@@ -13,6 +13,28 @@ export interface AgentSession {
   unread?: boolean;
 }
 
+export interface ToolCallItem {
+  id?: string;
+  call_id?: string;
+  tool: string;
+  args?: string;
+  result?: string;
+  state?: "calling" | "success" | "error";
+  exitCode?: number;
+}
+
+export interface ChatStep {
+  kind: "reasoning" | "tool_call";
+  id?: string;
+  call_id?: string;
+  text?: string;
+  tool?: string;
+  args?: string;
+  result?: string;
+  state?: "calling" | "success" | "error";
+  exitCode?: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -20,12 +42,8 @@ export interface ChatMessage {
   reasoning?: string;
   timestamp: string;
   evidenceStatus?: "observed" | "inferred" | "unknown";
-  toolCalls?: {
-    tool: string;
-    args: string;
-    result?: string;
-    exitCode?: number;
-  }[];
+  steps?: ChatStep[];
+  toolCalls?: ToolCallItem[];
 }
 
 export interface InfraAgent {

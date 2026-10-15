@@ -5,9 +5,6 @@ import {
   ExternalLink,
   Shield,
   Layers,
-  Check,
-  Plus,
-  SlidersHorizontal,
 } from "lucide-react";
 
 export interface ConnectedAppItem {
@@ -15,76 +12,69 @@ export interface ConnectedAppItem {
   name: string;
   description: string;
   category: "Recommended" | "Password Managers" | "Productivity" | "Communication" | "Code" | "Data";
-  iconText: string;
-  iconBg: string;
+  logoUrl: string;
   status: "connected" | "available";
 }
 
+// 100% verified SVG logos supported directly by Composio API (https://logos.composio.dev/api/:slug)
 const APPS_CATALOG: ConnectedAppItem[] = [
   // Recommended
   {
-    id: "aws-location",
-    name: "Amazon Location Service",
-    description: "Guide developers through adding maps, tracking, geocoding and routing.",
+    id: "aws",
+    name: "Amazon Web Services",
+    description: "Build, deploy, and operate applications on AWS cloud infra and serverless services.",
     category: "Recommended",
-    iconText: "aws",
-    iconBg: "bg-[#232f3e] text-[#ff9900]",
+    logoUrl: "https://logos.composio.dev/api/aws",
     status: "available",
   },
   {
     id: "appwrite",
     name: "Appwrite",
-    description: "The Appwrite plugin for Cursor and agent runtimes with Auth & DB.",
+    description: "The Appwrite plugin for agent runtimes with Auth, Databases, Storage and Cloud Functions.",
     category: "Recommended",
-    iconText: "G",
-    iconBg: "bg-pink-600/90 text-white",
+    logoUrl: "https://logos.composio.dev/api/appwrite",
     status: "available",
   },
   {
-    id: "aws-amplify",
-    name: "AWS Amplify",
-    description: "Build full-stack apps with AWS Amplify Gen2 workflows.",
+    id: "cloudflare",
+    name: "Cloudflare",
+    description: "Build, test, and deploy applications on Cloudflare Workers, KV, R2 and DNS.",
     category: "Recommended",
-    iconText: "aws",
-    iconBg: "bg-[#232f3e] text-[#ff9900]",
+    logoUrl: "https://logos.composio.dev/api/cloudflare",
     status: "available",
   },
   {
-    id: "aws-core",
-    name: "AWS Core",
-    description: "Build, deploy, and operate applications on AWS cloud infra.",
+    id: "supabase",
+    name: "Supabase",
+    description: "Access Postgres databases, perform schema migrations and trigger realtime webhook events.",
     category: "Recommended",
-    iconText: "aws",
-    iconBg: "bg-[#232f3e] text-[#ff9900]",
+    logoUrl: "https://logos.composio.dev/api/supabase",
     status: "available",
   },
   {
-    id: "aws-databases",
-    name: "AWS Databases",
-    description: "Expert database guidance for RDS, Aurora, DynamoDB and DocumentDB.",
+    id: "github",
+    name: "GitHub",
+    description: "Manage pull requests, commit code, review diffs, and inspect GitHub Actions workflows.",
     category: "Recommended",
-    iconText: "aws",
-    iconBg: "bg-[#232f3e] text-[#ff9900]",
-    status: "available",
+    logoUrl: "https://logos.composio.dev/api/github",
+    status: "connected",
   },
   {
-    id: "aws-deployments",
-    name: "AWS Deployments",
-    description: "Deploy applications to AWS with architectural best practices.",
+    id: "composio",
+    name: "Composio Superpowers",
+    description: "Core tool ecosystem powering 250+ enterprise integrations for autonomous AI bots.",
     category: "Recommended",
-    iconText: "aws",
-    iconBg: "bg-[#232f3e] text-[#ff9900]",
-    status: "available",
+    logoUrl: "https://logos.composio.dev/api/composio",
+    status: "connected",
   },
 
   // Password Managers
   {
     id: "1password",
     name: "1Password",
-    description: "Share a dedicated 1Password vault with Agent360 for secrets.",
+    description: "Share a dedicated 1Password vault with Agent360 for secrets, keys and credentials.",
     category: "Password Managers",
-    iconText: "1P",
-    iconBg: "bg-blue-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/1password",
     status: "connected",
   },
 
@@ -92,205 +82,447 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "notion",
     name: "Notion",
-    description: "Search Notion pages and databases, create tasks, and sync knowledge.",
+    description: "Search Notion pages and databases, create tasks, and sync workspace knowledge bases.",
     category: "Productivity",
-    iconText: "N",
-    iconBg: "bg-white text-black font-serif",
+    logoUrl: "https://logos.composio.dev/api/notion",
     status: "available",
   },
   {
     id: "atlassian",
     name: "Atlassian",
-    description: "Atlassian plugin for Jira tickets, Confluence docs and sprint boards.",
+    description: "Connect agent workflows to Jira sprint boards, backlogs, and Confluence documentation.",
     category: "Productivity",
-    iconText: "A",
-    iconBg: "bg-blue-500 text-white",
+    logoUrl: "https://logos.composio.dev/api/atlassian",
+    status: "available",
+  },
+  {
+    id: "jira",
+    name: "Jira",
+    description: "Automate issue creation, sprint status tracking, and release management.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/jira",
+    status: "available",
+  },
+  {
+    id: "confluence",
+    name: "Confluence",
+    description: "Search team spaces, draft design specifications, and publish engineering runbooks.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/confluence",
     status: "available",
   },
   {
     id: "linear",
     name: "Linear",
-    description: "The product development system for issue tracking and roadmaps.",
+    description: "The product development system for issue tracking, cycle planning, and roadmaps.",
     category: "Productivity",
-    iconText: "L",
-    iconBg: "bg-[#5e6ad2] text-white",
+    logoUrl: "https://logos.composio.dev/api/linear",
     status: "available",
   },
   {
     id: "canva",
     name: "Canva",
-    description: "Create, edit, review, resize, and brand-check graphics and visuals.",
+    description: "Create, edit, review, resize, and brand-check graphics and presentation visuals.",
     category: "Productivity",
-    iconText: "Canva",
-    iconBg: "bg-gradient-to-tr from-cyan-500 to-indigo-500 text-white",
+    logoUrl: "https://logos.composio.dev/api/canva",
     status: "available",
   },
   {
-    id: "gitlab",
-    name: "GitLab",
-    description: "Connect agent workflows to GitLab repositories, pipelines and merge requests.",
+    id: "figma",
+    name: "Figma",
+    description: "Turn designs into code, inspect design tokens, and review UI/UX components.",
     category: "Productivity",
-    iconText: "🦊",
-    iconBg: "bg-amber-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/figma",
+    status: "available",
+  },
+  {
+    id: "clickup",
+    name: "ClickUp",
+    description: "Tasks, docs, goals and sprint workflows connected to autonomous agent turns.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/clickup",
+    status: "available",
+  },
+  {
+    id: "asana",
+    name: "Asana",
+    description: "Coordinate team tasks, project timelines, and cross-functional deliverables.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/asana",
+    status: "available",
+  },
+  {
+    id: "trello",
+    name: "Trello",
+    description: "Manage visual Kanban boards, update card checklists, and automate list moves.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/trello",
+    status: "available",
+  },
+  {
+    id: "monday",
+    name: "Monday.com",
+    description: "Operate customizable team workflows, track task statuses, and update boards.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/monday",
+    status: "available",
+  },
+  {
+    id: "googledocs",
+    name: "Google Docs",
+    description: "Create, read, and append collaborative Google documents and research recaps.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/googledocs",
+    status: "available",
+  },
+  {
+    id: "googledrive",
+    name: "Google Drive",
+    description: "Browse, upload, and organize corporate files, spreadsheets, and shared assets.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/googledrive",
     status: "available",
   },
   {
     id: "onedrive",
     name: "OneDrive",
-    description: "Browse, search, and read Microsoft OneDrive company assets.",
+    description: "Browse, search, and synchronize Microsoft OneDrive corporate documents.",
     category: "Productivity",
-    iconText: "☁️",
-    iconBg: "bg-sky-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/onedrive",
+    status: "available",
+  },
+  {
+    id: "dropbox",
+    name: "Dropbox",
+    description: "Store, retrieve, and share files across cloud folders with verified links.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/dropbox",
+    status: "available",
+  },
+  {
+    id: "box",
+    name: "Box",
+    description: "Enterprise content management and secure file sharing for compliance workflows.",
+    category: "Productivity",
+    logoUrl: "https://logos.composio.dev/api/box",
     status: "available",
   },
 
   // Communication
   {
-    id: "email",
-    name: "Email",
-    description: "Give Grok Bot its own email address for notifications and dispatch.",
+    id: "gmail",
+    name: "Gmail",
+    description: "Search, read, draft, and send emails with intelligent filtering and attachments.",
     category: "Communication",
-    iconText: "✉️",
-    iconBg: "bg-pink-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/gmail",
     status: "connected",
   },
   {
-    id: "gmail",
-    name: "Gmail",
-    description: "Search, read, draft, and manage Gmail messages securely.",
-    category: "Communication",
-    iconText: "M",
-    iconBg: "bg-red-500 text-white",
-    status: "available",
-  },
-  {
-    id: "google-calendar",
+    id: "googlecalendar",
     name: "Google Calendar",
-    description: "Search events and schedule meetings with teammates automatically.",
+    description: "Search upcoming events, schedule meetings with attendees, and resolve conflicts.",
     category: "Communication",
-    iconText: "31",
-    iconBg: "bg-blue-600 text-white font-bold",
+    logoUrl: "https://logos.composio.dev/api/googlecalendar",
     status: "available",
   },
   {
     id: "slack",
     name: "Slack",
-    description: "Slack AI tools for channels, threads and developer incidents.",
+    description: "Post notifications, listen to mention events, and chat in private channels.",
     category: "Communication",
-    iconText: "#",
-    iconBg: "bg-emerald-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/slack",
+    status: "available",
+  },
+  {
+    id: "discord",
+    name: "Discord",
+    description: "Interact with developer communities, send alerts, and manage server roles.",
+    category: "Communication",
+    logoUrl: "https://logos.composio.dev/api/discord",
+    status: "available",
+  },
+  {
+    id: "telegram",
+    name: "Telegram",
+    description: "Direct bot dispatch, send files and execution summaries to verified chat topics.",
+    category: "Communication",
+    logoUrl: "https://logos.composio.dev/api/telegram",
     status: "available",
   },
   {
     id: "outlook",
-    name: "Outlook",
-    description: "Search, read, and send Microsoft Outlook corporate emails.",
+    name: "Microsoft Outlook",
+    description: "Search, read, and send Microsoft Outlook corporate emails and invitations.",
     category: "Communication",
-    iconText: "O",
-    iconBg: "bg-blue-700 text-white",
+    logoUrl: "https://logos.composio.dev/api/outlook",
     status: "available",
   },
   {
     id: "x",
-    name: "X",
-    description: "Search posts, read timelines, pull trends and schedule updates.",
+    name: "X (Twitter)",
+    description: "Search posts, read timelines, monitor brand keywords, and schedule tweets.",
     category: "Communication",
-    iconText: "𝕏",
-    iconBg: "bg-black text-white border border-neutral-700",
+    logoUrl: "https://logos.composio.dev/api/x",
+    status: "available",
+  },
+  {
+    id: "zoom",
+    name: "Zoom",
+    description: "Schedule instant or recurring video conferences and retrieve meeting summaries.",
+    category: "Communication",
+    logoUrl: "https://logos.composio.dev/api/zoom",
+    status: "available",
+  },
+  {
+    id: "intercom",
+    name: "Intercom",
+    description: "Deliver autonomous customer support turns and triage live user conversations.",
+    category: "Communication",
+    logoUrl: "https://logos.composio.dev/api/intercom",
+    status: "available",
+  },
+  {
+    id: "zendesk",
+    name: "Zendesk",
+    description: "Manage support tickets, customer satisfaction surveys, and resolution macros.",
+    category: "Communication",
+    logoUrl: "https://logos.composio.dev/api/zendesk",
     status: "available",
   },
 
   // Code
   {
+    id: "gitlab",
+    name: "GitLab",
+    description: "Connect agent workflows to GitLab repositories, CI/CD pipelines, and merge requests.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/gitlab",
+    status: "available",
+  },
+  {
     id: "datadog",
     name: "Datadog",
-    description: "Inspect and query Datadog logs, metrics, APM traces and alerts.",
+    description: "Inspect and query Datadog logs, metrics, APM traces, and synthetic alerts.",
     category: "Code",
-    iconText: "🐶",
-    iconBg: "bg-purple-700 text-white",
-    status: "available",
-  },
-  {
-    id: "superpowers",
-    name: "Superpowers",
-    description: "Core skills library: TDD, debugging, test harness and benchmarks.",
-    category: "Code",
-    iconText: "⚡",
-    iconBg: "bg-neutral-800 text-white",
-    status: "available",
-  },
-  {
-    id: "vercel",
-    name: "Vercel",
-    description: "Build and deploy frontend web apps and serverless agents.",
-    category: "Code",
-    iconText: "▲",
-    iconBg: "bg-black text-white border border-neutral-700",
-    status: "available",
-  },
-  {
-    id: "supabase",
-    name: "Supabase",
-    description: "Access your Supabase projects, tables and perform Postgres migrations.",
-    category: "Code",
-    iconText: "⚡",
-    iconBg: "bg-emerald-700 text-white",
-    status: "available",
-  },
-  {
-    id: "cloudflare",
-    name: "Cloudflare",
-    description: "Build, test, and deploy applications on Cloudflare Workers & KV.",
-    category: "Code",
-    iconText: "☁️",
-    iconBg: "bg-orange-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/datadog",
     status: "available",
   },
   {
     id: "sentry",
     name: "Sentry",
-    description: "Sentry plugin for real-time error tracking and performance profiling.",
+    description: "Real-time exception tracking, error alerts, and stack trace investigations.",
     category: "Code",
-    iconText: "S",
-    iconBg: "bg-purple-800 text-white",
+    logoUrl: "https://logos.composio.dev/api/sentry",
+    status: "available",
+  },
+  {
+    id: "vercel",
+    name: "Vercel",
+    description: "Trigger deployments, inspect serverless logs, and manage preview environments.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/vercel",
+    status: "available",
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    description: "State-of-the-art model reasoning, code execution, and embedding capabilities.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/openai",
+    status: "available",
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic",
+    description: "Claude models for long-context analysis, safety steerability, and coding tasks.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/anthropic",
+    status: "available",
+  },
+  {
+    id: "groq",
+    name: "Groq",
+    description: "Ultra-low latency LPU inference engine for realtime streaming agent turns.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/groq",
+    status: "available",
+  },
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    description: "European open-weight and frontier models for reasoning, translation, and code.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/mistral",
+    status: "available",
+  },
+  {
+    id: "langchain",
+    name: "LangChain",
+    description: "Framework abstractions for chaining agent tools, prompts, and memory stores.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/langchain",
+    status: "available",
+  },
+  {
+    id: "llamaindex",
+    name: "LlamaIndex",
+    description: "Data orchestration framework connecting custom private data to LLM applications.",
+    category: "Code",
+    logoUrl: "https://logos.composio.dev/api/llamaindex",
     status: "available",
   },
 
-  // Data
+  // Data & Search
   {
     id: "postman",
     name: "Postman",
-    description: "Work with Postman collections directly from your agent console.",
+    description: "Execute and test API collections, generate mock servers, and debug payloads.",
     category: "Data",
-    iconText: "P",
-    iconBg: "bg-orange-500 text-white",
+    logoUrl: "https://logos.composio.dev/api/postman",
     status: "available",
   },
   {
     id: "huggingface",
     name: "Hugging Face",
-    description: "Agent skills for AI/ML tasks including datasets, models and spaces.",
+    description: "Access open-source models, curated datasets, and inference endpoints.",
     category: "Data",
-    iconText: "🤗",
-    iconBg: "bg-yellow-500 text-black",
+    logoUrl: "https://logos.composio.dev/api/huggingface",
     status: "available",
   },
   {
     id: "firecrawl",
     name: "Firecrawl",
-    description: "Web scraping, crawling, and search tailored for LLM pipelines.",
+    description: "Turn entire websites into clean LLM-ready markdown with headless scraping.",
     category: "Data",
-    iconText: "🔥",
-    iconBg: "bg-red-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/firecrawl",
     status: "available",
   },
   {
     id: "apify",
     name: "Apify",
-    description: "Official Apify agent skills for web automation and data harvesting.",
+    description: "Web automation platform with ready-made scrapers for e-commerce, maps, and feeds.",
     category: "Data",
-    iconText: "▲",
-    iconBg: "bg-teal-600 text-white",
+    logoUrl: "https://logos.composio.dev/api/apify",
+    status: "available",
+  },
+  {
+    id: "tavily",
+    name: "Tavily Search",
+    description: "AI-native search engine designed to return factual, cited research snippets.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/tavily",
+    status: "available",
+  },
+  {
+    id: "serpapi",
+    name: "SerpApi",
+    description: "Real-time Google search results, shopping prices, and maps data scraping.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/serpapi",
+    status: "available",
+  },
+  {
+    id: "perplexityai",
+    name: "Perplexity AI",
+    description: "Grounded web answers with real-time citations and domain-specific filters.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/perplexityai",
+    status: "available",
+  },
+  {
+    id: "pinecone",
+    name: "Pinecone",
+    description: "Managed vector database for semantic search, similarity matching, and RAG.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/pinecone",
+    status: "available",
+  },
+  {
+    id: "mongodb",
+    name: "MongoDB",
+    description: "Document database for modern apps with flexible schema and Atlas search.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/mongodb",
+    status: "available",
+  },
+  {
+    id: "redis",
+    name: "Redis",
+    description: "In-memory cache, message broker, and fast key-value store for active state.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/redis",
+    status: "available",
+  },
+  {
+    id: "postgresql",
+    name: "PostgreSQL",
+    description: "Enterprise relational database with pgvector, JSONB and ACID guarantees.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/postgresql",
+    status: "available",
+  },
+  {
+    id: "mysql",
+    name: "MySQL",
+    description: "Popular open-source relational database management system.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/mysql",
+    status: "available",
+  },
+  {
+    id: "snowflake",
+    name: "Snowflake",
+    description: "Cloud data warehouse for large-scale analytical queries and BI workloads.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/snowflake",
+    status: "available",
+  },
+  {
+    id: "googlesheets",
+    name: "Google Sheets",
+    description: "Read, write, update and append rows directly to cloud spreadsheets.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/googlesheets",
+    status: "available",
+  },
+  {
+    id: "airtable",
+    name: "Airtable",
+    description: "No-code relational database with views, automated triggers and forms.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/airtable",
+    status: "available",
+  },
+  {
+    id: "hubspot",
+    name: "HubSpot",
+    description: "Inbound CRM, contact lifecycle management, and marketing automation.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/hubspot",
+    status: "available",
+  },
+  {
+    id: "salesforce",
+    name: "Salesforce",
+    description: "Enterprise CRM platform for lead tracking, pipeline deals and accounts.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/salesforce",
+    status: "available",
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    description: "Payment infrastructure, subscription billing, and customer invoice management.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/stripe",
+    status: "available",
+  },
+  {
+    id: "shopify",
+    name: "Shopify",
+    description: "E-commerce platform for products, orders, inventory and customer management.",
+    category: "Data",
+    logoUrl: "https://logos.composio.dev/api/shopify",
     status: "available",
   },
 ];
@@ -312,7 +544,6 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
     "Password Managers",
     "Productivity",
     "Communication",
-    "Design",
     "Code",
     "Data",
   ];
@@ -334,14 +565,10 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
       app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory =
-      selectedCategory === "All" ||
-      (selectedCategory === "Design"
-        ? app.name.includes("Canva") || app.name.includes("Figma") || app.name.includes("Mobbin")
-        : app.category === selectedCategory);
+      selectedCategory === "All" || app.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  // Group by category for visual organization
   const displayCategories =
     selectedCategory === "All"
       ? (["Recommended", "Password Managers", "Productivity", "Communication", "Code", "Data"] as const)
@@ -387,7 +614,7 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
             <Search size={16} className="absolute left-3.5 top-3 text-neutral-500" />
             <input
               type="text"
-              placeholder="Search across apps and skills..."
+              placeholder="Search across 60+ verified apps and skills..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#1b1b22] border border-[#262630] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-400 transition-colors"
@@ -424,7 +651,7 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
               <div key={catGroup} className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider font-mono">
-                    {catGroup}
+                    {catGroup} ({groupApps.length})
                   </h3>
                   <span className="text-[11px] text-neutral-500 hover:text-neutral-300 cursor-pointer">
                     View all
@@ -439,11 +666,21 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
                         key={app.id}
                         className="p-3.5 rounded-2xl bg-[#181820] hover:bg-[#1d1d28] border border-[#22222c] hover:border-[#2e2e3c] flex items-center justify-between gap-3 transition-colors group"
                       >
-                        {/* App Icon */}
-                        <div
-                          className={`h-11 w-11 rounded-xl shrink-0 flex items-center justify-center font-bold text-sm shadow-md ${app.iconBg}`}
-                        >
-                          {app.iconText}
+                        {/* Composio Vector Brand Logo */}
+                        <div className="h-11 w-11 rounded-xl shrink-0 flex items-center justify-center p-2 bg-[#101014] border border-[#24242e] shadow-inner">
+                          <img
+                            src={app.logoUrl}
+                            alt={app.name}
+                            className="h-full w-full object-contain"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.style.display = "none";
+                              if (target.parentElement) {
+                                target.parentElement.textContent = app.name[0];
+                              }
+                            }}
+                          />
                         </div>
 
                         {/* Title & Description */}

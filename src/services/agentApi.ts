@@ -1,4 +1,4 @@
-import { InfraAgent, AgentSession } from "../types/agent";
+import { InfraAgent, AgentSession, ChatMessage } from "../types/agent";
 
 const API_BASE_URL = "/api/v1";
 
@@ -105,15 +105,162 @@ export async function fetchWorkspaceFileContent(filePath: string): Promise<strin
 
 export async function fetchChatMessages(chatId: string): Promise<ChatMessage[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/messages`, {
+    const res = await fetch(`${API_BASE_URL}/chats/${encodeURIComponent(chatId)}`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {
-      throw new Error(`Failed to fetch messages: ${res.statusText}`);
+      throw new Error(`Failed to fetch chat details: ${res.statusText}`);
     }
-    return await res.json();
+    const data = await res.json();
+    const rawList = Array.isArray(data) ? data : (data.messages || []);
+    
+    // Group into coherent user and assistant turns
+    const turns: ChatMessage[] = [];
+    let currentAsst: ChatMessage | null = null;
+
+    for (const m of rawList) {
+      const mtype = m.type;
+      const mrole = m.role || "assistant";
+      const meta = m.metadata || {};
+      const ts = meta.timestamp
+        ? new Date(meta.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "recently";
+
+      let textContent = "";
+      if (typeof m.content === "string") {
+        textContent = m.content;
+      } else if (Array.isArray(m.content)) {
+        textContent = m.content.map((c: any) => c?.text || "").filter(Boolean).join("
+");
+      }
+
+      if (textContent.includes("# BOOTSTRAP MODE") && textContent.includes("---")) {
+        const parts = textContent.split("---");
+        textContent = parts[parts.length - 1].trim();
+      }
+
+      if (mrole === "user") {
+        turns.push({
+          id: m.id || String(Math.random()),
+          role: "user",
+          content: textContent.trim(),
+          timestamp: ts,
+          steps: []
+        });
+        currentAsst = null;
+      } else {
+        if (!currentAsst) {
+          currentAsst = {
+            id: m.id || `asst-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            role: "assistant",
+            content: "",
+            timestamp: ts,
+            evidenceStatus: "observed",
+            steps: [],
+            toolCalls: []
+          };
+          turns.push(currentAsst);
+        }
+
+        if (mtype === "reasoning") {
+          const t = textContent.trim();
+          if (t) {
+            currentAsst.steps!.push({
+              kind: "reasoning",
+              id: m.id,
+              text: t
+            });
+          }
+        } else if (mtype === "plugin_call") {
+          const contents = Array.isArray(m.content) ? m.content : [];
+          for (const c of contents) {
+            if (c?.type === "data" && c.data) {
+              const d = c.data;
+              const cid = d.call_id;
+              const stepItem = {
+                kind: "tool_call" as const,
+                id: cid || m.id,
+                call_id: cid,
+                tool: d.name || "Tool Execution",
+                args: typeof d.arguments === "string" ? d.arguments : JSON.stringify(d.arguments || {}),
+                result: "",
+                state: "calling" as const
+              };
+              currentAsst.steps!.push(stepItem);
+              currentAsst.toolCalls!.push({
+                id: cid || m.id,
+                call_id: cid,
+                tool: d.name || "Tool Execution",
+                args: stepItem.args,
+                result: "",
+                state: "calling"
+              });
+            }
+          }
+        } else if (mtype === "plugin_call_output") {
+          const contents = Array.isArray(m.content) ? m.content : [];
+          for (const c of contents) {
+            if (c?.type === "data" && c.data) {
+              const d = c.data;
+              const cid = d.call_id;
+              let out = d.output ?? "";
+              if (typeof out === "string" && out.startsWith("[{")) {
+                try {
+                  const parsed = JSON.parse(out);
+                  if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].text) {
+                    out = parsed[0].text;
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+              const strOut = typeof out === "string" ? out : JSON.stringify(out, null, 2);
+              const toolState = d.state === "error" ? "error" : "success";
+
+              let matched = false;
+              for (let i = currentAsst.steps!.length - 1; i >= 0; i--) {
+                const s = currentAsst.steps![i];
+                if (s.kind === "tool_call" && s.call_id === cid) {
+                  s.result = strOut;
+                  s.state = toolState;
+                  matched = true;
+                  break;
+                }
+              }
+              if (!matched) {
+                currentAsst.steps!.push({
+                  kind: "tool_call",
+                  id: cid || m.id,
+                  call_id: cid,
+                  tool: d.name || "Tool Output",
+                  args: "",
+                  result: strOut,
+                  state: toolState
+                });
+              }
+            }
+          }
+        } else if (mtype === "message" || !mtype) {
+          const t = textContent.trim();
+          if (t) {
+            if (currentAsst.content) {
+              currentAsst.content += "
+
+" + t;
+            } else {
+              currentAsst.content = t;
+            }
+          }
+          if (ts) {
+            currentAsst.timestamp = ts;
+          }
+        }
+      }
+    }
+
+    return turns.filter(t => t.content || (t.steps && t.steps.length > 0));
   } catch (err) {
-    console.warn("fetchChatMessages fallback to empty array", err);
+    console.warn("fetchChatMessages fallback", err);
     return [];
   }
 }

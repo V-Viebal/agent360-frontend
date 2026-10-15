@@ -3,6 +3,9 @@ import { InfraAgentsSidebar } from "../components/InfraAgentsSidebar";
 import { AgentProfileHeader } from "../components/AgentProfileHeader";
 import { ChatSessionCanvas } from "../components/ChatSessionCanvas";
 import { CollapsibleSessionsRail } from "../components/CollapsibleSessionsRail";
+import { CommandPaletteModal } from "../components/CommandPaletteModal";
+import { SkillPoolModal } from "../components/SkillPoolModal";
+import { TokenAnalyticsModal } from "../components/TokenAnalyticsModal";
 import { MOCK_INFRA_AGENTS, MOCK_MESSAGES_BY_SESSION } from "../data/mockInfraAgents";
 import { fetchInfraAgents, fetchAgentChats } from "../services/agentApi";
 import {
@@ -18,6 +21,9 @@ export function AgentWorkspace() {
   const [agents, setAgents] = useState<InfraAgent[]>(MOCK_INFRA_AGENTS);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0].id);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [showCommandPalette, setShowCommandPalette] = useState<boolean>(false);
+  const [showSkillsModal, setShowSkillsModal] = useState<boolean>(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadData() {
@@ -268,6 +274,39 @@ export function AgentWorkspace() {
           agentName={selectedAgent.name}
         />
       </div>
+
+      {/* Cmd+K Command Palette Modal */}
+      <CommandPaletteModal
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        agents={agents}
+        onSelectAgent={handleSelectAgent}
+        onOpenAnalytics={() => setShowAnalyticsModal(true)}
+        onOpenSkills={() => setShowSkillsModal(true)}
+      />
+
+      {/* Floating Cmd+K Trigger Badge */}
+      <button
+        onClick={() => setShowCommandPalette(true)}
+        className="fixed bottom-14 right-6 z-40 px-3 py-1.5 rounded-full bg-[#1c1713]/90 hover:bg-[#2b241e] border border-white/10 text-neutral-400 hover:text-white flex items-center gap-1.5 font-mono text-[11px] shadow-lg backdrop-blur cursor-pointer transition-colors"
+        title="Open Command Palette"
+      >
+        <span>Cmd+K</span>
+      </button>
+
+      {/* Global Modals triggered from Command Palette */}
+      {showSkillsModal && (
+        <SkillPoolModal
+          agentName={selectedAgent.name}
+          onClose={() => setShowSkillsModal(false)}
+        />
+      )}
+
+      {showAnalyticsModal && (
+        <TokenAnalyticsModal
+          onClose={() => setShowAnalyticsModal(false)}
+        />
+      )}
     </div>
   );
 }

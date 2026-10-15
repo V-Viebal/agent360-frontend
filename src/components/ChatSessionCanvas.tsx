@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { ChatMessage, AgentSession } from "../types/agent";
 import { PendingApproval } from "../services/approvalApi";
 import { ApprovalCardModal } from "./ApprovalCardModal";
+import { MarkdownRenderer } from "./MarkdownRenderer";
+import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import {
   Send,
   Terminal,
@@ -15,12 +17,15 @@ import {
   ChevronDown,
   ChevronRight,
   ShieldAlert,
+  Paperclip,
+  X,
+  FileText,
 } from "lucide-react";
 
 interface ChatSessionCanvasProps {
   session?: AgentSession;
   messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, attachmentVirtualUri?: string) => void;
   agentName: string;
   pendingApprovals?: PendingApproval[];
   onApproveTool?: (requestId: string, sessionId: string, scope?: "exact" | "similar") => Promise<void>;
@@ -40,6 +45,11 @@ export function ChatSessionCanvas({
   const [showThinkingGlobally, setShowThinkingGlobally] = useState<boolean>(true);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
   const [showApprovalModal, setShowApprovalModal] = useState<boolean>(false);
+  const [attachedFile, setAttachedFile] = useState<UploadedFileResult | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -52,9 +62,35 @@ export function ChatSessionCanvas({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
-    onSendMessage(inputText);
+    if (!inputText.trim() && !attachedFile) return;
+
+    let finalMessage = inputText;
+    if (attachedFile) {
+      finalMessage = `${inputText}\n\n[Attached File: ${attachedFile.filename} (${attachedFile.virtual_uri})]`.trim();
+    }
+
+    onSendMessage(finalMessage, attachedFile?.virtual_uri);
     setInputText("");
+    setAttachedFile(null);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const res = await uploadFileToGateway(file);
+      setAttachedFile(res);
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to upload file");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const toggleReasoningForMessage = (msgId: string) => {
@@ -169,10 +205,14 @@ export function ChatSessionCanvas({
                   </div>
                 )}
 
-                {/* Body Text */}
-                <div className="whitespace-pre-wrap leading-relaxed text-[13px] text-neutral-200">
-                  {msg.content}
-                </div>
+                {/* Body Text with Markdown Artifact Rendering */}
+                {isUser ? (
+                  <div className="whitespace-pre-wrap leading-relaxed text-[13px] text-neutral-200">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <MarkdownRenderer content={msg.content} />
+                )}
 
                 {/* Evidence Receipt Badge if present */}
                 {msg.evidenceStatus && (
@@ -216,9 +256,51 @@ export function ChatSessionCanvas({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Composer */}
-      <div className="p-4 bg-[#100d0b] border-t border-[#26211d] shrink-0">
+      {/* Input Composer & Upload Attachment Bar */}
+      <div className="p-4 bg-[#100d0b] border-t border-[#26211d] shrink-0 space-y-2">
+        {/* Attachment preview if present */}
+        {attachedFile && (
+          <div className="max-w-4xl mx-auto flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#1a1410] border border-[#d86f4c]/40 font-mono text-xs text-[#d86f4c]">
+            <div className="flex items-center gap-2 truncate">
+              <FileText size={14} />
+              <span className="truncate">{attachedFile.filename}</span>
+              <span className="text-[10px] text-neutral-500 font-sans">
+                ({(attachedFile.size_bytes / 1024).toFixed(1)} KB)
+              </span>
+            </div>
+            <button
+              onClick={() => setAttachedFile(null)}
+              className="p-1 hover:text-white transition-colors cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {uploadError && (
+          <div className="max-w-4xl mx-auto text-[11px] text-red-400 font-mono">
+            Error: {uploadError}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex items-center gap-2">
+          {/* File Upload Button */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="h-10 px-3 rounded-xl bg-[#171310] border border-[#26211d] hover:border-[#d86f4c]/50 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
+            title="Attach file securely (Path Masked)"
+          >
+            <Paperclip size={15} className={uploading ? "animate-pulse text-[#d86f4c]" : ""} />
+          </button>
+
           <div className="flex-1 relative">
             <input
               type="text"
@@ -228,9 +310,10 @@ export function ChatSessionCanvas({
               className="w-full bg-[#171310] border border-[#26211d] rounded-xl px-4 py-3 text-xs text-[#f4f3ef] placeholder:text-neutral-500 focus:outline-none focus:border-[#d86f4c]/60 font-sans shadow-inner"
             />
           </div>
+
           <button
             type="submit"
-            disabled={!inputText.trim()}
+            disabled={(!inputText.trim() && !attachedFile) || uploading}
             className="h-10 px-4 rounded-xl bg-[#d86f4c] hover:bg-[#c2410c] disabled:opacity-40 disabled:hover:bg-[#d86f4c] text-white font-medium text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(216,111,76,0.3)] cursor-pointer"
           >
             <Send size={13} />

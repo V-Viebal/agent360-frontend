@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
+  Rocket,
+  X,
   Code2,
   Shield,
   Monitor,
@@ -19,6 +21,11 @@ import {
   Sparkles,
   Bot,
   Play,
+  MessageSquare,
+  Radio,
+  RotateCcw,
+  Check,
+  Download,
 } from "lucide-react";
 
 interface OrgNode {
@@ -213,6 +220,189 @@ const ORG_STRUCTURE: OrgNode[] = [
 
 export function AIOrgChart() {
   const [selectedNodeId, setSelectedNodeId] = useState<string>("gm-executive");
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [isBatchDeploying, setIsBatchDeploying] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchLogs, setBatchLogs] = useState<string[]>([]);
+  const [batchComplete, setBatchComplete] = useState(false);
+
+  const handleStartBatchDeploy = () => {
+    setShowBatchModal(true);
+    setIsBatchDeploying(true);
+    setBatchProgress(0);
+    setBatchLogs([]);
+    setBatchComplete(false);
+
+    let current = 0;
+    const interval = setInterval(() => {
+      if (current < ORG_STRUCTURE.length) {
+        const agent = ORG_STRUCTURE[current];
+        setBatchLogs((prev) => [
+          ...prev,
+          `[kernel:deploy] Provisioning container for ${agent.name} (${agent.title}) -> volume /app/working/${agent.id}... OK (HTTP 200)`
+        ]);
+        current++;
+        setBatchProgress(current);
+      } else {
+        clearInterval(interval);
+        setIsBatchDeploying(false);
+        setBatchComplete(true);
+        setBatchLogs((prev) => [
+          ...prev,
+          "[cluster:ready] 10/10 AI Teammate containers healthy and bound to Agent360 ACP network. Mission ready."
+        ]);
+      }
+    }, 400);
+  };
+
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationStep, setSimulationStep] = useState(0);
+  const [scenarioFilter, setScenarioFilter] = useState<"eng-sre" | "mkt-exec" | "sec-audit">("eng-sre");
+
+  const SCENARIO_CATALOG = {
+    "eng-sre": {
+      name: "Engineering ⇄ SRE Incident Fix",
+      messages: [
+        {
+          from: "Devon (VP Engineering)",
+          to: "Alex (Chief Orchestrator)",
+          time: "10:14:02 AM",
+          text: "Hotfix PR #42 applied by SWE Worker. Multi-tenant RLS isolation passed 14/14 unit tests. Requesting sign-off.",
+          receipt: "SHA256: 9ca84cf... PASS",
+          type: "proposal"
+        },
+        {
+          from: "Aegis (Head of QA)",
+          to: "Alex (Chief Orchestrator)",
+          time: "10:14:05 AM",
+          text: "Security audit verified. IDOR exploit blocked with HTTP 403 Forbidden across 48 API routes. 0 data leaks.",
+          receipt: "Audit: OBSERVED (WCAG + OWASP pass)",
+          type: "verification"
+        },
+        {
+          from: "Alex (Chief Orchestrator)",
+          to: "Devon & Sentinel",
+          time: "10:14:08 AM",
+          text: "Approved. All cryptographic receipts verified. Merging PR #42 and dispatching SRE Sentinel for canary rollout.",
+          receipt: "Sign-off: Plan Ledger Rev #5 Committed",
+          type: "approval"
+        },
+        {
+          from: "Sentinel (Director SRE)",
+          to: "Alex (Chief Orchestrator)",
+          time: "10:14:12 AM",
+          text: "Canary container healthy on Node 6th. Memory pressure 42%, zero downtime. Mission accomplished.",
+          receipt: "Fleet Health: 8/8 UP (healthy)",
+          type: "final"
+        }
+      ]
+    },
+    "mkt-exec": {
+      name: "Marketing ⇄ Executive Product Launch",
+      messages: [
+        {
+          from: "Harper (Head of Growth)",
+          to: "Alex (Chief Orchestrator)",
+          time: "02:30:10 PM",
+          text: "Changelog draft ready for Agent360 v2.2.1. Social distribution queued on Postiz MCP across X, LinkedIn, and Discord.",
+          receipt: "Draft ID: #MKT-890 (Validated)",
+          type: "proposal"
+        },
+        {
+          from: "Alex (Chief Orchestrator)",
+          to: "Harper (Head of Growth)",
+          time: "02:30:14 PM",
+          text: "Reviewed positioning: ensure tone highlights 'No Fake Done' and zero host mutation guarantees. Authorized to publish.",
+          receipt: "Policy Rev #12: Content Released",
+          type: "approval"
+        },
+        {
+          from: "Harper (Head of Growth)",
+          to: "Alex (Chief Orchestrator)",
+          time: "02:30:18 PM",
+          text: "Dispatched to 3 platforms via Postiz API. Search Console sitemap ping HTTP 200 OK registered.",
+          receipt: "Live Impressions: Tracking active",
+          type: "final"
+        }
+      ]
+    },
+    "sec-audit": {
+      name: "Security ⇄ Fleet Kernel Vulnerability Scan",
+      messages: [
+        {
+          from: "Aegis (Head of QA)",
+          to: "Sentinel (Director SRE)",
+          time: "11:05:00 AM",
+          text: "Automated scan detected open debug port 9222 on worker container sidecar. Flagging policy violation.",
+          receipt: "CVE Audit: Port 9222 exposed to bridge",
+          type: "verification"
+        },
+        {
+          from: "Sentinel (Director SRE)",
+          to: "Aegis (Head of QA)",
+          time: "11:05:04 AM",
+          text: "Enforcing rootless network isolation: bound CDP port strictly to loopback 127.0.0.1. Re-checking firewall.",
+          receipt: "IPTables: Loopback binding confirmed",
+          type: "proposal"
+        },
+        {
+          from: "Alex (Chief Orchestrator)",
+          to: "Aegis & Sentinel",
+          time: "11:05:08 AM",
+          text: "Incident closed in 8 seconds. Cryptographic audit trail archived to MinIO S3 immutable bucket.",
+          receipt: "Receipt: SEC-CLOSE-9921 VERIFIED",
+          type: "final"
+        }
+      ]
+    }
+  };
+
+  const activeScenario = SCENARIO_CATALOG[scenarioFilter];
+
+  const handleDownloadAuditJson = () => {
+    const payload = {
+      auditTimestamp: new Date().toISOString(),
+      governanceModel: "AntaresOS / Agent360 v2.2.1",
+      departmentScenario: scenarioFilter,
+      scenarioName: activeScenario.name,
+      complianceStandard: "SOC2-CC6.1 / ISO27001-A.12.4.1 (Immutable Log Trace)",
+      verificationStatus: "OBSERVED (Zero Fake Done)",
+      messages: activeScenario.messages.map((m, idx) => ({
+        step: idx + 1,
+        sender: m.from,
+        recipient: m.to,
+        timestamp: m.time,
+        content: m.text,
+        cryptographicReceipt: m.receipt,
+        decisionType: m.type
+      }))
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `agent360-audit-${scenarioFilter}-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleStartSimulation = () => {
+    setIsSimulating(true);
+    setSimulationStep(0);
+    let step = 0;
+    const interval = setInterval(() => {
+      step++;
+      if (step < activeScenario.messages.length) {
+        setSimulationStep(step);
+      } else {
+        clearInterval(interval);
+      }
+    }, 1800);
+  };
+
   const selectedNode = ORG_STRUCTURE.find((n) => n.id === selectedNodeId) || ORG_STRUCTURE[0];
 
   const executive = ORG_STRUCTURE.find((n) => n.level === "c-level")!;
@@ -233,6 +423,16 @@ export function AIOrgChart() {
         <p className="mt-2 text-xs sm:text-sm text-neutral-400 max-w-2xl mx-auto leading-relaxed">
           See how specialized AI teammates across Engineering, Operations, Security, and Marketing report progress upwards to the Lead Orchestrator with verified completion receipts.
         </p>
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button
+            onClick={handleStartBatchDeploy}
+            className="inline-flex items-center gap-2 rounded-full bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold px-5 py-2 text-xs transition-all shadow-[0_0_20px_rgba(255,122,0,0.35)] cursor-pointer active:scale-95"
+          >
+            <Rocket size={14} />
+            <span>One-Click Deploy Entire AI Workforce</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Hierarchy Tree & Detail Inspector */}
@@ -359,6 +559,99 @@ export function AIOrgChart() {
               })}
             </div>
           </div>
+
+          {/* Inter-Department Live Simulation Console */}
+          <div className="pt-6 border-t border-white/10 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Radio size={14} className="text-[#ff7a00] animate-pulse" />
+                <span className="text-xs font-mono font-semibold text-white">
+                  Inter-Department Autonomous Communication (ACP Channel)
+                </span>
+              </div>
+
+              {/* Scenario Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-lg border border-white/10">
+                {(["eng-sre", "mkt-exec", "sec-audit"] as const).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setScenarioFilter(key);
+                      setIsSimulating(false);
+                      setSimulationStep(0);
+                    }}
+                    className={`px-2.5 py-1 rounded text-[11px] font-mono transition-all cursor-pointer ${
+                      scenarioFilter === key
+                        ? "bg-[#ff7a00] text-black font-semibold shadow"
+                        : "text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    {key === "eng-sre" ? "Engineering ⇄ SRE" : key === "mkt-exec" ? "Marketing ⇄ Exec" : "Security ⇄ Fleet"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownloadAuditJson}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white text-xs font-mono transition-all cursor-pointer"
+                  title="Download SOC2/ISO audit log as JSON"
+                >
+                  <Download size={12} />
+                  <span>Download Audit JSON</span>
+                </button>
+                <button
+                  onClick={handleStartSimulation}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 border border-[#ff7a00]/30 text-[#ff7a00] text-xs font-mono transition-all cursor-pointer active:scale-95"
+                >
+                  <MessageSquare size={12} />
+                  <span>{isSimulating ? "Restart Scenario" : "Run Scenario"}</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-[11px] font-mono text-neutral-400">
+              Active Scenario: <span className="text-[#ff7a00] font-semibold">{activeScenario.name}</span>
+            </div>
+
+            {isSimulating ? (
+              <div className="space-y-2 bg-[#090c12] p-4 rounded-xl border border-white/10 font-mono text-xs">
+                {activeScenario.messages.slice(0, simulationStep + 1).map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`p-3 rounded-lg border transition-all ${
+                      msg.type === "approval"
+                        ? "bg-[#ff7a00]/10 border-[#ff7a00]/30 text-neutral-200"
+                        : msg.type === "verification"
+                        ? "bg-purple-500/10 border-purple-500/30 text-neutral-200"
+                        : msg.type === "final"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-neutral-200"
+                        : "bg-blue-500/10 border-blue-500/30 text-neutral-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="font-semibold text-white flex items-center gap-1.5">
+                        <span className="text-[#ff7a00]">{msg.from}</span>
+                        <span className="text-neutral-500">➔</span>
+                        <span>{msg.to}</span>
+                      </span>
+                      <span className="text-neutral-500 text-[10px]">{msg.time}</span>
+                    </div>
+                    <p className="text-xs font-sans text-neutral-300 leading-relaxed mb-1.5">
+                      {msg.text}
+                    </p>
+                    <div className="text-[10px] font-mono text-emerald-400 bg-black/40 px-2 py-0.5 rounded inline-block">
+                      Receipt: {msg.receipt}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-[#090c12] border border-white/5 p-4 rounded-xl text-center text-xs text-neutral-500 font-mono">
+                Click "Run Scenario" to view the multi-agent execution turn for <strong className="text-neutral-300">{activeScenario.name}</strong>.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Detail Inspector Panel */}
@@ -445,6 +738,98 @@ export function AIOrgChart() {
           </div>
         </aside>
       </div>
+
+      {/* Batch Deployment Modal */}
+      {showBatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-2xl rounded-2xl border border-white/15 bg-[#0d111a] p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00]">
+                  <Rocket size={18} />
+                </div>
+                <div>
+                  <h4 className="text-base font-semibold text-white">Cluster Batch Container Deployment</h4>
+                  <p className="text-xs text-neutral-400 font-mono">Provisioning 10 Autonomous AI Teammates to Coolify / Docker</p>
+                </div>
+              </div>
+              {!isBatchDeploying && (
+                <button
+                  onClick={() => setShowBatchModal(false)}
+                  className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-white/10"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-neutral-400">Deployment Progress:</span>
+                <span className="text-[#ff7a00] font-bold">{batchProgress} / {ORG_STRUCTURE.length} Nodes</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff7a00] to-emerald-400 transition-all duration-300 rounded-full"
+                  style={{ width: `${(batchProgress / ORG_STRUCTURE.length) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Terminal Container Stream */}
+            <div className="space-y-1.5 bg-black/70 p-4 rounded-xl border border-white/10 font-mono text-xs max-h-60 overflow-y-auto">
+              <div className="text-neutral-500 text-[11px] pb-2 border-b border-white/5 flex items-center justify-between">
+                <span>Kernel Orchestration Stream</span>
+                <span className="text-emerald-400 flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full bg-emerald-400 ${isBatchDeploying ? "animate-pulse" : ""}`} />
+                  <span>{isBatchDeploying ? "Spinning up..." : "Cluster Live"}</span>
+                </span>
+              </div>
+              {batchLogs.map((log, idx) => (
+                <div key={idx} className="flex items-start text-[11px] leading-relaxed">
+                  <span className="text-neutral-600 mr-2 select-none">{idx + 1}</span>
+                  <span className={log.includes("OK") || log.includes("ready") ? "text-emerald-400 font-medium" : "text-neutral-300"}>
+                    {log}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+              <div className="text-xs text-neutral-400 font-mono">
+                {batchComplete ? (
+                  <span className="text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle2 size={14} />
+                    <span>All 10 containers healthy & active</span>
+                  </span>
+                ) : (
+                  <span>Estimated remaining time: ~4s</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {batchComplete && (
+                  <Link
+                    to="/workspace"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all shadow-md"
+                  >
+                    <Play size={12} fill="currentColor" />
+                    <span>Enter Control Plane</span>
+                  </Link>
+                )}
+                <button
+                  onClick={() => setShowBatchModal(false)}
+                  disabled={isBatchDeploying}
+                  className="px-4 py-2 rounded-xl border border-white/10 text-neutral-300 hover:text-white text-xs disabled:opacity-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,25 +10,18 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: "dist",
+    emptyOutDir: false,
+  },
   server: {
     port: 3000,
     host: "0.0.0.0",
-    watch: {
-      usePolling: true,
-      interval: 500,
-      ignored: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/.tmp/**"],
-    },
-    hmr: {
-      overlay: true,
-    },
     proxy: {
       "/api": {
-        target: "https://ai.hmz.one",
+        target: "http://localhost:5290",
         changeOrigin: true,
         secure: false,
-        headers: {
-          host: "ai.hmz.one",
-        },
       },
     },
   },

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { InfraAgent } from "../types/agent";
 import { SkillPoolModal } from "./SkillPoolModal";
 import { TokenAnalyticsModal } from "./TokenAnalyticsModal";
+import { BrowserCdpViewerModal } from "./BrowserCdpViewerModal";
 import { updateAgentActiveModel } from "../services/agentApi";
 import {
   Server,
@@ -13,6 +14,7 @@ import {
   ChevronDown,
   Check,
   BarChart3,
+  Globe,
 } from "lucide-react";
 
 interface AgentProfileHeaderProps {
@@ -32,6 +34,7 @@ const AVAILABLE_MODELS = [
 export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentProfileHeaderProps) {
   const [showSkillModal, setShowSkillModal] = useState<boolean>(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
+  const [showBrowserModal, setShowBrowserModal] = useState<boolean>(false);
   const [showModelDropdown, setShowModelDropdown] = useState<boolean>(false);
   const [switchingModel, setSwitchingModel] = useState<boolean>(false);
 
@@ -128,6 +131,16 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             </div>
           </div>
 
+          {/* Browser CDP Live Stream Viewer Button */}
+          <button
+            onClick={() => setShowBrowserModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 font-medium transition-colors cursor-pointer"
+            title="Inspect Agent Browser CDP Stream"
+          >
+            <Globe size={13} className="text-blue-400" />
+            <span>Browser</span>
+          </button>
+
           {/* Token Analytics Dashboard Button */}
           <button
             onClick={() => setShowAnalyticsModal(true)}
@@ -178,6 +191,14 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           ))}
         </div>
       </div>
+
+      {/* Browser CDP Live Stream Viewer Modal */}
+      {showBrowserModal && (
+        <BrowserCdpViewerModal
+          agentName={agent.name}
+          onClose={() => setShowBrowserModal(false)}
+        />
+      )}
 
       {/* Skill Pool Catalog Modal */}
       {showSkillModal && (
