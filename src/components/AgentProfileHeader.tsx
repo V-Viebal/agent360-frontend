@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { InfraAgent } from "../types/agent";
 import { SkillPoolModal } from "./SkillPoolModal";
+import { TokenAnalyticsModal } from "./TokenAnalyticsModal";
 import { updateAgentActiveModel } from "../services/agentApi";
 import {
   Server,
@@ -11,6 +12,7 @@ import {
   Sparkles,
   ChevronDown,
   Check,
+  BarChart3,
 } from "lucide-react";
 
 interface AgentProfileHeaderProps {
@@ -29,6 +31,7 @@ const AVAILABLE_MODELS = [
 
 export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentProfileHeaderProps) {
   const [showSkillModal, setShowSkillModal] = useState<boolean>(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
   const [showModelDropdown, setShowModelDropdown] = useState<boolean>(false);
   const [switchingModel, setSwitchingModel] = useState<boolean>(false);
 
@@ -125,6 +128,17 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             </div>
           </div>
 
+          {/* Token Analytics Dashboard Button */}
+          <button
+            onClick={() => setShowAnalyticsModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 font-medium transition-colors cursor-pointer"
+            title="View Token Usage & Metrics"
+          >
+            <BarChart3 size={13} className="text-amber-400" />
+            <span>Usage</span>
+          </button>
+
+          {/* Skills Catalog Button */}
           <button
             onClick={() => setShowSkillModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d86f4c]/15 hover:bg-[#d86f4c]/25 border border-[#d86f4c]/40 text-[#d86f4c] font-medium transition-colors cursor-pointer"
@@ -170,6 +184,13 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
         <SkillPoolModal
           agentName={agent.name}
           onClose={() => setShowSkillModal(false)}
+        />
+      )}
+
+      {/* Token Analytics Dashboard Modal */}
+      {showAnalyticsModal && (
+        <TokenAnalyticsModal
+          onClose={() => setShowAnalyticsModal(false)}
         />
       )}
     </header>
