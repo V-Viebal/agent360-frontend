@@ -25,7 +25,11 @@ import {
   fetchAgentChats,
   fetchChatMessages,
   fetchSkills,
+  fetchWorkspaceTree,
+  fetchWorkspaceFileContent,
+  WorkspaceTreeNode,
 } from "../services/agentApi";
+import { Folder, FileText, ChevronDown, RefreshCw, Menu, PanelRight, ChevronLeft } from "lucide-react";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 
 export function GrokBotWorkspace() {
@@ -47,6 +51,13 @@ export function GrokBotWorkspace() {
   const [showPollCard, setShowPollCard] = useState(true);
   const [customCallName, setCustomCallName] = useState("");
 
+  // Workspace Tree State
+  const [workspaceFiles, setWorkspaceFiles] = useState<WorkspaceTreeNode[]>([]);
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [isLoadingTree, setIsLoadingTree] = useState(false);
+
   // Input composer
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,6 +65,10 @@ export function GrokBotWorkspace() {
   // Search in left sidebar
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Mobile / Tablet Responsive Drawer States
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileRightPaneOpen, setMobileRightPaneOpen] = useState(false);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -64,7 +79,35 @@ export function GrokBotWorkspace() {
     scrollToBottom();
   }, [messages, showPollCard, isStreaming]);
 
+  useEffect(() => {
+    if (rightTab === "Library" && workspaceFiles.length === 0) {
+      loadWorkspaceTree();
+    }
+  }, [rightTab]);
+
   // Initial load from real backend
+  const loadWorkspaceTree = async () => {
+    setIsLoadingTree(true);
+    try {
+      const entries = await fetchWorkspaceTree();
+      setWorkspaceFiles(entries);
+    } finally {
+      setIsLoadingTree(false);
+    }
+  };
+
+  const handleSelectFile = async (node: WorkspaceTreeNode) => {
+    if (node.kind === "directory") return;
+    setSelectedFilePath(node.path);
+    setIsLoadingFile(true);
+    try {
+      const content = await fetchWorkspaceFileContent(node.path);
+      setFileContent(content);
+    } finally {
+      setIsLoadingFile(false);
+    }
+  };
+
   useEffect(() => {
     async function initData() {
       const [loadedAgents, loadedChats, loadedSkills] = await Promise.all([
@@ -94,10 +137,10 @@ export function GrokBotWorkspace() {
     let mounted = true;
     setIsLoadingMessages(true);
 
-    fetchChatMessages(selectedChatId).then((loadedMsgs) => {
+    fetchChatMessages(selectedChatId).then((loadedMsgs: any) => {
       if (!mounted) return;
       if (loadedMsgs.length > 0) {
-        setMessages(loadedMsgs);
+        setMessages(loadedMsgs: any);
         setShowPollCard(false);
       } else {
         const curAgent = agents.find((a) => a.id === selectedAgentId);
@@ -143,6 +186,7 @@ export function GrokBotWorkspace() {
   // Switch chat session
   const handleSelectChat = (chat: AgentSession) => {
     setSelectedChatId(chat.id);
+    setMobileSidebarOpen(false);
   };
 
   // New Chat session
@@ -270,11 +314,23 @@ export function GrokBotWorkspace() {
   );
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0c0c0e] text-[#e6e6e8] font-sans select-none antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#0c0c0e] text-[#e6e6e8] font-sans select-none antialiased relative">
       {/* ========================================================= */}
       {/* 1. LEFT SIDEBAR: Real Agents & Sessions from Backend */}
       {/* ========================================================= */}
-      <aside className="w-[280px] h-full flex flex-col border-r border-[#1e1e24] bg-[#0f0f13] shrink-0">
+      {/* Backdrop overlay for mobile */}
+      {(mobileSidebarOpen || mobileRightPaneOpen) && (
+        <div
+          onClick={() => {
+            setMobileSidebarOpen(false);
+            setMobileRightPaneOpen(false);
+          }}
+          className="fixed inset-0 bg-black/60 z-30 lg:hidden backdrop-blur-xs transition-opacity"
+        />
+      )}
+
+      {/* 1. LEFT SIDEBAR: Responsive Drawer on mobile / fixed width on desktop */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-[280px] h-full flex flex-col border-r border-[#1e1e24] bg-[#0f0f13] shrink-0 transition-transform duration-200 ease-in-out ${mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"}`}>
         {/* Top Controls: Search & New Chat icons */}
         <div className="p-3 border-b border-[#1c1c22] flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -402,17 +458,36 @@ export function GrokBotWorkspace() {
       {/* 2. CENTER AREA: Grok Bot Dialogue & Dynamic Poll Card */}
       {/* ========================================================= */}
       <main className="flex-1 flex flex-col h-full bg-[#0c0c0e] relative overflow-hidden">
-        {/* Top Centered Floating Pill */}
-        <div className="h-12 border-b border-[#1c1c22] flex items-center justify-center shrink-0 relative bg-[#0c0c0e]/80 backdrop-blur-md">
-          <div className="flex items-center gap-2 bg-[#181820] border border-[#2a2a34] px-3.5 py-1 rounded-full text-xs font-medium text-white shadow-sm">
+        {/* Top Centered Floating Pill with Mobile Toggle Buttons */}
+        <div className="h-12 border-b border-[#1c1c22] flex items-center justify-between px-3 shrink-0 relative bg-[#0c0c0e]/80 backdrop-blur-md">
+          {/* Left toggle button for mobile sidebar */}
+          <button
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden h-8 w-8 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer"
+            title="Toggle navigation sidebar"
+          >
+            <Menu size={16} />
+          </button>
+
+          {/* Centered agent pill */}
+          <div className="flex items-center gap-2 bg-[#181820] border border-[#2a2a34] px-3.5 py-1 rounded-full text-xs font-medium text-white shadow-sm mx-auto">
             <div className="h-3.5 w-3.5 rounded-full bg-white flex items-center justify-center">
               <div className="h-2 w-2 rounded-full bg-black flex items-center justify-center">
                 <div className="h-0.5 w-0.5 rounded-full bg-white" />
               </div>
             </div>
-            <span>{selectedAgent.name}</span>
-            <span className="text-[10px] font-mono text-neutral-500">({selectedAgent.node})</span>
+            <span className="truncate max-w-[120px] sm:max-w-none">{selectedAgent.name}</span>
+            <span className="text-[10px] font-mono text-neutral-500 hidden sm:inline">({selectedAgent.node})</span>
           </div>
+
+          {/* Right toggle button for mobile computer / telemetry pane */}
+          <button
+            onClick={() => setMobileRightPaneOpen(!mobileRightPaneOpen)}
+            className="xl:hidden h-8 w-8 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer"
+            title="Toggle details and computer pane"
+          >
+            <PanelRight size={16} />
+          </button>
         </div>
 
         {/* Messages Stream Area */}
@@ -586,12 +661,22 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       {/* 3. RIGHT PANE: Virtual Computer Screen & Live Skills */}
       {/* ========================================================= */}
-      <aside className="w-[300px] h-full flex flex-col border-l border-[#1e1e24] bg-[#0f0f13] shrink-0 select-none">
+      {/* 3. RIGHT PANE: Responsive Drawer on tablet/mobile / fixed on desktop */}
+      <aside className={`fixed xl:static inset-y-0 right-0 z-40 w-[300px] sm:w-[320px] h-full flex flex-col border-l border-[#1e1e24] bg-[#0f0f13] shrink-0 select-none transition-transform duration-200 ease-in-out ${mobileRightPaneOpen ? "translate-x-0 shadow-2xl" : "translate-x-full xl:translate-x-0"}`}>
         {/* Titlebar Window Controls */}
-        <div className="h-10 border-b border-[#1c1c22] flex items-center justify-end px-3 gap-3 text-neutral-400">
-          <button className="hover:text-white cursor-pointer"><Minus size={13} /></button>
-          <button className="hover:text-white cursor-pointer"><Square size={11} /></button>
-          <button className="hover:text-white cursor-pointer"><X size={13} /></button>
+        <div className="h-10 border-b border-[#1c1c22] flex items-center justify-between px-3 text-neutral-400">
+          <div className="text-[11px] font-mono text-neutral-500 xl:hidden">Agent Inspector</div>
+          <div className="flex items-center gap-3 ml-auto">
+            <button className="hover:text-white cursor-pointer hidden xl:inline-block"><Minus size={13} /></button>
+            <button className="hover:text-white cursor-pointer hidden xl:inline-block"><Square size={11} /></button>
+            <button
+              onClick={() => setMobileRightPaneOpen(false)}
+              className="hover:text-white cursor-pointer p-1"
+              title="Close panel"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Mascot & Name */}
@@ -688,12 +773,69 @@ export function GrokBotWorkspace() {
           )}
 
           {rightTab === "Library" && (
-            <div className="space-y-2 text-xs">
-              <div className="font-semibold text-white mb-2">Workspace History</div>
-              <div className="p-2.5 rounded-xl bg-[#16161e] border border-[#20202a] text-neutral-300 font-mono text-[11px]">
-                <div className="font-medium text-white">agent360-contracts.json</div>
-                <div className="text-[10px] text-neutral-500">v1.0.0 ratified</div>
+            <div className="space-y-3 text-xs flex flex-col h-full">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-white">Workspace Files ({workspaceFiles.length})</span>
+                <button
+                  onClick={loadWorkspaceTree}
+                  disabled={isLoadingTree}
+                  className="text-neutral-400 hover:text-white p-1 rounded hover:bg-[#1a1a22] transition-colors cursor-pointer"
+                  title="Refresh workspace tree"
+                >
+                  <RefreshCw size={12} className={isLoadingTree ? "animate-spin text-[#ff7a00]" : ""} />
+                </button>
               </div>
+
+              {/* File Tree List */}
+              <div className="bg-[#14141a] border border-[#1e1e26] rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 font-mono text-[11px]">
+                {isLoadingTree ? (
+                  <div className="text-center py-4 text-neutral-500">Loading tree...</div>
+                ) : workspaceFiles.length === 0 ? (
+                  <div className="text-center py-4 text-neutral-500">No files found</div>
+                ) : (
+                  workspaceFiles.map((node) => {
+                    const isSelected = selectedFilePath === node.path;
+                    return (
+                      <div
+                        key={node.path}
+                        onClick={() => handleSelectFile(node)}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${isSelected ? "bg-[#22222e] text-[#ff7a00] font-medium" : "text-neutral-300 hover:bg-[#1c1c24]"}`}
+                      >
+                        {node.kind === "directory" ? (
+                          <Folder size={13} className="text-amber-400 shrink-0" />
+                        ) : (
+                          <FileText size={13} className="text-neutral-400 shrink-0" />
+                        )}
+                        <span className="truncate flex-1">{node.name}</span>
+                        {node.size !== null && node.size !== undefined && (
+                          <span className="text-[9px] text-neutral-600">
+                            {Math.round(node.size / 1024)}k
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* File Preview Content */}
+              {selectedFilePath && (
+                <div className="flex-1 flex flex-col space-y-1 min-h-[140px]">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400">
+                    <span className="truncate max-w-[180px]">{selectedFilePath}</span>
+                    <span className="text-emerald-400">read-only ACL</span>
+                  </div>
+                  <div className="flex-1 bg-[#101014] border border-[#1c1c24] rounded-xl p-2.5 overflow-y-auto font-mono text-[10px] text-neutral-300 leading-relaxed whitespace-pre-wrap select-text max-h-52">
+                    {isLoadingFile ? (
+                      <span className="text-neutral-500">Reading content...</span>
+                    ) : fileContent !== null ? (
+                      fileContent
+                    ) : (
+                      <span className="text-neutral-600">Empty or binary file.</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

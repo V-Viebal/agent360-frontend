@@ -19,7 +19,6 @@ import {
   GitBranch,
   ExternalLink,
   Copy,
-  Check,
   Sparkles,
   ArrowRight,
 } from "lucide-react";
