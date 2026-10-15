@@ -1,3 +1,4 @@
+import { ConnectAppsModal } from "../components/ConnectAppsModal";
 import { useState, useRef, useEffect } from "react";
 import {
   Search,
@@ -69,6 +70,7 @@ export function GrokBotWorkspace() {
   // Mobile / Tablet Responsive Drawer States
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileRightPaneOpen, setMobileRightPaneOpen] = useState(false);
+  const [isConnectAppsOpen, setIsConnectAppsOpen] = useState(false);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -140,7 +142,7 @@ export function GrokBotWorkspace() {
     fetchChatMessages(selectedChatId).then((loadedMsgs: any) => {
       if (!mounted) return;
       if (loadedMsgs.length > 0) {
-        setMessages(loadedMsgs: any);
+        setMessages(loadedMsgs);
         setShowPollCard(false);
       } else {
         const curAgent = agents.find((a) => a.id === selectedAgentId);
@@ -444,7 +446,7 @@ export function GrokBotWorkspace() {
             </span>
           </div>
 
-          <button className="flex items-center gap-1.5 bg-[#1a1a22] hover:bg-[#242430] border border-[#2a2a34] px-2.5 py-1 rounded-full text-[11px] text-neutral-300 transition-colors cursor-pointer">
+          <button onClick={() => setIsConnectAppsOpen(true)} className="flex items-center gap-1.5 bg-[#1a1a22] hover:bg-[#242430] border border-[#2a2a34] px-2.5 py-1 rounded-full text-[11px] text-neutral-300 transition-colors cursor-pointer">
             <span>Connect apps</span>
             <div className="flex -space-x-1">
               <span className="h-3.5 w-3.5 rounded-full bg-red-500/80 inline-block text-[8px] text-center font-bold text-white">M</span>
@@ -840,6 +842,12 @@ export function GrokBotWorkspace() {
           )}
         </div>
       </aside>
+
+      {/* Connect Apps & Skills Overlay Modal matching reference screenshot */}
+      <ConnectAppsModal
+        isOpen={isConnectAppsOpen}
+        onClose={() => setIsConnectAppsOpen(false)}
+      />
     </div>
   );
 }
