@@ -1517,6 +1517,7 @@ export function GrokBotWorkspace() {
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
   const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
+  const [isTopologyModalOpen, setIsTopologyModalOpen] = useState(false);
   const [forkToast, setForkToast] = useState<string | null>(null);
   const [starredMsgIds, setStarredMsgIds] = useState<string[]>(() => {
     try {
@@ -2178,7 +2179,7 @@ export function GrokBotWorkspace() {
     const newChatId = `session-${timestamp.toString().slice(-6)}`;
     const newSession: AgentSession = {
       id: newChatId,
-      title: "New Dialogue",
+      title: "New Chat",
       updatedAt: "Just now",
       messageCount: 0,
       lastMessageSnippet: "Start a conversation...",
@@ -3286,18 +3287,14 @@ export function GrokBotWorkspace() {
               </div>
             </div>
           ) : messages.length === 0 ? (
-            /* Quick Suggestions for fresh New Chat session */
-            <div className="py-12 px-2 flex flex-col items-center justify-center text-center animate-in fade-in duration-300 max-w-xl mx-auto space-y-6">
-              <div className="space-y-2">
-                <div className="h-12 w-12 rounded-2xl bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-[#ff7a00] flex items-center justify-center mx-auto shadow-lg shadow-[#ff7a00]/5">
-                  <Sparkles size={24} />
-                </div>
-                <h3 className="text-base font-semibold text-white tracking-tight">
-                  How can {selectedAgent.name} help you today?
-                </h3>
-                <p className="text-xs text-neutral-400 font-sans max-w-sm mx-auto leading-relaxed">
-                  Autonomous AI teammate on <span className="text-neutral-200 font-mono">{selectedAgent.node}</span>. Pick a quick action or type any instruction below.
-                </p>
+            /* Quick Suggestions for fresh New Chat session: Lean, no greeting text or descriptions */
+            <div className="py-8 px-2 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-xl mx-auto w-full">
+              <div className="w-full flex items-center justify-between mb-3 px-1 text-xs text-neutral-400 font-mono">
+                <span className="flex items-center gap-1.5 text-neutral-300 font-medium">
+                  <Sparkles size={13} className="text-[#ff7a00]" />
+                  <span>Suggested Prompts</span>
+                </span>
+                <span className="text-[10px] text-neutral-500">Click to send immediately</span>
               </div>
 
               {/* Grid of 4 dynamic, agent-specific quick prompt suggestion cards */}
@@ -3325,9 +3322,6 @@ export function GrokBotWorkspace() {
                         <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100" />
                       </div>
                     </div>
-                    <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                      {item.desc}
-                    </p>
                   </button>
                 ))}
               </div>
@@ -3526,11 +3520,21 @@ export function GrokBotWorkspace() {
                 setShowScrollBottomBtn(false);
                 smoothScrollToBottom();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#181824]/95 border border-[#ff7a00]/40 text-[#ff7a00] hover:bg-[#ff7a00] hover:text-black font-mono text-[11px] shadow-xl hover:shadow-[0_0_15px_rgba(255,122,0,0.4)] transition-all cursor-pointer backdrop-blur-md"
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#181824]/95 border font-mono text-[11px] shadow-xl transition-all cursor-pointer backdrop-blur-md ${
+                isStreaming
+                  ? "border-[#ff7a00] text-white bg-[#221812]/95 shadow-[0_0_20px_rgba(255,122,0,0.5)] ring-1 ring-[#ff7a00]/60 animate-bounce"
+                  : "border-[#ff7a00]/40 text-[#ff7a00] hover:bg-[#ff7a00] hover:text-black hover:shadow-[0_0_15px_rgba(255,122,0,0.4)]"
+              }`}
               title="Jump to latest turn"
             >
-              <span>Scroll to latest</span>
-              <ChevronDown size={14} />
+              {isStreaming && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff7a00] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff7a00]" />
+                </span>
+              )}
+              <span>{isStreaming ? "New messages incoming..." : "Scroll to latest"}</span>
+              <ChevronDown size={14} className={isStreaming ? "animate-pulse text-[#ff7a00]" : ""} />
             </button>
           </div>
         )}
@@ -4933,6 +4937,14 @@ export function GrokBotWorkspace() {
         onRequestDone={() => {
           setVoiceError(null);
         }}
+      />
+
+      <A2ATopologyGraphModal
+        isOpen={isTopologyModalOpen}
+        onClose={() => setIsTopologyModalOpen(false)}
+        currentAgent={selectedAgent}
+        allAgents={agents}
+        onSelectAgent={handleSelectAgent}
       />
 
       <CommandPaletteModal
