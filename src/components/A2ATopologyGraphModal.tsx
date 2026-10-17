@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import {
   X,
@@ -39,6 +40,7 @@ export function A2ATopologyGraphModal({
   onSelectAgent,
   nodePingMs,
 }: A2ATopologyGraphModalProps) {
+  const { t } = useTranslation();
   const [selectedNodeId, setSelectedNodeId] = useState<string>(currentAgent.id);
   const [topologySearchQuery, setTopologySearchQuery] = useState<string>("");
   const [agentPings, setAgentPings] = useState<Record<string, number>>({});
@@ -240,13 +242,13 @@ export function A2ATopologyGraphModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-white">Live A2A Autonomous Topology Graph</h3>
+                <h3 className="text-sm font-semibold text-white">{t("topo.title")}</h3>
                 <span className="text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 px-2 py-0.2 rounded-full">
-                  Multi-Agent Network
+                  {t("topo.networkBadge")}
                 </span>
               </div>
               <p className="text-[11px] text-neutral-400">
-                Visual communication, real-time node latency, and cross-bot task delegation flow
+                {t("topo.subtitle")}
               </p>
             </div>
           </div>
@@ -297,7 +299,7 @@ export function A2ATopologyGraphModal({
               title="Refresh live ping latencies"
             >
               <RefreshCw size={11} className={isProbing ? "animate-spin text-cyan-400" : ""} />
-              <span className="hidden sm:inline">Refresh Ping</span>
+              <span className="hidden sm:inline">{t("topo.refresh")}</span>
             </button>
 
             {/* Export Benchmark Buttons */}
@@ -698,7 +700,7 @@ export function A2ATopologyGraphModal({
             onClick={onClose}
             className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
-            Close Graph
+            {t("topo.close")}
           </button>
         </div>
       </div>

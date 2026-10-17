@@ -370,17 +370,17 @@ export function LandingPage() {
               <div className="flex items-center justify-between text-[11px] text-neutral-400 border-b border-[var(--border-subtle)] pb-2 mb-2">
                 <span className="flex items-center gap-1.5 text-white">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] animate-pulse" />
-                  Task Decomposition Plan
+                  {t("plan.taskDecomp")}
                 </span>
-                <span className="text-emerald-400">Multi-Agent Protocol</span>
+                <span className="text-emerald-400">{t("plan.multiAgentProto")}</span>
               </div>
               <div className="space-y-1.5 text-[11px] text-neutral-300">
                 <div className="flex items-center gap-2">
-                  <span className="text-neutral-500">1. Orchestrator:</span>
-                  <span>Synthesizes intent & locks state receipts</span>
+                  <span className="text-neutral-500">{t("plan.orchestrator")}</span>
+                  <span>{t("plan.orchestratorDesc")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-neutral-500">2. Delegate:</span>
+                  <span className="text-neutral-500">{t("plan.delegate")}</span>
                   <span className="text-[#ff7a00]">
                     {heroTask.toLowerCase().includes("invoice") || heroTask.toLowerCase().includes("finance") || heroTask.toLowerCase().includes("tax") || heroTask.toLowerCase().includes("tt99")
                       ? "Financial Controller (ERPNext & Bank Feed)"
@@ -392,11 +392,11 @@ export function LandingPage() {
                       ? "HR & Talent Acquisition Partner"
                       : "Chief of Staff (Executive Director)"}
                   </span>
-                  <span className="text-neutral-500">{"->"} runs toolchain actions</span>
+                  <span className="text-neutral-500">{t("plan.delegateDesc")}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-neutral-500">3. Human Gate:</span>
-                  <span className="text-amber-400">Requires 1-click sign-off for critical writes</span>
+                  <span className="text-neutral-500">{t("plan.humanGate")}</span>
+                  <span className="text-amber-400">{t("plan.humanGateDesc")}</span>
                 </div>
               </div>
             </div>
@@ -586,19 +586,19 @@ export function LandingPage() {
                   <div className="h-5 w-5 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5 text-neutral-300">
                     <Check size={12} />
                   </div>
-                  <span>Continuous context retention across weeks of project iterations</span>
+                  <span>{t("interaction.bullet1")}</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5 text-neutral-300">
                     <Check size={12} />
                   </div>
-                  <span>Signs in to your apps (Zendesk, GitHub, Jira, Notion) automatically</span>
+                  <span>{t("interaction.bullet2")}</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="h-5 w-5 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5 text-neutral-300">
                     <Check size={12} />
                   </div>
-                  <span>Explicit human approval gates before critical production writes</span>
+                  <span>{t("interaction.bullet3")}</span>
                 </div>
               </div>
             </div>
@@ -611,7 +611,7 @@ export function LandingPage() {
                   <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
-                  <span className="ml-2 text-xs font-mono text-neutral-400">Skyer Bot // Task Execution #402</span>
+                  <span className="ml-2 text-xs font-mono text-neutral-400">{t("wb.taskHeader")}</span>
                 </div>
                 <span className="text-[10px] font-mono text-neutral-400 bg-white/[0.06] px-2 py-0.5 rounded">
                   Active
@@ -643,21 +643,21 @@ export function LandingPage() {
                     {/* Execution Steps */}
                     <div className="bg-[#090b10] border border-[var(--border-subtle)] rounded-lg p-3 space-y-2 font-mono text-[11px] text-neutral-300">
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-400">1. Financial Controller (ERPNext)</span>
-                        <span className="text-emerald-400">✓ 48/48 Invoices Reconciled ($0.00 discrepancy)</span>
+                        <span className="text-neutral-400">{t("wb.bot1Name")}</span>
+                        <span className="text-emerald-400">{t("wb.bot1Status")}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-400">2. Legal & Compliance Sentinel</span>
-                        <span className="text-emerald-400">✓ Vendor Terms Verified (TT99 Mẫu 02-VT)</span>
+                        <span className="text-neutral-400">{t("wb.bot2Name")}</span>
+                        <span className="text-emerald-400">{t("wb.bot2Status")}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-400">3. Chief of Staff</span>
-                        <span className="text-neutral-300">#42 Approval Memo staged on Leadership Deck</span>
+                        <span className="text-neutral-400">{t("wb.bot3Name")}</span>
+                        <span className="text-neutral-300">{t("wb.bot3Status")}</span>
                       </div>
                     </div>
 
                     <div className="pt-2 flex items-center justify-between text-xs font-mono text-neutral-400 border-t border-[var(--border-subtle)]">
-                      <span>Verification: 100% MATCHED (OBSERVED)</span>
+                      <span>{t("wb.verifObserved")}</span>
                       <Link to="/app" className="text-[#ff7a00] hover:underline flex items-center gap-1 font-sans font-medium text-xs">
                         Review Voucher Pack <ArrowRight size={11} />
                       </Link>
@@ -698,8 +698,8 @@ export function LandingPage() {
                 </p>
               </div>
               <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                <span>ERPNext General Ledger</span>
-                <span className="text-emerald-400">$0.00 discrepancy</span>
+                <span>{t("parallel.bot1FooterLeft")}</span>
+                <span className="text-emerald-400">{t("parallel.bot1FooterRight")}</span>
               </div>
             </div>
 
@@ -715,8 +715,8 @@ export function LandingPage() {
                 </p>
               </div>
               <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                <span>Zendesk & Intercom</span>
-                <span className="text-emerald-400">98.4% CSAT • &lt;25s reply</span>
+                <span>{t("parallel.bot2FooterLeft")}</span>
+                <span className="text-emerald-400">{t("parallel.bot2FooterRight")}</span>
               </div>
             </div>
 
@@ -732,8 +732,8 @@ export function LandingPage() {
                 </p>
               </div>
               <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                <span>HubSpot / CRM Pipeline</span>
-                <span className="text-emerald-400">42 qualified accounts</span>
+                <span>{t("parallel.bot3FooterLeft")}</span>
+                <span className="text-emerald-400">{t("parallel.bot3FooterRight")}</span>
               </div>
             </div>
           </div>
@@ -759,12 +759,12 @@ export function LandingPage() {
               </div>
 
               <div className="p-5 space-y-3 text-[11px] text-neutral-300">
-                <div className="text-neutral-500">// Skyer signs into Zendesk and works the support queue autonomously</div>
-                <div className="text-emerald-400">➜ Authenticating via stored OAuth session cookie... OK</div>
-                <div className="text-neutral-300">➜ Scanning unassigned triage queue: 8 customer tickets found</div>
-                <div className="text-neutral-300">➜ Analyzing stack traces & drafting verified solution replies...</div>
+                <div className="text-neutral-500">{t("vb.comment")}</div>
+                <div className="text-emerald-400">{t("vb.auth")}</div>
+                <div className="text-neutral-300">{t("vb.scan")}</div>
+                <div className="text-neutral-300">{t("vb.analyze")}</div>
                 <div className="p-3 bg-white/[0.03] border border-[var(--border-subtle)] rounded-lg text-neutral-200 font-sans text-xs">
-                  "All 8 customer tickets resolved with relevant runbook citations. Zero escalations required."
+                  {t("vb.summary")}
                 </div>
                 <div className="text-neutral-500 text-[10px] pt-1">
                   Session duration: 42s • Epistemic receipt stored in Outline KB
@@ -814,12 +814,12 @@ export function LandingPage() {
 
               <div className="bg-[#08090d] border border-[var(--border-subtle)] rounded-lg p-4 font-mono text-xs text-neutral-300 space-y-2">
                 <div className="flex items-center justify-between text-neutral-400 border-b border-[var(--border-subtle)] pb-2 text-[11px]">
-                  <span>Weekly Reporting Routine</span>
-                  <span className="text-[#ff7a00]">Watching & learning</span>
+                  <span>{t("routines.demoTitle")}</span>
+                  <span className="text-[#ff7a00]">{t("routines.demoStatus")}</span>
                 </div>
-                <div className="text-neutral-400 text-[11px]">Step 1: Pull Stripe MRR figures</div>
-                <div className="text-neutral-400 text-[11px]">Step 2: Generate PostHog active user cohort</div>
-                <div className="text-emerald-400 text-[11px] pt-1">✓ Routine created: Scheduled every Monday 9:00 AM</div>
+                <div className="text-neutral-400 text-[11px]">{t("routines.step1")}</div>
+                <div className="text-neutral-400 text-[11px]">{t("routines.step2")}</div>
+                <div className="text-emerald-400 text-[11px] pt-1">{t("routines.done")}</div>
               </div>
             </div>
 
@@ -868,20 +868,20 @@ export function LandingPage() {
           <div className="bg-[#090b10] border border-[var(--border-subtle)] rounded-xl p-5 sm:p-8 max-w-3xl mx-auto space-y-3 font-mono text-xs shadow-2xl">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] text-neutral-300">
               <span className="text-neutral-500 font-bold">01</span>
-              <strong className="text-white shrink-0">B2B Sales Bot:</strong>
-              <span className="text-neutral-400 truncate">"Identified 15 enterprise accounts with contract renewals this quarter."</span>
+              <strong className="text-white shrink-0">{t("collab.salesBot")}</strong>
+              <span className="text-neutral-400 truncate">{t("collab.salesMsg")}</span>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] text-neutral-300">
               <span className="text-neutral-500 font-bold">02</span>
-              <strong className="text-white shrink-0">Financial Controller:</strong>
-              <span className="text-neutral-400 truncate">"Audited custom payment schedule and gross margin model. 0 budget variance."</span>
+              <strong className="text-white shrink-0">{t("collab.finBot")}</strong>
+              <span className="text-neutral-400 truncate">{t("collab.finMsg")}</span>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] text-neutral-300">
               <span className="text-neutral-500 font-bold">03</span>
-              <strong className="text-white shrink-0">Chief of Staff:</strong>
-              <span className="text-neutral-400 truncate">"Executive proposal pack ready for CEO 1-click review & signature."</span>
+              <strong className="text-white shrink-0">{t("collab.chiefBot")}</strong>
+              <span className="text-neutral-400 truncate">{t("collab.chiefMsg")}</span>
             </div>
           </div>
         </div>
