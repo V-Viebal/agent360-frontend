@@ -1712,6 +1712,18 @@ export function GrokBotWorkspace() {
     );
   };
 
+  const handleToggleSelectAll = (chatList: AgentSession[]) => {
+    const listIds = chatList.map((c) => c.id);
+    const areAllSelected = listIds.length > 0 && listIds.every((id) => selectedChatIds.includes(id));
+    if (areAllSelected) {
+      // Deselect all in this list
+      setSelectedChatIds((prev) => prev.filter((id) => !listIds.includes(id)));
+    } else {
+      // Select all in this list
+      setSelectedChatIds((prev) => Array.from(new Set([...prev, ...listIds])));
+    }
+  };
+
   const handleBatchDeleteSelectedChats = () => {
     if (selectedChatIds.length === 0) return;
     setChats((prev) => prev.filter((c) => !selectedChatIds.includes(c.id)));
@@ -4543,6 +4555,44 @@ export function GrokBotWorkspace() {
                 Pinned ({pinnedChatIds.length})
               </button>
             </div>
+
+            {/* Select All / Batch Selection Bar */}
+            {filteredChats.length > 0 && (
+              <div className="px-3 py-1.5 flex items-center justify-between border-b border-[#1c1c24] text-[11px] font-mono select-none bg-[#101017]">
+                <div
+                  onClick={() => handleToggleSelectAll(filteredChats)}
+                  className="flex items-center gap-2 cursor-pointer group text-neutral-400 hover:text-white transition-colors"
+                  title="Chọn tất cả hoặc bỏ chọn tất cả phiên trong danh sách này"
+                >
+                  <div
+                    className={`h-4 w-4 rounded-md border flex items-center justify-center transition-all ${
+                      filteredChats.every((c) => selectedChatIds.includes(c.id))
+                        ? "bg-[#ff7a00] border-[#ff7a00] text-black shadow-xs"
+                        : filteredChats.some((c) => selectedChatIds.includes(c.id))
+                        ? "bg-[#ff7a00]/30 border-[#ff7a00] text-[#ff7a00]"
+                        : "border-[#303042] bg-[#161622] group-hover:border-[#ff7a00]/60"
+                    }`}
+                  >
+                    {filteredChats.every((c) => selectedChatIds.includes(c.id)) ? (
+                      <Check size={11} className="stroke-[3]" />
+                    ) : filteredChats.some((c) => selectedChatIds.includes(c.id)) ? (
+                      <div className="h-1.5 w-1.5 rounded-xs bg-[#ff7a00]" />
+                    ) : null}
+                  </div>
+                  <span className="font-sans font-medium text-xs text-neutral-300 group-hover:text-white">
+                    {filteredChats.every((c) => selectedChatIds.includes(c.id))
+                      ? "Bỏ chọn tất cả"
+                      : "Chọn tất cả (Select All)"}
+                  </span>
+                </div>
+
+                {selectedChatIds.length > 0 && (
+                  <span className="text-[10px] text-[#ff7a00] font-semibold bg-[#ff7a00]/10 px-1.5 py-0.5 rounded">
+                    Đã chọn {selectedChatIds.length}/{filteredChats.length}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Conversation list */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
