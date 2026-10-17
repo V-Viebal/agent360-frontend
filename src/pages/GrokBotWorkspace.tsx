@@ -2220,7 +2220,7 @@ export function GrokBotWorkspace() {
   <div class="card">
     <span class="badge">Skyer Verifiable Execution Receipt</span>
     <h1>Autonomous Task Delivery Audit</h1>
-    <p><strong>Agent:</strong> ${selectedAgent.name} (@${selectedAgent.slug}) | <strong>Node:</strong> ${selectedAgent.node} | <strong>Model:</strong> ${selectedAgent.model}</p>
+    <p><strong>Agent:</strong> ${selectedAgent.name} (@${selectedAgent.slug}) | <strong>Node:</strong> ${selectedAgent.node} | <strong>Model:</strong> ${selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</p>
     <p><strong>Session ID:</strong> <code>${selectedChatId}</code> | <strong>Generated At:</strong> ${dateStr}</p>
     <p><strong>Constitution Mandate:</strong> Enforced & Verified Pass (Zero Unverified Assumptions).</p>
   </div>
@@ -2259,7 +2259,7 @@ export function GrokBotWorkspace() {
     const header = `# Skyer Agent Session Export: ${selectedAgent.name}\n` +
       `- **Agent:** ${selectedAgent.name} (@${selectedAgent.slug})\n` +
       `- **Node:** ${selectedAgent.node}\n` +
-      `- **Model:** ${selectedAgent.model}\n` +
+      `- **Model:** ${selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}\n` +
       `- **Session ID:** ${selectedChatId}\n` +
       `- **Exported At:** ${new Date().toISOString()}\n\n---\n\n`;
 
@@ -3463,7 +3463,7 @@ export function GrokBotWorkspace() {
                   <span className="text-emerald-400">{selectedAgent.status || "active"}</span>
                 </div>
                 <span className="text-neutral-400">{selectedAgent.node}</span>
-                <span className="text-neutral-500 text-[9px]">{selectedAgent.model}</span>
+                <span className="text-neutral-500 text-[9px]">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
               </div>
             </div>
 
@@ -3473,6 +3473,10 @@ export function GrokBotWorkspace() {
           </div>
 
           {/* Right action group: Command Palette + Audio Chime + Conversation drawer toggle */}
+          <div className="flex items-center gap-1">
+            <ThemeSelector />
+            <LanguageSelector />
+          </div>
           <button aria-label="Command Palette (Ctrl+K / Cmd+K)"
             type="button"
             onClick={() => setIsCommandPaletteOpen(true)}

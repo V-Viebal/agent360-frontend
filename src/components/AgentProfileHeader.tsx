@@ -24,11 +24,12 @@ interface AgentProfileHeaderProps {
 }
 
 const AVAILABLE_MODELS = [
-  { providerId: "llm360coding", model: "skyer-4.7", label: "Skyer 4.7 (llm360)" },
-  { providerId: "llm360coding", model: "skyer-4.6", label: "Skyer 4.6 (llm360)" },
-  { providerId: "llm360coding", model: "gpt-5.6-luna", label: "GPT-5.6 Luna" },
-  { providerId: "llm360", model: "claude-3-7-sonnet", label: "Claude 3.7 Sonnet" },
-  { providerId: "llm360", model: "qwen2.5-coder-32b", label: "Qwen 2.5 Coder 32B" },
+  { providerId: "llm360coding", model: "grok-4.7", label: "grok-4.7" },
+  { providerId: "llm360coding", model: "gpt-5.6-luna", label: "gpt-5.6-luna" },
+  { providerId: "llm360coding", model: "gpt-6-sol", label: "gpt-6-sol" },
+  { providerId: "llm360coding", model: "grok-4.6", label: "grok-4.6" },
+  { providerId: "llm360", model: "claude-opus-4.6-thinking", label: "claude-opus-4.6-thinking" },
+  { providerId: "llm360", model: "gemini-3.7-flash-tiered", label: "gemini-3.7-flash-tiered" },
 ];
 
 export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentProfileHeaderProps) {

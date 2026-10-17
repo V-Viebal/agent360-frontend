@@ -1,3 +1,12 @@
+export function cleanModelDisplayName(rawModel: string): string {
+  if (!rawModel) return "";
+  let m = rawModel.trim();
+  if (m.includes("/")) {
+    m = m.split("/").pop()!;
+  }
+  return m;
+}
+
 import { InfraAgent, AgentSession, ChatMessage } from "../types/agent";
 
 const API_BASE_URL = "/api";
@@ -47,7 +56,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         node: displayNode,
         instanceId: instanceKey,
         status: a.status || (a.startup_status === "running" ? "active" : "idle"),
-        model: (typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna",
+        model: cleanModelDisplayName((typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna"),
         runtimeVersion: a.runtimeVersion || "Skyer v2.2",
         uptime: a.uptime || "Online (Private)",
         memoryUsageMb: a.memoryUsageMb || 256,
