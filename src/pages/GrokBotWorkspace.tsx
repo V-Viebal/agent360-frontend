@@ -1252,6 +1252,7 @@ export function GrokBotWorkspace() {
     const node = (a.node || "").toLowerCase();
     const desc = (a.description || "").toLowerCase();
 
+    if (node === selectedInstance) return true;
     if (selectedInstance === "node-6th") {
       return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe") || id.includes("vision");
     }
@@ -1268,12 +1269,12 @@ export function GrokBotWorkspace() {
       return node.includes("2nd") || node.includes("llm") || id.includes("zen");
     }
     if (selectedInstance === "node-1st") {
-      return node.includes("1st") || node.includes("api.antares");
+      return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
     }
     if (selectedInstance === "node-5th") {
       return node.includes("5th") || node.includes("storage");
     }
-    return true;
+    return false;
   });
 
   const filteredChats = chats
@@ -1335,31 +1336,26 @@ export function GrokBotWorkspace() {
               value={selectedInstance}
               onChange={(val) => {
                 setSelectedInstance(val);
-                // If currently selected agent is not in the filtered view, switch to first matching agent
-                setTimeout(() => {
-                  setAgents((currentAgents) => {
-                    const nextFiltered = currentAgents.filter((a) => {
-                      if (val === "all") return true;
-                      const id = a.id.toLowerCase();
-                      const node = (a.node || "").toLowerCase();
-                      if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe") || id.includes("vision");
-                      if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa") || id === "bot:agent360:default";
-                      if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
-                      if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre") || id.includes("researcher");
-                      if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
-                      if (val === "node-1st") return node.includes("1st") || node.includes("api.antares");
-                      if (val === "node-5th") return node.includes("5th") || node.includes("storage");
-                      return true;
-                    });
-                    if (nextFiltered.length > 0) {
-                      const stillExists = nextFiltered.some(a => a.id === selectedAgentId);
-                      if (!stillExists) {
-                        handleSelectAgent(nextFiltered[0]);
-                      }
-                    }
-                    return currentAgents;
-                  });
-                }, 0);
+                const nextMatching = agents.filter((a) => {
+                  if (val === "all") return true;
+                  const id = a.id.toLowerCase();
+                  const node = (a.node || "").toLowerCase();
+                  if (node === val) return true;
+                  if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
+                  if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
+                  if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
+                  if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
+                  if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
+                  if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
+                  if (val === "node-5th") return node.includes("5th") || node.includes("storage");
+                  return false;
+                });
+                if (nextMatching.length > 0) {
+                  const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
+                  if (!alreadySelected) {
+                    handleSelectAgent(nextMatching[0]);
+                  }
+                }
               }}
               options={INFRA_INSTANCES}
               triggerClassName="px-2 py-1 text-[11px] font-mono text-[#ff7a00]"

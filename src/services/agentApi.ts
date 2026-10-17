@@ -15,24 +15,21 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
     // Filter to load only enabled agents (handling both backend DTO and direct QwenPaw schema)
     const enabledOnly = rawList.filter((a: any) => a.enabled !== false && a.startup_status !== 'disabled');
     return enabledOnly.map((a: any) => {
-      // Preserve explicit backend node if provided, else detect from agent attributes
-      let nodeStr = a.node || (a.workspace_dir ? a.workspace_dir.split("/").pop() : "");
       const idStr = (a.id || "").toLowerCase();
       const slugStr = (a.slug || "").toLowerCase();
+      let nodeStr = a.node || "";
 
-      // If backend gave a generic or workspace path, enhance with exact infra node placement
-      if (!nodeStr || nodeStr === "Private System" || nodeStr === idStr) {
-        if (idStr.includes("mons") || idStr.includes("swe") || idStr.includes("gm") || idStr.includes("vision")) {
-          nodeStr = "6th (ai-gm.antares.vn)";
-        } else if (idStr.includes("ken") || idStr.includes("sre") || idStr.includes("control")) {
-          nodeStr = "7th (control.hmz.one)";
-        } else if (idStr.includes("mkai") || idStr.includes("browser")) {
-          nodeStr = "4th (browser.hmz.one)";
-        } else if (idStr.includes("zen") || idStr.includes("llm") || idStr.includes("storage")) {
-          nodeStr = "2nd (api-agent360.antares.vn)";
-        } else {
-          nodeStr = "3rd (ai.hmz.one)";
-        }
+      // Ensure exact infra node assignment across all instances
+      if (idStr.includes("mons") || slugStr.includes("mons") || idStr.includes("swe") || idStr.includes("vision")) {
+        nodeStr = "node-6th";
+      } else if (idStr.includes("ken") || slugStr.includes("ken") || idStr.includes("sre") || idStr.includes("control")) {
+        nodeStr = "node-7th";
+      } else if (idStr.includes("mkai") || slugStr.includes("mkai") || idStr.includes("browser")) {
+        nodeStr = "node-4th";
+      } else if (idStr.includes("zen") || slugStr.includes("zen") || idStr.includes("llm")) {
+        nodeStr = "node-2nd";
+      } else {
+        nodeStr = "node-3rd";
       }
 
       return {
