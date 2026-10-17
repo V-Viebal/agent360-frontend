@@ -18,6 +18,16 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: false,
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-icons": ["lucide-react"],
+          "vendor-motion": ["motion/react"],
+        },
+      },
+    },
   },
   server: {
     port: 3000,

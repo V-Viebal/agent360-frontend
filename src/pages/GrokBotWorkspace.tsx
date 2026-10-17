@@ -2850,8 +2850,8 @@ export function GrokBotWorkspace() {
           /* COLLAPSED VIEW: Minimal Rail Showing Only Avatar & State */
           /* ========================================================= */
           <>
-            {/* Collapsed Header: Expand Trigger */}
-            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center shrink-0 bg-[var(--bg-sidebar)]">
+            {/* Collapsed Header: Expand Trigger & A2A Topology Icon */}
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center gap-1 shrink-0 bg-[var(--bg-sidebar)] px-1">
               <button
                 aria-label="Expand Agents Sidebar"
                 data-ux-target-min="24"
@@ -2860,6 +2860,15 @@ export function GrokBotWorkspace() {
                 title="Expand Agents Sidebar (Ctrl+B)"
               >
                 <PanelLeftOpen size={16} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors" />
+              </button>
+              <button
+                aria-label="Sơ đồ phối hợp A2A (Ctrl+G)"
+                type="button"
+                onClick={() => setIsTopologyModalOpen(true)}
+                className="h-8 w-8 rounded-xl bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer shadow-xs"
+                title="Sơ đồ phối hợp giữa các đồng đội A2A (Ctrl+G)"
+              >
+                <Network size={15} />
               </button>
             </div>
 
@@ -3076,6 +3085,38 @@ export function GrokBotWorkspace() {
                   <X size={14} />
                 </button>
               </div>
+            </div>
+
+            {/* A2A Team Network & Collaboration Overview Button */}
+            <div className="p-2 border-b border-neutral-200 dark:border-[#1c1c22]">
+              <button
+                type="button"
+                onClick={() => setIsTopologyModalOpen(true)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500/10 via-[#161a24] to-[#121218] hover:from-cyan-500/20 hover:to-[#1a1f2c] border border-cyan-500/25 hover:border-cyan-400/50 text-left transition-all cursor-pointer group shadow-xs"
+                title="Xem mạng lưới liên kết & phối hợp công việc giữa các đồng đội (Ctrl + G)"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-6 w-6 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform shrink-0">
+                    <Network size={13} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-white group-hover:text-cyan-300 transition-colors truncate">
+                        Sơ đồ Phối hợp A2A
+                      </span>
+                      <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 shrink-0">
+                        Team Net
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 truncate">
+                      {agents.length} đồng đội • Độ trễ liên node
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-neutral-500 group-hover:text-cyan-400 transition-colors shrink-0">
+                  Ctrl+G ↗
+                </span>
+              </button>
             </div>
 
             {/* Search Agents */}
@@ -3430,16 +3471,7 @@ export function GrokBotWorkspace() {
             >
               <MessageSquare size={16} />
             </button>
-            {/* Live A2A Multi-Agent Topology Graph Trigger */}
-            <button
-              type="button"
-              onClick={() => setIsTopologyModalOpen(true)}
-              className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] flex items-center gap-1.5 text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors text-xs font-mono"
-              title="Open Live A2A Multi-Agent Topology Graph"
-            >
-              <Network size={14} className="text-cyan-400" />
-              <span className="hidden md:inline text-[11px] text-neutral-300">Topology</span>
-            </button>
+
 
             <button aria-label="Search within conversation" data-ux-target-min="24"
               type="button"
