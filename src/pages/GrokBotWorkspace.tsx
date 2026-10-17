@@ -1165,6 +1165,17 @@ export function GrokBotWorkspace() {
   );
   const [isCompactMode, setIsCompactMode] = useState<boolean>(isInitialCompact);
 
+  // Update compact mode dynamically on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (new URLSearchParams(window.location.search).get('compact') !== '1') {
+        setIsCompactMode(window.innerWidth < 1024);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Resizable layout column widths with localStorage persistence
   const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(() => {
     try {
@@ -1390,6 +1401,8 @@ export function GrokBotWorkspace() {
   const recognitionBaseTextRef = useRef<string>("");
   const isContinuousVoiceActiveRef = useRef<boolean>(false);
   const autoRestartVoiceAfterSpeechRef = useRef<boolean>(false);
+  const audioEnergyLevelRef = useRef<number>(0);
+  const speechDetectedOnceRef = useRef<boolean>(false);
   const silenceTimerRef = useRef<any>(null);
   const autoSendOnSilenceRef = useRef<boolean>(true);
   const vadModeRef = useRef<"continuous" | "manual" | "push_to_talk">("continuous");
@@ -1464,10 +1477,20 @@ export function GrokBotWorkspace() {
 
       recognition.onstart = () => {
         isContinuousVoiceActiveRef.current = true;
+        speechDetectedOnceRef.current = false;
         setIsRecording(true);
         setVoiceError(null);
         // Anchor the baseline text when recording starts so interim chunks do not duplicate
         recognitionBaseTextRef.current = inputText.trim();
+
+        // Safety fallback: if no speech is detected after 10 seconds of opening mic, auto-close mic
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          if (!speechDetectedOnceRef.current && isContinuousVoiceActiveRef.current) {
+            console.log("[VAD] No speech detected in initial 10s, pausing mic...");
+            stopVoiceRecording(true);
+          }
+        }, 10000);
       };
 
       recognition.onresult = (event: any) => {
@@ -1487,6 +1510,7 @@ export function GrokBotWorkspace() {
         const currentSpoken = (finalTranscript + (interimTranscript ? " " + interimTranscript : "")).trim();
         
         if (currentSpoken) {
+          speechDetectedOnceRef.current = true;
           const fullText = base ? `${base} ${currentSpoken}` : currentSpoken;
           setInputText(fullText);
 
@@ -1498,6 +1522,22 @@ export function GrokBotWorkspace() {
           // In continuous or push_to_talk mode, automatically stop and submit when user finishes speaking
           if (autoSendOnSilenceRef.current && vadModeRef.current !== "manual") {
             silenceTimerRef.current = setTimeout(() => {
+              // Dual-signal verification: check if acoustic energy has subsided below conversational threshold
+              if (audioEnergyLevelRef.current > 18) {
+                // User is still vocalizing or trailing off; grant grace window
+                console.log("[VAD] Acoustic energy still active (" + audioEnergyLevelRef.current + "%), extending silence window...");
+                silenceTimerRef.current = setTimeout(() => {
+                  stopVoiceRecording();
+                  setTimeout(() => {
+                    const form = composerFormRef.current;
+                    if (form) {
+                      form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                    }
+                  }, 250);
+                }, 800);
+                return;
+              }
+
               stopVoiceRecording();
               setTimeout(() => {
                 const form = composerFormRef.current;
@@ -2885,7 +2925,7 @@ export function GrokBotWorkspace() {
               <div
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] hover:border-[#ff7a00] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative"
-                title="Dang M (System Owner) - Account & Options"
+                title="Dang M (System Owner) - Account & Cài đặt"
               >
                 DM
                 <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-[#0c0c0e]" />
@@ -2899,6 +2939,27 @@ export function GrokBotWorkspace() {
                     <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
                   </div>
                   <div className="space-y-0.5">
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsSettingsModalOpen(true);
+                      }}
+                      className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors border border-transparent hover:border-[#ff7a00]/30"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded-md bg-[#ff7a00]/20 text-[#ff7a00]">
+                          <Settings size={14} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-white">Cài đặt Workspace</span>
+                          <span className="text-[10px] text-neutral-400">Giao diện, Tiếng nói, Âm thanh</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.5 rounded">
+                        Mở
+                      </span>
+                    </div>
+                    <div className="h-px bg-[#222230] my-1" />
                     <div
                       onClick={() => {
                         setIsUserMenuOpen(false);
@@ -3345,184 +3406,6 @@ export function GrokBotWorkspace() {
             <span className="text-[11px]">Ctrl+K</span>
           </button>
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="hidden sm:flex items-center gap-1">
-              <ThemeSelector />
-              <LanguageSelector />
-              <button
-                type="button"
-                onClick={() => setIsSettingsModalOpen(true)}
-                className="p-2 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-500/10 transition-colors cursor-pointer flex items-center justify-center"
-                title="Cài đặt Workspace & Hệ thống (Settings)"
-                aria-label="Open Workspace Settings"
-              >
-                <Settings size={15} />
-              </button>
-            </div>
-            <div ref={soundMenuRef} className="relative">
-              <button aria-label="Configure audio chime and presets"
-                type="button"
-                onClick={() => setIsSoundMenuOpen((prev) => !prev)}
-                className={`h-8 px-2 rounded-lg border flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer ${
-                  isSoundEnabled
-                    ? "bg-[#181820] hover:bg-[#22222e] border-[#242430] text-[#ff7a00]"
-                    : "bg-[#14141a] hover:bg-[#1a1a22] border-[#202028] text-neutral-500"
-                }`}
-                title="Configure audio chime and presets"
-              >
-                {isSoundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                <ChevronDown size={11} className={`transition-transform duration-200 ${isSoundMenuOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {isSoundMenuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-64 rounded-xl bg-[#14141c] border border-[#2a2a38] p-2 shadow-2xl backdrop-blur-md z-50 animate-in fade-in zoom-in-95 duration-100">
-                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#22222e]">
-                    <span className="text-[11px] font-semibold text-white">Audio Notification</span>
-                    <button data-ux-target-min="24"
-                      type="button"
-                      onClick={() => {
-                        const next = !isSoundEnabled;
-                        setIsSoundEnabled(next);
-                        try {
-                          localStorage.setItem("agent360_sound_enabled", next ? "true" : "false");
-                        } catch {}
-                      }}
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                        isSoundEnabled
-                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                          : "bg-white/5 border-white/10 text-neutral-400"
-                      }`}
-                    >
-                      {isSoundEnabled ? "Enabled" : "Muted"}
-                    </button>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono text-neutral-400 px-1 uppercase tracking-wider block">
-                      Sound Presets
-                    </span>
-                    {SOUND_PRESETS.map((p) => {
-                      const isSelected = p.id === soundPreset;
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => {
-                            setSoundPreset(p.id);
-                            setIsSoundEnabled(true);
-                            playNotificationChime(p.id);
-                            try {
-                              localStorage.setItem("agent360_sound_preset", p.id);
-                              localStorage.setItem("agent360_sound_enabled", "true");
-                            } catch {}
-                          }}
-                          className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                            isSelected
-                              ? "bg-[#222230] text-[#ff7a00] border border-[#ff7a00]/30"
-                              : "hover:bg-[#1a1a24] text-neutral-300"
-                          }`}
-                        >
-                          <div className="flex flex-col min-w-0 pr-2">
-                            <span className="text-xs font-medium truncate">{p.name}</span>
-                            <span className="text-[10px] text-neutral-500 truncate">{p.description}</span>
-                          </div>
-                          <button aria-label="Preview sound" data-ux-target-min="24"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              playNotificationChime(p.id);
-                            }}
-                            className="h-6 w-6 rounded hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white shrink-0"
-                            title="Preview sound"
-                          >
-                            <Volume2 size={12} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Speech Voice Settings: Rate & Pitch */}
-                  <div className="pt-2 mt-2 border-t border-[#22222e] space-y-2">
-                    <span className="text-[10px] font-mono text-neutral-400 px-1 uppercase tracking-wider block">
-                      Voice Dynamics (TTS)
-                    </span>
-                    {/* System Voice Selection */}
-                    <div className="px-1 space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-neutral-300">
-                        <span>Voice Accent:</span>
-                        <span className="font-mono text-[#ff7a00] text-[10px]">
-                          {systemVoices.find(v => v.voiceURI === selectedVoiceURI)?.lang || "Auto"}
-                        </span>
-                      </div>
-                      <select data-ux-target-min="16"
-                        value={selectedVoiceURI}
-                        onChange={(e) => {
-                          const uri = e.target.value;
-                          setSelectedVoiceURI(uri);
-                          saveStoredSpeechSettings({ voiceURI: uri });
-                        }}
-                        className="w-full bg-[#181822] text-xs text-neutral-200 border border-[#2a2a38] rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#ff7a00] cursor-pointer"
-                      >
-                        <option value="">Auto-Detect (Vietnamese / English)</option>
-                        {systemVoices.map((v) => (
-                          <option key={v.voiceURI} value={v.voiceURI}>
-                            {v.name} ({v.lang})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="px-1 space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-neutral-300">
-                        <span>Speed:</span>
-                        <span className="font-mono text-[#ff7a00] text-[10px]">{speechRate.toFixed(2)}x</span>
-                      </div>
-                      <input data-ux-target-min="16"
-                        type="range"
-                        min="0.8"
-                        max="1.5"
-                        step="0.05"
-                        value={speechRate}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          setSpeechRate(val);
-                          saveStoredSpeechSettings({ rate: val });
-                        }}
-                        className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
-                      />
-                    </div>
-                    <div className="px-1 space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-neutral-300">
-                        <span>Pitch:</span>
-                        <span className="font-mono text-[#ff7a00] text-[10px]">{speechPitch.toFixed(2)}</span>
-                      </div>
-                      <input data-ux-target-min="16"
-                        type="range"
-                        min="0.7"
-                        max="1.4"
-                        step="0.05"
-                        value={speechPitch}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          setSpeechPitch(val);
-                          saveStoredSpeechSettings({ pitch: val });
-                        }}
-                        className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
-                      />
-                    </div>
-                    <button data-ux-target-min="24"
-                      type="button"
-                      onClick={() => {
-                        speakText("Tốc độ và cao độ giọng nói đã được hiệu chỉnh.", {
-                          rate: speechRate,
-                          pitch: speechPitch
-                        });
-                      }}
-                      className="w-full py-1 text-[10px] font-mono rounded bg-[#1c1c26] hover:bg-[#252534] text-neutral-300 hover:text-white border border-[#2a2a38] transition-colors cursor-pointer mt-1"
-                    >
-                      ▶ Test Voice Dynamics
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
 
             <button aria-label={isChatListCollapsed ? "Expand Conversations list" : "Collapse Conversations list"} data-ux-target-min="24"
               onClick={() => {
@@ -3726,7 +3609,7 @@ export function GrokBotWorkspace() {
                 >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
-                    <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-[#ff7a00] text-white dark:bg-[#1c1c26] dark:text-neutral-100 rounded-br-xs shadow-sm font-sans border border-[#ff7a00]/30 dark:border-[#2c2c3e] ml-auto overflow-hidden break-words">
+                    <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-[#1e293b] text-white dark:bg-[#1c1c26] dark:text-neutral-100 rounded-br-xs shadow-sm font-sans border border-slate-700/50 dark:border-[#2c2c3e] ml-auto overflow-hidden break-words">
                       <p className="whitespace-pre-wrap select-text break-words break-all">{msg.content}</p>
                     </div>
                   ) : (
@@ -4251,7 +4134,7 @@ export function GrokBotWorkspace() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingFile}
-              className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-0.5 shrink-0"
+              className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer p-0.5 shrink-0"
               title="Add file to message (images, scripts, docs)"
             >
               {isUploadingFile ? (
@@ -4310,13 +4193,18 @@ export function GrokBotWorkspace() {
                 maxTokens={128000}
                 className="compact-trigger"
               />
-              <AudioVisualizerWaveform isRecording={isRecording} />
+              <AudioVisualizerWaveform
+                isRecording={isRecording}
+                onAudioLevel={(lvl) => {
+                  audioEnergyLevelRef.current = lvl;
+                }}
+              />
 
               {/* Keyboard Shortcuts Cheat Sheet Button */}
               <button
                 type="button"
                 onClick={() => setIsKeyboardShortcutsOpen(true)}
-                className="hidden sm:flex p-1 rounded-full hover:text-white hover:bg-black/10 dark:hover:bg-white/10 text-neutral-400 cursor-pointer transition-colors"
+                className="hidden sm:flex p-1 rounded-full hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 cursor-pointer transition-colors"
                 title="Keyboard Shortcuts Cheat Sheet (Ctrl+/)"
               >
                 <Command size={15} />
@@ -4326,7 +4214,7 @@ export function GrokBotWorkspace() {
               <button
                 type="button"
                 onClick={toggleSttLang}
-                className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1e1e28] hover:bg-[#28283a] text-neutral-300 hover:text-white border border-[#2a2a38] transition-colors cursor-pointer select-none"
+                className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-200 dark:bg-[#1e1e28] hover:bg-neutral-300 dark:hover:bg-[#28283a] text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-300 dark:border-[#2a2a38] transition-colors cursor-pointer select-none"
                 title={`Current voice input language: ${sttLang === "vi-VN" ? "Tiếng Việt (vi-VN)" : "English (en-US)"}. Click to switch.`}
               >
                 {sttLang === "vi-VN" ? "VI" : "EN"}
@@ -4357,7 +4245,7 @@ export function GrokBotWorkspace() {
                 className={`p-1 rounded-full cursor-pointer transition-all ${
                   isRecording
                     ? "bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30"
-                    : "hover:text-white hover:bg-white/10 text-neutral-400"
+                    : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
                 }`}
                 title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
               >
@@ -4386,7 +4274,7 @@ export function GrokBotWorkspace() {
               <button
                 type="submit"
                 disabled={!inputText.trim() && attachedFiles.length === 0}
-                className="hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/5 text-neutral-400"
+                className="hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400"
                 title={isStreaming ? "Add to request queue" : "Send Message"}
                 aria-label={isStreaming ? "Add to request queue" : "Send Message"}
               >

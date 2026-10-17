@@ -21,6 +21,14 @@ import {
 import { useTheme, ThemeMode } from "../context/ThemeContext";
 import { useTranslation, LanguageSelection } from "../i18n/LanguageContext";
 import { SOUND_PRESETS, SoundPreset, playNotificationChime } from "../services/notificationService";
+import {
+  getStoredSpeechSettings,
+  saveStoredSpeechSettings,
+  getAvailableVoices,
+  speakText,
+  stopSpeaking,
+} from "../services/speechService";
+import { Sliders, RefreshCw, Play, Square, Bell, Mic } from "lucide-react";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -59,6 +67,33 @@ export function SettingsModal({
   const { language, selection, setLanguageSelection, detectedTimezone, t } = useTranslation();
 
   // Sound preset state
+  // Notification Sound & Speech Synthesis state
+  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("agent360_sound_enabled") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const [speechRate, setSpeechRate] = useState<number>(() => getStoredSpeechSettings().rate);
+  const [speechPitch, setSpeechPitch] = useState<number>(() => getStoredSpeechSettings().pitch);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState<string>(() => getStoredSpeechSettings().voiceURI || "");
+  const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isTestingSpeech, setIsTestingSpeech] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const voices = getAvailableVoices();
+      setSystemVoices(voices);
+      const handleVoices = () => setSystemVoices(getAvailableVoices());
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.addEventListener("voiceschanged", handleVoices);
+        return () => window.speechSynthesis.removeEventListener("voiceschanged", handleVoices);
+      }
+    }
+  }, [isOpen]);
+
   const [selectedPreset, setSelectedPreset] = useState<SoundPreset>(() => {
     try {
       return (localStorage.getItem("agent360_sound_preset") as SoundPreset) || "modern";
@@ -296,61 +331,231 @@ export function SettingsModal({
               </div>
             )}
 
-            {/* 3. AUDIO TAB */}
+            {/* 3. AUDIO TAB: Sound Chimes & TTS Voice Dynamics Studio */}
             {activeTab === "audio" && (
-              <div className="space-y-4 animate-in fade-in duration-150">
-                <div>
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Chuông báo khi đồng đội hoàn thành việc
-                  </h4>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Bật tiếng chuông nhẹ nhàng để biết ngay khi bạn đồng đội AI trả lời xong
-                  </p>
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* 3A. Sound Notification Switch & Presets */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-[#222230]">
+                    <div>
+                      <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <Bell size={14} className="text-[#ff7a00]" />
+                        <span>Chuông thông báo (Audio Chime)</span>
+                      </h4>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        Báo âm thanh khi Agent hoàn tất tác vụ hoặc có session mới
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !isSoundEnabled;
+                        setIsSoundEnabled(next);
+                        try {
+                          localStorage.setItem("agent360_sound_enabled", next ? "true" : "false");
+                        } catch {}
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-mono font-medium border transition-all cursor-pointer ${
+                        isSoundEnabled
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                          : "bg-white/5 border-white/10 text-neutral-400"
+                      }`}
+                    >
+                      {isSoundEnabled ? "Đang bật (Enabled)" : "Tắt tiếng (Muted)"}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {SOUND_PRESETS.map((preset) => {
+                      const isSelected = selectedPreset === preset.id;
+                      return (
+                        <div
+                          key={preset.id}
+                          onClick={() => handleSelectPreset(preset.id as SoundPreset)}
+                          className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                            isSelected
+                              ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-xs"
+                              : "bg-[#181822] border-[#262634] text-neutral-300 hover:border-[#38384c]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 pr-1">
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-neutral-400"}`}>
+                              <Volume2 size={14} />
+                            </div>
+                            <div className="min-w-0 truncate">
+                              <div className="text-xs font-semibold text-white truncate">{preset.name}</div>
+                              <div className="text-[10px] text-neutral-400 truncate">{preset.description}</div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playNotificationChime(preset.id as SoundPreset);
+                              }}
+                              className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-[10px] font-mono transition-colors"
+                              title="Nghe thử"
+                            >
+                              Thử
+                            </button>
+                            {isSelected && (
+                              <div className="h-4 w-4 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
+                                <Check size={10} className="stroke-[3]" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  {SOUND_PRESETS.map((preset) => {
-                    const isSelected = selectedPreset === preset.id;
-                    return (
-                      <div
-                        key={preset.id}
-                        onClick={() => handleSelectPreset(preset.id as SoundPreset)}
-                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                          isSelected
-                            ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white"
-                            : "bg-[#181822] border-[#262634] text-neutral-300 hover:border-[#38384c]"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-1.5 rounded-lg ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-neutral-400"}`}>
-                            <Volume2 size={15} />
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold text-white">{preset.name}</div>
-                            <div className="text-[10px] text-neutral-400">{preset.description}</div>
-                          </div>
-                        </div>
+                {/* 3B. Voice Dynamics (Text-to-Speech Synthesis Studio) */}
+                <div className="space-y-4 pt-4 border-t border-[#222230]">
+                  <div>
+                    <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <Mic size={14} className="text-cyan-400" />
+                      <span>Giọng đọc trợ lý (Voice Dynamics & TTS)</span>
+                    </h4>
+                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                      Hiệu chỉnh tốc độ, cao độ và chọn chất giọng tiếng Việt / tiếng Anh đọc to phản hồi
+                    </p>
+                  </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              playNotificationChime(preset.id as SoundPreset);
-                            }}
-                            className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-[11px] font-mono transition-colors"
-                          >
-                            Nghe thử chuông
-                          </button>
-                          {isSelected && (
-                            <div className="h-5 w-5 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
-                              <Check size={12} className="stroke-[3]" />
-                            </div>
-                          )}
-                        </div>
+                  {/* System Voice Selection */}
+                  <div className="space-y-1.5 p-3 rounded-xl bg-[#181822] border border-[#262634]">
+                    <div className="flex items-center justify-between text-xs text-neutral-300">
+                      <span className="font-medium">Chất giọng hệ thống:</span>
+                      <span className="font-mono text-[#ff7a00] text-[11px]">
+                        {systemVoices.find(v => v.voiceURI === selectedVoiceURI)?.lang || "Tự động nhận diện"}
+                      </span>
+                    </div>
+                    <select
+                      value={selectedVoiceURI}
+                      onChange={(e) => {
+                        const uri = e.target.value;
+                        setSelectedVoiceURI(uri);
+                        saveStoredSpeechSettings({ voiceURI: uri });
+                      }}
+                      className="w-full bg-[#121218] text-xs text-neutral-200 border border-[#2a2a3c] rounded-lg px-2.5 py-2 focus:outline-none focus:border-[#ff7a00] cursor-pointer"
+                    >
+                      <option value="">Tự động nhận diện (Tiếng Việt & English)</option>
+                      {systemVoices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {v.name} ({v.lang})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Sliders for Rate & Pitch */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Speed Slider */}
+                    <div className="p-3 rounded-xl bg-[#181822] border border-[#262634] space-y-2">
+                      <div className="flex items-center justify-between text-xs text-neutral-300">
+                        <span className="font-medium">Tốc độ đọc (Speed):</span>
+                        <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechRate.toFixed(2)}x</span>
                       </div>
-                    );
-                  })}
+                      <input
+                        type="range"
+                        min="0.8"
+                        max="1.5"
+                        step="0.05"
+                        value={speechRate}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setSpeechRate(val);
+                          saveStoredSpeechSettings({ rate: val });
+                        }}
+                        className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] font-mono text-neutral-500">
+                        <span>0.8x (Chậm)</span>
+                        <span>1.0x (Chuẩn)</span>
+                        <span>1.5x (Nhanh)</span>
+                      </div>
+                    </div>
+
+                    {/* Pitch Slider */}
+                    <div className="p-3 rounded-xl bg-[#181822] border border-[#262634] space-y-2">
+                      <div className="flex items-center justify-between text-xs text-neutral-300">
+                        <span className="font-medium">Cao độ giọng (Pitch):</span>
+                        <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechPitch.toFixed(2)}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.7"
+                        max="1.4"
+                        step="0.05"
+                        value={speechPitch}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setSpeechPitch(val);
+                          saveStoredSpeechSettings({ pitch: val });
+                        }}
+                        className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] font-mono text-neutral-500">
+                        <span>0.7 (Trầm)</span>
+                        <span>1.0 (Tự nhiên)</span>
+                        <span>1.4 (Thanh)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Audition Button */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isTestingSpeech) {
+                          stopSpeaking();
+                          setIsTestingSpeech(false);
+                        } else {
+                          setIsTestingSpeech(true);
+                          speakText("Xin chào, tốc độ và cao độ giọng nói đã được hiệu chỉnh chính xác theo cài đặt của bạn.", {
+                            rate: speechRate,
+                            pitch: speechPitch,
+                            voiceURI: selectedVoiceURI,
+                            onEnd: () => setIsTestingSpeech(false),
+                            onError: () => setIsTestingSpeech(false),
+                          });
+                        }
+                      }}
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                        isTestingSpeech
+                          ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-sm"
+                          : "bg-[#1e1e2c] hover:bg-[#28283a] border-[#2e2e42] text-white hover:border-[#ff7a00]/40"
+                      }`}
+                    >
+                      {isTestingSpeech ? (
+                        <>
+                          <Square size={13} className="fill-red-400" />
+                          <span>Dừng nghe thử</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play size={13} className="text-[#ff7a00] fill-[#ff7a00]" />
+                          <span>Nghe thử mẫu giọng nói tiếng Việt</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSpeechRate(1.05);
+                        setSpeechPitch(1.0);
+                        setSelectedVoiceURI("");
+                        saveStoredSpeechSettings({ rate: 1.05, pitch: 1.0, voiceURI: "" });
+                      }}
+                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer"
+                      title="Khôi phục mặc định"
+                    >
+                      Mặc định
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
