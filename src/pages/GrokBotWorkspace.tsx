@@ -59,6 +59,9 @@ import {
   ChevronDown,
   Shield,
   Star,
+  Settings,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
 import {
@@ -89,6 +92,7 @@ import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_P
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
 import { CustomSelect, StatusBadge, IconButton, SearchInput } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
+import { SettingsModal } from "../components/SettingsModal";
 import { PermissionsModal } from "../components/PermissionsModal";
 import { OnboardingChecklistWidget, recordMilestone } from "../components/OnboardingChecklistWidget";
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
@@ -969,6 +973,7 @@ export function GrokBotWorkspace() {
   });
   const [isSoundMenuOpen, setIsSoundMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
   const [turnTelemetry, setTurnTelemetry] = useState<TurnTelemetry | null>(null);
@@ -1208,6 +1213,27 @@ export function GrokBotWorkspace() {
   }, [isResizingLeft, isResizingRight]);
 
   // Collapse states per user request with localStorage persistence
+  // 0. isLeftSidebarCollapsed: collapsible left sidebar showing only avatars & status
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
+    if (isInitialCompact) return false;
+    try {
+      const saved = localStorage.getItem("agent360_left_sidebar_collapsed");
+      return saved !== null ? saved === "true" : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleLeftSidebar = (collapse?: boolean) => {
+    setIsLeftSidebarCollapsed((prev) => {
+      const next = collapse !== undefined ? collapse : !prev;
+      try {
+        localStorage.setItem("agent360_left_sidebar_collapsed", next ? "true" : "false");
+      } catch {}
+      return next;
+    });
+  };
+
   // 1. isChatListCollapsed: collapse bar for conversation list
   const [isChatListCollapsed, setIsChatListCollapsed] = useState<boolean>(() => {
     if (isInitialCompact) return true;
@@ -1256,12 +1282,23 @@ export function GrokBotWorkspace() {
       if (e.data && e.data.type === 'AGENT360_SET_MODE') {
         const compact = Boolean(e.data.compact);
         setIsCompactMode(compact);
+        setIsLeftSidebarCollapsed(compact);
         setIsChatListCollapsed(compact);
         setIsBotInfoCollapsed(compact);
       }
     };
+    const handleResize = () => {
+      const isSmall = window.innerWidth < 1024;
+      const isUrlCompact = new URLSearchParams(window.location.search).get('compact') === '1';
+      setIsCompactMode(isUrlCompact || isSmall);
+    };
+
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Chat messages state
@@ -1289,6 +1326,7 @@ export function GrokBotWorkspace() {
 
   // Workspace Tree State
   const [workspaceFiles, setWorkspaceFiles] = useState<WorkspaceTreeNode[]>([]);
+  const [librarySearchQuery, setLibrarySearchQuery] = useState("");
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
@@ -2266,6 +2304,13 @@ export function GrokBotWorkspace() {
         return;
       }
 
+      // 1b. Fast Toggle Left Sidebar (Ctrl+B or Cmd+B)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        handleToggleLeftSidebar();
+        return;
+      }
+
       // 2. Fast New Dialogue Shortcut (Ctrl+Shift+O or Ctrl+Shift+N)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === "o" || e.key.toLowerCase() === "n")) {
         e.preventDefault();
@@ -2656,354 +2701,469 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <aside
         id="tour-agent-selector"
-        style={{ width: !isCompactMode && typeof window !== "undefined" && window.innerWidth >= 1024 ? `${leftSidebarWidth}px` : undefined }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 w-[85vw] max-w-[380px] h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform relative ${
+        style={{
+          width:
+            !isCompactMode && typeof window !== "undefined" && window.innerWidth >= 1024
+              ? (isLeftSidebarCollapsed ? "64px" : `${leftSidebarWidth}px`)
+              : undefined,
+        }}
+        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform relative ${
           mobileAgentsOpen
-            ? "translate-x-0 shadow-2xl"
+            ? "w-[85vw] max-w-[380px] translate-x-0 shadow-2xl"
             : isCompactMode
-            ? "-translate-x-full invisible"
-            : "-translate-x-full max-lg:invisible lg:translate-x-0"
+            ? "w-[85vw] max-w-[380px] -translate-x-full invisible"
+            : isLeftSidebarCollapsed
+            ? "w-[85vw] max-w-[380px] lg:w-[64px] -translate-x-full max-lg:invisible lg:translate-x-0"
+            : "w-[85vw] max-w-[380px] -translate-x-full max-lg:invisible lg:translate-x-0"
         }`}
         aria-hidden={!mobileAgentsOpen && isCompactMode ? true : undefined}
       >
-        {/* Header */}
-        <div className="h-12 px-3 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between gap-1.5 min-w-0 shrink-0 bg-[var(--bg-sidebar)]">
-          <a aria-label="Return to Skyer Home" href="/" className="hover:opacity-90 transition-opacity shrink-0" title="Return to Skyer Home">
-            <SkyerLogo size={24} showText={true} showBotBadge={false} />
-          </a>
-          <div className="flex items-center gap-1 min-w-0 max-w-[130px] sm:max-w-[140px]">
-            <CustomSelect
-              value={selectedInstance}
-              onChange={(val) => {
-                setSelectedInstance(val);
-                const nextMatching = agents.filter((a) => {
-                  if (val === "all") return true;
-                  if (a.instanceId) return a.instanceId === val;
-                  const id = a.id.toLowerCase();
-                  const node = (a.node || "").toLowerCase();
-                  if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
-                  if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
-                  if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
-                  if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
-                  if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
-                  if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
-                  if (val === "node-5th") return node.includes("5th") || node.includes("storage");
-                  return false;
-                });
-                if (nextMatching.length > 0) {
-                  const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
-                  if (!alreadySelected) {
-                    handleSelectAgent(nextMatching[0]);
-                  }
-                }
-              }}
-              options={INFRA_INSTANCES}
-              className="min-w-0 w-full"
-              triggerClassName="px-2 py-1 text-[11px] font-mono text-[#ff7a00] w-full"
-            />
-            <button aria-label="Close drawer" data-ux-target-min="24"
-              onClick={() => setMobileAgentsOpen(false)}
-              className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white"
-              title="Close drawer"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Search Agents */}
-        <div className="p-2 border-b border-[#1c1c22]">
-          <SearchInput
-            value={agentSearchQuery}
-            onChange={setAgentSearchQuery}
-            placeholder="Filter agents..."
-          />
-        </div>
-
-        {/* Agents List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {isLoadingAgents ? (
-            <div className="space-y-2 p-1">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="w-full p-2.5 rounded-xl border border-white/[0.04] bg-[#14141c]/50 flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl skeleton-shimmer shrink-0" />
-                  <div className="flex-1 space-y-1.5 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="h-3.5 w-24 rounded skeleton-shimmer" />
-                      <div className="h-2.5 w-12 rounded skeleton-shimmer" />
-                    </div>
-                    <div className="h-2.5 w-36 rounded skeleton-shimmer" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              {filteredAgents.map((ag, index) => {
-            const isSelected = ag.id === selectedAgentId;
-            return (
-              <div
-                key={ag.id}
-                style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
-                onClick={() => handleSelectAgent(ag)}
-                className={`w-full p-2.5 rounded-xl text-left flex items-center gap-3 transition-colors cursor-pointer border animate-fade-in-stagger ${
-                  isSelected
-                    ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs"
-                    : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
-                }`}
+        {isLeftSidebarCollapsed && !mobileAgentsOpen ? (
+          /* ========================================================= */
+          /* COLLAPSED VIEW: Minimal Rail Showing Only Avatar & State */
+          /* ========================================================= */
+          <>
+            {/* Collapsed Header: Expand Trigger */}
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center shrink-0 bg-[var(--bg-sidebar)]">
+              <button
+                aria-label="Expand Agents Sidebar"
+                data-ux-target-min="24"
+                onClick={() => handleToggleLeftSidebar(false)}
+                className="h-8 w-8 rounded-xl bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 flex items-center justify-center text-neutral-300 hover:text-white transition-all cursor-pointer shadow-xs group"
+                title="Expand Agents Sidebar (Ctrl+B)"
               >
-                {/* Dedicated Agent Identity Avatar */}
-                <div className="relative shrink-0">
-                  <AgentAvatar agent={ag} size="md" />
-                  {isSelected && (
-                    <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#ff7a00] border border-[#0c0c0e]" />
-                  )}
+                <PanelLeftOpen size={16} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors" />
+              </button>
+            </div>
+
+            {/* Collapsed Agents List */}
+            <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-2 flex flex-col items-center scrollbar-none">
+              {isLoadingAgents ? (
+                <div className="space-y-2.5 p-1 w-full flex flex-col items-center">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="h-9 w-9 rounded-xl skeleton-shimmer shrink-0" />
+                  ))}
                 </div>
+              ) : (
+                <>
+                  {filteredAgents.map((ag) => {
+                    const isSelected = ag.id === selectedAgentId;
+                    const hasError = ag.status === "degraded";
+                    const unreadList = unreadCompletedSessions[ag.id] || [];
+                    const hasUnreadCompleted = unreadList.length > 0;
 
-                {/* Agent Details: Lean typography with rich status tooltip */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-medium text-neutral-900 dark:text-white truncate block">
-                      {ag.name}
-                    </span>
-                    <div className="relative group shrink-0">
-                      {(() => {
-                        const hasError = ag.status === "degraded";
-                        const unreadList = unreadCompletedSessions[ag.id] || [];
-                        const hasUnreadCompleted = unreadList.length > 0;
+                    return (
+                      <button
+                        key={ag.id}
+                        aria-label={ag.name}
+                        data-ux-target-min="24"
+                        onClick={() => handleSelectAgent(ag)}
+                        className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer border group shrink-0 ${
+                          isSelected
+                            ? "bg-[#1c1c26] border-[#ff7a00] shadow-sm shadow-[#ff7a00]/25"
+                            : "border-transparent hover:bg-[#161620] hover:border-[#2a2a38]"
+                        }`}
+                                                title={`${ag.name}\n${ag.roleTag || "Agent"} • ${ag.status || "active"}\n${ag.node} • ${ag.model}${hasUnreadCompleted ? ` (Có ${unreadList.length} session chưa xem)` : ""}${hasError ? " (Degraded)" : ""}`}
+                      >
+                        {/* Dedicated Agent Identity Avatar */}
+                        <div className="relative shrink-0">
+                          <AgentAvatar agent={ag} size="md" />
 
-                        // Lean State: Chỉ báo ĐỎ khi lỗi, chỉ báo XANH khi có việc chạy xong chưa xem, còn lại im lặng (neutral chìm)
-                        return (
-                          <span className="inline-flex items-center justify-center p-1 rounded-full hover:bg-white/10 transition-colors cursor-help">
-                            {hasError ? (
-                              <span
-                                className="h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-                                title="Agent gặp sự cố hạ tầng hoặc cần can thiệp"
-                              />
-                            ) : hasUnreadCompleted ? (
-                              <span
-                                className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                                title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
-                              />
-                            ) : (
-                              <span
-                                className="h-1.5 w-1.5 rounded-full bg-neutral-600/40"
-                                title="Idle / Sẵn sàng"
-                              />
-                            )}
-                          </span>
-                        );
-                      })()}
-                      {/* Rich Tooltip displaying role, node & model */}
-                      <div className="pointer-events-none absolute right-0 bottom-full mb-1.5 hidden group-hover:flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-[#161622] border border-[#2a2a3c] text-[10px] font-mono shadow-xl z-30 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-neutral-200">
-                          <span className="text-[#ff7a00] font-semibold">{ag.roleTag || "Agent"}</span>
-                          <span>•</span>
-                          <span className="text-emerald-400">{ag.status || "active"}</span>
+                          {/* Lean State: ĐỎ khi sự cố, XANH khi xong việc chưa đọc, CAM khi selected */}
+                          {hasError ? (
+                            <span
+                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[#0c0c0e] animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.9)]"
+                            />
+                          ) : hasUnreadCompleted ? (
+                            <span
+                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                            />
+                          ) : isSelected ? (
+                            <span
+                              className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-[#ff7a00] ring-2 ring-[#0c0c0e]"
+                            />
+                          ) : (
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-neutral-600/40 group-hover:bg-neutral-400 transition-colors"
+                            />
+                          )}
                         </div>
-                        <span className="text-neutral-400">{ag.node}</span>
-                        <span className="text-neutral-500 text-[9px]">{ag.model}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-neutral-500 truncate block mt-0.5">
-                    {ag.model}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </div>
 
-              {filteredAgents.length === 0 && (
-                <div className="p-6 text-center text-xs text-neutral-500 font-mono">
-                  No agents matching query.
+            {/* Collapsed Bottom Profile Bar */}
+            <div ref={userMenuRef} className="p-2 border-t border-[#1c1c22] flex flex-col items-center relative select-none shrink-0">
+              <div
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] hover:border-[#ff7a00] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative"
+                title="Dang M (System Owner) - Account & Options"
+              >
+                DM
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-[#0c0c0e]" />
+              </div>
+
+              {/* User Profile Dropdown Menu in Collapsed State */}
+              {isUserMenuOpen && (
+                <div className="absolute bottom-2 left-[calc(100%+8px)] w-64 rounded-2xl bg-[#14141c]/95 border border-[#2e2e42] p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 z-50">
+                  <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
+                    <div className="text-xs font-semibold text-white">Dang M</div>
+                    <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsSettingsModalOpen(true);
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Settings size={13} className="text-[#ff7a00]" />
+                        <span>Cài đặt & Tuỳ chọn</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#ff7a00]">Settings</span>
+                    </div>
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        handleToggleBotInfo(false);
+                        setRightTab("Apps");
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                    >
+                      <span>Connected Apps</span>
+                      <span className="text-[10px] font-mono text-neutral-500">{connectedAppIds.length} apps</span>
+                    </div>
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        handleToggleBotInfo(false);
+                        setRightTab("Details");
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                    >
+                      <span>Fleet Diagnostics</span>
+                      <span className="text-[10px] font-mono text-emerald-400">Healthy</span>
+                    </div>
+                    <a
+                      href="https://community-agent360.antares.vn"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Community Forum</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-neutral-500 group-hover:text-[#ff7a00]">↗</span>
+                    </a>
+                  </div>
                 </div>
               )}
-            </>
-          )}
-        </div>
-
-        {/* Bottom Profile Bar with User Dropdown */}
-        <div ref={userMenuRef} className="p-3 border-t border-[#1c1c22] relative select-none">
-          <div
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0">
-                DM
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-xs text-neutral-200 font-medium truncate">Dang M</span>
-                <span className="text-[10px] font-mono text-neutral-500 truncate">System Owner</span>
+            </div>
+          </>
+        ) : (
+          /* ========================================================= */
+          /* EXPANDED VIEW: Full Agent List with Selector & Details   */
+          /* ========================================================= */
+          <>
+            {/* Header */}
+            <div className="h-12 px-3 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between gap-1.5 min-w-0 shrink-0 bg-[var(--bg-sidebar)]">
+              <a aria-label="Return to Skyer Home" href="/" className="hover:opacity-90 transition-opacity shrink-0" title="Return to Skyer Home">
+                <SkyerLogo size={24} showText={true} showBotBadge={false} />
+              </a>
+              <div className="flex items-center gap-1 min-w-0 max-w-[130px] sm:max-w-[140px]">
+                <CustomSelect
+                  value={selectedInstance}
+                  onChange={(val) => {
+                    setSelectedInstance(val);
+                    const nextMatching = agents.filter((a) => {
+                      if (val === "all") return true;
+                      if (a.instanceId) return a.instanceId === val;
+                      const id = a.id.toLowerCase();
+                      const node = (a.node || "").toLowerCase();
+                      if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
+                      if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
+                      if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
+                      if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
+                      if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
+                      if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
+                      if (val === "node-5th") return node.includes("5th") || node.includes("storage");
+                      return false;
+                    });
+                    if (nextMatching.length > 0) {
+                      const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
+                      if (!alreadySelected) {
+                        handleSelectAgent(nextMatching[0]);
+                      }
+                    }
+                  }}
+                  options={INFRA_INSTANCES}
+                  className="min-w-0 w-full"
+                  triggerClassName="px-2 py-1 text-[11px] font-mono text-[#ff7a00] w-full"
+                />
+                {/* Collapse trigger button on desktop */}
+                <button
+                  aria-label="Collapse Agents Sidebar"
+                  data-ux-target-min="24"
+                  onClick={() => handleToggleLeftSidebar(true)}
+                  className="hidden lg:flex h-7 w-7 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                  title="Collapse Agents Sidebar (Ctrl+B)"
+                >
+                  <PanelLeftClose size={14} />
+                </button>
+                {/* Close drawer button on mobile */}
+                <button
+                  aria-label="Close drawer"
+                  data-ux-target-min="24"
+                  onClick={() => setMobileAgentsOpen(false)}
+                  className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white shrink-0"
+                  title="Close drawer"
+                >
+                  <X size={14} />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Quick hardware permission status indicators */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsPermissionsModalOpen(true);
-                }}
-                className="flex items-center gap-1 p-1 rounded-lg hover:bg-[#20202c] text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                title="Browser Hardware & Sandbox Permissions (Click to manage)"
-              >
-                <ShieldCheck size={13} className="text-[#ff7a00]" />
-              </button>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Online</span>
-              </div>
-              <ChevronDown
-                size={12}
-                className={`text-neutral-400 transition-transform duration-200 ${isUserMenuOpen ? "rotate-180" : ""}`}
+
+            {/* Search Agents */}
+            <div className="p-2 border-b border-[#1c1c22]">
+              <SearchInput
+                value={agentSearchQuery}
+                onChange={setAgentSearchQuery}
+                placeholder="Filter agents..."
               />
             </div>
-          </div>
 
-          {/* User Profile Dropdown Menu */}
-          {isUserMenuOpen && (
-            <div className="absolute bottom-[calc(100%+8px)] left-2 right-2 rounded-2xl bg-[#14141c]/95 border border-[#2e2e42] p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 z-50">
-              <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
-                <div className="text-xs font-semibold text-white">Dang M</div>
-                <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
-              </div>
-              <div className="space-y-0.5">
-                <a
-                  href="https://community-agent360.antares.vn"
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => setIsUserMenuOpen(false)}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Community Forum</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-neutral-500 group-hover:text-[#ff7a00]">
-                    ↗
-                  </span>
-                </a>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    handleToggleBotInfo(false);
-                    setRightTab("Apps");
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span>Connected Apps</span>
-                  <span className="text-[10px] font-mono text-neutral-500">{connectedAppIds.length} apps</span>
+            {/* Agents List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {isLoadingAgents ? (
+                <div className="space-y-2 p-1">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="w-full p-2.5 rounded-xl border border-white/[0.04] bg-[#14141c]/50 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl skeleton-shimmer shrink-0" />
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div className="h-3.5 w-24 rounded skeleton-shimmer" />
+                          <div className="h-2.5 w-12 rounded skeleton-shimmer" />
+                        </div>
+                        <div className="h-2.5 w-36 rounded skeleton-shimmer" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    handleToggleBotInfo(false);
-                    setRightTab("Details");
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span>Fleet Diagnostics</span>
-                  <span className="text-[10px] font-mono text-emerald-400">Healthy</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    startOnboardingTour({ force: true });
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span>Interactive App Tour</span>
-                  <span className="text-[10px] font-mono text-[#ff7a00]">Guide</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    try {
-                      localStorage.removeItem("agent360_onboarding_checklist_dismissed");
-                      window.dispatchEvent(new CustomEvent("agent360_milestone_updated"));
-                    } catch {}
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span>Getting Started Checklist</span>
-                  <span className="text-[10px] font-mono text-amber-400">Checklist</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    setIsPermissionsModalOpen(true);
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span>Hardware & Permissions</span>
-                  <span className="text-[10px] font-mono text-[#ff7a00]">Manage</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    handleExportSessionMarkdown();
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Download size={12} className="text-[#ff7a00]" />
-                    <span>Export Session (MD)</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-neutral-500">Markdown</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    handleExportSessionJson();
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <FileText size={12} className="text-cyan-400" />
-                    <span>Export Audit Trail (JSON)</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-cyan-400">JSON</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    handleExportAuditCertificate();
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Shield size={12} className="text-emerald-400" />
-                    <span>Audit Certificate (HTML)</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-400">Verified</span>
-                </div>
-                <div
-                  onClick={() => {
-                    setIsUserMenuOpen(false);
-                    handleInstallPWA();
-                  }}
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <Layers size={12} className="text-[#ff7a00]" />
-                    <span>Install Skyer App</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-neutral-500">PWA</span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  {filteredAgents.map((ag, index) => {
+                    const isSelected = ag.id === selectedAgentId;
+                    return (
+                      <div
+                        key={ag.id}
+                        style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
+                        onClick={() => handleSelectAgent(ag)}
+                        className={`w-full p-2.5 rounded-xl text-left flex items-center gap-3 transition-colors cursor-pointer border animate-fade-in-stagger ${
+                          isSelected
+                            ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs"
+                            : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
+                        }`}
+                      >
+                        {/* Dedicated Agent Identity Avatar */}
+                        <div className="relative shrink-0">
+                          <AgentAvatar agent={ag} size="md" />
+                          {isSelected && (
+                            <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#ff7a00] border border-[#0c0c0e]" />
+                          )}
+                        </div>
+
+                        {/* Agent Details: Lean typography with rich status tooltip */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-medium text-neutral-900 dark:text-white truncate block">
+                              {ag.name}
+                            </span>
+                            <div className="relative group shrink-0">
+                              {(() => {
+                                const hasError = ag.status === "degraded";
+                                const unreadList = unreadCompletedSessions[ag.id] || [];
+                                const hasUnreadCompleted = unreadList.length > 0;
+
+                                // Lean State: Chỉ báo ĐỎ khi lỗi, chỉ báo XANH khi có việc chạy xong chưa xem, còn lại im lặng (neutral chìm)
+                                return (
+                                  <span className="inline-flex items-center justify-center p-1 rounded-full hover:bg-white/10 transition-colors cursor-help">
+                                    {hasError ? (
+                                      <span
+                                        className="h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+                                        title="Agent gặp sự cố hạ tầng hoặc cần can thiệp"
+                                      />
+                                    ) : hasUnreadCompleted ? (
+                                      <span
+                                        className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                                        title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
+                                      />
+                                    ) : (
+                                      <span
+                                        className="h-1.5 w-1.5 rounded-full bg-neutral-600/40"
+                                        title="Idle / Sẵn sàng"
+                                      />
+                                    )}
+                                  </span>
+                                );
+                              })()}
+                              {/* Rich Tooltip displaying role, node & model */}
+                              <div className="pointer-events-none absolute right-0 bottom-full mb-1.5 hidden group-hover:flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-[#161622] border border-[#2a2a3c] text-[10px] font-mono shadow-xl z-30 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 text-neutral-200">
+                                  <span className="text-[#ff7a00] font-semibold">{ag.roleTag || "Agent"}</span>
+                                  <span>•</span>
+                                  <span className="text-emerald-400">{ag.status || "active"}</span>
+                                </div>
+                                <span className="text-neutral-400">{ag.node}</span>
+                                <span className="text-neutral-500 text-[9px]">{ag.model}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-neutral-500 truncate block mt-0.5">
+                            {ag.model}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {filteredAgents.length === 0 && (
+                    <div className="p-6 text-center text-xs text-neutral-500 font-mono">
+                      No agents matching query.
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
-        </div>
-        {/* Left Sidebar Draggable Resizer Splitter */}
-        <div
-          onMouseDown={() => setIsResizingLeft(true)}
-          className="hidden lg:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 group"
-          title="Drag to resize agents sidebar"
-        >
-          <div className="w-0.5 h-8 bg-neutral-600 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2" />
-        </div>
+
+            {/* Bottom Profile Bar with User Dropdown */}
+            <div ref={userMenuRef} className="p-3 border-t border-[#1c1c22] relative select-none">
+              <div
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0">
+                    DM
+                  </div>
+                  <div className="flex flex-col truncate">
+                    <span className="text-xs text-neutral-200 font-medium truncate">Dang M</span>
+                    <span className="text-[10px] font-mono text-neutral-500 truncate">System Owner</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Quick hardware permission status indicators */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsPermissionsModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 p-1 rounded-lg hover:bg-[#20202c] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    title="Browser Hardware & Sandbox Permissions (Click to manage)"
+                  >
+                    <ShieldCheck size={13} className="text-[#ff7a00]" />
+                  </button>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Online</span>
+                  </div>
+                  <ChevronDown
+                    size={12}
+                    className={`text-neutral-400 transition-transform duration-200 ${isUserMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
+              </div>
+
+              {/* User Profile Dropdown Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute bottom-[calc(100%+8px)] left-2 right-2 rounded-2xl bg-[#14141c]/95 border border-[#2e2e42] p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 z-50">
+                  <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
+                    <div className="text-xs font-semibold text-white">Dang M</div>
+                    <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
+                  </div>
+                  <div className="space-y-0.5">
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsSettingsModalOpen(true);
+                      }}
+                      className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors border border-transparent hover:border-[#ff7a00]/30"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded-md bg-[#ff7a00]/20 text-[#ff7a00]">
+                          <Settings size={14} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-white">Cài đặt Workspace</span>
+                          <span className="text-[10px] text-neutral-400">Theme, Ngôn ngữ, Âm báo, Export</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.5 rounded">
+                        Open
+                      </span>
+                    </div>
+                    <div className="h-px bg-[#222230] my-1" />
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        handleToggleBotInfo(false);
+                        setRightTab("Apps");
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                    >
+                      <span>Connected Apps</span>
+                      <span className="text-[10px] font-mono text-neutral-500">{connectedAppIds.length} apps</span>
+                    </div>
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        handleToggleBotInfo(false);
+                        setRightTab("Details");
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                    >
+                      <span>Fleet Diagnostics</span>
+                      <span className="text-[10px] font-mono text-emerald-400">Healthy</span>
+                    </div>
+                    <a
+                      href="https://community-agent360.antares.vn"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Community Forum</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-neutral-500 group-hover:text-[#ff7a00]">
+                        ↗
+                      </span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Left Sidebar Draggable Resizer Splitter (only when expanded on desktop) */}
+        {!isLeftSidebarCollapsed && (
+          <div
+            onMouseDown={() => setIsResizingLeft(true)}
+            className="hidden lg:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 group"
+            title="Drag to resize agents sidebar"
+          >
+            <div className="w-0.5 h-8 bg-neutral-600 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2" />
+          </div>
+        )}
       </aside>
 
       {/* ========================================================= */}
@@ -3012,17 +3172,21 @@ export function GrokBotWorkspace() {
       <main className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0">
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
         <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[var(--bg-workspace)]/85 backdrop-blur-md z-10">
-          {/* Left button: mobile/compact drawer for Agents */}
+          {/* Left button: mobile drawer or expand collapsed left sidebar on desktop */}
           <button aria-label="Toggle Agents Sidebar" data-ux-target-min="24"
             onClick={() => {
-              setMobileAgentsOpen(!mobileAgentsOpen);
-              setMobileChatsOpen(false);
-              setMobileBotInfoOpen(false);
+              if (window.innerWidth >= 1024) {
+                handleToggleLeftSidebar();
+              } else {
+                setMobileAgentsOpen(!mobileAgentsOpen);
+                setMobileChatsOpen(false);
+                setMobileBotInfoOpen(false);
+              }
             }}
-            className={`${isCompactMode ? "flex" : "lg:hidden flex"} h-8 w-8 rounded-lg bg-[#181820] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0`}
-            title="Toggle Agents Sidebar"
+            className={`${isCompactMode || isLeftSidebarCollapsed ? "flex" : "lg:hidden flex"} h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors`}
+            title={isLeftSidebarCollapsed ? "Expand Agents Sidebar (Ctrl+B)" : "Toggle Agents Sidebar"}
           >
-            <Menu size={16} />
+            {isLeftSidebarCollapsed ? <PanelLeftOpen size={16} /> : <Menu size={16} />}
           </button>
 
           {/* Middle Group: Capsule Info + Telemetry HUD */}
@@ -3093,6 +3257,15 @@ export function GrokBotWorkspace() {
             <div className="hidden sm:flex items-center gap-1">
               <ThemeSelector />
               <LanguageSelector />
+              <button
+                type="button"
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="p-2 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-500/10 transition-colors cursor-pointer flex items-center justify-center"
+                title="Cài đặt Workspace & Hệ thống (Settings)"
+                aria-label="Open Workspace Settings"
+              >
+                <Settings size={15} />
+              </button>
             </div>
             <div ref={soundMenuRef} className="relative">
               <button aria-label="Configure audio chime and presets"
@@ -4705,11 +4878,19 @@ export function GrokBotWorkspace() {
                   )}
 
                   {/* Sub-tab 2: Library (Workspace Files) */}
-                  {detailSubTab === "Library" && (
+                  {detailSubTab === "Library" && (() => {
+                    const filteredWorkspaceFiles = librarySearchQuery.trim()
+                      ? workspaceFiles.filter((node) =>
+                          node.name.toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
+                          node.path.toLowerCase().includes(librarySearchQuery.toLowerCase())
+                        )
+                      : workspaceFiles;
+
+                    return (
                     <div className="space-y-3 text-xs flex flex-col flex-1 min-h-0">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-white">
-                          Workspace Files ({workspaceFiles.length})
+                          Workspace Files ({filteredWorkspaceFiles.length}{librarySearchQuery.trim() ? ` / ${workspaceFiles.length}` : ""})
                         </span>
                         <button
                           aria-label="Refresh workspace tree"
@@ -4726,6 +4907,27 @@ export function GrokBotWorkspace() {
                         </button>
                       </div>
 
+                      {/* Instant File Filter */}
+                      <div className="flex items-center gap-1.5 bg-[#14141c] border border-[#22222e] rounded-lg px-2 py-1 text-xs">
+                        <Search size={12} className="text-neutral-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={librarySearchQuery}
+                          onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                          placeholder="Filter files (.md, .py, .yaml)..."
+                          className="w-full bg-transparent text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
+                        />
+                        {librarySearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setLibrarySearchQuery("")}
+                            className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
+                          >
+                            <X size={11} />
+                          </button>
+                        )}
+                      </div>
+
                       {/* File Tree List */}
                       <div className="bg-[#14141a] border border-[#1e1e26] rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 font-mono text-[11px]">
                         {isLoadingTree ? (
@@ -4734,10 +4936,12 @@ export function GrokBotWorkspace() {
                             <div className="h-6 w-5/6 rounded-md skeleton-shimmer" />
                             <div className="h-6 w-2/3 rounded-md skeleton-shimmer" />
                           </div>
-                        ) : workspaceFiles.length === 0 ? (
-                          <div className="text-center py-4 text-neutral-500 font-mono">No files found in workspace</div>
+                        ) : filteredWorkspaceFiles.length === 0 ? (
+                          <div className="text-center py-4 text-neutral-500 font-mono">
+                            {librarySearchQuery ? `No files matching "${librarySearchQuery}"` : "No files found in workspace"}
+                          </div>
                         ) : (
-                          workspaceFiles.map((node) => {
+                          filteredWorkspaceFiles.map((node) => {
                             const isSelected = selectedFilePath === node.path;
                             return (
                               <div
@@ -4779,7 +4983,8 @@ export function GrokBotWorkspace() {
                         </div>
                       )}
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Sub-tab 3: Overview */}
                   {detailSubTab === "Overview" && (
@@ -5063,6 +5268,36 @@ export function GrokBotWorkspace() {
         agentId={selectedAgent.id}
         agentName={selectedAgent.name}
         onSaved={refreshDetailsData}
+      />
+
+            <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+        onStartTour={() => startOnboardingTour({ force: true })}
+        onResetChecklist={() => {
+          try {
+            localStorage.removeItem("agent360_onboarding_checklist_dismissed");
+            window.dispatchEvent(new CustomEvent("agent360_milestone_updated"));
+          } catch {}
+        }}
+        onExportMarkdown={() => {
+          setIsSettingsModalOpen(false);
+          handleExportSessionMarkdown();
+        }}
+        onExportJson={() => {
+          setIsSettingsModalOpen(false);
+          handleExportSessionJson();
+        }}
+        onExportCertificate={() => {
+          setIsSettingsModalOpen(false);
+          handleExportAuditCertificate();
+        }}
+        onInstallPwa={() => {
+          setIsSettingsModalOpen(false);
+          handleInstallPWA();
+        }}
+        isPwaInstallable={Boolean(deferredPrompt)}
       />
 
       <PermissionsModal

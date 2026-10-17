@@ -117,6 +117,37 @@ function setDuckingState(active: boolean) {
   }
 }
 
+
+export interface TextChunkSegment {
+  text: string;
+  lang: "vi" | "en";
+}
+
+/**
+ * Split mixed Vietnamese-English technical text into segments for accurate bilingual TTS pronunciation
+ */
+export function segmentBilingualText(text: string): TextChunkSegment[] {
+  if (!text) return [];
+
+  // Match sentences or clauses
+  const sentences = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
+  const segments: TextChunkSegment[] = [];
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+
+    // Detect if this sentence has Vietnamese tone marks
+    const hasVi = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(trimmed);
+    segments.push({
+      text: trimmed,
+      lang: hasVi ? "vi" : "en",
+    });
+  }
+
+  return segments;
+}
+
 export function cleanTextForSpeech(rawText: string): string {
   if (!rawText) return "";
 
@@ -166,34 +197,52 @@ export function speakText(
   // Cancel any ongoing speech turn
   window.speechSynthesis.cancel();
 
-  // Detect language: if text contains Vietnamese characters, pick Vietnamese voice
-  const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(clean);
-  const selectedVoice = options?.voice || pickBestVoice(hasVietnamese ? "vi" : "en", options?.voiceURI);
+  const segments = segmentBilingualText(clean);
+  if (segments.length === 0) return false;
+
   const stored = getStoredSpeechSettings();
+  let currentSegmentIndex = 0;
 
-  const utterance = new SpeechSynthesisUtterance(clean);
-  if (selectedVoice) {
-    utterance.voice = selectedVoice;
-    utterance.lang = selectedVoice.lang;
-  }
-  utterance.rate = options?.rate ?? stored.rate;
-  utterance.pitch = options?.pitch ?? stored.pitch;
-  utterance.volume = options?.volume ?? 1.0;
+  setDuckingState(true);
 
-  utterance.onstart = () => {
-    setDuckingState(true);
+  const speakNextSegment = () => {
+    if (currentSegmentIndex >= segments.length) {
+      setDuckingState(false);
+      options?.onEnd?.();
+      return;
+    }
+
+    const seg = segments[currentSegmentIndex];
+    const segmentVoice = options?.voice || pickBestVoice(seg.lang, options?.voiceURI);
+
+    const utterance = new SpeechSynthesisUtterance(seg.text);
+    if (segmentVoice) {
+      utterance.voice = segmentVoice;
+      utterance.lang = segmentVoice.lang;
+    }
+    utterance.rate = options?.rate ?? stored.rate;
+    utterance.pitch = options?.pitch ?? stored.pitch;
+    utterance.volume = options?.volume ?? 1.0;
+
+    utterance.onend = () => {
+      currentSegmentIndex++;
+      speakNextSegment();
+    };
+
+    utterance.onerror = (e) => {
+      console.warn("Speech segment error:", e);
+      currentSegmentIndex++;
+      if (currentSegmentIndex < segments.length) {
+        speakNextSegment();
+      } else {
+        setDuckingState(false);
+        options?.onError?.(e);
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
-  utterance.onend = () => {
-    setDuckingState(false);
-    options?.onEnd?.();
-  };
-
-  utterance.onerror = (e) => {
-    setDuckingState(false);
-    options?.onError?.(e);
-  };
-
-  window.speechSynthesis.speak(utterance);
+  speakNextSegment();
   return true;
 }

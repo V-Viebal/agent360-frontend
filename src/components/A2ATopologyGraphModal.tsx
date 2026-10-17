@@ -18,6 +18,7 @@ import {
   Navigation,
   Maximize2,
   Search,
+  Download,
 } from "lucide-react";
 import { InfraAgent } from "../types/agent";
 
@@ -109,6 +110,65 @@ export function A2ATopologyGraphModal({
       probeAllLatencies();
     }
   }, [isOpen, allAgents.length]);
+
+
+  const exportLatencyData = (format: "json" | "csv") => {
+    const targetAgents = allAgents.filter((ag: InfraAgent) => {
+      if (topologySearchQuery.trim()) {
+        const q = topologySearchQuery.toLowerCase();
+        return (
+          ag.name.toLowerCase().includes(q) ||
+          ag.slug.toLowerCase().includes(q) ||
+          (ag.node || "").toLowerCase().includes(q) ||
+          (ag.roleTag || "").toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+
+    const data = targetAgents.map((ag: InfraAgent) => {
+      const ping = agentPings[ag.id] ?? nodePingMs ?? 25;
+      const node = ag.node || "control";
+      return {
+        id: ag.id,
+        name: ag.name,
+        slug: ag.slug,
+        node: node,
+        model: ag.model || "default",
+        pingLatencyMs: ping,
+        roleTag: ag.roleTag || ag.description || "",
+      };
+    });
+
+    if (format === "json") {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `agent360-topology-pings-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = ["ID", "Name", "Slug", "Node", "Model", "LatencyMs", "RoleTag"];
+      const rows = data.map((d: any) => [
+        d.id,
+        `"${d.name.replace(/"/g, '""')}"`,
+        d.slug,
+        d.node,
+        d.model,
+        d.pingLatencyMs,
+        `"${(d.roleTag || "").replace(/"/g, '""')}"`,
+      ]);
+      const csvContent = [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `agent360-topology-pings-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -239,6 +299,28 @@ export function A2ATopologyGraphModal({
               <RefreshCw size={11} className={isProbing ? "animate-spin text-cyan-400" : ""} />
               <span className="hidden sm:inline">Refresh Ping</span>
             </button>
+
+            {/* Export Benchmark Buttons */}
+            <div className="hidden md:flex items-center gap-1 bg-[#181824] p-0.5 rounded-lg border border-[#262638]">
+              <button
+                type="button"
+                onClick={() => exportLatencyData("csv")}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-400 hover:text-white hover:bg-[#232334] transition-colors cursor-pointer"
+                title="Export live latency telemetry as CSV"
+              >
+                <Download size={11} className="text-cyan-400" />
+                <span>CSV</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => exportLatencyData("json")}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-400 hover:text-white hover:bg-[#232334] transition-colors cursor-pointer"
+                title="Export live latency telemetry as JSON"
+              >
+                <Download size={11} className="text-cyan-400" />
+                <span>JSON</span>
+              </button>
+            </div>
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg bg-[#1c1c28] hover:bg-[#252538] text-neutral-400 hover:text-white transition-colors cursor-pointer"

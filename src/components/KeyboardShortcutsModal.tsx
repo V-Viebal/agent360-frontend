@@ -23,6 +23,13 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     customizable: true,
   },
   {
+    id: "toggle_left_sidebar",
+    defaultKeys: ["Ctrl", "B"],
+    description: "Toggle left Agents sidebar (collapse / expand)",
+    category: "Navigation & Search",
+    customizable: true,
+  },
+  {
     id: "shortcuts_legend",
     defaultKeys: ["Ctrl", "/"],
     description: "Open Keyboard Shortcuts Legend",
