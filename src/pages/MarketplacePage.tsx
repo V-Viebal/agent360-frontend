@@ -174,7 +174,7 @@ export function MarketplacePage() {
               <span>{t("marketplace.activeControlPlane")}</span>
             </Link>
             <a
-              href="https://github.com/agentscope-ai/QwenPaw"
+              href="https://github.com/v-viebal/agent360"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-full bg-[#ff7a00] px-4 py-2 text-xs font-medium text-black hover:bg-[#ff8f26] transition-colors shadow-[0_0_20px_rgba(255,122,0,0.3)]"

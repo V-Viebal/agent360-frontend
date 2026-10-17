@@ -504,7 +504,7 @@ export function LandingPage() {
                     <ExternalLink size={11} className="text-[#ff7a00]" />
                   </a>
                   <a
-                    href="https://github.com/agentscope-ai/QwenPaw"
+                    href="https://github.com/v-viebal/agent360"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff7a00] hover:text-amber-400"
