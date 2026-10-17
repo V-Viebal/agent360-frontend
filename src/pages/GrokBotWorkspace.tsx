@@ -1,5 +1,7 @@
 import { ConnectAppsModal } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
+import { AgentSubAgentsTab } from "../components/AgentSubAgentsTab";
+import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
 import { ChannelConfigModal } from "../components/ChannelConfigModal";
 import { ScheduleJobModal } from "../components/ScheduleJobModal";
 import { useState, useRef, useEffect } from "react";
@@ -659,7 +661,7 @@ export function GrokBotWorkspace() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Rightmost bot info tab: 'Details' | 'Library' | 'Computer'
-  const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Details" | "Library">("Computer");
+  const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Agents" | "Details" | "Library">("Computer");
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(() => {
@@ -2192,7 +2194,7 @@ export function GrokBotWorkspace() {
 
             {/* Tabs: Apps | Computer | Details | Library */}
             <div className="flex items-center justify-around border-b border-[#1c1c22] text-xs font-medium text-neutral-400 px-2">
-              {(["Computer", "Apps", "Details", "Library"] as const).map((tab) => (
+              {(["Computer", "Apps", "Agents", "Details", "Library"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setRightTab(tab)}
@@ -2294,6 +2296,15 @@ export function GrokBotWorkspace() {
                   onOpenConnectModal={() => setIsConnectAppsOpen(true)}
                   onRefreshTrigger={mcpRefreshTrigger}
                 />
+              )}
+
+              {rightTab === "Agents" && (
+                <div className="space-y-4">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Internal</div>
+                  <AgentSubAgentsTab agentId={selectedAgent.id} agentName={selectedAgent.name} allAgents={agents} />
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 pt-2 border-t border-[#22222e]">External (AgentTeams A2A)</div>
+                  <ExternalSubAgentsTab agentId={selectedAgent.id} agentName={selectedAgent.name} />
+                </div>
               )}
 
               {rightTab === "Details" && (
