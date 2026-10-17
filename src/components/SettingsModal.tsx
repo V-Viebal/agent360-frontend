@@ -81,19 +81,19 @@ export function SettingsModal({
     {
       id: "system",
       label: "Hệ thống (System Auto)",
-      desc: "Tự động đồng bộ với chế độ sáng/tối của hệ điều hành",
+      desc: "Tự động đổi sáng hoặc tối theo cài đặt máy tính của bạn",
       icon: <Monitor size={16} />,
     },
     {
       id: "dark",
-      label: "Tối (Dark OLED)",
-      desc: "Độ tương phản cao, tối ưu pin và giảm mỏi mắt ban đêm",
+      label: "Ban đêm (Dark OLED)",
+      desc: "Nền đen êm mắt, đỡ chói khi làm việc buổi tối",
       icon: <Moon size={16} className="text-blue-400" />,
     },
     {
       id: "light",
-      label: "Sáng (Light Mode)",
-      desc: "Giao diện thanh lịch, tương phản rõ ràng ban ngày",
+      label: "Ban ngày (Light Mode)",
+      desc: "Giao diện sáng sủa, dễ nhìn dưới ánh sáng phòng",
       icon: <Sun size={16} className="text-amber-500" />,
     },
   ];
@@ -101,20 +101,20 @@ export function SettingsModal({
   const langOptions: { id: LanguageSelection; label: string; desc: string; flag: string }[] = [
     {
       id: "auto",
-      label: "Tự động (Auto Detect)",
+      label: "Tự động (Theo vị trí máy)",
       desc: `Vị trí máy: ${detectedTimezone} • ${language === "vi" ? "Tiếng Việt" : "English"}`,
       flag: "🌐",
     },
     {
       id: "vi",
       label: "Tiếng Việt",
-      desc: "Giao diện và trợ lý hiển thị bằng Tiếng Việt (vi-VN)",
+      desc: "Toàn bộ giao diện và trao đổi hiển thị bằng Tiếng Việt thân thiện",
       flag: "🇻🇳",
     },
     {
       id: "en",
       label: "English",
-      desc: "Default international workspace locale (en-US)",
+      desc: "Giao diện chuẩn tiếng Anh quốc tế (en-US)",
       flag: "🇺🇸",
     },
   ];
@@ -135,9 +135,9 @@ export function SettingsModal({
               <Settings size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Cài đặt Workspace & Hệ thống</h3>
+              <h3 className="text-sm font-semibold text-white">Cài đặt không gian làm việc</h3>
               <p className="text-[11px] text-neutral-400">
-                Tuỳ chỉnh giao diện, ngôn ngữ, âm báo và bảo mật thiết bị
+                Tuỳ chỉnh cách nhìn, ngôn ngữ, chuông báo và quyền hạn thiết bị
               </p>
             </div>
           </div>
@@ -164,7 +164,7 @@ export function SettingsModal({
               }`}
             >
               <Palette size={15} />
-              <span>Giao diện (Theme)</span>
+              <span>Giao diện (Màu sắc)</span>
             </button>
             <button
               type="button"
@@ -176,7 +176,7 @@ export function SettingsModal({
               }`}
             >
               <Globe size={15} />
-              <span>Ngôn ngữ (Locale)</span>
+              <span>Ngôn ngữ (Tiếng nói)</span>
             </button>
             <button
               type="button"
@@ -188,7 +188,7 @@ export function SettingsModal({
               }`}
             >
               <Volume2 size={15} />
-              <span>Âm báo (Chime)</span>
+              <span>Âm báo (Chuông tin nhắn)</span>
             </button>
             <button
               type="button"
@@ -200,7 +200,7 @@ export function SettingsModal({
               }`}
             >
               <ShieldCheck size={15} />
-              <span>Dữ liệu & Quyền</span>
+              <span>Quyền & Hướng dẫn</span>
             </button>
           </div>
 
@@ -211,10 +211,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Chủ đề giao diện (Theme Mode)
+                    Chọn màu sắc hiển thị
                   </h4>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Hiện tại đang áp dụng: <span className="text-[#ff7a00] font-semibold capitalize">{themeMode} ({resolvedTheme})</span>
+                    Đang chọn: <span className="text-[#ff7a00] font-semibold capitalize">{themeMode === "system" ? "Tự động theo máy" : themeMode === "dark" ? "Ban đêm" : "Ban ngày"}</span>
                   </p>
                 </div>
 
@@ -257,10 +257,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Ngôn ngữ hiển thị (Interface Language)
+                    Ngôn ngữ trò chuyện & hiển thị
                   </h4>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Tự động nhận diện khu vực & múi giờ hoặc ghim ngôn ngữ ưu tiên
+                    Hệ thống có thể tự chọn theo vị trí máy của bạn hoặc bạn tự chọn ngôn ngữ thích hợp
                   </p>
                 </div>
 
@@ -301,10 +301,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Âm thanh phản hồi & Chuông thông báo
+                    Chuông báo khi đồng đội hoàn thành việc
                   </h4>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Chọn chuông báo khi agent hoàn thành nhiệm vụ hoặc trả lời tin nhắn
+                    Bật tiếng chuông nhẹ nhàng để biết ngay khi bạn đồng đội AI trả lời xong
                   </p>
                 </div>
 
@@ -340,7 +340,7 @@ export function SettingsModal({
                             }}
                             className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-[11px] font-mono transition-colors"
                           >
-                            Nghe thử
+                            Nghe thử chuông
                           </button>
                           {isSelected && (
                             <div className="h-5 w-5 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
@@ -360,10 +360,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Quyền hạn thiết bị & Onboarding
+                    Quyền hạn thiết bị & Hướng dẫn bắt đầu
                   </h4>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
-                    Quản lý micro, thông báo và hỗ trợ người dùng mới
+                    Cho phép dùng micro để nói chuyện và xem lại các bước hướng dẫn
                   </p>
                 </div>
 
@@ -381,8 +381,8 @@ export function SettingsModal({
                         <ShieldCheck size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Quản lý Quyền Browser</div>
-                        <div className="text-[10px] text-neutral-400">Microphone, Audio, Clipboard</div>
+                        <div className="text-xs font-semibold text-white">Quyền Micro & Âm thanh</div>
+                        <div className="text-[10px] text-neutral-400">Bật micro để nói chuyện trực tiếp</div>
                       </div>
                     </button>
                   )}
@@ -400,8 +400,8 @@ export function SettingsModal({
                         <Sparkles size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Chạy App Tour</div>
-                        <div className="text-[10px] text-neutral-400">Hướng dẫn Driver.js tương tác</div>
+                        <div className="text-xs font-semibold text-white">Tham quan 1 vòng ứng dụng</div>
+                        <div className="text-[10px] text-neutral-400">Xem nhanh các góc làm việc chính</div>
                       </div>
                     </button>
                   )}
@@ -418,8 +418,8 @@ export function SettingsModal({
                         <Sparkles size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Mở lại Checklist</div>
-                        <div className="text-[10px] text-neutral-400">Hiện lại bảng mốc tiến độ</div>
+                        <div className="text-xs font-semibold text-white">Mở lại bảng Checklist</div>
+                        <div className="text-[10px] text-neutral-400">Xem lại các bước làm quen ban đầu</div>
                       </div>
                     </button>
                   )}
@@ -437,8 +437,8 @@ export function SettingsModal({
                         <Smartphone size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Cài đặt Skyer PWA</div>
-                        <div className="text-[10px] text-neutral-400">Chạy như ứng dụng desktop / mobile</div>
+                        <div className="text-xs font-semibold text-white">Cài app về máy tính / điện thoại</div>
+                        <div className="text-[10px] text-neutral-400">Dùng như một ứng dụng độc lập</div>
                       </div>
                     </button>
                   )}
@@ -446,7 +446,7 @@ export function SettingsModal({
 
                 <div className="pt-2 border-t border-[#222230]">
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Xuất dữ liệu phiên hội thoại
+                    Tải về nhật ký trò chuyện
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
                     {onExportMarkdown && (
@@ -456,7 +456,7 @@ export function SettingsModal({
                         className="p-2.5 rounded-xl bg-[#181822] hover:bg-[#20202e] border border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-neutral-200"
                       >
                         <Download size={14} className="text-[#ff7a00] shrink-0" />
-                        <span className="truncate">Markdown (.md)</span>
+                        <span className="truncate">Tệp văn bản (.md)</span>
                       </button>
                     )}
                     {onExportJson && (
@@ -466,7 +466,7 @@ export function SettingsModal({
                         className="p-2.5 rounded-xl bg-[#181822] hover:bg-[#20202e] border border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-neutral-200"
                       >
                         <FileText size={14} className="text-cyan-400 shrink-0" />
-                        <span className="truncate">Audit Trail (.json)</span>
+                        <span className="truncate">Dữ liệu gốc (.json)</span>
                       </button>
                     )}
                     {onExportCertificate && (
@@ -476,7 +476,7 @@ export function SettingsModal({
                         className="p-2.5 rounded-xl bg-[#181822] hover:bg-[#20202e] border border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-neutral-200"
                       >
                         <Shield size={14} className="text-emerald-400 shrink-0" />
-                        <span className="truncate">Certificate (.html)</span>
+                        <span className="truncate">Chứng chỉ kiểm định (.html)</span>
                       </button>
                     )}
                   </div>
@@ -488,13 +488,13 @@ export function SettingsModal({
 
         {/* Modal Footer */}
         <div className="px-5 py-3 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-          <span>Skyer Platform Control Center</span>
+          <span>Skyer Không Gian Đồng Đội AI</span>
           <button
             type="button"
             onClick={onClose}
             className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
           >
-            Đóng
+            Đóng bảng
           </button>
         </div>
       </div>

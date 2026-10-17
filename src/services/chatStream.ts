@@ -74,7 +74,7 @@ export async function sendConsoleChatMessageStream(
         }
       }
 
-      const response = await fetch("/api/agents/console/chat", {
+      let response = await fetch("/api/agents/console/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -83,7 +83,21 @@ export async function sendConsoleChatMessageStream(
         },
         body: JSON.stringify(payload),
         signal: options.signal
-      });
+      }).catch(() => null);
+
+      if (!response || !response.ok) {
+        // Fallback to /api/console/chat
+        response = await fetch("/api/console/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Agent-Id": targetAgent,
+            Accept: "text/event-stream"
+          },
+          body: JSON.stringify(payload),
+          signal: options.signal
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Chat stream request failed: ${response.status} ${response.statusText}`);
