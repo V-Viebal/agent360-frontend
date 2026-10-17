@@ -723,29 +723,201 @@ export function getAgentBrowserUrl(agent: InfraAgent): AgentBrowserMeta {
   };
 }
 
-// Quick starter prompt suggestions for new chat session
-const QUICK_SUGGESTIONS = [
-  {
-    title: "Audit Fleet & Health",
-    desc: "Scan infrastructure nodes, memory pressure and service uptime",
-    prompt: "Scan all infrastructure nodes and report active status, memory usage, and runtime health."
-  },
-  {
-    title: "Deploy & Verify Diffs",
-    desc: "Inspect latest git changes, run local build and check deployment status",
-    prompt: "Check recent git changes, build the code, and verify service responses on 2nd."
-  },
-  {
-    title: "Security Constitution Check",
-    desc: "Evaluate current security posture against rootless container policy",
-    prompt: "Perform a security audit against container isolation and approval policies."
-  },
-  {
-    title: "Inspect ACP & MCP Tools",
-    desc: "List active tool schemas, external bridges and QwenPaw capabilities",
-    prompt: "List all active tools and MCP servers registered for this agent session."
+interface QuickSuggestion {
+  title: string;
+  desc: string;
+  prompt: string;
+  badge?: string;
+}
+
+// Dynamically generate 4 tailored quick prompt suggestions based on agent role, tools, and node placement
+function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
+  if (!agent) {
+    return [
+      {
+        title: "Audit Fleet & Health",
+        desc: "Scan infrastructure nodes, memory pressure and service uptime",
+        prompt: "Scan all infrastructure nodes and report active status, memory usage, and runtime health.",
+        badge: "Fleet"
+      },
+      {
+        title: "Deploy & Verify Diffs",
+        desc: "Inspect latest git changes, run local build and check deployment status",
+        prompt: "Check recent git changes, build the code, and verify service responses on 2nd.",
+        badge: "Build"
+      },
+      {
+        title: "Security Constitution Check",
+        desc: "Evaluate current security posture against rootless container policy",
+        prompt: "Perform a security audit against container isolation and approval policies.",
+        badge: "Audit"
+      },
+      {
+        title: "Inspect ACP & MCP Tools",
+        desc: "List active tool schemas, external bridges and QwenPaw capabilities",
+        prompt: "List all active tools and MCP servers registered for this agent session.",
+        badge: "Tools"
+      }
+    ];
   }
-];
+
+  const role = agent.roleTag || "Engineering";
+  const id = (agent.id || "").toLowerCase();
+  const slug = (agent.slug || "").toLowerCase();
+  const name = (agent.name || "").toLowerCase();
+  const tools = (agent.tools || []).map((t: any) => (typeof t === "string" ? t : t.name || "").toLowerCase());
+
+  // 1. ERPNext / Business Operations Agents (e.g. GM Bốc, GM Gạo, GM Lúa, GM Team)
+  const hasErpTools = tools.some((t: string) => t.includes("erpnext") || t.includes("invoice") || t.includes("quotation"));
+  if (hasErpTools || id.includes("gm-") || slug.includes("gm-")) {
+    return [
+      {
+        title: "ERP & Stock Balance",
+        desc: `Check warehouse stock levels, pending inventory transfers, and batch balance on ${agent.node}`,
+        prompt: "Query current ERPNext inventory balances, pending stock movements, and item valuations.",
+        badge: "ERP"
+      },
+      {
+        title: "Order & Invoice Reconcile",
+        desc: "Three-way invoice match for recent supplier receipts and payments",
+        prompt: "Reconcile recent purchase orders against supplier invoices and generate a summary report.",
+        badge: "Finance"
+      },
+      {
+        title: "Draft Commercial Quotation",
+        desc: "Generate official Vietnamese quote with pricing, terms, and item lines",
+        prompt: "Create a formal draft service quotation for a prospective client with line items and TT99 terms.",
+        badge: "Sales"
+      },
+      {
+        title: "Triage Operations Inquiries",
+        desc: "Review open tickets, delivery schedules, and partner communications",
+        prompt: "Triage pending customer tickets and summarize high-priority fulfillment bottlenecks.",
+        badge: "Ops"
+      }
+    ];
+  }
+
+  // 2. Research & Creative Discovery (e.g. Climax Default, Climax Team, KB Researcher, Zen)
+  const hasResearchTools = tools.some((t: string) => t.includes("search_papers") || t.includes("brave") || t.includes("paper"));
+  if (hasResearchTools || role === "Research" || id.includes("climax") || slug.includes("climax")) {
+    return [
+      {
+        title: "Deep Market & Competitor Scan",
+        desc: "Analyze industry competitors, market trends, and product positioning",
+        prompt: "Perform evidence-backed market research on leading Vietnamese AI employee platforms and summarize key differentiators.",
+        badge: "Research"
+      },
+      {
+        title: "Topic & Trend Discovery",
+        desc: "Harvest trending search topics, discussion keywords, and engagement signals",
+        prompt: "Analyze trending topics and query branches related to AI automation for enterprise operations.",
+        badge: "Trends"
+      },
+      {
+        title: "Synthesize Knowledge Brief",
+        desc: "Compile findings into a structured, citation-backed briefing for the KB Hub",
+        prompt: "Synthesize a concise, layered research brief with key takeaways, data evidence, and actionable next steps.",
+        badge: "Docs"
+      },
+      {
+        title: "Social Content Planning",
+        desc: "Draft multi-channel publication outlines with narrative hooks and visuals",
+        prompt: "Draft an engaging 5-part LinkedIn and Threads series explaining how autonomous agents reduce operational friction.",
+        badge: "Creative"
+      }
+    ];
+  }
+
+  // 3. Quality & UI/UX / Vision (e.g. QA Helper, Vision QA)
+  const hasVisionOrBrowser = tools.some((t: string) => t.includes("click") || t.includes("cdp") || t.includes("browser") || t.includes("drag"));
+  if (hasVisionOrBrowser || role === "Quality" || id.includes("qa") || slug.includes("qa") || name.includes("vision")) {
+    return [
+      {
+        title: "Visual Regression Audit",
+        desc: "Inspect live viewport rendering across mobile, tablet, and desktop breakpoints",
+        prompt: "Run a browser visual check on https://agent360.antares.vn/app and audit layout contrast, spacing, and responsive scaling.",
+        badge: "UI/UX"
+      },
+      {
+        title: "Interactive Flow Test",
+        desc: "Simulate click events, form inputs, modal toggles, and drawer animations",
+        prompt: "Verify conversational flow: create a new session, test prompt execution, and confirm CTAs appear only after completion.",
+        badge: "Test"
+      },
+      {
+        title: "Accessibility & WCAG Check",
+        desc: "Audit touch target dimensions, color contrast ratios, and aria labels",
+        prompt: "Audit accessibility standards: verify aria labels, keyboard navigation (Ctrl+K), and color contrast for dark mode.",
+        badge: "A11y"
+      },
+      {
+        title: "Network & Console Diagnostics",
+        desc: "Inspect DevTools network traffic, SSE event stream health, and error logs",
+        prompt: "Check browser console and network responses for any 4xx/5xx status codes or unhandled rejections.",
+        badge: "Logs"
+      }
+    ];
+  }
+
+  // 4. Security / Inference Gateway (e.g. LLM360, SRE Sentinel)
+  if (role === "Security" || id.includes("llm360") || id.includes("sre") || slug.includes("sre")) {
+    return [
+      {
+        title: "Audit Fleet & Node Latency",
+        desc: "Scan infrastructure nodes (1st–7th), memory pressure, and container status",
+        prompt: "Audit all fleet nodes (1st–7th, storage1) for CPU load, memory headroom, and container health.",
+        badge: "Fleet"
+      },
+      {
+        title: "Security Constitution Check",
+        desc: "Evaluate container isolation, rootless execution, and bypass guards",
+        prompt: "Perform a security compliance audit against rootless container guidelines and zero-trust proxy rules.",
+        badge: "Audit"
+      },
+      {
+        title: "Model Gateway & Quota Check",
+        desc: "Inspect provider health, token quotas, and active inference routes",
+        prompt: "Verify LLM360 provider availability, active upstream routes, and token consumption rate.",
+        badge: "Gateway"
+      },
+      {
+        title: "Audit Approval & Tool Receipts",
+        desc: "Review high-risk tool execution approvals, policy hashes, and receipts",
+        prompt: "Inspect recent security approvals and tool receipts across active agent sessions.",
+        badge: "Receipts"
+      }
+    ];
+  }
+
+  // 5. Default Engineering / Fullstack Developer (e.g. Mons, AgentTeams Gateway, Fullstack SWE)
+  return [
+    {
+      title: "Inspect & Review Git Diffs",
+      desc: "Check uncommitted files, inspect git diffs, and prepare clean atomic commit",
+      prompt: "Review current git status and code diffs across frontend and backend services.",
+      badge: "Git"
+    },
+    {
+      title: "Build & Deploy Verification",
+      desc: "Run local build, verify TypeScript types, and check deployment health",
+      prompt: "Execute local production build and verify service endpoints respond with exit code 0.",
+      badge: "Build"
+    },
+    {
+      title: "Inspect ACP & MCP Tool Registry",
+      desc: "List active tool schemas, runtime bridges, and registered capabilities",
+      prompt: "List all active tools and MCP servers registered for this agent session.",
+      badge: "Tools"
+    },
+    {
+      title: "Sub-Agent Delegation Task",
+      desc: `Dispatch multi-step objective to specialized sub-agents via ${agent.name}`,
+      prompt: "Plan and coordinate a multi-agent delegation pipeline with acceptance criteria.",
+      badge: "Swarm"
+    }
+  ];
+}
 
 export function GrokBotWorkspace() {
   const [agents, setAgents] = useState<InfraAgent[]>([]);
@@ -1830,13 +2002,6 @@ export function GrokBotWorkspace() {
 
   // Core function to execute a single prompt stream
   const executeTurnStream = async (userText: string) => {
-    const userMsg: ChatMessage = {
-      id: `usr-${Date.now()}`,
-      role: "user",
-      content: userText,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-
     const tempBotMsgId = `bot-${Date.now() + 1}`;
     const initialBotMsg: ChatMessage = {
       id: tempBotMsgId,
@@ -1846,7 +2011,20 @@ export function GrokBotWorkspace() {
       evidenceStatus: "observed",
     };
 
-    setMessages((prev) => [...prev, userMsg, initialBotMsg]);
+    setMessages((prev) => {
+      // If user message is already shown at the end (queued or instant echo), just append bot placeholder
+      const lastMsg = prev[prev.length - 1];
+      if (lastMsg && lastMsg.role === "user" && lastMsg.content === userText) {
+        return [...prev, initialBotMsg];
+      }
+      const userMsg: ChatMessage = {
+        id: `usr-${Date.now()}`,
+        role: "user",
+        content: userText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      return [...prev, userMsg, initialBotMsg];
+    });
     setIsStreaming(true);
 
     const streamStart = performance.now();
@@ -2015,8 +2193,18 @@ export function GrokBotWorkspace() {
       stopVoiceRecording();
     }
 
+    // Instant Local Message Echo: append to messages immediately so user gets 0ms visual confirmation
     if (isStreaming || isProcessingQueueRef.current) {
-      // Agent is busy: enqueue prompt
+      // Agent is busy: show optimistic user message with Queued indicator
+      const queuedUserMsg: ChatMessage = {
+        id: `usr-queued-${Date.now()}`,
+        role: "user",
+        content: userText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, queuedUserMsg]);
+
+      // Enqueue prompt for execution
       requestQueueRef.current.push(userText);
       setRequestQueue([...requestQueueRef.current]);
     } else {
@@ -2224,8 +2412,8 @@ export function GrokBotWorkspace() {
                 onClick={() => handleSelectAgent(ag)}
                 className={`w-full p-2.5 rounded-xl text-left flex items-center gap-3 transition-colors cursor-pointer border animate-fade-in-stagger ${
                   isSelected
-                    ? "bg-[#1c1c26] border-[#303042] text-white shadow-sm"
-                    : "border-transparent hover:bg-[#14141c] text-neutral-400 hover:text-neutral-200"
+                    ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs"
+                    : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
                 }`}
               >
                 {/* Dedicated Agent Identity Avatar */}
@@ -2808,9 +2996,9 @@ export function GrokBotWorkspace() {
                 </p>
               </div>
 
-              {/* Grid of 4 quick prompt suggestion cards */}
+              {/* Grid of 4 dynamic, agent-specific quick prompt suggestion cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left font-sans">
-                {QUICK_SUGGESTIONS.map((item, qIdx) => (
+                {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
                   <button
                     key={qIdx}
                     type="button"
@@ -2824,7 +3012,14 @@ export function GrokBotWorkspace() {
                         <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00]" />
                         {item.title}
                       </span>
-                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100" />
+                      <div className="flex items-center gap-1.5">
+                        {item.badge && (
+                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e]">
+                            {item.badge}
+                          </span>
+                        )}
+                        <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100" />
+                      </div>
                     </div>
                     <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
                       {item.desc}
@@ -3181,7 +3376,7 @@ export function GrokBotWorkspace() {
           <form
             ref={composerFormRef}
             onSubmit={handleSendMessage}
-            className={`flex items-center gap-2 bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
+            className={`flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
           >
             {/* Hidden native file input */}
             <input data-ux-target-min="16"
