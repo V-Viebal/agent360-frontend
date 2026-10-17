@@ -59,6 +59,7 @@ export function recordMilestone(key: keyof OnboardingMilestones) {
 }
 
 interface OnboardingChecklistWidgetProps {
+  onOpenAgentsDrawer?: () => void;
   onOpenTopology?: () => void;
   onOpenShortcuts?: () => void;
   onOpenSpecs?: () => void;
@@ -67,6 +68,7 @@ interface OnboardingChecklistWidgetProps {
 }
 
 export function OnboardingChecklistWidget({
+  onOpenAgentsDrawer,
   onOpenTopology,
   onOpenShortcuts,
   onOpenSpecs,
@@ -137,7 +139,7 @@ export function OnboardingChecklistWidget({
 
   return (
     <div
-      className="fixed bottom-5 right-5 z-40 w-80 sm:w-88 shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
+      className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 w-[calc(100vw-24px)] max-w-[390px] sm:max-w-[420px] md:w-[410px] shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
     >
       <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#222230] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -208,13 +210,19 @@ export function OnboardingChecklistWidget({
                 Xem danh sách đồng đội ở cột bên trái: Lập trình viên (SWE), Vận hành (SRE), Kiểm thử (QA), v.v.
               </p>
               {!milestones.selectedAgent && (
-                <div className="pt-1">
+                <div className="pt-1 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => highlightElement("#tour-agent-selector", "Danh sách đồng đội", "Bấm chọn bạn đồng đội bạn muốn giao việc ở đây nhé", "right")}
+                    onClick={() => {
+                      if (typeof window !== "undefined" && window.innerWidth < 1024 && onOpenAgentsDrawer) {
+                        onOpenAgentsDrawer();
+                      } else {
+                        highlightElement("#tour-agent-selector", "Danh sách đồng đội", "Bấm chọn bạn đồng đội bạn muốn giao việc ở đây nhé", "right");
+                      }
+                    }}
                     className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
-                    Chỉ cho tôi chỗ chọn <ChevronRight size={11} />
+                    <span>Mở danh sách đồng đội</span> <ChevronRight size={11} />
                   </button>
                 </div>
               )}
@@ -330,7 +338,7 @@ export function OnboardingChecklistWidget({
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Bật micro (Alt + M) để nói trực tiếp, hoặc dùng phím tắt để làm việc nhanh hơn.
+                Trên điện thoại: Chạm biểu tượng Micro để nói. Trên máy tính: Bấm Alt + M hoặc xem bảng phím tắt (Ctrl+/).
               </p>
             </div>
           </div>

@@ -1194,9 +1194,9 @@ export function GrokBotWorkspace() {
   const [botInfoWidth, setBotInfoWidth] = useState<number>(() => {
     try {
       const v = localStorage.getItem("agent360_bot_info_w");
-      return v ? parseInt(v, 10) : 320;
+      return v ? parseInt(v, 10) : 380;
     } catch {
-      return 320;
+      return 380;
     }
   });
 
@@ -1210,7 +1210,7 @@ export function GrokBotWorkspace() {
         setLeftSidebarWidth(newW);
         try { localStorage.setItem("agent360_left_sidebar_w", newW.toString()); } catch {}
       } else if (isResizingRight) {
-        const newW = Math.min(480, Math.max(260, window.innerWidth - e.clientX));
+        const newW = Math.min(560, Math.max(280, window.innerWidth - e.clientX));
         setBotInfoWidth(newW);
         try { localStorage.setItem("agent360_bot_info_w", newW.toString()); } catch {}
       }
@@ -4486,8 +4486,7 @@ export function GrokBotWorkspace() {
                     key={c.id}
                     onClick={() => {
                       handleSelectChat(c);
-                      // Expand when user clicks on a chat from collapsed rail
-                      handleToggleChatList(false);
+                      // Keep current collapsed/expanded state when switching chat
                     }}
                     className={`h-7 w-7 rounded-xl flex items-center justify-center text-[10px] font-mono cursor-pointer transition-all border ${
                       isSelected
@@ -4804,7 +4803,7 @@ export function GrokBotWorkspace() {
         className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok relative ${
           isBotInfoCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0"
-            : "w-[85vw] max-w-[480px] sm:w-[320px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
+            : "w-[85vw] max-w-[560px] sm:w-[380px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
         }`}
       >
         {/* Right Pane Draggable Resizer Splitter */}
@@ -5733,6 +5732,11 @@ export function GrokBotWorkspace() {
       )}
 
       <OnboardingChecklistWidget
+        onOpenAgentsDrawer={() => {
+          setMobileAgentsOpen(true);
+          setMobileChatsOpen(false);
+          setMobileBotInfoOpen(false);
+        }}
         onOpenTopology={() => {
           setIsTopologyModalOpen(true);
           recordMilestone("openedSpecsOrTopology");
