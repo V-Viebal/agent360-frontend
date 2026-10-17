@@ -3,14 +3,20 @@ import React, { useEffect, useRef } from "react";
 interface AudioVisualizerWaveformProps {
   isRecording: boolean;
   className?: string;
+  onAudioLevel?: (level: number) => void;
 }
 
-export function AudioVisualizerWaveform({ isRecording, className = "" }: AudioVisualizerWaveformProps) {
+export function AudioVisualizerWaveform({
+  isRecording,
+  className = "",
+  onAudioLevel,
+}: AudioVisualizerWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const [currentLevel, setCurrentLevel] = React.useState<number>(0);
 
   useEffect(() => {
     if (!isRecording) {
@@ -103,26 +109,33 @@ export function AudioVisualizerWaveform({ isRecording, className = "" }: AudioVi
           const totalWidth = barCount * (barWidth + gap);
           const startX = (canvas.width - totalWidth) / 2;
 
+          let sumVolume = 0;
           for (let i = 0; i < barCount; i++) {
             // Sample frequency bin
             const index = Math.floor((i / barCount) * (bufferLength / 2));
             const val = dataArray[index] || 0;
+            sumVolume += val;
             const percent = val / 255;
-            const height = Math.max(3, percent * (canvas.height - 2));
+            // Reactive dynamic height scaling based on live audio intensity
+            const height = Math.max(2, Math.pow(percent, 0.85) * (canvas.height - 2));
 
             const x = startX + i * (barWidth + gap);
             const y = (canvas.height - height) / 2;
 
-            // Gradient bar
+            // Gradient bar from neon orange to bright pink-red
             const gradient = ctx.createLinearGradient(0, y, 0, y + height);
-            gradient.addColorStop(0, "#ff7a00");
-            gradient.addColorStop(1, "#ff3366");
+            gradient.addColorStop(0, percent > 0.6 ? "#ff3366" : "#ff7a00");
+            gradient.addColorStop(1, percent > 0.6 ? "#ff9900" : "#ff3366");
 
             ctx.fillStyle = gradient;
             ctx.beginPath();
             ctx.roundRect(x, y, barWidth, height, 1.5);
             ctx.fill();
           }
+
+          const avgVol = Math.round((sumVolume / (barCount * 255)) * 100);
+          if (onAudioLevel) onAudioLevel(avgVol);
+          setCurrentLevel(avgVol);
         };
 
         draw();
@@ -150,17 +163,28 @@ export function AudioVisualizerWaveform({ isRecording, className = "" }: AudioVi
   if (!isRecording) return null;
 
   return (
-    <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/25 animate-in fade-in select-none ${className}`}>
+    <div
+      className={`flex items-center gap-2 px-2 sm:px-2.5 py-1 rounded-full transition-all duration-150 border animate-in fade-in select-none ${
+        currentLevel > 40
+          ? "bg-red-500/20 border-red-500/50 shadow-xs shadow-red-500/20"
+          : "bg-red-500/10 border-red-500/25"
+      } ${className}`}
+    >
       <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
-      <span className="text-[10px] font-mono text-red-400 font-semibold uppercase tracking-wider shrink-0">
+      <span className="text-[10px] font-mono text-red-400 font-semibold uppercase tracking-wider shrink-0 hidden xs:inline">
         Listening
       </span>
       <canvas
         ref={canvasRef}
-        width={100}
-        height={20}
-        className="block shrink-0"
+        width={80}
+        height={currentLevel > 50 ? 24 : 18}
+        className="block shrink-0 transition-all duration-100"
       />
+      {currentLevel > 0 && (
+        <span className="text-[9px] font-mono text-neutral-400 shrink-0 hidden sm:inline">
+          {currentLevel}%
+        </span>
+      )}
     </div>
   );
 }

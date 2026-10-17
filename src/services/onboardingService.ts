@@ -55,7 +55,7 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
     overlayColor: "rgba(0, 0, 0, 0.78)",
     nextBtnText: "Tiếp tục ▸",
     prevBtnText: "◂ Quay lại",
-    doneBtnText: "Bắt đầu làm việc ✓",
+    doneBtnText: "Vào việc ngay ✓",
     popoverClass: "driverjs-skyer-theme",
     onDestroyStarted: () => {
       markOnboardingTourSeen();
@@ -68,8 +68,8 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-agent-selector",
         popover: {
-          title: "🤖 Chọn AI Teammate",
-          description: "Chọn bot chuyên môn (SWE, SRE, QA, Sentinel, v.v.) từ danh sách các instance đang chạy thực tế trên hạ tầng cluster.",
+          title: "🤝 Gặp gỡ Đồng đội AI của bạn",
+          description: "Mỗi bạn bot ở đây là một đồng nghiệp chuyên trách (Lập trình viên, Vận hành hệ thống, Kiểm thử, Quản trị, v.v.). Bấm vào để bắt đầu làm việc cùng bạn ấy nhé!",
           side: "right",
           align: "start",
         },
@@ -77,8 +77,8 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-chat-sessions",
         popover: {
-          title: "💬 Quản lý Phiên Hội Thoại",
-          description: "Lịch sử chat độc lập theo từng agent. Bạn có thể tạo phiên mới, ghim phiên quan trọng (Pin), đổi tên hoặc xem trạng thái Done.",
+          title: "📋 Nhật ký công việc & Cuộc trò chuyện",
+          description: "Nơi lưu lại các lần trao đổi riêng với từng bạn đồng đội. Bạn có thể mở chủ đề mới, ghim việc quan trọng lên đầu hoặc tìm lại trao đổi cũ.",
           side: isMobile ? "bottom" : "left",
           align: "start",
         },
@@ -86,8 +86,8 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-prompt-composer",
         popover: {
-          title: "⚡ Gửi Yêu Cầu & Giọng Nói",
-          description: "Nhập lệnh prompt hoặc bấm biểu tượng Micro (Alt + M) để nói chuyện rảnh tay qua Voice VAD. Kèm các shortcut tra cứu nhanh bằng Ctrl+/.",
+          title: "💬 Nhắn tin hoặc Nói chuyện trực tiếp",
+          description: "Gõ câu hỏi vào đây, hoặc bấm micro (Alt + M) để nói chuyện rảnh tay như đang gọi điện cho đồng nghiệp. Bấm Ctrl + / để xem thêm phím tắt nhanh nhé.",
           side: "top",
           align: "center",
         },
@@ -95,8 +95,8 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-bot-spec-trigger",
         popover: {
-          title: "🛠 Chi Tiết Kỹ Thuật & Công Cụ",
-          description: "Mở pane thông tin agent để xem Model đang chạy, cây thư mục làm việc (Workspace Tree), Connected Apps và lịch trình tự động (Cron).",
+          title: "🔍 Xem Hồ sơ & Kỹ năng của đồng đội",
+          description: "Bấm vào tên bạn ấy ở trên để xem hồ sơ chuyên môn: Trí nhớ dự án (Memory), tài liệu tham khảo (Library), ứng dụng liên kết và công cụ hỗ trợ.",
           side: isMobile ? "top" : "left",
           align: "start",
         },
@@ -104,8 +104,8 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-command-palette-trigger",
         popover: {
-          title: "⌨️ Quick Launcher & Command Palette",
-          description: "Bấm nút này hoặc gõ Ctrl + K bất kỳ lúc nào để chuyển nhanh giữa các Agent, Node hạ tầng, hoặc test thiết bị âm thanh.",
+          title: "⚡ Bảng lệnh thần tốc (Ctrl + K)",
+          description: "Bấm vào đây hoặc nhấn Ctrl + K bất cứ lúc nào để gọi nhanh đồng đội khác, tìm hội thoại cũ, hoặc chỉnh âm lượng thông báo.",
           side: "right",
           align: "end",
         },

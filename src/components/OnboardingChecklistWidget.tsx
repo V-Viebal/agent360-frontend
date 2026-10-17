@@ -126,10 +126,10 @@ export function OnboardingChecklistWidget({
           </div>
           <div>
             <h4 className="text-xs font-semibold text-white tracking-wide">
-              Bắt đầu với Agent360
+              Làm quen cùng đội ngũ AI
             </h4>
             <p className="text-[10px] text-neutral-400 font-mono">
-              {completedSteps}/{totalSteps} hoàn thành ({progressPercent}%)
+              {completedSteps}/{totalSteps} bước ({progressPercent}%)
             </p>
           </div>
         </div>
@@ -179,22 +179,25 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">1. Chọn AI Teammate</span>
-                {milestones.selectedAgent ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Xong</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => highlightElement("#tour-agent-selector", "Danh sách Agent", "Chọn bot theo chuyên môn tại thanh sidebar trái", "right")}
-                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
-                  >
-                    Xem vị trí <ChevronRight size={11} />
-                  </button>
+                <span className="text-xs font-medium">1. Chọn đồng đội bạn muốn làm việc cùng</span>
+                {milestones.selectedAgent && (
+                  <span className="text-[10px] font-mono text-emerald-400">Đã chọn</span>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Chọn bot chuyên môn (SWE, SRE, QA, v.v.) từ thanh điều hướng bên trái.
+                Xem danh sách đồng đội ở cột bên trái: Lập trình viên (SWE), Vận hành (SRE), Kiểm thử (QA), v.v.
               </p>
+              {!milestones.selectedAgent && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => highlightElement("#tour-agent-selector", "Danh sách đồng đội", "Bấm chọn bạn đồng đội bạn muốn giao việc ở đây nhé", "right")}
+                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
+                  >
+                    Chỉ cho tôi chỗ chọn <ChevronRight size={11} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -215,21 +218,21 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">2. Gửi lời thoại đầu tiên</span>
+                <span className="text-xs font-medium">2. Giao việc đầu tiên cho đồng đội</span>
                 {milestones.sentMessage ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Xong</span>
+                  <span className="text-[10px] font-mono text-emerald-400">Đã gửi</span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => onFocusComposer && onFocusComposer()}
                     className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
-                    Nhập ngay <ChevronRight size={11} />
+                    Gõ lời nhắn ngay <ChevronRight size={11} />
                   </button>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Nhập câu hỏi hoặc chọn một Recipe đề xuất để bắt đầu phiên hội thoại.
+                Hỏi một câu bất kỳ hoặc bấm một gợi ý có sẵn để bạn ấy bắt tay vào làm việc ngay.
               </p>
             </div>
           </div>
@@ -251,9 +254,9 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">3. Sơ đồ A2A & Chi tiết</span>
+                <span className="text-xs font-medium">3. Xem sơ đồ phối hợp giữa các bạn</span>
                 {milestones.openedSpecsOrTopology ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Xong</span>
+                  <span className="text-[10px] font-mono text-emerald-400">Đã xem</span>
                 ) : (
                   <button
                     type="button"
@@ -263,12 +266,12 @@ export function OnboardingChecklistWidget({
                     }}
                     className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
-                    Xem Sơ đồ <ChevronRight size={11} />
+                    Mở sơ đồ mạng lưới <ChevronRight size={11} />
                   </button>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Xem mạng lưới liên kết bot A2A (Ctrl+G) hoặc thanh Agent Spec.
+                Xem các bạn bot phối hợp công việc với nhau thế nào (phím Ctrl + G).
               </p>
             </div>
           </div>
@@ -290,9 +293,9 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">4. Voice VAD & Phím tắt</span>
+                <span className="text-xs font-medium">4. Nói chuyện rảnh tay hoặc xem phím tắt</span>
                 {milestones.triedVoiceOrShortcuts ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Xong</span>
+                  <span className="text-[10px] font-mono text-emerald-400">Đã biết</span>
                 ) : (
                   <button
                     type="button"
@@ -302,12 +305,12 @@ export function OnboardingChecklistWidget({
                     }}
                     className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
-                    Phím tắt (Ctrl+/) <ChevronRight size={11} />
+                    Xem phím tắt (Ctrl+/) <ChevronRight size={11} />
                   </button>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Tận dụng phím tắt và chế độ nói rảnh tay (Alt + M) để tăng tốc thao tác.
+                Bật micro (Alt + M) để nói trực tiếp, hoặc dùng phím tắt để làm việc nhanh hơn.
               </p>
             </div>
           </div>
@@ -320,12 +323,12 @@ export function OnboardingChecklistWidget({
               className="text-[11px] font-medium text-[#ff7a00] hover:text-[#ff9433] transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Sparkles size={13} />
-              <span>Chạy Tour tương tác</span>
+              <span>Dẫn tôi đi tham quan 1 vòng</span>
             </button>
 
             {isAllCompleted ? (
               <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={12} /> Hoàn thành 100%!
+                <CheckCircle2 size={12} /> Đã sẵn sàng làm việc!
               </span>
             ) : (
               <button
@@ -333,7 +336,7 @@ export function OnboardingChecklistWidget({
                 onClick={handleDismiss}
                 className="text-[10px] text-neutral-400 hover:text-neutral-300 font-mono transition-colors cursor-pointer"
               >
-                Ẩn bảng này
+                Tạm ẩn bảng này
               </button>
             )}
           </div>
