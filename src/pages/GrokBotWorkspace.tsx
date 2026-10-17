@@ -2892,25 +2892,25 @@ export function GrokBotWorkspace() {
           /* COLLAPSED VIEW: Minimal Rail Showing Only Avatar & State */
           /* ========================================================= */
           <>
-            {/* Collapsed Header: Expand Trigger & A2A Topology Icon */}
-            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center gap-1 shrink-0 bg-[var(--bg-sidebar)] px-1">
+            {/* Collapsed Header: Brand Skyer Logo (Click to Expand) & Topology */}
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center gap-1.5 shrink-0 bg-[var(--bg-sidebar)] px-1">
               <button
-                aria-label="Expand Agents Sidebar"
-                data-ux-target-min="24"
+                type="button"
                 onClick={() => handleToggleLeftSidebar(false)}
-                className="h-8 w-8 rounded-xl bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 flex items-center justify-center text-neutral-300 hover:text-white transition-all cursor-pointer shadow-xs group"
+                className="p-1 rounded-xl hover:bg-[#1f1f2c] transition-transform hover:scale-105 cursor-pointer"
                 title="Expand Agents Sidebar (Ctrl+B)"
+                aria-label="Expand Agents Sidebar"
               >
-                <PanelLeftOpen size={16} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors" />
+                <SkyerLogo size={26} showText={false} showBotBadge={false} />
               </button>
               <button
                 aria-label="Sơ đồ đội ngũ (Ctrl+G)"
                 type="button"
                 onClick={() => setIsTopologyModalOpen(true)}
-                className="h-8 w-8 rounded-xl bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer shadow-xs"
+                className="h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer shadow-xs"
                 title="Sơ đồ đội ngũ (Ctrl+G)"
               >
-                <Network size={15} />
+                <Network size={13} />
               </button>
             </div>
 
@@ -3477,6 +3477,15 @@ export function GrokBotWorkspace() {
             <ThemeSelector />
             <LanguageSelector />
           </div>
+          {/* Context Token Usage Trigger moved to top header */}
+          <ContextUsageBar
+            agentId={selectedAgent.id}
+            sessionId={selectedChat?.id}
+            estimatedTokens={selectedChat?.messageCount ? selectedChat.messageCount * 380 : 1200}
+            maxTokens={128000}
+            className="compact-trigger mr-1 hidden sm:inline-flex"
+          />
+
           <button aria-label="Command Palette (Ctrl+K / Cmd+K)"
             type="button"
             onClick={() => setIsCommandPaletteOpen(true)}
@@ -4259,13 +4268,6 @@ export function GrokBotWorkspace() {
 
             <div className="flex items-center gap-2 text-neutral-400 shrink-0">
               {/* Live WebRTC Audio Visualizer */}
-              <ContextUsageBar
-                agentId={selectedAgent.id}
-                sessionId={selectedChat?.id}
-                estimatedTokens={selectedChat?.messageCount ? selectedChat.messageCount * 380 : 1200}
-                maxTokens={128000}
-                className="compact-trigger"
-              />
               <AudioVisualizerWaveform
                 isRecording={isRecording}
                 onAudioLevel={(lvl) => {
@@ -4285,20 +4287,6 @@ export function GrokBotWorkspace() {
                 {starredMsgIds.length > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-400 ring-1 ring-[#0c0c0e]" />
                 )}
-              </button>
-
-              {/* STT Language Accent Badge Toggle (VI / EN) & Audio Settings Context Menu */}
-              <button
-                type="button"
-                onClick={toggleSttLang}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setIsVoiceRecordSettingsOpen(true);
-                }}
-                className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-200 dark:bg-[#1e1e28] hover:bg-neutral-300 dark:hover:bg-[#28283a] text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-300 dark:border-[#2a2a38] transition-colors cursor-pointer select-none"
-                title={`Voice input language: ${sttLang === "vi-VN" ? "Tiếng Việt (vi-VN)" : "English (en-US)"}. Click to switch, right-click for audio device settings.`}
-              >
-                {sttLang === "vi-VN" ? "VI" : "EN"}
               </button>
 
               {/* Voice to text recording button (Supports Click Toggle & Push-to-Talk) */}
@@ -4560,9 +4548,9 @@ export function GrokBotWorkspace() {
               </button>
             </div>
 
-            {/* Select All / Batch Selection Bar */}
-            {filteredChats.length > 0 && (
-              <div className="px-3 py-1.5 flex items-center justify-between border-b border-[#1c1c24] text-[11px] font-mono select-none bg-[#101017]">
+            {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
+            {filteredChats.length > 0 && selectedChatIds.length > 0 && (
+              <div className="px-3 py-1.5 flex items-center justify-between border-b border-[#1c1c24] text-[11px] font-mono select-none bg-[#101017] animate-in fade-in duration-150">
                 <div
                   onClick={() => handleToggleSelectAll(filteredChats)}
                   className="flex items-center gap-2 cursor-pointer group text-neutral-400 hover:text-white transition-colors"
