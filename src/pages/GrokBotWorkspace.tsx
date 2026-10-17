@@ -98,6 +98,8 @@ import { PromptRecipesModal } from "../components/PromptRecipesModal";
 import { MermaidDiagram } from "../components/MermaidDiagram";
 import { requestPermission, queryPermissionStatus } from "../services/permissionService";
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
+import { ThemeSelector } from "../components/ThemeSelector";
+import { LanguageSelector } from "../components/LanguageSelector";
 
 
 
@@ -136,7 +138,7 @@ function TurnExecutionAccordion({
         <button data-ux-target-min="24"
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#14141c] hover:bg-[#1a1a24] border border-[#22222e] hover:border-[#303040] text-xs font-mono text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs select-none"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-neutral-300 dark:hover:border-[#303040] text-xs font-mono text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           <span className="font-semibold text-neutral-200">
@@ -270,11 +272,11 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
   };
 
   return (
-    <div className="w-full rounded-xl border border-[#22222c] bg-[#121217] overflow-hidden my-1.5 transition-all text-xs font-mono shadow-sm">
+    <div className="w-full rounded-xl border border-neutral-200 dark:border-[#22222c] bg-white dark:bg-[#121217] overflow-hidden my-1.5 transition-all text-xs font-mono shadow-sm">
       {/* Header Bar */}
       <div
         onClick={() => setOpen(!open)}
-        className="px-3 py-2 bg-[#15151c] hover:bg-[#191922] flex items-center justify-between cursor-pointer select-none transition-colors border-b border-transparent"
+        className="px-3 py-2 bg-neutral-50 dark:bg-[#15151c] hover:bg-neutral-100 dark:hover:bg-[#191922] flex items-center justify-between cursor-pointer select-none transition-colors border-b border-transparent"
       >
         <div className="flex items-center gap-2 min-w-0">
           {isCalling ? (
@@ -288,7 +290,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
               <Terminal size={10} />
             </span>
           )}
-          <span className="text-[12px] font-semibold text-neutral-200 truncate font-mono">
+          <span className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-200 truncate font-mono">
             {displayTitle}
           </span>
           <span
@@ -2602,7 +2604,7 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <aside
         style={{ width: !isCompactMode && typeof window !== "undefined" && window.innerWidth >= 1024 ? `${leftSidebarWidth}px` : undefined }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 w-[85vw] max-w-[380px] h-full flex flex-col border-r border-[#1e1e24] bg-[#0d0d12] shrink-0 transition-grok-transform relative ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 w-[85vw] max-w-[380px] h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform relative ${
           mobileAgentsOpen
             ? "translate-x-0 shadow-2xl"
             : isCompactMode
@@ -2612,7 +2614,7 @@ export function GrokBotWorkspace() {
         aria-hidden={!mobileAgentsOpen && isCompactMode ? true : undefined}
       >
         {/* Header */}
-        <div className="h-12 px-3 border-b border-[#1c1c22] flex items-center justify-between gap-1.5 min-w-0 shrink-0 bg-[#0d0d12]">
+        <div className="h-12 px-3 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between gap-1.5 min-w-0 shrink-0 bg-[var(--bg-sidebar)]">
           <a aria-label="Return to Skyer Home" href="/" className="hover:opacity-90 transition-opacity shrink-0" title="Return to Skyer Home">
             <SkyerLogo size={24} showText={true} showBotBadge={false} />
           </a>
@@ -2708,7 +2710,7 @@ export function GrokBotWorkspace() {
                 {/* Agent Details: Lean typography with rich status tooltip */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-medium text-white truncate block">
+                    <span className="text-xs font-medium text-neutral-900 dark:text-white truncate block">
                       {ag.name}
                     </span>
                     <div className="relative group shrink-0">
@@ -2931,9 +2933,9 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       {/* 2. CENTER AREA: Skyer Chat & Dialogue Content */}
       {/* ========================================================= */}
-      <main className="flex-1 flex flex-col h-full bg-[#0c0c0e] relative overflow-hidden min-w-0">
+      <main className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0">
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
-        <div className="h-12 border-b border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[#0c0c0e]/80 backdrop-blur-md z-10">
+        <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[var(--bg-workspace)]/85 backdrop-blur-md z-10">
           {/* Left button: mobile/compact drawer for Agents */}
           <button aria-label="Toggle Agents Sidebar" data-ux-target-min="24"
             onClick={() => {
@@ -2955,14 +2957,14 @@ export function GrokBotWorkspace() {
                   handleToggleBotInfo();
                   setMobileBotInfoOpen((prev) => !prev);
                 }}
-                className="flex items-center gap-1.5 sm:gap-2 bg-[#181820] hover:bg-[#22222e] border border-[#2a2a34] hover:border-[#383848] px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium text-white shadow-sm cursor-pointer transition-all select-none"
+                className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-300 dark:border-[#2a2a34] hover:border-neutral-400 dark:hover:border-[#383848] px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium text-neutral-900 dark:text-white shadow-sm cursor-pointer transition-all select-none"
               >
                 <div className="h-3.5 w-3.5 rounded-full bg-white flex items-center justify-center shrink-0">
                   <div className="h-2 w-2 rounded-full bg-black flex items-center justify-center">
                     <div className="h-0.5 w-0.5 rounded-full bg-white" />
                   </div>
                 </div>
-                <span className="truncate text-xs">{selectedAgent.name}</span>
+                <span className="truncate text-xs text-neutral-900 dark:text-white">{selectedAgent.name}</span>
                 {nodePingMs !== null && (
                   <span
                     className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono border ${
@@ -3010,6 +3012,10 @@ export function GrokBotWorkspace() {
             <span className="text-[11px]">Ctrl+K</span>
           </button>
           <div className="flex items-center gap-1.5 shrink-0">
+            <div className="hidden sm:flex items-center gap-1">
+              <ThemeSelector />
+              <LanguageSelector />
+            </div>
             <div ref={soundMenuRef} className="relative">
               <button aria-label="Configure audio chime and presets"
                 type="button"
@@ -3378,7 +3384,7 @@ export function GrokBotWorkspace() {
                 >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
-                    <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-[#1c1c26] text-white rounded-br-xs shadow-sm font-sans border border-[#2c2c3e] ml-auto overflow-hidden break-words">
+                    <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-[#ff7a00] text-white dark:bg-[#1c1c26] dark:text-neutral-100 rounded-br-xs shadow-sm font-sans border border-[#ff7a00]/30 dark:border-[#2c2c3e] ml-auto overflow-hidden break-words">
                       <p className="whitespace-pre-wrap select-text break-words break-all">{msg.content}</p>
                     </div>
                   ) : (
@@ -3411,7 +3417,7 @@ export function GrokBotWorkspace() {
 
                       {msg.content && (
                         <>
-                          <div className="text-[13px] leading-relaxed text-neutral-200 py-1 px-0.5 divide-y divide-dashed divide-[#22222c]/50">
+                          <div className="text-[13px] leading-relaxed text-neutral-800 dark:text-neutral-200 py-1 px-0.5 divide-y divide-dashed divide-neutral-200 dark:divide-[#22222c]/50">
                             <FormattedMessageContent content={msg.content} agentNode={selectedAgent.node} onRunCode={(codeSnippet) => {
                             sendConsoleChatMessageStream(
                               selectedChatId || "default",
@@ -3903,7 +3909,7 @@ export function GrokBotWorkspace() {
                   : `Message ${selectedAgent.name}... (Enter to send, Shift+Enter for new line)`
               }
               aria-label={`Message ${selectedAgent.name}`}
-              className="flex-1 bg-transparent border-0 text-xs text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed"
+              className="flex-1 bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed"
             />
 
             <div className="flex items-center gap-2 text-neutral-400 shrink-0">
@@ -3986,7 +3992,7 @@ export function GrokBotWorkspace() {
       {/* 3. CONVERSATION SESSIONS LIST (COLLAPSIBLE, RIGHT OF CHAT) */}
       {/* ========================================================= */}
       <aside
-        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col border-l border-[#1e1e24] bg-[#0f0f14] shrink-0 transition-grok ${
+        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok ${
           mobileChatsOpen
             ? "flex w-[85vw] max-w-[320px] sm:w-[280px] translate-x-0 shadow-2xl"
             : isChatListCollapsed
@@ -3996,7 +4002,7 @@ export function GrokBotWorkspace() {
       >
         {/* Header & Collapse Toggle */}
         {(isChatListCollapsed && !mobileChatsOpen) ? (
-          <div className="h-12 border-b border-[#1c1c22] flex items-center justify-center shrink-0">
+          <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center shrink-0">
             <button aria-label="Expand Conversations list" data-ux-target-min="24"
               onClick={() => {
                 handleToggleChatList(false);
@@ -4328,7 +4334,7 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <aside
         style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
-        className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-[#1e1e24] bg-[#0f0f13] shrink-0 select-none transition-grok relative ${
+        className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok relative ${
           isBotInfoCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0"
             : "w-[85vw] max-w-[480px] sm:w-[320px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
@@ -4347,7 +4353,7 @@ export function GrokBotWorkspace() {
         {!isBotInfoCollapsed && (
           <>
             {/* Clean Header with Mobile Close Button */}
-            <div className="h-12 border-b border-[#1c1c22] flex items-center justify-between px-3 shrink-0 bg-[#0f0f13]">
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-3 shrink-0 bg-[var(--bg-sidebar)]">
               <span className="text-[11px] font-mono text-neutral-400">Agent Specification</span>
               <button aria-label="Close Agent Specification" data-ux-target-min="24"
                 onClick={() => {

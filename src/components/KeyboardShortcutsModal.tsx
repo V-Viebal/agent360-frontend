@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Keyboard, X, RotateCcw, Edit2, Check } from "lucide-react";
+import { Keyboard, X, RotateCcw, Edit2, Check, Download, Upload } from "lucide-react";
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -101,6 +101,46 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
   const [customMap, setCustomMap] = useState<Record<string, string[]>>(() => getCustomShortcutsMap());
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [conflictWarning, setConflictWarning] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleExportShortcuts = () => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customMap, null, 2));
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `skyer-shortcuts-${Date.now().toString().slice(-6)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    } catch (e) {
+      console.warn("Failed to export shortcuts JSON:", e);
+    }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (typeof parsed === "object" && parsed !== null) {
+          setCustomMap(parsed);
+          localStorage.setItem("agent360_custom_shortcuts", JSON.stringify(parsed));
+          window.dispatchEvent(new CustomEvent("agent360_shortcuts_updated", { detail: parsed }));
+          setImportSuccess("Custom shortcuts imported successfully!");
+          setTimeout(() => setImportSuccess(null), 3000);
+        }
+      } catch (err) {
+        setConflictWarning("Invalid shortcuts JSON file format.");
+        setTimeout(() => setConflictWarning(null), 3500);
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   // List of reserved browser hotkeys that shouldn't be overridden
   const RESERVED_BROWSER_HOTKEYS = ["Ctrl+W", "Ctrl+T", "Ctrl+N", "Ctrl+R", "Ctrl+F4", "Alt+F4", "Ctrl+Tab"];
@@ -313,17 +353,53 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
           })}
         </div>
 
+        {/* Import Success Toast */}
+        {importSuccess && (
+          <div className="px-4 py-1.5 bg-emerald-500/15 border-t border-emerald-500/30 text-emerald-300 text-xs font-mono flex items-center gap-2 animate-in fade-in select-none">
+            <Check size={13} className="text-emerald-400" />
+            <span>{importSuccess}</span>
+          </div>
+        )}
+
         {/* Footer info */}
         <div className="px-5 py-3 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-          <button
-            type="button"
-            onClick={handleResetDefaults}
-            className="flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-            title="Reset all shortcuts to factory defaults"
-          >
-            <RotateCcw size={12} />
-            <span>Reset to Defaults</span>
-          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleResetDefaults}
+              className="flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Reset all shortcuts to factory defaults"
+            >
+              <RotateCcw size={12} />
+              <span>Reset</span>
+            </button>
+            <span className="text-neutral-700">|</span>
+            <button
+              type="button"
+              onClick={handleExportShortcuts}
+              className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Export custom shortcuts to JSON file"
+            >
+              <Download size={12} />
+              <span>Export</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Import shortcuts from JSON file"
+            >
+              <Upload size={12} />
+              <span>Import</span>
+            </button>
+          </div>
           <button
             type="button"
             onClick={onClose}

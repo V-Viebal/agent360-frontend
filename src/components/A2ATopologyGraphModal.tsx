@@ -14,6 +14,8 @@ import {
   ZoomOut,
   RotateCcw,
   Move,
+  MapPin,
+  Navigation,
 } from "lucide-react";
 import { InfraAgent } from "../types/agent";
 
@@ -398,6 +400,65 @@ export function A2ATopologyGraphModal({
                 </div>
               </div>
             )}
+            </div>
+
+            {/* Topology MiniMap Navigation HUD */}
+            <div className="absolute bottom-3 right-3 z-30 p-2 rounded-xl bg-[#0c0c12]/95 border border-[#2a2a3e] shadow-2xl backdrop-blur-md hidden sm:flex flex-col gap-1.5 select-none w-36">
+              <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 border-b border-[#20202e] pb-1">
+                <span className="flex items-center gap-1 text-cyan-400">
+                  <Navigation size={10} />
+                  <span>MiniMap</span>
+                </span>
+                <span className="text-[9px] text-[#ff7a00] font-semibold">{Math.round(zoomScale * 100)}%</span>
+              </div>
+
+              {/* Simplified micro layout representation */}
+              <div className="relative w-full h-16 bg-[#14141e] rounded-lg border border-[#202030] overflow-hidden flex flex-col justify-between p-1">
+                {/* Micro Level 1: Orchestrators */}
+                <div className="flex justify-center gap-1">
+                  {orchestrators.slice(0, 3).map((o) => (
+                    <div
+                      key={o.id}
+                      className={`h-2.5 w-6 rounded-xs transition-colors ${
+                        o.id === selectedNodeId ? "bg-[#ff7a00]" : "bg-neutral-600"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Micro Level 2: Workers */}
+                <div className="flex justify-center gap-1">
+                  {workers.slice(0, 4).map((w) => (
+                    <div
+                      key={w.id}
+                      className={`h-2.5 w-4 rounded-xs transition-colors ${
+                        w.id === selectedNodeId ? "bg-cyan-400" : "bg-neutral-700"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Micro Level 3: Specialists */}
+                <div className="flex justify-center gap-1">
+                  {specialists.slice(0, 3).map((s) => (
+                    <div
+                      key={s.id}
+                      className={`h-2 w-4 rounded-xs transition-colors ${
+                        s.id === selectedNodeId ? "bg-emerald-400" : "bg-neutral-800"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Viewport Frame Indicator */}
+                <div
+                  className="absolute inset-0 border border-cyan-400/50 rounded pointer-events-none"
+                  style={{
+                    transform: `translate(${-panOffset.x / 20}px, ${-panOffset.y / 20}px) scale(${1 / zoomScale})`,
+                    transformOrigin: "center center",
+                  }}
+                />
+              </div>
             </div>
           </div>
 

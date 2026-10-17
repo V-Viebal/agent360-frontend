@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+
+
+
 :root {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Newsreader', Georgia, Cambria, 'Times New Roman', serif;
@@ -7,18 +11,25 @@
 
   /* Theme Tokens - Default Dark Mode (Obsidian) */
   --bg-page: #05070a;
+  --bg-workspace: #0c0c0e;
+  --bg-sidebar: #0d0d12;
   --bg-nav: rgba(7, 9, 14, 0.85);
-  --bg-card: #0c0e14;
+  --bg-card: #121218;
+  --bg-card-hover: #181822;
   --bg-card-subtle: #090b10;
-  --bg-surface-elevated: #12151d;
+  --bg-surface-elevated: #161622;
   --bg-input: #16161d;
+  --bg-pill: #181820;
+  --bg-bubble-user: #1c1c26;
+  --bg-bubble-assistant: #101016;
+  --bg-active-tab: #22222e;
   
   --text-primary: #f0f2f5;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
   
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-card: rgba(255, 255, 255, 0.08);
+  --border-card: #22222e;
   --border-focus: rgba(255, 255, 255, 0.25);
   
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
@@ -29,19 +40,27 @@
 
 :root.light,
 [data-theme="light"] {
+  /* Theme Tokens - Light Mode */
   --bg-page: #f8fafc;
+  --bg-workspace: #ffffff;
+  --bg-sidebar: #f1f5f9;
   --bg-nav: rgba(255, 255, 255, 0.88);
   --bg-card: #ffffff;
-  --bg-card-subtle: #f1f5f9;
+  --bg-card-hover: #f1f5f9;
+  --bg-card-subtle: #f8fafc;
   --bg-surface-elevated: #ffffff;
-  --bg-input: #ffffff;
+  --bg-input: #f1f5f9;
+  --bg-pill: #e2e8f0;
+  --bg-bubble-user: #ff7a00;
+  --bg-bubble-assistant: #f1f5f9;
+  --bg-active-tab: #e2e8f0;
   
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
   
   --border-subtle: rgba(15, 23, 42, 0.08);
-  --border-card: rgba(15, 23, 42, 0.09);
+  --border-card: #e2e8f0;
   --border-focus: rgba(15, 23, 42, 0.3);
   
   --shadow-card: 0 4px 18px -2px rgba(15, 23, 42, 0.06);
@@ -49,7 +68,6 @@
   --scrollbar-thumb: #cbd5e1;
   --scrollbar-thumb-hover: #94a3b8;
 }
-
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-page);
@@ -158,4 +176,109 @@ body {
 .typing-dot-3 {
   animation: typingDot 1.4s infinite ease-in-out;
   animation-delay: 0.4s;
+}
+
+/* Comprehensive Light Mode Overrides for Workspace, Modals & Components */
+html.light,
+[data-theme="light"] {
+  /* Surfaces */
+  .bg-\[\#0c0c0e\],
+  .bg-\[\#0d0d12\],
+  .bg-\[\#0f0f13\],
+  .bg-\[\#0f0f14\],
+  .bg-\[\#0f0f15\],
+  .bg-\[\#101014\],
+  .bg-\[\#101015\],
+  .bg-\[\#101016\],
+  .bg-\[\#121217\],
+  .bg-\[\#121218\],
+  .bg-\[\#14141a\],
+  .bg-\[\#14141c\],
+  .bg-\[\#15151c\],
+  .bg-\[\#16161d\],
+  .bg-\[\#16161e\],
+  .bg-\[\#161620\],
+  .bg-\[\#161622\],
+  .bg-\[\#171720\],
+  .bg-\[\#181820\],
+  .bg-\[\#181822\],
+  .bg-\[\#181824\],
+  .bg-\[\#1a1a22\],
+  .bg-\[\#1a1a24\],
+  .bg-\[\#1c1c24\],
+  .bg-\[\#1c1c26\],
+  .bg-\[\#1c1c28\],
+  .bg-\[\#1f1f2c\],
+  .bg-\[\#1f1f2e\],
+  .bg-\[\#22222c\],
+  .bg-\[\#222230\],
+  .bg-\[\#252534\],
+  .bg-\[\#2a2a34\] {
+    background-color: var(--bg-card);
+  }
+
+  /* Hover states in light mode */
+  .hover\:bg-\[\#1a1a24\]:hover,
+  .hover\:bg-\[\#1c1c24\]:hover,
+  .hover\:bg-\[\#1c1c28\]:hover,
+  .hover\:bg-\[\#181820\]:hover,
+  .hover\:bg-\[\#181822\]:hover,
+  .hover\:bg-\[\#191922\]:hover,
+  .hover\:bg-\[\#1f1f2c\]:hover,
+  .hover\:bg-\[\#22222e\]:hover,
+  .hover\:bg-\[\#252534\]:hover {
+    background-color: var(--bg-card-hover);
+  }
+
+  /* Borders in light mode */
+  .border-\[\#1c1c22\],
+  .border-\[\#1c1c24\],
+  .border-\[\#1e1e24\],
+  .border-\[\#1e1e26\],
+  .border-\[\#1e1e28\],
+  .border-\[\#202028\],
+  .border-\[\#20202a\],
+  .border-\[\#20202c\],
+  .border-\[\#22222c\],
+  .border-\[\#22222e\],
+  .border-\[\#242430\],
+  .border-\[\#242432\],
+  .border-\[\#252532\],
+  .border-\[\#262634\],
+  .border-\[\#282836\],
+  .border-\[\#2a2a34\],
+  .border-\[\#2a2a38\],
+  .border-\[\#2a2a3c\],
+  .border-\[\#2c2c3e\],
+  .border-\[\#2e2e42\],
+  .border-\[\#303040\],
+  .border-\[\#303042\] {
+    border-color: var(--border-card);
+  }
+
+  /* Text readability in light mode */
+  .text-white:not(.keep-white),
+  .text-neutral-200:not(.keep-white),
+  .text-neutral-300:not(.keep-white) {
+    color: var(--text-primary);
+  }
+
+  .text-neutral-400:not(.keep-white) {
+    color: var(--text-secondary);
+  }
+
+  .text-neutral-500:not(.keep-white) {
+    color: var(--text-muted);
+  }
+
+  /* Keep pure white text on solid colored accents/CTAs */
+  .bg-\[\#ff7a00\],
+  button.bg-\[\#ff7a00\],
+  a.bg-\[\#ff7a00\],
+  .bg-amber-500,
+  .bg-red-500,
+  .bg-emerald-500,
+  .keep-white {
+    color: #ffffff !important;
+  }
 }
