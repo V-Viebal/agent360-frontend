@@ -1,6 +1,6 @@
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
-import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork } from "lucide-react";
+import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
 import { ConnectAppsModal } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
@@ -8,6 +8,7 @@ import { AgentSubAgentsTab } from "../components/AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
 import { ChannelConfigModal } from "../components/ChannelConfigModal";
 import { ScheduleJobModal } from "../components/ScheduleJobModal";
+import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect } from "react";
 import {
   Trash2,
