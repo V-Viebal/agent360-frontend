@@ -16,6 +16,7 @@ import {
   Move,
   MapPin,
   Navigation,
+  Maximize2,
 } from "lucide-react";
 import { InfraAgent } from "../types/agent";
 
@@ -185,6 +186,14 @@ export function A2ATopologyGraphModal({
                 title="Reset View (100%)"
               >
                 <RotateCcw size={12} />
+              </button>
+              <button
+                type="button"
+                onClick={handleFitToScreen}
+                className="p-1 rounded hover:bg-[#252538] hover:text-white cursor-pointer"
+                title="Fit all nodes to screen"
+              >
+                <Maximize2 size={12} className="text-cyan-400" />
               </button>
             </div>
 

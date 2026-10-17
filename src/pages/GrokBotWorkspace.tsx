@@ -90,6 +90,7 @@ import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSetti
 import { CustomSelect, StatusBadge, IconButton, SearchInput } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { PermissionsModal } from "../components/PermissionsModal";
+import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar } from "../components/AgentAvatar";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
@@ -967,6 +968,7 @@ export function GrokBotWorkspace() {
   const [isSoundMenuOpen, setIsSoundMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
   const [turnTelemetry, setTurnTelemetry] = useState<TurnTelemetry | null>(null);
   const [forwardModalMsg, setForwardModalMsg] = useState<string | null>(null);
 
@@ -3923,6 +3925,16 @@ export function GrokBotWorkspace() {
               />
               <AudioVisualizerWaveform isRecording={isRecording} />
 
+              {/* Keyboard Shortcuts Cheat Sheet Button */}
+              <button
+                type="button"
+                onClick={() => setIsKeyboardShortcutsOpen(true)}
+                className="hidden sm:flex p-1 rounded-full hover:text-white hover:bg-black/10 dark:hover:bg-white/10 text-neutral-400 cursor-pointer transition-colors"
+                title="Keyboard Shortcuts Cheat Sheet (Ctrl+/)"
+              >
+                <Keyboard size={15} />
+              </button>
+
               {/* Voice to text recording button (Supports Click Toggle & Push-to-Talk) */}
               <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
                 type="button"
@@ -4989,6 +5001,11 @@ export function GrokBotWorkspace() {
         onRequestDone={() => {
           setVoiceError(null);
         }}
+      />
+
+      <KeyboardShortcutsModal
+        isOpen={isKeyboardShortcutsOpen}
+        onClose={() => setIsKeyboardShortcutsOpen(false)}
       />
 
       <A2ATopologyGraphModal
