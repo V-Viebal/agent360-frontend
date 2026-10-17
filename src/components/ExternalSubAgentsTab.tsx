@@ -66,9 +66,9 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
   return (
     <div className="space-y-3 text-xs font-sans">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-white flex items-center gap-1.5"><Network size={13} className="text-[#ff7a00]" />External Sub-Agents</span>
+        <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5"><Network size={13} className="text-[#ff7a00]" />External Sub-Agents</span>
         <div className="flex gap-1">
-          <button aria-label="Discover external agents from AgentTeams" onClick={() => run("discover", a2aApi.discover, "Directory synced from AgentTeams")} className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-lg bg-[#16161f] border border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-white" title="Discover from AgentTeams">
+          <button aria-label="Discover external agents from AgentTeams" onClick={() => run("discover", a2aApi.discover, "Directory synced from AgentTeams")} className="min-h-[44px] min-w-[44px] flex items-center justify-center p-1.5 rounded-lg bg-[#16161f] border border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white" title="Discover from AgentTeams">
             <RefreshCw size={12} className={busy === "discover" ? "animate-spin" : ""} />
           </button>
           <button onClick={() => run("skill", () => a2aApi.syncSkill(agentId), `Skill synced to ${agentName}`)} aria-label="Sync external sub-agents skill to the parent agent" className="min-h-[44px] px-3 rounded-lg bg-[#ff7a00] text-black font-semibold text-[11px]">Sync Skill</button>
@@ -86,7 +86,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
 
       {!hasKey ? (
         <div className="flex gap-1">
-          <input aria-label="A2A operator key" type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="A2A operator key (ledger & actions)" className="flex-1 min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-white" />
+          <input aria-label="A2A operator key" type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="A2A operator key (ledger & actions)" className="flex-1 min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
           <button onClick={() => { operatorKey.set(keyInput.trim()); setHasKey(!!keyInput.trim()); setKeyInput(""); load(); }} aria-label="Unlock operator actions" className="min-h-[44px] flex items-center gap-1 px-3 rounded-lg bg-[#1d1d26] border border-[#282834] text-slate-700 dark:text-neutral-300"><KeyRound size={11} />Unlock</button>
         </div>
       ) : (
@@ -94,17 +94,17 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
       )}
 
       {/* Topology */}
-      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#101016] border border-[#20202c] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
-        <div className="flex items-center gap-1 text-white"><GitBranch size={11} />{parentRef}</div>
+      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#101016] border border-[#20202c] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
+        <div className="flex items-center gap-1 text-slate-900 dark:text-white"><GitBranch size={11} />{parentRef}</div>
         {bindings.length === 0 && <div className="pl-3 text-neutral-500">└── (no external sub-agents)</div>}
         {bindings.map((b, i) => (
           <div key={b.id} className="pl-3">{i === bindings.length - 1 ? "└──" : "├──"} external via AgentTeams: <span className="text-[#ff7a00]">{b.child_agent_ref}</span></div>
         ))}
       </div>
 
-      <div className="flex gap-1 p-1 bg-[#14141a] rounded-xl border border-[#20202a]">
+      <div className="flex gap-1 p-1 bg-[#14141a] rounded-xl border border-slate-200 dark:border-[#20202a]">
         {(["external", "delegations"] as const).map((v) => (
-          <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`flex-1 min-h-[44px] rounded-lg ${view === v ? "bg-[#242432] text-white" : "text-slate-500 dark:text-neutral-400"}`}>
+          <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`flex-1 min-h-[44px] rounded-lg ${view === v ? "bg-[#242432] text-slate-900 dark:text-white" : "text-slate-500 dark:text-neutral-400"}`}>
             {v === "external" ? `External (${agents.length})` : `Delegations (${tasks.length})`}
           </button>
         ))}
@@ -116,7 +116,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
           <div key={a.agent_ref} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-white font-semibold truncate">{a.display_name}</div>
+                <div className="text-slate-900 dark:text-white font-semibold truncate">{a.display_name}</div>
                 <div className="font-mono text-[10px] text-slate-500 dark:text-neutral-400 truncate">{a.agent_ref}</div>
               </div>
               <span className={`px-2 py-0.5 rounded-full border text-[10px] font-mono ${a.health === "online" ? "text-emerald-300 border-emerald-500/30" : a.health === "degraded" ? "text-amber-300 border-amber-500/30" : "text-slate-500 dark:text-neutral-400 border-neutral-600"}`}>{a.health}</span>
@@ -141,11 +141,11 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
       {view === "delegations" && (
         <div className="space-y-2">
           <div className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
-            <select aria-label="External sub-agent to delegate to" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-white">
+            <select aria-label="External sub-agent to delegate to" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
               {bindings.map((b) => <option key={b.id} value={b.child_agent_ref}>{b.child_agent_ref}</option>)}
             </select>
-            <textarea aria-label="Delegation objective" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Objective (read-only by default)" className="w-full h-14 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-white" />
-            <input aria-label="Acceptance criteria separated by semicolons" value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder="Acceptance criteria; separated by ;" className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-white" />
+            <textarea aria-label="Delegation objective" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Objective (read-only by default)" className="w-full h-14 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
+            <input aria-label="Acceptance criteria separated by semicolons" value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder="Acceptance criteria; separated by ;" className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <button disabled={!target || !objective || !criteria || busy === "send"} onClick={() => run("send", () => a2aApi.delegate({ parent_agent_ref: agentId.split(":").pop(), child_agent_ref: target, objective, constraints: ["Read-only"], acceptance_criteria: criteria.split(";").map((s) => s.trim()).filter(Boolean) }), "Delegation sent via AgentTeams")} aria-label="Delegate task via AgentTeams" className="min-h-[44px] flex items-center gap-1 px-3 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50">
               {busy === "send" ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}Delegate
             </button>

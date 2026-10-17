@@ -3076,36 +3076,7 @@ export function GrokBotWorkspace() {
               <a aria-label="Return to Skyer Home" href="/" className="hover:opacity-90 transition-opacity shrink-0" title="Return to Skyer Home">
                 <SkyerLogo size={24} showText={true} showBotBadge={false} />
               </a>
-              <div className="flex items-center gap-1 min-w-0 max-w-[130px] sm:max-w-[140px]">
-                <CustomSelect
-                  value={selectedInstance}
-                  onChange={(val) => {
-                    setSelectedInstance(val);
-                    const nextMatching = agents.filter((a) => {
-                      if (val === "all") return true;
-                      if (a.instanceId) return a.instanceId === val;
-                      const id = a.id.toLowerCase();
-                      const node = (a.node || "").toLowerCase();
-                      if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
-                      if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
-                      if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
-                      if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
-                      if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
-                      if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
-                      if (val === "node-5th") return node.includes("5th") || node.includes("storage");
-                      return false;
-                    });
-                    if (nextMatching.length > 0) {
-                      const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
-                      if (!alreadySelected) {
-                        handleSelectAgent(nextMatching[0]);
-                      }
-                    }
-                  }}
-                  options={INFRA_INSTANCES}
-                  className="min-w-0 w-full"
-                  triggerClassName="px-2 py-1 text-[11px] font-mono text-[#ff7a00] w-full"
-                />
+              <div className="flex items-center gap-1">
                 {/* Collapse trigger button on desktop */}
                 <button
                   aria-label="Collapse Agents Sidebar"
@@ -3129,8 +3100,41 @@ export function GrokBotWorkspace() {
               </div>
             </div>
 
+            {/* Instance Fleet Selector (Moved above Sơ đồ đội ngũ, clean non-highlight styling) */}
+            <div className="px-2 pt-2 pb-1 border-b border-neutral-200 dark:border-[#1c1c22]/60">
+              <CustomSelect
+                value={selectedInstance}
+                onChange={(val) => {
+                  setSelectedInstance(val);
+                  const nextMatching = agents.filter((a) => {
+                    if (val === "all") return true;
+                    if (a.instanceId) return a.instanceId === val;
+                    const id = a.id.toLowerCase();
+                    const node = (a.node || "").toLowerCase();
+                    if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
+                    if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
+                    if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
+                    if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
+                    if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
+                    if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
+                    if (val === "node-5th") return node.includes("5th") || node.includes("storage");
+                    return false;
+                  });
+                  if (nextMatching.length > 0) {
+                    const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
+                    if (!alreadySelected) {
+                      handleSelectAgent(nextMatching[0]);
+                    }
+                  }
+                }}
+                options={INFRA_INSTANCES}
+                className="w-full"
+                triggerClassName="w-full bg-[#14141c] hover:bg-[#1c1c26] text-neutral-300 hover:text-white border-[#242432] hover:border-[#343446] px-2.5 py-1.5 rounded-lg text-xs font-mono font-normal shadow-none"
+              />
+            </div>
+
             {/* Team Network Overview Button (Lean, Normal Option, Details on Hover) */}
-            <div className="px-2 pt-2 pb-1.5 border-b border-neutral-200 dark:border-[#1c1c22]">
+            <div className="px-2 pt-1 pb-1.5 border-b border-neutral-200 dark:border-[#1c1c22]">
               <button
                 type="button"
                 onClick={() => setIsTopologyModalOpen(true)}
@@ -3691,7 +3695,7 @@ export function GrokBotWorkspace() {
                 >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
-                    <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-[#1e293b] text-white dark:bg-[#1c1c26] dark:text-neutral-100 rounded-br-xs shadow-sm font-sans border border-slate-700/50 dark:border-[#2c2c3e] ml-auto overflow-hidden break-words">
+                    <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words">
                       <p className="whitespace-pre-wrap select-text break-words break-all">{msg.content}</p>
                     </div>
                   ) : (

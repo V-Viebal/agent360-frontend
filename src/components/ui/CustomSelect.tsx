@@ -50,7 +50,7 @@ export function CustomSelect({
           title={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder}
           className={`flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full ${triggerClassName}`}
         >
-          <span className="truncate text-[#ff7a00] font-medium min-w-0 flex-1 text-left">
+          <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronDown
