@@ -157,13 +157,20 @@ export async function fetchAvailableModels(): Promise<ModelOption[]> {
           ...(p.models || [])
         ];
         for (const m of pModels) {
-          if (m && m.id && !list.some(x => x.model === m.id)) {
-            list.push({
-              providerId: p.id,
-              providerName: p.name || p.id,
-              model: m.id,
-              name: m.name || m.id,
-            });
+          if (m && m.id) {
+            const cleanId = m.id.includes("/") ? m.id.split("/").pop()! : m.id;
+            // Filter out non-chat / media generation models
+            if (cleanId.includes("generate-preview") || cleanId.includes("imagen") || cleanId === "metadata_health") {
+              continue;
+            }
+            if (!list.some(x => x.model === cleanId)) {
+              list.push({
+                providerId: p.id,
+                providerName: "",
+                model: cleanId,
+                name: cleanId,
+              });
+            }
           }
         }
       }
