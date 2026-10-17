@@ -1359,6 +1359,7 @@ export function GrokBotWorkspace() {
   // Voice recording / Speech-to-text state
   const [isRecording, setIsRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [liveVoiceEnergy, setLiveVoiceEnergy] = useState<number>(0);
   const [sttLang, setSttLang] = useState<"vi-VN" | "en-US">(() => {
     try {
       return (localStorage.getItem("agent360_stt_lang") as any) || "vi-VN";
@@ -4197,6 +4198,7 @@ export function GrokBotWorkspace() {
                 isRecording={isRecording}
                 onAudioLevel={(lvl) => {
                   audioEnergyLevelRef.current = lvl;
+                  setLiveVoiceEnergy(lvl);
                 }}
               />
 
@@ -4242,9 +4244,17 @@ export function GrokBotWorkspace() {
                     }, 200);
                   }
                 }}
+                style={{
+                  boxShadow: isRecording
+                    ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
+                      (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : "rgba(255, 122, 0, 0.65)")
+                    : undefined,
+                }}
                 className={`p-1 rounded-full cursor-pointer transition-all ${
                   isRecording
-                    ? "bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30"
+                    ? liveVoiceEnergy > 45
+                      ? "bg-gradient-to-r from-[#ff3366] to-[#ff7a00] text-white"
+                      : "bg-[#ff7a00] text-black"
                     : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
                 }`}
                 title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
