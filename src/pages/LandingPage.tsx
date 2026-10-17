@@ -774,7 +774,7 @@ export function LandingPage() {
 
             <div className="lg:col-span-5 space-y-4 order-1 lg:order-2">
               <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                NATIVE TOOL ACCESS
+                {t("tools.badge")}
               </span>
               <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight text-balance">
                 {t("tools.title")}

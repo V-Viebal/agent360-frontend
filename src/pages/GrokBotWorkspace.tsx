@@ -3296,7 +3296,7 @@ export function GrokBotWorkspace() {
                     <div className="h-0.5 w-0.5 rounded-full bg-white" />
                   </div>
                 </div>
-                <span className="truncate text-xs text-neutral-900 dark:text-white">{selectedAgent.name}</span>
+                <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent.name}</span>
                 {nodePingMs !== null && (
                   <span
                     className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono border ${

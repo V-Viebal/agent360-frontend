@@ -22,7 +22,7 @@ export const vi = {
   "announcement.exploreOnPrem": "Khám phá On-Premise",
 
   // Hero Section
-  "hero.title": "Gặp gỡ Skyer. Nhân viên AI thực sự hoàn thành công việc.",
+  "hero.title": "Gặp gỡ Skyer. Nhân viên AI thực sự hoàn thành công\u00A0việc.",
   "hero.subtitle": "Các Bot có thể đăng nhập công cụ của bạn, thao tác y hệt con người, phối hợp song song 24/7 và bàn giao kết quả nghiệm thu có biên nhận xác thực.",
   "hero.inputPlaceholder": "Bạn muốn giao việc gì cho Bot? Ví dụ: Đối chiếu công nợ tuần này hoặc xử lý ticket Zendesk",
   "hero.submitButton": "Giao việc cho Bot",
@@ -33,7 +33,7 @@ export const vi = {
 
   // On-Premise Section
   "onPremise.badge": "CHỦ QUYỀN DỮ LIỆU DOANH NGHIỆP",
-  "onPremise.title": "Triển khai trên Cloud của chúng tôi. Hoặc hoàn toàn On-Premise trên máy chủ của bạn.",
+  "onPremise.title": "Triển khai trên Cloud của chúng tôi. Hoặc hoàn toàn On-Premise trên máy chủ của\u00A0bạn.",
   "onPremise.subtitle": "Vận hành nhân viên AI tự hành Skyer ngay bên trong trung tâm dữ liệu riêng, mạng nội bộ hoặc hạ tầng tách biệt (Air-gap). Cam kết 100% dữ liệu không rời khỏi tường lửa doanh nghiệp.",
   "onPremise.privateClusterTitle": "Cụm On-Premise Nội Bộ",
   "onPremise.privateClusterDesc": "Dành cho ngân hàng, cơ sở y tế, cơ quan nhà nước và tập đoàn có yêu cầu nghiêm ngặt về vị trí lưu trữ dữ liệu (GDPR, HIPAA, Nghị định 13/2023/NĐ-CP).",
@@ -55,7 +55,7 @@ export const vi = {
 
   // Specialized Roles / Give Bot a Job
   "roles.badge": "VỊ TRÍ CHUYÊN BIỆT",
-  "roles.title": "Giao đúng việc cho đúng Bot.",
+  "roles.title": "Giao đúng việc cho đúng\u00A0Bot.",
   "roles.subtitle": "Đừng ép một câu lệnh chat chung chung phải xử lý cả báo cáo tài chính, hóa đơn TT99, bán hàng B2B, ticket hỗ trợ và tuyển dụng nhân sự. Skyer cung cấp nhân viên AI chuyên trách cho từng phòng ban với công cụ và bộ nhớ riêng biệt.",
   "roles.exampleTask": "Tác vụ mẫu",
   "roles.authorizedToolchain": "Bộ công cụ được cấp quyền:",
@@ -64,7 +64,7 @@ export const vi = {
 
   // Interaction Section
   "interaction.badge": "TƯƠNG TÁC TỰ NHIÊN",
-  "interaction.title": "Giao tiếp với Bot như đồng nghiệp thực thụ.",
+  "interaction.title": "Giao tiếp với Bot như đồng nghiệp thực\u00A0thụ.",
   "interaction.subtitle": "Giao việc cho Bot như cách bạn nhắn tin cho đồng nghiệp trên desktop hoặc web. Nhân viên AI sẽ tự chủ xử lý từ đầu đến cuối, ghi nhớ ngữ cảnh làm việc và chỉ liên hệ khi cần phê duyệt quan trọng.",
   "interaction.check1": "Ghi nhớ ngữ cảnh liên tục qua nhiều tuần lặp dự án",
   "interaction.check2": "Tự động đăng nhập vào các ứng dụng nội bộ (Zendesk, GitHub, Jira, Notion)",
@@ -72,27 +72,27 @@ export const vi = {
 
   // Multi-Agent Collaboration
   "hierarchy.badge": "HỢP TÁC ĐA TÁC NHÂN",
-  "hierarchy.title": "Kết nối các Bot thành một đội ngũ.",
+  "hierarchy.title": "Kết nối các Bot thành một đội\u00A0ngũ.",
   "hierarchy.subtitle": "Đưa các Bot vào cùng một luồng công việc để chúng tự động chuyển giao tác vụ cho nhau. Bạn chỉ cần theo dõi tiến độ hoàn thành thay vì phải can thiệp từng bước nhỏ.",
 
   // Native Tool Access
   "tools.badge": "TRUY CẬP CÔNG CỤ THỰC TẾ",
-  "tools.title": "Skyer Bot làm việc ngay trên môi trường của bạn.",
+  "tools.title": "Skyer Bot làm việc ngay trên môi\u00A0trường của\u00A0bạn.",
   "tools.subtitle": "Chỉ cần đăng nhập một lần. Bot sẽ sử dụng các ứng dụng và trang web của bạn giống như thao tác của con người. Nhờ có máy ảo riêng và cookie trình duyệt bền bỉ, Bot thao tác mượt mà trên mọi nền tảng SaaS.",
 
   // Repeatable Routines
   "routines.badge": "QUY TRÌNH TỰ ĐỘNG LẶP LẠI",
-  "routines.title": "Dạy Bot cách làm một lần duy nhất.",
+  "routines.title": "Dạy Bot cách làm một lần duy\u00A0nhất.",
   "routines.subtitle": "Mời Bot cùng theo dõi khi bạn thực hiện một quy trình. Bot sẽ tự động lưu thành quy trình chuẩn và tự giác thực thi vào những lần sau mà không cần nhắc nhở.",
 
   // Shared Memory
   "memory.badge": "NGỮ CẢNH CHIA SẺ",
-  "memory.title": "Bot thông minh hơn theo thời gian.",
+  "memory.title": "Bot thông minh hơn theo thời\u00A0gian.",
   "memory.subtitle": "Các Bot ghi nhớ kiến thức và học hỏi lẫn nhau. Hướng dẫn một việc hôm nay, thứ Sáu có thể bàn giao trọn vẹn dự án. Bộ nhớ được lưu trữ bền vững trên Outline KB và máy chủ của bạn.",
 
   // Pricing
   "pricing.badge": "CHI PHÍ MINH BẠCH",
-  "pricing.title": "Gói cước phù hợp mọi quy mô.",
+  "pricing.title": "Gói cước phù hợp mọi quy\u00A0mô.",
   "pricing.subtitle": "Định phí dự đoán được với năng lực điện toán riêng biệt và hạn mức sử dụng hàng tuần đi kèm.",
   "pricing.getPlan": "Đăng ký",
 
@@ -102,14 +102,14 @@ export const vi = {
   "faq.subtitle": "Mọi thông tin cần thiết về kiến trúc Skyer, cơ chế bảo mật và vận hành thực tế.",
 
   // CTA Footer
-  "cta.title": "Khởi tạo Nhân viên AI đầu tiên của bạn.",
+  "cta.title": "Khởi tạo Nhân viên AI đầu\u00A0tiên của\u00A0bạn.",
   "cta.subtitle": "Một đồng nghiệp AI đáng tin cậy để bàn giao công việc thực tế. Vận hành song song 24/7 với biên nhận nghiệm thu có thể kiểm chứng.",
   "cta.getStarted": "Bắt đầu miễn phí",
   "cta.readDocs": "Xem tài liệu kỹ thuật",
 
   // Marketplace
   "marketplace.badge": "DANH MỤC NHÂN VIÊN AI DOANH NGHIỆP",
-  "marketplace.title": "Chợ Nhân viên Skyer",
+  "marketplace.title": "Chợ Nhân viên\u00A0Skyer",
   "marketplace.subtitle": "Khám phá các nhân viên AI sẵn sàng làm việc cho mọi phòng ban: Ban điều hành, Kế toán & Tài chính, Bán hàng B2B, Hỗ trợ Khách hàng, Tiếp thị, Nhân sự, Pháp chế và Vận hành IT.",
   "marketplace.searchPlaceholder": "Tìm theo vị trí, người tạo (@handle) hoặc công cụ...",
   "marketplace.inspectSpec": "Xem chi tiết thông số",
@@ -201,11 +201,11 @@ export const vi = {
   "hero.roleSales": "Chuyên viên Kinh doanh B2B (Doanh thu & CRM)",
   "hero.roleHR": "Cố vấn Tuyển dụng & Nhân sự",
   "hero.roleChief": "Chánh Văn phòng Điều hành",
-  "onPremise.heading": "Triển khai trên Cloud. Hoặc hoàn toàn On-Premise trên máy chủ nội bộ.",
+  "onPremise.heading": "Triển khai trên Cloud. Hoặc hoàn toàn On-Premise trên máy chủ nội\u00A0bộ.",
   "onPremise.clusterTitle": "Cụm On-Premise Nội Bộ",
   "onPremise.cloudTitle": "Skyer Managed Cloud",
   "parallel.badge": "LỰC LƯỢNG LAO ĐỘNG DOANH NGHIỆP",
-  "parallel.title": "Làm việc cùng nhiều Bot cùng một lúc.",
+  "parallel.title": "Làm việc cùng nhiều Bot cùng một\u00A0lúc.",
   "parallel.subtitle": "Vận hành 5, 20 hoặc 100 Bot song song. Mỗi Bot phụ trách một phòng ban, giải quyết hàng đợi công việc suốt 24/7.",
   "parallel.bot1Title": "Bot Tài chính & Kế toán",
   "parallel.bot1Desc": "Đối soát tài khoản ngân hàng và ghi nhận bút toán TT99/TT133 tự động trên ERPNext.",
@@ -213,9 +213,9 @@ export const vi = {
   "parallel.bot2Desc": "Phân loại yêu cầu Zendesk và soạn thảo phản hồi chuẩn xác theo tài liệu nội bộ.",
   "parallel.bot3Title": "Bot Phát triển Kinh doanh B2B",
   "parallel.bot3Desc": "Sàng lọc khách hàng tiềm năng, kiểm tra CRM và tự động gửi email chăm sóc cá nhân hóa.",
-  "tools.heading": "Skyer Bot làm việc ngay trên môi trường của bạn.",
+  "tools.heading": "Skyer Bot làm việc ngay trên môi\u00A0trường của\u00A0bạn.",
   "tools.lead": "Chỉ cần đăng nhập một lần. Bot sẽ sử dụng công cụ với quyền hạn của bạn và bàn giao kết quả nghiệm thu.",
-  "hierarchy.heading": "Kết nối các Bot thành một đội ngũ.",
+  "hierarchy.heading": "Kết nối các Bot thành một đội\u00A0ngũ.",
   "hierarchy.lead": "Đưa các Bot vào cùng một luồng công việc. Bot Trưởng nhóm phân bổ mục tiêu, phân việc cho các Bot phụ trách và kiểm tra kỹ lưỡng trước khi bàn giao cho bạn.",
   "marketplace.allPositions": "Tất cả vị trí",
   "marketplace.executiveOps": "Điều hành & Vận hành",
