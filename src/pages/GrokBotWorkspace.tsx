@@ -13,6 +13,7 @@ import { StarredAndShortcutsModal } from "../components/StarredAndShortcutsModal
 import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect } from "react";
 import {
+  Monitor,
   Trash2,
   Pin,
   PinOff,
@@ -1148,13 +1149,34 @@ export function GrokBotWorkspace() {
     const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
-  const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(() => {
+  const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(false);
+  const [isComputerSplitOpen, setIsComputerSplitOpen] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("agent360_browser_expanded") === "true";
+      return localStorage.getItem("agent360_computer_split") === "true";
     } catch {
       return false;
     }
   });
+
+  const handleToggleComputerSplit = (forceState?: boolean) => {
+    setIsComputerSplitOpen((prev) => {
+      const next = forceState !== undefined ? forceState : !prev;
+      try {
+        localStorage.setItem("agent360_computer_split", next ? "true" : "false");
+      } catch {}
+      if (next) {
+        if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+          setIsLeftSidebarCollapsed(true);
+          setIsChatListCollapsed(true);
+          try {
+            localStorage.setItem("agent360_left_sidebar_collapsed", "true");
+            localStorage.setItem("agent360_chat_list_collapsed", "true");
+          } catch {}
+        }
+      }
+      return next;
+    });
+  };
 
   const handleSetBrowserModalOpen = (open: boolean) => {
     setIsBrowserModalOpen(open);
@@ -3397,7 +3419,13 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       {/* 2. CENTER AREA: Skyer Chat & Dialogue Content */}
       {/* ========================================================= */}
-      <main className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0">
+      <main
+        style={{
+          width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '30%' : undefined,
+          flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '0 0 30%' : undefined,
+        }}
+        className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0"
+      >
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
         <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[var(--bg-workspace)]/85 backdrop-blur-md z-10">
           {/* Left button: mobile drawer or expand collapsed left sidebar on desktop */}
@@ -3481,6 +3509,25 @@ export function GrokBotWorkspace() {
             <ThemeSelector />
             <LanguageSelector />
           </div>
+
+          {/* Live Virtual Computer Toggle Button */}
+          <button
+            type="button"
+            onClick={() => handleToggleComputerSplit()}
+            className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer ${
+              isComputerSplitOpen
+                ? "bg-[#ff7a00]/15 border-[#ff7a00]/40 text-[#ff7a00] shadow-xs"
+                : "bg-[#181820] hover:bg-[#22222e] border-[#242430] text-neutral-300 hover:text-white"
+            }`}
+            title={isComputerSplitOpen ? "Đóng Virtual Computer" : "Mở Virtual Computer (Desktop 3:7 / Mobile Full)"}
+            aria-label="Toggle Virtual Computer Mode"
+          >
+            <Monitor size={14} className={isComputerSplitOpen ? "text-[#ff7a00] animate-pulse" : ""} />
+            <span className="hidden sm:inline font-sans text-xs font-medium">Computer</span>
+            {isComputerSplitOpen && (
+              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] hidden sm:inline-block" />
+            )}
+          </button>
           {/* Context Token Usage Trigger moved to top header */}
           <ContextUsageBar
             agentId={selectedAgent.id}
@@ -4365,6 +4412,82 @@ export function GrokBotWorkspace() {
           </form>
         </div>
       </main>
+
+      {/* ========================================================= */}
+      {/* 2.5 LIVE COMPUTER EXPAND PANE (Desktop: 70% width, Mobile: Fullscreen) */}
+      {/* ========================================================= */}
+      {isComputerSplitOpen && (() => {
+        const browserTarget = getAgentBrowserUrl(selectedAgent);
+        return (
+          <section
+            aria-label="Virtual Computer Interactive Workspace"
+            className="fixed inset-0 z-50 lg:static lg:z-10 lg:w-[70%] lg:flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden"
+          >
+            {/* Top Control Bar */}
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-xs font-mono font-semibold text-white tracking-wide truncate">
+                  {selectedAgent.name} Computer
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
+                  Live Sandbox
+                </span>
+                <span className="text-[11px] font-mono text-neutral-400 hidden md:inline px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                  {selectedAgent.node}
+                </span>
+              </div>
+
+              {/* Action Buttons: Fullscreen modal, Open in new tab, and Close Split */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSetBrowserModalOpen(true)}
+                  className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
+                  title="Mở rộng toàn màn hình (Modal)"
+                  aria-label="Expand full screen modal"
+                >
+                  <Maximize2 size={13} />
+                  <span className="hidden sm:inline text-[11px]">Full Modal</span>
+                </button>
+
+                <a
+                  href={browserTarget.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
+                  title="Mở trong tab mới (External Window)"
+                  aria-label="Open external window"
+                >
+                  <ExternalLink size={13} />
+                  <span className="hidden sm:inline text-[11px]">Tab mới</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleComputerSplit(false)}
+                  className="h-8 w-8 rounded-lg bg-[#22222e] hover:bg-red-500/20 hover:text-red-400 border border-[#303042] hover:border-red-500/30 text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                  title="Đóng Computer (Esc)"
+                  aria-label="Close Virtual Computer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+
+            {/* Iframe Workspace */}
+            <div className="flex-1 w-full h-full bg-black relative">
+              <iframe
+                key={`split-${selectedAgent.id}-${browserTarget.url}`}
+                src={browserTarget.url}
+                title={`${selectedAgent.name} Computer Live Split`}
+                className="w-full h-full border-0 bg-black"
+                allow="clipboard-read; clipboard-write; fullscreen"
+              />
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* 3. CONVERSATION SESSIONS LIST (COLLAPSIBLE, RIGHT OF CHAT) */}
