@@ -1,4 +1,17 @@
+import { operatorKey } from "./a2aApi";
+
 const API = "/api";
+
+export class SubAgentAuthError extends Error {}
+
+export interface SkillSyncStatus {
+  parent_agent_id: string;
+  state: "idle" | "pending" | "syncing" | "synced" | "failed";
+  requested_at?: string | null;
+  synced_at?: string | null;
+  duration_ms?: number | null;
+  error?: string | null;
+}
 
 export type DelegationMode = "sync" | "async";
 
@@ -70,12 +83,24 @@ export interface DelegationTask {
 export const normalizeAgentId = (id: string) => (id.includes(":") ? id.split(":").pop()! : id);
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  const key = operatorKey.get();
   const res = await fetch(`${API}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", Accept: "application/json", ...(init?.headers || {}) },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(key ? { Authorization: `Bearer ${key}` } : {}),
+      ...(init?.headers || {}),
+    },
   });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  if (res.status === 401) throw new SubAgentAuthError("Operator key required for this action");
   if (!res.ok) throw new Error(data?.detail || data?.error || data?.message || `HTTP ${res.status}`);
   return data as T;
 }
@@ -91,6 +116,9 @@ export const subAgentApi = {
     call<{ removed: boolean }>(`/agents/${a(parent)}/subagents/${a(child)}`, { method: "DELETE" }),
   syncSkill: (parent: string) =>
     call<{ synced: boolean; content: string }>(`/agents/${a(parent)}/subagents/sync-skill`, { method: "POST" }),
+  syncSkillAsync: (parent: string) =>
+    call<SkillSyncStatus>(`/agents/${a(parent)}/subagents/sync-skill?wait=false`, { method: "POST" }),
+  skillStatus: (parent: string) => call<SkillSyncStatus>(`/agents/${a(parent)}/subagents/skill-status`),
   probe: (parent: string, child: string, prompt?: string) =>
     call<{ ok: boolean; output?: string; error?: string; session_id: string }>(
       `/agents/${a(parent)}/subagents/${a(child)}/probe`,
@@ -115,7 +143,10 @@ export const subAgentApi = {
   syncStatus: (id: string) => call<DelegationTask>(`/delegations/${id}/sync-native-status`, { method: "POST" }),
   review: (id: string, body: { decision?: string; reviewer: string; checks?: AcceptanceCheck[]; reason?: string }) =>
     call<DelegationTask>(`/delegations/${id}/review`, { method: "POST", body: JSON.stringify(body) }),
-  retry: (id: string, feedback: string) =>
-    call<DelegationTask>(`/delegations/${id}/retry`, { method: "POST", body: JSON.stringify({ feedback }) }),
+  retry: (
+    id: string,
+    feedback: string,
+    revised?: { objective?: string; expected_output?: string; acceptance_criteria?: string[] }
+  ) => call<DelegationTask>(`/delegations/${id}/retry`, { method: "POST", body: JSON.stringify({ feedback, ...(revised || {}) }) }),
   cancel: (id: string) => call<DelegationTask>(`/delegations/${id}/cancel`, { method: "POST" }),
 };

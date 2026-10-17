@@ -1,3 +1,4 @@
+import { operatorKey } from "../services/a2aApi";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, RefreshCw, Trash2, Zap, Network, CheckCircle2, XCircle, Clock, Send, RotateCcw, Ban, ScanSearch } from "lucide-react";
 import { InfraAgent } from "../types/agent";
@@ -9,6 +10,8 @@ import {
   SubAgentHealth,
   normalizeAgentId,
   subAgentApi,
+  SkillSyncStatus,
+  SubAgentAuthError,
 } from "../services/subAgentApi";
 
 interface Props {
@@ -50,6 +53,9 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
   const [form, setForm] = useState({ child: "", role: "", capabilities: "", timeout: 300 });
   const [dlg, setDlg] = useState({ child: "", mode: "sync" as DelegationMode, objective: "", criteria: "" });
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [skill, setSkill] = useState<SkillSyncStatus | null>(null);
+  const [hasKey, setHasKey] = useState(!!operatorKey.get());
+  const [keyInput, setKeyInput] = useState("");
 
   const candidates = useMemo(
     () =>
@@ -67,7 +73,13 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
   const load = async () => {
     setLoading(true);
     try {
-      const [b, h, t] = await Promise.all([subAgentApi.list(parent), subAgentApi.health(parent), subAgentApi.delegations(parent)]);
+      const [b, h, t, st] = await Promise.all([
+        subAgentApi.list(parent),
+        subAgentApi.health(parent),
+        subAgentApi.delegations(parent),
+        subAgentApi.skillStatus(parent).catch(() => null),
+      ]);
+      setSkill(st);
       setBindings(b);
       setHealth(Object.fromEntries(h.map((x) => [x.child_agent_id, x])));
       setTasks(t);
@@ -98,16 +110,38 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
     return () => clearInterval(timer);
   }, [tasks]);
 
+  useEffect(() => {
+    if (!skill || !["pending", "syncing"].includes(skill.state)) return;
+    const timer = setTimeout(async () => {
+      try {
+        setSkill(await subAgentApi.skillStatus(parent));
+      } catch {
+        /* keep last state */
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [skill, parent]);
+
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
     try {
       await fn();
     } catch (e: any) {
+      if (e instanceof SubAgentAuthError) {
+        operatorKey.set("");
+        setHasKey(false);
+      }
       flash(e.message, false);
     } finally {
       setBusy(null);
     }
   };
+
+  const resyncSkill = () =>
+    run("skill", async () => {
+      setSkill(await subAgentApi.syncSkillAsync(parent));
+    });
+
 
   const addBinding = () =>
     run("bind", async () => {
@@ -118,7 +152,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
         timeout_seconds: form.timeout,
       });
       setForm({ child: "", role: "", capabilities: "", timeout: 300 });
-      flash(`Bound ${form.child} and synced skill agent360-subagents into ${agentName}`);
+      flash(`Bound ${form.child}; skill agent360-subagents is syncing into ${agentName} in the background`);
       await load();
     });
 
@@ -149,7 +183,13 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
     run(`retry-${t.id}`, async () => {
       const feedback = window.prompt("Feedback for the sub-agent (required):", t.acceptance?.reason || "");
       if (!feedback) return;
-      const updated = await subAgentApi.retry(t.id, feedback);
+      const objective = window.prompt("Revised objective (optional — leave as-is to keep):", t.objective) || undefined;
+      const criteriaText = window.prompt("Revised acceptance criteria, separated by ';' (optional):", t.acceptance_criteria.join("; ")) || "";
+      const criteria = criteriaText.split(";").map((x) => x.trim()).filter(Boolean);
+      const updated = await subAgentApi.retry(t.id, feedback, {
+        objective: objective && objective !== t.objective ? objective : undefined,
+        acceptance_criteria: criteria.length && criteria.join("; ") !== t.acceptance_criteria.join("; ") ? criteria : undefined,
+      });
       setTasks((prev) => prev.map((x) => (x.id === t.id ? updated : x)));
     });
 
@@ -160,6 +200,63 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           {notice.text}
         </div>
       )}
+
+      <div className="flex flex-wrap items-center gap-2 p-2 bg-[#14141a] rounded-xl border border-[#20202a] text-[10px] font-mono">
+        <span className="text-neutral-500">skill</span>
+        <span
+          data-testid="skill-sync-state"
+          className={`px-1.5 py-0.5 rounded border ${
+            skill?.state === "synced"
+              ? "text-emerald-300 border-emerald-500/30"
+              : skill?.state === "failed"
+                ? "text-rose-300 border-rose-500/30"
+                : skill && ["pending", "syncing"].includes(skill.state)
+                  ? "text-amber-300 border-amber-500/30"
+                  : "text-neutral-400 border-[#2b2b3d]"
+          }`}
+          title={skill?.error || (skill?.synced_at ? `synced ${skill.synced_at}` : "")}
+        >
+          {skill?.state ?? "unknown"}
+          {skill?.duration_ms != null && skill.state === "synced" ? ` · ${skill.duration_ms}ms` : ""}
+        </span>
+        <button onClick={resyncSkill} disabled={busy === "skill"} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-200 cursor-pointer disabled:opacity-50">
+          Re-sync skill
+        </button>
+        <span className="ml-auto flex items-center gap-1">
+          {hasKey ? (
+            <button
+              onClick={() => {
+                operatorKey.set("");
+                setHasKey(false);
+              }}
+              className="text-neutral-500 hover:text-neutral-300 cursor-pointer"
+            >
+              operator unlocked · lock
+            </button>
+          ) : (
+            <>
+              <input
+                type="password"
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="operator key"
+                aria-label="Operator key"
+                className="w-28 px-1.5 py-0.5 rounded bg-[#0f0f14] border border-[#2b2b3d] text-neutral-200"
+              />
+              <button
+                onClick={() => {
+                  operatorKey.set(keyInput.trim());
+                  setHasKey(!!keyInput.trim());
+                  setKeyInput("");
+                }}
+                className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-200 cursor-pointer"
+              >
+                Unlock
+              </button>
+            </>
+          )}
+        </span>
+      </div>
 
       <div className="flex items-center gap-1 p-1 bg-[#14141a] rounded-xl border border-[#20202a] text-[11px]">
         {(["subagents", "delegations"] as const).map((v) => (
