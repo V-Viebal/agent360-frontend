@@ -4882,7 +4882,7 @@ export function GrokBotWorkspace() {
                   title="Click to change active model"
                 >
                   <span className="truncate max-w-[150px]">
-                    {isChangingModel ? "Updating model..." : selectedAgent.model}
+                    {isChangingModel ? "Updating model..." : (selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model)}
                   </span>
                   <ChevronDown
                     size={11}

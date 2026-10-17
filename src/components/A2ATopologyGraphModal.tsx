@@ -453,7 +453,7 @@ export function A2ATopologyGraphModal({
                           </div>
                         </div>
                         <div className="text-[11px] font-mono text-slate-500 dark:text-neutral-400 mt-1.5 truncate">
-                          {ag.node} • {ag.model}
+                          {ag.node} • {ag.model ? (ag.model.includes("/") ? ag.model.split("/").pop() : ag.model) : "default"}
                         </div>
                       </div>
                     );
@@ -533,7 +533,7 @@ export function A2ATopologyGraphModal({
                           </div>
                         </div>
                         <div className="text-[11px] font-mono text-slate-500 dark:text-neutral-400 mt-1.5 truncate">
-                          {ag.node} • {ag.model}
+                          {ag.node} • {ag.model ? (ag.model.includes("/") ? ag.model.split("/").pop() : ag.model) : "default"}
                         </div>
                       </div>
                     );
@@ -662,7 +662,7 @@ export function A2ATopologyGraphModal({
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Mô hình trí tuệ:</span>
-                  <span className="text-[#ff7a00] font-medium">{activeSelectedAgent.model}</span>
+                  <span className="text-[#ff7a00] font-medium">{activeSelectedAgent.model ? (activeSelectedAgent.model.includes("/") ? activeSelectedAgent.model.split("/").pop() : activeSelectedAgent.model) : "default"}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Thời gian phản hồi:</span>
