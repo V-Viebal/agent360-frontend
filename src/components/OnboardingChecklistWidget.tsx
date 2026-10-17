@@ -327,16 +327,23 @@ export function OnboardingChecklistWidget({
             </button>
 
             {isAllCompleted ? (
-              <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={12} /> Đã sẵn sàng làm việc!
-              </span>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 text-[11px] font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                title="Bấm để đóng bảng và bắt đầu làm việc ngay"
+              >
+                <CheckCircle2 size={13} />
+                <span>Đã sẵn sàng làm việc! ✕</span>
+              </button>
             ) : (
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="text-[10px] text-neutral-400 hover:text-neutral-300 font-mono transition-colors cursor-pointer"
+                className="text-[10px] text-neutral-400 hover:text-neutral-300 font-mono transition-colors cursor-pointer hover:underline"
+                title="Đóng bảng và không hiển thị lại"
               >
-                Tạm ẩn bảng này
+                Đã hiểu, đóng bảng này
               </button>
             )}
           </div>
