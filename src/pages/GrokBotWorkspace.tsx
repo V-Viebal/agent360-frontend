@@ -1612,6 +1612,49 @@ export function GrokBotWorkspace() {
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned">("all");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
+  // Mobile Hold-Touch / Long-Press Action Sheet state
+  const [mobileActionChat, setMobileActionChat] = useState<AgentSession | null>(null);
+  const [mobileActionMsg, setMobileActionMsg] = useState<{ id: string; content: string; turnIdx: number } | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressPreventClickRef = useRef<boolean>(false);
+
+  const handleTouchStartChat = (chat: AgentSession) => {
+    longPressPreventClickRef.current = false;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressPreventClickRef.current = true;
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate(25); } catch {}
+      }
+      setMobileActionChat(chat);
+    }, 400);
+  };
+
+  const handleTouchEndChat = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTouchStartMsg = (msg: { id: string; content: string; turnIdx: number }) => {
+    longPressPreventClickRef.current = false;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressPreventClickRef.current = true;
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate(25); } catch {}
+      }
+      setMobileActionMsg(msg);
+    }, 400);
+  };
+
+  const handleTouchEndMsg = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
   const [isBatchClearModalOpen, setIsBatchClearModalOpen] = useState(false);
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
@@ -2049,8 +2092,8 @@ export function GrokBotWorkspace() {
     } catch {}
   };
 
-  const togglePinChat = (chatId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const togglePinChat = (chatId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setPinnedChatIds((prev) => {
       const next = prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [...prev, chatId];
       try {
@@ -2388,6 +2431,8 @@ export function GrokBotWorkspace() {
         setInSessionSearchOpen(false);
         setForwardModalMsg(null);
         setChatToDelete(null);
+        setMobileActionChat(null);
+        setMobileActionMsg(null);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -3686,7 +3731,19 @@ export function GrokBotWorkspace() {
                     </div>
                   ) : (
                     /* Assistant Turn: Structured Content Blocks + QwenPaw Tool Cards */
-                    <div className="w-full max-w-full space-y-2.5 min-w-0 overflow-hidden">
+                    <div
+                      onTouchStart={() => handleTouchStartMsg({ id: msg.id, content: msg.content, turnIdx: mIdx })}
+                      onTouchEnd={handleTouchEndMsg}
+                      onTouchMove={handleTouchEndMsg}
+                      onTouchCancel={handleTouchEndMsg}
+                      onContextMenu={(e) => {
+                        if (window.innerWidth < 1024) {
+                          e.preventDefault();
+                          setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx });
+                        }
+                      }}
+                      className="w-full max-w-full space-y-2.5 min-w-0 overflow-hidden"
+                    >
                       {/* 1. Intermediate Steps (Reasoning & Tool Calls): Collapsible summary when turn is completed */}
                       {(hasSteps || hasTools) && (
                         <TurnExecutionAccordion
@@ -4544,8 +4601,24 @@ export function GrokBotWorkspace() {
                   <div
                     key={chat.id}
                     style={{ animationDelay: `${Math.min(cIdx * 20, 200)}ms` }}
-                    onClick={() => handleSelectChat(chat)}
-                    className={`w-full p-2.5 rounded-xl text-left flex items-center gap-2.5 transition-colors cursor-pointer group animate-fade-in-stagger ${
+                    onTouchStart={() => handleTouchStartChat(chat)}
+                    onTouchEnd={handleTouchEndChat}
+                    onTouchMove={handleTouchEndChat}
+                    onTouchCancel={handleTouchEndChat}
+                    onContextMenu={(e) => {
+                      if (window.innerWidth < 1024) {
+                        e.preventDefault();
+                        setMobileActionChat(chat);
+                      }
+                    }}
+                    onClick={() => {
+                      if (longPressPreventClickRef.current) {
+                        longPressPreventClickRef.current = false;
+                        return;
+                      }
+                      handleSelectChat(chat);
+                    }}
+                    className={`w-full p-2.5 rounded-xl text-left flex items-center gap-2.5 transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
                       isSelected
                         ? "bg-[#22222c] text-white shadow-sm"
                         : "hover:bg-[#181820] text-neutral-400 hover:text-neutral-200"
@@ -5619,6 +5692,215 @@ export function GrokBotWorkspace() {
           setMcpRefreshTrigger((t) => t + 1);
         }}
       />
+
+      {/* ========================================================= */}
+      {/* MOBILE HOLD-TOUCH / LONG-PRESS ACTION SHEET: CHAT SESSION */}
+      {/* ========================================================= */}
+      {mobileActionChat && (
+        <div
+          onClick={() => setMobileActionChat(null)}
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+          >
+            {/* Header / Session Title */}
+            <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
+              <div className="min-w-0 flex-1 pr-2">
+                <span className="text-[10px] font-mono text-[#ff7a00] uppercase font-bold block">Session Actions</span>
+                <h4 className="text-sm font-semibold text-white truncate">{mobileActionChat.title}</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileActionChat(null)}
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Quick Actions List */}
+            <div className="space-y-1">
+              {/* 1. Pin / Unpin */}
+              <button
+                type="button"
+                onClick={() => {
+                  togglePinChat(mobileActionChat.id);
+                  setMobileActionChat(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Pin size={15} className={pinnedChatIds.includes(mobileActionChat.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
+                <span>{pinnedChatIds.includes(mobileActionChat.id) ? "Bỏ ghim phiên hội thoại (Unpin)" : "Ghim phiên lên đầu (Pin to top)"}</span>
+              </button>
+
+              {/* 2. Rename */}
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingChatId(mobileActionChat.id);
+                  setEditingChatTitle(mobileActionChat.title);
+                  setMobileActionChat(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Edit2 size={15} className="text-cyan-400" />
+                <span>Đổi tên phiên hội thoại (Rename)</span>
+              </button>
+
+              {/* 3. Export Markdown */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleExportSessionMarkdown();
+                  setMobileActionChat(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Download size={15} className="text-emerald-400" />
+                <span>Xuất tệp Markdown (.md)</span>
+              </button>
+
+              {/* 4. Delete Session */}
+              <button
+                type="button"
+                onClick={() => {
+                  const toDel = mobileActionChat;
+                  setMobileActionChat(null);
+                  setChatToDelete(toDel);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-xs text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+              >
+                <Trash2 size={15} className="text-red-400" />
+                <span>Xóa phiên hội thoại (Delete)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MOBILE HOLD-TOUCH / LONG-PRESS ACTION SHEET: BOT RESPONSE */}
+      {/* ========================================================= */}
+      {mobileActionMsg && (
+        <div
+          onClick={() => setMobileActionMsg(null)}
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
+              <div className="min-w-0 flex-1 pr-2">
+                <span className="text-[10px] font-mono text-[#ff7a00] uppercase font-bold block">Message Turn Actions</span>
+                <p className="text-xs text-neutral-400 truncate max-w-xs italic">
+                  "{mobileActionMsg.content.slice(0, 60)}..."
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileActionMsg(null)}
+                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Quick Actions List */}
+            <div className="space-y-1">
+              {/* 1. Star / Bookmark Turn */}
+              <button
+                type="button"
+                onClick={() => {
+                  toggleStarMessage(mobileActionMsg.id);
+                  setMobileActionMsg(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Star size={15} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
+                <span>{starredMsgIds.includes(mobileActionMsg.id) ? "Bỏ đánh dấu sao câu trả lời" : "Đánh dấu sao (Star / Bookmark)"}</span>
+              </button>
+
+              {/* 2. Copy Response */}
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(mobileActionMsg.content);
+                  setCopiedResponseMsgId(mobileActionMsg.id);
+                  setMobileActionMsg(null);
+                  setTimeout(() => setCopiedResponseMsgId(null), 1800);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Copy size={15} className="text-neutral-300" />
+                <span>Sao chép toàn bộ phản hồi (Copy)</span>
+              </button>
+
+              {/* 3. Read Aloud (TTS) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const content = mobileActionMsg.content;
+                  const id = mobileActionMsg.id;
+                  setMobileActionMsg(null);
+                  if (speakingMsgId === id) {
+                    stopSpeaking();
+                    setSpeakingMsgId(null);
+                  } else {
+                    setSpeakingMsgId(id);
+                    speakText(content, {
+                      onSegmentChange: (seg) => setSpeakingSentence(seg),
+                      onEnd: () => {
+                        setSpeakingMsgId(null);
+                        setSpeakingSentence(null);
+                      },
+                      onError: () => {
+                        setSpeakingMsgId(null);
+                        setSpeakingSentence(null);
+                      },
+                    });
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Volume2 size={15} className="text-[#ff7a00]" />
+                <span>Đọc to phản hồi bằng giọng nói (TTS)</span>
+              </button>
+
+              {/* 4. Branch / Fork Session */}
+              <button
+                type="button"
+                onClick={() => {
+                  const turnIdx = mobileActionMsg.turnIdx;
+                  setMobileActionMsg(null);
+                  handleForkSession(turnIdx);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <GitFork size={15} className="text-cyan-400" />
+                <span>Tách nhánh phiên mới từ đây (Fork Session)</span>
+              </button>
+
+              {/* 5. Forward to Another Agent */}
+              <button
+                type="button"
+                onClick={() => {
+                  const content = mobileActionMsg.content;
+                  setMobileActionMsg(null);
+                  setForwardModalMsg(content);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Share2 size={15} className="text-purple-400" />
+                <span>Chuyển tiếp cho Agent khác tiếp nối</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
