@@ -315,4 +315,17 @@ export const en = {
   "topo.level3": "LEVEL 3: DOMAIN SPECIALISTS",
   "topo.protocol": "A2A Delegation Protocol (ACP / JSON-RPC)",
   "topo.close": "Close Graph",
+
+
+  // Agent Detail Page
+  "detail.back": "Back to Marketplace",
+  "detail.deploy": "Deploy Teammate",
+  "detail.deploying": "Deploying to Workspace...",
+  "detail.overview": "Executive Overview",
+  "detail.roleGoal": "Agent Role & Specific Goal",
+  "detail.backstory": "Backstory & Epistemic Standard",
+  "detail.orchestration": "Multi-Agent AI Teammates Orchestration",
+  "detail.toolchain": "Provisioned Sandbox Toolchain",
+  "detail.routines": "Continuous Autonomous Routines",
+  "detail.terminalTrace": "Authoritative Terminal Execution Trace",
 };

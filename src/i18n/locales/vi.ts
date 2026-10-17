@@ -315,4 +315,17 @@ export const vi = {
   "topo.level3": "TẦNG 3: CHUYÊN VIÊN NGHIỆP VỤ",
   "topo.protocol": "Giao thức Điều phối A2A (ACP / JSON-RPC)",
   "topo.close": "Đóng Đồ Thị",
+
+
+  // Agent Detail Page
+  "detail.back": "Quay lại Chợ Nhân viên",
+  "detail.deploy": "Kích hoạt Nhân viên AI",
+  "detail.deploying": "Đang khởi tạo Workspace...",
+  "detail.overview": "Tổng quan Nghiệp vụ",
+  "detail.roleGoal": "Vai trò & Mục tiêu Cụ thể",
+  "detail.backstory": "Bối cảnh & Tiêu chuẩn Nghiệp vụ",
+  "detail.orchestration": "Điều phối Đa Tác nhân AI Tự hành",
+  "detail.toolchain": "Bộ Công cụ Sandbox Được Cấp quyền",
+  "detail.routines": "Quy trình Lặp lại Tự động",
+  "detail.terminalTrace": "Nhật ký Kiểm chứng Lệnh Thực tế",
 };

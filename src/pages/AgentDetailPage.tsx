@@ -20,10 +20,12 @@ import {
 } from "lucide-react";
 import { MARKETPLACE_AGENTS } from "../data/mockMarketplaceAgents";
 import { AgentMarketplaceItem } from "../types/marketplace";
+import { useTranslation } from "../i18n/LanguageContext";
 
 export function AgentDetailPage() {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [deployed, setDeployed] = useState(false);
 
   const agent = MARKETPLACE_AGENTS.find((a) => a.id === agentId) || MARKETPLACE_AGENTS[0];
@@ -44,7 +46,7 @@ export function AgentDetailPage() {
           className="inline-flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors mb-6 font-mono"
         >
           <ArrowLeft size={14} />
-          <span>Back to Marketplace</span>
+          <span>{t("detail.back")}</span>
         </Link>
 
         {/* Main Agent Header Card */}
@@ -88,7 +90,7 @@ export function AgentDetailPage() {
               className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-7 py-3 text-sm font-semibold transition-all shadow-[0_0_24px_rgba(255,122,0,0.35)] cursor-pointer active:scale-95 shrink-0"
             >
               {deployed ? <Check size={16} /> : <Play size={16} fill="currentColor" />}
-              <span>{deployed ? "Deploying to Workspace..." : "Deploy Teammate"}</span>
+              <span>{deployed ? t("detail.deploying") : t("detail.deploy")}</span>
             </button>
           </div>
 
@@ -96,7 +98,7 @@ export function AgentDetailPage() {
           <div className="mt-8 space-y-8">
             <div>
               <h2 className="text-xs font-mono uppercase tracking-widest text-[#ff7a00] mb-2">
-                Executive Overview
+                {t("detail.overview")}
               </h2>
               <p className="text-sm sm:text-base text-neutral-800 dark:text-neutral-700 dark:text-neutral-300 leading-relaxed">
                 {agent.description}
@@ -108,7 +110,7 @@ export function AgentDetailPage() {
               <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
                 <div className="text-xs font-mono text-[#ff7a00] uppercase tracking-wider flex items-center gap-1.5">
                   <Workflow size={14} />
-                  <span>Agent Role & Specific Goal</span>
+                  <span>{t("detail.roleGoal")}</span>
                 </div>
                 <p className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-sans">
                   {agent.goal}
@@ -118,7 +120,7 @@ export function AgentDetailPage() {
               <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
                 <div className="text-xs font-mono text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldCheck size={14} />
-                  <span>Backstory & Epistemic Standard</span>
+                  <span>{t("detail.backstory")}</span>
                 </div>
                 <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-800 dark:text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans">
                   {agent.backstory}
@@ -131,7 +133,7 @@ export function AgentDetailPage() {
               <div className="flex items-center justify-between text-white font-semibold">
                 <span className="flex items-center gap-2">
                   <Cpu size={14} className="text-[#ff7a00]" />
-                  Multi-Agent AI Teammates Orchestration
+                  {t("detail.orchestration")}
                 </span>
                 <span className="text-neutral-400">Mode: {agent.teamConfig.collaborationMode}</span>
               </div>
@@ -150,7 +152,7 @@ export function AgentDetailPage() {
               <div>
                 <h3 className="text-neutral-400 font-semibold mb-3 flex items-center gap-1.5">
                   <Lock size={13} className="text-[#ff7a00]" />
-                  Provisioned Sandbox Toolchain
+                  {t("detail.toolchain")}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {agent.tools.map((t) => (
@@ -167,7 +169,7 @@ export function AgentDetailPage() {
               <div>
                 <h3 className="text-neutral-400 font-semibold mb-3 flex items-center gap-1.5">
                   <GitBranch size={13} className="text-emerald-400" />
-                  Continuous Autonomous Routines
+                  {t("detail.routines")}
                 </h3>
                 <ul className="space-y-2 text-neutral-700 dark:text-neutral-300">
                   {agent.routines.map((r, i) => (
@@ -185,7 +187,7 @@ export function AgentDetailPage() {
               <div className="flex items-center justify-between text-neutral-400 font-mono text-xs">
                 <span className="flex items-center gap-1.5 text-white font-semibold">
                   <Terminal size={14} className="text-[#ff7a00]" />
-                  Authoritative Terminal Execution Trace
+                  {t("detail.terminalTrace")}
                 </span>
                 <span className="text-emerald-400">Exit Code: 0 (PASS)</span>
               </div>

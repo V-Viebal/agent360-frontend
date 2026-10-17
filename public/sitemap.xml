@@ -44,27 +44,51 @@
     <priority>0.8</priority>
   </url>
 
-  <!-- 6. Marketplace Individual Bot Profiles -->
+  <!-- 6. Marketplace Individual Bot Profiles (Valid IDs) -->
   <url>
-    <loc>https://agent360.antares.vn/marketplace/agent team-swe-lead</loc>
+    <loc>https://agent360.antares.vn/marketplace/agent-chief-of-staff</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://agent360.antares.vn/marketplace/agent team-sre-sentinel</loc>
+    <loc>https://agent360.antares.vn/marketplace/agent-finance-controller</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://agent360.antares.vn/marketplace/agent team-qa-vision</loc>
+    <loc>https://agent360.antares.vn/marketplace/agent-b2b-sales-exec</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://agent360.antares.vn/marketplace/agent team-ai-orchestrator</loc>
+    <loc>https://agent360.antares.vn/marketplace/agent-customer-support-lead</loc>
+    <lastmod>2026-10-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agent360.antares.vn/marketplace/agent-marketing-growth</loc>
+    <lastmod>2026-10-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agent360.antares.vn/marketplace/agent-hr-talent-partner</loc>
+    <lastmod>2026-10-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agent360.antares.vn/marketplace/agent-legal-compliance</loc>
+    <lastmod>2026-10-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agent360.antares.vn/marketplace/agent-it-systems-ops</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
