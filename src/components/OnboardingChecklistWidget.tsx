@@ -139,7 +139,7 @@ export function OnboardingChecklistWidget({
 
   return (
     <div
-      className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-40 w-[calc(100vw-24px)] max-w-[390px] sm:max-w-[420px] md:w-[410px] shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
+      className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[60] w-[calc(100vw-24px)] max-w-[390px] sm:max-w-[420px] md:w-[410px] shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
     >
       <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#222230] flex items-center justify-between">
         <div className="flex items-center gap-2.5">

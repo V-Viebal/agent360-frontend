@@ -285,6 +285,7 @@ html.light,
 
 /* ------------------- Driver.js Skyer Premium Theme (Adapted from App360) ------------------- */
 .driverjs-skyer-theme {
+  z-index: 100002 !important;
   background-color: #14141c !important;
   color: #f3f4f6 !important;
   border-radius: 16px !important;
@@ -396,6 +397,7 @@ p, li, span, blockquote {
 /* Driver.js Light Theme Adaptation */
 html.light .driverjs-skyer-theme,
 [data-theme="light"] .driverjs-skyer-theme {
+  z-index: 100002 !important;
   background-color: #ffffff !important;
   color: #0f172a !important;
   box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15), 0 0 25px rgba(255, 122, 0, 0.12) !important;
@@ -432,4 +434,12 @@ html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-bt
   background: #ff7a00 !important;
   color: #ffffff !important;
   border-color: #ff7a00 !important;
+}
+
+.driver-overlay {
+  z-index: 100000 !important;
+}
+
+.driver-popover {
+  z-index: 100002 !important;
 }
