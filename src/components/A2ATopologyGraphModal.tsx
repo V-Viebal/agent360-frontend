@@ -43,6 +43,37 @@ export function A2ATopologyGraphModal({
   const [agentPings, setAgentPings] = useState<Record<string, number>>({});
   const [isProbing, setIsProbing] = useState<boolean>(false);
 
+  // Canvas zoom & pan
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
+
+  const clampZoom = (value: number) => Math.min(2.5, Math.max(0.4, Math.round(value * 100) / 100));
+  const handleZoom = (delta: number) => setZoomScale((z) => clampZoom(z + delta));
+  const handleResetZoomPan = () => {
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
+  const handleFitToScreen = () => {
+    const count = Math.max(1, allAgents.length);
+    setZoomScale(clampZoom(count > 12 ? 0.75 : count > 6 ? 0.9 : 1));
+    setPanOffset({ x: 0, y: 0 });
+  };
+  const handleMouseDownPan = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+  };
+  const handleMouseMovePan = (e: React.MouseEvent) => {
+    if (!isPanning || !panStart) return;
+    setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+  };
+  const handleMouseUpPan = () => {
+    setIsPanning(false);
+    setPanStart(null);
+  };
+
   // Measure latency to individual agent endpoints / nodes
   const probeAllLatencies = async () => {
     setIsProbing(true);

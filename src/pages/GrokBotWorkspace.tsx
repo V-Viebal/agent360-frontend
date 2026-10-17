@@ -1,6 +1,6 @@
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
-import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network } from "lucide-react";
+import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network, Keyboard } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
 import { ConnectAppsModal } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
@@ -3964,7 +3964,7 @@ export function GrokBotWorkspace() {
                 className="hidden sm:flex p-1 rounded-full hover:text-white hover:bg-black/10 dark:hover:bg-white/10 text-neutral-400 cursor-pointer transition-colors"
                 title="Keyboard Shortcuts Cheat Sheet (Ctrl+/)"
               >
-                <Keyboard size={15} />
+                <Command size={15} />
               </button>
 
               {/* Voice to text recording button (Supports Click Toggle & Push-to-Talk) */}
