@@ -63,7 +63,7 @@ const TOPOLOGY_NODES: TopologyNode[] = [
   {
     id: "worker-sre",
     label: "SRE Sentinel Worker",
-    role: "Fleet Recovery & Pressure",
+    role: "System Recovery & Resource Guard",
     type: "worker",
     model: "Qwen 2.5 7B Local",
     status: "Active • Monitoring VPS 6th",
@@ -127,7 +127,7 @@ agent team:
         - "wcag_engine"
 
     - id: "sre-sentinel"
-      role: "Fleet Recovery & Pressure"
+      role: "System Recovery & Resource Guard"
       model: "qwen-2.5-7b-local"
       backend: "qwenpaw-native"
       sandbox:

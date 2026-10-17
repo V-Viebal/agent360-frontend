@@ -11,7 +11,7 @@ export function Footer() {
               <div className="h-6 w-6 rounded-md bg-[#ff7a00] flex items-center justify-center text-black font-bold">
                 <Bot size={14} />
               </div>
-              <span>Agent360 Platform</span>
+              <span>Skyer Platform</span>
             </div>
             <p className="text-neutral-400 text-xs leading-relaxed">
               Multi-bot control plane for enterprise engineering & autonomous infrastructure delivery.
@@ -37,6 +37,7 @@ export function Footer() {
           <div className="space-y-2.5">
             <h4 className="text-white font-medium text-xs uppercase tracking-wider font-mono">Ecosystem</h4>
             <ul className="space-y-2">
+              <li><a href="https://community-agent360.antares.vn" target="_blank" rel="noreferrer" className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 font-medium"><span>Community Forum (Ready to Post)</span> <ArrowUpRight size={11} /></a></li>
               <li><a href="https://kb.hmz.one" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">KB Single Source of Truth <ArrowUpRight size={11} /></a></li>
               <li><a href="https://github.com/agentscope-ai/QwenPaw" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">QwenPaw Upstream <ArrowUpRight size={11} /></a></li>
               <li><a href="https://iam360-api-gm.hmz.one" target="_blank" rel="noreferrer" className="hover:text-white transition-colors flex items-center gap-1">IAM360 Authority Gateway <ArrowUpRight size={11} /></a></li>
@@ -61,14 +62,14 @@ export function Footer() {
 
         <div className="border-t border-white/[0.06] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-neutral-500 text-[11px]">
           <div>
-            © {new Date().getFullYear()} Agent360. All rights reserved. Designed with Awwwards visual excellence.
+            © {new Date().getFullYear()} Skyer. All rights reserved. Designed with Awwwards visual excellence.
           </div>
           <div className="flex items-center gap-4">
             <a href="#privacy" className="hover:text-neutral-400">Security Sandbox</a>
             <span>•</span>
             <a href="#terms" className="hover:text-neutral-400">Constitution Policy</a>
             <span>•</span>
-            <a href="#status" className="hover:text-neutral-400">Fleet Radar</a>
+            <a href="#status" className="hover:text-neutral-400">System Radar</a>
           </div>
         </div>
       </div>

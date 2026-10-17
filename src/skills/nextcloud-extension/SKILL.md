@@ -7,7 +7,7 @@ description: Hướng dẫn chi tiết cách đóng gói, tích hợp sâu và t
 
 # Agent360 Nextcloud Extension Integration Skill
 
-Skill này định nghĩa chuẩn mực kiến trúc, quy trình đóng gói và hướng dẫn tích hợp sâu giao diện **Agent360 GrokBot Workspace** vào hệ sinh thái Nextcloud.
+Skill này định nghĩa chuẩn mực kiến trúc, quy trình đóng gói và hướng dẫn tích hợp sâu giao diện **Agent360 Skyer Workspace** vào hệ sinh thái Nextcloud.
 
 ---
 
@@ -112,7 +112,7 @@ Ngoài chế độ Full Page App độc lập, extension `agent360` hỗ trợ 2
 - **Cơ chế Hook:** Đăng ký `$context->registerDashboardWidget(Agent360Widget::class)` trong `Application::register`.
 - **Hành vi trên UI:**
   - Hiển thị widget trạng thái của Agent360 ngay trên trang chủ Dashboard của Nextcloud.
-  - Cho biết trạng thái fleet (Running / HTTP 200), nút `Mở Workspace` và nút `Chat nhanh` (kích hoạt mở ngay Overlay Sidebar).
+  - Cho biết trạng thái hệ thống cá nhân (Running / HTTP 200), nút `Mở Workspace` và nút `Chat nhanh` (kích hoạt mở ngay Overlay Sidebar).
 
 ---
 
@@ -129,7 +129,7 @@ Ngoài chế độ Full Page App độc lập, extension `agent360` hỗ trợ 2
        ↓ (Click nút Maximize trên Control Bar)
 [Chế độ 2: Right Sidebar Docking (Expanded)]
 - Kích thước: Width 520px, Height 100vh (neo trực tiếp toàn bộ cạnh phải Nextcloud)
-- Mục đích: Không gian làm việc sâu, theo dõi stream logs, xem chi tiết file code hoặc danh sách Agent fleet.
+- Mục đích: Không gian làm việc sâu, theo dõi stream logs, xem chi tiết file code hoặc danh sách hệ thống Agent cá nhân.
 ```
 
 - **CSS Classes áp dụng:**

@@ -2,9 +2,11 @@ import { useState } from "react";
 import {
   Search,
   X,
-  ExternalLink,
   Shield,
   Layers,
+  Check,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 
 export interface ConnectedAppItem {
@@ -17,7 +19,7 @@ export interface ConnectedAppItem {
 }
 
 // 100% verified SVG logos supported directly by Composio API (https://logos.composio.dev/api/:slug)
-const APPS_CATALOG: ConnectedAppItem[] = [
+export const APPS_CATALOG: ConnectedAppItem[] = [
   // Recommended
   {
     id: "aws",
@@ -57,7 +59,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
     description: "Manage pull requests, commit code, review diffs, and inspect GitHub Actions workflows.",
     category: "Recommended",
     logoUrl: "https://logos.composio.dev/api/github",
-    status: "connected",
+    status: "available",
   },
   {
     id: "composio",
@@ -72,17 +74,17 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "1password",
     name: "1Password",
-    description: "Share a dedicated 1Password vault with Agent360 for secrets, keys and credentials.",
+    description: "Secure credential vault for service accounts, API tokens, and zero-trust secrets.",
     category: "Password Managers",
     logoUrl: "https://logos.composio.dev/api/1password",
-    status: "connected",
+    status: "available",
   },
 
   // Productivity
   {
     id: "notion",
     name: "Notion",
-    description: "Search Notion pages and databases, create tasks, and sync workspace knowledge bases.",
+    description: "Query, create, and organize workspace pages, project documentation, and databases.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/notion",
     status: "available",
@@ -90,7 +92,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "atlassian",
     name: "Atlassian",
-    description: "Connect agent workflows to Jira sprint boards, backlogs, and Confluence documentation.",
+    description: "Cross-product suite integration across Jira tickets, Confluence spaces, and Bitbucket.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/atlassian",
     status: "available",
@@ -98,7 +100,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "jira",
     name: "Jira",
-    description: "Automate issue creation, sprint status tracking, and release management.",
+    description: "Sprint issues tracking, backlog management, automated bug triage, and project boards.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/jira",
     status: "available",
@@ -106,7 +108,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "confluence",
     name: "Confluence",
-    description: "Search team spaces, draft design specifications, and publish engineering runbooks.",
+    description: "Enterprise knowledge base documentation, technical specs, and team spaces.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/confluence",
     status: "available",
@@ -114,7 +116,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "linear",
     name: "Linear",
-    description: "The product development system for issue tracking, cycle planning, and roadmaps.",
+    description: "Streamlined issue tracking, cycle workflows, roadmaps, and software bug management.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/linear",
     status: "available",
@@ -122,7 +124,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "canva",
     name: "Canva",
-    description: "Create, edit, review, resize, and brand-check graphics and presentation visuals.",
+    description: "Automate design templates, export presentation decks, and generate branded creative assets.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/canva",
     status: "available",
@@ -130,7 +132,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "figma",
     name: "Figma",
-    description: "Turn designs into code, inspect design tokens, and review UI/UX components.",
+    description: "Extract design tokens, inspect component trees, read comments, and export frame assets.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/figma",
     status: "available",
@@ -138,7 +140,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "clickup",
     name: "ClickUp",
-    description: "Tasks, docs, goals and sprint workflows connected to autonomous agent turns.",
+    description: "All-in-one productivity platform for tasks, docs, goals, and team workload boards.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/clickup",
     status: "available",
@@ -146,7 +148,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "asana",
     name: "Asana",
-    description: "Coordinate team tasks, project timelines, and cross-functional deliverables.",
+    description: "Manage cross-functional workflows, project milestones, task timelines, and portfolios.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/asana",
     status: "available",
@@ -154,7 +156,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "trello",
     name: "Trello",
-    description: "Manage visual Kanban boards, update card checklists, and automate list moves.",
+    description: "Kanban boards, lists, and visual card automation for lean project delivery.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/trello",
     status: "available",
@@ -162,7 +164,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "monday",
     name: "Monday.com",
-    description: "Operate customizable team workflows, track task statuses, and update boards.",
+    description: "Customizable work operating system for sales pipelines, projects, and sprint tracking.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/monday",
     status: "available",
@@ -170,7 +172,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "googledocs",
     name: "Google Docs",
-    description: "Create, read, and append collaborative Google documents and research recaps.",
+    description: "Real-time document creation, automated reporting, batch drafting, and exports.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/googledocs",
     status: "available",
@@ -178,15 +180,15 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "googledrive",
     name: "Google Drive",
-    description: "Browse, upload, and organize corporate files, spreadsheets, and shared assets.",
+    description: "Cloud file storage, workspace permission grants, shared drives, and content ingestion.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/googledrive",
     status: "available",
   },
   {
     id: "onedrive",
-    name: "OneDrive",
-    description: "Browse, search, and synchronize Microsoft OneDrive corporate documents.",
+    name: "Microsoft OneDrive",
+    description: "Secure enterprise file synchronization and folder sharing across Microsoft 365.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/onedrive",
     status: "available",
@@ -194,7 +196,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "dropbox",
     name: "Dropbox",
-    description: "Store, retrieve, and share files across cloud folders with verified links.",
+    description: "File backup, public transfer links, and cloud document archive synchronization.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/dropbox",
     status: "available",
@@ -202,7 +204,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "box",
     name: "Box",
-    description: "Enterprise content management and secure file sharing for compliance workflows.",
+    description: "Compliant cloud content management, granular metadata, and enterprise security policies.",
     category: "Productivity",
     logoUrl: "https://logos.composio.dev/api/box",
     status: "available",
@@ -212,15 +214,15 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "gmail",
     name: "Gmail",
-    description: "Search, read, draft, and send emails with intelligent filtering and attachments.",
+    description: "Compose, categorize, search, and draft executive email correspondence securely.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/gmail",
-    status: "connected",
+    status: "available",
   },
   {
     id: "googlecalendar",
     name: "Google Calendar",
-    description: "Search upcoming events, schedule meetings with attendees, and resolve conflicts.",
+    description: "Schedule executive meetings, RSVP invites, and synchronize multi-timezone agendas.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/googlecalendar",
     status: "available",
@@ -228,7 +230,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "slack",
     name: "Slack",
-    description: "Post notifications, listen to mention events, and chat in private channels.",
+    description: "Send alerts, listen to thread mentions, trigger slash commands, and broadcast updates.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/slack",
     status: "available",
@@ -236,7 +238,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "discord",
     name: "Discord",
-    description: "Interact with developer communities, send alerts, and manage server roles.",
+    description: "Community moderation, bot commands, webhook alerts, and voice channel announcements.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/discord",
     status: "available",
@@ -244,7 +246,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "telegram",
     name: "Telegram",
-    description: "Direct bot dispatch, send files and execution summaries to verified chat topics.",
+    description: "Dispatch broadcast notifications, receive bot callbacks, and deliver secure files.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/telegram",
     status: "available",
@@ -252,15 +254,15 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "outlook",
     name: "Microsoft Outlook",
-    description: "Search, read, and send Microsoft Outlook corporate emails and invitations.",
+    description: "Exchange enterprise mail, sync calendar events, and manage distribution contacts.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/outlook",
     status: "available",
   },
   {
     id: "x",
-    name: "X (Twitter)",
-    description: "Search posts, read timelines, monitor brand keywords, and schedule tweets.",
+    name: "X / Twitter",
+    description: "Post status updates, monitor keyword mentions, and track social developer engagement.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/x",
     status: "available",
@@ -268,7 +270,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "zoom",
     name: "Zoom",
-    description: "Schedule instant or recurring video conferences and retrieve meeting summaries.",
+    description: "Provision instant meetings, retrieve cloud recording transcripts, and schedule webinars.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/zoom",
     status: "available",
@@ -276,7 +278,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "intercom",
     name: "Intercom",
-    description: "Deliver autonomous customer support turns and triage live user conversations.",
+    description: "Customer conversational support, AI bot resolution, and customer contact ticketing.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/intercom",
     status: "available",
@@ -284,17 +286,17 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "zendesk",
     name: "Zendesk",
-    description: "Manage support tickets, customer satisfaction surveys, and resolution macros.",
+    description: "Customer success ticketing, SLA escalation policies, and knowledge help center articles.",
     category: "Communication",
     logoUrl: "https://logos.composio.dev/api/zendesk",
     status: "available",
   },
 
-  // Code
+  // Code & AI Frameworks
   {
     id: "gitlab",
     name: "GitLab",
-    description: "Connect agent workflows to GitLab repositories, CI/CD pipelines, and merge requests.",
+    description: "Manage self-hosted repositories, merge request reviews, and run CI/CD pipelines.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/gitlab",
     status: "available",
@@ -302,7 +304,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "datadog",
     name: "Datadog",
-    description: "Inspect and query Datadog logs, metrics, APM traces, and synthetic alerts.",
+    description: "Infrastructure metric telemetry, APM trace inspection, and operational alert monitors.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/datadog",
     status: "available",
@@ -310,7 +312,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "sentry",
     name: "Sentry",
-    description: "Real-time exception tracking, error alerts, and stack trace investigations.",
+    description: "Frontend & backend error tracking, crash stack traces, and release regression monitoring.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/sentry",
     status: "available",
@@ -318,7 +320,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "vercel",
     name: "Vercel",
-    description: "Trigger deployments, inspect serverless logs, and manage preview environments.",
+    description: "Trigger edge deployments, inspect build logs, configure custom domains, and purge edge cache.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/vercel",
     status: "available",
@@ -326,15 +328,15 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "openai",
     name: "OpenAI",
-    description: "State-of-the-art model reasoning, code execution, and embedding capabilities.",
+    description: "Embeddings generation, fine-tuning jobs, and GPT-4o multimodal completion calls.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/openai",
     status: "available",
   },
   {
     id: "anthropic",
-    name: "Anthropic",
-    description: "Claude models for long-context analysis, safety steerability, and coding tasks.",
+    name: "Anthropic Claude",
+    description: "Long-context reasoning, code review workflows, and Claude 3.7 Sonnet analysis.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/anthropic",
     status: "available",
@@ -342,7 +344,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "groq",
     name: "Groq",
-    description: "Ultra-low latency LPU inference engine for realtime streaming agent turns.",
+    description: "Ultra-low latency LPU inference for real-time speech and open-weights LLMs.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/groq",
     status: "available",
@@ -350,7 +352,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "mistral",
     name: "Mistral AI",
-    description: "European open-weight and frontier models for reasoning, translation, and code.",
+    description: "Frontier open models, codestral coding completions, and fast token generation.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/mistral",
     status: "available",
@@ -358,7 +360,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "langchain",
     name: "LangChain",
-    description: "Framework abstractions for chaining agent tools, prompts, and memory stores.",
+    description: "Connect LangSmith observability tracing, prompt evaluations, and agent chain execution.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/langchain",
     status: "available",
@@ -366,17 +368,17 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "llamaindex",
     name: "LlamaIndex",
-    description: "Data orchestration framework connecting custom private data to LLM applications.",
+    description: "Data indexing, structured document chunking, and advanced hybrid retrieval engines.",
     category: "Code",
     logoUrl: "https://logos.composio.dev/api/llamaindex",
     status: "available",
   },
 
-  // Data & Search
+  // Data & Databases
   {
     id: "postman",
     name: "Postman",
-    description: "Execute and test API collections, generate mock servers, and debug payloads.",
+    description: "API collection runs, automated test assertions, and workspace environment mocking.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/postman",
     status: "available",
@@ -384,7 +386,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "huggingface",
     name: "Hugging Face",
-    description: "Access open-source models, curated datasets, and inference endpoints.",
+    description: "Search open model weights, download datasets, and deploy serverless Inference Endpoints.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/huggingface",
     status: "available",
@@ -392,7 +394,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "firecrawl",
     name: "Firecrawl",
-    description: "Turn entire websites into clean LLM-ready markdown with headless scraping.",
+    description: "Clean LLM-ready markdown web crawling, sitemap traversing, and structured web extraction.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/firecrawl",
     status: "available",
@@ -400,15 +402,15 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "apify",
     name: "Apify",
-    description: "Web automation platform with ready-made scrapers for e-commerce, maps, and feeds.",
+    description: "Run cloud web scrapers, crawler Actors, and social data extractors on schedule.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/apify",
     status: "available",
   },
   {
     id: "tavily",
-    name: "Tavily Search",
-    description: "AI-native search engine designed to return factual, cited research snippets.",
+    name: "Tavily AI Search",
+    description: "Search engine built specifically for autonomous AI agents with factual citations.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/tavily",
     status: "available",
@@ -416,7 +418,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "serpapi",
     name: "SerpApi",
-    description: "Real-time Google search results, shopping prices, and maps data scraping.",
+    description: "Real-time Google search results, localized shopping, news snippets, and maps data.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/serpapi",
     status: "available",
@@ -424,7 +426,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "perplexityai",
     name: "Perplexity AI",
-    description: "Grounded web answers with real-time citations and domain-specific filters.",
+    description: "Online answer engine with cited research sources and multi-step inquiry reasoning.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/perplexityai",
     status: "available",
@@ -432,7 +434,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "pinecone",
     name: "Pinecone",
-    description: "Managed vector database for semantic search, similarity matching, and RAG.",
+    description: "Managed serverless vector database for low-latency semantic search and RAG embeddings.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/pinecone",
     status: "available",
@@ -440,7 +442,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "mongodb",
     name: "MongoDB",
-    description: "Document database for modern apps with flexible schema and Atlas search.",
+    description: "Document-oriented database with flexible JSON-like schemas and Atlas search indexes.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/mongodb",
     status: "available",
@@ -448,7 +450,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "redis",
     name: "Redis",
-    description: "In-memory cache, message broker, and fast key-value store for active state.",
+    description: "In-memory data structure store for caching, pub/sub queues, and rate-limiting counters.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/redis",
     status: "available",
@@ -456,7 +458,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "postgresql",
     name: "PostgreSQL",
-    description: "Enterprise relational database with pgvector, JSONB and ACID guarantees.",
+    description: "Enterprise relational database with ACID transactions, JSONB, and pgvector extension.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/postgresql",
     status: "available",
@@ -464,7 +466,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "mysql",
     name: "MySQL",
-    description: "Popular open-source relational database management system.",
+    description: "Classic open-source SQL relational database engine for web and SaaS applications.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/mysql",
     status: "available",
@@ -472,7 +474,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "snowflake",
     name: "Snowflake",
-    description: "Cloud data warehouse for large-scale analytical queries and BI workloads.",
+    description: "Cloud data warehouse for massive analytical queries, data lakes, and business metrics.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/snowflake",
     status: "available",
@@ -480,7 +482,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "googlesheets",
     name: "Google Sheets",
-    description: "Read, write, update and append rows directly to cloud spreadsheets.",
+    description: "Read, write, update rows, and compute formulas in cloud spreadsheets collaboratively.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/googlesheets",
     status: "available",
@@ -488,7 +490,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "airtable",
     name: "Airtable",
-    description: "No-code relational database with views, automated triggers and forms.",
+    description: "Low-code relational database and spreadsheet hybrid for business operations.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/airtable",
     status: "available",
@@ -496,7 +498,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "hubspot",
     name: "HubSpot",
-    description: "Inbound CRM, contact lifecycle management, and marketing automation.",
+    description: "Inbound CRM, sales deals tracking, marketing automation, and customer contact pipelines.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/hubspot",
     status: "available",
@@ -504,7 +506,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "salesforce",
     name: "Salesforce",
-    description: "Enterprise CRM platform for lead tracking, pipeline deals and accounts.",
+    description: "Enterprise CRM platform for sales pipelines, customer leads, and account contracts.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/salesforce",
     status: "available",
@@ -512,7 +514,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "stripe",
     name: "Stripe",
-    description: "Payment infrastructure, subscription billing, and customer invoice management.",
+    description: "Manage subscription billings, payment intents, customer cards, and refund payouts.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/stripe",
     status: "available",
@@ -520,7 +522,7 @@ const APPS_CATALOG: ConnectedAppItem[] = [
   {
     id: "shopify",
     name: "Shopify",
-    description: "E-commerce platform for products, orders, inventory and customer management.",
+    description: "E-commerce store inventory, orders fulfillment, customer accounts, and webhooks.",
     category: "Data",
     logoUrl: "https://logos.composio.dev/api/shopify",
     status: "available",
@@ -530,12 +532,26 @@ const APPS_CATALOG: ConnectedAppItem[] = [
 interface ConnectAppsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  targetAgentId?: string;
+  targetAgentName?: string;
+  connectedAppIds?: string[];
+  onAppConnected?: (appId: string) => void;
+  onAppDisconnected?: (appId: string) => void;
 }
 
-export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
+export function ConnectAppsModal({
+  isOpen,
+  onClose,
+  targetAgentId = "default",
+  targetAgentName = "Agent",
+  connectedAppIds = [],
+  onAppConnected,
+  onAppDisconnected,
+}: ConnectAppsModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [apps, setApps] = useState<ConnectedAppItem[]>(APPS_CATALOG);
+  const [loadingAppId, setLoadingAppId] = useState<string | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   if (!isOpen) return null;
 
@@ -548,19 +564,100 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
     "Data",
   ];
 
-  const toggleConnect = (appId: string) => {
-    setApps((prev) =>
-      prev.map((app) =>
-        app.id === appId
-          ? { ...app, status: app.status === "connected" ? "available" : "connected" }
-          : app
-      )
-    );
+  const handleToggleApp = async (app: ConnectedAppItem) => {
+    const isCurrentlyConnected = connectedAppIds.includes(app.id);
+    setLoadingAppId(app.id);
+    setFeedbackMsg(null);
+
+    try {
+      if (isCurrentlyConnected) {
+        // Disconnect: Hot-patch DELETE from agent MCP layer
+        const res = await fetch(`/api/mcp/composio_${app.id}`, {
+          method: "DELETE",
+          headers: {
+            "X-Agent-Id": targetAgentId,
+          },
+        });
+        if (res.ok) {
+          onAppDisconnected?.(app.id);
+          setFeedbackMsg({
+            text: `Disconnected ${app.name} from ${targetAgentName}`,
+            type: "success",
+          });
+        } else {
+          throw new Error(`Failed to disconnect: status ${res.status}`);
+        }
+      } else {
+        // Connect: Call Composio OAuth + Hot-patch into Agent MCP
+        const connRes = await fetch("/api/integrations/composio/connect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appSlug: app.id,
+            action: "add",
+            agentId: targetAgentId,
+          }),
+        });
+
+        const connData = await connRes.json();
+        if (!connRes.ok) {
+          throw new Error(connData.error || "Integration connection failed");
+        }
+
+        // Hot-patch into QwenPaw agent MCP registry
+        const mcpPatchRes = await fetch("/api/mcp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Agent-Id": targetAgentId,
+          },
+          body: JSON.stringify({
+            client_key: `composio_${app.id}`,
+            client: {
+              name: app.id,
+              description: `Composio ${app.name} MCP integration for ${targetAgentName}`,
+              transport: "sse",
+              url: "https://connect.composio.dev/mcp",
+              headers: {
+                Authorization: "Bearer ck_hRHd3TK_vE4wwTBlUaX3",
+              },
+              enabled: true,
+            },
+          }),
+        });
+
+        if (!mcpPatchRes.ok) {
+          console.warn("[HotPatch] /api/mcp POST returned status:", mcpPatchRes.status);
+        }
+
+        onAppConnected?.(app.id);
+
+        if (connData.redirect_url) {
+          // Open OAuth consent in new tab
+          window.open(connData.redirect_url, "_blank", "noopener,noreferrer");
+          setFeedbackMsg({
+            text: `Opening OAuth for ${app.name}. Hot-patched MCP tool into ${targetAgentName}!`,
+            type: "success",
+          });
+        } else {
+          setFeedbackMsg({
+            text: `Successfully hot-patched ${app.name} into ${targetAgentName}`,
+            type: "success",
+          });
+        }
+      }
+    } catch (err: any) {
+      console.error("[ConnectApps Error]", err);
+      setFeedbackMsg({
+        text: err.message || "Failed to toggle application integration",
+        type: "error",
+      });
+    } finally {
+      setLoadingAppId(null);
+    }
   };
 
-  const connectedCount = apps.filter((a) => a.status === "connected").length;
-
-  const filteredApps = apps.filter((app) => {
+  const filteredApps = APPS_CATALOG.filter((app) => {
     const matchesSearch =
       app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -575,108 +672,154 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
       : [selectedCategory as any];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-4xl max-h-[90vh] bg-[#141416] border border-[#222228] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans"
+        className="relative w-full max-w-2xl max-h-[85vh] bg-[#121216] border border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans transition-all duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-5 border-b border-[#1f1f26] flex items-center justify-between shrink-0">
+        <div className="px-5 py-4 border-b border-[#1f1f2a] flex items-center justify-between shrink-0 bg-[#16161c]">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-white tracking-tight">Connect Apps</h2>
-            <div className="flex items-center gap-1.5 text-xs text-neutral-400 font-mono bg-[#1c1c24] px-2.5 py-1 rounded-full border border-[#262632]">
-              <Shield size={12} className="text-emerald-400" />
-              <span>{connectedCount} connected</span>
+            <div className="h-8 w-8 rounded-xl bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-white tracking-tight">Connect Apps & Tools</h2>
+                <span className="text-[10px] font-mono bg-[#20202c] text-[#ff7a00] px-2 py-0.5 rounded-full border border-[#2b2b3c]">
+                  {targetAgentName}
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                Hot-patch Composio MCP tools directly into agent runtime
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.open("/marketplace", "_blank")}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-white bg-[#1c1c24] hover:bg-[#252530] border border-[#282834] rounded-full transition-colors cursor-pointer"
-            >
-              <div className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>Bot templates</span>
-              <ExternalLink size={12} className="text-neutral-500" />
-            </button>
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-400 font-mono bg-[#1c1c24] px-2.5 py-1 rounded-full border border-[#262632]">
+              <Shield size={12} className="text-emerald-400" />
+              <span>{connectedAppIds.length} active</span>
+            </div>
+
             <button
               onClick={onClose}
-              className="h-8 w-8 rounded-full hover:bg-[#22222c] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
+              title="Close"
             >
-              <X size={18} />
+              <X size={15} />
             </button>
           </div>
         </div>
 
-        {/* Search Bar & Filter Pills */}
-        <div className="p-5 pb-3 border-b border-[#1a1a20] space-y-3 shrink-0">
+        {/* Feedback Alert Banner */}
+        {feedbackMsg && (
+          <div
+            className={`px-4 py-2 text-xs flex items-center justify-between border-b transition-all duration-200 ${
+              feedbackMsg.type === "success"
+                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                : "bg-red-500/10 border-red-500/20 text-red-300"
+            }`}
+          >
+            <span>{feedbackMsg.text}</span>
+            <button
+              onClick={() => setFeedbackMsg(null)}
+              className="text-neutral-400 hover:text-white ml-2 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Search Bar & Categories */}
+        <div className="p-4 border-b border-[#1c1c26] space-y-3 shrink-0 bg-[#14141a]">
           <div className="relative">
-            <Search size={16} className="absolute left-3.5 top-3 text-neutral-500" />
+            <Search
+              size={14}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500"
+            />
             <input
               type="text"
-              placeholder="Search across 60+ verified apps and skills..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#1b1b22] border border-[#262630] rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-400 transition-colors"
+              placeholder="Search 60+ verified Composio tool integrations..."
+              className="w-full bg-[#1b1b24] border border-[#282836] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00] transition-colors"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-full transition-colors shrink-0 cursor-pointer text-xs font-medium ${
-                  selectedCategory === cat
-                    ? "bg-white text-black font-semibold"
-                    : "bg-[#1c1c24] text-neutral-400 hover:text-white hover:bg-[#242430] border border-[#252530]"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+            {categories.map((cat) => {
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? "bg-white text-black shadow-sm"
+                      : "bg-[#1d1d26] text-neutral-400 hover:text-neutral-200 hover:bg-[#252532] border border-[#282834]"
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Scrollable Apps List grouped by category */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          {displayCategories.map((catGroup) => {
-            const groupApps = filteredApps.filter(
-              (a) => catGroup === "Recommended" || a.category === catGroup
+        {/* Content Body: Categorized App Grid */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-[#0f0f13]">
+          {displayCategories.map((category) => {
+            const categoryApps = filteredApps.filter(
+              (app) => app.category === category
             );
-            if (groupApps.length === 0) return null;
+            if (categoryApps.length === 0) return null;
 
             return (
-              <div key={catGroup} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider font-mono">
-                    {catGroup} ({groupApps.length})
-                  </h3>
-                  <span className="text-[11px] text-neutral-500 hover:text-neutral-300 cursor-pointer">
-                    View all
+              <div key={category} className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-neutral-400 px-1">
+                  <span>{category}</span>
+                  <span className="text-[10px] font-mono text-neutral-500 font-normal">
+                    {categoryApps.length} apps
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {groupApps.map((app) => {
-                    const isConnected = app.status === "connected";
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {categoryApps.map((app) => {
+                    const isConnected = connectedAppIds.includes(app.id);
+                    const isLoading = loadingAppId === app.id;
+
                     return (
                       <div
                         key={app.id}
-                        className="p-3.5 rounded-2xl bg-[#181820] hover:bg-[#1d1d28] border border-[#22222c] hover:border-[#2e2e3c] flex items-center justify-between gap-3 transition-colors group"
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${
+                          isConnected
+                            ? "bg-[#18221c] border-emerald-500/30"
+                            : "bg-[#16161e] border-[#22222e] hover:border-[#2f2f42] hover:bg-[#1a1a24]"
+                        }`}
                       >
-                        {/* Composio Vector Brand Logo */}
-                        <div className="h-11 w-11 rounded-xl shrink-0 flex items-center justify-center p-2 bg-[#101014] border border-[#24242e] shadow-inner">
+                        {/* 100% Verified SVG Vector Logo */}
+                        <div className="h-9 w-9 rounded-xl bg-[#20202c] border border-[#2c2c3e] flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-sm">
                           <img
                             src={app.logoUrl}
                             alt={app.name}
-                            className="h-full w-full object-contain"
+                            className="h-full w-full object-contain filter drop-shadow-sm"
                             loading="lazy"
                             onError={(e) => {
                               const target = e.currentTarget;
                               target.style.display = "none";
                               if (target.parentElement) {
+                                target.parentElement.className =
+                                  "h-9 w-9 rounded-xl bg-neutral-800 text-white flex items-center justify-center text-xs font-bold";
                                 target.parentElement.textContent = app.name[0];
                               }
                             }}
@@ -700,14 +843,26 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
 
                         {/* Action Button: Connect / Add */}
                         <button
-                          onClick={() => toggleConnect(app.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 cursor-pointer ${
-                            isConnected
+                          disabled={isLoading}
+                          onClick={() => handleToggleApp(app)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                            isLoading
+                              ? "opacity-60 cursor-not-allowed bg-neutral-800 text-neutral-400"
+                              : isConnected
                               ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
-                              : "bg-[#252532] hover:bg-white hover:text-black text-neutral-200 border border-[#303040]"
+                              : "bg-[#252534] hover:bg-white hover:text-black text-neutral-200 border border-[#323246]"
                           }`}
                         >
-                          {isConnected ? "Connected" : "Add"}
+                          {isLoading ? (
+                            <Loader2 size={12} className="animate-spin text-neutral-300" />
+                          ) : isConnected ? (
+                            <>
+                              <Check size={12} className="text-emerald-400" />
+                              <span>Connected</span>
+                            </>
+                          ) : (
+                            <span>Add</span>
+                          )}
                         </button>
                       </div>
                     );
@@ -718,8 +873,8 @@ export function ConnectAppsModal({ isOpen, onClose }: ConnectAppsModalProps) {
           })}
 
           {filteredApps.length === 0 && (
-            <div className="py-16 text-center text-xs text-neutral-500 font-mono space-y-2">
-              <Layers size={24} className="mx-auto text-neutral-600 mb-1" />
+            <div className="py-12 text-center text-xs text-neutral-500 font-mono space-y-2">
+              <Layers size={22} className="mx-auto text-neutral-600 mb-1" />
               <div>No applications found matching "{searchQuery}".</div>
               <button
                 onClick={() => {

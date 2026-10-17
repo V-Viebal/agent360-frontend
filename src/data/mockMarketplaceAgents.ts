@@ -42,8 +42,8 @@ export const MARKETPLACE_AGENTS: AgentMarketplaceItem[] = [
   },
   {
     id: "agent team-sre-sentinel",
-    name: "Fleet SRE Sentinel",
-    roleTitle: "Site Reliability & Fleet Guardian",
+    name: "Skyer SRE Sentinel",
+    roleTitle: "Site Reliability & System Guardian",
     creatorName: "Antares Cloud Labs",
     handle: "antares_infra",
     verified: true,
@@ -51,7 +51,7 @@ export const MARKETPLACE_AGENTS: AgentMarketplaceItem[] = [
     categories: ["Operations & SRE", "From Agent360 Team"],
     summary: "Audits VPS node metrics 24/7, detects kernel D-state stalls, handles container crashes, and gracefully drains memory pressure.",
     description: "Enterprise infrastructure sentinel designed for hybrid VPS clusters. Interfaces with Beszel, Guardian, systemd, and Docker engines. Performs safe self-healing actions within strict policy boundaries and notifies on-call teams only when intervention is required.",
-    goal: "Maintain 99.99% fleet uptime across VPS hypervisors while keeping memory and disk pressure within safe operating thresholds.",
+    goal: "Maintain high uptime across personal services while keeping memory and disk pressure within safe operating thresholds.",
     backstory: "Built by veteran Linux sysadmins who got tired of waking up at 3 AM for zombie containers and WSL 9p kernel locks.",
     color: "amber",
     shape: "dome",
@@ -72,7 +72,7 @@ export const MARKETPLACE_AGENTS: AgentMarketplaceItem[] = [
       expectedOutput: "Health probe log with HTTP 200 verification and memory delta graph.",
     },
     terminalPreview: [
-      "[sre:agent360] Fleet telemetry ping: 8/8 nodes operational",
+      "[sre:agent360] System telemetry ping: personal nodes operational",
       "[sre:agent360] Node 6th RAM pressure warning: 88.4% in eval-worker",
       "[sre:agent360] Initiating graceful drain and restart of container qwenpaw-eval",
       "[sre:agent360] Container UP (healthy) in 410ms. RAM dropped to 31.2%",
@@ -147,7 +147,7 @@ export const MARKETPLACE_AGENTS: AgentMarketplaceItem[] = [
     teamConfig: {
       collaborationMode: "Hierarchical Orchestrator",
       leadAgent: "Self",
-      teammateRoles: ["Fullstack SWE Teammate", "Vision QA & A11y Auditor", "Fleet SRE Sentinel"],
+      teammateRoles: ["Fullstack SWE Teammate", "Vision QA & A11y Auditor", "Skyer SRE Sentinel"],
       expectedOutput: "Completed task dependency graph with verified receipts across all phases.",
     },
     terminalPreview: [
@@ -264,7 +264,7 @@ export const MARKETPLACE_AGENTS: AgentMarketplaceItem[] = [
     samplePrompt: "Audit current environment variables across staging nodes and flag any exposed plaintext secrets.",
     teamConfig: {
       collaborationMode: "Hierarchical Orchestrator",
-      teammateRoles: ["Fleet SRE Sentinel"],
+      teammateRoles: ["Skyer SRE Sentinel"],
       expectedOutput: "Cryptographically signed compliance audit report with 0 credential exposure.",
     },
     terminalPreview: [
@@ -303,7 +303,7 @@ export const MARKETPLACE_AGENTS: AgentMarketplaceItem[] = [
     samplePrompt: "Synthesize yesterday's SRE incident logs into a post-mortem document and update the operational runbook index.",
     teamConfig: {
       collaborationMode: "Autonomous AI Team",
-      teammateRoles: ["Fleet SRE Sentinel", "Fullstack SWE Teammate"],
+      teammateRoles: ["Skyer SRE Sentinel", "Fullstack SWE Teammate"],
       expectedOutput: "Published Outline KB document linked under the canonical Project Hub with verified readback receipt.",
     },
     terminalPreview: [

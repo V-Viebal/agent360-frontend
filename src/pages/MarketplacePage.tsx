@@ -120,7 +120,7 @@ export function MarketplacePage() {
     setTimeout(() => {
       setDeployedSuccess(null);
       // Navigate to active workspace
-      navigate("/workspace");
+      navigate("/app");
     }, 1200);
   };
 
@@ -144,7 +144,7 @@ export function MarketplacePage() {
 
           <div className="flex items-center gap-3">
             <Link
-              to="/workspace"
+              to="/app"
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
             >
               <Cpu size={14} className="text-[#ff7a00]" />

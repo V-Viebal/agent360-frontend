@@ -4,19 +4,16 @@ import { LandingPage } from "./pages/LandingPage";
 import { MarketplacePage } from "./pages/MarketplacePage";
 import { DocsPage } from "./pages/DocsPage";
 import { AgentDetailPage } from "./pages/AgentDetailPage";
+import { AgentStatsDashboardPage } from "./pages/AgentStatsDashboardPage";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 
 export default function App() {
   return (
     <Routes>
-      {/* Primary: Exact Grok Bot layout matching user screenshot */}
-      <Route path="/" element={<GrokBotWorkspace />} />
-      <Route path="/workspace" element={<GrokBotWorkspace />} />
-
-      {/* Marketing Landing Page */}
+      {/* 1. Public Marketing Landing Page at "/" */}
       <Route
-        path="/landing"
+        path="/"
         element={
           <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
             <Navbar />
@@ -27,8 +24,13 @@ export default function App() {
           </div>
         }
       />
+      <Route path="/landing" element={<Navigate to="/" replace />} />
 
-      {/* Marketplace Catalog: x.ai & AI Teammates Multi-Agent Teammate Templates */}
+      {/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
+      <Route path="/app" element={<GrokBotWorkspace />} />
+      <Route path="/workspace" element={<Navigate to="/app" replace />} />
+
+      {/* 3. Marketplace Catalog */}
       <Route
         path="/marketplace"
         element={
@@ -56,7 +58,7 @@ export default function App() {
         }
       />
 
-      {/* Documentation (AI Teammates structure + QwenPaw specs) */}
+      {/* Documentation */}
       <Route
         path="/docs"
         element={
@@ -64,6 +66,20 @@ export default function App() {
             <Navbar />
             <main className="flex-1">
               <DocsPage />
+            </main>
+            <Footer />
+          </div>
+        }
+      />
+
+      {/* Agent Load & Telemetry Analytics Dashboard */}
+      <Route
+        path="/analytics"
+        element={
+          <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+            <Navbar />
+            <main className="flex-1">
+              <AgentStatsDashboardPage />
             </main>
             <Footer />
           </div>

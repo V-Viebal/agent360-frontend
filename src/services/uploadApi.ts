@@ -1,24 +1,26 @@
 export interface UploadedFileResult {
-  file_id: string;
-  filename: string;
-  virtual_uri: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
+  url: string;
+  file_name: string;
+  size: number;
 }
 
-export async function uploadFileToGateway(file: File): Promise<UploadedFileResult> {
+export async function uploadFileToGateway(file: File, agentId: string = "default"): Promise<UploadedFileResult> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch("/api/v1/agents/console/upload", {
+  const cleanAgent = (agentId || "default").replace(/^bot:agent360:/, "");
+
+  const res = await fetch("/api/console/upload", {
     method: "POST",
+    headers: {
+      "X-Agent-Id": cleanAgent,
+    },
     body: formData,
   });
 
   if (!res.ok) {
     const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.error || `Upload failed: ${res.statusText}`);
+    throw new Error(errorJson?.detail || errorJson?.error || `Upload failed: ${res.statusText}`);
   }
 
   return await res.json();

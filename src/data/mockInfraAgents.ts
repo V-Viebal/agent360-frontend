@@ -46,7 +46,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
   },
   {
     id: "bot:agent360:sre-sentinel",
-    name: "SRE Fleet Sentinel",
+    name: "SRE Sentinel",
     slug: "sre-sentinel",
     roleTag: "Operations",
     node: "7th (control.hmz.one)",
@@ -56,9 +56,9 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
     uptime: "28d 11h 05m",
     activeSessionId: "sess-sre-201",
     memoryUsageMb: 218,
-    description: "Guards the 8 VPS fleet nodes (1st–7th, storage1). Monitors Beszel, disk pressure, memory leaks, and executes automated graceful container restarts.",
+    description: "Guards personal infrastructure nodes and services. Monitors Beszel, disk pressure, memory leaks, and executes automated graceful container restarts.",
     tools: [
-      { name: "SSH Bridge", type: "Remote Shell", description: "Encrypted connection to edge fleet hypervisors" },
+      { name: "SSH Bridge", type: "Remote Shell", description: "Encrypted connection to personal hypervisors" },
       { name: "Beszel Agent", type: "Telemetry", description: "Live CPU, IO, and RAM metrics collection" },
       { name: "Coolify API", type: "PaaS Manager", description: "Automated service deployment & health probes" },
       { name: "Systemd Sentinel", type: "Host Service", description: "Unit daemon lifecycle & cgroup limits audit" },
@@ -171,7 +171,7 @@ export const MOCK_MESSAGES_BY_SESSION: Record<string, ChatMessage[]> = {
     {
       id: "m-3",
       role: "assistant",
-      content: "I have initialized the component tree:\n1. **InfraAgentsSidebar**: Lists all active bots loaded from fleet infrastructure with status indicators and memory footprint.\n2. **AgentProfileHeader**: Displays selected agent metadata, node location, uptime, and authorized toolchain.\n3. **ChatSessionCanvas**: Central dialogue area supporting markdown responses, tool call receipts, and evidence tags.\n4. **CollapsibleSessionsRail**: Bottom expandable bar displaying historical chat sessions with instant switching.",
+      content: "I have initialized the component tree:\n1. **InfraAgentsSidebar**: Lists all active bots loaded from personal environment with status indicators and memory footprint.\n2. **AgentProfileHeader**: Displays selected agent metadata, node location, uptime, and authorized toolchain.\n3. **ChatSessionCanvas**: Central dialogue area supporting markdown responses, tool call receipts, and evidence tags.\n4. **CollapsibleSessionsRail**: Bottom expandable bar displaying historical chat sessions with instant switching.",
       timestamp: "10:16 AM",
       evidenceStatus: "observed",
       toolCalls: [
@@ -220,6 +220,14 @@ export const MOCK_MESSAGES_BY_SESSION: Record<string, ChatMessage[]> = {
       content: "Audited 28 text nodes across both Ember light and Ash dark palettes:\n- **Primary CTA (#d86f4c on warm-paper)**: 4.8:1 (Pass WCAG AA)\n- **Body ink (#1a130f on linen-canvas)**: 14.2:1 (Pass WCAG AAA)\n- **Muted description (#7a6857 on warm-paper)**: 5.3:1 (Pass WCAG AA)\n\nZero unsettled CSS animations detected after 350ms frame settle.",
       timestamp: "11:03 AM",
       evidenceStatus: "observed",
+      toolCalls: [
+        {
+          tool: "browser_view_screen",
+          args: '{"url": "https://agent360.antares.vn", "action": "inspect_viewport"}',
+          result: 'Captured viewport 1920x1080. Page state: 200 OK. Headless browser ready.',
+          exitCode: 0,
+        },
+      ],
     },
   ],
 };

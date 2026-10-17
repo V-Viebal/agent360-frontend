@@ -31,7 +31,7 @@ export function AgentDetailPage() {
   const handleDeploy = () => {
     setDeployed(true);
     setTimeout(() => {
-      navigate(`/workspace?agent=${agent.id}`);
+      navigate(`/app?agent=${agent.id}`);
     }, 1200);
   };
 

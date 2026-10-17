@@ -86,7 +86,7 @@ const ORG_STRUCTURE: OrgNode[] = [
   {
     id: "ops-director",
     name: "Sentinel",
-    title: "Director of Autonomous SRE & Fleet",
+    title: "Director of Autonomous SRE & Systems",
     department: "Operations & SRE",
     level: "director",
     model: "Qwen 2.5 14B Local",
@@ -292,7 +292,7 @@ export function AIOrgChart() {
           to: "Alex (Chief Orchestrator)",
           time: "10:14:12 AM",
           text: "Canary container healthy on Node 6th. Memory pressure 42%, zero downtime. Mission accomplished.",
-          receipt: "Fleet Health: 8/8 UP (healthy)",
+          receipt: "System Health: 100% UP (healthy)",
           type: "final"
         }
       ]
@@ -327,7 +327,7 @@ export function AIOrgChart() {
       ]
     },
     "sec-audit": {
-      name: "Security ⇄ Fleet Kernel Vulnerability Scan",
+      name: "Security ⇄ Kernel Vulnerability Scan",
       messages: [
         {
           from: "Aegis (Head of QA)",
@@ -586,7 +586,7 @@ export function AIOrgChart() {
                         : "text-neutral-400 hover:text-white"
                     }`}
                   >
-                    {key === "eng-sre" ? "Engineering ⇄ SRE" : key === "mkt-exec" ? "Marketing ⇄ Exec" : "Security ⇄ Fleet"}
+                    {key === "eng-sre" ? "Engineering ⇄ SRE" : key === "mkt-exec" ? "Marketing ⇄ Exec" : "Security ⇄ Systems"}
                   </button>
                 ))}
               </div>
@@ -728,7 +728,7 @@ export function AIOrgChart() {
 
             <div className="pt-4 border-t border-white/10">
               <Link
-                to="/workspace"
+                to="/app"
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold py-2.5 text-xs transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] active:scale-98"
               >
                 <Play size={12} fill="currentColor" />
@@ -811,7 +811,7 @@ export function AIOrgChart() {
               <div className="flex items-center gap-2">
                 {batchComplete && (
                   <Link
-                    to="/workspace"
+                    to="/app"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all shadow-md"
                   >
                     <Play size={12} fill="currentColor" />

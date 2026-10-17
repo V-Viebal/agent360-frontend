@@ -90,7 +90,7 @@ export function DocsPage() {
       <div className="border-b border-white/[0.08] bg-white/[0.02] px-4 py-3">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
-            <Link to="/landing" className="hover:text-white transition-colors">Agent360</Link>
+            <Link to="/" className="hover:text-white transition-colors">Agent360</Link>
             <ChevronRight size={12} />
             <span className="text-white font-medium">Documentation</span>
             <ChevronRight size={12} />
@@ -361,7 +361,7 @@ export function DocsPage() {
                       <span className="text-emerald-400 font-medium">$ {activeDoc.sandboxPrompt}</span>
                     </div>
                     <Link
-                      to="/workspace"
+                      to="/app"
                       className="text-[11px] font-sans text-[#ff7a00] hover:underline flex items-center gap-1"
                     >
                       <span>Open Workspace</span>
@@ -414,7 +414,7 @@ export function DocsPage() {
             </Link>
 
             <Link
-              to="/workspace"
+              to="/app"
               className="text-xs font-medium bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-2 rounded-full transition-all"
             >
               Launch Control Plane

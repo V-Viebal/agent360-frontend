@@ -47,6 +47,7 @@ export interface ChatMessage {
 }
 
 export interface InfraAgent {
+  enabled?: boolean;
   id: string;
   name: string;
   slug: string;

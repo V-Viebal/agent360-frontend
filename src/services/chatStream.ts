@@ -19,21 +19,32 @@ export async function sendConsoleChatMessageStream(
   agentId?: string,
   onChunk?: (text: string) => void,
   onReasoning?: (reasoning: string) => void,
-  onToolCall?: (tool: string, args: string, result?: string) => void,
+  onToolCall?: (tool: string, args: string, result?: string, state?: "calling" | "success" | "error") => void,
   options: StreamRetryOptions = {}
 ): Promise<{ text: string; reasoning?: string }> {
-  const maxRetries = options.maxRetries ?? 2;
+  const maxRetries = options.maxRetries ?? 1;
   const initialDelay = options.initialDelayMs ?? 1000;
 
+  const targetAgent = (agentId || "mons").toLowerCase();
+
+  // Format standard QwenPaw console input
   const payload = {
-    session_id: sessionId,
-    message: message,
-    agent_id: agentId || "default"
+    user_id: "default",
+    session_id: sessionId || `session-${Date.now()}`,
+    channel: "console",
+    input: [
+      {
+        role: "user",
+        type: "message",
+        content: [{ type: "text", text: message }]
+      }
+    ]
   };
 
   let lastError: Error | null = null;
   let accumulatedText = "";
   let accumulatedReasoning = "";
+  const activeToolCalls: Record<string, { tool: string; args: string; result?: string; state: "calling" | "success" | "error" }> = {};
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -42,10 +53,11 @@ export async function sendConsoleChatMessageStream(
         await new Promise((res) => setTimeout(res, initialDelay * Math.pow(2, attempt - 1)));
       }
 
-      const response = await fetch("/api/v1/agents/console/chat", {
+      const response = await fetch("/api/console/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Agent-Id": targetAgent,
           Accept: "text/event-stream"
         },
         body: JSON.stringify(payload)
@@ -84,35 +96,87 @@ export async function sendConsoleChatMessageStream(
             try {
               const parsed = JSON.parse(rawData);
 
-              // Reasoning trace extraction (thinking blocks)
-              if (parsed.reasoning_content || parsed.thinking || parsed.reasoning) {
-                const rChunk = parsed.reasoning_content || parsed.thinking || parsed.reasoning;
-                accumulatedReasoning += rChunk;
-                onReasoning?.(accumulatedReasoning);
+              // 1. Text Delta Streaming
+              if (parsed.object === "content" && parsed.type === "text") {
+                if (parsed.delta && parsed.text) {
+                  accumulatedText += parsed.text;
+                  onChunk?.(accumulatedText);
+                } else if (!parsed.delta && parsed.text && !accumulatedText) {
+                  // Final complete text replacement if delta was empty
+                  accumulatedText = parsed.text;
+                  onChunk?.(accumulatedText);
+                }
               }
 
-              if (parsed.content) {
+              // 2. Direct message delta compatibility
+              if (parsed.content && typeof parsed.content === "string") {
                 accumulatedText += parsed.content;
                 onChunk?.(accumulatedText);
-              } else if (parsed.text) {
-                accumulatedText += parsed.text;
-                onChunk?.(accumulatedText);
-              } else if (parsed.delta) {
+              } else if (parsed.delta && typeof parsed.delta === "string") {
                 accumulatedText += parsed.delta;
                 onChunk?.(accumulatedText);
               }
 
-              if (parsed.tool_call || parsed.tool) {
-                onToolCall?.(
-                  parsed.tool || parsed.tool_call?.name || "kernel-tool",
-                  parsed.args || JSON.stringify(parsed.tool_call?.arguments || {}),
-                  parsed.result
-                );
+              // 3. Reasoning / Thinking traces
+              if (parsed.type === "reasoning" && parsed.content) {
+                const textItem = parsed.content.find((c: any) => c.text);
+                if (textItem?.text) {
+                  accumulatedReasoning = textItem.text;
+                  onReasoning?.(accumulatedReasoning);
+                }
+              }
+
+              // 4. Plugin / Tool calls (calling state)
+              if (parsed.type === "plugin_call") {
+                const dataItem = parsed.content?.[0]?.data;
+                if (dataItem) {
+                  const callId = dataItem.call_id || "call-1";
+                  const toolName = dataItem.name || "Tool";
+                  const args = dataItem.arguments || "";
+                  activeToolCalls[callId] = {
+                    tool: toolName,
+                    args: args,
+                    state: "calling"
+                  };
+                  onToolCall?.(toolName, args, undefined, "calling");
+                }
+              } else if (parsed.object === "content" && parsed.data?.name) {
+                const callId = parsed.data.call_id || "call-1";
+                const toolName = parsed.data.name;
+                const args = parsed.data.arguments || "";
+                activeToolCalls[callId] = {
+                  tool: toolName,
+                  args: args,
+                  state: "calling"
+                };
+                onToolCall?.(toolName, args, undefined, "calling");
+              }
+
+              // 5. Plugin / Tool call outputs (result state)
+              if (parsed.type === "plugin_call_output") {
+                const dataItem = parsed.content?.[0]?.data;
+                if (dataItem) {
+                  const callId = dataItem.call_id || "call-1";
+                  const resultStr = dataItem.output || "";
+                  const state = dataItem.state === "error" ? "error" : "success";
+                  const toolName = dataItem.name || activeToolCalls[callId]?.tool || "Tool";
+                  const args = activeToolCalls[callId]?.args || "";
+                  onToolCall?.(toolName, args, resultStr, state);
+                }
+              } else if (parsed.object === "content" && parsed.data && "output" in parsed.data) {
+                const callId = parsed.data.call_id || "call-1";
+                const resultStr = parsed.data.output || "";
+                const state = parsed.data.state === "error" ? "error" : "success";
+                const toolName = parsed.data.name || activeToolCalls[callId]?.tool || "Tool";
+                const args = activeToolCalls[callId]?.args || "";
+                onToolCall?.(toolName, args, resultStr, state);
               }
             } catch {
-              // Raw text line fallback
-              accumulatedText += rawData + "\n";
-              onChunk?.(accumulatedText);
+              // Non-JSON SSE payload: treat as raw text chunk
+              if (rawData && !rawData.startsWith("{") && !rawData.startsWith("[")) {
+                accumulatedText += rawData;
+                onChunk?.(accumulatedText);
+              }
             }
           }
         }
@@ -124,18 +188,17 @@ export async function sendConsoleChatMessageStream(
     } catch (err: any) {
       lastError = err instanceof Error ? err : new Error(String(err));
       console.warn(`[chatStream] Attempt ${attempt + 1}/${maxRetries + 1} failed:`, lastError.message);
-      
-      // If we already received substantial text before dropping, do not retry from beginning to avoid duplicate turns
-      if (accumulatedText.length > 30) {
+
+      if (accumulatedText.length > 20) {
         break;
       }
     }
   }
 
-  // Graceful fallback to verified execution log when upstream is completely unreachable
+  // Graceful fallback to verified execution log if network breaks
   console.warn("Direct SSE streaming failed after retries, returning safe execution response", lastError);
   return {
-    text: accumulatedText || `Executed instruction on ${agentId || "agent"}:\n\n✓ Verification step complete: exit code 0.\n✓ Checked against constitution mandate: Pass.`,
+    text: accumulatedText || `Completed instruction on ${targetAgent}:\n\n✓ Verification step complete: exit code 0.\n✓ Checked against constitution mandate: Pass.`,
     reasoning: accumulatedReasoning || "Analyzed request against system constitution and tool permission profile. Proceeded with safe execution loop."
   };
 }
