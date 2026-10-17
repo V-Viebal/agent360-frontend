@@ -538,10 +538,12 @@ function FormattedMessageContent({
   content,
   onRunCode,
   agentNode,
+  onSpeakSentence,
 }: {
   content: string;
   onRunCode?: (code: string, lang: string) => void;
   agentNode?: string;
+  onSpeakSentence?: (sentence: string) => void;
 }) {
   const [runningBlock, setRunningBlock] = useState<number | null>(null);
   const [runOutputs, setRunOutputs] = useState<Record<number, { output: string; exitCode: number }>>({});
@@ -723,7 +725,12 @@ function FormattedMessageContent({
               }
 
               return (
-                <p key={lineIdx} className="text-neutral-300 leading-relaxed break-words">
+                <p
+                  key={lineIdx}
+                  onDoubleClick={() => onSpeakSentence?.(trimmed)}
+                  title="Double click to read this sentence aloud"
+                  className="text-neutral-300 leading-relaxed break-words hover:text-white transition-colors cursor-text"
+                >
                   {renderInlineMarkdown(line)}
                 </p>
               );
@@ -3693,13 +3700,31 @@ export function GrokBotWorkspace() {
                       {msg.content && (
                         <>
                           <div className="text-[13px] leading-relaxed text-neutral-800 dark:text-neutral-200 py-1 px-0.5 divide-y divide-dashed divide-neutral-200 dark:divide-[#22222c]/50">
-                            <FormattedMessageContent content={msg.content} agentNode={selectedAgent.node} onRunCode={(codeSnippet) => {
-                            sendConsoleChatMessageStream(
-                              selectedChatId || "default",
+                            <FormattedMessageContent
+                            content={msg.content}
+                            agentNode={selectedAgent.node}
+                            onRunCode={(codeSnippet) => {
+                              sendConsoleChatMessageStream(
+                                selectedChatId || "default",
                                 "Execute shell verification:\n```bash\n" + codeSnippet + "\n```",
-                              selectedAgent.slug
-                            );
-                          }} />
+                                selectedAgent.slug
+                              );
+                            }}
+                            onSpeakSentence={(sentence) => {
+                              setSpeakingMsgId(msg.id);
+                              speakText(sentence, {
+                                onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                onEnd: () => {
+                                  setSpeakingMsgId(null);
+                                  setSpeakingSentence(null);
+                                },
+                                onError: () => {
+                                  setSpeakingMsgId(null);
+                                  setSpeakingSentence(null);
+                                },
+                              });
+                            }}
+                          />
                             {/* Inline pulsing bullet cursor if currently streaming active tokens */}
                             {isStreaming && isLastTurn && (
                               <span className="inline-flex items-center gap-1 ml-1.5 align-middle select-none">
