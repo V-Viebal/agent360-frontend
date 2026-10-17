@@ -53,7 +53,7 @@ export async function sendConsoleChatMessageStream(
         await new Promise((res) => setTimeout(res, initialDelay * Math.pow(2, attempt - 1)));
       }
 
-      const response = await fetch("/api/console/chat", {
+      const response = await fetch("/api/agents/console/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
