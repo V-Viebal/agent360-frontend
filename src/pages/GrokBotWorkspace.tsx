@@ -2227,7 +2227,28 @@ export function GrokBotWorkspace() {
         return;
       }
 
-      // 3. Escape key closes open modals / menus
+      // 3. Home / End keyboard shortcuts for dialogue scrolling (when not actively editing text)
+      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isInputFocused = targetTag === "input" || targetTag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
+
+      if (!isInputFocused) {
+        if (e.key === "End") {
+          e.preventDefault();
+          isUserScrolledUpRef.current = false;
+          setShowScrollBottomBtn(false);
+          smoothScrollToBottom();
+          return;
+        }
+        if (e.key === "Home") {
+          e.preventDefault();
+          if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+          }
+          return;
+        }
+      }
+
+      // 4. Escape key closes open modals / menus
       if (e.key === "Escape") {
         setIsCommandPaletteOpen(false);
         setIsPermissionsModalOpen(false);

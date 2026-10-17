@@ -77,7 +77,7 @@ export function AgentTopologyVisualizer() {
   const [copiedYaml, setCopiedYaml] = useState(false);
 
   const generateWorkforceYaml = () => {
-    return `# Agent360 AI Workforce Hierarchy Specification
+    return `# Skyer AI Workforce Hierarchy Specification
 # Generated for: AntaresOS / Coolify Deployments
 version: "2.2.1"
 agent team:

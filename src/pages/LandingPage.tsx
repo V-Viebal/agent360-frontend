@@ -419,13 +419,13 @@ export function LandingPage() {
               to="/app"
               className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-white text-black hover:bg-neutral-200 px-8 text-sm font-semibold transition-all shadow-sm active:scale-98"
             >
-              Launch Skyer App
+              {t("hero.launchApp")}
             </Link>
             <a
               href="#bots"
               className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-98"
             >
-              Explore AI Teammates
+              {t("hero.exploreTeammates")}
             </a>
           </div>
         </div>

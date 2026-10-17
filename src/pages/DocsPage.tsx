@@ -92,7 +92,7 @@ export function DocsPage() {
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
-            <Link to="/" className="hover:text-neutral-900 dark:text-white transition-colors">Agent360</Link>
+            <Link to="/" className="hover:text-neutral-900 dark:text-white transition-colors">Skyer</Link>
             <ChevronRight size={12} />
             <span className="text-neutral-900 dark:text-white font-medium">Documentation</span>
             <ChevronRight size={12} />

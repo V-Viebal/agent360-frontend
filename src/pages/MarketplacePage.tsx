@@ -338,7 +338,7 @@ export function MarketplacePage() {
                         {agent.name}
                       </h3>
                       {agent.verified && (
-                        <span title="Verified Agent360 Core Template">
+                        <span title="Verified Skyer Core Template">
                           <CheckCircle2 size={14} className="text-[#ff7a00] shrink-0" />
                         </span>
                       )}

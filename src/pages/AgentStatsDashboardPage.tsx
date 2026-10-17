@@ -222,7 +222,7 @@ export function AgentStatsDashboardPage() {
   const handleExportJson = () => {
     const payload = {
       exportTimestamp: new Date().toISOString(),
-      governanceModel: "Agent360 v2.2.1 / QwenPaw Telemetry",
+      governanceModel: "Skyer v2.2.1 / QwenPaw Telemetry",
       dateRange: { start: stats.start_date, end: stats.end_date },
       summary: {
         totalSessions: stats.total_active_sessions,
@@ -871,7 +871,7 @@ export function AgentStatsDashboardPage() {
               <div role="status" className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 font-mono text-[11px] flex items-center gap-2">
                 <Check size={14} className="text-emerald-400" />
                 <span>
-                  {testAlert.isSimulation ? "DEMO" : "TEST"} alert preview (not sent): "[Agent360 Sentinel] Token expenditure at{" "}
+                  {testAlert.isSimulation ? "DEMO" : "TEST"} alert preview (not sent): "[Skyer Sentinel] Token expenditure at{" "}
                   {testAlert.usagePercent}% of budget limit (${testAlert.costUSD.toFixed(2)} / ${testAlert.limitUSD.toFixed(2)})"
                 </span>
               </div>

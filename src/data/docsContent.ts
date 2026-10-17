@@ -22,11 +22,11 @@ export const DOCS_SECTIONS: DocSection[] = [
     category: "Getting Started",
     badge: "Core",
     summary:
-      "Get up and running with Agent360: an enterprise AI agent workstation that combines QwenPaw's sandboxed runtime with Enterprise-grade multi-agent orchestration.",
+      "Get up and running with Skyer: an enterprise AI agent workstation that combines QwenPaw's sandboxed runtime with Enterprise-grade multi-agent orchestration.",
     content: `
-### What is Agent360?
-Agent360 is an enterprise-grade autonomous AI workstation designed to build and operate long-lived AI Teammates. 
-Unlike chat-only LLM wrappers, Agent360 agents possess persistent Linux working environments, continuous file storage, tool permission guards, and multi-channel communication (Telegram, DingTalk, Feishu, Discord, Web).
+### What is Skyer?
+Skyer is an enterprise-grade autonomous AI workstation designed to build and operate long-lived AI Teammates. 
+Unlike chat-only LLM wrappers, Skyer agents possess persistent Linux working environments, continuous file storage, tool permission guards, and multi-channel communication (Telegram, DingTalk, Feishu, Discord, Web).
 
 ### Key Architectural Pillars
 - **Agent OS Environment:** Built on QwenPaw's kernel sandbox. Agents read/write real files, clone git repositories, run test suites, and inspect browser DOMs.
@@ -36,11 +36,11 @@ Unlike chat-only LLM wrappers, Agent360 agents possess persistent Linux working 
     `,
     codeSnippet: {
       language: "bash",
-      code: `# 1. Clone your project repository with Agent360 overlay
+      code: `# 1. Clone your project repository with Skyer overlay
 git clone https://github.com/V-Viebal/agent360.git
 cd agent360
 
-# 2. Start Agent360 API and Web Control Plane
+# 2. Start Skyer API and Web Control Plane
 docker compose up -d
 
 # 3. Verify agent status via CLI
@@ -53,10 +53,10 @@ curl http://localhost:5000/api/agents/skills`,
     ],
     sandboxPrompt: "curl -s http://localhost:5000/api/agents/skills | jq .",
     sandboxOutput: [
-      "[sandbox:connect] Connecting to Agent360 kernel @ localhost:5000...",
-      "[sandbox:skills] 14 verified skills registered in runtime",
-      "[sandbox:check] Kernel status: Up (healthy) - 0 memory leaks detected",
-      "[sandbox:receipt] Healthcheck response: HTTP 200 OK (latency 12ms)",
+      "[sandbox.connect] Connecting to Skyer kernel @ localhost:5000...",
+      "[sandbox.skills] 14 verified skills registered in runtime",
+      "[sandbox.check] Kernel status: Up (healthy) - 0 memory leaks detected",
+      "[sandbox.receipt] Healthcheck response: HTTP 200 OK (latency 12ms)",
     ],
   },
   {
@@ -67,7 +67,7 @@ curl http://localhost:5000/api/agents/skills`,
     summary:
       "Understand the primary entities: Agents, AI Workforce, Tasks, Tools, ReMe Memory, and Evidence Receipts.",
     content: `
-### The 6 Core Entities of Agent360
+### The 6 Core Entities of Skyer
 
 1. **AI Agent (Teammate):** An autonomous entity with an explicit persona, role, provisioned tools, and personal memory. Each agent owns an isolated working volume (\`/app/working\`).
 2. **AI Team (Multi-Agent Team):** A collaborative collective of agents configured with a process mode:
@@ -95,7 +95,7 @@ curl http://localhost:5000/api/agents/skills`,
       "How to configure specialized AI Teammates: system prompts, capabilities, backends, and permission models.",
     content: `
 ### Give Each Bot a Job
-Rather than using a single mega-prompt for all company operations, Agent360 enforces domain specialization.
+Rather than using a single mega-prompt for all company operations, Skyer enforces domain specialization.
 
 #### Agent Definition Schema
 \`\`\`yaml
@@ -220,10 +220,10 @@ Tasks are the execution contracts between agents. A task must define:
 \`\`\`yaml
 task_id: "task-402-auth"
 assigned_to: "swe-agent"
-description: "Configure Logto OAuth provider in Agent360.API and frontend SPA."
+description: "Configure Logto OAuth provider in Skyer.API and frontend SPA."
 expected_output: "Clean git diff with passing contract tests and Playwright video capture."
 verification_requirements:
-  - "Exit code 0 from: dotnet test Agent360.API.ContractTests"
+  - "Exit code 0 from: dotnet test Skyer.API.ContractTests"
   - "Exit code 0 from: pnpm test:e2e"
   - "Non-empty screenshot at .tmp/auth-verified.png"
 \`\`\`
@@ -245,7 +245,7 @@ verification_requirements:
       "Deep dive into QwenPaw's rootless container sandboxing, File Guards, and Tool Permission escalation.",
     content: `
 ### Sandboxing & Host Isolation
-Agent360 inherits QwenPaw's containerized execution model:
+Skyer inherits QwenPaw's containerized execution model:
 
 - **Isolated Working Volumes:** Agents only have write permissions within their scoped \`/app/working\` directory.
 - **Tool Guard Interceptors:** Commands like \`rm -rf /\`, \`drop database\`, or reading sensitive keys trigger human approval gates.
@@ -254,7 +254,7 @@ Agent360 inherits QwenPaw's containerized execution model:
     `,
     codeSnippet: {
       language: "bash",
-      code: `# Agent360 Docker Sandbox specification
+      code: `# Skyer Docker Sandbox specification
 docker run -d \\
   --name agent360-sandbox-worker \\
   --security-opt=no-new-privileges:true \\
@@ -278,7 +278,7 @@ docker run -d \\
       "How QwenPaw's ReMe engine turns conversations, diffs, and documents into permanent, reusable knowledge.",
     content: `
 ### The 6-Stage Memory Lifecycle
-Agent360 does not rely on transient chat logs. Instead, it follows QwenPaw's proven memory architecture:
+Skyer does not rely on transient chat logs. Instead, it follows QwenPaw's proven memory architecture:
 
 1. **Record:** Captures operational preferences, architecture rules, and verified facts.
 2. **Ingest:** Parses upstream pull requests, commit messages, and API schemas.
@@ -299,7 +299,7 @@ Agent360 does not rely on transient chat logs. Instead, it follows QwenPaw's pro
     category: "Enterprise Integration",
     badge: "Channels",
     summary:
-      "Connect Agent360 teammates to 10+ enterprise channels: Telegram, Element, Discord, DingTalk, Feishu, and Web.",
+      "Connect Skyer teammates to 10+ enterprise channels: Telegram, Element, Discord, DingTalk, Feishu, and Web.",
     content: `
 ### Seamless Teammate Communication
 Interact with your AI agent team on the tools your team already uses every day:
@@ -310,7 +310,7 @@ Interact with your AI agent team on the tools your team already uses every day:
 - **Web Console:** Real-time terminal streaming and interactive desktop workspace.
 
 #### Topic-Aware Routing
-In group chats with forum topics enabled, Agent360 preserves separate thread contexts, ensuring tasks don't cross-contaminate.
+In group chats with forum topics enabled, Skyer preserves separate thread contexts, ensuring tasks don't cross-contaminate.
     `,
     keyTakeaways: [
       "Communicate with agents directly from existing chat apps",

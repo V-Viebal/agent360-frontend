@@ -61,7 +61,7 @@ export function AgentDetailPage() {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">{agent.name}</h1>
                   {agent.verified && (
-                    <span title="Verified Agent360 Core Template">
+                    <span title="Verified Skyer Core Template">
                       <CheckCircle2 size={20} className="text-[#ff7a00]" />
                     </span>
                   )}

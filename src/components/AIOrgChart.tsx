@@ -251,7 +251,7 @@ export function AIOrgChart() {
         setBatchComplete(true);
         setBatchLogs((prev) => [
           ...prev,
-          "[cluster:ready] 10/10 AI Teammate containers healthy and bound to Agent360 ACP network. Mission ready."
+          "[cluster:ready] 10/10 AI Teammate containers healthy and bound to Skyer ACP network. Mission ready."
         ]);
       }
     }, 400);
@@ -356,7 +356,7 @@ export function AIOrgChart() {
   const handleDownloadAuditJson = () => {
     const payload = {
       auditTimestamp: new Date().toISOString(),
-      governanceModel: "AntaresOS / Agent360 v2.2.1",
+      governanceModel: "AntaresOS / Skyer v2.2.1",
       departmentScenario: scenarioFilter,
       scenarioName: activeScenario.name,
       complianceStandard: "SOC2-CC6.1 / ISO27001-A.12.4.1 (Immutable Log Trace)",
