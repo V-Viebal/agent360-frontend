@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+  <id>agent360</id>
+  <name>Agent360 Workspace</name>
+  <summary>Autonomous AI Teammates Workstation integrated into Nextcloud.</summary>
+  <description>Deep native Nextcloud integration for Agent360. Provides access to sovereign AI agents, fleet stream, ACP tool execution, and session management inside the Nextcloud navigation suite.</description>
+  <version>1.0.0</version>
+  <licence>agpl</licence>
+  <author>Viebal / Antares</author>
+  <namespace>Agent360</namespace>
+  <category>tools</category>
+  <dependencies>
+    <nextcloud min-version="28" max-version="34" />
+    <php min-version="8.1" max-version="8.4" />
+  </dependencies>
+  <types>
+    <api>ocs</api>
+  </types>
+  <navigations>
+    <navigation>
+      <name>Agent360</name>
+      <route>agent360.Page.index</route>
+      <icon>app.svg</icon>
+      <order>15</order>
+    </navigation>
+  </navigations>
+  <settings>
+    <admin>OCA\Agent360\Settings\AdminSettings</admin>
+  </settings>
+</info>

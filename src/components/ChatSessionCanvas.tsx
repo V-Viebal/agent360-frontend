@@ -66,10 +66,10 @@ export function ChatSessionCanvas({
 
     let finalMessage = inputText;
     if (attachedFile) {
-      finalMessage = `${inputText}\n\n[Attached File: ${attachedFile.filename} (${attachedFile.virtual_uri})]`.trim();
+      finalMessage = `${inputText}\n\n[Attached File: ${attachedFile.file_name} (${attachedFile.url})]`.trim();
     }
 
-    onSendMessage(finalMessage, attachedFile?.virtual_uri);
+    onSendMessage(finalMessage, attachedFile?.url);
     setInputText("");
     setAttachedFile(null);
   };
@@ -263,9 +263,9 @@ export function ChatSessionCanvas({
           <div className="max-w-4xl mx-auto flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#1a1410] border border-[#d86f4c]/40 font-mono text-xs text-[#d86f4c]">
             <div className="flex items-center gap-2 truncate">
               <FileText size={14} />
-              <span className="truncate">{attachedFile.filename}</span>
+              <span className="truncate">{attachedFile.file_name}</span>
               <span className="text-[10px] text-neutral-500 font-sans">
-                ({(attachedFile.size_bytes / 1024).toFixed(1)} KB)
+                ({(attachedFile.size / 1024).toFixed(1)} KB)
               </span>
             </div>
             <button

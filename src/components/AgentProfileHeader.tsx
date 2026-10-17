@@ -43,7 +43,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
     setSwitchingModel(true);
     try {
       const res = await updateAgentActiveModel(agent.id, providerId, model);
-      if (res.success) {
+      if (res) {
         const fullModelName = `${providerId}/${model}`;
         onModelChanged?.(fullModelName);
         onRefresh?.();

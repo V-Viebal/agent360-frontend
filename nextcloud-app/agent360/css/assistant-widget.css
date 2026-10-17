@@ -1,0 +1,203 @@
+/**
+ * Agent360 Intelligent Nextcloud Overlay:
+ * 1. Compact Floating Popover (Widget mở nhỏ, góc dưới phải)
+ *    -> Responsive: chỉ hiển thị phần chat, tinh giản các thanh bên
+ * 2. Full-Height Right Sidebar Docking (Expand chiếm trọn chiều cao, neo vào cạnh phải)
+ */
+
+/* ========================================================
+   1. FLOATING ACTION BUTTON (TRIGGER)
+   ======================================================== */
+#agent360-fab-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff7a00, #ff9433);
+  box-shadow: 0 4px 20px rgba(255, 122, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10000;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  user-select: none;
+}
+
+#agent360-fab-trigger:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px rgba(255, 122, 0, 0.55), 0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+#agent360-fab-trigger svg {
+  width: 24px;
+  height: 24px;
+  stroke: #ffffff;
+}
+
+#agent360-fab-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background-color: #10b981;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+}
+
+/* ========================================================
+   2. ASSISTANT CONTAINER (DUAL MODE: COMPACT & SIDEBAR)
+   ======================================================== */
+#agent360-assistant-container {
+  position: fixed;
+  z-index: 99999;
+  background-color: #0c0c0e;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px #22222e;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s ease, height 0.25s ease, border-radius 0.2s ease;
+}
+
+/* --- CHẾ ĐỘ 1: WIDGET MỞ NHỎ (Compact Floating Popover) --- */
+#agent360-assistant-container.mode-compact {
+  bottom: 84px;
+  right: 24px;
+  width: 420px;
+  height: 600px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 100px);
+  border-radius: 18px;
+  transform: translateY(16px) scale(0.96);
+}
+
+#agent360-assistant-container.mode-compact.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+/* --- CHẾ ĐỘ 2: EXPAND PLACE TRONG RIGHT SIDEBAR (Full View Height) --- */
+#agent360-assistant-container.mode-sidebar {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  width: 540px;
+  max-width: 92vw;
+  border-radius: 0;
+  border-left: 1px solid #22222e;
+  transform: translateX(100%);
+}
+
+#agent360-assistant-container.mode-sidebar.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+/* Nền mờ chỉ xuất hiện khi ở mode sidebar nếu muốn tập trung */
+#agent360-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 99998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#agent360-overlay-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ========================================================
+   3. HEADER & CONTROLS (EXPAND/COLLAPSE, CLOSE)
+   ======================================================== */
+.agent360-control-bar {
+  height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #1c1c24;
+  background-color: #0f0f14;
+  user-select: none;
+}
+
+.agent360-control-bar__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.agent360-control-bar__badge {
+  font-family: monospace;
+  font-size: 10px;
+  background: rgba(255, 122, 0, 0.15);
+  color: #ff7a00;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 122, 0, 0.3);
+}
+
+.agent360-control-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.agent360-btn-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #a3a3a3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.agent360-btn-icon:hover {
+  background: #1f1f2a;
+  color: #ffffff;
+}
+
+/* ========================================================
+   4. CONTENT IFRAME (EMBEDDED WORKSPACE)
+   ======================================================== */
+.agent360-frame-content {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 44px);
+  border: none;
+  background-color: #0c0c0e;
+}
+
+@media (max-width: 640px) {
+  #agent360-assistant-container.mode-compact {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}
