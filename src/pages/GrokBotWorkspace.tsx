@@ -9,6 +9,7 @@ import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
 import { ChannelConfigModal } from "../components/ChannelConfigModal";
 import { ScheduleJobModal } from "../components/ScheduleJobModal";
 import { VoiceRecordSettingsModal } from "../components/VoiceRecordSettingsModal";
+import { StarredAndShortcutsModal } from "../components/StarredAndShortcutsModal";
 import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect } from "react";
 import {
@@ -984,6 +985,7 @@ export function GrokBotWorkspace() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
+  const [isStarredShortcutsModalOpen, setIsStarredShortcutsOpen] = useState(false);
   const [isVoiceRecordSettingsOpen, setIsVoiceRecordSettingsOpen] = useState(false);
   const [turnTelemetry, setTurnTelemetry] = useState<TurnTelemetry | null>(null);
   const [forwardModalMsg, setForwardModalMsg] = useState<string | null>(null);
@@ -1700,6 +1702,31 @@ export function GrokBotWorkspace() {
     }
   };
   const [isBatchClearModalOpen, setIsBatchClearModalOpen] = useState(false);
+  // Multi-select state for bulk deleting chat sessions
+  const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
+
+  const handleToggleSelectChat = (chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedChatIds((prev) =>
+      prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [...prev, chatId]
+    );
+  };
+
+  const handleBatchDeleteSelectedChats = () => {
+    if (selectedChatIds.length === 0) return;
+    setChats((prev) => prev.filter((c) => !selectedChatIds.includes(c.id)));
+    setPinnedChatIds((prev) => prev.filter((id) => !selectedChatIds.includes(id)));
+    if (selectedChatId && selectedChatIds.includes(selectedChatId)) {
+      const remaining = chats.filter((c) => !selectedChatIds.includes(c.id));
+      if (remaining.length > 0) {
+        handleSelectChat(remaining[0]);
+      } else {
+        handleNewChat();
+      }
+    }
+    setSelectedChatIds([]);
+    setIsBatchClearModalOpen(false);
+  };
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
   const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
@@ -2864,11 +2891,11 @@ export function GrokBotWorkspace() {
                 <PanelLeftOpen size={16} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors" />
               </button>
               <button
-                aria-label="Sơ đồ phối hợp A2A (Ctrl+G)"
+                aria-label="Sơ đồ đội ngũ (Ctrl+G)"
                 type="button"
                 onClick={() => setIsTopologyModalOpen(true)}
                 className="h-8 w-8 rounded-xl bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer shadow-xs"
-                title="Sơ đồ phối hợp giữa các đồng đội A2A (Ctrl+G)"
+                title="Sơ đồ đội ngũ (Ctrl+G)"
               >
                 <Network size={15} />
               </button>
@@ -3089,35 +3116,28 @@ export function GrokBotWorkspace() {
               </div>
             </div>
 
-            {/* A2A Team Network & Collaboration Overview Button */}
-            <div className="p-2 border-b border-neutral-200 dark:border-[#1c1c22]">
+            {/* Team Network Overview Button (Lean, Normal Option, Details on Hover) */}
+            <div className="px-2 pt-2 pb-1.5 border-b border-neutral-200 dark:border-[#1c1c22]">
               <button
                 type="button"
                 onClick={() => setIsTopologyModalOpen(true)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500/10 via-[#161a24] to-[#121218] hover:from-cyan-500/20 hover:to-[#1a1f2c] border border-cyan-500/25 hover:border-cyan-400/50 text-left transition-all cursor-pointer group shadow-xs"
-                title="Xem mạng lưới liên kết & phối hợp công việc giữa các đồng đội (Ctrl + G)"
+                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border border-transparent hover:border-neutral-300 dark:hover:border-[#28283a] hover:bg-neutral-100 dark:hover:bg-[#161622] text-left transition-colors cursor-pointer group select-none"
+                title={`Sơ đồ phối hợp giữa ${agents.length} đồng đội (Nhấn Ctrl + G để mở)`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-6 w-6 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform shrink-0">
-                    <Network size={13} />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-white group-hover:text-cyan-300 transition-colors truncate">
-                        Sơ đồ Phối hợp A2A
-                      </span>
-                      <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.2 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/25 shrink-0">
-                        Team Net
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-neutral-400 truncate">
-                      {agents.length} đồng đội • Độ trễ liên node
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Network size={14} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors shrink-0" />
+                  <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors truncate">
+                    Sơ đồ đội ngũ
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-neutral-500 group-hover:text-cyan-400 transition-colors shrink-0">
-                  Ctrl+G ↗
-                </span>
+                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[10px] font-mono text-neutral-400">
+                    {agents.length} bạn
+                  </span>
+                  <span className="text-[10px] font-mono text-neutral-500">
+                    Ctrl+G
+                  </span>
+                </div>
               </button>
             </div>
 
@@ -4237,14 +4257,17 @@ export function GrokBotWorkspace() {
                 }}
               />
 
-              {/* Keyboard Shortcuts Cheat Sheet Button */}
+              {/* Starred Messages & Keyboard Shortcuts Quick Hub */}
               <button
                 type="button"
-                onClick={() => setIsKeyboardShortcutsOpen(true)}
-                className="hidden sm:flex p-1 rounded-full hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 cursor-pointer transition-colors"
-                title="Keyboard Shortcuts Cheat Sheet (Ctrl+/)"
+                onClick={() => setIsStarredShortcutsOpen(true)}
+                className="hidden sm:flex p-1 rounded-full hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 cursor-pointer transition-colors relative"
+                title="Đã đánh dấu sao & Phím tắt hệ thống (Ctrl+/)"
               >
                 <Command size={15} />
+                {starredMsgIds.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-400 ring-1 ring-[#0c0c0e]" />
+                )}
               </button>
 
               {/* STT Language Accent Badge Toggle (VI / EN) & Audio Settings Context Menu */}
@@ -4381,13 +4404,18 @@ export function GrokBotWorkspace() {
               >
                 <Search size={14} />
               </button>
-              {chats.length > 1 && (
-                <button aria-label="Batch clear conversations" data-ux-target-min="24"
+              {/* Delete Selected Sessions Button: ONLY visible when 1 or more sessions are checked */}
+              {selectedChatIds.length > 0 && (
+                <button
+                  aria-label={`Delete ${selectedChatIds.length} selected conversations`}
+                  data-ux-target-min="24"
+                  type="button"
                   onClick={() => setIsBatchClearModalOpen(true)}
-                  className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] hover:text-red-400 flex items-center justify-center text-neutral-400 transition-colors cursor-pointer"
-                  title="Clear non-pinned conversations"
+                  className="h-7 px-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 flex items-center gap-1.5 text-[11px] font-mono transition-all cursor-pointer animate-in fade-in"
+                  title={`Xóa ${selectedChatIds.length} phiên hội thoại đã chọn`}
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={12} />
+                  <span>Xóa ({selectedChatIds.length})</span>
                 </button>
               )}
               <button aria-label="New Chat Session" data-ux-target-min="24"
@@ -4561,23 +4589,40 @@ export function GrokBotWorkspace() {
                         : "hover:bg-[#181820] text-neutral-400 hover:text-neutral-200"
                     }`}
                   >
-                    <div className="h-7 w-7 rounded-lg bg-[#181822] border border-[#2a2a3a] flex items-center justify-center shrink-0 relative text-neutral-400 group-hover:text-white transition-colors">
-                      <MessageSquare size={13} className={isSelected ? "text-[#ff7a00]" : "text-neutral-400"} />
-                      {(() => {
-                        const isUnreadCompleted = (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id);
-                        if (isUnreadCompleted) {
-                          return (
-                            <span
-                              className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#0f0f14] shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse"
-                              title="Công việc đã hoàn thành và sẵn sàng nghiệm thu"
-                            />
-                          );
-                        }
-                        if (isSelected) {
-                          return <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full bg-[#ff7a00] border border-black" />;
-                        }
-                        return null;
-                      })()}
+                    {/* Interactive Icon Box: Shows Checkbox on hover or when selected, otherwise MessageSquare */}
+                    <div
+                      onClick={(e) => handleToggleSelectChat(chat.id, e)}
+                      className={`h-7 w-7 rounded-lg border flex items-center justify-center shrink-0 relative transition-all cursor-pointer ${
+                        selectedChatIds.includes(chat.id)
+                          ? "bg-[#ff7a00] border-[#ff7a00] text-black shadow-xs shadow-[#ff7a00]/30"
+                          : "bg-[#181822] border-[#2a2a3a] text-neutral-400 group-hover:border-[#ff7a00]/50"
+                      }`}
+                      title={selectedChatIds.includes(chat.id) ? "Bỏ chọn phiên này" : "Chọn phiên này để xóa hàng loạt"}
+                    >
+                      {/* Checkbox Icon (always shown if checked, or shown on desktop hover) */}
+                      <span className={selectedChatIds.includes(chat.id) ? "block" : "hidden group-hover:block"}>
+                        <Check size={13} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#ff7a00]"} />
+                      </span>
+
+                      {/* Default MessageSquare icon (hidden when checked or when hovering on desktop) */}
+                      <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden"}>
+                        <MessageSquare size={13} className={isSelected ? "text-[#ff7a00]" : "text-neutral-400"} />
+                        {(() => {
+                          const isUnreadCompleted = (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id);
+                          if (isUnreadCompleted) {
+                            return (
+                              <span
+                                className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#0f0f14] shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse"
+                                title="Công việc đã hoàn thành và sẵn sàng nghiệm thu"
+                              />
+                            );
+                          }
+                          if (isSelected) {
+                            return <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full bg-[#ff7a00] border border-black" />;
+                          }
+                          return null;
+                        })()}
+                      </span>
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -5440,6 +5485,17 @@ export function GrokBotWorkspace() {
         isPwaInstallable={Boolean(deferredPrompt)}
       />
 
+      <StarredAndShortcutsModal
+        isOpen={isStarredShortcutsModalOpen}
+        onClose={() => setIsStarredShortcutsOpen(false)}
+        starredMessages={messages.filter((m) => starredMsgIds.includes(m.id))}
+        onUnstar={(msgId) => toggleStarMessage(msgId)}
+        onOpenShortcutsCustomizer={() => {
+          setIsStarredShortcutsOpen(false);
+          setIsKeyboardShortcutsOpen(true);
+        }}
+      />
+
       <VoiceRecordSettingsModal
         isOpen={isVoiceRecordSettingsOpen}
         onClose={() => setIsVoiceRecordSettingsOpen(false)}
@@ -5541,7 +5597,7 @@ export function GrokBotWorkspace() {
         </div>
       )}
 
-      {/* Batch Clear Conversations Confirmation Modal */}
+      {/* Batch Clear / Delete Selected Conversations Confirmation Modal */}
       {isBatchClearModalOpen && (
         <div
           onClick={() => setIsBatchClearModalOpen(false)}
@@ -5549,16 +5605,16 @@ export function GrokBotWorkspace() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-[#121218] border border-[#242432] p-5 shadow-2xl text-neutral-200"
+            className="w-full max-w-sm rounded-2xl bg-[#121218] border border-[#242432] p-5 shadow-2xl text-neutral-200 font-sans"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
                 <Trash2 size={16} />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Clear Conversations?</h4>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  This will remove all non-pinned dialogues for {selectedAgent.name}. Pinned sessions will be preserved.
+                <h4 className="text-sm font-semibold text-white">Xóa các phiên đã chọn?</h4>
+                <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                  Bạn có chắc muốn xóa <span className="text-[#ff7a00] font-semibold">{selectedChatIds.length}</span> phiên hội thoại đã đánh dấu chọn không? Thao tác này không thể hoàn tác.
                 </p>
               </div>
             </div>
@@ -5568,14 +5624,14 @@ export function GrokBotWorkspace() {
                 onClick={() => setIsBatchClearModalOpen(false)}
                 className="px-3 py-1.5 rounded-lg bg-[#1a1a24] hover:bg-[#222230] text-neutral-300 font-medium transition-colors cursor-pointer"
               >
-                Cancel
+                Hủy bỏ
               </button>
               <button
                 type="button"
-                onClick={handleBatchClearChats}
+                onClick={handleBatchDeleteSelectedChats}
                 className="px-3.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 font-medium transition-colors cursor-pointer"
               >
-                Clear All
+                Xóa ngay ({selectedChatIds.length})
               </button>
             </div>
           </div>
