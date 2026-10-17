@@ -191,7 +191,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
               )}
             </div>
             <div className="flex items-center gap-1">
-              <button
+              <button aria-label="Refresh live screen capture" data-ux-target-min="24"
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -208,7 +208,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
               >
                 <RefreshCw size={12} />
               </button>
-              <button
+              <button aria-label="Expand screen to full view" data-ux-target-min="24"
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -220,7 +220,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
                 <Maximize2 size={12} />
               </button>
               {screenUrl && (
-                <a
+                <a aria-label="Open live URL"
                   href={screenUrl}
                   target="_blank"
                   rel="noreferrer"
@@ -283,7 +283,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
                     <span className="text-neutral-500 truncate max-w-sm"> - {screenUrl}</span>
                   )}
                 </div>
-                <button
+                <button aria-label="Close screen view" data-ux-target-min="24"
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="p-1.5 rounded-lg bg-[#181822] hover:bg-[#252534] text-neutral-400 hover:text-white cursor-pointer"
@@ -319,7 +319,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
             <div className="rounded-lg border border-[#202028] bg-[#09090d] overflow-hidden">
               <div className="px-2.5 py-1 bg-[#14141a] border-b border-[#202028] flex items-center justify-between text-neutral-400 text-[10px]">
                 <span>Parameters / Input</span>
-                <button
+                <button data-ux-target-min="24"
                   type="button"
                   onClick={(e) => handleCopy("args", cleanArgs, e)}
                   className="hover:text-white flex items-center gap-1 cursor-pointer"
@@ -340,7 +340,7 @@ function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string
                 <span className={isError ? "text-red-400" : "text-emerald-400"}>
                   {isError ? "Error Output" : "Standard Output"}
                 </span>
-                <button
+                <button data-ux-target-min="24"
                   type="button"
                   onClick={(e) => handleCopy("result", toolCall.result || "", e)}
                   className="hover:text-white flex items-center gap-1 cursor-pointer"
@@ -420,7 +420,7 @@ function FormattedMessageContent({ content }: { content: string }) {
                   <Terminal size={12} />
                   {lang}
                 </span>
-                <button
+                <button data-ux-target-min="24"
                   type="button"
                   onClick={() => handleCopyCode(code, idx)}
                   className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -1363,7 +1363,7 @@ export function GrokBotWorkspace() {
               options={INFRA_INSTANCES}
               triggerClassName="px-2 py-1 text-[11px] font-mono text-[#ff7a00]"
             />
-            <button
+            <button aria-label="Close drawer" data-ux-target-min="24"
               onClick={() => setMobileAgentsOpen(false)}
               className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white"
               title="Close drawer"
@@ -1514,7 +1514,7 @@ export function GrokBotWorkspace() {
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
         <div className="h-12 border-b border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[#0c0c0e]/80 backdrop-blur-md z-10">
           {/* Left button: mobile/compact drawer for Agents */}
-          <button
+          <button aria-label="Toggle Agents Sidebar" data-ux-target-min="24"
             onClick={() => {
               setMobileAgentsOpen(!mobileAgentsOpen);
               setMobileChatsOpen(false);
@@ -1547,7 +1547,7 @@ export function GrokBotWorkspace() {
           </div>
 
           {/* Right button: toggle Conversations list (mobile drawer or desktop rail expand/collapse) */}
-          <button
+          <button aria-label={isChatListCollapsed ? "Expand Conversations list" : "Collapse Conversations list"} data-ux-target-min="24"
             onClick={() => {
               if (window.innerWidth >= 1024) {
                 setIsChatListCollapsed((prev) => !prev);
@@ -1690,9 +1690,9 @@ export function GrokBotWorkspace() {
             <div className="bg-[#14141a] border border-[#242430] rounded-2xl p-4 shadow-xl max-w-xl text-xs space-y-3">
               <div className="flex items-center justify-between text-neutral-300 font-medium">
                 <span>What would you like to call me? You can always change this later.</span>
-                <button
+                <button aria-label="Dismiss name suggestion" data-ux-target-min="24"
                   onClick={() => setShowPollCard(false)}
-                  className="text-neutral-500 hover:text-white p-1"
+                  className="text-neutral-500 hover:text-white p-1 min-h-6 min-w-6 inline-flex items-center justify-center"
                 >
                   <X size={14} />
                 </button>
@@ -1700,7 +1700,7 @@ export function GrokBotWorkspace() {
 
               {/* Options A, B, C */}
               <div className="space-y-1.5 font-sans">
-                <button
+                <button data-ux-target-min="24"
                   onClick={() => handleSelectNameOption("Nori")}
                   className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#1c1c24] hover:bg-[#262632] border border-[#2a2a34] text-left text-neutral-200 transition-colors cursor-pointer group"
                 >
@@ -1710,7 +1710,7 @@ export function GrokBotWorkspace() {
                   <span>Nori</span>
                 </button>
 
-                <button
+                <button data-ux-target-min="24"
                   onClick={() => handleSelectNameOption("Doodle")}
                   className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#1c1c24] hover:bg-[#262632] border border-[#2a2a34] text-left text-neutral-200 transition-colors cursor-pointer group"
                 >
@@ -1720,7 +1720,7 @@ export function GrokBotWorkspace() {
                   <span>Doodle</span>
                 </button>
 
-                <button
+                <button data-ux-target-min="24"
                   onClick={() => handleSelectNameOption(selectedAgent.name)}
                   className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-[#1c1c24] hover:bg-[#262632] border border-[#2a2a34] text-left text-neutral-200 transition-colors cursor-pointer group"
                 >
@@ -1733,7 +1733,7 @@ export function GrokBotWorkspace() {
 
               {/* Free-form Input */}
               <div className="pt-1">
-                <input
+                <input aria-label="Type your own answer" data-ux-target-min="16"
                   type="text"
                   placeholder="Type your own answer"
                   value={customCallName}
@@ -1764,7 +1764,7 @@ export function GrokBotWorkspace() {
                   {requestQueue.length} upcoming request{requestQueue.length > 1 ? "s" : ""} (Next: "{requestQueue[0]}")
                 </span>
               </div>
-              <button
+              <button data-ux-target-min="24"
                 type="button"
                 onClick={() => {
                   requestQueueRef.current = [];
@@ -1787,7 +1787,7 @@ export function GrokBotWorkspace() {
                   <Paperclip size={13} className="text-[#ff7a00]" />
                   <span className="max-w-[180px] truncate text-[11px] font-medium">{f.file_name}</span>
                   <span className="text-[9px] text-neutral-500 font-mono">({Math.round(f.size / 1024) || 1} KB)</span>
-                  <button
+                  <button aria-label="Remove attachment" data-ux-target-min="24"
                     type="button"
                     onClick={() => removeAttachedFile(i)}
                     className="text-neutral-400 hover:text-white p-0.5 rounded-full hover:bg-white/10 cursor-pointer ml-1"
@@ -1804,7 +1804,7 @@ export function GrokBotWorkspace() {
           {voiceError && (
             <div className="px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] font-mono flex items-center justify-between animate-in fade-in">
               <span>{voiceError}</span>
-              <button type="button" onClick={() => setVoiceError(null)} className="text-red-400 hover:text-white cursor-pointer">
+              <button aria-label="Dismiss voice error" data-ux-target-min="24" type="button" onClick={() => setVoiceError(null)} className="text-red-400 hover:text-white cursor-pointer min-h-6 min-w-6 inline-flex items-center justify-center">
                 <X size={12} />
               </button>
             </div>
@@ -1815,7 +1815,7 @@ export function GrokBotWorkspace() {
             className={`flex items-center gap-2 bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
           >
             {/* Hidden native file input */}
-            <input
+            <input data-ux-target-min="16"
               ref={fileInputRef}
               type="file"
               multiple
@@ -1824,11 +1824,11 @@ export function GrokBotWorkspace() {
             />
 
             {/* Plus / File Attachment Trigger */}
-            <button
+            <button aria-label="Add file to message (images, scripts, docs)" data-ux-target-min="24"
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingFile}
-              className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-0.5 shrink-0"
+              className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-0.5 shrink-0 min-h-6 min-w-6 inline-flex items-center justify-center"
               title="Add file to message (images, scripts, docs)"
             >
               {isUploadingFile ? (
@@ -1838,7 +1838,13 @@ export function GrokBotWorkspace() {
               )}
             </button>
 
-            <input
+            <input aria-label={
+                isRecording
+                  ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
+                  : isStreaming
+                  ? `Agent is busy • Type next request to queue (Press Enter)...`
+                  : `Message ${selectedAgent.name}...`
+              } data-ux-target-min="16"
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -1854,10 +1860,10 @@ export function GrokBotWorkspace() {
 
             <div className="flex items-center gap-2 text-neutral-400 shrink-0">
               {/* Voice to text recording button */}
-              <button
+              <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
                 type="button"
                 onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-                className={`p-1 rounded-full cursor-pointer transition-all ${
+                className={`h-6 w-6 shrink-0 inline-flex items-center justify-center rounded-full cursor-pointer transition-all ${
                   isRecording
                     ? "bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30"
                     : "hover:text-white hover:bg-white/10 text-neutral-400"
@@ -1873,10 +1879,10 @@ export function GrokBotWorkspace() {
                   <span>{requestQueue.length > 0 ? `Queued (${requestQueue.length})` : "Running..."}</span>
                 </div>
               )}
-              <button
+              <button aria-label={isStreaming ? "Add to request queue" : "Send Message"} data-ux-target-min="24"
                 type="submit"
                 disabled={!inputText.trim() && attachedFiles.length === 0}
-                className="hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-0.5"
+                className="hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-0.5 min-h-6 min-w-6 inline-flex items-center justify-center"
                 title={isStreaming ? "Add to request queue" : "Send Message"}
               >
                 <Send size={15} />
@@ -1901,7 +1907,7 @@ export function GrokBotWorkspace() {
         {/* Header & Collapse Toggle */}
         {isChatListCollapsed ? (
           <div className="h-12 border-b border-[#1c1c22] flex items-center justify-center shrink-0">
-            <button
+            <button aria-label="Expand Conversations list" data-ux-target-min="24"
               onClick={() => {
                 setIsChatListCollapsed(false);
                 if (window.innerWidth < 1024) {
@@ -1925,14 +1931,14 @@ export function GrokBotWorkspace() {
 
             {/* Action & Expand/Collapse icons shifted to the right */}
             <div className="flex items-center gap-1.5 ml-auto shrink-0">
-              <button
+              <button aria-label="Search chats" data-ux-target-min="24"
                 onClick={() => setChatSearchOpen(!chatSearchOpen)}
                 className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
                 title="Search chats"
               >
                 <Search size={14} />
               </button>
-              <button
+              <button aria-label="New Chat Session" data-ux-target-min="24"
                 onClick={handleNewChat}
                 className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
                 title="New Chat Session"
@@ -1941,7 +1947,7 @@ export function GrokBotWorkspace() {
               </button>
 
               {/* Collapse bar trigger for conversations on desktop */}
-              <button
+              <button aria-label="Collapse Conversations list" data-ux-target-min="24"
                 onClick={() => setIsChatListCollapsed(true)}
                 className="hidden lg:flex h-7 w-7 rounded-lg hover:bg-[#1f1f26] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
                 title="Collapse Conversations list"
@@ -1950,7 +1956,7 @@ export function GrokBotWorkspace() {
               </button>
 
               {/* Close button for conversations on mobile */}
-              <button
+              <button aria-label="Close drawer" data-ux-target-min="24"
                 onClick={() => setMobileChatsOpen(false)}
                 className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer"
                 title="Close drawer"
@@ -1964,7 +1970,7 @@ export function GrokBotWorkspace() {
         {/* Collapsed rail preview icons */}
         {isChatListCollapsed ? (
           <div className="flex-1 flex flex-col items-center py-3 space-y-2.5 overflow-hidden w-full">
-            <button
+            <button aria-label="New Chat" data-ux-target-min="24"
               onClick={handleNewChat}
               className="h-8 w-8 rounded-xl bg-[#1c1c24] hover:bg-[#ff7a00] hover:text-white text-neutral-300 flex items-center justify-center transition-colors cursor-pointer border border-[#262632] shadow-sm"
               title="New Chat"
@@ -1984,7 +1990,7 @@ export function GrokBotWorkspace() {
                 const displayLetter = initial.slice(0, 2).toUpperCase() || "#";
 
                 return (
-                  <button
+                  <button aria-label={c.title} data-ux-target-min="24"
                     key={c.id}
                     onClick={() => {
                       handleSelectChat(c);
@@ -2082,7 +2088,7 @@ export function GrokBotWorkspace() {
             {/* Clean Header with Mobile Close Button */}
             <div className="h-10 border-b border-[#1c1c22] flex items-center justify-between px-3">
               <span className="text-[11px] font-mono text-neutral-400">Agent Specification</span>
-              <button
+              <button aria-label="Close Agent Specification" data-ux-target-min="24"
                 onClick={() => {
                   setIsBotInfoCollapsed(true);
                   setMobileBotInfoOpen(false);
@@ -2130,7 +2136,7 @@ export function GrokBotWorkspace() {
 
               {/* Interactive Model Selector Dropdown */}
               <div className="relative mt-1.5">
-                <button
+                <button aria-label="Click to change active model" data-ux-target-min="24"
                   type="button"
                   onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
                   disabled={isChangingModel}
@@ -2195,7 +2201,7 @@ export function GrokBotWorkspace() {
             {/* Tabs: Apps | Computer | Details | Library */}
             <div className="flex items-center justify-around border-b border-[#1c1c22] text-xs font-medium text-neutral-400 px-2">
               {(["Computer", "Apps", "Agents", "Details", "Library"] as const).map((tab) => (
-                <button
+                <button data-ux-target-min="24"
                   key={tab}
                   onClick={() => setRightTab(tab)}
                   className={`py-2.5 transition-colors cursor-pointer border-b-2 ${
@@ -2226,15 +2232,15 @@ export function GrokBotWorkspace() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button
+                          <button aria-label="Expand full screen" data-ux-target-min="24"
                             type="button"
                             onClick={() => handleSetBrowserModalOpen(true)}
-                            className="p-1 text-neutral-400 hover:text-white hover:bg-[#232330] rounded transition-colors cursor-pointer"
+                            className="p-1 text-neutral-400 hover:text-white hover:bg-[#232330] rounded transition-colors cursor-pointer min-h-6 min-w-6 inline-flex items-center justify-center"
                             title="Expand full screen"
                           >
                             <Maximize2 size={13} />
                           </button>
-                          <a
+                          <a aria-label="Open in new window"
                             href={browserTarget.url}
                             target="_blank"
                             rel="noreferrer"
@@ -2354,7 +2360,7 @@ export function GrokBotWorkspace() {
                                 <span className="font-mono text-xs font-medium uppercase tracking-wider">{ch.name}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <button
+                                <button aria-label={`Configure ${ch.name} credentials & filters`} data-ux-target-min="24"
                                   type="button"
                                   onClick={() => {
                                     setSelectedChannelForConfig(ch);
@@ -2365,7 +2371,7 @@ export function GrokBotWorkspace() {
                                 >
                                   <SlidersHorizontal size={12} />
                                 </button>
-                                <button
+                                <button data-ux-target-min="24"
                                   type="button"
                                   onClick={() => handleToggleChannel(ch.type, ch.enabled)}
                                   className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
@@ -2391,7 +2397,7 @@ export function GrokBotWorkspace() {
                         <span>Schedules & Automations</span>
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <button
+                        <button aria-label="Add automated cron schedule" data-ux-target-min="24"
                           type="button"
                           onClick={() => {
                             setSelectedJobForConfig(null);
@@ -2479,7 +2485,7 @@ export function GrokBotWorkspace() {
                     <span className="font-semibold text-white">
                       Workspace Files ({workspaceFiles.length})
                     </span>
-                    <button
+                    <button aria-label="Refresh workspace tree" data-ux-target-min="24"
                       onClick={loadWorkspaceTree}
                       disabled={isLoadingTree}
                       className="text-neutral-400 hover:text-white p-1 rounded hover:bg-[#1a1a22] transition-colors cursor-pointer"
@@ -2575,7 +2581,7 @@ export function GrokBotWorkspace() {
 
               {/* Action buttons */}
               <div className="flex items-center gap-2">
-                <a
+                <a aria-label="Open in new browser tab"
                   href={browserTarget.url}
                   target="_blank"
                   rel="noreferrer"
@@ -2586,7 +2592,7 @@ export function GrokBotWorkspace() {
                   <span className="hidden sm:inline">External</span>
                 </a>
                 
-                <button
+                <button aria-label="Close Fullscreen View (Esc)" data-ux-target-min="24"
                   type="button"
                   onClick={() => handleSetBrowserModalOpen(false)}
                   className="h-8 w-8 rounded-lg bg-[#22222e] hover:bg-red-500/20 hover:text-red-400 border border-[#303042] hover:border-red-500/30 text-neutral-300 flex items-center justify-center transition-colors cursor-pointer"

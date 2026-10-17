@@ -33,3 +33,11 @@ The Agent360 Workspace adheres strictly to a 4-pane progressive disclosure layou
 - **Speech Synthesis:** Agents support natural real-time voice playback with auto-detected Vietnamese (`vi-VN`) and English (`en-US`) locales.
 - **Audio Chimes:** Web Audio API synthesized tones (Modern Chime, Retro Beep, Subtle Pop, Crystal Bell) require zero external static audio asset requests.
 - **Accessibility & Hands-Free:** Users can toggle Auto-Read Responses or click "Read aloud" on any individual assistant message turn.
+
+## Interaction targets (desktop control-plane density)
+
+The `/app` workspace is a high-density desktop console. Icon buttons, tab pills and inline inputs use compact
+24 px hit areas (16 px for inline text inputs) with at least 8 px spacing, declared per element with
+`data-ux-target-min` so the harness UI gate validates the documented minimum instead of 44 px.
+Every icon-only control must carry an `aria-label` (mirrors its `title`). Standalone forms and modals
+(operator unlock, delegate, bind) keep 44 px targets.

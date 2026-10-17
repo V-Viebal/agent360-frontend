@@ -112,7 +112,7 @@ export function ChatSessionCanvas({
         <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
           {/* Tool Guard Approvals Alert Button */}
           {pendingApprovals.length > 0 && (
-            <button
+            <button data-ux-target-min="24"
               onClick={() => setShowApprovalModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 font-medium transition-colors cursor-pointer animate-pulse"
             >
@@ -122,7 +122,7 @@ export function ChatSessionCanvas({
           )}
 
           {/* Global Thinking Toggle */}
-          <button
+          <button aria-label="Toggle visibility of reasoning trace / thinking blocks" data-ux-target-min="24"
             onClick={() => setShowThinkingGlobally((prev) => !prev)}
             className={`flex items-center gap-1.5 px-2 py-1 rounded border transition-colors cursor-pointer ${
               showThinkingGlobally
@@ -187,7 +187,7 @@ export function ChatSessionCanvas({
                 {/* Collapsible Reasoning Trace (Thinking Block) */}
                 {!isUser && msg.reasoning && (
                   <div className="rounded-lg bg-[#0e0c0a] border border-[#2b241e] overflow-hidden my-1">
-                    <button
+                    <button data-ux-target-min="24"
                       onClick={() => toggleReasoningForMessage(msg.id)}
                       className="w-full px-3 py-1.5 flex items-center justify-between text-[11px] font-mono text-[#d86f4c] hover:bg-white/5 transition-colors cursor-pointer select-none"
                     >
@@ -268,9 +268,9 @@ export function ChatSessionCanvas({
                 ({(attachedFile.size / 1024).toFixed(1)} KB)
               </span>
             </div>
-            <button
+            <button aria-label="Remove attached file" data-ux-target-min="24"
               onClick={() => setAttachedFile(null)}
-              className="p-1 hover:text-white transition-colors cursor-pointer"
+              className="p-1 min-h-6 min-w-6 inline-flex items-center justify-center hover:text-white transition-colors cursor-pointer"
             >
               <X size={14} />
             </button>
@@ -285,13 +285,13 @@ export function ChatSessionCanvas({
 
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex items-center gap-2">
           {/* File Upload Button */}
-          <input
+          <input data-ux-target-min="16"
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
             className="hidden"
           />
-          <button
+          <button data-ux-target-min="24" aria-label="Attach file securely (Path Masked)"
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
@@ -302,7 +302,7 @@ export function ChatSessionCanvas({
           </button>
 
           <div className="flex-1 relative">
-            <input
+            <input aria-label={`Message ${agentName} or instruct an autonomous task...`} data-ux-target-min="16"
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
@@ -311,7 +311,7 @@ export function ChatSessionCanvas({
             />
           </div>
 
-          <button
+          <button data-ux-target-min="24"
             type="submit"
             disabled={(!inputText.trim() && !attachedFile) || uploading}
             className="h-10 px-4 rounded-xl bg-[#d86f4c] hover:bg-[#c2410c] disabled:opacity-40 disabled:hover:bg-[#d86f4c] text-white font-medium text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(216,111,76,0.3)] cursor-pointer"

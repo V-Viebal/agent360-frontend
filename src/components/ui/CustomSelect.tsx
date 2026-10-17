@@ -43,7 +43,7 @@ export function CustomSelect({
   return (
     <div ref={containerRef} className={`relative inline-block text-left select-none ${className}`}>
       {/* Trigger Button */}
-      <button
+      <button data-ux-target-min="24"
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center justify-between gap-2 bg-[#181820] hover:bg-[#20202a] text-neutral-200 border border-[#2a2a38] hover:border-[#3a3a4c] rounded-xl px-3 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm ${triggerClassName}`}

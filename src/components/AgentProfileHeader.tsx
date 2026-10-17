@@ -85,7 +85,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
 
             {/* Model Selector Dropdown */}
             <div className="relative">
-              <button
+              <button data-ux-target-min="24" aria-label="Switch Active Model Slot"
                 onClick={() => setShowModelDropdown((prev) => !prev)}
                 disabled={switchingModel}
                 className="flex items-center gap-1.5 text-neutral-200 hover:text-white transition-colors cursor-pointer"
@@ -106,7 +106,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
                   {AVAILABLE_MODELS.map((m) => {
                     const isSelected = agent.model.includes(m.model);
                     return (
-                      <button
+                      <button data-ux-target-min="24"
                         key={`${m.providerId}-${m.model}`}
                         onClick={() => handleSelectModel(m.providerId, m.model)}
                         className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
@@ -132,7 +132,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           </div>
 
           {/* Browser CDP Live Stream Viewer Button */}
-          <button
+          <button aria-label="Inspect Agent Browser CDP Stream" data-ux-target-min="24"
             onClick={() => setShowBrowserModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 font-medium transition-colors cursor-pointer"
             title="Inspect Agent Browser CDP Stream"
@@ -142,7 +142,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           </button>
 
           {/* Token Analytics Dashboard Button */}
-          <button
+          <button aria-label="View Token Usage & Metrics" data-ux-target-min="24"
             onClick={() => setShowAnalyticsModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 font-medium transition-colors cursor-pointer"
             title="View Token Usage & Metrics"
@@ -152,7 +152,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           </button>
 
           {/* Skills Catalog Button */}
-          <button
+          <button aria-label="Browse Skills & Capabilities" data-ux-target-min="24"
             onClick={() => setShowSkillModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d86f4c]/15 hover:bg-[#d86f4c]/25 border border-[#d86f4c]/40 text-[#d86f4c] font-medium transition-colors cursor-pointer"
             title="Browse Skills & Capabilities"
@@ -162,7 +162,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           </button>
 
           {onRefresh && (
-            <button
+            <button data-ux-target-min="24" aria-label="Refresh Agent State"
               onClick={onRefresh}
               className="p-2 rounded-lg bg-[#1c1713] border border-[#26211d] text-neutral-400 hover:text-white hover:border-[#d86f4c]/40 transition-colors cursor-pointer"
               title="Refresh Agent State"
