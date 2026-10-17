@@ -1,6 +1,6 @@
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
-import { ShieldAlert, CheckCircle, XCircle } from "lucide-react";
+import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
 import { ConnectAppsModal } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
@@ -94,6 +94,7 @@ import { AgentAvatar } from "../components/AgentAvatar";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
 import { PromptRecipesModal } from "../components/PromptRecipesModal";
+import { MermaidDiagram } from "../components/MermaidDiagram";
 import { requestPermission, queryPermissionStatus } from "../services/permissionService";
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 
@@ -153,17 +154,34 @@ function TurnExecutionAccordion({
       {/* Accordion Body: reasoning + tool cards */}
       {(!isTurnDone || isExpanded) && (
         <div className="space-y-1.5 w-full animate-in fade-in duration-150">
-          {reasoningItems.map((r, rIdx) => (
-            <div
-              key={rIdx}
-              className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#14141a]/80 border border-[#202028] text-xs text-neutral-400 leading-relaxed font-sans shadow-xs"
-            >
-              <Sparkles size={13} className="text-[#ff7a00] shrink-0 mt-0.5" />
-              <div className="flex-1 whitespace-pre-wrap italic break-words min-w-0">
-                {renderInlineMarkdown(r.text || "")}
-              </div>
-            </div>
-          ))}
+          {reasoningItems.map((r, rIdx) => {
+            const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
+            const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+            return (
+              <details
+                key={rIdx}
+                className="group rounded-xl bg-[#14141a]/70 border border-[#22222e] text-xs font-sans overflow-hidden transition-all select-none"
+                open={!isTurnDone}
+              >
+                <summary className="flex items-center gap-2 px-3.5 py-2 cursor-pointer hover:bg-white/[0.03] text-neutral-400 hover:text-neutral-200 list-none">
+                  <Sparkles size={13} className="text-[#ff7a00] shrink-0" />
+                  <span className="font-mono text-[11px] font-medium text-neutral-300">
+                    Thought for ~{estimatedSec}s
+                  </span>
+                  <span className="text-[10px] text-neutral-500 font-sans ml-1">
+                    ({wordCount} words reasoning trace)
+                  </span>
+                  <ChevronDown
+                    size={12}
+                    className="ml-auto text-neutral-500 transition-transform duration-200 group-open:rotate-180"
+                  />
+                </summary>
+                <div className="px-3.5 py-2.5 pt-1 text-xs text-neutral-400 leading-relaxed italic border-t border-[#1e1e28] whitespace-pre-wrap break-words select-text">
+                  {renderInlineMarkdown(r.text || "")}
+                </div>
+              </details>
+            );
+          })}
 
           {allToolItems.map((step, sIdx) => (
             <QwenPawToolCard
@@ -539,6 +557,10 @@ function FormattedMessageContent({
           const match = part.match(/^```(\w+)?\s*\n([\s\S]*?)```$/);
           const lang = match ? match[1] || "shell" : "code";
           const code = match ? match[2] : part.slice(3, -3);
+
+          if (lang === "mermaid") {
+            return <MermaidDiagram key={idx} code={code} />;
+          }
 
           return (
             <div
@@ -945,17 +967,7 @@ export function GrokBotWorkspace() {
   const [turnTelemetry, setTurnTelemetry] = useState<TurnTelemetry | null>(null);
   const [forwardModalMsg, setForwardModalMsg] = useState<string | null>(null);
 
-  // Global Keyboard Shortcut: Ctrl+K or Cmd+K
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [copiedResponseMsgId, setCopiedResponseMsgId] = useState<string | null>(null);
   const [speechRate, setSpeechRate] = useState<number>(() => getStoredSpeechSettings().rate);
@@ -1132,6 +1144,61 @@ export function GrokBotWorkspace() {
   );
   const [isCompactMode, setIsCompactMode] = useState<boolean>(isInitialCompact);
 
+  // Resizable layout column widths with localStorage persistence
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem("agent360_left_sidebar_w");
+      return v ? parseInt(v, 10) : 260;
+    } catch {
+      return 260;
+    }
+  });
+
+  const [botInfoWidth, setBotInfoWidth] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem("agent360_bot_info_w");
+      return v ? parseInt(v, 10) : 320;
+    } catch {
+      return 320;
+    }
+  });
+
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        const newW = Math.min(420, Math.max(200, e.clientX));
+        setLeftSidebarWidth(newW);
+        try { localStorage.setItem("agent360_left_sidebar_w", newW.toString()); } catch {}
+      } else if (isResizingRight) {
+        const newW = Math.min(480, Math.max(260, window.innerWidth - e.clientX));
+        setBotInfoWidth(newW);
+        try { localStorage.setItem("agent360_bot_info_w", newW.toString()); } catch {}
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+    };
+
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizingLeft, isResizingRight]);
+
   // Collapse states per user request with localStorage persistence
   // 1. isChatListCollapsed: collapse bar for conversation list
   const [isChatListCollapsed, setIsChatListCollapsed] = useState<boolean>(() => {
@@ -1197,6 +1264,16 @@ export function GrokBotWorkspace() {
   const [requestQueue, setRequestQueue] = useState<string[]>([]);
   const requestQueueRef = useRef<string[]>([]);
   const isProcessingQueueRef = useRef<boolean>(false);
+  const streamAbortControllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleStopStreaming = () => {
+    if (streamAbortControllerRef.current) {
+      streamAbortControllerRef.current.abort();
+      streamAbortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  };
 
   // Choice poll card state ("What would you like to call me?")
   const [showPollCard, setShowPollCard] = useState(true);
@@ -1217,6 +1294,29 @@ export function GrokBotWorkspace() {
   // Voice recording / Speech-to-text state
   const [isRecording, setIsRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [deviceToast, setDeviceToast] = useState<{ message: string; type: "info" | "warn" } | null>(null);
+
+  // Listen to hardware audio devices connect / disconnect events (e.g. Bluetooth headset, USB mic)
+  useEffect(() => {
+    if (typeof window === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.addEventListener) return;
+
+    const handleDeviceChange = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter((d) => d.kind === "audioinput");
+        setDeviceToast({
+          message: `Hardware audio devices updated (${mics.length} mic(s) available)`,
+          type: "info",
+        });
+        setTimeout(() => setDeviceToast(null), 4000);
+      } catch (e) {
+        console.warn("Device change event error:", e);
+      }
+    };
+
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
+  }, []);
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
   const autoSendOnSilenceRef = useRef<boolean>(true);
@@ -1505,6 +1605,17 @@ export function GrokBotWorkspace() {
   }, [mobileAgentsOpen]);
   const [mobileChatsOpen, setMobileChatsOpen] = useState(false);
   const [mobileBotInfoOpen, setMobileBotInfoOpen] = useState(false);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
+  const isUserScrolledUpRef = useRef<boolean>(false);
+
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    // Calculate distance from bottom
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isScrolledUp = distanceFromBottom > 160;
+    isUserScrolledUpRef.current = isScrolledUp;
+    setShowScrollBottomBtn(isScrolledUp);
+  };
   const [isConnectAppsOpen, setIsConnectAppsOpen] = useState(false);
 
   // Jump immediately to bottom on open / chat switch without smooth scroll animation
@@ -1537,10 +1648,14 @@ export function GrokBotWorkspace() {
       const timer = setTimeout(jumpToBottom, 40);
       return () => clearTimeout(timer);
     } else if (isStreaming) {
-      // During active token streaming, scroll gently or jump
-      jumpToBottom();
+      // During active token streaming, only auto-scroll if user has NOT scrolled up to read earlier text
+      if (!isUserScrolledUpRef.current) {
+        jumpToBottom();
+      }
     } else {
-      jumpToBottom();
+      if (!isUserScrolledUpRef.current) {
+        jumpToBottom();
+      }
     }
   }, [messages, showPollCard, isStreaming]);
 
@@ -1588,7 +1703,7 @@ export function GrokBotWorkspace() {
       try {
         [loadedAgents, loadedSkills] = await Promise.all([
           fetchInfraAgents(),
-          fetchSkills(),
+          fetchSkills(selectedAgentId || undefined),
         ]);
         if (loadedAgents.length === 0) {
           setBackendError("No active agents returned from cluster. Running in Standby mode.");
@@ -1938,6 +2053,33 @@ export function GrokBotWorkspace() {
     URL.revokeObjectURL(url);
   };
 
+  // Structured Audit Trail Export in JSON format
+  const handleExportSessionJson = () => {
+    if (messages.length === 0) return;
+    const payload = {
+      schemaVersion: "1.0",
+      platform: "Skyer Agent360",
+      agent: {
+        id: selectedAgent.id,
+        name: selectedAgent.name,
+        slug: selectedAgent.slug,
+        node: selectedAgent.node,
+        model: selectedAgent.model,
+      },
+      sessionId: selectedChatId,
+      exportedAt: new Date().toISOString(),
+      turnsCount: messages.length,
+      turns: messages,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `skyer-audit-${selectedAgent.slug}-${selectedChatId || "default"}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleBatchApproveAll = async () => {
     for (const app of pendingApprovals) {
       await handleInlineApprove(app.request_id, app.session_id);
@@ -2006,6 +2148,30 @@ export function GrokBotWorkspace() {
     } catch {}
   };
 
+  // PWA Install Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) {
+      alert("Skyer is ready to install! Click the install button in your browser address bar.");
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setDeferredPrompt(null);
+    }
+  };
+
   // New Chat session with Optimistic Insertion and Instant UI Feedback
   const handleNewChat = () => {
     const timestamp = Date.now();
@@ -2040,6 +2206,43 @@ export function GrokBotWorkspace() {
     }, 50);
   };
 
+  // Global Workspace Keyboard Shortcuts:
+  // - Ctrl+K / Cmd+K: Open Command Palette
+  // - Ctrl+Shift+O / Ctrl+Shift+N: New Chat Session
+  // - Esc: Close any open popovers/modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Command Palette
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // 2. Fast New Dialogue Shortcut (Ctrl+Shift+O or Ctrl+Shift+N)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === "o" || e.key.toLowerCase() === "n")) {
+        e.preventDefault();
+        handleNewChat();
+        textareaRef.current?.focus();
+        return;
+      }
+
+      // 3. Escape key closes open modals / menus
+      if (e.key === "Escape") {
+        setIsCommandPaletteOpen(false);
+        setIsPermissionsModalOpen(false);
+        setIsRecipesModalOpen(false);
+        setIsSoundMenuOpen(false);
+        setIsUserMenuOpen(false);
+        setInSessionSearchOpen(false);
+        setForwardModalMsg(null);
+        setChatToDelete(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // Core function to execute a single prompt stream
   const executeTurnStream = async (userText: string) => {
     const tempBotMsgId = `bot-${Date.now() + 1}`;
@@ -2066,6 +2269,10 @@ export function GrokBotWorkspace() {
       return [...prev, userMsg, initialBotMsg];
     });
     setIsStreaming(true);
+
+    // Instantiate active AbortController for this stream turn
+    const abortController = new AbortController();
+    streamAbortControllerRef.current = abortController;
 
     const streamStart = performance.now();
     let firstTokenTime: number | null = null;
@@ -2110,7 +2317,8 @@ export function GrokBotWorkspace() {
               return { ...m, toolCalls: updatedTools };
             })
           );
-        }
+        },
+        { signal: abortController.signal }
       );
 
       // Finalize: Reconcile any lingering "calling" tool states to "success" upon response completion
@@ -2127,10 +2335,8 @@ export function GrokBotWorkspace() {
           }));
           return {
             ...m,
-            content:
-              accumulated ||
-              `Completed instruction on ${selectedAgent.node} with exit code 0. Checked against constitution policy.`,
-            evidenceStatus: "observed",
+            content: accumulated || "Agent finished without a text response.",
+            evidenceStatus: accumulated ? "observed" : "unknown",
             toolCalls: reconciledTools,
             steps: reconciledSteps,
           };
@@ -2193,7 +2399,14 @@ export function GrokBotWorkspace() {
           onError: () => setSpeakingMsgId(null),
         });
       }
+    } catch (err: any) {
+      if (err.name === "AbortError" || abortController.signal.aborted) {
+        console.log("[Stream] User cancelled generation.");
+      } else {
+        throw err;
+      }
     } finally {
+      streamAbortControllerRef.current = null;
       setIsStreaming(false);
       // Process next item in queue if present
       processNextInQueue();
@@ -2365,7 +2578,8 @@ export function GrokBotWorkspace() {
       {/* 1. LEFT SIDEBAR: Real Agents Loaded From Infra */}
       {/* ========================================================= */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 w-[85vw] max-w-[280px] lg:w-[260px] h-full flex flex-col border-r border-[#1e1e24] bg-[#0d0d12] shrink-0 transition-grok-transform ${
+        style={{ width: !isCompactMode && typeof window !== "undefined" && window.innerWidth >= 1024 ? `${leftSidebarWidth}px` : undefined }}
+        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 w-[85vw] max-w-[380px] h-full flex flex-col border-r border-[#1e1e24] bg-[#0d0d12] shrink-0 transition-grok-transform relative ${
           mobileAgentsOpen
             ? "translate-x-0 shadow-2xl"
             : isCompactMode
@@ -2636,7 +2850,20 @@ export function GrokBotWorkspace() {
                     <Download size={12} className="text-[#ff7a00]" />
                     <span>Export Session (MD)</span>
                   </span>
-                  <span className="text-[10px] font-mono text-neutral-500">Receipts</span>
+                  <span className="text-[10px] font-mono text-neutral-500">Markdown</span>
+                </div>
+                <div
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    handleExportSessionJson();
+                  }}
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <FileText size={12} className="text-cyan-400" />
+                    <span>Export Audit Trail (JSON)</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-cyan-400">JSON</span>
                 </div>
                 <div
                   onClick={() => {
@@ -2651,9 +2878,30 @@ export function GrokBotWorkspace() {
                   </span>
                   <span className="text-[10px] font-mono text-emerald-400">Verified</span>
                 </div>
+                <div
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    handleInstallPWA();
+                  }}
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Layers size={12} className="text-[#ff7a00]" />
+                    <span>Install Skyer App</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-neutral-500">PWA</span>
+                </div>
               </div>
             </div>
           )}
+        </div>
+        {/* Left Sidebar Draggable Resizer Splitter */}
+        <div
+          onMouseDown={() => setIsResizingLeft(true)}
+          className="hidden lg:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 group"
+          title="Drag to resize agents sidebar"
+        >
+          <div className="w-0.5 h-8 bg-neutral-600 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2" />
         </div>
       </aside>
 
@@ -3268,6 +3516,25 @@ export function GrokBotWorkspace() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Floating Scroll to Bottom Button */}
+        {showScrollBottomBtn && (
+          <div className="absolute bottom-20 right-8 z-30 animate-in fade-in zoom-in-95 duration-150">
+            <button
+              type="button"
+              onClick={() => {
+                isUserScrolledUpRef.current = false;
+                setShowScrollBottomBtn(false);
+                smoothScrollToBottom();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#181824]/95 border border-[#ff7a00]/40 text-[#ff7a00] hover:bg-[#ff7a00] hover:text-black font-mono text-[11px] shadow-xl hover:shadow-[0_0_15px_rgba(255,122,0,0.4)] transition-all cursor-pointer backdrop-blur-md"
+              title="Jump to latest turn"
+            >
+              <span>Scroll to latest</span>
+              <ChevronDown size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
         <div className={`${isCompactMode ? "p-2.5 pb-3" : "p-4"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-2`}>
           {/* Request Queue Indicator */}
@@ -3329,7 +3596,27 @@ export function GrokBotWorkspace() {
             </div>
           )}
 
-                    {/* Voice Error Notification with Permission Quick-Fix */}
+                    {/* Hardware Device Change Notification Toast */}
+          {deviceToast && (
+            <div className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
+              <div className="flex items-center gap-2 truncate">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="truncate">{deviceToast.message}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsPermissionsModalOpen(true)}
+                  className="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-white underline text-[10px] cursor-pointer shrink-0"
+                >
+                  Configure Audio
+                </button>
+              </div>
+              <button type="button" onClick={() => setDeviceToast(null)} className="text-cyan-400 hover:text-white cursor-pointer shrink-0">
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
+          {/* Voice Error Notification with Permission Quick-Fix */}
           {voiceError && (
             <div className="px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
               <div className="flex items-center gap-2 truncate">
@@ -3458,6 +3745,48 @@ export function GrokBotWorkspace() {
             </div>
           )}
 
+          {/* Quick Slash Commands Popover */}
+          <div className="relative w-full">
+            {inputText.startsWith("/") && (
+              <SlashCommandMenu
+                query={inputText}
+                onSelect={(cmd) => {
+                  setInputText(cmd.prompt);
+                }}
+                onClose={() => {}}
+              />
+            )}
+          </div>
+
+          {/* Context Token Usage High Warning (>80% threshold) */}
+          {(() => {
+            const currentTokens = turnTelemetry?.tokenCount || 0;
+            const maxContext = 128000;
+            const usagePercent = Math.round((currentTokens / maxContext) * 100);
+            if (usagePercent >= 80) {
+              return (
+                <div className="mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono flex items-center justify-between gap-3 animate-in fade-in select-none">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle size={14} className="text-amber-400 shrink-0 animate-pulse" />
+                    <span>Context window at {usagePercent}% capacity ({currentTokens.toLocaleString()} / 128,000 tokens).</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await compactAgentContext(selectedAgent.id, selectedChatId || "default");
+                      setForkToast("Context compacted successfully");
+                      setTimeout(() => setForkToast(null), 3000);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-[10px] cursor-pointer transition-colors shrink-0 shadow-sm"
+                  >
+                    Auto-Compact
+                  </button>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           <form
             ref={composerFormRef}
             onSubmit={handleSendMessage}
@@ -3497,24 +3826,34 @@ export function GrokBotWorkspace() {
               <Sparkles size={15} />
             </button>
 
-            <input aria-label={
-                isRecording
-                  ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
-                  : isStreaming
-                  ? `Agent is busy • Type next request to queue (Press Enter)...`
-                  : `Message ${selectedAgent.name}...`
-              } data-ux-target-min="16"
-              type="text"
+            <textarea
+              ref={textareaRef}
+              rows={1}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={(e) => {
+                setInputText(e.target.value);
+                // Auto-expand height smoothly up to 130px
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 130) + "px";
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  composerFormRef.current?.requestSubmit();
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = "auto";
+                  }
+                }
+              }}
               placeholder={
                 isRecording
                   ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
                   : isStreaming
-                  ? `Agent is busy • Type next request to queue (Press Enter)...`
-                  : `Message ${selectedAgent.name}...`
+                  ? `Agent is responding • Enter to queue next request, or click Stop...`
+                  : `Message ${selectedAgent.name}... (Enter to send, Shift+Enter for new line)`
               }
-              className="flex-1 bg-transparent border-0 text-xs text-white placeholder:text-neutral-500 focus:outline-none"
+              aria-label={`Message ${selectedAgent.name}`}
+              className="flex-1 bg-transparent border-0 text-xs text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed"
             />
 
             <div className="flex items-center gap-2 text-neutral-400 shrink-0">
@@ -3561,16 +3900,30 @@ export function GrokBotWorkspace() {
               </button>
 
               {isStreaming && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#ff7a00]/10 border border-[#ff7a00]/20 text-[10px] font-mono text-[#ff7a00]">
-                  <Loader2 size={12} className="animate-spin" />
-                  <span>{requestQueue.length > 0 ? `Queued (${requestQueue.length})` : "Running..."}</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleStopStreaming}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 text-[11px] font-mono transition-colors cursor-pointer select-none"
+                    title="Stop generation"
+                    aria-label="Stop response stream"
+                  >
+                    <Square size={10} className="fill-current" />
+                    <span>Stop</span>
+                  </button>
+                  {requestQueue.length > 0 && (
+                    <span className="text-[10px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
+                      Queued: {requestQueue.length}
+                    </span>
+                  )}
                 </div>
               )}
-              <button aria-label={isStreaming ? "Add to request queue" : "Send Message"} data-ux-target-min="24"
+              <button
                 type="submit"
                 disabled={!inputText.trim() && attachedFiles.length === 0}
-                className="hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-0.5"
+                className="hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-1 rounded-lg hover:bg-white/5 text-neutral-400"
                 title={isStreaming ? "Add to request queue" : "Send Message"}
+                aria-label={isStreaming ? "Add to request queue" : "Send Message"}
               >
                 <Send size={15} />
               </button>
@@ -3881,8 +4234,36 @@ export function GrokBotWorkspace() {
               })}
 
                   {filteredChats.length === 0 && (
-                    <div className="p-6 text-center text-xs text-neutral-500 font-mono">
-                      No dialogues found.
+                    <div className="py-10 px-4 text-center space-y-3 font-sans">
+                      <div className="h-9 w-9 rounded-xl bg-[#1a1a24] border border-[#262634] text-neutral-500 flex items-center justify-center mx-auto">
+                        <MessageSquare size={16} />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-neutral-300">
+                          {chatSearchQuery ? `No matches for "${chatSearchQuery}"` : "No dialogues found"}
+                        </p>
+                        <p className="text-[11px] text-neutral-500">
+                          {chatSearchQuery ? "Try a different search keyword or clear filter." : "Start a fresh session with this agent."}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        {chatSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setChatSearchQuery("")}
+                            className="px-2.5 py-1 rounded-lg bg-[#181822] hover:bg-[#20202c] border border-[#2a2a3a] text-[11px] text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                          >
+                            Clear search
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleNewChat}
+                          className="px-3 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8a1a] text-black font-semibold text-[11px] transition-colors cursor-pointer shadow-xs"
+                        >
+                          + New Chat
+                        </button>
+                      </div>
                     </div>
                   )}
                 </>
@@ -3896,12 +4277,23 @@ export function GrokBotWorkspace() {
       {/* 4. RIGHTMOST PANE: SELECTED BOT INFO (COLLAPSIBLE) */}
       {/* ========================================================= */}
       <aside
-        className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-[#1e1e24] bg-[#0f0f13] shrink-0 select-none transition-grok ${
+        style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
+        className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-[#1e1e24] bg-[#0f0f13] shrink-0 select-none transition-grok relative ${
           isBotInfoCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0"
-            : "w-[85vw] max-w-[340px] sm:w-[320px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
+            : "w-[85vw] max-w-[480px] sm:w-[320px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
         }`}
       >
+        {/* Right Pane Draggable Resizer Splitter */}
+        {!isBotInfoCollapsed && (
+          <div
+            onMouseDown={() => setIsResizingRight(true)}
+            className="hidden xl:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 group -ml-1"
+            title="Drag to resize agent specification pane"
+          >
+            <div className="w-0.5 h-8 bg-neutral-600 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2" />
+          </div>
+        )}
         {!isBotInfoCollapsed && (
           <>
             {/* Clean Header with Mobile Close Button */}
@@ -4399,9 +4791,39 @@ export function GrokBotWorkspace() {
                   {/* File Preview Content */}
                   {selectedFilePath && (
                     <div className="flex-1 flex flex-col space-y-1 min-h-[140px]">
-                      <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400">
-                        <span className="truncate max-w-[180px]">{selectedFilePath}</span>
-                        <span className="text-emerald-400">read-only ACL</span>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 pb-0.5">
+                        <span className="truncate max-w-[150px] text-white" title={selectedFilePath}>{selectedFilePath}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(selectedFilePath);
+                              setForkToast("Copied path to clipboard");
+                              setTimeout(() => setForkToast(null), 2000);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                            title="Copy file path"
+                          >
+                            Copy Path
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!fileContent) return;
+                              const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8;" });
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement("a");
+                              link.href = url;
+                              link.download = selectedFilePath.split("/").pop() || "file.txt";
+                              link.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="px-1.5 py-0.5 rounded bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] transition-colors cursor-pointer"
+                            title="Download file"
+                          >
+                            Download
+                          </button>
+                        </div>
                       </div>
                       <div className="flex-1 bg-[#101014] border border-[#1c1c24] rounded-xl p-2.5 overflow-y-auto font-mono text-[10px] text-neutral-300 leading-relaxed whitespace-pre-wrap select-text max-h-52">
                         {isLoadingFile ? (
