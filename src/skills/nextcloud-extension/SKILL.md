@@ -26,7 +26,7 @@ projects/agent360/nextcloud-app/
 │   │   │   └── Application.php # Bootstrap class kế thừa OCP\AppFramework\App
 │   │   └── Controller/
 │   │       ├── PageController.php # Render template nhúng SPA, inject CSS/JS bundles
-│   │       └── ApiController.php  # Reverse proxy an toàn về Agent360 Backend (ACP/QwenPaw)
+│   │       └── ApiController.php  # Reverse proxy an toàn về Agent360 Backend (ACP/Skyer)
 │   ├── templates/
 │   │   └── index.php           # Canvas HTML gắn thẻ `<div id="root">` đón React runtime
 │   ├── css/

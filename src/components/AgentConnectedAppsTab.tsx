@@ -231,7 +231,7 @@ export function AgentConnectedAppsTab({
       <div className="p-2.5 rounded-xl bg-[#14141d] border border-[#222232] text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed flex items-start gap-2">
         <Shield size={13} className="text-emerald-400 shrink-0 mt-0.5" />
         <div>
-          Loaded directly from <strong className="text-white font-mono">{agentName}</strong>'s QwenPaw MCP driver card layer. Adding tools hot-patches this agent's runtime.
+          Loaded directly from <strong className="text-white font-mono">{agentName}</strong>'s Skyer MCP driver layer. Adding tools hot-patches this agent's runtime.
         </div>
       </div>
 

@@ -244,7 +244,7 @@ export function Navbar() {
                       Documentation & API
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      QwenPaw ACP protocols, tool integration guides, and runbooks.
+                      Skyer ACP protocols, tool integration guides, and runbooks.
                     </div>
                   </div>
                 </Link>
@@ -308,7 +308,7 @@ export function Navbar() {
 
           {/* GitHub Source Link */}
           <a
-            href="https://github.com/agentscope-ai/QwenPaw"
+            href="https://github.com/v-viebal/agent360"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/[0.06] transition-all flex items-center gap-1"

@@ -12,7 +12,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
     }
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.agents || []);
-    // Filter to load only enabled agents (handling both backend DTO and direct QwenPaw schema)
+    // Filter to load only enabled agents (handling both backend DTO and direct Skyer schema)
     const enabledOnly = rawList.filter((a: any) => a.enabled !== false && a.startup_status !== 'disabled');
     return enabledOnly.map((a: any) => {
       const idStr = (a.id || "").toLowerCase();
@@ -48,7 +48,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         instanceId: instanceKey,
         status: a.status || (a.startup_status === "running" ? "active" : "idle"),
         model: (typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna",
-        runtimeVersion: a.runtimeVersion || "QwenPaw v1.2",
+        runtimeVersion: a.runtimeVersion || "Skyer v2.2",
         uptime: a.uptime || "Online (Private)",
         memoryUsageMb: a.memoryUsageMb || 256,
         description: a.description || "Active autonomous infrastructure agent",
@@ -113,7 +113,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
 export async function updateAgentActiveModel(agentId: string, providerId: string, model: string): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    // Fetch full current agent record first because QwenPaw API requires full payload on PUT
+    // Fetch full current agent record first because Skyer API requires full payload on PUT
     const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
       method: "PUT",
       headers: {

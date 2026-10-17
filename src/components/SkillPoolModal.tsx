@@ -107,7 +107,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
         <div className="p-6 overflow-y-auto space-y-3 flex-1">
           {loading ? (
             <div className="text-center py-12 text-neutral-500 text-xs font-mono">
-              Loading skills from QwenPaw runtime adapter...
+              Loading skills from Skyer runtime adapter...
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-neutral-500 text-xs font-mono">

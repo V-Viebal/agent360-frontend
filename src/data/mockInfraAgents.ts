@@ -9,7 +9,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
     node: "6th (ai-gm.antares.vn)",
     status: "active",
     model: "claude-3-7-sonnet / qwen2.5-coder-32b",
-    runtimeVersion: "qwenpaw-adapter v2.2.1",
+    runtimeVersion: "skyer-adapter v2.2.1",
     uptime: "14d 6h 22m",
     activeSessionId: "sess-swe-101",
     memoryUsageMb: 342,
@@ -40,7 +40,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
         title: "Refactor: Split Agent360 control-plane contracts",
         updatedAt: "Yesterday",
         messageCount: 22,
-        lastMessageSnippet: "Isolated QwenPaw upstream vendor code from Antares bot definitions.",
+        lastMessageSnippet: "Isolated Skyer Upstream vendor code from Antares bot definitions.",
       },
     ],
   },
@@ -69,7 +69,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
         title: "Incident: Memory pressure surge on Node 6th",
         updatedAt: "10 mins ago",
         messageCount: 9,
-        lastMessageSnippet: "Recycled container qwenpaw-eval smoothly; HTTP 200 health probe restored.",
+        lastMessageSnippet: "Recycled container skyer-eval smoothly; HTTP 200 health probe restored.",
       },
       {
         id: "sess-sre-200",
@@ -194,12 +194,12 @@ export const MOCK_MESSAGES_BY_SESSION: Record<string, ChatMessage[]> = {
     {
       id: "m-sre-2",
       role: "assistant",
-      content: "Node 6th exhibited 89% RAM saturation due to an uncollected worker process. I executed a graceful recycle of container `qwenpaw-eval`. Public endpoint `https://ai-gm.antares.vn` is healthy with HTTP 200.",
+      content: "Node 6th exhibited 89% RAM saturation due to an uncollected worker process. I executed a graceful recycle of container `skyer-eval`. Public endpoint `https://ai-gm.antares.vn` is healthy with HTTP 200.",
       timestamp: "09:41 AM",
       evidenceStatus: "observed",
       toolCalls: [
         {
-          tool: "docker restart qwenpaw-eval && curl -sI https://ai-gm.antares.vn",
+          tool: "docker restart skyer-eval && curl -sI https://ai-gm.antares.vn",
           args: "Graceful restart & probe",
           result: "HTTP/2 200 OK - Response time 142ms",
           exitCode: 0,

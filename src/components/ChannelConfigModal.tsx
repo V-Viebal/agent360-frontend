@@ -74,7 +74,7 @@ export function ChannelConfigModal({
         onClose();
       }, 700);
     } else {
-      alert("Failed to save channel config to QwenPaw backend.");
+      alert("Failed to save channel config to Skyer backend.");
     }
   };
 
@@ -171,7 +171,7 @@ export function ChannelConfigModal({
           {/* Footer Controls */}
           <div className="flex items-center justify-between pt-2 border-t border-white/5">
             <span className="text-[10px] font-mono text-neutral-500">
-              Live applied to QwenPaw Core
+              Live applied to Skyer Core
             </span>
             <div className="flex items-center gap-2">
               <button

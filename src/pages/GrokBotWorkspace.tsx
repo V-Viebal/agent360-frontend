@@ -196,7 +196,7 @@ function TurnExecutionAccordion({
           })}
 
           {allToolItems.map((step, sIdx) => (
-            <QwenPawToolCard
+            <AgentToolCard
               key={sIdx}
               toolCall={{
                 tool: step.tool || "Tool",
@@ -212,8 +212,8 @@ function TurnExecutionAccordion({
   );
 }
 
-// QwenPaw-style Tool Execution Block
-function QwenPawToolCard({ toolCall }: { toolCall: { tool: string; args?: string; result?: string; state?: "calling" | "success" | "error" } }) {
+// Agent Tool Execution Block
+function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; result?: string; state?: "calling" | "success" | "error" } }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<"args" | "result" | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -796,7 +796,7 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
       },
       {
         title: "Inspect ACP & MCP Tools",
-        desc: "List active tool schemas, external bridges and QwenPaw capabilities",
+        desc: "List active tool schemas, external bridges and Skyer capabilities",
         prompt: "List all active tools and MCP servers registered for this agent session.",
         badge: "Tools"
       }
@@ -1068,7 +1068,7 @@ export function GrokBotWorkspace() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Available models from QwenPaw /api/models
+  // Available models from Skyer /api/models
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [modelSearchQuery, setModelSearchQuery] = useState<string>("");
   const [isChangingModel, setIsChangingModel] = useState<boolean>(false);
@@ -3682,7 +3682,7 @@ export function GrokBotWorkspace() {
                       <p className="whitespace-pre-wrap select-text break-words break-all">{msg.content}</p>
                     </div>
                   ) : (
-                    /* Assistant Turn: Structured Content Blocks + QwenPaw Tool Cards */
+                    /* Assistant Turn: Structured Content Blocks + Agent Tool Cards */
                     <div
                       onTouchStart={() => handleTouchStartMsg({ id: msg.id, content: msg.content, turnIdx: mIdx })}
                       onTouchEnd={handleTouchEndMsg}

@@ -92,7 +92,7 @@ agent team:
     id: "lead-manager"
     role: "Orchestration & PR Gate"
     model: "qwen-2.5-72b-instruct"
-    backend: "qwenpaw-native"
+    backend: "skyer-native"
     sandbox:
       working_dir: "/app/working/manager"
       read_only_root: true
@@ -106,7 +106,7 @@ agent team:
     - id: "swe-worker"
       role: "Code Mutation & TDD"
       model: "deepseek-coder-33b"
-      backend: "qwenpaw-native"
+      backend: "skyer-native"
       sandbox:
         working_dir: "/app/working/swe-worker"
       tools:
@@ -118,7 +118,7 @@ agent team:
     - id: "security-qa"
       role: "Penetration & Accessibility"
       model: "qwen-2.5-14b-instruct"
-      backend: "qwenpaw-native"
+      backend: "skyer-native"
       sandbox:
         working_dir: "/app/working/security-qa"
       tools:
@@ -129,7 +129,7 @@ agent team:
     - id: "sre-sentinel"
       role: "System Recovery & Resource Guard"
       model: "qwen-2.5-7b-local"
-      backend: "qwenpaw-native"
+      backend: "skyer-native"
       sandbox:
         working_dir: "/app/working/sre-sentinel"
       tools:
@@ -169,7 +169,7 @@ agent team:
             <h4 className="text-base font-semibold text-white">AI Workforce Hierarchy Topology</h4>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
-            Interactive multi-agent supervision tree modeled after AI Teammates & QwenPaw sandboxes.
+            Interactive multi-agent supervision tree modeled after AI Teammates & Skyer sandboxes.
           </p>
         </div>
         <div className="text-[11px] font-mono bg-white/5 border border-white/10 px-2.5 py-1 rounded text-neutral-300">

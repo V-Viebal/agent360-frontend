@@ -148,7 +148,7 @@ export function ContextUsageBar({
         type="button"
         onClick={handleCompact}
         disabled={isCompacting}
-        title="Trigger native QwenPaw context compaction & checkpoint GC"
+        title="Trigger native Skyer context compaction & checkpoint GC"
         className={`ml-1 flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-sans font-medium transition-all ${
           isHigh
             ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40"

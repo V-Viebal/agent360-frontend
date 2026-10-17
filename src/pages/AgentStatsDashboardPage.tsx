@@ -222,7 +222,7 @@ export function AgentStatsDashboardPage() {
   const handleExportJson = () => {
     const payload = {
       exportTimestamp: new Date().toISOString(),
-      governanceModel: "Skyer v2.2.1 / QwenPaw Telemetry",
+      governanceModel: "Skyer v2.2.1 / Skyer Telemetry",
       dateRange: { start: stats.start_date, end: stats.end_date },
       summary: {
         totalSessions: stats.total_active_sessions,
@@ -339,7 +339,7 @@ export function AgentStatsDashboardPage() {
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] mb-2">
               <Activity size={14} className="animate-pulse" />
-              <span>QwenPaw Kernel Telemetry & Load Analytics</span>
+              <span>Skyer Kernel Telemetry & Load Analytics</span>
             </div>
             <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-900 dark:text-white">
               Agent Load & Telemetry
@@ -356,7 +356,7 @@ export function AgentStatsDashboardPage() {
                 : "bg-white/5 text-neutral-400 border-[var(--border-subtle)]"
             }`}>
               <span className={`h-2 w-2 rounded-full ${isLiveConnected ? "bg-emerald-400 animate-ping" : "bg-neutral-500"}`} />
-              <span>{isLiveConnected ? "Live QwenPaw Stream" : "Deterministic Sandbox Trace"}</span>
+              <span>{isLiveConnected ? "Live Skyer Stream" : "Deterministic Sandbox Trace"}</span>
             </div>
 
             {/* Auto-Refresh Polling Toggle Pills */}
@@ -535,7 +535,7 @@ export function AgentStatsDashboardPage() {
             </div>
 
             <div className="text-[11px] font-mono text-neutral-400 flex items-center justify-between pt-1">
-              <span>Telemetry Source: QwenPaw Kernel Trace Logger</span>
+              <span>Telemetry Source: Skyer Kernel Trace Logger</span>
               <span className="text-emerald-400 font-semibold">0 Lost Turn Packets</span>
             </div>
           </div>

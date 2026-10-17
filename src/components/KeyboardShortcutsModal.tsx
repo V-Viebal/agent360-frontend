@@ -259,7 +259,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               <KeyboardIcon size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Keyboard Shortcuts</h3>
               <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Click any shortcut with an edit icon to record your custom key combination
               </p>
@@ -332,7 +332,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                                 {activeKeys.map((k, kIdx) => (
                                   <kbd
                                     key={kIdx}
-                                    className="px-2 py-0.5 rounded-md bg-[#222230] border border-[#303044] text-[11px] font-mono text-slate-800 dark:text-neutral-200 shadow-xs"
+                                    className="px-2 py-0.5 rounded-md bg-white dark:bg-[#222230] border border-slate-300 dark:border-[#303044] text-[11px] font-mono text-slate-800 dark:text-neutral-200 shadow-xs font-semibold"
                                   >
                                     {k}
                                   </kbd>
@@ -369,7 +369,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         )}
 
         {/* Footer info */}
-        <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-5 py-3 bg-slate-50 dark:bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-neutral-500">
           <input
             ref={fileInputRef}
             type="file"
@@ -410,7 +410,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-lg bg-slate-200 dark:bg-white/5 hover:bg-slate-300 dark:hover:bg-white/10 text-slate-800 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white font-medium transition-colors cursor-pointer"
           >
             Done
           </button>

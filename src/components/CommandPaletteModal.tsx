@@ -57,7 +57,7 @@ export function CommandPaletteModal({
       id: "act-compact-context",
       type: "action",
       title: "Compact Active Context",
-      subtitle: "Trigger native QwenPaw checkpoint GC & Scroll context compaction",
+      subtitle: "Trigger native Skyer checkpoint GC & Scroll context compaction",
       icon: <Sparkles size={14} className="text-amber-400" />,
       action: () => {
         onCompactContext();
@@ -242,16 +242,16 @@ export function CommandPaletteModal({
                 onMouseEnter={() => setSelectedIndex(idx)}
                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
                   isSelected
-                    ? "bg-[#222230] text-white border border-[#ff7a00]/30 shadow-xs"
+                    ? "bg-amber-500/10 text-slate-900 dark:text-white border border-[#ff7a00]/40 shadow-xs"
                     : "hover:bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] text-slate-700 dark:text-neutral-300 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 pr-3">
-                  <div className="h-7 w-7 rounded-lg bg-[#181824] border border-[#28283a] flex items-center justify-center shrink-0">
+                  <div className="h-7 w-7 rounded-lg bg-slate-100 dark:bg-[#181824] border border-slate-200 dark:border-[#28283a] flex items-center justify-center shrink-0">
                     {item.icon}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-medium text-white truncate">{item.title}</span>
+                    <span className="text-xs font-medium text-slate-900 dark:text-white truncate">{item.title}</span>
                     <span className="text-[11px] text-neutral-500 truncate">{item.subtitle}</span>
                   </div>
                 </div>

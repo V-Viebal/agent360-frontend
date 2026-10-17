@@ -28,7 +28,7 @@ export async function sendConsoleChatMessageStream(
 
   const targetAgent = (agentId || "mons").toLowerCase();
 
-  // Format standard QwenPaw console input
+  // Format standard Skyer console input
   const payload = {
     user_id: "default",
     session_id: sessionId || `session-${Date.now()}`,
@@ -56,7 +56,7 @@ export async function sendConsoleChatMessageStream(
         await new Promise((res) => setTimeout(res, initialDelay * Math.pow(2, attempt - 1)));
 
         // Proposal 2: Streaming Fallback Reconnection
-        // If a tool call was left running when connection dropped, attempt to reconnect directly to QwenPaw's tool-calls stream
+        // If a tool call was left running when connection dropped, attempt to reconnect directly to Skyer's tool-calls stream
         if (lastActiveToolCallId && sessionId) {
           try {
             console.log(`[chatStream] Attempting tool output stream reconnect for tool_call_id ${lastActiveToolCallId}`);

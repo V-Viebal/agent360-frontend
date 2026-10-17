@@ -37,7 +37,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li><a href="https://community-agent360.antares.vn" target="_blank" rel="noreferrer" className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 font-medium"><span>{t("footer.forum")}</span> <ArrowUpRight size={11} /></a></li>
               <li><a href="https://kb.hmz.one" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">KB Single Source of Truth <ArrowUpRight size={11} /></a></li>
-              <li><a href="https://github.com/agentscope-ai/QwenPaw" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">QwenPaw Upstream <ArrowUpRight size={11} /></a></li>
+              <li><a href="https://github.com/v-viebal/agent360" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">Skyer Upstream <ArrowUpRight size={11} /></a></li>
               <li><a href="https://iam360-api-gm.hmz.one" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">IAM360 Authority Gateway <ArrowUpRight size={11} /></a></li>
               <li><a href="https://cloud.giamoc.com" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">Nextcloud Deck Projection <ArrowUpRight size={11} /></a></li>
             </ul>

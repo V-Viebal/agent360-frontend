@@ -604,7 +604,7 @@ export function ConnectAppsModal({
           throw new Error(connData.error || "Integration connection failed");
         }
 
-        // Hot-patch into QwenPaw agent MCP registry
+        // Hot-patch into Skyer agent MCP registry
         const mcpPatchRes = await fetch("/api/mcp", {
           method: "POST",
           headers: {

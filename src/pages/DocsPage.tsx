@@ -101,12 +101,12 @@ export function DocsPage() {
 
           <div className="flex items-center gap-3 text-xs">
             <a
-              href="https://qwenpaw.agentscope.io/docs/intro"
+              href="/docs"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
             >
-              <span>QwenPaw Specs</span>
+              <span>Skyer Specs</span>
               <ExternalLink size={12} />
             </a>
             <span className="text-neutral-600">•</span>
