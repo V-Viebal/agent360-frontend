@@ -102,6 +102,21 @@ export function pickBestVoice(langPreference: "vi" | "en" = "vi", customVoiceURI
   return enVoice || voices[0];
 }
 
+
+// Audio Ducking: lowers background audio / chime volume during active TTS readout
+let _isDuckingActive = false;
+
+export function isAudioDuckingActive(): boolean {
+  return _isDuckingActive;
+}
+
+function setDuckingState(active: boolean) {
+  _isDuckingActive = active;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("agent360_audio_ducking_changed", { detail: { isDucking: active } }));
+  }
+}
+
 export function cleanTextForSpeech(rawText: string): string {
   if (!rawText) return "";
 
@@ -125,6 +140,7 @@ export function cleanTextForSpeech(rawText: string): string {
 export function stopSpeaking(): void {
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     window.speechSynthesis.cancel();
+    setDuckingState(false);
   }
 }
 
@@ -164,12 +180,19 @@ export function speakText(
   utterance.pitch = options?.pitch ?? stored.pitch;
   utterance.volume = options?.volume ?? 1.0;
 
-  if (options?.onEnd) {
-    utterance.onend = () => options.onEnd?.();
-  }
-  if (options?.onError) {
-    utterance.onerror = (e) => options.onError?.(e);
-  }
+  utterance.onstart = () => {
+    setDuckingState(true);
+  };
+
+  utterance.onend = () => {
+    setDuckingState(false);
+    options?.onEnd?.();
+  };
+
+  utterance.onerror = (e) => {
+    setDuckingState(false);
+    options?.onError?.(e);
+  };
 
   window.speechSynthesis.speak(utterance);
   return true;

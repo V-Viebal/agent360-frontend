@@ -90,6 +90,7 @@ import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSetti
 import { CustomSelect, StatusBadge, IconButton, SearchInput } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { PermissionsModal } from "../components/PermissionsModal";
+import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
 import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar } from "../components/AgentAvatar";
@@ -1124,7 +1125,8 @@ export function GrokBotWorkspace() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   // Rightmost bot info tab: 'Details' | 'Library' | 'Computer'
-  const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Memory" | "Agents" | "Details" | "Library">("Computer");
+  const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Agents" | "Details">("Computer");
+    const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(() => {
@@ -1348,7 +1350,12 @@ export function GrokBotWorkspace() {
       }
     };
     window.addEventListener("agent360_vad_settings_changed", handleSettings);
+    const handleTourEvent = () => {
+      startOnboardingTour({ force: true });
+    };
+    window.addEventListener("agent360_start_tour", handleTourEvent);
     return () => window.removeEventListener("agent360_vad_settings_changed", handleSettings);
+      window.removeEventListener("agent360_start_tour", handleTourEvent);
   }, []);
 
   const startVoiceRecording = async () => {
@@ -1781,6 +1788,14 @@ export function GrokBotWorkspace() {
       }
     }
     initData();
+
+    // Auto-trigger Driver.js onboarding tour for first-time visitors
+    const timer = setTimeout(() => {
+      if (!hasSeenOnboardingTour()) {
+        startOnboardingTour();
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   // Fetch agent-specific MCP clients and chats whenever selectedAgentId changes
@@ -2637,6 +2652,7 @@ export function GrokBotWorkspace() {
       {/* 1. LEFT SIDEBAR: Real Agents Loaded From Infra */}
       {/* ========================================================= */}
       <aside
+        id="tour-agent-selector"
         style={{ width: !isCompactMode && typeof window !== "undefined" && window.innerWidth >= 1024 ? `${leftSidebarWidth}px` : undefined }}
         className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 w-[85vw] max-w-[380px] h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform relative ${
           mobileAgentsOpen
@@ -2891,6 +2907,16 @@ export function GrokBotWorkspace() {
                 <div
                   onClick={() => {
                     setIsUserMenuOpen(false);
+                    startOnboardingTour({ force: true });
+                  }}
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                >
+                  <span>Interactive App Tour</span>
+                  <span className="text-[10px] font-mono text-[#ff7a00]">Guide</span>
+                </div>
+                <div
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
                     setIsPermissionsModalOpen(true);
                   }}
                   className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
@@ -2987,6 +3013,7 @@ export function GrokBotWorkspace() {
           <div className="flex items-center gap-2 mx-auto">
             <div className="relative group">
               <div
+                id="tour-bot-spec-trigger"
                 onClick={() => {
                   handleToggleBotInfo();
                   setMobileBotInfoOpen((prev) => !prev);
@@ -3878,6 +3905,7 @@ export function GrokBotWorkspace() {
           })()}
 
           <form
+            id="tour-prompt-composer"
             ref={composerFormRef}
             onSubmit={handleSendMessage}
             className={`flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
@@ -4509,15 +4537,15 @@ export function GrokBotWorkspace() {
               </div>
             </div>
 
-            {/* Tabs: Apps | Computer | Details | Library */}
-            <div className="flex items-center justify-around border-b border-[#1c1c22] text-xs font-medium text-neutral-400 px-2">
-              {(["Computer", "Apps", "Memory", "Agents", "Details", "Library"] as const).map((tab) => (
+            {/* 4 Main Tabs: Computer | Apps | Agents | Details */}
+            <div className="flex items-center justify-around border-b border-[#1c1c22] text-xs font-medium text-neutral-400 px-2 shrink-0">
+              {(["Computer", "Apps", "Agents", "Details"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setRightTab(tab)}
-                  className={`py-2.5 transition-colors cursor-pointer border-b-2 ${
+                  className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-mono ${
                     rightTab === tab
-                      ? "text-white border-white font-semibold"
+                      ? "text-white border-[#ff7a00] font-semibold"
                       : "border-transparent hover:text-neutral-200"
                   }`}
                 >
@@ -4606,14 +4634,6 @@ export function GrokBotWorkspace() {
                 );
               })()}
 
-              {rightTab === "Memory" && (
-                <AgentMemoryTab
-                  agentId={selectedAgent.id}
-                  agentName={selectedAgent.name}
-                  agentSlug={selectedAgent.slug}
-                />
-              )}
-
               {rightTab === "Apps" && (
                 <AgentConnectedAppsTab
                   agentId={selectedAgent.id}
@@ -4633,7 +4653,119 @@ export function GrokBotWorkspace() {
               )}
 
               {rightTab === "Details" && (
-                <div className="space-y-4 text-xs text-neutral-300 font-sans pb-4">
+                <div className="space-y-4 text-xs text-neutral-300 font-sans pb-4 flex flex-col h-full">
+                  {/* Details Sub-Tabs: Overview | Memory | Library */}
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#14141c] border border-[#22222e] text-xs font-mono select-none shrink-0">
+                    {(["Overview", "Memory", "Library"] as const).map((st) => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => {
+                          setDetailSubTab(st);
+                          if (st === "Library" && workspaceFiles.length === 0) {
+                            loadWorkspaceTree();
+                          }
+                        }}
+                        className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer font-medium ${
+                          detailSubTab === st
+                            ? "bg-[#222230] text-[#ff7a00] font-semibold shadow-xs border border-[#ff7a00]/30"
+                            : "text-neutral-400 hover:text-white hover:bg-white/5 border border-transparent"
+                        }`}
+                      >
+                        {st === "Library" ? `Library (${workspaceFiles.length})` : st}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sub-tab 1: Memory */}
+                  {detailSubTab === "Memory" && (
+                    <AgentMemoryTab
+                      agentId={selectedAgent.id}
+                      agentName={selectedAgent.name}
+                      agentSlug={selectedAgent.slug}
+                    />
+                  )}
+
+                  {/* Sub-tab 2: Library (Workspace Files) */}
+                  {detailSubTab === "Library" && (
+                    <div className="space-y-3 text-xs flex flex-col flex-1 min-h-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-white">
+                          Workspace Files ({workspaceFiles.length})
+                        </span>
+                        <button
+                          aria-label="Refresh workspace tree"
+                          data-ux-target-min="24"
+                          onClick={loadWorkspaceTree}
+                          disabled={isLoadingTree}
+                          className="text-neutral-400 hover:text-white p-1 rounded hover:bg-[#1a1a22] transition-colors cursor-pointer"
+                          title="Refresh workspace tree"
+                        >
+                          <RefreshCw
+                            size={12}
+                            className={isLoadingTree ? "animate-spin text-[#ff7a00]" : ""}
+                          />
+                        </button>
+                      </div>
+
+                      {/* File Tree List */}
+                      <div className="bg-[#14141a] border border-[#1e1e26] rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 font-mono text-[11px]">
+                        {isLoadingTree ? (
+                          <div className="space-y-1.5 py-1">
+                            <div className="h-6 w-3/4 rounded-md skeleton-shimmer" />
+                            <div className="h-6 w-5/6 rounded-md skeleton-shimmer" />
+                            <div className="h-6 w-2/3 rounded-md skeleton-shimmer" />
+                          </div>
+                        ) : workspaceFiles.length === 0 ? (
+                          <div className="text-center py-4 text-neutral-500 font-mono">No files found in workspace</div>
+                        ) : (
+                          workspaceFiles.map((node) => {
+                            const isSelected = selectedFilePath === node.path;
+                            return (
+                              <div
+                                key={node.path}
+                                onClick={() => handleSelectFile(node)}
+                                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                  isSelected
+                                    ? "bg-[#22222e] text-[#ff7a00] font-medium"
+                                    : "text-neutral-300 hover:bg-[#1c1c24]"
+                                }`}
+                              >
+                                {node.kind === "directory" ? (
+                                  <Folder size={13} className="text-amber-400 shrink-0" />
+                                ) : (
+                                  <FileText size={13} className="text-neutral-400 shrink-0" />
+                                )}
+                                <span className="truncate flex-1">{node.name}</span>
+                                {node.size !== null && node.size !== undefined && (
+                                  <span className="text-[9px] text-neutral-600">
+                                    {Math.round(node.size / 1024)}k
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Selected File Content Preview */}
+                      {selectedFilePath && (
+                        <div className="flex-1 flex flex-col bg-[#14141a] border border-[#1e1e26] rounded-xl overflow-hidden min-h-[140px] max-h-64">
+                          <div className="h-8 px-2.5 bg-[#181822] border-b border-[#20202c] flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                            <span className="truncate text-white">{selectedFilePath.split("/").pop()}</span>
+                            <span className="text-[9px] text-neutral-500">Read-Only</span>
+                          </div>
+                          <div className="flex-1 p-2 overflow-auto font-mono text-[10px] text-neutral-300 whitespace-pre-wrap leading-relaxed select-text">
+                            {isLoadingFile ? "Loading file content..." : fileContent || "Empty file"}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sub-tab 3: Overview */}
+                  {detailSubTab === "Overview" && (
+                    <div className="space-y-4">
                   {/* Agent Persona & System Governance */}
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
                     <div className="flex items-center justify-between text-white font-semibold">
@@ -4825,124 +4957,12 @@ export function GrokBotWorkspace() {
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {rightTab === "Library" && (
-                <div className="space-y-3 text-xs flex flex-col h-full">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white">
-                      Workspace Files ({workspaceFiles.length})
-                    </span>
-                    <button aria-label="Refresh workspace tree" data-ux-target-min="24"
-                      onClick={loadWorkspaceTree}
-                      disabled={isLoadingTree}
-                      className="text-neutral-400 hover:text-white p-1 rounded hover:bg-[#1a1a22] transition-colors cursor-pointer"
-                      title="Refresh workspace tree"
-                    >
-                      <RefreshCw
-                        size={12}
-                        className={isLoadingTree ? "animate-spin text-[#ff7a00]" : ""}
-                      />
-                    </button>
-                  </div>
-
-                  {/* File Tree List */}
-                  <div className="bg-[#14141a] border border-[#1e1e26] rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 font-mono text-[11px]">
-                    {isLoadingTree ? (
-                      <div className="space-y-1.5 py-1">
-                        <div className="h-6 w-3/4 rounded-md skeleton-shimmer" />
-                        <div className="h-6 w-5/6 rounded-md skeleton-shimmer" />
-                        <div className="h-6 w-2/3 rounded-md skeleton-shimmer" />
-                        <div className="h-6 w-4/5 rounded-md skeleton-shimmer" />
-                      </div>
-                    ) : workspaceFiles.length === 0 ? (
-                      <div className="text-center py-4 text-neutral-500">No files found</div>
-                    ) : (
-                      workspaceFiles.map((node) => {
-                        const isSelected = selectedFilePath === node.path;
-                        return (
-                          <div
-                            key={node.path}
-                            onClick={() => handleSelectFile(node)}
-                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                              isSelected
-                                ? "bg-[#22222e] text-[#ff7a00] font-medium"
-                                : "text-neutral-300 hover:bg-[#1c1c24]"
-                            }`}
-                          >
-                            {node.kind === "directory" ? (
-                              <Folder size={13} className="text-amber-400 shrink-0" />
-                            ) : (
-                              <FileText size={13} className="text-neutral-400 shrink-0" />
-                            )}
-                            <span className="truncate flex-1">{node.name}</span>
-                            {node.size !== null && node.size !== undefined && (
-                              <span className="text-[9px] text-neutral-600">
-                                {Math.round(node.size / 1024)}k
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* File Preview Content */}
-                  {selectedFilePath && (
-                    <div className="flex-1 flex flex-col space-y-1 min-h-[140px]">
-                      <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 pb-0.5">
-                        <span className="truncate max-w-[150px] text-white" title={selectedFilePath}>{selectedFilePath}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(selectedFilePath);
-                              setForkToast("Copied path to clipboard");
-                              setTimeout(() => setForkToast(null), 2000);
-                            }}
-                            className="px-1.5 py-0.5 rounded bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                            title="Copy file path"
-                          >
-                            Copy Path
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!fileContent) return;
-                              const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8;" });
-                              const url = URL.createObjectURL(blob);
-                              const link = document.createElement("a");
-                              link.href = url;
-                              link.download = selectedFilePath.split("/").pop() || "file.txt";
-                              link.click();
-                              URL.revokeObjectURL(url);
-                            }}
-                            className="px-1.5 py-0.5 rounded bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] transition-colors cursor-pointer"
-                            title="Download file"
-                          >
-                            Download
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex-1 bg-[#101014] border border-[#1c1c24] rounded-xl p-2.5 overflow-y-auto font-mono text-[10px] text-neutral-300 leading-relaxed whitespace-pre-wrap select-text max-h-52">
-                        {isLoadingFile ? (
-                          <div className="space-y-2 py-1">
-                            <div className="h-3 w-4/5 rounded skeleton-shimmer" />
-                            <div className="h-3 w-full rounded skeleton-shimmer" />
-                            <div className="h-3 w-3/4 rounded skeleton-shimmer" />
-                            <div className="h-3 w-5/6 rounded skeleton-shimmer" />
-                          </div>
-                        ) : fileContent !== null ? (
-                          fileContent
-                        ) : (
-                          <span className="text-neutral-600">Empty or binary file.</span>
-                        )}
-                      </div>
                     </div>
                   )}
                 </div>
               )}
+
+              
             </div>
           </>
         )}

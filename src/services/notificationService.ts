@@ -1,3 +1,4 @@
+import { isAudioDuckingActive } from "./speechService";
 // Web Notification & Audio Alert Service for Skyer
 
 export type SoundPreset = "modern" | "retro" | "pop" | "bell";
@@ -57,7 +58,11 @@ export function isNotificationGranted(): boolean {
 
 // Synthesize audio preset on demand using Web Audio API
 export function playNotificationChime(preset: SoundPreset = "modern", customVolume?: number): void {
-  const masterVolume = customVolume !== undefined ? Math.max(0, Math.min(1, customVolume)) : getNotificationVolume();
+  let masterVolume = customVolume !== undefined ? Math.max(0, Math.min(1, customVolume)) : getNotificationVolume();
+  // Audio Ducking: automatically attenuate notification chimes to 25% while bot is speaking
+  if (isAudioDuckingActive()) {
+    masterVolume *= 0.25;
+  }
   if (masterVolume <= 0) return;
   try {
     if (typeof window === "undefined") return;

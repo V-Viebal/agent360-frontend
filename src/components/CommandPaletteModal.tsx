@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, ArrowRight, CornerDownLeft, ShieldCheck, Mic } from "lucide-react";
+import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic } from "lucide-react";
 import { InfraAgent, AgentSession } from "../types/agent";
 import { SOUND_PRESETS, SoundPreset, playNotificationChime } from "../services/notificationService";
 

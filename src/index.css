@@ -282,3 +282,97 @@ html.light,
     color: #ffffff !important;
   }
 }
+
+/* ------------------- Driver.js Skyer Premium Theme (Adapted from App360) ------------------- */
+.driverjs-skyer-theme {
+  background-color: #14141c !important;
+  color: #f3f4f6 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 122, 0, 0.2) !important;
+  padding: 18px 20px !important;
+  border: 1px solid rgba(255, 122, 0, 0.3) !important;
+  max-width: 380px !important;
+  font-family: var(--font-sans, system-ui, sans-serif) !important;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.driverjs-skyer-theme .driver-popover-title {
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin-bottom: 8px !important;
+  letter-spacing: -0.01em !important;
+}
+
+.driverjs-skyer-theme .driver-popover-description {
+  font-size: 0.85rem !important;
+  line-height: 1.55 !important;
+  color: #9ca3af !important;
+}
+
+.driverjs-skyer-theme .driver-popover-footer {
+  margin-top: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.driverjs-skyer-theme .driver-popover-footer button {
+  background: #1f1f2e !important;
+  color: #e5e7eb !important;
+  border: 1px solid #2e2e42 !important;
+  border-radius: 10px !important;
+  padding: 6px 14px !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  text-shadow: none !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.driverjs-skyer-theme .driver-popover-footer button:hover {
+  background: #2b2b3d !important;
+  color: #ffffff !important;
+  border-color: #3e3e56 !important;
+}
+
+.driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn,
+.driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn {
+  background: #ff7a00 !important;
+  color: #000000 !important;
+  border-color: #ff7a00 !important;
+  font-weight: 700 !important;
+}
+
+.driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn:hover,
+.driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn:hover {
+  background: #ff8f26 !important;
+  border-color: #ff8f26 !important;
+  box-shadow: 0 0 15px rgba(255, 122, 0, 0.4) !important;
+}
+
+.driverjs-skyer-theme .driver-popover-progress-text {
+  font-size: 0.75rem !important;
+  font-family: var(--font-mono, monospace) !important;
+  color: #9ca3af !important;
+  font-weight: 500 !important;
+}
+
+.driverjs-skyer-theme .driver-popover-arrow {
+  border-color: #14141c !important;
+}
+
+.driverjs-skyer-theme .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: #ff7a00 !important;
+}
+.driverjs-skyer-theme .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: #ff7a00 !important;
+}
+.driverjs-skyer-theme .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: #ff7a00 !important;
+}
+.driverjs-skyer-theme .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: #ff7a00 !important;
+}

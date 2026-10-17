@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Keyboard, X, RotateCcw, Edit2, Check, Download, Upload } from "lucide-react";
+import { Command as KeyboardIcon, X, RotateCcw, Edit2, Check, Download, Upload } from "lucide-react";
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -249,7 +249,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         <div className="px-5 py-4 border-b border-[#22222e] flex items-center justify-between bg-[#161620]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
-              <Keyboard size={18} />
+              <KeyboardIcon size={18} />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>

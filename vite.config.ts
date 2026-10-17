@@ -23,10 +23,10 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://100.67.180.13:5290",
+        target: "https://agent360.antares.vn",
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, "/api/v1"),
+        rewrite: (path) => path,
       },
     },
   },
