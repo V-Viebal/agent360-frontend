@@ -5,8 +5,9 @@ import {
   Circle,
   X,
   ChevronRight,
+  HelpCircle,
 } from "lucide-react";
-import { startOnboardingTour } from "../services/onboardingService";
+import { startOnboardingTour, highlightElement } from "../services/onboardingService";
 
 export interface OnboardingMilestones {
   selectedAgent: boolean;
@@ -179,8 +180,16 @@ export function OnboardingChecklistWidget({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">1. Chọn AI Teammate</span>
-                {milestones.selectedAgent && (
+                {milestones.selectedAgent ? (
                   <span className="text-[10px] font-mono text-emerald-400">Xong</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => highlightElement("#tour-agent-selector", "Danh sách Agent", "Chọn bot theo chuyên môn tại thanh sidebar trái", "right")}
+                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
+                  >
+                    Xem vị trí <ChevronRight size={11} />
+                  </button>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">

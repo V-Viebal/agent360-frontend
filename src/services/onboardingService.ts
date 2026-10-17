@@ -123,3 +123,58 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
   driverObj.drive();
   return driverObj;
 }
+
+/**
+ * Highlights a single target element with a descriptive popover.
+ * Aligned with App360 OnboardingService.highlightElement() standard.
+ */
+export function highlightElement(
+  selector: string,
+  title: string,
+  description: string,
+  side: "top" | "right" | "bottom" | "left" | "over" = "bottom"
+): void {
+  if (typeof window === "undefined" || window.innerWidth < 768) return;
+  const target = document.querySelector(selector);
+  if (!target) return;
+
+  const driverObj = driver({
+    showProgress: false,
+    animate: true,
+    overlayColor: "rgba(0, 0, 0, 0.75)",
+    nextBtnText: "Đóng",
+    doneBtnText: "Đã hiểu",
+    popoverClass: "driverjs-skyer-theme",
+    steps: [
+      {
+        element: selector,
+        popover: {
+          title,
+          description,
+          side: side as any,
+          align: "start",
+        },
+      },
+    ],
+  });
+  driverObj.drive();
+}
+
+/**
+ * "Lights Off" Focus Spotlight
+ * Dims the screen and focuses attention on a target element without floating popover.
+ * Aligned with App360 OnboardingService.lightsOffFocus() standard.
+ */
+export function lightsOffFocus(selector: string): void {
+  if (typeof window === "undefined" || window.innerWidth < 768) return;
+  const target = document.querySelector(selector);
+  if (!target) return;
+
+  const driverObj = driver({
+    showProgress: false,
+    animate: true,
+    overlayColor: "rgba(0, 0, 0, 0.8)",
+    steps: [{ element: selector }],
+  });
+  driverObj.drive();
+}
