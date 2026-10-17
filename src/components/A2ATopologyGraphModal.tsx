@@ -216,11 +216,51 @@ export function A2ATopologyGraphModal({
               </div>
             </div>
 
-            {/* Downward Delegation Arrow */}
-            <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-500">
-              <div className="h-[1px] bg-neutral-800 flex-1" />
-              <span>A2A Delegation Protocol (ACP / JSON-RPC)</span>
-              <div className="h-[1px] bg-neutral-800 flex-1" />
+            {/* Dynamic SVG Directed Connection Curves */}
+            <div className="relative py-2 select-none">
+              <svg className="w-full h-12 overflow-visible" viewBox="0 0 400 48" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="curveGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ff7a00" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.8" />
+                  </linearGradient>
+                  <linearGradient id="curveGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ff7a00" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+                  </linearGradient>
+                </defs>
+                {/* Orchestrator to Worker Left curve */}
+                <path
+                  d="M 100,0 C 100,24 80,24 80,48"
+                  fill="none"
+                  stroke="url(#curveGrad1)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                  className="animate-pulse"
+                />
+                {/* Center delegation stem */}
+                <path
+                  d="M 200,0 C 200,20 200,28 200,48"
+                  fill="none"
+                  stroke="#38bdf8"
+                  strokeWidth="1.5"
+                  strokeDasharray="3 2"
+                />
+                {/* Orchestrator to Worker Right curve */}
+                <path
+                  d="M 300,0 C 300,24 320,24 320,48"
+                  fill="none"
+                  stroke="url(#curveGrad2)"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                  className="animate-pulse"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="px-2.5 py-0.5 rounded-full bg-[#12121a] border border-[#242436] text-[10px] font-mono text-cyan-300 shadow-sm">
+                  ACP Protocol • Bidirectional JSON-RPC Stream
+                </span>
+              </div>
             </div>
 
             {/* Level 2: Execution Workers */}
