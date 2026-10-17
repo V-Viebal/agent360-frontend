@@ -1,35 +1,58 @@
 name: Deploy Frontend
 
+# Single source of truth for agent360.antares.vn static assets.
+# Builds on the node that serves them (2nd) and publishes additively so cached clients keep
+# their hashed bundles; index.html is swapped last. No manual rsync from workstations.
 on:
+  # Deploy only by explicit dispatch or a `deploy-*` tag. Auto-deploy on push stays disabled while
+  # work-in-progress lives only in local working trees (a push-triggered deploy of main would regress prod).
   push:
-    branches: [main]
+    tags: ['deploy-*']
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: agent360-frontend-deploy
+  cancel-in-progress: false
+
 jobs:
-  build:
-    runs-on: [self-hosted, linux]
+  deploy:
+    runs-on: [self-hosted, linux, 2nd]
+    env:
+      DIST_ROOT: /opt/agent360/frontend-dist
+      PUBLIC_URL: https://agent360.antares.vn
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Verify Node environment
+      - name: Install and typecheck
         run: |
-          node -v
-          npm -v
+          corepack enable >/dev/null 2>&1 || true
+          npm install --no-audit --no-fund
+          npx tsc --noEmit -p .
 
-      - name: Build static assets
+      - name: Build
         run: |
-          npm install --no-audit
           npm run build
-          test -d dist
-          echo "Frontend static bundle built successfully."
+          test -f dist/index.html
 
-      - name: Trigger Webhook Deploy
-        if: env.COOLIFY_WEBHOOK_URL != ''
-        env:
-          COOLIFY_WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK }}
+      - name: Publish (assets first, index.html last)
         run: |
-          curl -f -X POST "$COOLIFY_WEBHOOK_URL" || echo "Deployment triggered."
+          cp -r dist/assets/. "$DIST_ROOT/assets/"
+          find dist -maxdepth 1 -type f ! -name index.html -exec cp {} "$DIST_ROOT/" \;
+          cp dist/index.html "$DIST_ROOT/index.html.new" && mv "$DIST_ROOT/index.html.new" "$DIST_ROOT/index.html"
+          sudo -n /usr/local/sbin/agent360-restart frontend
+
+      - name: Verify live bundle
+        run: |
+          want=$(grep -o 'assets/index-[^"]*\.js' dist/index.html)
+          for i in $(seq 1 10); do
+            live=$(curl -fsS "$PUBLIC_URL/" | grep -o 'assets/index-[^"]*\.js' || true)
+            [ "$live" = "$want" ] && curl -fsS -o /dev/null "$PUBLIC_URL/$want" && { echo "live: $want"; exit 0; }
+            sleep 3
+          done
+          echo "live bundle mismatch: want=$want live=$live" >&2; exit 1
+
+      - name: Prune bundles older than 14 days
+        run: find "$DIST_ROOT/assets" -type f -mtime +14 -delete
