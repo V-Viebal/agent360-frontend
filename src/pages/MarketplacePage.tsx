@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
@@ -93,6 +94,7 @@ function GeometricAvatar({
 }
 
 export function MarketplacePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<"catalog" | "orgchart">("catalog");
   const [selectedCategory, setSelectedCategory] = useState<string>("All Positions");
@@ -153,13 +155,13 @@ export function MarketplacePage() {
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] mb-2">
               <Sparkles size={14} />
-              <span>Enterprise AI Employee Catalog</span>
+              <span>{t("marketplace.badge")}</span>
             </div>
             <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-              Skyer Marketplace
+              {t("marketplace.title")}
             </h1>
             <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-              Browse production-ready AI employees for every department: Executive Leadership, Finance & Accounting, B2B Sales, Customer Support, Marketing, HR, Legal, and IT Operations. Deploy specialized autonomous colleagues that execute real workflows.
+              {t("marketplace.subtitle")}
             </p>
           </div>
 
@@ -169,7 +171,7 @@ export function MarketplacePage() {
               className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/5 px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-white/10 transition-colors"
             >
               <Cpu size={14} className="text-[#ff7a00]" />
-              <span>Active Control Plane</span>
+              <span>{t("marketplace.activeControlPlane")}</span>
             </Link>
             <a
               href="https://github.com/agentscope-ai/QwenPaw"
@@ -177,7 +179,7 @@ export function MarketplacePage() {
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 rounded-full bg-[#ff7a00] px-4 py-2 text-xs font-medium text-black hover:bg-[#ff8f26] transition-colors shadow-[0_0_20px_rgba(255,122,0,0.3)]"
             >
-              <span>Build Custom Bot</span>
+              <span>{t("marketplace.buildCustomBot")}</span>
               <ArrowUpRight size={13} />
             </a>
           </div>
@@ -195,7 +197,7 @@ export function MarketplacePage() {
               }`}
             >
               <Bot size={14} />
-              <span>Teammate Catalog</span>
+              <span>{t("marketplace.catalogTab")}</span>
             </button>
             <button
               onClick={() => setActiveView("orgchart")}
@@ -206,7 +208,7 @@ export function MarketplacePage() {
               }`}
             >
               <Users size={14} />
-              <span>AI Organization Chart</span>
+              <span>{t("marketplace.orgChartTab")}</span>
             </button>
           </div>
 
@@ -233,7 +235,7 @@ export function MarketplacePage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by role, creator (@handle), or tool..."
+              placeholder={t("marketplace.searchPlaceholder")}
               className="w-full rounded-full border border-[var(--border-subtle)] bg-white/[0.04] pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:border-[#ff7a00] focus:bg-white/[0.08] focus:outline-none transition-all font-sans"
             />
             {searchQuery && (
@@ -250,15 +252,15 @@ export function MarketplacePage() {
           <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
             <span className="text-xs font-mono text-neutral-400 mr-1 flex items-center gap-1.5">
               <SlidersHorizontal size={13} className="text-[#ff7a00]" />
-              Company Scale:
+              {t("marketplace.companyScale")}
             </span>
             {(["All", "Startup", "SME", "Enterprise"] as const).map((scale) => {
               const active = selectedCompanyScale === scale;
               const labels = {
                 All: "All Scales",
-                Startup: "Early Startup (1-50)",
-                SME: "Growing SME (50-250)",
-                Enterprise: "Global Enterprise (250+)",
+                Startup: t("marketplace.startup"),
+                SME: t("marketplace.sme"),
+                Enterprise: t("marketplace.enterprise"),
               };
               return (
                 <button
@@ -306,11 +308,11 @@ export function MarketplacePage() {
           <div className="hidden sm:flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>No Fake Done (Strict Evidence)</span>
+              <span>{t("marketplace.strictEvidence")}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00]" />
-              <span>AI Teammates Multi-Agent Ready</span>
+              <span>{t("marketplace.multiAgentReady")}</span>
             </span>
           </div>
         </div>
@@ -396,7 +398,7 @@ export function MarketplacePage() {
                   className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <BookOpen size={13} />
-                  <span>Inspect Spec</span>
+                  <span>{t("marketplace.inspectSpec")}</span>
                 </button>
 
                 <button
@@ -404,7 +406,7 @@ export function MarketplacePage() {
                   className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-[#ff7a00] text-white hover:text-black px-3.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer active:scale-95"
                 >
                   <Play size={12} fill="currentColor" />
-                  <span>Deploy Bot</span>
+                  <span>{t("marketplace.deployBot")}</span>
                 </button>
               </div>
             </motion.div>
@@ -414,7 +416,7 @@ export function MarketplacePage() {
         {filteredAgents.length === 0 && (
           <div className="text-center py-20 border border-dashed border-[var(--border-subtle)] rounded-2xl mt-8">
             <Bot size={40} className="mx-auto text-neutral-600 mb-3" />
-            <h3 className="text-base font-semibold text-white">No agent templates match your query</h3>
+            <h3 className="text-base font-semibold text-white">{t("marketplace.noResultsTitle")}</h3>
             <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
               Try searching for "Finance", "Sales", "Support", "Marketing", or "HR".
             </p>
@@ -515,11 +517,11 @@ export function MarketplacePage() {
                     </span>
                   </div>
                   <div className="text-xs text-neutral-300">
-                    <strong className="text-neutral-400 font-mono">Teammate Roles:</strong>{" "}
+                    <strong className="text-neutral-400 font-mono">{t("marketplace.teammateRoles")}</strong>{" "}
                     {activeAgentModal.teamConfig.teammateRoles.join(" ⇄ ")}
                   </div>
                   <div className="text-xs text-neutral-400">
-                    <strong className="text-neutral-400 font-mono">Expected Output:</strong>{" "}
+                    <strong className="text-neutral-400 font-mono">{t("marketplace.expectedOutput")}</strong>{" "}
                     {activeAgentModal.teamConfig.expectedOutput}
                   </div>
                 </div>
@@ -527,7 +529,7 @@ export function MarketplacePage() {
                 {/* Provisioned Tools & Routines */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
                   <div>
-                    <div className="text-neutral-400 mb-2">Allowed Toolchain:</div>
+                    <div className="text-neutral-400 mb-2">{t("marketplace.allowedToolchain")}</div>
                     <div className="flex flex-wrap gap-1.5">
                       {activeAgentModal.tools.map((t) => (
                         <span
@@ -540,7 +542,7 @@ export function MarketplacePage() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-neutral-400 mb-2">Autonomous Routines:</div>
+                    <div className="text-neutral-400 mb-2">{t("marketplace.autonomousRoutines")}</div>
                     <ul className="space-y-1 text-neutral-300">
                       {activeAgentModal.routines.map((r, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-[11px]">
@@ -607,7 +609,7 @@ export function MarketplacePage() {
                     className="inline-flex items-center gap-2 rounded-full bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-6 py-2 text-xs font-semibold transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] cursor-pointer"
                   >
                     <Play size={13} fill="currentColor" />
-                    <span>Deploy This Teammate</span>
+                    <span>{t("marketplace.deployThisTeammate")}</span>
                   </button>
                 </div>
               </div>

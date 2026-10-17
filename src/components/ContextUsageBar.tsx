@@ -101,19 +101,20 @@ export function ContextUsageBar({
           onClick={handleCompact}
           disabled={isCompacting}
           title={`Context: ${ratio}% (${currentTokens.toLocaleString()} / ${safeMax.toLocaleString()} tokens). Click to compact context & GC.`}
-          className={`flex items-center justify-center h-7 w-7 rounded-full border transition-all cursor-pointer ${
+          className={`flex items-center gap-1 h-6 px-1.5 rounded-full border transition-all cursor-pointer text-[10px] font-mono ${
             isHigh
-              ? "bg-amber-500/20 text-amber-400 border-amber-500/40 hover:bg-amber-500/30"
+              ? "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
               : isMedium
-              ? "bg-[#ff7a00]/15 text-[#ff7a00] border-[#ff7a00]/30 hover:bg-[#ff7a00]/25"
-              : "bg-[#1c1c26] text-neutral-400 border-[#2b2b3b] hover:text-white hover:bg-[#252536]"
+              ? "bg-[#ff7a00]/10 text-[#ff7a00] border-[#ff7a00]/25 hover:bg-[#ff7a00]/20"
+              : "bg-white/5 text-neutral-400 border-white/10 hover:text-white hover:bg-white/10"
           } ${className}`}
         >
           {isCompacting ? (
-            <Loader2 size={13} className="animate-spin text-[#ff7a00]" />
+            <Loader2 size={10} className="animate-spin text-[#ff7a00]" />
           ) : (
-            <Zap size={13} className={isHigh ? "animate-pulse" : ""} />
+            <Zap size={10} className={isHigh ? "animate-pulse text-amber-400" : "text-[#ff7a00]"} />
           )}
+          <span className="text-[9px] font-mono leading-none">{ratio}%</span>
         </button>
 
         {compactResult && (

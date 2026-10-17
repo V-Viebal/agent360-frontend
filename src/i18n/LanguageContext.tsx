@@ -77,7 +77,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return machineLocale.language === "vi" ? "VN" : "US";
   });
 
-  // Re-check machine environment on focus/load + fetch geo-ip hint from Cloudflare CDN trace
+  // Re-check machine environment on focus/load + cached regional geo-hint from Cloudflare CDN trace
   useEffect(() => {
     const detected = detectMachineLocationLanguage();
     setMachineLocale(detected);
@@ -85,7 +85,19 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       setDetectedCountry("VN");
     }
 
-    // Secondary location verification from Cloudflare trace for end user machine location
+    // Check cached country in sessionStorage to eliminate redundant network roundtrips (<50ms initial paint)
+    try {
+      const cachedCountry = sessionStorage.getItem("skyer_geo_country");
+      if (cachedCountry) {
+        setDetectedCountry(cachedCountry);
+        if (cachedCountry === "VN") {
+          setMachineLocale((prev) => ({ ...prev, language: "vi" }));
+        }
+        return;
+      }
+    } catch {}
+
+    // Asynchronously resolve machine location from CDN trace edge and cache result
     fetch("/cdn-cgi/trace")
       .then((res) => {
         if (!res.ok) return null;
@@ -98,6 +110,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         if (locLine) {
           const country = locLine.replace("loc=", "").trim().toUpperCase();
           setDetectedCountry(country);
+          try {
+            sessionStorage.setItem("skyer_geo_country", country);
+          } catch {}
           if (country === "VN") {
             setMachineLocale((prev) => ({ ...prev, language: "vi" }));
           }

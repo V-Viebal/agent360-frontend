@@ -445,8 +445,7 @@ export function LandingPage() {
               <span>{t("onPremise.badge")}</span>
             </div>
             <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal leading-tight">
-              Deploy in our Cloud. <br />
-              <span className="italic text-[#ff7a00]">Or entirely On-Premise</span> on your hardware.
+              {t("onPremise.title")}
             </h2>
             <p className="mt-4 text-neutral-400 text-sm sm:text-base leading-relaxed">
               {t("onPremise.subtitle")}
@@ -727,9 +726,9 @@ export function LandingPage() {
                 <div className="h-9 w-9 rounded-lg bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-[var(--border-subtle)] flex items-center justify-center text-neutral-900 dark:text-white mb-4">
                   <Sparkles size={18} className="text-[#ff7a00]" />
                 </div>
-                <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-1.5">Bot on B2B Revenue</h3>
+                <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-1.5">{t("parallel.bot3Title")}</h3>
                 <p className="text-xs text-neutral-400 leading-relaxed mb-6">
-                  Sales Executive researches target enterprise accounts, qualifies inbound leads, and stages tailored proposals in your company tone.
+                  {t("parallel.bot3Desc")}
                 </p>
               </div>
               <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono text-neutral-400">
@@ -778,10 +777,10 @@ export function LandingPage() {
                 NATIVE TOOL ACCESS
               </span>
               <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
-                Skyer Bot works where you work.
+                {t("tools.title")}
               </h2>
               <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-                Log Skyer Bot in once. It uses your apps and websites just like you would, including the tools that are harder to navigate. With a dedicated virtual computer and persistent browser cookies, Bots operate inside real SaaS surfaces.
+                {t("tools.subtitle")}
               </p>
               <div className="pt-2 flex flex-wrap gap-2">
                 {["Zendesk", "GitHub", "Linear", "Jira", "Notion", "PostgreSQL", "Telegram", "Figma"].map((tool) => (
@@ -809,7 +808,7 @@ export function LandingPage() {
                   {t("routines.title")}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
-                  Ask a Bot to follow along as you complete a workflow once. It saves it as a routine and runs it on its own next time without requiring instruction.
+                  {t("routines.subtitle")}
                 </p>
               </div>
 
@@ -834,7 +833,7 @@ export function LandingPage() {
                   {t("memory.title")}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
-                  Bots keep context and learn from each other. Show one a workflow today, hand off the project by Friday. Memory is persisted in your own Outline KB and local storage.
+                  {t("memory.subtitle")}
                 </p>
               </div>
 

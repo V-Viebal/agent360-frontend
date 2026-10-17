@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -219,6 +220,7 @@ const ORG_STRUCTURE: OrgNode[] = [
 ];
 
 export function AIOrgChart() {
+  const { t } = useTranslation();
   const [selectedNodeId, setSelectedNodeId] = useState<string>("gm-executive");
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [isBatchDeploying, setIsBatchDeploying] = useState(false);
@@ -407,13 +409,13 @@ export function AIOrgChart() {
       <div className="rounded-2xl border border-white/10 bg-[#0c1018] p-6 text-center max-w-4xl mx-auto">
         <div className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-[#ff7a00] bg-[#ff7a00]/10 border border-[#ff7a00]/20 px-3 py-1 rounded-full mb-3">
           <GitBranch size={13} className="text-[#ff7a00]" />
-          <span>Autonomous AI Workforce Structure</span>
+          <span>{t("orgChart.badge")}</span>
         </div>
         <h2 className="font-newsreader text-2xl sm:text-4xl font-semibold text-white">
-          AI Organization Chart
+          {t("orgChart.title")}
         </h2>
         <p className="mt-2 text-xs sm:text-sm text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-          See how specialized AI employees across Executive, Finance, Sales, Customer Support, and HR collaborate and report upwards with verifiable execution receipts.
+          {t("orgChart.subtitle")}
         </p>
 
         <div className="mt-5 flex items-center justify-center gap-3">
@@ -422,7 +424,7 @@ export function AIOrgChart() {
             className="inline-flex items-center gap-2 rounded-full bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold px-5 py-2 text-xs transition-all shadow-[0_0_20px_rgba(255,122,0,0.35)] cursor-pointer active:scale-95"
           >
             <Rocket size={14} />
-            <span>One-Click Deploy Entire AI Workforce</span>
+            <span>{t("orgChart.deployAll")}</span>
           </button>
         </div>
       </div>
@@ -590,7 +592,7 @@ export function AIOrgChart() {
                   title="Download SOC2/ISO audit log as JSON"
                 >
                   <Download size={12} />
-                  <span>Download Audit JSON</span>
+                  <span>{t("orgChart.downloadAudit")}</span>
                 </button>
                 <button
                   onClick={handleStartSimulation}
@@ -668,7 +670,7 @@ export function AIOrgChart() {
 
           <div className="space-y-4 text-xs">
             <div>
-              <span className="text-neutral-500 font-mono block text-[11px] mb-1">Live Operating Status:</span>
+              <span className="text-neutral-500 font-mono block text-[11px] mb-1">{t("orgChart.liveStatus")}</span>
               <div className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl font-mono flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                 <span className="truncate">{selectedNode.status}</span>
@@ -676,7 +678,7 @@ export function AIOrgChart() {
             </div>
 
             <div>
-              <span className="text-neutral-500 font-mono block text-[11px] mb-1">Departmental Mandate:</span>
+              <span className="text-neutral-500 font-mono block text-[11px] mb-1">{t("orgChart.mandate")}</span>
               <p className="text-neutral-300 font-sans leading-relaxed text-xs bg-white/[0.02] border border-white/5 p-3 rounded-xl">
                 {selectedNode.mandate}
               </p>
@@ -684,7 +686,7 @@ export function AIOrgChart() {
 
             {selectedNode.directReports && (
               <div>
-                <span className="text-neutral-500 font-mono block text-[11px] mb-1.5">Direct AI Subordinates:</span>
+                <span className="text-neutral-500 font-mono block text-[11px] mb-1.5">{t("orgChart.directReports")}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedNode.directReports.map((id) => {
                     const subordinate = ORG_STRUCTURE.find((n) => n.id === id);
@@ -705,7 +707,7 @@ export function AIOrgChart() {
             )}
 
             <div>
-              <span className="text-neutral-500 font-mono block text-[11px] mb-1.5">Provisioned Toolchain:</span>
+              <span className="text-neutral-500 font-mono block text-[11px] mb-1.5">{t("orgChart.provisionedTools")}</span>
               <div className="flex flex-wrap gap-1.5">
                 {selectedNode.tools.map((tool) => (
                   <span
@@ -741,7 +743,7 @@ export function AIOrgChart() {
                   <Rocket size={18} />
                 </div>
                 <div>
-                  <h4 className="text-base font-semibold text-white">Cluster Batch Container Deployment</h4>
+                  <h4 className="text-base font-semibold text-white">{t("orgChart.clusterBatch")}</h4>
                   <p className="text-xs text-neutral-400 font-mono">Provisioning 10 Autonomous AI Teammates to Coolify / Docker</p>
                 </div>
               </div>
@@ -758,7 +760,7 @@ export function AIOrgChart() {
             {/* Progress Bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-neutral-400">Deployment Progress:</span>
+                <span className="text-neutral-400">{t("orgChart.deployProgress")}</span>
                 <span className="text-[#ff7a00] font-bold">{batchProgress} / {ORG_STRUCTURE.length} Nodes</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
@@ -772,7 +774,7 @@ export function AIOrgChart() {
             {/* Terminal Container Stream */}
             <div className="space-y-1.5 bg-black/70 p-4 rounded-xl border border-white/10 font-mono text-xs max-h-60 overflow-y-auto">
               <div className="text-neutral-500 text-[11px] pb-2 border-b border-white/5 flex items-center justify-between">
-                <span>Kernel Orchestration Stream</span>
+                <span>{t("orgChart.kernelStream")}</span>
                 <span className="text-emerald-400 flex items-center gap-1.5">
                   <span className={`h-1.5 w-1.5 rounded-full bg-emerald-400 ${isBatchDeploying ? "animate-pulse" : ""}`} />
                   <span>{isBatchDeploying ? "Spinning up..." : "Cluster Live"}</span>
@@ -794,7 +796,7 @@ export function AIOrgChart() {
                 {batchComplete ? (
                   <span className="text-emerald-400 flex items-center gap-1.5">
                     <CheckCircle2 size={14} />
-                    <span>All 10 containers healthy & active</span>
+                    <span>{t("orgChart.allActive")}</span>
                   </span>
                 ) : (
                   <span>Estimated remaining time: ~4s</span>
@@ -807,7 +809,7 @@ export function AIOrgChart() {
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all shadow-md"
                   >
                     <Play size={12} fill="currentColor" />
-                    <span>Enter Control Plane</span>
+                    <span>{t("orgChart.enterControl")}</span>
                   </Link>
                 )}
                 <button
