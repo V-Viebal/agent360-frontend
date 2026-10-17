@@ -117,15 +117,15 @@ export function OnboardingChecklistWidget({
 
   return (
     <div
-      className="fixed bottom-5 right-5 z-40 w-80 sm:w-88 shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-[#121218]/95 backdrop-blur-md border border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
+      className="fixed bottom-5 right-5 z-40 w-80 sm:w-88 shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
     >
-      <div className="px-4 py-3 bg-[#181822] border-b border-[#222230] flex items-center justify-between">
+      <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#222230] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00]">
             <Sparkles size={15} />
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-white tracking-wide">
+            <h4 className="text-xs font-semibold text-slate-900 dark:text-white tracking-wide">
               Làm quen cùng đội ngũ AI
             </h4>
             <p className="text-[10px] text-neutral-400 font-mono">
@@ -166,8 +166,8 @@ export function OnboardingChecklistWidget({
           <div
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.selectedAgent
-                ? "bg-[#161622]/60 border-emerald-500/20 text-neutral-300"
-                : "bg-[#181826] border-[#2c2c3e] text-white hover:border-[#ff7a00]/40"
+                ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -205,8 +205,8 @@ export function OnboardingChecklistWidget({
           <div
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.sentMessage
-                ? "bg-[#161622]/60 border-emerald-500/20 text-neutral-300"
-                : "bg-[#181826] border-[#2c2c3e] text-white hover:border-[#ff7a00]/40"
+                ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -241,8 +241,8 @@ export function OnboardingChecklistWidget({
           <div
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.openedSpecsOrTopology
-                ? "bg-[#161622]/60 border-emerald-500/20 text-neutral-300"
-                : "bg-[#181826] border-[#2c2c3e] text-white hover:border-[#ff7a00]/40"
+                ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -280,8 +280,8 @@ export function OnboardingChecklistWidget({
           <div
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.triedVoiceOrShortcuts
-                ? "bg-[#161622]/60 border-emerald-500/20 text-neutral-300"
-                : "bg-[#181826] border-[#2c2c3e] text-white hover:border-[#ff7a00]/40"
+                ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -316,7 +316,7 @@ export function OnboardingChecklistWidget({
           </div>
 
           {/* Footer */}
-          <div className="pt-2 border-t border-[#222230] flex items-center justify-between">
+          <div className="pt-2 border-t border-slate-200 dark:border-[#222230] flex items-center justify-between">
             <button
               type="button"
               onClick={() => startOnboardingTour({ force: true })}

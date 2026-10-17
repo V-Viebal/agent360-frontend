@@ -3571,10 +3571,10 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       executeTurnStream(item.prompt);
                     }}
-                    className="p-3.5 rounded-2xl bg-[#14141c]/90 hover:bg-[#1c1c28] border border-[#242432] hover:border-[#ff7a00]/40 text-left transition-all cursor-pointer group shadow-sm flex flex-col justify-between space-y-1.5"
+                    className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-sm flex flex-col justify-between space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-neutral-200 group-hover:text-white group-hover:translate-x-0.5 transition-transform flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-transform flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00]" />
                         {item.title}
                       </span>

@@ -392,3 +392,44 @@ p, li, span, blockquote {
     word-break: break-word;
   }
 }
+
+/* Driver.js Light Theme Adaptation */
+html.light .driverjs-skyer-theme,
+[data-theme="light"] .driverjs-skyer-theme {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15), 0 0 25px rgba(255, 122, 0, 0.12) !important;
+  border: 1px solid rgba(255, 122, 0, 0.35) !important;
+}
+
+html.light .driverjs-skyer-theme .driver-popover-title,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-title {
+  color: #0f172a !important;
+}
+
+html.light .driverjs-skyer-theme .driver-popover-description,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-description {
+  color: #475569 !important;
+}
+
+html.light .driverjs-skyer-theme .driver-popover-footer button,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-footer button {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+html.light .driverjs-skyer-theme .driver-popover-footer button:hover,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-footer button:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn,
+html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn {
+  background: #ff7a00 !important;
+  color: #ffffff !important;
+  border-color: #ff7a00 !important;
+}
