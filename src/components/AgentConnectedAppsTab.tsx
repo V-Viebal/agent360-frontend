@@ -1,3 +1,4 @@
+import { ToolSchemaInspectorModal, DiscoveredToolItem } from "./ToolSchemaInspectorModal";
 import { useState, useEffect } from "react";
 import {
   Shield,
@@ -28,6 +29,9 @@ export function AgentConnectedAppsTab({
   const [clients, setClients] = useState<AgentMcpClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [refreshingKey, setRefreshingKey] = useState<string | null>(null);
+  const [refreshToast, setRefreshToast] = useState<string | null>(null);
+  const [inspectorModal, setInspectorModal] = useState<{ open: boolean; appName: string; appSlug: string; tools: DiscoveredToolItem[] }>({ open: false, appName: '', appSlug: '', tools: [] });
   const [filter, setFilter] = useState<"all" | "composio" | "native">("all");
 
   const loadMcpClients = async () => {
@@ -46,6 +50,52 @@ export function AgentConnectedAppsTab({
   useEffect(() => {
     loadMcpClients();
   }, [agentId, onRefreshTrigger]);
+
+      const handleInspectSchema = async (client: AgentMcpClient, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const appSlug = client.key.replace(/^composio_/, "");
+    // Fetch schema details via refresh-schema
+    try {
+      const res = await fetch("/api/integrations/composio/refresh-schema", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appSlug, agentId }),
+      });
+      const data = await res.json();
+      setInspectorModal({
+        open: true,
+        appName: client.name || appSlug,
+        appSlug,
+        tools: data.tools || []
+      });
+    } catch (err: any) {
+      alert(`Could not inspect schema: ${err.message}`);
+    }
+  };
+
+  const handleRefreshSchema = async (client: AgentMcpClient, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const appSlug = client.key.replace(/^composio_/, "");
+    setRefreshingKey(client.key);
+    try {
+      const res = await fetch("/api/integrations/composio/refresh-schema", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appSlug, agentId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRefreshToast(`Refreshed schema for ${client.name} (${data.tools_discovered_count} tools updated)`);
+        setTimeout(() => setRefreshToast(null), 4000);
+      } else {
+        alert(data.error || "Failed to refresh schema");
+      }
+    } catch (err: any) {
+      alert(`Error refreshing schema: ${err.message}`);
+    } finally {
+      setRefreshingKey(null);
+    }
+  };
 
   const handleDeleteClient = async (clientKey: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -105,6 +155,14 @@ export function AgentConnectedAppsTab({
 
   return (
     <div className="space-y-3.5 text-xs flex flex-col h-full font-sans">
+      {/* Toast Alert */}
+      {refreshToast && (
+        <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] flex items-center justify-between animate-in fade-in">
+          <span>{refreshToast}</span>
+          <button onClick={() => setRefreshToast(null)} className="text-emerald-400 hover:text-white ml-2">✕</button>
+        </div>
+      )}
+
       {/* Top Controls: Counts, Filters, Add Button */}
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-1.5">
@@ -203,7 +261,9 @@ export function AgentConnectedAppsTab({
             return (
               <div
                 key={client.key}
-                className="group p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs"
+                onClick={(e) => meta.isComposio && handleInspectSchema(client, e)}
+                className={`group p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
+                title={meta.isComposio ? "Click to inspect tool functions" : ""}
               >
                 {/* Logo + Names */}
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -246,12 +306,27 @@ export function AgentConnectedAppsTab({
                   </div>
                 </div>
 
-                {/* Right Actions: Status Badge & Trash */}
+                {/* Right Actions: Status Badge, Refresh Schema & Trash */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                     <CheckCircle2 size={10} />
                     <span>Active</span>
                   </span>
+
+                  {meta.isComposio && (
+                    <button
+                      disabled={refreshingKey === client.key}
+                      onClick={(e) => handleRefreshSchema(client, e)}
+                      className="p-1 rounded-md text-neutral-400 hover:text-[#ff7a00] hover:bg-[#ff7a00]/10 transition-all cursor-pointer"
+                      title={`Re-discover and update ${meta.name} schema in SKILL.md`}
+                    >
+                      {refreshingKey === client.key ? (
+                        <Loader2 size={12} className="animate-spin text-[#ff7a00]" />
+                      ) : (
+                        <RefreshCw size={12} />
+                      )}
+                    </button>
+                  )}
 
                   <button
                     disabled={isDeleting}
@@ -271,6 +346,30 @@ export function AgentConnectedAppsTab({
           })
         )}
       </div>
+
+      {/* Tool Schema Inspector Modal */}
+      <ToolSchemaInspectorModal
+        isOpen={inspectorModal.open}
+        onClose={() => setInspectorModal((prev) => ({ ...prev, open: false }))}
+        appName={inspectorModal.appName}
+        appSlug={inspectorModal.appSlug}
+        agentId={agentId}
+        agentName={agentName}
+        tools={inspectorModal.tools}
+        onRefreshSchema={async () => {
+          const res = await fetch("/api/integrations/composio/refresh-schema", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ appSlug: inspectorModal.appSlug, agentId }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setInspectorModal((prev) => ({ ...prev, tools: data.tools || [] }));
+            setRefreshToast(`Refreshed schema for ${inspectorModal.appName}`);
+            setTimeout(() => setRefreshToast(null), 3000);
+          }
+        }}
+      />
     </div>
   );
 }

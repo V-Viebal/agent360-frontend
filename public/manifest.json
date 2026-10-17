@@ -1,0 +1,35 @@
+{
+  "name": "Skyer — Autonomous AI Teammates",
+  "short_name": "Skyer",
+  "description": "Autonomous AI Teammates with persistent memory, terminal tools, and real execution environments.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07090E",
+  "theme_color": "#07090E",
+  "categories": ["productivity", "utilities", "developer tools"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Console Chat",
+      "short_name": "Chat",
+      "description": "Start dialogue with your active autonomous agent",
+      "url": "/app",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

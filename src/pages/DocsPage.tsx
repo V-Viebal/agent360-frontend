@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -26,6 +27,7 @@ import { DOCS_SECTIONS, DocSection } from "../data/docsContent";
 import { AgentTopologyVisualizer } from "../components/AgentTopologyVisualizer";
 
 export function DocsPage() {
+  const { t } = useTranslation();
   const [selectedDocId, setSelectedDocId] = useState<string>("quickstart");
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
@@ -85,14 +87,14 @@ export function DocsPage() {
   };
 
   return (
-    <div className="pt-20 min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+    <div className="pt-20 min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans">
       {/* Top Banner */}
-      <div className="border-b border-white/[0.08] bg-white/[0.02] px-4 py-3">
+      <div className="border-b border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
-            <Link to="/" className="hover:text-white transition-colors">Agent360</Link>
+            <Link to="/" className="hover:text-neutral-900 dark:text-white transition-colors">Agent360</Link>
             <ChevronRight size={12} />
-            <span className="text-white font-medium">Documentation</span>
+            <span className="text-neutral-900 dark:text-white font-medium">Documentation</span>
             <ChevronRight size={12} />
             <span className="text-[#ff7a00]">{activeDoc.title}</span>
           </div>
@@ -102,7 +104,7 @@ export function DocsPage() {
               href="https://qwenpaw.agentscope.io/docs/intro"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
             >
               <span>QwenPaw Specs</span>
               <ExternalLink size={12} />
@@ -112,7 +114,7 @@ export function DocsPage() {
               href="https://docs.ai-teammates.com/"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
             >
               <span>AI Teammates Architecture</span>
               <ExternalLink size={12} />
@@ -132,7 +134,7 @@ export function DocsPage() {
               placeholder="Search documentation..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0d111a] border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/50"
+              className="w-full bg-white dark:bg-[#0d111a] border border-neutral-200 dark:border-[var(--border-subtle)] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 rounded-xl pl-9 pr-3 py-2 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/50"
             />
           </div>
 
@@ -160,16 +162,17 @@ export function DocsPage() {
                           className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
                             isSelected
                               ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold border border-[#ff7a00]/30"
-                              : "text-neutral-400 hover:text-white hover:bg-white/[0.04]"
+                              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.04]"
                           }`}
                         >
                           <span className="truncate">{doc.title}</span>
                           {doc.badge && (
                             <span
+                              title={`${doc.badge} Module`}
                               className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
                                 isSelected
                                   ? "bg-[#ff7a00] text-black font-semibold"
-                                  : "bg-white/10 text-neutral-400"
+                                  : "bg-white/5 text-neutral-500 hover:text-neutral-300"
                               }`}
                             >
                               {doc.badge}
@@ -185,8 +188,8 @@ export function DocsPage() {
           </div>
 
           {/* Quick Help Card */}
-          <div className="rounded-xl border border-white/10 bg-[#0d111a] p-4 text-xs space-y-2">
-            <div className="font-semibold text-white flex items-center gap-1.5">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] p-4 text-xs space-y-2 shadow-sm dark:shadow-none">
+            <div className="font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
               <Sparkles size={13} className="text-[#ff7a00]" />
               <span>Need custom agents?</span>
             </div>
@@ -203,20 +206,20 @@ export function DocsPage() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="lg:col-span-9 rounded-2xl border border-white/10 bg-[#0d111a] p-6 sm:p-10 shadow-xl space-y-8">
+        <main className="lg:col-span-9 rounded-2xl border border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] p-6 sm:p-10 shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 space-y-8">
           {/* Header */}
-          <div className="border-b border-white/10 pb-6">
+          <div className="border-b border-[var(--border-subtle)] pb-6">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[11px] font-mono uppercase tracking-wider text-[#ff7a00] bg-[#ff7a00]/10 px-2.5 py-0.5 rounded-md border border-[#ff7a00]/20">
                 {activeDoc.category}
               </span>
               {activeDoc.badge && (
-                <span className="text-[11px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-neutral-300">
+                <span className="text-[11px] font-mono bg-white/5 border border-[var(--border-subtle)] px-2 py-0.5 rounded text-neutral-300">
                   {activeDoc.badge}
                 </span>
               )}
             </div>
-            <h1 className="font-newsreader text-3xl sm:text-5xl font-semibold text-white tracking-tight">
+            <h1 className="font-newsreader text-3xl sm:text-5xl font-semibold text-neutral-900 dark:text-white tracking-tight">
               {activeDoc.title}
             </h1>
             <p className="mt-3 text-base text-neutral-400 leading-relaxed max-w-3xl font-sans">
@@ -230,7 +233,7 @@ export function DocsPage() {
               <CheckCircle2 size={14} />
               <span>Key Architectural Guarantees</span>
             </div>
-            <ul className="space-y-1.5 text-xs text-neutral-300 font-sans">
+            <ul className="space-y-1.5 text-xs text-neutral-700 dark:text-neutral-300 font-sans">
               {activeDoc.keyTakeaways.map((takeaway, idx) => (
                 <li key={idx} className="flex items-start gap-2">
                   <span className="text-[#ff7a00]">•</span>
@@ -241,25 +244,25 @@ export function DocsPage() {
           </div>
 
           {/* Markdown-style Prose Content */}
-          <div className="prose prose-invert max-w-none text-neutral-300 text-sm leading-relaxed space-y-4">
+          <div className="prose prose-neutral dark:prose-invert max-w-none text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed space-y-4">
             {activeDoc.content.split("\n\n").map((paragraph, idx) => {
               if (paragraph.startsWith("### ")) {
                 return (
-                  <h3 key={idx} className="text-xl font-semibold text-white mt-6 mb-2 border-b border-white/5 pb-2">
+                  <h3 key={idx} className="text-xl font-semibold text-neutral-900 dark:text-white mt-6 mb-2 border-b border-white/5 pb-2">
                     {paragraph.replace("### ", "")}
                   </h3>
                 );
               }
               if (paragraph.startsWith("#### ")) {
                 return (
-                  <h4 key={idx} className="text-base font-semibold text-neutral-200 mt-4 mb-2">
+                  <h4 key={idx} className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mt-4 mb-2">
                     {paragraph.replace("#### ", "")}
                   </h4>
                 );
               }
               if (paragraph.startsWith("- ")) {
                 return (
-                  <ul key={idx} className="space-y-2 my-3 pl-4 list-disc text-neutral-300">
+                  <ul key={idx} className="space-y-2 my-3 pl-4 list-disc text-neutral-700 dark:text-neutral-300">
                     {paragraph.split("\n").map((item, itemIdx) => (
                       <li key={itemIdx} className="leading-relaxed">
                         {item.replace("- ", "")}
@@ -269,7 +272,7 @@ export function DocsPage() {
                 );
               }
               return (
-                <p key={idx} className="text-neutral-300 leading-relaxed font-sans">
+                <p key={idx} className="text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans">
                   {paragraph}
                 </p>
               );
@@ -288,8 +291,8 @@ export function DocsPage() {
           )}
 
           {/* Interactive Code & Live Sandbox Execution Area */}
-          <div className="rounded-xl border border-white/10 bg-[#04060a] overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5 text-xs font-mono">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[#04060a] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2.5 text-xs font-mono">
               {/* Tab Switcher */}
               <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5">
                 {activeDoc.codeSnippet && (
@@ -298,7 +301,7 @@ export function DocsPage() {
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "code"
                         ? "bg-[#ff7a00] text-black font-semibold shadow"
-                        : "text-neutral-400 hover:text-white"
+                        : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
                     <Code2 size={12} />
@@ -311,7 +314,7 @@ export function DocsPage() {
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "sandbox"
                         ? "bg-[#ff7a00] text-black font-semibold shadow"
-                        : "text-neutral-400 hover:text-white"
+                        : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
                     <Terminal size={12} />
@@ -335,7 +338,7 @@ export function DocsPage() {
                 {activeDoc.codeSnippet && activeTab === "code" && (
                   <button
                     onClick={() => handleCopyCode(activeDoc.codeSnippet!.code)}
-                    className="hover:text-white text-neutral-400 transition-colors flex items-center gap-1 cursor-pointer text-xs"
+                    className="hover:text-neutral-900 dark:text-white text-neutral-400 transition-colors flex items-center gap-1 cursor-pointer text-xs"
                   >
                     {copiedCode ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                     <span>{copiedCode ? "Copied" : "Copy"}</span>
@@ -405,10 +408,10 @@ export function DocsPage() {
           </div>
 
           {/* Footer Navigation */}
-          <div className="border-t border-white/10 pt-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="border-t border-[var(--border-subtle)] pt-6 flex flex-wrap items-center justify-between gap-4">
             <Link
               to="/marketplace"
-              className="text-xs font-medium text-neutral-400 hover:text-white flex items-center gap-1.5"
+              className="text-xs font-medium text-neutral-400 hover:text-neutral-900 dark:text-white flex items-center gap-1.5"
             >
               <span>Explore Agent Marketplace</span>
             </Link>

@@ -1,0 +1,18 @@
+# ==============================================================================
+# Robots.txt for Skyer AI Workforce Platform (https://agent360.antares.vn)
+# ==============================================================================
+
+User-agent: *
+Allow: /
+Allow: /app
+Allow: /marketplace
+Allow: /analytics
+Allow: /docs
+
+# Disallow private runtime APIs and debug artifacts from search indexing
+Disallow: /api/
+Disallow: /admin/
+Disallow: /*.json$
+
+# Sitemaps
+Sitemap: https://agent360.antares.vn/sitemap.xml

@@ -17,11 +17,16 @@ export default defineConfig({
   server: {
     port: 3000,
     host: "0.0.0.0",
+    watch: {
+      usePolling: true,
+      interval: 800,
+    },
     proxy: {
       "/api": {
-        target: "http://localhost:5290",
+        target: "http://100.67.180.13:5290",
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace(/^\/api/, "/api/v1"),
       },
     },
   },

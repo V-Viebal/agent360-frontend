@@ -280,9 +280,14 @@ export function AgentWorkspace() {
         isOpen={showCommandPalette}
         onClose={() => setShowCommandPalette(false)}
         agents={agents}
-        onSelectAgent={handleSelectAgent}
-        onOpenAnalytics={() => setShowAnalyticsModal(true)}
-        onOpenSkills={() => setShowSkillsModal(true)}
+        chats={[]}
+        onSelectAgent={(agent) => handleSelectAgent(agent.id)}
+        onSelectChat={() => setShowCommandPalette(false)}
+        onNewChat={() => setShowCommandPalette(false)}
+        onToggleSound={() => {}}
+        isSoundEnabled={false}
+        onFilterInstance={() => {}}
+        infraInstances={[]}
       />
 
       {/* Floating Cmd+K Trigger Badge */}

@@ -27,15 +27,23 @@ import { MARKETPLACE_AGENTS } from "../data/mockMarketplaceAgents";
 import { AIOrgChart } from "../components/AIOrgChart";
 import { AgentMarketplaceItem, AgentDepartment } from "../types/marketplace";
 
-const CATEGORIES: AgentDepartment[] = [
-  "All",
-  "From Agent360 Team",
-  "Engineering",
-  "Operations & SRE",
-  "Quality & Security",
-  "Sales & BizDev",
-  "Marketing & Growth",
-  "Product & Research",
+
+const COMPANY_SCALES = [
+  { id: "all", label: "All Company Scales", desc: "Every tier" },
+  { id: "startup", label: "Startup (<50)", desc: "Lean & Fast" },
+  { id: "sme", label: "SME & Growth (50-250)", desc: "Scale Operations" },
+  { id: "enterprise", label: "Enterprise (250+)", desc: "Air-Gapped & Compliance" },
+];
+
+const CATEGORIES: { label: string; filter: (item: AgentMarketplaceItem) => boolean }[] = [
+  { label: "All Positions", filter: () => true },
+  { label: "Executive & Ops", filter: (item) => item.department === "Executive & Ops" },
+  { label: "Finance & Accounting", filter: (item) => item.department === "Finance & Accounting" },
+  { label: "Sales & BizDev", filter: (item) => item.department === "Sales & BizDev" },
+  { label: "Customer Support", filter: (item) => item.department === "Customer Support & Success" },
+  { label: "Marketing & Growth", filter: (item) => item.department === "Marketing & Creative" },
+  { label: "HR & Legal", filter: (item) => item.department === "HR & People" || item.department === "Legal & Compliance" },
+  { label: "IT & Tech", filter: (item) => item.department === "Engineering & Tech" },
 ];
 
 // Helper to render geometrical shapes like x.ai/bot/marketplace
@@ -87,19 +95,25 @@ function GeometricAvatar({
 export function MarketplacePage() {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<"catalog" | "orgchart">("catalog");
-  const [selectedCategory, setSelectedCategory] = useState<AgentDepartment>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All Positions");
+  const [selectedScale, setSelectedScale] = useState<string>("all");
+  const [selectedCompanyScale, setSelectedCompanyScale] = useState<"All" | "Startup" | "SME" | "Enterprise">("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeAgentModal, setActiveAgentModal] = useState<AgentMarketplaceItem | null>(null);
   const [deployedSuccess, setDeployedSuccess] = useState<string | null>(null);
 
-  // Filter logic
+  // Filter logic: Default to All Agents (no restrictive filter)
   const filteredAgents = useMemo(() => {
+    const categoryConfig = CATEGORIES.find((c) => c.label === selectedCategory);
     return MARKETPLACE_AGENTS.filter((agent) => {
       const matchesCategory =
+        !selectedCategory ||
         selectedCategory === "All" ||
-        (selectedCategory === "From Agent360 Team"
-          ? agent.creatorName.includes("Agent360") || agent.categories.includes("From Agent360 Team")
-          : agent.department === selectedCategory || agent.categories.includes(selectedCategory));
+        selectedCategory === "All Positions"
+          ? true
+          : categoryConfig
+          ? categoryConfig.filter(agent)
+          : agent.department === selectedCategory || agent.categories.includes(selectedCategory);
 
       const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -111,9 +125,16 @@ export function MarketplacePage() {
         agent.summary.toLowerCase().includes(query) ||
         agent.tools.some((t) => t.toLowerCase().includes(query));
 
-      return matchesCategory && matchesSearch;
+      // Company scale matching
+      const matchesScale =
+        selectedCompanyScale === "All" ||
+        (selectedCompanyScale === "Startup" && (agent.department === "Executive & Ops" || agent.department === "Customer Support & Success" || agent.department === "Sales & BizDev")) ||
+        (selectedCompanyScale === "SME" && (agent.department === "Finance & Accounting" || agent.department === "Marketing & Creative" || agent.department === "HR & People")) ||
+        (selectedCompanyScale === "Enterprise" && (agent.department === "Legal & Compliance" || agent.department === "Engineering & Tech" || agent.department === "Executive & Ops" || agent.department === "Finance & Accounting"));
+
+      return matchesCategory && matchesSearch && matchesScale;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, selectedCompanyScale]);
 
   const handleDeployAgent = (agent: AgentMarketplaceItem) => {
     setDeployedSuccess(agent.name);
@@ -125,27 +146,27 @@ export function MarketplacePage() {
   };
 
   return (
-    <div className="pt-24 pb-28 min-h-screen text-[#f0f2f5] font-sans">
+    <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
       {/* Top Header Banner matching x.ai and ai-teammates style */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-white/[0.08]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-[var(--border-subtle)]">
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] mb-2">
               <Sparkles size={14} />
-              <span>Multi-Agent Teammate Templates</span>
+              <span>Enterprise AI Employee Catalog</span>
             </div>
-            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-white">
-              Agent360 Marketplace
+            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+              Skyer Marketplace
             </h1>
-            <p className="mt-2 text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-              Browse handpicked, production-ready AI teammates. Give each bot a specialized job, role, and toolchain—or deploy entire autonomous AI Workforce with verified receipts.
+            <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
+              Browse production-ready AI employees for every department: Executive Leadership, Finance & Accounting, B2B Sales, Customer Support, Marketing, HR, Legal, and IT Operations. Deploy specialized autonomous colleagues that execute real workflows.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/5 px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-white/10 transition-colors"
             >
               <Cpu size={14} className="text-[#ff7a00]" />
               <span>Active Control Plane</span>
@@ -163,8 +184,8 @@ export function MarketplacePage() {
         </div>
 
         {/* View Switcher: Catalog vs AI Organization Chart */}
-        <div className="mt-8 flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+        <div className="mt-8 flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
+          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-[var(--border-subtle)]">
             <button
               onClick={() => setActiveView("catalog")}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
@@ -213,7 +234,7 @@ export function MarketplacePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by role, creator (@handle), or tool..."
-              className="w-full rounded-full border border-white/10 bg-white/[0.04] pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:border-[#ff7a00] focus:bg-white/[0.08] focus:outline-none transition-all font-sans"
+              className="w-full rounded-full border border-[var(--border-subtle)] bg-white/[0.04] pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:border-[#ff7a00] focus:bg-white/[0.08] focus:outline-none transition-all font-sans"
             />
             {searchQuery && (
               <button
@@ -225,21 +246,52 @@ export function MarketplacePage() {
             )}
           </div>
 
+                    {/* Company Scale Selector (Startup / SME / Enterprise) */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+            <span className="text-xs font-mono text-neutral-400 mr-1 flex items-center gap-1.5">
+              <SlidersHorizontal size={13} className="text-[#ff7a00]" />
+              Company Scale:
+            </span>
+            {(["All", "Startup", "SME", "Enterprise"] as const).map((scale) => {
+              const active = selectedCompanyScale === scale;
+              const labels = {
+                All: "All Scales",
+                Startup: "Early Startup (1-50)",
+                SME: "Growing SME (50-250)",
+                Enterprise: "Global Enterprise (250+)",
+              };
+              return (
+                <button
+                  key={scale}
+                  type="button"
+                  onClick={() => setSelectedCompanyScale(scale)}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-mono transition-all border cursor-pointer ${
+                    active
+                      ? "bg-white text-black font-semibold border-white shadow-xs"
+                      : "bg-white/[0.03] text-neutral-400 hover:text-white border-white/[0.08] hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {labels[scale]}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Categories Pill Navigation matching x.ai UI */}
           <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {CATEGORIES.map((cat) => {
-              const active = selectedCategory === cat;
+              const active = selectedCategory === cat.label;
               return (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer ${
+                  key={cat.label}
+                  onClick={() => setSelectedCategory(cat.label)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer border ${
                     active
-                      ? "bg-white text-black font-semibold shadow-md shadow-white/10 scale-102"
-                      : "bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08] hover:text-white border border-white/[0.06]"
+                      ? "bg-[#ff7a00] text-black font-semibold border-[#ff7a00] shadow-sm shadow-[#ff7a00]/25"
+                      : "bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08] hover:text-white border-white/[0.06]"
                   }`}
                 >
-                  {cat}
+                  {cat.label}
                 </button>
               );
             })}
@@ -272,7 +324,7 @@ export function MarketplacePage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className="group relative flex flex-col justify-between rounded-2xl border border-white/[0.08] bg-[#0c1018]/90 hover:bg-[#0e131d] hover:border-white/20 p-5 transition-all duration-200 shadow-lg hover:shadow-2xl"
+              className="group relative flex flex-col justify-between rounded-2xl border border-[var(--border-subtle)] bg-white dark:bg-[#0c1018]/90 hover:bg-neutral-50 dark:hover:bg-[#0e131d] border-neutral-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-none hover:border-white/20 p-5 transition-all duration-200 shadow-lg hover:shadow-2xl"
             >
               <div>
                 {/* Header: Geometry Avatar + Title + Department */}
@@ -280,7 +332,7 @@ export function MarketplacePage() {
                   <GeometricAvatar shape={agent.shape} color={agent.color} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h3 className="font-semibold text-sm sm:text-base text-white truncate group-hover:text-[#ff7a00] transition-colors">
+                      <h3 className="font-semibold text-sm sm:text-base text-neutral-900 dark:text-white truncate group-hover:text-[#ff7a00] transition-colors">
                         {agent.name}
                       </h3>
                       {agent.verified && (
@@ -299,12 +351,12 @@ export function MarketplacePage() {
                 </div>
 
                 {/* Summary */}
-                <p className="text-xs text-neutral-300 line-clamp-3 leading-relaxed mb-4">
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 line-clamp-3 leading-relaxed mb-4">
                   {agent.summary}
                 </p>
 
                 {/* AI Teammates Orchestration Info */}
-                <div className="rounded-lg bg-black/40 border border-white/5 p-2.5 mb-4 space-y-1.5 font-mono text-[11px]">
+                <div className="rounded-lg bg-black/40 border border-[var(--border-subtle)] p-2.5 mb-4 space-y-1.5 font-mono text-[11px]">
                   <div className="flex items-center justify-between text-neutral-400">
                     <span className="flex items-center gap-1 text-neutral-300">
                       <Workflow size={12} className="text-[#ff7a00]" />
@@ -324,7 +376,7 @@ export function MarketplacePage() {
                   {agent.tools.slice(0, 3).map((tool) => (
                     <span
                       key={tool}
-                      className="text-[10px] font-mono bg-white/[0.04] border border-white/5 px-2 py-0.5 rounded text-neutral-300"
+                      className="text-[10px] font-mono bg-white/[0.04] border border-[var(--border-subtle)] px-2 py-0.5 rounded text-neutral-300"
                     >
                       {tool}
                     </span>
@@ -338,10 +390,10 @@ export function MarketplacePage() {
               </div>
 
               {/* Bottom Actions */}
-              <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between gap-3">
+              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3">
                 <button
                   onClick={() => setActiveAgentModal(agent)}
-                  className="text-xs font-medium text-neutral-300 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                  className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <BookOpen size={13} />
                   <span>Inspect Spec</span>
@@ -360,15 +412,16 @@ export function MarketplacePage() {
         </div>
 
         {filteredAgents.length === 0 && (
-          <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl mt-8">
+          <div className="text-center py-20 border border-dashed border-[var(--border-subtle)] rounded-2xl mt-8">
             <Bot size={40} className="mx-auto text-neutral-600 mb-3" />
             <h3 className="text-base font-semibold text-white">No agent templates match your query</h3>
             <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-              Try searching for "SWE", "QA", "SRE", or resetting the department filter.
+              Try searching for "Finance", "Sales", "Support", "Marketing", or "HR".
             </p>
             <button
               onClick={() => {
-                setSelectedCategory("All");
+                setSelectedCategory("All Positions");
+                setSelectedCompanyScale("All");
                 setSearchQuery("");
               }}
               className="mt-4 px-4 py-1.5 rounded-full bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition-colors"
@@ -400,7 +453,7 @@ export function MarketplacePage() {
               </button>
 
               {/* Modal Header */}
-              <div className="flex items-start gap-4 pb-6 border-b border-white/10">
+              <div className="flex items-start gap-4 pb-6 border-b border-[var(--border-subtle)]">
                 <GeometricAvatar
                   shape={activeAgentModal.shape}
                   color={activeAgentModal.color}
@@ -432,7 +485,7 @@ export function MarketplacePage() {
               <div className="mt-6 space-y-6 text-xs sm:text-sm">
                 {/* Goal & Backstory */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-1.5">
+                  <div className="p-4 rounded-xl bg-white/[0.03] border border-[var(--border-subtle)] space-y-1.5">
                     <div className="text-[11px] font-mono text-[#ff7a00] uppercase tracking-wider">
                       Role & Goal (AI Teammates Pattern)
                     </div>
@@ -440,7 +493,7 @@ export function MarketplacePage() {
                       {activeAgentModal.goal}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-1.5">
+                  <div className="p-4 rounded-xl bg-white/[0.03] border border-[var(--border-subtle)] space-y-1.5">
                     <div className="text-[11px] font-mono text-blue-400 uppercase tracking-wider">
                       Backstory & Epistemic Stance
                     </div>
@@ -451,7 +504,7 @@ export function MarketplacePage() {
                 </div>
 
                 {/* Multi-Agent AI Team Pipeline */}
-                <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                <div className="p-4 rounded-xl bg-black/40 border border-[var(--border-subtle)] space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-white font-semibold flex items-center gap-1.5">
                       <Workflow size={14} className="text-[#ff7a00]" />
@@ -479,7 +532,7 @@ export function MarketplacePage() {
                       {activeAgentModal.tools.map((t) => (
                         <span
                           key={t}
-                          className="bg-white/5 border border-white/10 px-2.5 py-1 rounded text-neutral-200"
+                          className="bg-white/5 border border-[var(--border-subtle)] px-2.5 py-1 rounded text-neutral-200"
                         >
                           {t}
                         </span>
@@ -510,7 +563,7 @@ export function MarketplacePage() {
                       Strict Exit Codes Verified
                     </span>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-black/70 p-4 font-mono text-xs space-y-1.5 text-neutral-300">
+                  <div className="rounded-xl border border-[var(--border-subtle)] bg-black/70 p-4 font-mono text-xs space-y-1.5 text-neutral-300">
                     {activeAgentModal.terminalPreview.map((line, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <span className="text-neutral-600 select-none">{idx + 1}</span>
@@ -533,7 +586,7 @@ export function MarketplacePage() {
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="mt-8 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
                 <div className="text-xs text-neutral-400 font-mono">
                   Memory: <span className="text-white">{activeAgentModal.memoryType}</span> | Gate:{" "}
                   <span className="text-emerald-400">{activeAgentModal.authorityGate}</span>
@@ -541,7 +594,7 @@ export function MarketplacePage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setActiveAgentModal(null)}
-                    className="px-4 py-2 rounded-full border border-white/10 text-xs font-medium text-neutral-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-full border border-[var(--border-subtle)] text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                   >
                     Close
                   </button>

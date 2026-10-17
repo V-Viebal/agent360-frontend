@@ -62,6 +62,7 @@ export function ScheduleJobModal({
 
     setSaving(true);
     const success = await createOrUpdateSchedule({
+      agentId,
       id: job?.id,
       name: name.trim(),
       cronExpr: cronExpr.trim(),
@@ -82,7 +83,7 @@ export function ScheduleJobModal({
   const handleDelete = async () => {
     if (!job || !window.confirm(`Delete automation schedule "${job.name}"?`)) return;
     setDeleting(true);
-    const success = await deleteSchedule(job.id);
+    const success = await deleteSchedule(job.id, agentId);
     setDeleting(false);
     if (success) {
       onSaved();

@@ -1,0 +1,53 @@
+import React from "react";
+
+interface SkyerLogoProps {
+  size?: number;
+  className?: string;
+  showText?: boolean;
+  showBotBadge?: boolean;
+}
+
+export function SkyerLogo({ size = 32, className = "", showText = true, showBotBadge = false }: SkyerLogoProps) {
+  return (
+    <div className={`flex items-center gap-2.5 group select-none ${className}`}>
+      {/* Precision Icon Mark with Micro-Angle Blade Transition */}
+      <div 
+        style={{ width: size, height: size }}
+        className="rounded-[9px] bg-[#0A0C13] border border-white/10 flex items-center justify-center p-1.5 shadow-[0_0_15px_rgba(255,122,0,0.18)] transition-all duration-300 group-hover:border-[#ff7a00]/50 group-hover:shadow-[0_0_22px_rgba(255,122,0,0.35)] group-hover:scale-105 shrink-0"
+      >
+        <svg viewBox="0 0 36 36" width="100%" height="100%" fill="none" className="transition-transform duration-300 group-hover:rotate-6">
+          {/* Upper Blade: Pure White */}
+          <path 
+            d="M 27 7.5 L 13.5 7.5 C 10 7.5 7.5 10 7.5 13.5 L 7.5 14.5 C 7.5 18 10 20 13.5 20.5 L 21 21.5" 
+            stroke="#FFFFFF" 
+            strokeWidth="3.6" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          />
+          {/* Lower Blade: Electric Grok Ember */}
+          <path 
+            d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5" 
+            stroke="#FF7A00" 
+            strokeWidth="3.6" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      {/* Modern Wordmark */}
+      {showText && (
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-[17px] tracking-tight text-white font-sans group-hover:text-neutral-100 transition-colors">
+            Skyer
+          </span>
+          {showBotBadge && (
+            <span className="text-[9px] font-mono font-bold uppercase bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 px-1.5 py-0.2 rounded-full">
+              BOT
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

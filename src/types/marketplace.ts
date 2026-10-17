@@ -1,12 +1,13 @@
 export type AgentDepartment =
   | "All"
-  | "From Agent360 Team"
-  | "Engineering"
-  | "Operations & SRE"
-  | "Quality & Security"
+  | "Executive & Ops"
+  | "Finance & Accounting"
   | "Sales & BizDev"
-  | "Marketing & Growth"
-  | "Product & Research";
+  | "Customer Support & Success"
+  | "Marketing & Creative"
+  | "HR & People"
+  | "Legal & Compliance"
+  | "Engineering & Tech";
 
 export type GeometricShape =
   | "squircle"

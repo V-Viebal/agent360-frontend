@@ -11,6 +11,7 @@ export interface StreamRetryOptions {
   maxRetries?: number;
   initialDelayMs?: number;
   onRetryAttempt?: (attempt: number, error: Error) => void;
+  signal?: AbortSignal;
 }
 
 export async function sendConsoleChatMessageStream(
@@ -22,7 +23,7 @@ export async function sendConsoleChatMessageStream(
   onToolCall?: (tool: string, args: string, result?: string, state?: "calling" | "success" | "error") => void,
   options: StreamRetryOptions = {}
 ): Promise<{ text: string; reasoning?: string }> {
-  const maxRetries = options.maxRetries ?? 1;
+  const maxRetries = options.maxRetries ?? 2;
   const initialDelay = options.initialDelayMs ?? 1000;
 
   const targetAgent = (agentId || "mons").toLowerCase();
@@ -31,6 +32,7 @@ export async function sendConsoleChatMessageStream(
   const payload = {
     user_id: "default",
     session_id: sessionId || `session-${Date.now()}`,
+    agent_id: targetAgent,
     channel: "console",
     input: [
       {
@@ -45,12 +47,31 @@ export async function sendConsoleChatMessageStream(
   let accumulatedText = "";
   let accumulatedReasoning = "";
   const activeToolCalls: Record<string, { tool: string; args: string; result?: string; state: "calling" | "success" | "error" }> = {};
+  let lastActiveToolCallId: string | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
         options.onRetryAttempt?.(attempt, lastError || new Error("Connection dropped"));
         await new Promise((res) => setTimeout(res, initialDelay * Math.pow(2, attempt - 1)));
+
+        // Proposal 2: Streaming Fallback Reconnection
+        // If a tool call was left running when connection dropped, attempt to reconnect directly to QwenPaw's tool-calls stream
+        if (lastActiveToolCallId && sessionId) {
+          try {
+            console.log(`[chatStream] Attempting tool output stream reconnect for tool_call_id ${lastActiveToolCallId}`);
+            const toolReceiptsRes = await fetch(`/api/agents/sessions/${encodeURIComponent(sessionId)}/tool-receipts?agentId=${encodeURIComponent(targetAgent)}`);
+            if (toolReceiptsRes.ok) {
+              const receipts = await toolReceiptsRes.json();
+              const matching = receipts.find((r: any) => r.tool_call_id === lastActiveToolCallId);
+              if (matching && matching.status === "succeeded") {
+                onToolCall?.(matching.capability_id || "Tool", "", matching.output_hash || "Completed in background", "success");
+              }
+            }
+          } catch (reconnectErr) {
+            console.warn("[chatStream] Tool reconnect check failed, continuing normal chat retry:", reconnectErr);
+          }
+        }
       }
 
       const response = await fetch("/api/agents/console/chat", {
@@ -60,7 +81,8 @@ export async function sendConsoleChatMessageStream(
           "X-Agent-Id": targetAgent,
           Accept: "text/event-stream"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: options.signal
       });
 
       if (!response.ok) {
@@ -102,7 +124,6 @@ export async function sendConsoleChatMessageStream(
                   accumulatedText += parsed.text;
                   onChunk?.(accumulatedText);
                 } else if (!parsed.delta && parsed.text && !accumulatedText) {
-                  // Final complete text replacement if delta was empty
                   accumulatedText = parsed.text;
                   onChunk?.(accumulatedText);
                 }
@@ -131,6 +152,7 @@ export async function sendConsoleChatMessageStream(
                 const dataItem = parsed.content?.[0]?.data;
                 if (dataItem) {
                   const callId = dataItem.call_id || "call-1";
+                  lastActiveToolCallId = callId;
                   const toolName = dataItem.name || "Tool";
                   const args = dataItem.arguments || "";
                   activeToolCalls[callId] = {
@@ -142,6 +164,7 @@ export async function sendConsoleChatMessageStream(
                 }
               } else if (parsed.object === "content" && parsed.data?.name) {
                 const callId = parsed.data.call_id || "call-1";
+                lastActiveToolCallId = callId;
                 const toolName = parsed.data.name;
                 const args = parsed.data.arguments || "";
                 activeToolCalls[callId] = {
@@ -195,10 +218,8 @@ export async function sendConsoleChatMessageStream(
     }
   }
 
-  // Graceful fallback to verified execution log if network breaks
-  console.warn("Direct SSE streaming failed after retries, returning safe execution response", lastError);
-  return {
-    text: accumulatedText || `Completed instruction on ${targetAgent}:\n\n✓ Verification step complete: exit code 0.\n✓ Checked against constitution mandate: Pass.`,
-    reasoning: accumulatedReasoning || "Analyzed request against system constitution and tool permission profile. Proceeded with safe execution loop."
-  };
+  if (accumulatedText) {
+    return { text: accumulatedText, reasoning: accumulatedReasoning || undefined };
+  }
+  throw lastError || new Error(`Agent ${targetAgent} returned no response`);
 }

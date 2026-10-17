@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40" fill="none">
+  <!-- Minimalist Icon Glyph (Grok S-Slash) -->
+  <g transform="translate(2, 2)">
+    <rect width="36" height="36" rx="9" fill="#0A0C13" stroke="rgba(255,255,255,0.1)"/>
+    <path d="M 27 7.5 L 13.5 7.5 C 10 7.5 7.5 10 7.5 13.5 L 7.5 14.5 C 7.5 18 10 20 13.5 20.5 L 21 21.5" 
+          stroke="#FFFFFF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5" 
+          stroke="#FF7A00" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Wordmark "Skyer" in clean Swiss geometric font -->
+  <text x="48" y="26" font-family="'Inter', -apple-system, sans-serif" font-weight="700" font-size="20" fill="#FFFFFF" letter-spacing="-0.5px">
+    Skyer
+  </text>
+</svg>

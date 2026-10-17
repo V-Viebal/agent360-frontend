@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+  <!-- Minimalist dark ceramic tile -->
+  <rect width="36" height="36" rx="9" fill="#0A0C13"/>
+  <rect x="0.5" y="0.5" width="35" height="35" rx="8.5" stroke="rgba(255,255,255,0.12)"/>
+  
+  <!-- Upper Blade: Crisp White with 45-degree chamfer -->
+  <path d="M 27 7.5 L 13.5 7.5 C 10 7.5 7.5 10 7.5 13.5 L 7.5 14.5 C 7.5 18 10 20 13.5 20.5 L 21 21.5" 
+        stroke="#FFFFFF" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+        
+  <!-- Lower Blade: Electric Grok Ember #FF7A00 with matching geometry -->
+  <path d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5" 
+        stroke="#FF7A00" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -7,15 +7,19 @@ import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { AgentStatsDashboardPage } from "./pages/AgentStatsDashboardPage";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
+import { ThemeProvider } from "./context/ThemeContext";
+import { LanguageProvider } from "./i18n/LanguageContext";
 
 export default function App() {
   return (
-    <Routes>
+    <ThemeProvider>
+      <LanguageProvider>
+      <Routes>
       {/* 1. Public Marketing Landing Page at "/" */}
       <Route
         path="/"
         element={
-          <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+          <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans transition-colors">
             <Navbar />
             <main className="flex-1">
               <LandingPage />
@@ -34,7 +38,7 @@ export default function App() {
       <Route
         path="/marketplace"
         element={
-          <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+          <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans transition-colors">
             <Navbar />
             <main className="flex-1">
               <MarketplacePage />
@@ -48,7 +52,7 @@ export default function App() {
       <Route
         path="/marketplace/:agentId"
         element={
-          <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+          <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans transition-colors">
             <Navbar />
             <main className="flex-1">
               <AgentDetailPage />
@@ -62,7 +66,7 @@ export default function App() {
       <Route
         path="/docs"
         element={
-          <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+          <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans transition-colors">
             <Navbar />
             <main className="flex-1">
               <DocsPage />
@@ -76,7 +80,7 @@ export default function App() {
       <Route
         path="/analytics"
         element={
-          <div className="min-h-screen bg-[#07090e] text-[#f0f2f5] flex flex-col font-sans">
+          <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans transition-colors">
             <Navbar />
             <main className="flex-1">
               <AgentStatsDashboardPage />
@@ -89,5 +93,7 @@ export default function App() {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </LanguageProvider>
+    </ThemeProvider>
   );
 }

@@ -1,137 +1,260 @@
-import { useState, useEffect } from "react";
-import { InfraAgent } from "../types/agent";
-import {
-  Search,
-  Bot,
-  Command,
-  X,
-  Sparkles,
-  BarChart3,
-  Server,
-  ArrowRight,
-} from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, ArrowRight, CornerDownLeft, ShieldCheck, Mic } from "lucide-react";
+import { InfraAgent, AgentSession } from "../types/agent";
+import { SOUND_PRESETS, SoundPreset, playNotificationChime } from "../services/notificationService";
 
 interface CommandPaletteModalProps {
   isOpen: boolean;
   onClose: () => void;
   agents: InfraAgent[];
-  onSelectAgent: (agentId: string) => void;
-  onOpenAnalytics: () => void;
-  onOpenSkills: () => void;
+  chats: AgentSession[];
+  onSelectAgent: (agent: InfraAgent) => void;
+  onSelectChat: (chat: AgentSession) => void;
+  onNewChat: () => void;
+  onToggleSound: () => void;
+  isSoundEnabled: boolean;
+  onOpenPermissions?: () => void;
+  onFilterInstance: (instanceId: string) => void;
+  onCompactContext?: () => void;
+  infraInstances: { value: string; label: string; badge: string }[];
 }
 
 export function CommandPaletteModal({
   isOpen,
   onClose,
   agents,
+  chats,
   onSelectAgent,
-  onOpenAnalytics,
-  onOpenSkills,
+  onSelectChat,
+  onNewChat,
+  onToggleSound,
+  isSoundEnabled,
+  onOpenPermissions,
+  onFilterInstance,
+  infraInstances,
+  onCompactContext,
 }: CommandPaletteModalProps) {
   const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        if (isOpen) {
-          onClose();
-        } else {
-          // Open handled by parent or toggle
-        }
-      } else if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+    if (isOpen) {
+      setQuery("");
+      setSelectedIndex(0);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const filteredAgents = agents.filter(
-    (a) =>
-      a.name.toLowerCase().includes(query.toLowerCase()) ||
-      a.slug.toLowerCase().includes(query.toLowerCase()) ||
-      a.roleTag.toLowerCase().includes(query.toLowerCase())
-  );
+  // Filter actions, agents, instances, and chats
+  const q = query.trim().toLowerCase();
+
+  const actionItems = [
+    ...(onCompactContext ? [{
+      id: "act-compact-context",
+      type: "action",
+      title: "Compact Active Context",
+      subtitle: "Trigger native QwenPaw checkpoint GC & Scroll context compaction",
+      icon: <Sparkles size={14} className="text-amber-400" />,
+      action: () => {
+        onCompactContext();
+        onClose();
+      },
+    }] : []),
+    {
+      id: "act-new-chat",
+      type: "action",
+      title: "New Chat Session",
+      subtitle: "Start a fresh interactive turn with the active bot",
+      icon: <Sparkles size={14} className="text-[#ff7a00]" />,
+      action: () => {
+        onNewChat();
+        onClose();
+      },
+    },
+    {
+      id: "act-toggle-sound",
+      type: "action",
+      title: isSoundEnabled ? "Mute Audio Chime Alerts" : "Enable Audio Chime Alerts",
+      subtitle: `Current state: ${isSoundEnabled ? "Sound Enabled" : "Sound Muted"}`,
+      icon: <Volume2 size={14} className="text-[#ff7a00]" />,
+      action: () => {
+        onToggleSound();
+        onClose();
+      },
+    },
+    ...SOUND_PRESETS.map((preset) => ({
+      id: `act-chime-${preset.id}`,
+      type: "action" as const,
+      title: `Sound Preset: ${preset.name}`,
+      subtitle: `Switch audio alert to ${preset.description}`,
+      icon: <Volume2 size={14} className="text-amber-400" />,
+      action: () => {
+        try {
+          localStorage.setItem("agent360_sound_preset", preset.id);
+          playNotificationChime(preset.id as SoundPreset);
+        } catch {}
+        onClose();
+      },
+    })),
+  ];
+
+  const agentItems = agents
+    .filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q) || (a.roleTag && a.roleTag.toLowerCase().includes(q)))
+    .map((a) => ({
+      id: `agent-${a.id}`,
+      type: "agent",
+      title: `@${a.name}`,
+      subtitle: `${a.node} • ${a.roleTag || "Agent"} • ${a.model}`,
+      icon: <Bot size={14} className="text-emerald-400" />,
+      action: () => {
+        onSelectAgent(a);
+        onClose();
+      },
+    }));
+
+  const instanceItems = infraInstances
+    .filter((i) => i.value !== "all" && (i.label.toLowerCase().includes(q) || i.value.toLowerCase().includes(q)))
+    .map((i) => ({
+      id: `node-${i.value}`,
+      type: "node",
+      title: `/${i.value}`,
+      subtitle: `Filter view to ${i.label} (${i.badge})`,
+      icon: <Server size={14} className="text-cyan-400" />,
+      action: () => {
+        onFilterInstance(i.value);
+        onClose();
+      },
+    }));
+
+  const chatItems = chats
+    .filter((c) => c.title.toLowerCase().includes(q) || c.lastMessageSnippet.toLowerCase().includes(q))
+    .slice(0, 8)
+    .map((c) => ({
+      id: `chat-${c.id}`,
+      type: "chat",
+      title: c.title,
+      subtitle: c.lastMessageSnippet || `Chat session from ${c.updatedAt}`,
+      icon: <MessageSquare size={14} className="text-neutral-400" />,
+      action: () => {
+        onSelectChat(c);
+        onClose();
+      },
+    }));
+
+  const combinedItems = [
+    ...(q ? [] : actionItems),
+    ...agentItems,
+    ...instanceItems,
+    ...chatItems,
+    ...(q ? actionItems.filter((a) => a.title.toLowerCase().includes(q)) : []),
+  ];
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev + 1) % Math.max(1, combinedItems.length));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev - 1 + combinedItems.length) % Math.max(1, combinedItems.length));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (combinedItems[selectedIndex]) {
+        combinedItems[selectedIndex].action();
+      }
+    } else if (e.key === "Escape") {
+      onClose();
+    }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start justify-center pt-24 p-4">
-      <div className="bg-[#120f0c] border border-[#2b241e] rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl flex flex-col font-sans">
-        {/* Search Input */}
-        <div className="px-4 py-3 bg-[#17120e] border-b border-[#2b241e] flex items-center gap-3">
-          <Search size={16} className="text-[#d86f4c]" />
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+      >
+        {/* Search Input Bar */}
+        <div className="h-14 px-4 border-b border-[#22222e] flex items-center gap-3 bg-[#161620]">
+          <Search size={18} className="text-[#ff7a00] shrink-0" />
           <input
+            ref={inputRef}
             type="text"
-            autoFocus
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command, bot name, or tool..."
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-neutral-500 focus:outline-none"
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Search agents (@mons), nodes (/node-6th), chats or actions..."
+            className="flex-1 bg-transparent border-0 text-sm text-white placeholder-neutral-500 focus:outline-none font-sans"
           />
-          <kbd className="px-2 py-0.5 rounded bg-black/40 border border-white/10 text-[10px] text-neutral-400 font-mono">
-            ESC
-          </kbd>
+          <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono text-neutral-500 bg-[#20202c] border border-[#2c2c3c]">
+            ESC to close
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="sm:hidden text-neutral-400 hover:text-white"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Results */}
-        <div className="p-3 max-h-80 overflow-y-auto space-y-1 text-xs">
-          {/* Quick Actions */}
-          <div className="px-2 py-1 text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-            Quick Actions
-          </div>
-          <button
-            onClick={() => {
-              onClose();
-              onOpenAnalytics();
-            }}
-            className="w-full px-3 py-2 rounded-xl flex items-center justify-between text-neutral-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer text-left font-mono"
-          >
-            <span className="flex items-center gap-2">
-              <BarChart3 size={13} className="text-amber-400" />
-              <span>Open Token Consumption & Cost Analytics</span>
-            </span>
-            <ArrowRight size={12} className="text-neutral-500" />
-          </button>
+        {/* Results List */}
+        <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
+          {combinedItems.map((item, idx) => {
+            const isSelected = idx === selectedIndex;
+            return (
+              <div
+                key={item.id}
+                onClick={item.action}
+                onMouseEnter={() => setSelectedIndex(idx)}
+                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-[#222230] text-white border border-[#ff7a00]/30 shadow-xs"
+                    : "hover:bg-[#181822] text-neutral-300 border border-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0 pr-3">
+                  <div className="h-7 w-7 rounded-lg bg-[#181824] border border-[#28283a] flex items-center justify-center shrink-0">
+                    {item.icon}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-medium text-white truncate">{item.title}</span>
+                    <span className="text-[11px] text-neutral-500 truncate">{item.subtitle}</span>
+                  </div>
+                </div>
 
-          <button
-            onClick={() => {
-              onClose();
-              onOpenSkills();
-            }}
-            className="w-full px-3 py-2 rounded-xl flex items-center justify-between text-neutral-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer text-left font-mono"
-          >
-            <span className="flex items-center gap-2">
-              <Sparkles size={13} className="text-[#d86f4c]" />
-              <span>Browse Skill Pool & Capabilities Catalog</span>
-            </span>
-            <ArrowRight size={12} className="text-neutral-500" />
-          </button>
-
-          {/* Agents Section */}
-          <div className="px-2 pt-3 pb-1 text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-            Switch Agent ({filteredAgents.length})
-          </div>
-          {filteredAgents.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => {
-                onSelectAgent(a.id);
-                onClose();
-              }}
-              className="w-full px-3 py-2 rounded-xl flex items-center justify-between text-neutral-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-2.5">
-                <Bot size={14} className="text-[#d86f4c]" />
-                <span className="font-medium text-white">{a.name}</span>
-                <span className="text-[10px] font-mono text-neutral-500 bg-white/5 px-2 py-0.5 rounded">
-                  {a.node}
-                </span>
+                {isSelected && (
+                  <div className="flex items-center gap-1 text-[10px] font-mono text-[#ff7a00] shrink-0">
+                    <span>Jump</span>
+                    <CornerDownLeft size={11} />
+                  </div>
+                )}
               </div>
-              <span className="text-[11px] font-mono text-neutral-400">{a.model}</span>
-            </button>
-          ))}
+            );
+          })}
+
+          {combinedItems.length === 0 && (
+            <div className="py-8 text-center text-xs font-mono text-neutral-500">
+              No matching agents, nodes, chats or commands found.
+            </div>
+          )}
+        </div>
+
+        {/* Footer shortcuts */}
+        <div className="px-4 py-2.5 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500 select-none">
+          <div className="flex items-center gap-3">
+            <span>↑↓ Navigate</span>
+            <span>↵ Select</span>
+            <span>ESC Close</span>
+          </div>
+          <span>Skyer Command Palette</span>
         </div>
       </div>
     </div>

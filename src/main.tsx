@@ -11,3 +11,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Register Progressive Web App Service Worker for offline resilience
+if ("serviceWorker" in navigator && !window.location.host.includes("localhost")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.warn("SW registration failed: ", err);
+    });
+  });
+}

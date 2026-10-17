@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -130,6 +131,7 @@ const FALLBACK_TREND: LlmToolDaily[] = [
 ];
 
 export function AgentStatsDashboardPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<AgentStatsSummary>(FALLBACK_SUMMARY);
   const [trend, setTrend] = useState<LlmToolDaily[]>(FALLBACK_TREND);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
@@ -330,19 +332,19 @@ export function AgentStatsDashboardPage() {
   const maxCalls = Math.max(...trend.map((t) => Math.max(t.agent_llm_calls, t.tool_calls)), 100);
 
   return (
-    <div className="pt-24 pb-28 min-h-screen text-[#f0f2f5] font-sans">
+    <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header Banner */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/[0.08]">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[var(--border-subtle)]">
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] mb-2">
               <Activity size={14} className="animate-pulse" />
               <span>QwenPaw Kernel Telemetry & Load Analytics</span>
             </div>
-            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-white">
+            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-900 dark:text-white">
               Agent Load & Telemetry
             </h1>
-            <p className="mt-2 text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
+            <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
               Real-time operational metrics across all autonomous AI teammates: execution turns, prompt token consumption, cache hit rates, and multi-channel traffic.
             </p>
           </div>
@@ -351,14 +353,14 @@ export function AgentStatsDashboardPage() {
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono ${
               isLiveConnected
                 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                : "bg-white/5 text-neutral-400 border-white/10"
+                : "bg-white/5 text-neutral-400 border-[var(--border-subtle)]"
             }`}>
               <span className={`h-2 w-2 rounded-full ${isLiveConnected ? "bg-emerald-400 animate-ping" : "bg-neutral-500"}`} />
               <span>{isLiveConnected ? "Live QwenPaw Stream" : "Deterministic Sandbox Trace"}</span>
             </div>
 
             {/* Auto-Refresh Polling Toggle Pills */}
-            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-white/10 font-mono text-xs">
+            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-neutral-200 dark:border-[var(--border-subtle)] font-mono text-xs">
               <span className="text-[10px] text-neutral-500 pl-2 pr-1 flex items-center gap-1">
                 <Clock size={11} className={autoRefreshInterval > 0 ? "text-[#ff7a00]" : ""} />
                 <span className="hidden sm:inline">Auto:</span>
@@ -370,7 +372,7 @@ export function AgentStatsDashboardPage() {
                   className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
                     autoRefreshInterval === sec
                       ? "bg-[#ff7a00] text-black font-bold shadow-sm"
-                      : "text-neutral-400 hover:text-white"
+                      : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                   }`}
                 >
                   {sec === 0 ? "Off" : `${sec}s`}
@@ -379,21 +381,21 @@ export function AgentStatsDashboardPage() {
             </div>
 
             {/* Export Metrics Buttons */}
-            <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-full border border-white/10 text-xs font-mono">
+            <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-full border border-neutral-200 dark:border-[var(--border-subtle)] text-xs font-mono">
               <span className="text-[10px] text-neutral-500 pl-2 pr-1 flex items-center gap-1">
                 <Download size={11} />
                 <span className="hidden sm:inline">Export:</span>
               </span>
               <button
                 onClick={handleExportCsv}
-                className="px-2.5 py-1 rounded-full text-[11px] text-neutral-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-full text-[11px] text-neutral-300 hover:text-neutral-900 dark:text-white hover:bg-white/10 transition-all cursor-pointer"
                 title="Download CSV breakdown by date"
               >
                 CSV
               </button>
               <button
                 onClick={handleExportJson}
-                className="px-2.5 py-1 rounded-full text-[11px] text-neutral-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-full text-[11px] text-neutral-300 hover:text-neutral-900 dark:text-white hover:bg-white/10 transition-all cursor-pointer"
                 title="Download full JSON telemetry payload"
               >
                 JSON
@@ -403,7 +405,7 @@ export function AgentStatsDashboardPage() {
             <button
               onClick={loadData}
               disabled={isLoading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-[var(--border-subtle)] bg-white/5 px-4 py-2 text-xs font-medium text-neutral-300 hover:text-neutral-900 dark:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
               <RefreshCw size={13} className={isLoading ? "animate-spin" : ""} />
               <span>Refresh</span>
@@ -413,12 +415,12 @@ export function AgentStatsDashboardPage() {
 
         {/* 4 Primary Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl border border-white/10 bg-[#0d111a] space-y-2">
+          <div className="p-5 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 space-y-2">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono">
               <span>Active Agent Sessions</span>
               <Users size={16} className="text-[#ff7a00]" />
             </div>
-            <div className="text-3xl font-bold text-white font-newsreader">
+            <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
               {stats.total_active_sessions.toLocaleString()}
             </div>
             <div className="text-[11px] text-neutral-500 font-mono">
@@ -426,12 +428,12 @@ export function AgentStatsDashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-white/10 bg-[#0d111a] space-y-2">
+          <div className="p-5 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 space-y-2">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono">
               <span>LLM Execution Turns</span>
               <Bot size={16} className="text-blue-400" />
             </div>
-            <div className="text-3xl font-bold text-white font-newsreader">
+            <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
               {stats.total_llm_calls.toLocaleString()}
             </div>
             <div className="text-[11px] text-neutral-500 font-mono">
@@ -439,12 +441,12 @@ export function AgentStatsDashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-white/10 bg-[#0d111a] space-y-2">
+          <div className="p-5 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 space-y-2">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono">
               <span>Tool Call Invocations</span>
               <Zap size={16} className="text-purple-400" />
             </div>
-            <div className="text-3xl font-bold text-white font-newsreader">
+            <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
               {stats.total_tool_calls.toLocaleString()}
             </div>
             <div className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
@@ -453,7 +455,7 @@ export function AgentStatsDashboardPage() {
             </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-white/10 bg-[#0d111a] space-y-2">
+          <div className="p-5 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 space-y-2">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono">
               <span>Prompt Cache Hit Rate</span>
               <Database size={16} className="text-emerald-400" />
@@ -470,10 +472,10 @@ export function AgentStatsDashboardPage() {
         {/* Charts & Graphs Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Main Visual Bar Chart: Daily LLM vs Tool Calls */}
-          <div className="lg:col-span-8 rounded-2xl border border-white/10 bg-[#0d111a] p-6 space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="lg:col-span-8 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 p-6 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
               <div>
-                <h3 className="text-base font-semibold text-white flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-semibold text-neutral-900 dark:text-white flex flex-wrap items-center gap-2">
                   <BarChart3 size={16} className="text-[#ff7a00]" />
                   <span>Execution Volume Trend (LLM Turns vs Tool Calls)</span>
                 </h3>
@@ -496,7 +498,7 @@ export function AgentStatsDashboardPage() {
 
             {/* Pure CSS/SVG Bar Chart */}
             <div className="space-y-4 pt-2">
-              <div className="grid grid-cols-7 gap-3 h-52 items-end pt-4 border-b border-white/10 pb-2">
+              <div className="grid grid-cols-7 gap-3 h-52 items-end pt-4 border-b border-[var(--border-subtle)] pb-2">
                 {trend.map((d, idx) => {
                   const llmHeight = Math.max((d.agent_llm_calls / maxCalls) * 100, 10);
                   const toolHeight = Math.max((d.tool_calls / maxCalls) * 100, 8);
@@ -508,7 +510,7 @@ export function AgentStatsDashboardPage() {
                           style={{ height: `${llmHeight}%` }}
                           className="w-1/2 max-w-[18px] bg-blue-500/80 hover:bg-blue-400 rounded-t-sm transition-all relative group/bar"
                         >
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/90 text-white font-mono text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-white/20">
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/90 text-neutral-900 dark:text-white font-mono text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-white/20">
                             {d.agent_llm_calls} LLM
                           </div>
                         </div>
@@ -518,12 +520,12 @@ export function AgentStatsDashboardPage() {
                           style={{ height: `${toolHeight}%` }}
                           className="w-1/2 max-w-[18px] bg-[#ff7a00]/80 hover:bg-[#ff7a00] rounded-t-sm transition-all relative group/bar"
                         >
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/90 text-white font-mono text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-white/20">
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/90 text-neutral-900 dark:text-white font-mono text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-white/20">
                             {d.tool_calls} Tools
                           </div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono text-neutral-500 group-hover:text-white transition-colors">
+                      <span className="text-[10px] font-mono text-neutral-500 group-hover:text-neutral-900 dark:text-white transition-colors">
                         {d.date}
                       </span>
                     </div>
@@ -539,9 +541,9 @@ export function AgentStatsDashboardPage() {
           </div>
 
           {/* Right Column: Multi-Channel Distribution */}
-          <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-[#0d111a] p-6 space-y-6">
-            <div className="border-b border-white/10 pb-4">
-              <h3 className="text-base font-semibold text-white flex items-center gap-2">
+          <div className="lg:col-span-4 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 p-6 space-y-6">
+            <div className="border-b border-[var(--border-subtle)] pb-4">
+              <h3 className="text-base font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
                 <MessageSquare size={16} className="text-[#ff7a00]" />
                 <span>Channel Traffic Split</span>
               </h3>
@@ -574,10 +576,10 @@ export function AgentStatsDashboardPage() {
               })}
             </div>
 
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-[var(--border-subtle)]">
               <Link
                 to="/workspace"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2.5 text-xs transition-all cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 hover:bg-white/10 border border-neutral-200 dark:border-[var(--border-subtle)] text-neutral-900 dark:text-white font-medium py-2.5 text-xs transition-all cursor-pointer"
               >
                 <span>Launch Interactive Workspace</span>
                 <ArrowUpRight size={12} className="text-neutral-400" />
@@ -587,14 +589,14 @@ export function AgentStatsDashboardPage() {
         </div>
 
         {/* Token Cost Estimator Calculator */}
-        <section aria-label="Token cost and budget preview" className="rounded-2xl border border-white/10 bg-[#0d111a] p-4 sm:p-8 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <section aria-label="Token cost and budget preview" className="rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 p-4 sm:p-8 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                 <Calculator size={20} />
               </div>
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-white flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-semibold text-neutral-900 dark:text-white flex flex-wrap items-center gap-2">
                   <span>Token Cost Estimator Calculator</span>
                   <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                     {isBudgetSimulationActive ? "Demo preview" : "Estimated pricing"}
@@ -608,7 +610,7 @@ export function AgentStatsDashboardPage() {
 
             {/* Currency & Provider Selectors */}
             <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/10">
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-neutral-200 dark:border-[var(--border-subtle)]">
                 {(["qwen", "deepseek", "openai"] as const).map((prov) => (
                   <button
                     key={prov}
@@ -616,7 +618,7 @@ export function AgentStatsDashboardPage() {
                     className={`px-3 py-1 rounded text-[11px] capitalize transition-all cursor-pointer ${
                       pricingProvider === prov
                         ? "bg-[#ff7a00] text-black font-semibold shadow"
-                        : "text-neutral-400 hover:text-white"
+                        : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
                     {prov === "deepseek" ? "DeepSeek" : prov === "qwen" ? "Qwen 72B" : "GPT-4o"}
@@ -624,7 +626,7 @@ export function AgentStatsDashboardPage() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-white/10">
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-lg border border-neutral-200 dark:border-[var(--border-subtle)]">
                 {(["USD", "VND"] as const).map((cur) => (
                   <button
                     key={cur}
@@ -632,7 +634,7 @@ export function AgentStatsDashboardPage() {
                     className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
                       currency === cur
                         ? "bg-white text-black shadow"
-                        : "text-neutral-400 hover:text-white"
+                        : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
                     {cur}
@@ -646,7 +648,7 @@ export function AgentStatsDashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
               <span className="text-neutral-500 block text-[11px]">Provider Baseline</span>
-              <div className="text-sm font-semibold text-white truncate">{selectedRate.name}</div>
+              <div className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{selectedRate.name}</div>
               <div className="text-[10px] text-neutral-400">
                 ${selectedRate.promptPrice}/1M prompt • ${selectedRate.completionPrice}/1M compl
               </div>
@@ -654,7 +656,7 @@ export function AgentStatsDashboardPage() {
 
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
               <span className="text-neutral-500 block text-[11px]">Prompt Input Cost</span>
-              <div className="text-base font-bold text-white">
+              <div className="text-base font-bold text-neutral-900 dark:text-white">
                 {currency === "USD" ? `$${displayedPromptCostUSD.toFixed(3)}` : `${Math.round(displayedPromptCostUSD * VND_RATE).toLocaleString()} ₫`}
               </div>
               <div className="text-[10px] text-neutral-400">
@@ -665,7 +667,7 @@ export function AgentStatsDashboardPage() {
 
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
               <span className="text-neutral-500 block text-[11px]">Completion Output Cost</span>
-              <div className="text-base font-bold text-white">
+              <div className="text-base font-bold text-neutral-900 dark:text-white">
                 {currency === "USD" ? `$${displayedCompletionCostUSD.toFixed(3)}` : `${Math.round(displayedCompletionCostUSD * VND_RATE).toLocaleString()} ₫`}
               </div>
               <div className="text-[10px] text-neutral-400">
@@ -730,11 +732,11 @@ export function AgentStatsDashboardPage() {
             </div>
           </div>
           {/* Budget Alert Threshold & Webhook Trigger Config */}
-          <div className="pt-6 border-t border-white/10 space-y-4">
+          <div className="pt-6 border-t border-[var(--border-subtle)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-start gap-2">
                 <ShieldAlert size={16} className={`shrink-0 ${isBudgetExceeded ? "text-red-400" : "text-[#ff7a00]"}`} />
-                <span className="text-xs font-mono font-semibold text-white">
+                <span className="text-xs font-mono font-semibold text-neutral-900 dark:text-white">
                   Monthly Budget Guard & Telegram Alert Webhook
                 </span>
               </div>
@@ -747,7 +749,7 @@ export function AgentStatsDashboardPage() {
                     className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
                       budgetLimitUSD === limit
                         ? "bg-[#ff7a00] text-black font-bold shadow"
-                        : "bg-white/5 text-neutral-400 hover:text-white"
+                        : "bg-white/5 text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
                     ${limit}
@@ -760,7 +762,7 @@ export function AgentStatsDashboardPage() {
             <div className="space-y-1.5 font-mono text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-neutral-400">
-                  Current Consumption: <strong className="text-white">${displayedTotalCostUSD.toFixed(2)}</strong> / ${budgetLimitUSD}.00
+                  Current Consumption: <strong className="text-neutral-900 dark:text-white">${displayedTotalCostUSD.toFixed(2)}</strong> / ${budgetLimitUSD}.00
                 </span>
                 <span className={isBudgetExceeded ? "text-red-400 font-bold" : "text-emerald-400"}>
                   {budgetUsagePercent}% of monthly threshold {isBudgetExceeded && "(LIMIT EXCEEDED)"}
@@ -789,7 +791,7 @@ export function AgentStatsDashboardPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2 min-w-0">
                   <div className={`h-2 w-2 rounded-full ${autoThrottleEnabled ? "bg-emerald-400" : "bg-neutral-600"}`} />
-                  <span className="font-semibold text-white">Auto-Throttle Policy Preview:</span>
+                  <span className="font-semibold text-neutral-900 dark:text-white">Auto-Throttle Policy Preview:</span>
                   <span className="text-neutral-400 text-[11px]">
                     Preview local Qwen 7B / 14B fallbacks. No runtime routing is changed.
                   </span>
@@ -803,7 +805,7 @@ export function AgentStatsDashboardPage() {
                   className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     autoThrottleEnabled
                       ? "bg-emerald-500 text-black shadow-sm"
-                      : "bg-white/10 text-neutral-400 hover:text-white"
+                      : "bg-white/10 text-neutral-400 hover:text-neutral-900 dark:text-white"
                   }`}
                 >
                   {autoThrottleEnabled ? "ENABLED" : "DISABLED"}
@@ -830,7 +832,7 @@ export function AgentStatsDashboardPage() {
 
             {/* Telegram Webhook Endpoint Input */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 font-mono text-xs">
-              <div className="min-w-0 flex-1 flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-neutral-300">
+              <div className="min-w-0 flex-1 flex items-center gap-2 bg-black/40 border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl px-3 py-2 text-neutral-300">
                 <Bell size={13} className="text-[#ff7a00] shrink-0" />
                 <input
                   type="text"
@@ -841,14 +843,14 @@ export function AgentStatsDashboardPage() {
                     setWebhookSaved(false);
                   }}
                   placeholder="https://api.telegram.org/bot<token>/sendMessage"
-                  className="min-w-0 w-full bg-transparent border-none text-xs text-white placeholder-neutral-600 focus:outline-none font-mono"
+                  className="min-w-0 w-full bg-transparent border-none text-xs text-neutral-900 dark:text-white placeholder-neutral-600 focus:outline-none font-mono"
                 />
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={handleSendTestAlert}
-                  className="px-3 py-2 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs transition-all cursor-pointer"
+                  className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] hover:border-white/20 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-neutral-900 dark:text-white text-xs transition-all cursor-pointer"
                 >
                   {testAlert ? "Alert Preview Ready" : "Test Alert"}
                 </button>

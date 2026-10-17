@@ -19,17 +19,24 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
       const slugStr = (a.slug || "").toLowerCase();
       let nodeStr = a.node || "";
 
-      // Ensure exact infra node assignment across all instances
-      if (idStr.includes("mons") || slugStr.includes("mons") || idStr.includes("swe") || idStr.includes("vision")) {
-        nodeStr = "node-6th";
-      } else if (idStr.includes("ken") || slugStr.includes("ken") || idStr.includes("sre") || idStr.includes("control")) {
-        nodeStr = "node-7th";
-      } else if (idStr.includes("mkai") || slugStr.includes("mkai") || idStr.includes("browser")) {
-        nodeStr = "node-4th";
-      } else if (idStr.includes("zen") || slugStr.includes("zen") || idStr.includes("llm")) {
-        nodeStr = "node-2nd";
-      } else {
-        nodeStr = "node-3rd";
+      let instanceKey = "node-3rd";
+      let displayNode = a.node || "Node 3rd (Core) - ai.hmz.one";
+
+      if (idStr.startsWith("gm-") || slugStr.startsWith("gm-") || nodeStr.includes("6th") || nodeStr.includes("gia mộc")) {
+        instanceKey = "node-6th";
+        displayNode = a.node || "Node 6th (Gia Mộc) - ai-gm.antares.vn";
+      } else if (idStr.startsWith("climax-") || slugStr.startsWith("climax-") || idStr.startsWith("planthy-") || slugStr.startsWith("planthy-") || nodeStr.includes("5th")) {
+        instanceKey = "node-5th";
+        displayNode = a.node || "Node 5th (Isolated) - antares.vn";
+      } else if (idStr.startsWith("agentteams-") || slugStr.startsWith("agentteams-") || idStr.includes("llm360") || idStr.includes("tsx") || nodeStr.includes("4th")) {
+        instanceKey = "node-4th";
+        displayNode = a.node || "Node 4th (Swarm & Inference) - hmz.one";
+      } else if (nodeStr.includes("7th") || idStr.includes("control")) {
+        instanceKey = "node-7th";
+        displayNode = a.node || "Node 7th (Control) - control.hmz.one";
+      } else if (nodeStr.includes("2nd")) {
+        instanceKey = "node-2nd";
+        displayNode = a.node || "Node 2nd (Platform) - api-agent360.antares.vn";
       }
 
       return {
@@ -37,7 +44,8 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         name: a.name || a.id,
         slug: a.slug || a.id,
         roleTag: a.roleTag || (a.pinned ? "Core" : "Operations"),
-        node: nodeStr,
+        node: displayNode,
+        instanceId: instanceKey,
         status: a.status || (a.startup_status === "running" ? "active" : "idle"),
         model: (typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna",
         runtimeVersion: a.runtimeVersion || "QwenPaw v1.2",
@@ -97,10 +105,8 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
       };
     });
   } catch (err) {
-    console.warn("Backend API not reachable, falling back to mock agent chats", err);
-    const { MOCK_INFRA_AGENTS } = await import("../data/mockInfraAgents");
-    const found = MOCK_INFRA_AGENTS.find((a) => a.id === agentId || a.slug === agentId);
-    return found ? found.sessions : (MOCK_INFRA_AGENTS[0]?.sessions || []);
+    console.warn("fetchAgentChats error, returning empty list instead of stale mocks", err);
+    return [];
   }
 }
 
@@ -108,22 +114,13 @@ export async function updateAgentActiveModel(agentId: string, providerId: string
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
     // Fetch full current agent record first because QwenPaw API requires full payload on PUT
-    const getRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
-      headers: { Accept: "application/json" }
-    });
-    if (!getRes.ok) throw new Error(`Failed to fetch agent ${cleanId}`);
-    const agentData = await getRes.json();
-    agentData.active_model = {
-      provider_id: providerId,
-      model: model,
-    };
-    const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
+    const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(agentData),
+      body: JSON.stringify({ scope: "agent", agent_id: cleanId, provider_id: providerId, model }),
     });
     return putRes.ok;
   } catch (err) {
@@ -193,50 +190,91 @@ export interface WorkspaceTreeNode {
   children?: WorkspaceTreeNode[];
 }
 
-export async function fetchWorkspaceTree(agentId: string): Promise<WorkspaceTreeNode[]> {
+export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTreeNode[]> {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(agentId)}/files`, {
+    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/tree`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {
       throw new Error(`Failed to fetch workspace tree: ${res.statusText}`);
     }
     const data = await res.json();
-    return Array.isArray(data) ? data : (data.files || []);
+    const rawEntries = Array.isArray(data) ? data : (data.entries || data.files || []);
+    return rawEntries.map((e: any) => ({
+      name: e.name || e.path || "file",
+      path: e.path || e.name || "",
+      kind: e.kind === "directory" || e.type === "directory" ? "directory" : "file",
+      size: typeof e.size === "number" ? e.size : null
+    }));
   } catch (err) {
-    console.warn(`fetchWorkspaceTree fallback for ${agentId}:`, err);
-    return [
-      { name: "agent.json", path: "agent.json", kind: "file", size: 1024 },
-      { name: "AGENTS.md", path: "AGENTS.md", kind: "file", size: 4096 },
-      { name: "MEMORY.md", path: "MEMORY.md", kind: "file", size: 2048 },
-      { name: "SOUL.md", path: "SOUL.md", kind: "file", size: 1536 },
-      { name: "skills", path: "skills", kind: "directory" },
-    ];
+    console.warn(`fetchWorkspaceTree failed for ${cleanId}:`, err);
+    return [];
   }
 }
 
 export async function fetchWorkspaceFileContent(agentId: string, filePath: string): Promise<string> {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(agentId)}/files/content?path=${encodeURIComponent(filePath)}`, {
-      headers: { Accept: "text/plain, application/json" }
+    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
+      headers: { Accept: "application/json" }
     });
     if (!res.ok) {
       throw new Error(`Failed to fetch file content: ${res.statusText}`);
     }
-    return await res.text();
+    const json = await res.json();
+    return typeof json === "string" ? json : (json.content || "");
   } catch (err) {
-    console.warn(`fetchWorkspaceFileContent fallback for ${filePath}:`, err);
-    return `# Workspace File: ${filePath}\n\n[Live content preview not available]`;
+    console.warn(`fetchWorkspaceFileContent failed for ${cleanId}/${filePath}:`, err);
+    return `# ${filePath}\n\n[Unable to load live content]`;
   }
 }
 
+// Fast Client-Side Dialogue Session Cache for Instant Navigation
+const _chatMessagesCache = new Map<string, { messages: ChatMessage[]; timestamp: number }>();
+
+export function getCachedChatMessages(chatId: string, agentId?: string): ChatMessage[] | null {
+  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const key = `${cleanAgentId}:${chatId}`;
+  const cached = _chatMessagesCache.get(key);
+  if (cached && cached.messages) {
+    return cached.messages;
+  }
+  try {
+    const raw = sessionStorage.getItem(`agent360_msgcache_${key}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        _chatMessagesCache.set(key, { messages: parsed, timestamp: Date.now() });
+        return parsed;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function setCachedChatMessages(chatId: string, messages: ChatMessage[], agentId?: string): void {
+  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const key = `${cleanAgentId}:${chatId}`;
+  _chatMessagesCache.set(key, { messages, timestamp: Date.now() });
+  try {
+    sessionStorage.setItem(`agent360_msgcache_${key}`, JSON.stringify(messages.slice(-50)));
+  } catch {}
+}
+
 export async function fetchChatMessages(chatId: string, agentId?: string): Promise<ChatMessage[]> {
+  // If this is a fresh client-generated session (e.g. session-xxxxxx), return immediately without network latency
+  if (chatId.startsWith("session-")) {
+    setCachedChatMessages(chatId, [], agentId);
+    return [];
+  }
   try {
     const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
     // Priority URLs: /api/agents/chats/:chatId (direct history endpoint on AgentFeaturesEndpoints)
     const urlsToTry = [
-      `${API_BASE_URL}/agents/chats/${encodeURIComponent(chatId)}`,
       cleanAgentId ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanAgentId)}/chats/${encodeURIComponent(chatId)}` : null,
+      cleanAgentId ? `${API_BASE_URL}/agents/chats/${encodeURIComponent(chatId)}?agentId=${encodeURIComponent(cleanAgentId)}` : null,
+      `${API_BASE_URL}/agents/chats/${encodeURIComponent(chatId)}`,
       `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}`
     ].filter(Boolean) as string[];
 
@@ -252,9 +290,6 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
     }
     if (!res || !res.ok) {
       throw new Error(`Failed to fetch messages for chat ${chatId}`);
-    }
-    if (!res.ok) {
-      throw new Error(`Failed to fetch messages: ${res.statusText}`);
     }
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.messages || []);
@@ -457,31 +492,23 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
         filteredTurns.push(t);
       }
     }
+    setCachedChatMessages(chatId, filteredTurns, agentId);
     return filteredTurns;
   } catch (err) {
+    // If this is a fresh new session created on the client (starts with session-), return empty turns immediately
+    if (chatId.startsWith("session-")) {
+      return [];
+    }
     console.warn("fetchChatMessages fallback to mock dialogues", err);
     const { MOCK_MESSAGES_BY_SESSION } = await import("../data/mockInfraAgents");
-    return MOCK_MESSAGES_BY_SESSION[chatId] || [
-      {
-        id: "m-default-1",
-        role: "user",
-        content: "Status and readiness of agent session.",
-        timestamp: "Just now"
-      },
-      {
-        id: "m-default-2",
-        role: "assistant",
-        content: "Agent session active and listening on secure channel. All tools verified.",
-        timestamp: "Just now",
-        evidenceStatus: "observed"
-      }
-    ];
+    return MOCK_MESSAGES_BY_SESSION[chatId] || [];
   }
 }
 
-export async function fetchSkills(): Promise<string[]> {
+export async function fetchSkills(agentId?: string): Promise<string[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/skills`, {
+    const cleanId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
+    const res = await fetch(cleanId ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/skills` : `${API_BASE_URL}/agents/skills`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {
@@ -514,10 +541,11 @@ export interface AgentMcpClient {
 
 export async function fetchAgentMcpClients(agentId: string): Promise<AgentMcpClient[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/mcp`, {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await fetch(`${API_BASE_URL}/mcp?agentIdQuery=${encodeURIComponent(cleanId)}`, {
       headers: {
         Accept: "application/json",
-        "X-Agent-Id": agentId,
+        "X-Agent-Id": cleanId,
       },
     });
     if (!res.ok) {
@@ -552,12 +580,11 @@ export interface AgentScheduleJob {
 export async function fetchAgentChannels(agentId: string): Promise<AgentChannelConfig[]> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
+    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels`, {
       headers: { Accept: "application/json" }
     });
-    if (!res.ok) throw new Error("Failed to fetch agent profile");
-    const data = await res.json();
-    const channelsObj = data.channels || {};
+    if (!res.ok) throw new Error("Failed to fetch agent channels");
+    const channelsObj = await res.json();
     
     const list: AgentChannelConfig[] = [];
     for (const [key, val] of Object.entries<any>(channelsObj)) {
@@ -570,35 +597,22 @@ export async function fetchAgentChannels(agentId: string): Promise<AgentChannelC
     }
     return list;
   } catch (err) {
-    console.warn("fetchAgentChannels fallback", err);
-    return [
-      { name: "CONSOLE", enabled: true, type: "console" },
-      { name: "TELEGRAM", enabled: true, type: "telegram" },
-      { name: "DISCORD", enabled: false, type: "discord" },
-      { name: "SLACK", enabled: false, type: "slack" },
-      { name: "MATRIX", enabled: false, type: "matrix" },
-    ];
+    console.warn("fetchAgentChannels failed", err);
+    return [];
   }
 }
 
 export async function toggleAgentChannel(agentId: string, channelType: string, enabled: boolean): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const getRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
-      headers: { Accept: "application/json" }
-    });
-    if (!getRes.ok) throw new Error("Failed to fetch agent profile");
-    const data = await getRes.json();
-    const channels = data.channels || {};
-    if (!channels[channelType]) {
-      channels[channelType] = { enabled: enabled };
-    } else {
-      channels[channelType].enabled = enabled;
-    }
-    const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
+    const channelPath = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels/${encodeURIComponent(channelType)}`;
+    const getRes = await fetch(channelPath, { headers: { Accept: "application/json" } });
+    if (!getRes.ok) throw new Error("Failed to fetch channel config");
+    const current = await getRes.json();
+    const putRes = await fetch(channelPath, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ ...data, channels })
+      body: JSON.stringify({ ...current, enabled })
     });
     return putRes.ok;
   } catch (err) {
@@ -607,9 +621,14 @@ export async function toggleAgentChannel(agentId: string, channelType: string, e
   }
 }
 
+function agentScopedPath(agentId: string | undefined, path: string): string {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  return `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/${path.replace(/^\//, "")}`;
+}
+
 export async function fetchAgentSchedules(agentId?: string): Promise<AgentScheduleJob[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/cron/jobs`, {
+    const res = await fetch(agentScopedPath(agentId, "cron/jobs"), {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) throw new Error("Failed to fetch cron jobs");
@@ -625,27 +644,8 @@ export async function fetchAgentSchedules(agentId?: string): Promise<AgentSchedu
       promptSnippet: j.request?.input?.[0]?.content?.[0]?.text?.slice(0, 100) || "Routine automation run"
     }));
   } catch (err) {
-    console.warn("fetchAgentSchedules fallback", err);
-    return [
-      {
-        id: "cron-1",
-        name: "Morning Intelligence Brief",
-        enabled: true,
-        cronExpr: "0 08 * * *",
-        timezone: "Asia/Ho_Chi_Minh",
-        targetChannel: "telegram",
-        promptSnippet: "Summarize top critical alerts and unread notifications"
-      },
-      {
-        id: "cron-2",
-        name: "Evening Sync & Reconcile",
-        enabled: true,
-        cronExpr: "0 21 * * *",
-        timezone: "Asia/Ho_Chi_Minh",
-        targetChannel: "telegram",
-        promptSnippet: "Perform daily health check and dispatch summary report"
-      }
-    ];
+    console.warn("fetchAgentSchedules failed", err);
+    return [];
   }
 }
 
@@ -653,20 +653,14 @@ export async function fetchAgentSchedules(agentId?: string): Promise<AgentSchedu
 export async function updateAgentChannelConfig(agentId: string, channelType: string, newConfig: Record<string, any>): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const getRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
-      headers: { Accept: "application/json" }
-    });
-    if (!getRes.ok) throw new Error("Failed to fetch agent profile");
-    const data = await getRes.json();
-    const channels = data.channels || {};
-    channels[channelType] = {
-      ...(channels[channelType] || {}),
-      ...newConfig
-    };
-    const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
+    const channelPath = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels/${encodeURIComponent(channelType)}`;
+    const getRes = await fetch(channelPath, { headers: { Accept: "application/json" } });
+    if (!getRes.ok) throw new Error("Failed to fetch channel config");
+    const current = await getRes.json();
+    const putRes = await fetch(channelPath, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ ...data, channels })
+      body: JSON.stringify({ ...current, ...newConfig })
     });
     return putRes.ok;
   } catch (err) {
@@ -678,10 +672,13 @@ export async function updateAgentChannelConfig(agentId: string, channelType: str
 export async function createOrUpdateSchedule(jobData: any): Promise<boolean> {
   try {
     const isEdit = Boolean(jobData.id && !jobData.id.startsWith("new-"));
-    const endpoint = isEdit ? `${API_BASE_URL}/cron/jobs/${encodeURIComponent(jobData.id)}` : `${API_BASE_URL}/cron/jobs`;
+    const endpoint = isEdit
+      ? agentScopedPath(jobData.agentId, `cron/jobs/${encodeURIComponent(jobData.id)}`)
+      : agentScopedPath(jobData.agentId, "cron/jobs");
     const method = isEdit ? "PUT" : "POST";
 
     const payload = {
+      ...(isEdit ? { id: jobData.id } : {}),
       name: jobData.name || "Automated Schedule",
       enabled: jobData.enabled !== false,
       schedule: {
@@ -728,9 +725,38 @@ export async function createOrUpdateSchedule(jobData: any): Promise<boolean> {
   }
 }
 
-export async function deleteSchedule(jobId: string): Promise<boolean> {
+export interface TurnTelemetryPayload {
+  agentId: string;
+  sessionId: string;
+  model: string;
+  ttftMs: number;
+  totalDurationMs: number;
+  tokenCount: number;
+  tokensPerSec: number;
+  estimatedCostUsd: number;
+  node: string;
+}
+
+export async function sendTurnTelemetryBeacon(payload: TurnTelemetryPayload): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/cron/jobs/${encodeURIComponent(jobId)}`, {
+    const res = await fetch(`${API_BASE_URL}/agents/analytics/turn-telemetry`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("Failed to dispatch turn telemetry beacon:", err);
+    return false;
+  }
+}
+
+export async function deleteSchedule(jobId: string, agentId?: string): Promise<boolean> {
+  try {
+    const res = await fetch(agentScopedPath(agentId, `cron/jobs/${encodeURIComponent(jobId)}`), {
       method: "DELETE",
       headers: { Accept: "application/json" }
     });
@@ -741,16 +767,124 @@ export async function deleteSchedule(jobId: string): Promise<boolean> {
   }
 }
 
-export async function toggleScheduleStatus(jobId: string, currentEnabled: boolean): Promise<boolean> {
+export async function toggleScheduleStatus(jobId: string, currentEnabled: boolean, agentId?: string): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE_URL}/cron/jobs/${encodeURIComponent(jobId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ enabled: !currentEnabled })
+    const action = currentEnabled ? "pause" : "resume";
+    const res = await fetch(agentScopedPath(agentId, `cron/jobs/${encodeURIComponent(jobId)}/${action}`), {
+      method: "POST",
+      headers: { Accept: "application/json" }
     });
     return res.ok;
   } catch (err) {
     console.warn("toggleScheduleStatus error", err);
     return false;
+  }
+}
+
+import { InfraNodeInstance, BotDeploymentInstance } from "../types/instance";
+
+export async function fetchInfraInstances(): Promise<InfraNodeInstance[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/instances`, {
+      headers: { Accept: "application/json" }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch instances: ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.warn("fetchInfraInstances fallback:", err);
+    return [];
+  }
+}
+
+export async function fetchBotDeployments(botId: string): Promise<BotDeploymentInstance[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/bots/${encodeURIComponent(botId)}/deployments`, {
+      headers: { Accept: "application/json" }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch bot deployments: ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.warn(`fetchBotDeployments fallback for ${botId}:`, err);
+    return [];
+  }
+}
+
+export interface CompactContextResponse {
+  success: boolean;
+  agent_id: string;
+  session_id?: string;
+  action: string;
+  details?: any;
+}
+
+export async function compactAgentContext(agentId: string, sessionId?: string, hint?: string): Promise<CompactContextResponse> {
+  try {
+    const cleanAgent = agentId.replace(/^bot:agent360:/, "").trim();
+    const res = await fetch(`${API_BASE_URL}/agents/compact-context`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        agent_id: cleanAgent,
+        session_id: sessionId,
+        hint: hint,
+        clean_history_gc: true,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to compact context: ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.warn("compactAgentContext error:", err);
+    return {
+      success: false,
+      agent_id: agentId,
+      session_id: sessionId,
+      action: "error",
+      details: { error: err.message },
+    };
+  }
+}
+
+export interface ToolCallReceipt {
+  schema: string;
+  tool_call_id: string;
+  bot_id: string;
+  bot_binding_id?: string;
+  deployment_id?: string;
+  run_id: string;
+  capability_id: string;
+  input_hash?: string;
+  authorization_decision_id: string;
+  policy_hash: string;
+  status: "proposed" | "denied" | "awaiting_approval" | "running" | "succeeded" | "failed" | "cancelled";
+  output_hash?: string;
+  error?: string;
+}
+
+export async function fetchToolCallReceipts(sessionId: string, agentId?: string): Promise<ToolCallReceipt[]> {
+  try {
+    const cleanAgent = agentId ? agentId.replace(/^bot:agent360:/, "").trim() : "";
+    const url = cleanAgent
+      ? `${API_BASE_URL}/agents/sessions/${encodeURIComponent(sessionId)}/tool-receipts?agentId=${encodeURIComponent(cleanAgent)}`
+      : `${API_BASE_URL}/agents/sessions/${encodeURIComponent(sessionId)}/tool-receipts`;
+
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch receipts: ${res.statusText}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.warn("fetchToolCallReceipts fallback:", err);
+    return [];
   }
 }

@@ -1,174 +1,335 @@
-import { useState, useEffect } from "react";
+import { SkyerLogo } from "./SkyerLogo";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bot, Menu, X, ArrowUpRight, Sparkles, LogIn } from "lucide-react";
+import {
+  ChevronDown,
+  Sparkles,
+  Server,
+  Shield,
+  Workflow,
+  Cpu,
+  BarChart3,
+  BookOpen,
+  Users,
+  ExternalLink,
+  LogIn,
+  Sun,
+  Moon,
+  Menu,
+  X,
+  Layers,
+  ArrowRight
+} from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
+import { LanguageSelector } from "./LanguageSelector";
+import { ThemeSelector } from "./ThemeSelector";
+import { useTranslation } from "../i18n/LanguageContext";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("");
+  const [openDropdown, setOpenDropdown] = useState<"product" | "solutions" | "resources" | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { themeMode, resolvedTheme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const location = useLocation();
 
-  const isLinkActive = (path: string) => location.pathname === path;
-
-  // ScrollSpy for landing page section anchors
+  // Close overlay dropdowns on outside click or escape
   useEffect(() => {
-    if (location.pathname !== "/") {
-      setActiveSection("");
-      return;
-    }
-
-    const sectionIds = ["bots", "hierarchy", "workflow", "architecture", "pricing", "faq"];
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 120;
-      let currentSection = "";
-
-      for (const id of sectionIds) {
-        const el = document.getElementById(id);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPosition >= top && scrollPosition < top + height) {
-            currentSection = id;
-            break;
-          }
-        }
+    const handleOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
       }
-      setActiveSection(currentSection);
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenDropdown(null);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [location.pathname]);
+  // Close dropdown on route change
+  useEffect(() => {
+    setOpenDropdown(null);
+    setMobileMenuOpen(false);
+  }, [location.pathname, location.hash]);
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-[#07090e]/85 backdrop-blur-xl border-b border-white/[0.08]">
+    <header className="fixed top-0 inset-x-0 z-50 bg-[var(--bg-nav)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] transition-colors select-none">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo & Name */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-[#ff7a00] to-amber-400 p-[1px] shadow-[0_0_15px_rgba(255,122,0,0.25)]">
-            <div className="h-full w-full bg-[#07090e] rounded-[11px] flex items-center justify-center group-hover:bg-transparent transition-colors">
-              <Bot size={20} className="text-[#ff7a00] group-hover:text-black transition-colors" />
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-base tracking-tight text-white flex items-center gap-1.5">
-              Skyer
-              <span className="text-[10px] font-mono font-normal uppercase bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 px-1.5 py-0.2 rounded-full">
-                Bot
-              </span>
-            </span>
-          </div>
+        <Link to="/" className="shrink-0 flex items-center">
+          <SkyerLogo size={32} showText={true} showBotBadge={false} />
         </Link>
 
-        {/* Desktop Navigation Links aligned to GrokBot style with ScrollSpy indicator */}
-        <nav className="hidden md:flex items-center gap-1 text-[13px] font-medium text-neutral-300">
+        {/* Desktop Navigation Links: 3 Lean Dropdown Overlays + Direct Pricing */}
+        <nav ref={dropdownRef} className="hidden md:flex items-center gap-1.5 text-xs font-medium text-neutral-300">
+          
+          {/* 1. PRODUCT OVERLAY */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === "product" ? null : "product")}
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
+                openDropdown === "product"
+                  ? "bg-white/10 text-white font-semibold"
+                  : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
+              }`}
+            >
+              <span>Product</span>
+              <ChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${openDropdown === "product" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
+              />
+            </button>
+
+            {openDropdown === "product" && (
+              <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-[#0c0e15]/95 border border-white/15 p-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
+                <a
+                  href="/#bots"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00] shrink-0 mt-0.5">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                      AI Employees
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      Specialized autonomous teammates across Finance, Sales, CX, and Operations.
+                    </div>
+                  </div>
+                </a>
+
+                <a
+                  href="/#hierarchy"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
+                    <Workflow size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors">
+                      Multi-Agent Coordination (ACP)
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      Connect bots in one thread. Delegate tasks with verified execution receipts.
+                    </div>
+                  </div>
+                </a>
+
+                <Link
+                  to="/app"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 mt-0.5">
+                    <Cpu size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-purple-400 transition-colors">
+                      Virtual Computer Workspace
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      Persistent browser cookies, isolated execution sandbox, and live tool access.
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* 2. SOLUTIONS & DEPLOYMENT OVERLAY */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === "solutions" ? null : "solutions")}
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
+                openDropdown === "solutions"
+                  ? "bg-white/10 text-white font-semibold"
+                  : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
+              }`}
+            >
+              <span>Solutions</span>
+              <ChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${openDropdown === "solutions" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
+              />
+            </button>
+
+            {openDropdown === "solutions" && (
+              <div className="absolute left-0 mt-2 w-80 rounded-2xl bg-[#0c0e15]/95 border border-white/15 p-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
+                <a
+                  href="/#on-premise"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                    <Shield size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                      <span>On-Premise Private Cluster</span>
+                      <span className="text-[9px] font-mono bg-emerald-400/15 text-emerald-400 px-1.5 py-0.2 rounded">Sovereign</span>
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      100% Air-gapped deployment behind your firewall with local vLLM / Ollama inference.
+                    </div>
+                  </div>
+                </a>
+
+                <Link
+                  to="/marketplace"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00] shrink-0 mt-0.5">
+                    <Layers size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                      Corporate Role Catalog
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      Templates categorized by company scale (Startup, SME, Global Enterprise).
+                    </div>
+                  </div>
+                </Link>
+
+                <div className="pt-2 mt-1 border-t border-white/[0.06] px-2.5 pb-1 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                  <span>Architecture Docs & Security:</span>
+                  <a
+                    href="/skyer-enterprise-whitepaper.md"
+                    target="_blank"
+                    className="text-[#ff7a00] hover:underline flex items-center gap-1 font-sans text-xs"
+                  >
+                    Whitepaper <ExternalLink size={10} />
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. PLATFORM & RESOURCES OVERLAY */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(openDropdown === "resources" ? null : "resources")}
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
+                openDropdown === "resources"
+                  ? "bg-white/10 text-white font-semibold"
+                  : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
+              }`}
+            >
+              <span>Resources</span>
+              <ChevronDown
+                size={12}
+                className={`transition-transform duration-200 ${openDropdown === "resources" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
+              />
+            </button>
+
+            {openDropdown === "resources" && (
+              <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-[#0c0e15]/95 border border-white/15 p-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
+                <Link
+                  to="/docs"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0 mt-0.5">
+                    <BookOpen size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                      Documentation & API
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      QwenPaw ACP protocols, tool integration guides, and runbooks.
+                    </div>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/analytics"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                    <BarChart3 size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors">
+                      Fleet Telemetry & Load
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      Live memory saturation, CPU radar, and active agent execution metrics.
+                    </div>
+                  </div>
+                </Link>
+
+                <a
+                  href="https://community-agent360.antares.vn"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
+                    <Users size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                      <span>Community Forum</span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    </div>
+                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                      Discuss multi-agent patterns with enterprise AI engineers.
+                    </div>
+                  </div>
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Direct Link: Transparent Pricing */}
           <a
-            href="/#bots"
-            className={`px-3.5 py-1.5 rounded-full transition-all ${
-              location.pathname === "/" && activeSection === "bots"
-                ? "bg-white/10 text-[#ff7a00] font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
+            href="/#pricing"
+            className="px-3.5 py-1.5 rounded-full text-xs hover:text-white hover:bg-white/[0.06] transition-all text-neutral-300"
           >
-            Bots
-          </a>
-          <a
-            href="/#hierarchy"
-            className={`px-3.5 py-1.5 rounded-full transition-all ${
-              location.pathname === "/" && activeSection === "hierarchy"
-                ? "bg-white/10 text-[#ff7a00] font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
-          >
-            Multi-Agent
-          </a>
-          <a
-            href="/#workflow"
-            className={`px-3.5 py-1.5 rounded-full transition-all ${
-              location.pathname === "/" && activeSection === "workflow"
-                ? "bg-white/10 text-[#ff7a00] font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
-          >
-            How it Works
-          </a>
-          <a
-            href="/#architecture"
-            className={`px-3.5 py-1.5 rounded-full transition-all ${
-              location.pathname === "/" && activeSection === "architecture"
-                ? "bg-white/10 text-[#ff7a00] font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
-          >
-            Architecture
-          </a>
-          <Link
-            to="/marketplace"
-            className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
-              isLinkActive("/marketplace")
-                ? "bg-white/10 text-white font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
-          >
-            <Sparkles size={13} className="text-[#ff7a00]" />
-            <span>Marketplace</span>
-          </Link>
-          <Link
-            to="/analytics"
-            className={`px-3.5 py-1.5 rounded-full transition-all ${
-              isLinkActive("/analytics")
-                ? "bg-white/10 text-white font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
-          >
-            Analytics
-          </Link>
-          <Link
-            to="/docs"
-            className={`px-3.5 py-1.5 rounded-full transition-all ${
-              isLinkActive("/docs")
-                ? "bg-white/10 text-white font-semibold"
-                : "hover:text-white hover:bg-white/[0.06]"
-            }`}
-          >
-            Docs
-          </Link>
-          <a
-            href="https://community-agent360.antares.vn"
-            target="_blank"
-            rel="noreferrer"
-            className="px-3 py-1 rounded-full hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5 text-neutral-300 text-xs"
-            title="Join Skyer Community Forum"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Community</span>
+            Pricing
           </a>
         </nav>
 
-        {/* Right Action Buttons */}
+        {/* Right Action Controls: Clean Utility Cluster */}
         <div className="hidden sm:flex items-center gap-2.5">
+          {/* Language Selector (Auto Location: vi / en) */}
+          <LanguageSelector />
+
+          {/* Theme Selector (System / Light / Dark) */}
+          <ThemeSelector />
+
+          {/* GitHub Source Link */}
           <a
             href="https://github.com/agentscope-ai/QwenPaw"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-medium text-neutral-400 hover:text-white px-3 py-2 rounded-full hover:bg-white/[0.06] transition-all flex items-center gap-1"
+            className="text-xs font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/[0.06] transition-all flex items-center gap-1"
           >
             <span>GitHub</span>
-            <ArrowUpRight size={13} className="text-neutral-500" />
+            <ExternalLink size={11} className="text-neutral-500" />
           </a>
 
-          {/* SIGN IN BUTTON -> DIRECT ENTRY TO /app */}
+          {/* SIGN IN BUTTON */}
           <Link
             to="/app"
-            className="text-xs font-medium text-neutral-200 hover:text-white px-3.5 py-2 rounded-full border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
+            className="text-xs font-medium text-neutral-200 hover:text-white px-3.5 py-1.5 rounded-full border border-white/10 hover:border-white/20 bg-white/5 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <LogIn size={13} className="text-[#ff7a00]" />
-            <span>Sign In</span>
+            <span>{t("nav.signIn")}</span>
           </Link>
 
+          {/* LAUNCH APP CTA */}
           <Link
             to="/app"
-            className="text-xs font-medium bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-2 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95"
+            className="text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95"
           >
             Launch App
           </Link>
@@ -184,87 +345,112 @@ export function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu Slide-down Sheet */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#0a0d14] border-b border-white/10 px-4 py-6 space-y-2">
-          <a
-            href="/#bots"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm text-neutral-200 hover:text-white py-2"
-          >
-            Bots & AI Teammates
-          </a>
-          <a
-            href="/#hierarchy"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm text-[#ff7a00] font-medium py-2"
-          >
-            Multi-Agent Topology
-          </a>
-          <a
-            href="/#workflow"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm text-neutral-200 hover:text-white py-2"
-          >
-            How it Works
-          </a>
-          <a
-            href="/#architecture"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm text-neutral-200 hover:text-white py-2"
-          >
-            Architecture
-          </a>
-          <div className="pt-2 border-t border-white/10 space-y-1">
+        <div className="md:hidden bg-[#0c0e15] border-b border-white/10 px-4 py-6 space-y-4 max-h-[85vh] overflow-y-auto">
+          {/* Section 1: Core Navigation */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">Platform</span>
+            <a
+              href="/#bots"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm text-neutral-200 hover:text-white py-2 px-1"
+            >
+              AI Employees & Roles
+            </a>
+            <a
+              href="/#on-premise"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm text-emerald-400 font-medium py-2 px-1 flex items-center gap-2"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span>On-Premise Private Cluster</span>
+            </a>
+            <a
+              href="/#hierarchy"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm text-[#ff7a00] font-medium py-2 px-1"
+            >
+              Multi-Agent Coordination (ACP)
+            </a>
             <Link
               to="/marketplace"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-neutral-200 hover:text-white py-2"
+              className="block text-sm text-neutral-200 hover:text-white py-2 px-1"
             >
-              Marketplace
+              Marketplace Catalog
+            </Link>
+            <a
+              href="/#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm text-neutral-200 hover:text-white py-2 px-1"
+            >
+              Pricing Tiers
+            </a>
+          </div>
+
+          {/* Section 2: Resources & Docs */}
+          <div className="pt-3 border-t border-white/10 space-y-1">
+            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">Resources</span>
+            <Link
+              to="/docs"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm text-neutral-300 hover:text-white py-2 px-1"
+            >
+              Documentation & Guides
             </Link>
             <Link
               to="/analytics"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-neutral-200 hover:text-white py-2"
+              className="block text-sm text-neutral-300 hover:text-white py-2 px-1"
             >
-              Analytics & Telemetry
-            </Link>
-            <Link
-              to="/docs"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-neutral-200 hover:text-white py-2"
-            >
-              Documentation
+              Fleet Telemetry Radar
             </Link>
             <a
               href="https://community-agent360.antares.vn"
               target="_blank"
               rel="noreferrer"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-emerald-400 font-medium py-2 flex items-center justify-between"
+              className="block text-sm text-emerald-400 font-medium py-2 px-1 flex items-center justify-between"
             >
-              <span>Community Forum (Discourse)</span>
-              <span className="text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-400">Ready to Post</span>
+              <span>Community Forum</span>
+              <ExternalLink size={12} />
+            </a>
+            <a
+              href="/skyer-enterprise-whitepaper.md"
+              target="_blank"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm text-neutral-300 hover:text-white py-2 px-1 flex items-center justify-between"
+            >
+              <span>Enterprise Whitepaper (PDF/MD)</span>
+              <ExternalLink size={12} />
             </a>
           </div>
 
-          <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
-            <Link
-              to="/app"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2 rounded-full flex items-center justify-center gap-2"
-            >
-              <LogIn size={14} className="text-[#ff7a00]" />
-              <span>Sign In to Skyer</span>
-            </Link>
-            <Link
-              to="/app"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-center text-sm font-medium bg-[#ff7a00] text-black py-2.5 rounded-full"
-            >
-              Launch App
-            </Link>
+          {/* Section 3: Language & Action Buttons */}
+          <div className="pt-3 border-t border-white/10 space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-neutral-400 font-mono">Language / Ngôn ngữ:</span>
+              <LanguageSelector />
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <Link
+                to="/app"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2"
+              >
+                <LogIn size={14} className="text-[#ff7a00]" />
+                <span>Sign In to Skyer</span>
+              </Link>
+              <Link
+                to="/app"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-center text-sm font-medium bg-[#ff7a00] text-black py-2.5 rounded-full shadow-md"
+              >
+                Launch App
+              </Link>
+            </div>
           </div>
         </div>
       )}

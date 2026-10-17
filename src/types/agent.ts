@@ -11,6 +11,8 @@ export interface AgentSession {
   messageCount: number;
   lastMessageSnippet: string;
   unread?: boolean;
+  session_id?: string;
+  agentId?: string;
 }
 
 export interface ToolCallItem {
@@ -53,6 +55,7 @@ export interface InfraAgent {
   slug: string;
   roleTag: "Engineering" | "Operations" | "Quality" | "Research" | "Security";
   node: string;
+  instanceId?: string;
   status: "active" | "idle" | "evaluating" | "degraded";
   model: string;
   runtimeVersion: string;
