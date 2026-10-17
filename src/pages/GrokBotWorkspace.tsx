@@ -981,6 +981,7 @@ export function GrokBotWorkspace() {
 
 
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [speakingSentence, setSpeakingSentence] = useState<string | null>(null);
   const [copiedResponseMsgId, setCopiedResponseMsgId] = useState<string | null>(null);
   const [speechRate, setSpeechRate] = useState<number>(() => getStoredSpeechSettings().rate);
   const [speechPitch, setSpeechPitch] = useState<number>(() => getStoredSpeechSettings().pitch);
@@ -1589,6 +1590,7 @@ export function GrokBotWorkspace() {
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned">("all");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
+  const [isBatchClearModalOpen, setIsBatchClearModalOpen] = useState(false);
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
   const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
@@ -2208,6 +2210,20 @@ export function GrokBotWorkspace() {
     }
   };
 
+  const handleBatchClearChats = () => {
+    // Keep pinned chats or clear all non-pinned
+    setChats((prev) => prev.filter((c) => pinnedChatIds.includes(c.id)));
+    if (!pinnedChatIds.includes(selectedChatId || "")) {
+      const remaining = chats.filter((c) => pinnedChatIds.includes(c.id));
+      if (remaining.length > 0) {
+        handleSelectChat(remaining[0]);
+      } else {
+        handleNewChat();
+      }
+    }
+    setIsBatchClearModalOpen(false);
+  };
+
     const handleForkSession = (fromMsgIndex: number) => {
     const forkedChatId = `session-fork-${Date.now().toString().slice(-6)}`;
     const forkedMessages = messages.slice(0, fromMsgIndex + 1);
@@ -2509,8 +2525,10 @@ export function GrokBotWorkspace() {
 
       if (isAutoSpeakEnabled && accumulated) {
         speakText(accumulated, {
+          onSegmentChange: (seg) => setSpeakingSentence(seg),
           onEnd: () => {
             setSpeakingMsgId(null);
+            setSpeakingSentence(null);
             // If continuous hands-free voice conversation is enabled, resume listening after bot finishes
             if (isContinuousVoiceActiveRef.current && vadModeRef.current === "continuous") {
               setTimeout(() => {
@@ -2707,7 +2725,7 @@ export function GrokBotWorkspace() {
               ? (isLeftSidebarCollapsed ? "64px" : `${leftSidebarWidth}px`)
               : undefined,
         }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform relative ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform ${
           mobileAgentsOpen
             ? "w-[85vw] max-w-[380px] translate-x-0 shadow-2xl"
             : isCompactMode
@@ -3186,7 +3204,13 @@ export function GrokBotWorkspace() {
             className={`${isCompactMode || isLeftSidebarCollapsed ? "flex" : "lg:hidden flex"} h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors`}
             title={isLeftSidebarCollapsed ? "Expand Agents Sidebar (Ctrl+B)" : "Toggle Agents Sidebar"}
           >
-            {isLeftSidebarCollapsed ? <PanelLeftOpen size={16} /> : <Menu size={16} />}
+            {/* Show PanelLeftOpen on desktop when collapsed; on mobile always show Menu drawer icon */}
+            <span className="hidden lg:inline-flex">
+              {isLeftSidebarCollapsed ? <PanelLeftOpen size={16} /> : <Menu size={16} />}
+            </span>
+            <span className="lg:hidden inline-flex">
+              <Menu size={16} />
+            </span>
           </button>
 
           {/* Middle Group: Capsule Info + Telemetry HUD */}
@@ -3685,6 +3709,15 @@ export function GrokBotWorkspace() {
                               </span>
                             )}
                           </div>
+                          {/* Visual Karaoke sentence pill indicator during TTS readout */}
+                          {speakingMsgId === msg.id && speakingSentence && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 my-1 rounded-xl bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-xs font-mono text-[#ff7a00] animate-in fade-in select-none">
+                              <Volume2 size={13} className="animate-pulse shrink-0" />
+                              <span className="text-neutral-400 text-[10px] uppercase font-bold shrink-0">Reading:</span>
+                              <span className="text-white italic truncate max-w-lg">"{speakingSentence}"</span>
+                            </div>
+                          )}
+
                           {/* Message Turn Action CTAs: ONLY rendered after turn completion, strictly hidden while streaming */}
                           {!(isStreaming && isLastTurn) && (
                           <div className="flex items-center gap-1 pt-1 mt-1 select-none">
@@ -3755,8 +3788,15 @@ export function GrokBotWorkspace() {
                                   } else {
                                     setSpeakingMsgId(msg.id);
                                     speakText(msg.content, {
-                                      onEnd: () => setSpeakingMsgId(null),
-                                      onError: () => setSpeakingMsgId(null),
+                                      onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                      onEnd: () => {
+                                        setSpeakingMsgId(null);
+                                        setSpeakingSentence(null);
+                                      },
+                                      onError: () => {
+                                        setSpeakingMsgId(null);
+                                        setSpeakingSentence(null);
+                                      },
                                     });
                                   }
                                 }}
@@ -4297,6 +4337,15 @@ export function GrokBotWorkspace() {
               >
                 <Search size={14} />
               </button>
+              {chats.length > 1 && (
+                <button aria-label="Batch clear conversations" data-ux-target-min="24"
+                  onClick={() => setIsBatchClearModalOpen(true)}
+                  className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] hover:text-red-400 flex items-center justify-center text-neutral-400 transition-colors cursor-pointer"
+                  title="Clear non-pinned conversations"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
               <button aria-label="New Chat Session" data-ux-target-min="24"
                 onClick={handleNewChat}
                 className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -5387,6 +5436,47 @@ export function GrokBotWorkspace() {
                   <ArrowRight size={13} className="text-[#ff7a00]" />
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Clear Conversations Confirmation Modal */}
+      {isBatchClearModalOpen && (
+        <div
+          onClick={() => setIsBatchClearModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-100"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-[#121218] border border-[#242432] p-5 shadow-2xl text-neutral-200"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 size={16} />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-white">Clear Conversations?</h4>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  This will remove all non-pinned dialogues for {selectedAgent.name}. Pinned sessions will be preserved.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex items-center justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setIsBatchClearModalOpen(false)}
+                className="px-3 py-1.5 rounded-lg bg-[#1a1a24] hover:bg-[#222230] text-neutral-300 font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleBatchClearChats}
+                className="px-3.5 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 font-medium transition-colors cursor-pointer"
+              >
+                Clear All
+              </button>
             </div>
           </div>
         </div>

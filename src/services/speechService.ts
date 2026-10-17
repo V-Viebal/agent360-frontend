@@ -185,6 +185,7 @@ export function speakText(
     voice?: SpeechSynthesisVoice;
     onEnd?: () => void;
     onError?: (err: any) => void;
+    onSegmentChange?: (segmentText: string, index: number, total: number) => void;
   }
 ): boolean {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -214,6 +215,8 @@ export function speakText(
 
     const seg = segments[currentSegmentIndex];
     const segmentVoice = options?.voice || pickBestVoice(seg.lang, options?.voiceURI);
+
+    options?.onSegmentChange?.(seg.text, currentSegmentIndex, segments.length);
 
     const utterance = new SpeechSynthesisUtterance(seg.text);
     if (segmentVoice) {
