@@ -8,6 +8,7 @@ import { AgentSubAgentsTab } from "../components/AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
 import { ChannelConfigModal } from "../components/ChannelConfigModal";
 import { ScheduleJobModal } from "../components/ScheduleJobModal";
+import { VoiceRecordSettingsModal } from "../components/VoiceRecordSettingsModal";
 import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect } from "react";
 import {
@@ -983,6 +984,7 @@ export function GrokBotWorkspace() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
+  const [isVoiceRecordSettingsOpen, setIsVoiceRecordSettingsOpen] = useState(false);
   const [turnTelemetry, setTurnTelemetry] = useState<TurnTelemetry | null>(null);
   const [forwardModalMsg, setForwardModalMsg] = useState<string | null>(null);
 
@@ -4245,12 +4247,16 @@ export function GrokBotWorkspace() {
                 <Command size={15} />
               </button>
 
-              {/* STT Language Accent Badge Toggle (VI / EN) */}
+              {/* STT Language Accent Badge Toggle (VI / EN) & Audio Settings Context Menu */}
               <button
                 type="button"
                 onClick={toggleSttLang}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setIsVoiceRecordSettingsOpen(true);
+                }}
                 className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-200 dark:bg-[#1e1e28] hover:bg-neutral-300 dark:hover:bg-[#28283a] text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white border border-neutral-300 dark:border-[#2a2a38] transition-colors cursor-pointer select-none"
-                title={`Current voice input language: ${sttLang === "vi-VN" ? "Tiếng Việt (vi-VN)" : "English (en-US)"}. Click to switch.`}
+                title={`Voice input language: ${sttLang === "vi-VN" ? "Tiếng Việt (vi-VN)" : "English (en-US)"}. Click to switch, right-click for audio device settings.`}
               >
                 {sttLang === "vi-VN" ? "VI" : "EN"}
               </button>
@@ -5432,6 +5438,15 @@ export function GrokBotWorkspace() {
           handleInstallPWA();
         }}
         isPwaInstallable={Boolean(deferredPrompt)}
+      />
+
+      <VoiceRecordSettingsModal
+        isOpen={isVoiceRecordSettingsOpen}
+        onClose={() => setIsVoiceRecordSettingsOpen(false)}
+        sttLang={sttLang}
+        onSttLangChange={setSttLang}
+        onOpenShortcuts={() => setIsKeyboardShortcutsOpen(true)}
+        onOpenPermissions={() => setIsPermissionsModalOpen(true)}
       />
 
       <PermissionsModal
