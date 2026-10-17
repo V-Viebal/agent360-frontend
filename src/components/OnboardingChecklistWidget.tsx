@@ -82,7 +82,24 @@ export function OnboardingChecklistWidget({
       return false;
     }
   });
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("agent360_onboarding_checklist_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleCollapse = (collapse?: boolean) => {
+    setIsCollapsed((prev) => {
+      const next = collapse !== undefined ? collapse : !prev;
+      try {
+        localStorage.setItem("agent360_onboarding_checklist_collapsed", next ? "true" : "false");
+      } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     const handler = () => {
@@ -109,7 +126,10 @@ export function OnboardingChecklistWidget({
   const handleDismiss = () => {
     setIsDismissed(true);
     try {
+      // Permanently record that user dismissed the onboarding checklist
       localStorage.setItem(STORAGE_KEY_CHECKLIST_DISMISSED, "true");
+      // Also broadcast to other tabs/components
+      window.dispatchEvent(new CustomEvent("agent360_checklist_dismissed"));
     } catch {}
   };
 
@@ -137,7 +157,7 @@ export function OnboardingChecklistWidget({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => handleToggleCollapse()}
             className="p-1 rounded text-neutral-400 hover:text-white hover:bg-white/5 transition-colors text-[11px] font-mono px-1.5 cursor-pointer"
           >
             {isCollapsed ? "Mở rộng" : "Thu gọn"}
