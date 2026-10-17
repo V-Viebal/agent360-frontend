@@ -1066,6 +1066,7 @@ export function GrokBotWorkspace() {
 
   // Available models from QwenPaw /api/models
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
+  const [modelSearchQuery, setModelSearchQuery] = useState<string>("");
   const [isChangingModel, setIsChangingModel] = useState<boolean>(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
@@ -4753,24 +4754,54 @@ export function GrokBotWorkspace() {
                 </button>
 
                 {/* Model selection dropdown menu */}
-                {isModelDropdownOpen && (
-                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-60 rounded-xl bg-[#14141c] border border-[#2a2a38] p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-2 py-1 text-[10px] font-mono uppercase text-neutral-400 border-b border-[#22222e] flex items-center justify-between">
+                {isModelDropdownOpen && (() => {
+                  const filteredModelsList = (availableModels.length > 0
+                    ? availableModels
+                    : [
+                        { providerId: "llm360coding", providerName: "LLM360", model: "gpt-5.6-luna", name: "GPT-5.6 Luna" },
+                        { providerId: "llm360coding", providerName: "LLM360", model: "grok-4.7", name: "Grok 4.7" },
+                        { providerId: "llm360coding", providerName: "LLM360", model: "gpt-6-sol", name: "GPT-6 Sol" },
+                        { providerId: "llm360coding", providerName: "LLM360", model: "grok-4.6", name: "Grok 4.6" },
+                        { providerId: "llm360coding", providerName: "LLM360", model: "claude-opus-4.6-thinking", name: "Claude Opus 4.6" },
+                        { providerId: "llm360coding", providerName: "LLM360", model: "gemini-3.7-flash-tiered", name: "Gemini 3.7 Flash" },
+                      ]
+                  ).filter((m) => {
+                    if (!modelSearchQuery.trim()) return true;
+                    const q = modelSearchQuery.toLowerCase();
+                    return m.model.toLowerCase().includes(q) || (m.name || "").toLowerCase().includes(q) || (m.providerName || "").toLowerCase().includes(q);
+                  });
+
+                  return (
+                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-72 rounded-2xl bg-[#14141c] border border-[#2a2a38] p-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-1.5 pb-1.5 text-[10px] font-mono uppercase text-neutral-400 border-b border-[#22222e] flex items-center justify-between">
                       <span>Available Models</span>
-                      <span className="text-[9px] text-[#ff7a00]">{availableModels.length} models</span>
+                      <span className="text-[9px] text-[#ff7a00]">{filteredModelsList.length} / {availableModels.length || 6} models</span>
                     </div>
+
+                    {/* Instant Model Search */}
+                    <div className="my-1.5 flex items-center gap-1.5 bg-[#1a1a24] border border-[#28283a] rounded-lg px-2 py-1 text-xs">
+                      <Search size={12} className="text-neutral-400 shrink-0" />
+                      <input
+                        type="text"
+                        autoFocus
+                        value={modelSearchQuery}
+                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                        placeholder="Filter model name (gpt, grok, claude)..."
+                        className="w-full bg-transparent text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
+                      />
+                      {modelSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setModelSearchQuery("")}
+                          className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+
                     <div className="space-y-0.5 max-h-60 overflow-y-auto mt-1 text-left">
-                      {(availableModels.length > 0
-                        ? availableModels
-                        : [
-                            { providerId: "llm360coding", providerName: "LLM360", model: "gpt-5.6-luna", name: "GPT-5.6 Luna" },
-                            { providerId: "llm360coding", providerName: "LLM360", model: "grok-4.7", name: "Grok 4.7" },
-                            { providerId: "llm360coding", providerName: "LLM360", model: "gpt-6-sol", name: "GPT-6 Sol" },
-                            { providerId: "llm360coding", providerName: "LLM360", model: "grok-4.6", name: "Grok 4.6" },
-                            { providerId: "llm360coding", providerName: "LLM360", model: "claude-opus-4.6-thinking", name: "Claude Opus 4.6" },
-                            { providerId: "llm360coding", providerName: "LLM360", model: "gemini-3.7-flash-tiered", name: "Gemini 3.7 Flash" },
-                          ]
-                      ).map((m) => {
+                      {filteredModelsList.map((m) => {
                         const isCurrent = selectedAgent.model === m.model;
                         return (
                           <div
@@ -4794,7 +4825,8 @@ export function GrokBotWorkspace() {
                       })}
                     </div>
                   </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
 
