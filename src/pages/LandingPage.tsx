@@ -326,7 +326,7 @@ export function LandingPage() {
             {t("hero.title")}
           </h1>
 
-          <p className="mt-6 sm:mt-8 max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed">
+          <p className="mt-6 sm:mt-8 max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed">
             {t("hero.subtitle")}
           </p>
 
@@ -673,7 +673,7 @@ export function LandingPage() {
       {/* 4. Work with many Bots at once - Clean Asymmetric 3-Card Grid */}
       <section className="py-20 sm:py-28 border-b border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mb-12 sm:mb-16">
+          <div className="max-w-3xl lg:max-w-4xl mb-12 sm:mb-16">
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("parallel.badge")}
             </span>
@@ -853,7 +853,7 @@ export function LandingPage() {
       {/* 7. Connect the Bots (Multi-Agent Thread) */}
       <section id="hierarchy" className="py-20 sm:py-28 border-b border-[var(--border-subtle)]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center mb-12 sm:mb-16">
+          <div className="max-w-3xl lg:max-w-4xl mx-auto text-center mb-12 sm:mb-16">
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("hierarchy.badge")}
             </span>
@@ -890,7 +890,7 @@ export function LandingPage() {
       {/* 8. Give each Bot a job - Interactive Dynamic Workbench */}
       <section id="bots" className="py-20 sm:py-28 border-b border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mb-10 sm:mb-14">
+          <div className="max-w-3xl lg:max-w-4xl mb-10 sm:mb-14">
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("roles.badge")}
             </span>
@@ -1076,7 +1076,7 @@ export function LandingPage() {
       {/* 9. Pricing Section: Clean Tiers */}
       <section id="pricing" className="py-20 sm:py-28 border-b border-[var(--border-subtle)]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center mb-12 sm:mb-16">
+          <div className="max-w-3xl lg:max-w-4xl mx-auto text-center mb-12 sm:mb-16">
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("pricing.badge")}
             </span>
@@ -1183,11 +1183,11 @@ export function LandingPage() {
 
       {/* 11. Final CTA: Meet your first Bot */}
       <section id="deploy" className="py-24 sm:py-32 text-center relative overflow-hidden">
-        <div className="mx-auto max-w-3xl px-4 relative z-10">
+        <div className="mx-auto max-w-4xl px-4 relative z-10">
           <h2 className="font-newsreader text-3xl sm:text-5xl md:text-6xl text-white font-normal text-balance">
             {t("cta.title")}
           </h2>
-          <p className="mt-4 text-neutral-400 text-sm sm:text-base max-w-xl mx-auto">
+          <p className="mt-4 text-neutral-400 text-sm sm:text-base max-w-2xl mx-auto">
             An AI teammate you can trust to get work done. Deploy in parallel 24/7 with verifiable execution receipts.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 max-w-xs sm:max-w-none mx-auto">

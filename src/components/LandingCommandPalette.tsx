@@ -155,7 +155,7 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
                 <span className="block truncate text-sm text-white">{item.label}</span>
                 <span className="block truncate text-xs text-neutral-500">{item.hint}</span>
               </span>
-              {idx === cursor && <CornerDownLeft size={13} className="text-neutral-400 shrink-0" />}
+              {idx === cursor && <CornerDownLeft size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />}
             </li>
           ))}
           {items.length === 0 && <li className="px-5 py-6 text-sm text-neutral-500">No matches.</li>}

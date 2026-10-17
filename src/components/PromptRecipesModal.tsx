@@ -73,21 +73,21 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full max-w-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#22222e] flex items-center justify-between bg-[#161620]">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
               <Sparkles size={16} />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">Prompt Recipes & Task Templates</h3>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Pre-engineered prompts for engineering, infrastructure RCA, and audits
               </p>
             </div>
@@ -95,7 +95,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-[#1c1c28] hover:bg-[#252536] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             <X size={15} />
           </button>
@@ -104,7 +104,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
         {/* Search & Category Tabs */}
         <div className="p-3 border-b border-[#1c1c24] bg-[#14141a] space-y-2">
           <div className="flex items-center gap-2 bg-[#1c1c26] border border-[#2a2a3c] rounded-xl px-3 py-1.5 text-xs text-white">
-            <Search size={13} className="text-neutral-400 shrink-0" />
+            <Search size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />
             <input
               type="text"
               autoFocus
@@ -124,7 +124,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
                 className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                   selectedCat === cat
                     ? "bg-[#ff7a00] border-[#ff7a00] text-black font-semibold shadow-xs"
-                    : "bg-[#181822] border-[#242432] text-neutral-400 hover:text-white"
+                    : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 {cat}
@@ -142,17 +142,17 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
                 onSelectRecipe(recipe.prompt);
                 onClose();
               }}
-              className="p-3.5 rounded-xl bg-[#14141c] hover:bg-[#1c1c28] border border-[#22222e] hover:border-[#ff7a00]/40 transition-all cursor-pointer group shadow-xs space-y-1.5"
+              className="p-3.5 rounded-xl bg-white dark:bg-[#14141c] hover:bg-slate-100 dark:bg-[#1c1c28] border border-slate-200 dark:border-[#22222e] hover:border-[#ff7a00]/40 transition-all cursor-pointer group shadow-xs space-y-1.5"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
                   {recipe.title}
                 </span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-white/5 text-neutral-400 border border-white/10 shrink-0">
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-white/5 text-slate-500 dark:text-neutral-400 border border-white/10 shrink-0">
                   {recipe.category}
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400 leading-relaxed font-sans">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed font-sans">
                 {recipe.description}
               </p>
               <div className="flex items-center justify-between pt-1 border-t border-[#1c1c24] text-[10px] font-mono text-neutral-500">

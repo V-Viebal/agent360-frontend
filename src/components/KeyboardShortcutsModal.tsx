@@ -246,21 +246,21 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150 select-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#22222e] flex items-center justify-between bg-[#161620]">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
               <KeyboardIcon size={18} />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">Keyboard Shortcuts</h3>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Click any shortcut with an edit icon to record your custom key combination
               </p>
             </div>
@@ -268,7 +268,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-[#1c1c28] hover:bg-[#252536] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             <X size={15} />
           </button>
@@ -299,7 +299,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                 <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold px-1">
                   {cat}
                 </span>
-                <div className="rounded-xl border border-[#22222e] bg-[#161620] divide-y divide-[#22222e] overflow-hidden">
+                <div className="rounded-xl border border-slate-200 dark:border-[#22222e] bg-slate-50 dark:bg-[#161620] divide-y divide-[#22222e] overflow-hidden">
                   {items.map((item) => {
                     const activeKeys = customMap[item.id] || item.defaultKeys;
                     const isRecording = recordingId === item.id;
@@ -313,7 +313,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-neutral-300 font-normal truncate">{item.description}</span>
+                          <span className="text-slate-700 dark:text-neutral-300 font-normal truncate">{item.description}</span>
                           {isCustomized && (
                             <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/15 px-1.5 py-0.2 rounded shrink-0">
                               custom
@@ -332,7 +332,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                                 {activeKeys.map((k, kIdx) => (
                                   <kbd
                                     key={kIdx}
-                                    className="px-2 py-0.5 rounded-md bg-[#222230] border border-[#303044] text-[11px] font-mono text-neutral-200 shadow-xs"
+                                    className="px-2 py-0.5 rounded-md bg-[#222230] border border-[#303044] text-[11px] font-mono text-slate-800 dark:text-neutral-200 shadow-xs"
                                   >
                                     {k}
                                   </kbd>
@@ -342,7 +342,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                                 <button
                                   type="button"
                                   onClick={() => setRecordingId(item.id)}
-                                  className="p-1 rounded-md hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                                  className="p-1 rounded-md hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
                                   title="Record custom shortcut"
                                 >
                                   <Edit2 size={12} />
@@ -369,7 +369,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         )}
 
         {/* Footer info */}
-        <div className="px-5 py-3 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <input
             ref={fileInputRef}
             type="file"
@@ -381,7 +381,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             <button
               type="button"
               onClick={handleResetDefaults}
-              className="flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
               title="Reset all shortcuts to factory defaults"
             >
               <RotateCcw size={12} />
@@ -391,7 +391,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             <button
               type="button"
               onClick={handleExportShortcuts}
-              className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
               title="Export custom shortcuts to JSON file"
             >
               <Download size={12} />
@@ -400,7 +400,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
               title="Import shortcuts from JSON file"
             >
               <Upload size={12} />
@@ -410,7 +410,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
             Done
           </button>

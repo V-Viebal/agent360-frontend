@@ -236,14 +236,14 @@ export function A2ATopologyGraphModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-6xl max-h-[92vh] bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full max-w-6xl max-h-[92vh] bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Header (aligned with SettingsModal & Skyer Design Pattern) */}
-        <div className="px-6 py-4 border-b border-[#22222e] flex items-center justify-between bg-[#161620]">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-[#ff7a00]/10 border border-[#ff7a00]/25 flex items-center justify-center text-[#ff7a00] shrink-0">
               <Share2 size={17} />
@@ -257,7 +257,7 @@ export function A2ATopologyGraphModal({
                   {allAgents.length} Đồng đội
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                 Mạng lưới liên kết, phân luồng công việc và kiểm tra độ trễ phản hồi thời gian thực
               </p>
             </div>
@@ -265,7 +265,7 @@ export function A2ATopologyGraphModal({
 
           <div className="flex items-center gap-2">
             {/* Zoom & Pan Controls */}
-            <div className="hidden sm:flex items-center gap-1 bg-[#1a1a24] border border-[#2a2a3c] rounded-xl p-1 text-neutral-400">
+            <div className="hidden sm:flex items-center gap-1 bg-[#1a1a24] border border-[#2a2a3c] rounded-xl p-1 text-slate-500 dark:text-neutral-400">
               <button
                 type="button"
                 onClick={() => handleZoom(-0.1)}
@@ -274,7 +274,7 @@ export function A2ATopologyGraphModal({
               >
                 <ZoomOut size={13} />
               </button>
-              <span className="text-[10px] font-mono px-1.5 select-none text-neutral-300">
+              <span className="text-[10px] font-mono px-1.5 select-none text-slate-700 dark:text-neutral-300">
                 {Math.round(zoomScale * 100)}%
               </span>
               <button
@@ -309,7 +309,7 @@ export function A2ATopologyGraphModal({
               type="button"
               onClick={runPingProbing}
               disabled={isProbing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a1a24] hover:bg-[#242434] border border-[#2a2a3c] text-xs font-medium text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a1a24] hover:bg-[#242434] border border-[#2a2a3c] text-xs font-medium text-slate-800 dark:text-neutral-200 hover:text-white transition-colors cursor-pointer"
               title="Đo lại độ trễ kết nối"
             >
               <RefreshCw size={12} className={isProbing ? "animate-spin text-[#ff7a00]" : "text-[#ff7a00]"} />
@@ -321,7 +321,7 @@ export function A2ATopologyGraphModal({
               <button
                 type="button"
                 onClick={() => exportLatencyData("csv")}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title="Xuất file đo kiểm CSV"
               >
                 <Download size={11} className="text-[#ff7a00]" />
@@ -330,7 +330,7 @@ export function A2ATopologyGraphModal({
               <button
                 type="button"
                 onClick={() => exportLatencyData("json")}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title="Xuất file đo kiểm JSON"
               >
                 <Download size={11} className="text-cyan-400" />
@@ -341,7 +341,7 @@ export function A2ATopologyGraphModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-[#1c1c28] hover:bg-[#252536] text-neutral-400 hover:text-white transition-colors cursor-pointer ml-1"
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer ml-1"
             >
               <X size={15} />
             </button>
@@ -349,9 +349,9 @@ export function A2ATopologyGraphModal({
         </div>
 
         {/* Toolbar: Search & Node Filters */}
-        <div className="px-6 py-2.5 bg-[#14141c] border-b border-[#20202c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs select-none">
+        <div className="px-6 py-2.5 bg-white dark:bg-[#14141c] border-b border-[#20202c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs select-none">
           <div className="flex items-center gap-2 flex-1 max-w-md bg-[#1a1a24] border border-[#2a2a3c] focus-within:border-[#ff7a00] rounded-xl px-3 py-1.5 transition-colors">
-            <Search size={13} className="text-neutral-400 shrink-0" />
+            <Search size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />
             <input
               type="text"
               value={topologySearchQuery}
@@ -363,7 +363,7 @@ export function A2ATopologyGraphModal({
               <button
                 type="button"
                 onClick={() => setTopologySearchQuery("")}
-                className="text-neutral-500 hover:text-neutral-300"
+                className="text-neutral-500 hover:text-slate-700 dark:text-neutral-300"
               >
                 <X size={12} />
               </button>
@@ -386,7 +386,7 @@ export function A2ATopologyGraphModal({
                   className={`px-2.5 py-1 rounded-lg text-[11px] transition-colors cursor-pointer ${
                     selectedRegion === reg.id
                       ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold border border-[#ff7a00]/30"
-                      : "text-neutral-400 hover:text-white"
+                      : "text-slate-500 dark:text-neutral-400 hover:text-white"
                   }`}
                 >
                   {reg.label}
@@ -434,8 +434,8 @@ export function A2ATopologyGraphModal({
                         onClick={() => setSelectedNodeId(ag.id)}
                         className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
                           isSel
-                            ? "bg-[#1c1c28] border-[#ff7a00] shadow-lg shadow-[#ff7a00]/15"
-                            : "bg-[#14141c] border-[#242434] hover:border-[#38384c]"
+                            ? "bg-slate-100 dark:bg-[#1c1c28] border-[#ff7a00] shadow-lg shadow-[#ff7a00]/15"
+                            : "bg-white dark:bg-[#14141c] border-[#242434] hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -452,7 +452,7 @@ export function A2ATopologyGraphModal({
                             )}
                           </div>
                         </div>
-                        <div className="text-[11px] font-mono text-neutral-400 mt-1.5 truncate">
+                        <div className="text-[11px] font-mono text-slate-500 dark:text-neutral-400 mt-1.5 truncate">
                           {ag.node} • {ag.model}
                         </div>
                       </div>
@@ -514,8 +514,8 @@ export function A2ATopologyGraphModal({
                         onClick={() => setSelectedNodeId(ag.id)}
                         className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
                           isSel
-                            ? "bg-[#1c1c28] border-cyan-400 shadow-lg shadow-cyan-400/15"
-                            : "bg-[#14141c] border-[#242434] hover:border-[#38384c]"
+                            ? "bg-slate-100 dark:bg-[#1c1c28] border-cyan-400 shadow-lg shadow-cyan-400/15"
+                            : "bg-white dark:bg-[#14141c] border-[#242434] hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -532,7 +532,7 @@ export function A2ATopologyGraphModal({
                             )}
                           </div>
                         </div>
-                        <div className="text-[11px] font-mono text-neutral-400 mt-1.5 truncate">
+                        <div className="text-[11px] font-mono text-slate-500 dark:text-neutral-400 mt-1.5 truncate">
                           {ag.node} • {ag.model}
                         </div>
                       </div>
@@ -560,15 +560,15 @@ export function A2ATopologyGraphModal({
                           onClick={() => setSelectedNodeId(ag.id)}
                           className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
                             isSel
-                              ? "bg-[#1c1c28] border-emerald-400 shadow-lg shadow-emerald-400/15"
-                              : "bg-[#14141c] border-[#242434] hover:border-[#38384c]"
+                              ? "bg-slate-100 dark:bg-[#1c1c28] border-emerald-400 shadow-lg shadow-emerald-400/15"
+                              : "bg-white dark:bg-[#14141c] border-[#242434] hover:border-[#38384c]"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1.5">
                             <span className="text-xs font-semibold text-white truncate">{ag.name}</span>
                             {renderPingBadge(ag.id)}
                           </div>
-                          <div className="text-[10px] font-mono text-neutral-400 mt-1 truncate">
+                          <div className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 mt-1 truncate">
                             {ag.roleTag || "Specialist"}
                           </div>
                         </div>
@@ -581,7 +581,7 @@ export function A2ATopologyGraphModal({
 
             {/* Topology MiniMap Navigation HUD */}
             <div className="absolute bottom-4 right-4 z-30 p-2.5 rounded-2xl bg-[#101018]/95 border border-[#262638] shadow-2xl backdrop-blur-md hidden sm:flex flex-col gap-1.5 select-none w-40">
-              <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 border-b border-[#20202e] pb-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-neutral-400 border-b border-[#20202e] pb-1">
                 <span className="flex items-center gap-1 text-[#ff7a00]">
                   <Navigation size={11} />
                   <span>Bản đồ thu nhỏ</span>
@@ -633,7 +633,7 @@ export function A2ATopologyGraphModal({
           </div>
 
           {/* Side Panel: Selected Teammate Profile & Action (Col 9-12 / 34%) */}
-          <div className="lg:col-span-4 p-5 bg-[#14141c] flex flex-col justify-between space-y-4 overflow-y-auto">
+          <div className="lg:col-span-4 p-5 bg-white dark:bg-[#14141c] flex flex-col justify-between space-y-4 overflow-y-auto">
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-mono text-[#ff7a00]">
                 <Sparkles size={14} />
@@ -649,13 +649,13 @@ export function A2ATopologyGraphModal({
                   {activeSelectedAgent.roleTag || "Đồng đội AI"}
                 </div>
                 {activeSelectedAgent.description && (
-                  <p className="text-xs text-neutral-300 leading-relaxed font-sans pt-2 border-t border-[#242434]">
+                  <p className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed font-sans pt-2 border-t border-[#242434]">
                     {activeSelectedAgent.description}
                   </p>
                 )}
               </div>
 
-              <div className="space-y-2 text-xs font-mono text-neutral-400 p-4 rounded-2xl bg-[#181824] border border-[#262638]">
+              <div className="space-y-2 text-xs font-mono text-slate-500 dark:text-neutral-400 p-4 rounded-2xl bg-[#181824] border border-[#262638]">
                 <div className="flex items-center justify-between">
                   <span>Máy chủ:</span>
                   <span className="text-white font-medium">{activeSelectedAgent.node}</span>
@@ -696,12 +696,12 @@ export function A2ATopologyGraphModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-6 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <span>Skyer Không Gian Đồng Đội AI</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
+            className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
           >
             Đóng bảng
           </button>

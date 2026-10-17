@@ -20,6 +20,7 @@
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.64.7",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",

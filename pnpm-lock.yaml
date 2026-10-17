@@ -33,6 +33,9 @@ importers:
         specifier: ^2.5.5
         version: 2.6.1
     devDependencies:
+      '@rollup/rollup-linux-x64-gnu':
+        specifier: ^4.64.7
+        version: 4.64.7
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@6.4.4(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -423,6 +426,12 @@ packages:
 
   '@rollup/rollup-linux-x64-gnu@4.64.5':
     resolution: {integrity: sha512-dR9nd6OKnvSS60Ifz/L7Mj5zzYyoqyRn2NwTuaOONKaa3xsVGXyp8YusMbvFyEOR94DxnwgcbgsFqkHd29ZSzQ==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@rollup/rollup-linux-x64-gnu@4.64.7':
+    resolution: {integrity: sha512-14oLfDsOSr0TSntT/34jRg/V8B2XW/Jomh9zX9CjIM9gwwNlI1OCymS/GVn0DV32h67eRf7U0GGem0rvfXgNwQ==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
@@ -1227,6 +1236,8 @@ snapshots:
 
   '@rollup/rollup-linux-x64-gnu@4.64.5':
     optional: true
+
+  '@rollup/rollup-linux-x64-gnu@4.64.7': {}
 
   '@rollup/rollup-linux-x64-musl@4.64.5':
     optional: true

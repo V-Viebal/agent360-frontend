@@ -95,9 +95,9 @@ export function ToolSchemaInspectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] bg-[#121216] border border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans"
+        className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-[#121216] border border-slate-200 dark:border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -115,7 +115,7 @@ export function ToolSchemaInspectorModal({
                   {agentName}
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Discovered schemas from Composio remote MCP protocol populated in SKILL.md
               </p>
             </div>
@@ -126,7 +126,7 @@ export function ToolSchemaInspectorModal({
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#1e1e28] hover:bg-[#282838] border border-[#2e2e40] text-neutral-300 hover:text-white transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#1e1e28] hover:bg-[#282838] border border-[#2e2e40] text-slate-700 dark:text-neutral-300 hover:text-white transition-all cursor-pointer"
                 title="Re-query SSE Discovery"
               >
                 <RefreshCw size={12} className={isRefreshing ? "animate-spin text-[#ff7a00]" : ""} />
@@ -136,7 +136,7 @@ export function ToolSchemaInspectorModal({
 
             <button
               onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
+              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-slate-500 dark:text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
               title="Close"
             >
               <X size={15} />
@@ -145,7 +145,7 @@ export function ToolSchemaInspectorModal({
         </div>
 
         {/* Subheader info bar */}
-        <div className="px-5 py-2.5 bg-[#14141a] border-b border-[#1e1e26] flex items-center justify-between text-xs text-neutral-400 font-mono">
+        <div className="px-5 py-2.5 bg-[#14141a] border-b border-[#1e1e26] flex items-center justify-between text-xs text-slate-500 dark:text-neutral-400 font-mono">
           <div className="flex items-center gap-2">
             <span>Client Key:</span>
             <code className="text-[#ff7a00] bg-[#1f1f2c] px-2 py-0.5 rounded border border-[#2d2d3e]">
@@ -181,7 +181,7 @@ export function ToolSchemaInspectorModal({
               return (
                 <div
                   key={t.name}
-                  className="p-3 rounded-xl border border-[#1f1f2c] bg-[#14141c] hover:border-[#2d2d3f] transition-all space-y-1.5 group"
+                  className="p-3 rounded-xl border border-[#1f1f2c] bg-white dark:bg-[#14141c] hover:border-[#2d2d3f] transition-all space-y-1.5 group"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -221,7 +221,7 @@ export function ToolSchemaInspectorModal({
                         className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer border ${
                           testingToolName === t.name
                             ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white"
-                            : "bg-[#1f1f2e] border-[#2c2c3e] text-neutral-300 hover:text-white hover:bg-[#28283a]"
+                            : "bg-[#1f1f2e] border-[#2c2c3e] text-slate-700 dark:text-neutral-300 hover:text-white hover:bg-[#28283a]"
                         }`}
                         title="Dry-run tool call in sandbox playground"
                       >
@@ -239,14 +239,14 @@ export function ToolSchemaInspectorModal({
                     </div>
                   </div>
 
-                  <p className="text-xs text-neutral-300 leading-relaxed font-sans">
+                  <p className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed font-sans">
                     {t.description || "No parameter description available."}
                   </p>
 
                   {/* Dry Run Interactive Playground */}
                   {testingToolName === t.name && (
-                    <div className="mt-2.5 p-3 rounded-lg bg-[#0a0a0e] border border-[#262634] space-y-2 font-mono text-xs animate-in fade-in">
-                      <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                    <div className="mt-2.5 p-3 rounded-lg bg-[#0a0a0e] border border-slate-200 dark:border-[#262634] space-y-2 font-mono text-xs animate-in fade-in">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-neutral-400">
                         <span className="flex items-center gap-1.5 text-[#ff7a00]">
                           <Terminal size={12} />
                           <span>Dry Run Arguments (JSON):</span>
@@ -266,11 +266,11 @@ export function ToolSchemaInspectorModal({
                         onChange={(e) => setTestPayload(e.target.value)}
                         placeholder={"{\n  \"param\": \"value\"\n}"}
                         rows={2}
-                        className="w-full bg-[#121218] border border-[#22222e] rounded p-2 text-white font-mono text-[11px] focus:outline-none focus:border-[#ff7a00]"
+                        className="w-full bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] rounded p-2 text-white font-mono text-[11px] focus:outline-none focus:border-[#ff7a00]"
                       />
 
                       {testOutput[t.name] && (
-                        <div className="pt-1.5 border-t border-[#1e1e28]">
+                        <div className="pt-1.5 border-t border-slate-200 dark:border-[#1e1e28]">
                           <div className="text-[10px] text-neutral-500 mb-1">Sandbox Console Output:</div>
                           <pre className="p-2 rounded bg-black/60 text-emerald-400 text-[10px] whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto border border-emerald-500/20">
                             {testOutput[t.name]}

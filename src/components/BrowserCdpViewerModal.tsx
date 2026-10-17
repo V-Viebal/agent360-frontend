@@ -53,10 +53,10 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
   const selectedTarget = cdpStatus?.targets.find((t) => t.id === selectedTargetId);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between select-none">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between select-none">
           <div className="flex items-center gap-2.5 text-[#d86f4c]">
             <Globe size={18} />
             <div>
@@ -73,7 +73,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsStreaming((prev) => !prev)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#2b241e] bg-[#0c0a08] text-xs font-mono text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#2b241e] bg-[#0c0a08] text-xs font-mono text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer"
             >
               {isStreaming ? (
                 <>
@@ -90,7 +90,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
 
             <button
               onClick={loadStatus}
-              className="p-1.5 rounded-lg border border-[#2b241e] bg-[#0c0a08] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-[#2b241e] bg-[#0c0a08] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
               title="Refresh Targets"
             >
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -98,7 +98,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
 
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -120,7 +120,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
                 }}
               />
             ) : !cdpStatus?.available ? (
-              <div className="text-center p-8 space-y-2 text-neutral-400 font-mono text-xs">
+              <div className="text-center p-8 space-y-2 text-slate-500 dark:text-neutral-400 font-mono text-xs">
                 <AlertCircle size={32} className="text-amber-400 mx-auto" />
                 <p className="text-white font-semibold">Remote Browser CDP Unreachable</p>
                 <p className="text-neutral-500 max-w-sm">
@@ -128,15 +128,15 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
                 </p>
               </div>
             ) : (
-              <div className="text-center p-8 space-y-2 text-neutral-400 font-mono text-xs">
+              <div className="text-center p-8 space-y-2 text-slate-500 dark:text-neutral-400 font-mono text-xs">
                 <Pause size={32} className="text-neutral-500 mx-auto" />
-                <p className="text-neutral-300">Stream paused. Click Resume Stream to reconnect.</p>
+                <p className="text-slate-700 dark:text-neutral-300">Stream paused. Click Resume Stream to reconnect.</p>
               </div>
             )}
 
             {/* Target URL Badge */}
             {selectedTarget && (
-              <div className="absolute bottom-3 left-4 right-4 bg-[#14100d]/90 backdrop-blur border border-[#2b241e] px-3 py-1.5 rounded-lg flex items-center justify-between text-[11px] font-mono text-neutral-300">
+              <div className="absolute bottom-3 left-4 right-4 bg-[#14100d]/90 backdrop-blur border border-[#2b241e] px-3 py-1.5 rounded-lg flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300">
                 <div className="flex items-center gap-2 truncate">
                   <span className="text-[#d86f4c] font-semibold">URL:</span>
                   <span className="truncate text-white">{selectedTarget.url || "about:blank"}</span>
@@ -160,7 +160,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
                   className={`w-full text-left p-2.5 rounded-xl border transition-colors cursor-pointer ${
                     selectedTargetId === target.id
                       ? "bg-[#d86f4c]/15 border-[#d86f4c]/40 text-white"
-                      : "bg-[#0c0a08] border-[#2b241e] text-neutral-400 hover:text-white"
+                      : "bg-[#0c0a08] border-[#2b241e] text-slate-500 dark:text-neutral-400 hover:text-white"
                   }`}
                 >
                   <div className="font-semibold truncate text-[11px] mb-0.5">
@@ -187,11 +187,11 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-2.5 bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
+        <div className="px-6 py-2.5 bg-slate-50 dark:bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
           <span>Operated by {agentName} via Project-scoped CDP Adapter</span>
           <button
             onClick={onClose}
-            className="hover:text-neutral-300 transition-colors cursor-pointer"
+            className="hover:text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer"
           >
             Close Viewer
           </button>

@@ -672,9 +672,9 @@ export function ConnectAppsModal({
       : [selectedCategory as any];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] bg-[#121216] border border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans transition-all duration-300"
+        className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-[#121216] border border-slate-200 dark:border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans transition-all duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -690,21 +690,21 @@ export function ConnectAppsModal({
                   {targetAgentName}
                 </span>
               </div>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Hot-patch Composio MCP tools directly into agent runtime
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-400 font-mono bg-[#1c1c24] px-2.5 py-1 rounded-full border border-[#262632]">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400 font-mono bg-[#1c1c24] px-2.5 py-1 rounded-full border border-slate-200 dark:border-[#262632]">
               <Shield size={12} className="text-emerald-400" />
               <span>{connectedAppIds.length} active</span>
             </div>
 
             <button
               onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
+              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-slate-500 dark:text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
               title="Close"
             >
               <X size={15} />
@@ -724,7 +724,7 @@ export function ConnectAppsModal({
             <span>{feedbackMsg.text}</span>
             <button
               onClick={() => setFeedbackMsg(null)}
-              className="text-neutral-400 hover:text-white ml-2 text-xs"
+              className="text-slate-500 dark:text-neutral-400 hover:text-white ml-2 text-xs"
             >
               ✕
             </button>
@@ -748,7 +748,7 @@ export function ConnectAppsModal({
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-slate-700 dark:text-neutral-300"
               >
                 <X size={13} />
               </button>
@@ -766,7 +766,7 @@ export function ConnectAppsModal({
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer ${
                     isActive
                       ? "bg-white text-black shadow-sm"
-                      : "bg-[#1d1d26] text-neutral-400 hover:text-neutral-200 hover:bg-[#252532] border border-[#282834]"
+                      : "bg-[#1d1d26] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200 hover:bg-[#252532] border border-[#282834]"
                   }`}
                 >
                   {cat}
@@ -786,7 +786,7 @@ export function ConnectAppsModal({
 
             return (
               <div key={category} className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-neutral-400 px-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-neutral-400 px-1">
                   <span>{category}</span>
                   <span className="text-[10px] font-mono text-neutral-500 font-normal">
                     {categoryApps.length} apps
@@ -804,7 +804,7 @@ export function ConnectAppsModal({
                         className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${
                           isConnected
                             ? "bg-[#18221c] border-emerald-500/30"
-                            : "bg-[#16161e] border-[#22222e] hover:border-[#2f2f42] hover:bg-[#1a1a24]"
+                            : "bg-[#16161e] border-slate-200 dark:border-[#22222e] hover:border-[#2f2f42] hover:bg-[#1a1a24]"
                         }`}
                       >
                         {/* 100% Verified SVG Vector Logo */}
@@ -836,7 +836,7 @@ export function ConnectAppsModal({
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
                             )}
                           </div>
-                          <p className="text-[11px] text-neutral-400 truncate mt-0.5 leading-snug">
+                          <p className="text-[11px] text-slate-500 dark:text-neutral-400 truncate mt-0.5 leading-snug">
                             {app.description}
                           </p>
                         </div>
@@ -847,14 +847,14 @@ export function ConnectAppsModal({
                           onClick={() => handleToggleApp(app)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
                             isLoading
-                              ? "opacity-60 cursor-not-allowed bg-neutral-800 text-neutral-400"
+                              ? "opacity-60 cursor-not-allowed bg-neutral-800 text-slate-500 dark:text-neutral-400"
                               : isConnected
                               ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
-                              : "bg-[#252534] hover:bg-white hover:text-black text-neutral-200 border border-[#323246]"
+                              : "bg-[#252534] hover:bg-white hover:text-black text-slate-800 dark:text-neutral-200 border border-[#323246]"
                           }`}
                         >
                           {isLoading ? (
-                            <Loader2 size={12} className="animate-spin text-neutral-300" />
+                            <Loader2 size={12} className="animate-spin text-slate-700 dark:text-neutral-300" />
                           ) : isConnected ? (
                             <>
                               <Check size={12} className="text-emerald-400" />

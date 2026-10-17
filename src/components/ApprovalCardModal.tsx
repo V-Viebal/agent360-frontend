@@ -47,10 +47,10 @@ export function ApprovalCardModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="px-6 py-4 bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-[#d86f4c]">
             <ShieldAlert size={18} />
             <h3 className="font-semibold text-sm text-white font-sans">
@@ -67,9 +67,9 @@ export function ApprovalCardModal({
           {approvals.map((app) => (
             <div
               key={app.request_id}
-              className="bg-[#17120e] border border-[#2b241e] rounded-xl p-4 space-y-3 font-sans text-xs"
+              className="bg-slate-50 dark:bg-[#17120e] border border-[#2b241e] rounded-xl p-4 space-y-3 font-sans text-xs"
             >
-              <div className="flex items-center justify-between text-neutral-400 font-mono text-[11px]">
+              <div className="flex items-center justify-between text-slate-500 dark:text-neutral-400 font-mono text-[11px]">
                 <span className="flex items-center gap-1.5 text-amber-400 font-medium">
                   <AlertTriangle size={13} />
                   Severity: {app.severity || "HIGH"}
@@ -91,7 +91,7 @@ export function ApprovalCardModal({
               {app.reasoning && (
                 <div>
                   <span className="text-neutral-500 font-mono text-[10px] block mb-0.5">AGENT REASONING</span>
-                  <p className="text-neutral-300 text-xs leading-relaxed bg-[#0c0a08]/50 p-2.5 rounded-lg border border-white/5 font-mono">
+                  <p className="text-slate-700 dark:text-neutral-300 text-xs leading-relaxed bg-[#0c0a08]/50 p-2.5 rounded-lg border border-white/5 font-mono">
                     {app.reasoning}
                   </p>
                 </div>
@@ -121,11 +121,11 @@ export function ApprovalCardModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
+        <div className="px-6 py-3 bg-slate-50 dark:bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
           <span>Decisions recorded in audit log</span>
           <button
             onClick={onClose}
-            className="hover:text-neutral-300 transition-colors cursor-pointer"
+            className="hover:text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer"
           >
             Dismiss overlay
           </button>

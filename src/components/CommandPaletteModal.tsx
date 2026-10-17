@@ -163,7 +163,7 @@ export function CommandPaletteModal({
       type: "chat",
       title: c.title,
       subtitle: c.lastMessageSnippet || `Chat session from ${c.updatedAt}`,
-      icon: <MessageSquare size={14} className="text-neutral-400" />,
+      icon: <MessageSquare size={14} className="text-slate-500 dark:text-neutral-400" />,
       action: () => {
         onSelectChat(c);
         onClose();
@@ -198,14 +198,14 @@ export function CommandPaletteModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full max-w-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Search Input Bar */}
-        <div className="h-14 px-4 border-b border-[#22222e] flex items-center gap-3 bg-[#161620]">
+        <div className="h-14 px-4 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-3 bg-slate-50 dark:bg-[#161620]">
           <Search size={18} className="text-[#ff7a00] shrink-0" />
           <input
             ref={inputRef}
@@ -225,7 +225,7 @@ export function CommandPaletteModal({
           <button
             type="button"
             onClick={onClose}
-            className="sm:hidden text-neutral-400 hover:text-white"
+            className="sm:hidden text-slate-500 dark:text-neutral-400 hover:text-white"
           >
             <X size={16} />
           </button>
@@ -243,7 +243,7 @@ export function CommandPaletteModal({
                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
                   isSelected
                     ? "bg-[#222230] text-white border border-[#ff7a00]/30 shadow-xs"
-                    : "hover:bg-[#181822] text-neutral-300 border border-transparent"
+                    : "hover:bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] text-slate-700 dark:text-neutral-300 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 pr-3">
@@ -274,7 +274,7 @@ export function CommandPaletteModal({
         </div>
 
         {/* Footer shortcuts */}
-        <div className="px-4 py-2.5 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500 select-none">
+        <div className="px-4 py-2.5 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500 select-none">
           <div className="flex items-center gap-3">
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>

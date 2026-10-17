@@ -167,7 +167,7 @@ export function AgentConnectedAppsTab({
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="font-semibold text-white tracking-tight">Connected Apps</span>
-          <span className="text-[10px] font-mono bg-[#1e1e28] text-neutral-400 px-2 py-0.5 rounded-full border border-[#2b2b3a]">
+          <span className="text-[10px] font-mono bg-[#1e1e28] text-slate-500 dark:text-neutral-400 px-2 py-0.5 rounded-full border border-[#2b2b3a]">
             {clients.length}
           </span>
         </div>
@@ -176,7 +176,7 @@ export function AgentConnectedAppsTab({
           <button
             onClick={loadMcpClients}
             disabled={loading}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-white bg-[#16161f] hover:bg-[#20202c] border border-[#242432] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-neutral-400 hover:text-white bg-[#16161f] hover:bg-[#20202c] border border-[#242432] transition-colors cursor-pointer"
             title="Refresh connected tools"
           >
             <RefreshCw size={12} className={loading ? "animate-spin text-[#ff7a00]" : ""} />
@@ -199,7 +199,7 @@ export function AgentConnectedAppsTab({
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center ${
             filter === "all"
               ? "bg-[#242432] text-white shadow-xs"
-              : "text-neutral-400 hover:text-neutral-200"
+              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"
           }`}
         >
           All ({clients.length})
@@ -209,7 +209,7 @@ export function AgentConnectedAppsTab({
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
             filter === "composio"
               ? "bg-[#242432] text-[#ff7a00] shadow-xs"
-              : "text-neutral-400 hover:text-neutral-200"
+              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"
           }`}
         >
           <Sparkles size={11} />
@@ -220,7 +220,7 @@ export function AgentConnectedAppsTab({
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center ${
             filter === "native"
               ? "bg-[#242432] text-white shadow-xs"
-              : "text-neutral-400 hover:text-neutral-200"
+              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"
           }`}
         >
           Infra MCP ({nativeClients.length})
@@ -228,7 +228,7 @@ export function AgentConnectedAppsTab({
       </div>
 
       {/* Integration Info Banner */}
-      <div className="p-2.5 rounded-xl bg-[#14141d] border border-[#222232] text-[11px] text-neutral-400 leading-relaxed flex items-start gap-2">
+      <div className="p-2.5 rounded-xl bg-[#14141d] border border-[#222232] text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed flex items-start gap-2">
         <Shield size={13} className="text-emerald-400 shrink-0 mt-0.5" />
         <div>
           Loaded directly from <strong className="text-white font-mono">{agentName}</strong>'s QwenPaw MCP driver card layer. Adding tools hot-patches this agent's runtime.
@@ -243,7 +243,7 @@ export function AgentConnectedAppsTab({
             <span>Loading {agentName}'s integrations...</span>
           </div>
         ) : displayedClients.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center text-xs text-neutral-500 font-mono space-y-3 p-4 border border-dashed border-[#22222e] rounded-2xl">
+          <div className="py-12 flex flex-col items-center justify-center text-center text-xs text-neutral-500 font-mono space-y-3 p-4 border border-dashed border-slate-200 dark:border-[#22222e] rounded-2xl">
             <Layers size={22} className="text-neutral-600" />
             <div>No connected apps in this view.</div>
             <button
@@ -262,7 +262,7 @@ export function AgentConnectedAppsTab({
               <div
                 key={client.key}
                 onClick={(e) => meta.isComposio && handleInspectSchema(client, e)}
-                className={`group p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
+                className={`group p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
                 title={meta.isComposio ? "Click to inspect tool functions" : ""}
               >
                 {/* Logo + Names */}
@@ -295,12 +295,12 @@ export function AgentConnectedAppsTab({
                           Composio
                         </span>
                       ) : (
-                        <span className="text-[9px] font-mono text-neutral-400 bg-neutral-800 px-1.5 py-0.2 rounded shrink-0">
+                        <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 bg-neutral-800 px-1.5 py-0.2 rounded shrink-0">
                           {client.transport}
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-neutral-400 truncate mt-0.5 leading-tight font-mono">
+                    <p className="text-[10px] text-slate-500 dark:text-neutral-400 truncate mt-0.5 leading-tight font-mono">
                       key: {client.key}
                     </p>
                   </div>
@@ -317,7 +317,7 @@ export function AgentConnectedAppsTab({
                     <button
                       disabled={refreshingKey === client.key}
                       onClick={(e) => handleRefreshSchema(client, e)}
-                      className="p-1 rounded-md text-neutral-400 hover:text-[#ff7a00] hover:bg-[#ff7a00]/10 transition-all cursor-pointer"
+                      className="p-1 rounded-md text-slate-500 dark:text-neutral-400 hover:text-[#ff7a00] hover:bg-[#ff7a00]/10 transition-all cursor-pointer"
                       title={`Re-discover and update ${meta.name} schema in SKILL.md`}
                     >
                       {refreshingKey === client.key ? (

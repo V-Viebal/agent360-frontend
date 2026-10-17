@@ -50,10 +50,10 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="px-6 py-4 bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 dark:bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-[#d86f4c]">
             <Puzzle size={18} />
             <h3 className="font-semibold text-sm text-white font-sans">
@@ -62,7 +62,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -77,7 +77,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search available skills and toolchains..."
-              className="w-full bg-[#0c0a08] border border-[#2b241e] rounded-xl pl-9 pr-3 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-[#d86f4c]/60 font-sans"
+              className="w-full bg-[#0c0a08] border border-[#2b241e] rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-[#d86f4c]/60 font-sans"
             />
           </div>
 
@@ -85,7 +85,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
             <select
               value={filterSource}
               onChange={(e) => setFilterSource(e.target.value)}
-              className="bg-[#0c0a08] border border-[#2b241e] rounded-xl px-2.5 py-1.5 text-xs text-neutral-300 font-mono focus:outline-none"
+              className="bg-[#0c0a08] border border-[#2b241e] rounded-xl px-2.5 py-1.5 text-xs text-slate-700 dark:text-neutral-300 font-mono focus:outline-none"
             >
               <option value="all">All Sources</option>
               <option value="custom">Custom Skills</option>
@@ -95,7 +95,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
 
             <button
               onClick={loadSkills}
-              className="p-1.5 rounded-lg border border-[#2b241e] bg-[#0c0a08] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-[#2b241e] bg-[#0c0a08] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
               title="Refresh Skill Pool"
             >
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -117,14 +117,14 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
             filtered.map((skill) => (
               <div
                 key={skill.name}
-                className="bg-[#17120e] border border-[#26201a] hover:border-[#d86f4c]/30 rounded-xl p-3.5 flex items-start justify-between gap-4 transition-all"
+                className="bg-slate-50 dark:bg-[#17120e] border border-[#26201a] hover:border-[#d86f4c]/30 rounded-xl p-3.5 flex items-start justify-between gap-4 transition-all"
               >
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-semibold text-xs text-white">
                       {skill.name}
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-white/5 border border-white/10 text-neutral-400">
+                    <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-white/5 border border-white/10 text-slate-500 dark:text-neutral-400">
                       {skill.source || "repo"}
                     </span>
                     {skill.enabled && (
@@ -134,7 +134,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-neutral-400 text-xs leading-relaxed font-sans line-clamp-2">
+                  <p className="text-slate-500 dark:text-neutral-400 text-xs leading-relaxed font-sans line-clamp-2">
                     {skill.description || "Skill definition and operational runbook for autonomous execution."}
                   </p>
                 </div>
@@ -143,7 +143,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
                   <button
                     className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-colors cursor-pointer border ${
                       skill.enabled
-                        ? "bg-[#26211d] text-neutral-300 border-[#382f28] hover:bg-[#382f28]"
+                        ? "bg-[#26211d] text-slate-700 dark:text-neutral-300 border-[#382f28] hover:bg-[#382f28]"
                         : "bg-[#d86f4c] text-white border-transparent hover:bg-[#c2410c]"
                     }`}
                   >
@@ -156,11 +156,11 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
+        <div className="px-6 py-3 bg-slate-50 dark:bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
           <span>{filtered.length} capabilities loaded on {agentName}</span>
           <button
             onClick={onClose}
-            className="hover:text-neutral-300 transition-colors cursor-pointer"
+            className="hover:text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer"
           >
             Close Catalog
           </button>

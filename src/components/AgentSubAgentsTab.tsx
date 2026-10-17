@@ -25,12 +25,12 @@ const STATUS_STYLE: Record<string, string> = {
   completed: "text-sky-300 bg-sky-500/10 border-sky-500/25",
   under_review: "text-amber-300 bg-amber-500/10 border-amber-500/25",
   running: "text-[#ff7a00] bg-[#ff7a00]/10 border-[#ff7a00]/25",
-  queued: "text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
-  retry_queued: "text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
+  queued: "text-slate-700 dark:text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
+  retry_queued: "text-slate-700 dark:text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
   rejected: "text-rose-300 bg-rose-500/10 border-rose-500/25",
   failed: "text-rose-300 bg-rose-500/10 border-rose-500/25",
   timed_out: "text-rose-300 bg-rose-500/10 border-rose-500/25",
-  cancelled: "text-neutral-400 bg-neutral-500/10 border-neutral-500/25",
+  cancelled: "text-slate-500 dark:text-neutral-400 bg-neutral-500/10 border-neutral-500/25",
 };
 
 function Badge({ status }: { status: string }) {
@@ -212,14 +212,14 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                 ? "text-rose-300 border-rose-500/30"
                 : skill && ["pending", "syncing"].includes(skill.state)
                   ? "text-amber-300 border-amber-500/30"
-                  : "text-neutral-400 border-[#2b2b3d]"
+                  : "text-slate-500 dark:text-neutral-400 border-[#2b2b3d]"
           }`}
           title={skill?.error || (skill?.synced_at ? `synced ${skill.synced_at}` : "")}
         >
           {skill?.state ?? "unknown"}
           {skill?.duration_ms != null && skill.state === "synced" ? ` · ${skill.duration_ms}ms` : ""}
         </span>
-        <button onClick={resyncSkill} disabled={busy === "skill"} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-200 cursor-pointer disabled:opacity-50">
+        <button onClick={resyncSkill} disabled={busy === "skill"} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer disabled:opacity-50">
           Re-sync skill
         </button>
         <span className="ml-auto flex items-center gap-1">
@@ -229,7 +229,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                 operatorKey.set("");
                 setHasKey(false);
               }}
-              className="text-neutral-500 hover:text-neutral-300 cursor-pointer"
+              className="text-neutral-500 hover:text-slate-700 dark:text-neutral-300 cursor-pointer"
             >
               operator unlocked · lock
             </button>
@@ -241,7 +241,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                 onChange={(e) => setKeyInput(e.target.value)}
                 placeholder="operator key"
                 aria-label="Operator key"
-                className="w-28 px-1.5 py-0.5 rounded bg-[#0f0f14] border border-[#2b2b3d] text-neutral-200"
+                className="w-28 px-1.5 py-0.5 rounded bg-[#0f0f14] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200"
               />
               <button
                 onClick={() => {
@@ -249,7 +249,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                   setHasKey(!!keyInput.trim());
                   setKeyInput("");
                 }}
-                className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-200 cursor-pointer"
+                className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer"
               >
                 Unlock
               </button>
@@ -263,18 +263,18 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`flex-1 py-1 rounded-lg font-medium cursor-pointer ${view === v ? "bg-[#242432] text-white" : "text-neutral-400 hover:text-neutral-200"}`}
+            className={`flex-1 py-1 rounded-lg font-medium cursor-pointer ${view === v ? "bg-[#242432] text-white" : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"}`}
           >
             {v === "subagents" ? `Sub-Agents (${bindings.length})` : `Delegations (${tasks.length})`}
           </button>
         ))}
-        <button onClick={load} className="p-1.5 text-neutral-400 hover:text-white cursor-pointer" title="Refresh">
+        <button onClick={load} className="p-1.5 text-slate-500 dark:text-neutral-400 hover:text-white cursor-pointer" title="Refresh">
           <RefreshCw size={12} className={loading ? "animate-spin text-[#ff7a00]" : ""} />
         </button>
       </div>
 
       {/* Topology */}
-      <div className="p-2.5 rounded-xl bg-[#14141c] border border-[#22222e] font-mono text-[11px] text-neutral-300">
+      <div className="p-2.5 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
         <div className="flex items-center gap-1.5 text-white font-semibold mb-1">
           <Network size={12} className="text-[#ff7a00]" /> {parent}
         </div>
@@ -298,7 +298,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           {bindings.map((b) => {
             const h = health[b.child_agent_id];
             return (
-              <div key={b.id} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
+              <div key={b.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`h-2 w-2 rounded-full ${h?.callable ? "bg-emerald-400" : "bg-rose-400"}`} title={h?.callable ? "online" : "offline/disabled"} />
@@ -314,7 +314,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                           flash(r.ok ? `Probe ${b.child_agent_id}: ${r.output}` : `Probe failed: ${r.error}`, r.ok);
                         })
                       }
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-300 hover:text-white cursor-pointer"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-700 dark:text-neutral-300 hover:text-white cursor-pointer"
                     >
                       {busy === `probe-${b.child_agent_id}` ? <Loader2 size={11} className="animate-spin" /> : <Zap size={11} />} Probe
                     </button>
@@ -336,7 +336,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {b.capabilities.map((c) => (
-                    <span key={c} className="text-[10px] px-1.5 py-0.5 rounded bg-[#1d1d27] border border-[#2a2a38] text-neutral-300">{c}</span>
+                    <span key={c} className="text-[10px] px-1.5 py-0.5 rounded bg-[#1d1d27] border border-[#2a2a38] text-slate-700 dark:text-neutral-300">{c}</span>
                   ))}
                 </div>
                 <div className="text-[10px] font-mono text-neutral-500">
@@ -347,7 +347,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
             );
           })}
 
-          <div className="p-2.5 rounded-xl border border-dashed border-[#2a2a38] bg-[#121218] space-y-1.5">
+          <div className="p-2.5 rounded-xl border border-dashed border-[#2a2a38] bg-white dark:bg-[#121218] space-y-1.5">
             <div className="font-semibold text-white flex items-center gap-1"><Plus size={12} /> Bind sub-agent</div>
             <select value={form.child} onChange={(e) => setForm({ ...form, child: e.target.value })} className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-white">
               <option value="">Select agent…</option>
@@ -364,7 +364,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
 
       {view === "delegations" && (
         <div className="space-y-2">
-          <div className="p-2.5 rounded-xl border border-[#2a2a38] bg-[#121218] space-y-1.5">
+          <div className="p-2.5 rounded-xl border border-[#2a2a38] bg-white dark:bg-[#121218] space-y-1.5">
             <div className="font-semibold text-white flex items-center gap-1"><Send size={12} /> New delegation</div>
             <div className="flex gap-1">
               <select value={dlg.child} onChange={(e) => setDlg({ ...dlg, child: e.target.value })} className="flex-1 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-white">
@@ -390,7 +390,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                     await load();
                   })
                 }
-                className="px-2 rounded-lg bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-300 hover:text-white cursor-pointer flex items-center gap-1"
+                className="px-2 rounded-lg bg-[#1f1f2b] border border-[#2b2b3d] text-slate-700 dark:text-neutral-300 hover:text-white cursor-pointer flex items-center gap-1"
                 title="Import chat_with_agent / submit_to_agent calls made by the agent itself"
               >
                 {busy === "ingest" ? <Loader2 size={12} className="animate-spin" /> : <ScanSearch size={12} />} Sync agent calls
@@ -400,29 +400,29 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
 
           {tasks.length === 0 && <div className="py-6 text-center text-neutral-500 font-mono">No delegations yet.</div>}
           {tasks.map((t) => (
-            <div key={t.id} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
+            <div key={t.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
               <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={() => setExpanded(expanded === t.id ? null : t.id)}>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-mono text-neutral-400">{t.parent_agent_id}→</span>
+                  <span className="font-mono text-slate-500 dark:text-neutral-400">{t.parent_agent_id}→</span>
                   <span className="font-semibold text-white">{t.child_agent_id}</span>
                   <span className="text-[10px] font-mono text-neutral-500">{t.mode}{t.source === "native-tool-call" ? " · auto" : ""} · #{t.attempt}</span>
                 </div>
                 <Badge status={t.status} />
               </div>
-              <p className="text-neutral-300 line-clamp-2">{t.objective}</p>
+              <p className="text-slate-700 dark:text-neutral-300 line-clamp-2">{t.objective}</p>
               {expanded === t.id && (
                 <div className="space-y-1.5 pt-1 border-t border-[#20202c]">
-                  {t.output && <pre className="whitespace-pre-wrap text-[11px] text-neutral-200 bg-[#0f0f14] p-2 rounded-lg max-h-48 overflow-y-auto">{t.output}</pre>}
+                  {t.output && <pre className="whitespace-pre-wrap text-[11px] text-slate-800 dark:text-neutral-200 bg-[#0f0f14] p-2 rounded-lg max-h-48 overflow-y-auto">{t.output}</pre>}
                   {t.error && <div className="text-rose-300 text-[11px]">Error: {t.error}</div>}
                   {t.acceptance && (
                     <div className="space-y-0.5">
-                      <div className="text-[10px] font-mono text-neutral-400">
+                      <div className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
                         {t.acceptance.reviewer}: {t.acceptance.decision} ({t.acceptance.score}) — {t.acceptance.reason}
                       </div>
                       {t.acceptance.checks.map((c) => (
                         <div key={c.criterion} className="flex items-start gap-1 text-[11px]">
                           {c.result === "pass" ? <CheckCircle2 size={11} className="text-emerald-400 mt-0.5" /> : c.result === "fail" ? <XCircle size={11} className="text-rose-400 mt-0.5" /> : <Clock size={11} className="text-amber-400 mt-0.5" />}
-                          <span className="text-neutral-300">{c.criterion}</span>
+                          <span className="text-slate-700 dark:text-neutral-300">{c.criterion}</span>
                         </div>
                       ))}
                     </div>
@@ -433,7 +433,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                   <div className="flex flex-wrap gap-1">
                     {["completed", "under_review"].includes(t.status) && (
                       <>
-                        <button onClick={() => review(t, "accepted", "rule-based")} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-200 cursor-pointer">Rule check</button>
+                        <button onClick={() => review(t, "accepted", "rule-based")} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer">Rule check</button>
                         <button onClick={() => review(t, "accepted", "human")} className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 cursor-pointer">Accept</button>
                         <button onClick={() => review(t, "rejected", "human")} className="px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 cursor-pointer">Reject</button>
                       </>
@@ -444,9 +444,9 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                     {["running", "queued", "retry_queued"].includes(t.status) && (
                       <>
                         {t.mode === "async" && (
-                          <button onClick={() => run(`s-${t.id}`, async () => { const u = await subAgentApi.syncStatus(t.id); setTasks((p) => p.map((x) => (x.id === t.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-200 cursor-pointer">Check status</button>
+                          <button onClick={() => run(`s-${t.id}`, async () => { const u = await subAgentApi.syncStatus(t.id); setTasks((p) => p.map((x) => (x.id === t.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer">Check status</button>
                         )}
-                        <button onClick={() => run(`c-${t.id}`, async () => { const u = await subAgentApi.cancel(t.id); setTasks((p) => p.map((x) => (x.id === t.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-neutral-400 cursor-pointer flex items-center gap-1"><Ban size={11} /> Cancel</button>
+                        <button onClick={() => run(`c-${t.id}`, async () => { const u = await subAgentApi.cancel(t.id); setTasks((p) => p.map((x) => (x.id === t.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-500 dark:text-neutral-400 cursor-pointer flex items-center gap-1"><Ban size={11} /> Cancel</button>
                       </>
                     )}
                   </div>

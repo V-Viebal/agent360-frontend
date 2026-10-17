@@ -48,7 +48,7 @@ export function CustomSelect({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           title={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder}
-          className={`flex items-center justify-between gap-1.5 bg-[#181820] hover:bg-[#20202a] text-neutral-200 border border-[#2a2a38] hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full ${triggerClassName}`}
+          className={`flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full ${triggerClassName}`}
         >
           <span className="truncate text-[#ff7a00] font-medium min-w-0 flex-1 text-left">
             {selectedOption ? selectedOption.label : placeholder}
@@ -60,7 +60,7 @@ export function CustomSelect({
         </button>
 
         {/* Floating Custom Tooltip on Hover with Top Z-Index */}
-        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[100] hidden group-hover/select-trigger:block whitespace-nowrap rounded-lg bg-[#0e1017] border border-white/15 px-2.5 py-1.5 text-[11px] font-sans text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[100] hidden group-hover/select-trigger:block whitespace-nowrap rounded-lg bg-white dark:bg-[#0e1017] border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] font-sans text-slate-900 dark:text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
           <div className="flex items-center gap-1.5">
             <span className="font-medium text-[#ff7a00]">{selectedOption ? selectedOption.label : placeholder}</span>
             {selectedOption?.badge && (
@@ -81,7 +81,7 @@ export function CustomSelect({
 
       {/* Dropdown Menu Always On Top */}
       {isOpen && (
-        <div className="absolute right-0 z-[100] mt-1.5 w-52 rounded-xl bg-[#14141c] border border-[#262634] p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 z-[100] mt-1.5 w-52 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
           <div className="space-y-0.5 max-h-56 overflow-y-auto">
             {options.map((opt) => {
               const isSelected = opt.value === value;

@@ -81,21 +81,21 @@ export function VoiceRecordSettingsModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150 select-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full max-w-md bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#22222e] flex items-center justify-between bg-[#161620]">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
               <Mic size={18} />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">Voice Input & Recording Settings</h3>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Configure input language accent, microphone device, and silence pause
               </p>
             </div>
@@ -103,7 +103,7 @@ export function VoiceRecordSettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-[#1c1c28] hover:bg-[#252536] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             <X size={15} />
           </button>
@@ -112,7 +112,7 @@ export function VoiceRecordSettingsModal({
         {/* Content Body */}
         <div className="p-4 space-y-4 max-h-[65vh] overflow-y-auto">
           {/* 1. Speech Recognition Input Language Accent (VI / EN) */}
-          <div className="p-3.5 rounded-xl bg-[#161620] border border-[#22222e] space-y-2.5">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Globe size={15} className="text-[#ff7a00]" />
@@ -122,7 +122,7 @@ export function VoiceRecordSettingsModal({
                 {sttLang === "vi-VN" ? "Tiếng Việt" : "English"}
               </span>
             </div>
-            <p className="text-[11px] text-neutral-400 leading-relaxed">
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed">
               Select the primary speech-to-text recognition model for best transcription accuracy:
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
@@ -132,7 +132,7 @@ export function VoiceRecordSettingsModal({
                 className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                   sttLang === "vi-VN"
                     ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
-                    : "bg-[#1c1c28] border-[#28283a] text-neutral-400 hover:text-white"
+                    : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 <span>Tiếng Việt (vi-VN)</span>
@@ -144,7 +144,7 @@ export function VoiceRecordSettingsModal({
                 className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                   sttLang === "en-US"
                     ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
-                    : "bg-[#1c1c28] border-[#28283a] text-neutral-400 hover:text-white"
+                    : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 <span>English (en-US)</span>
@@ -154,8 +154,8 @@ export function VoiceRecordSettingsModal({
           </div>
 
           {/* 2. Microphone Hardware Device */}
-          <div className="p-3.5 rounded-xl bg-[#161620] border border-[#22222e] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono text-neutral-300">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-neutral-300">
               <span className="font-semibold text-white">Target Microphone:</span>
               <span className="text-[10px] text-neutral-500 font-sans">
                 {audioDevices.length > 0 ? `${audioDevices.length} connected` : "Default"}
@@ -164,7 +164,7 @@ export function VoiceRecordSettingsModal({
             <select
               value={selectedMicId}
               onChange={(e) => handleDeviceChange(e.target.value)}
-              className="w-full bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
+              className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
             >
               <option value="">Default System Microphone</option>
               {audioDevices.map((d) => (
@@ -176,10 +176,10 @@ export function VoiceRecordSettingsModal({
           </div>
 
           {/* 3. Voice Activity Detection (VAD) Mode & Silence Threshold */}
-          <div className="p-3.5 rounded-xl bg-[#161620] border border-[#22222e] space-y-3">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-white">Interaction Mode</span>
-              <span className="text-[10px] font-mono text-neutral-400">
+              <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
                 {vadMode === "continuous" ? "Hands-Free VAD" : vadMode === "push_to_talk" ? "Push-to-Talk" : "Manual"}
               </span>
             </div>
@@ -191,7 +191,7 @@ export function VoiceRecordSettingsModal({
                 className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "continuous"
                     ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
-                    : "bg-[#1c1c28] border-[#28283a] text-neutral-400 hover:text-white"
+                    : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 Auto Silence
@@ -202,7 +202,7 @@ export function VoiceRecordSettingsModal({
                 className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "manual"
                     ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
-                    : "bg-[#1c1c28] border-[#28283a] text-neutral-400 hover:text-white"
+                    : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 Manual Toggle
@@ -213,7 +213,7 @@ export function VoiceRecordSettingsModal({
                 className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "push_to_talk"
                     ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
-                    : "bg-[#1c1c28] border-[#28283a] text-neutral-400 hover:text-white"
+                    : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 Push-to-Talk
@@ -221,7 +221,7 @@ export function VoiceRecordSettingsModal({
             </div>
 
             {vadMode === "continuous" && (
-              <div className="pt-1 flex items-center justify-between text-xs font-mono text-neutral-400">
+              <div className="pt-1 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
                 <span>Silence Pause Window:</span>
                 <div className="flex items-center gap-1.5">
                   {[1500, 2400, 3500].map((ms) => (
@@ -232,7 +232,7 @@ export function VoiceRecordSettingsModal({
                       className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
                         silenceDuration === ms
                           ? "bg-[#ff7a00] text-black font-bold"
-                          : "bg-[#1c1c28] hover:bg-[#252538] text-neutral-300"
+                          : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
                       }`}
                     >
                       {(ms / 1000).toFixed(1)}s
@@ -245,7 +245,7 @@ export function VoiceRecordSettingsModal({
         </div>
 
         {/* Footer info */}
-        <div className="px-5 py-3 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <div className="flex items-center gap-2">
             {onOpenPermissions && (
               <button
@@ -280,7 +280,7 @@ export function VoiceRecordSettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer"
           >
             Done
           </button>

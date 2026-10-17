@@ -111,31 +111,31 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
   return (
     <div className="space-y-3 text-xs font-sans pb-4">
       {/* Header Info Banner */}
-      <div className="p-3 rounded-xl bg-[#14141c] border border-[#22222e] space-y-1.5">
+      <div className="p-3 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-white flex items-center gap-1.5">
             <Brain size={13} className="text-[#ff7a00]" />
             <span>Persistent Memory (MEMORY.md)</span>
           </span>
-          <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
+          <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
             {memories.length} entries
           </span>
         </div>
-        <p className="text-[11px] text-neutral-400 leading-relaxed">
+        <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed">
           Facts and rules learned across conversations that persist into {agentName}&apos;s system prompt.
         </p>
       </div>
 
       {/* Filter and Add Button */}
       <div className="flex items-center justify-between gap-2 select-none">
-        <div className="flex items-center gap-1 bg-[#121218] p-1 rounded-lg border border-[#20202c] text-[10px] font-mono">
+        <div className="flex items-center gap-1 bg-white dark:bg-[#121218] p-1 rounded-lg border border-[#20202c] text-[10px] font-mono">
           {(["all", "rule", "preference", "project", "fact"] as const).map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setFilterCategory(cat)}
               className={`px-2 py-0.5 rounded capitalize transition-colors cursor-pointer ${
-                filterCategory === cat ? "bg-[#ff7a00] text-black font-semibold" : "text-neutral-400 hover:text-white"
+                filterCategory === cat ? "bg-[#ff7a00] text-black font-semibold" : "text-slate-500 dark:text-neutral-400 hover:text-white"
               }`}
             >
               {cat}
@@ -155,13 +155,13 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
 
       {/* Add New Memory Drawer */}
       {isAdding && (
-        <div className="p-3 rounded-xl bg-[#181824] border border-[#ff7a00]/30 space-y-2 animate-in fade-in">
-          <div className="flex items-center justify-between text-[11px] font-mono text-neutral-300">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#ff7a00]/30 space-y-2 animate-in fade-in">
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300">
             <span>New Knowledge Entry</span>
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as any)}
-              className="bg-[#121218] border border-[#2a2a3a] rounded px-2 py-0.5 text-[10px] text-white focus:outline-none"
+              className="bg-white dark:bg-[#121218] border border-[#2a2a3a] rounded px-2 py-0.5 text-[10px] text-white focus:outline-none"
             >
               <option value="fact">Fact</option>
               <option value="rule">Rule (Mandate)</option>
@@ -175,13 +175,13 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="Type what this agent should always remember..."
-            className="w-full bg-[#101016] border border-[#262638] rounded-lg p-2 text-xs text-white placeholder-neutral-500 focus:outline-none resize-none font-sans"
+            className="w-full bg-slate-50 dark:bg-[#101016] border border-[#262638] rounded-lg p-2 text-xs text-white placeholder-neutral-500 focus:outline-none resize-none font-sans"
           />
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-2.5 py-1 rounded text-[10px] text-neutral-400 hover:text-white cursor-pointer"
+              className="px-2.5 py-1 rounded text-[10px] text-slate-500 dark:text-neutral-400 hover:text-white cursor-pointer"
             >
               Cancel
             </button>
@@ -202,7 +202,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
         {filtered.map((item) => (
           <div
             key={item.id}
-            className="p-2.5 rounded-xl bg-[#121218] border border-[#20202c] hover:border-[#2a2a3c] transition-colors space-y-1.5 group"
+            className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-[#20202c] hover:border-[#2a2a3c] transition-colors space-y-1.5 group"
           >
             <div className="flex items-center justify-between">
               {getCategoryBadge(item.category)}
@@ -242,7 +242,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                   <button
                     type="button"
                     onClick={() => setEditingId(null)}
-                    className="p-1 rounded text-neutral-400 hover:text-white cursor-pointer"
+                    className="p-1 rounded text-slate-500 dark:text-neutral-400 hover:text-white cursor-pointer"
                   >
                     <X size={12} />
                   </button>
@@ -256,7 +256,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                 </div>
               </div>
             ) : (
-              <p className="text-[12px] text-neutral-200 leading-relaxed font-sans">{item.content}</p>
+              <p className="text-[12px] text-slate-800 dark:text-neutral-200 leading-relaxed font-sans">{item.content}</p>
             )}
           </div>
         ))}

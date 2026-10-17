@@ -157,21 +157,21 @@ export function SettingsModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-[#121218] border border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-neutral-200 font-sans animate-in zoom-in-95 duration-150 max-h-[85vh]"
+        className="w-full max-w-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150 max-h-[85vh]"
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-[#22222e] flex items-center justify-between bg-[#161620]">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
               <Settings size={18} />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">Cài đặt không gian làm việc</h3>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Tuỳ chỉnh cách nhìn, ngôn ngữ, chuông báo và quyền hạn thiết bị
               </p>
             </div>
@@ -179,7 +179,7 @@ export function SettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-[#1c1c28] hover:bg-[#252536] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
             <X size={15} />
           </button>
@@ -195,7 +195,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "appearance"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >
               <Palette size={15} />
@@ -207,7 +207,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "language"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >
               <Globe size={15} />
@@ -219,7 +219,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "audio"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >
               <Volume2 size={15} />
@@ -231,7 +231,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "privacy_export"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >
               <ShieldCheck size={15} />
@@ -240,7 +240,7 @@ export function SettingsModal({
           </div>
 
           {/* Right Panel Content */}
-          <div className="flex-1 p-5 overflow-y-auto space-y-5 bg-[#14141c]">
+          <div className="flex-1 p-5 overflow-y-auto space-y-5 bg-white dark:bg-[#14141c]">
             {/* 1. APPEARANCE TAB */}
             {activeTab === "appearance" && (
               <div className="space-y-4 animate-in fade-in duration-150">
@@ -248,7 +248,7 @@ export function SettingsModal({
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
                     Chọn màu sắc hiển thị
                   </h4>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                     Đang chọn: <span className="text-[#ff7a00] font-semibold capitalize">{themeMode === "system" ? "Tự động theo máy" : themeMode === "dark" ? "Ban đêm" : "Ban ngày"}</span>
                   </p>
                 </div>
@@ -263,16 +263,16 @@ export function SettingsModal({
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
                             ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                            : "bg-[#181822] border-[#262634] text-neutral-300 hover:border-[#38384c]"
+                            : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-neutral-400"}`}>
+                          <div className={`p-2 rounded-lg ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-slate-500 dark:text-neutral-400"}`}>
                             {opt.icon}
                           </div>
                           <div>
                             <div className="text-xs font-semibold text-white">{opt.label}</div>
-                            <div className="text-[11px] text-neutral-400 mt-0.5">{opt.desc}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">{opt.desc}</div>
                           </div>
                         </div>
                         {isSelected && (
@@ -294,7 +294,7 @@ export function SettingsModal({
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
                     Ngôn ngữ trò chuyện & hiển thị
                   </h4>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                     Hệ thống có thể tự chọn theo vị trí máy của bạn hoặc bạn tự chọn ngôn ngữ thích hợp
                   </p>
                 </div>
@@ -309,14 +309,14 @@ export function SettingsModal({
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
                             ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                            : "bg-[#181822] border-[#262634] text-neutral-300 hover:border-[#38384c]"
+                            : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="text-xl shrink-0">{opt.flag}</div>
                           <div>
                             <div className="text-xs font-semibold text-white">{opt.label}</div>
-                            <div className="text-[11px] text-neutral-400 mt-0.5">{opt.desc}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">{opt.desc}</div>
                           </div>
                         </div>
                         {isSelected && (
@@ -342,7 +342,7 @@ export function SettingsModal({
                         <Bell size={14} className="text-[#ff7a00]" />
                         <span>Chuông thông báo (Audio Chime)</span>
                       </h4>
-                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                      <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                         Báo âm thanh khi Agent hoàn tất tác vụ hoặc có session mới
                       </p>
                     </div>
@@ -358,7 +358,7 @@ export function SettingsModal({
                       className={`px-3 py-1 rounded-full text-xs font-mono font-medium border transition-all cursor-pointer ${
                         isSoundEnabled
                           ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                          : "bg-white/5 border-white/10 text-neutral-400"
+                          : "bg-white/5 border-white/10 text-slate-500 dark:text-neutral-400"
                       }`}
                     >
                       {isSoundEnabled ? "Đang bật (Enabled)" : "Tắt tiếng (Muted)"}
@@ -375,16 +375,16 @@ export function SettingsModal({
                           className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                             isSelected
                               ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-xs"
-                              : "bg-[#181822] border-[#262634] text-neutral-300 hover:border-[#38384c]"
+                              : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 pr-1">
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-neutral-400"}`}>
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-slate-500 dark:text-neutral-400"}`}>
                               <Volume2 size={14} />
                             </div>
                             <div className="min-w-0 truncate">
                               <div className="text-xs font-semibold text-white truncate">{preset.name}</div>
-                              <div className="text-[10px] text-neutral-400 truncate">{preset.description}</div>
+                              <div className="text-[10px] text-slate-500 dark:text-neutral-400 truncate">{preset.description}</div>
                             </div>
                           </div>
 
@@ -395,7 +395,7 @@ export function SettingsModal({
                                 e.stopPropagation();
                                 playNotificationChime(preset.id as SoundPreset);
                               }}
-                              className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-[10px] font-mono transition-colors"
+                              className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white text-[10px] font-mono transition-colors"
                               title="Nghe thử"
                             >
                               Thử
@@ -419,14 +419,14 @@ export function SettingsModal({
                       <Mic size={14} className="text-cyan-400" />
                       <span>Giọng đọc trợ lý (Voice Dynamics & TTS)</span>
                     </h4>
-                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                    <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                       Hiệu chỉnh tốc độ, cao độ và chọn chất giọng tiếng Việt / tiếng Anh đọc to phản hồi
                     </p>
                   </div>
 
                   {/* System Voice Selection */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-[#181822] border border-[#262634]">
-                    <div className="flex items-center justify-between text-xs text-neutral-300">
+                  <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
+                    <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                       <span className="font-medium">Chất giọng hệ thống:</span>
                       <span className="font-mono text-[#ff7a00] text-[11px]">
                         {systemVoices.find(v => v.voiceURI === selectedVoiceURI)?.lang || "Tự động nhận diện"}
@@ -439,7 +439,7 @@ export function SettingsModal({
                         setSelectedVoiceURI(uri);
                         saveStoredSpeechSettings({ voiceURI: uri });
                       }}
-                      className="w-full bg-[#121218] text-xs text-neutral-200 border border-[#2a2a3c] rounded-lg px-2.5 py-2 focus:outline-none focus:border-[#ff7a00] cursor-pointer"
+                      className="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] rounded-lg px-2.5 py-2 focus:outline-none focus:border-[#ff7a00] cursor-pointer"
                     >
                       <option value="">Tự động nhận diện (Tiếng Việt & English)</option>
                       {systemVoices.map((v) => (
@@ -453,8 +453,8 @@ export function SettingsModal({
                   {/* Sliders for Rate & Pitch */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Speed Slider */}
-                    <div className="p-3 rounded-xl bg-[#181822] border border-[#262634] space-y-2">
-                      <div className="flex items-center justify-between text-xs text-neutral-300">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                         <span className="font-medium">Tốc độ đọc (Speed):</span>
                         <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechRate.toFixed(2)}x</span>
                       </div>
@@ -479,8 +479,8 @@ export function SettingsModal({
                     </div>
 
                     {/* Pitch Slider */}
-                    <div className="p-3 rounded-xl bg-[#181822] border border-[#262634] space-y-2">
-                      <div className="flex items-center justify-between text-xs text-neutral-300">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                         <span className="font-medium">Cao độ giọng (Pitch):</span>
                         <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechPitch.toFixed(2)}</span>
                       </div>
@@ -527,7 +527,7 @@ export function SettingsModal({
                       className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                         isTestingSpeech
                           ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-sm"
-                          : "bg-[#1e1e2c] hover:bg-[#28283a] border-[#2e2e42] text-white hover:border-[#ff7a00]/40"
+                          : "bg-[#1e1e2c] hover:bg-[#28283a] border-slate-200 dark:border-[#2e2e42] text-white hover:border-[#ff7a00]/40"
                       }`}
                     >
                       {isTestingSpeech ? (
@@ -550,7 +550,7 @@ export function SettingsModal({
                         setSelectedVoiceURI("");
                         saveStoredSpeechSettings({ rate: 1.05, pitch: 1.0, voiceURI: "" });
                       }}
-                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer"
                       title="Khôi phục mặc định"
                     >
                       Mặc định
@@ -567,7 +567,7 @@ export function SettingsModal({
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
                     Quyền hạn thiết bị & Hướng dẫn bắt đầu
                   </h4>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                     Cho phép dùng micro để nói chuyện và xem lại các bước hướng dẫn
                   </p>
                 </div>
@@ -580,14 +580,14 @@ export function SettingsModal({
                         onClose();
                         onOpenPermissions();
                       }}
-                      className="p-3 rounded-xl bg-[#181822] border border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
                         <ShieldCheck size={16} />
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-white">Quyền Micro & Âm thanh</div>
-                        <div className="text-[10px] text-neutral-400">Bật micro để nói chuyện trực tiếp</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Bật micro để nói chuyện trực tiếp</div>
                       </div>
                     </button>
                   )}
@@ -599,14 +599,14 @@ export function SettingsModal({
                         onClose();
                         onStartTour();
                       }}
-                      className="p-3 rounded-xl bg-[#181822] border border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
                         <Sparkles size={16} />
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-white">Tham quan 1 vòng ứng dụng</div>
-                        <div className="text-[10px] text-neutral-400">Xem nhanh các góc làm việc chính</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Xem nhanh các góc làm việc chính</div>
                       </div>
                     </button>
                   )}
@@ -617,14 +617,14 @@ export function SettingsModal({
                       onClick={() => {
                         onResetChecklist();
                       }}
-                      className="p-3 rounded-xl bg-[#181822] border border-[#262634] hover:border-amber-500/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-amber-500/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-amber-500/15 text-amber-400">
                         <Sparkles size={16} />
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-white">Mở lại bảng Checklist</div>
-                        <div className="text-[10px] text-neutral-400">Xem lại các bước làm quen ban đầu</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Xem lại các bước làm quen ban đầu</div>
                       </div>
                     </button>
                   )}
@@ -636,14 +636,14 @@ export function SettingsModal({
                         onClose();
                         onInstallPwa();
                       }}
-                      className="p-3 rounded-xl bg-[#181822] border border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
                         <Smartphone size={16} />
                       </div>
                       <div>
                         <div className="text-xs font-semibold text-white">Cài app về máy tính / điện thoại</div>
-                        <div className="text-[10px] text-neutral-400">Dùng như một ứng dụng độc lập</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Dùng như một ứng dụng độc lập</div>
                       </div>
                     </button>
                   )}
@@ -658,7 +658,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportMarkdown}
-                        className="p-2.5 rounded-xl bg-[#181822] hover:bg-[#20202e] border border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
                         <Download size={14} className="text-[#ff7a00] shrink-0" />
                         <span className="truncate">Tệp văn bản (.md)</span>
@@ -668,7 +668,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportJson}
-                        className="p-2.5 rounded-xl bg-[#181822] hover:bg-[#20202e] border border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
                         <FileText size={14} className="text-cyan-400 shrink-0" />
                         <span className="truncate">Dữ liệu gốc (.json)</span>
@@ -678,7 +678,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportCertificate}
-                        className="p-2.5 rounded-xl bg-[#181822] hover:bg-[#20202e] border border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
                         <Shield size={14} className="text-emerald-400 shrink-0" />
                         <span className="truncate">Chứng chỉ kiểm định (.html)</span>
@@ -692,12 +692,12 @@ export function SettingsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3 bg-[#0f0f15] border-t border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <span>Skyer Không Gian Đồng Đội AI</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-200 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
+            className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-800 dark:text-neutral-200 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
           >
             Đóng bảng
           </button>

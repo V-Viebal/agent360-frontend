@@ -61,7 +61,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold text-white tracking-tight flex items-center gap-2">
               <span>{agent.name}</span>
-              <span className="text-xs font-mono font-normal text-neutral-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-mono font-normal text-slate-500 dark:text-neutral-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
                 {agent.slug}
               </span>
             </h1>
@@ -69,7 +69,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
               {agent.roleTag}
             </span>
           </div>
-          <p className="text-xs text-neutral-400 max-w-2xl leading-relaxed">
+          <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-2xl leading-relaxed">
             {agent.description}
           </p>
         </div>
@@ -77,9 +77,9 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
         {/* Right: Runtime Specs & Actions */}
         <div className="flex items-center gap-3 self-start md:self-center font-mono text-xs">
           <div className="flex items-center gap-3 bg-[#1c1713] border border-[#26211d] px-3.5 py-1.5 rounded-xl">
-            <div className="flex items-center gap-1.5 text-neutral-300">
+            <div className="flex items-center gap-1.5 text-slate-700 dark:text-neutral-300">
               <Server size={13} className="text-[#d86f4c]" />
-              <span className="text-neutral-400 text-[11px]">{agent.node}</span>
+              <span className="text-slate-500 dark:text-neutral-400 text-[11px]">{agent.node}</span>
             </div>
             <div className="h-3 w-px bg-white/10" />
 
@@ -88,7 +88,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
               <button data-ux-target-min="24" aria-label="Switch Active Model Slot"
                 onClick={() => setShowModelDropdown((prev) => !prev)}
                 disabled={switchingModel}
-                className="flex items-center gap-1.5 text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-slate-800 dark:text-neutral-200 hover:text-white transition-colors cursor-pointer"
                 title="Switch Active Model Slot"
               >
                 <Cpu size={13} className="text-emerald-400" />
@@ -112,7 +112,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
                         className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
                           isSelected
                             ? "bg-[#d86f4c]/15 text-[#d86f4c] font-medium"
-                            : "text-neutral-300 hover:bg-white/5 hover:text-white"
+                            : "text-slate-700 dark:text-neutral-300 hover:bg-white/5 hover:text-white"
                         }`}
                       >
                         <span>{m.label}</span>
@@ -125,9 +125,9 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             </div>
 
             <div className="h-3 w-px bg-white/10" />
-            <div className="flex items-center gap-1.5 text-neutral-300">
+            <div className="flex items-center gap-1.5 text-slate-700 dark:text-neutral-300">
               <Clock size={13} className="text-amber-400" />
-              <span className="text-neutral-400 text-[11px]">{agent.uptime}</span>
+              <span className="text-slate-500 dark:text-neutral-400 text-[11px]">{agent.uptime}</span>
             </div>
           </div>
 
@@ -144,7 +144,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           {/* Token Analytics Dashboard Button */}
           <button aria-label="View Token Usage & Metrics" data-ux-target-min="24"
             onClick={() => setShowAnalyticsModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-700 dark:text-neutral-300 font-medium transition-colors cursor-pointer"
             title="View Token Usage & Metrics"
           >
             <BarChart3 size={13} className="text-amber-400" />
@@ -164,7 +164,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
           {onRefresh && (
             <button data-ux-target-min="24" aria-label="Refresh Agent State"
               onClick={onRefresh}
-              className="p-2 rounded-lg bg-[#1c1713] border border-[#26211d] text-neutral-400 hover:text-white hover:border-[#d86f4c]/40 transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-[#1c1713] border border-[#26211d] text-slate-500 dark:text-neutral-400 hover:text-white hover:border-[#d86f4c]/40 transition-colors cursor-pointer"
               title="Refresh Agent State"
             >
               <RefreshCw size={13} />
@@ -184,7 +184,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             <span
               key={tool.name}
               title={tool.description}
-              className="bg-[#1c1713] border border-[#26211d] hover:border-white/20 text-neutral-300 px-2 py-0.5 rounded text-[11px] cursor-help transition-colors"
+              className="bg-[#1c1713] border border-[#26211d] hover:border-white/20 text-slate-700 dark:text-neutral-300 px-2 py-0.5 rounded text-[11px] cursor-help transition-colors"
             >
               {tool.name} <span className="text-neutral-500 text-[10px]">({tool.type})</span>
             </span>

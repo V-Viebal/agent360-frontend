@@ -94,10 +94,10 @@ export function ScheduleJobModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-[#121218] border border-[#262634] shadow-2xl overflow-hidden font-sans text-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs">
         {/* Header */}
-        <div className="px-4 py-3 bg-[#181822] border-b border-[#242432] flex items-center justify-between">
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-b border-[#242432] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock size={15} className="text-[#ff7a00]" />
             <span className="font-semibold text-white tracking-wide uppercase font-mono">
@@ -106,7 +106,7 @@ export function ScheduleJobModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-[#232330] transition-colors cursor-pointer"
+            className="p-1 text-slate-500 dark:text-neutral-400 hover:text-white rounded-lg hover:bg-[#232330] transition-colors cursor-pointer"
           >
             <X size={15} />
           </button>
@@ -115,7 +115,7 @@ export function ScheduleJobModal({
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-4 space-y-3.5">
           <div className="space-y-1">
-            <label className="text-neutral-300 font-medium">Task Name</label>
+            <label className="text-slate-700 dark:text-neutral-300 font-medium">Task Name</label>
             <input
               type="text"
               required
@@ -128,7 +128,7 @@ export function ScheduleJobModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-neutral-300 font-medium font-mono">Cron Expression</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium font-mono">Cron Expression</label>
               <input
                 type="text"
                 required
@@ -140,7 +140,7 @@ export function ScheduleJobModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-neutral-300 font-medium">Target Channel</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium">Target Channel</label>
               <select
                 value={targetChannel}
                 onChange={(e) => setTargetChannel(e.target.value)}
@@ -165,7 +165,7 @@ export function ScheduleJobModal({
                 className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
                   cronExpr === p.cron
                     ? "bg-[#ff7a00]/20 border-[#ff7a00] text-[#ff7a00]"
-                    : "bg-[#181824] border-[#262638] text-neutral-400 hover:text-white"
+                    : "bg-[#181824] border-[#262638] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 {p.label}
@@ -174,7 +174,7 @@ export function ScheduleJobModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-neutral-300 font-medium">Instruction Prompt to Execute</label>
+            <label className="text-slate-700 dark:text-neutral-300 font-medium">Instruction Prompt to Execute</label>
             <textarea
               rows={3}
               required
@@ -185,10 +185,10 @@ export function ScheduleJobModal({
             />
           </div>
 
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#161620] border border-[#242432]">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-[#242432]">
             <div className="flex flex-col">
               <span className="font-medium text-white">Active Status</span>
-              <span className="text-[10px] text-neutral-400">
+              <span className="text-[10px] text-slate-500 dark:text-neutral-400">
                 Automated scheduler fires according to cron expression
               </span>
             </div>
@@ -198,7 +198,7 @@ export function ScheduleJobModal({
               className={`px-3 py-1 rounded-full font-mono font-medium transition-all cursor-pointer border ${
                 enabled
                   ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                  : "bg-white/5 text-neutral-400 border-white/10"
+                  : "bg-white/5 text-slate-500 dark:text-neutral-400 border-white/10"
               }`}
             >
               {enabled ? "ACTIVE" : "PAUSED"}
@@ -223,7 +223,7 @@ export function ScheduleJobModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 rounded-lg border border-[#2a2a3a] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
               >
                 Cancel
               </button>

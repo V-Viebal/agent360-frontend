@@ -160,7 +160,7 @@ export function MarketplacePage() {
             <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               {t("marketplace.title")}
             </h1>
-            <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
+            <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-3xl leading-relaxed">
               {t("marketplace.subtitle")}
             </p>
           </div>
