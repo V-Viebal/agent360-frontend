@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Mic, X, Volume2, Globe, Sliders, CheckCircle2, ShieldCheck, Keyboard } from "lucide-react";
+import { Mic, X, Volume2, Globe, Sliders, CheckCircle2, ShieldCheck, Keyboard, Activity } from "lucide-react";
 import {
   AudioInputDeviceOption,
   getAvailableAudioInputDevices,
@@ -42,6 +42,95 @@ export function VoiceRecordSettingsModal({
       return 2400;
     }
   });
+
+  // Frequency bands (Bass / Mid / Treble) for live Equalizer Monitor
+  const [isLiveTesting, setIsLiveTesting] = useState(false);
+  const [freqBands, setFreqBands] = useState<{ bass: number; mid: number; treble: number }>({
+    bass: 0,
+    mid: 0,
+    treble: 0,
+  });
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const animFrameRef = React.useRef<number | null>(null);
+
+  const stopLiveTest = () => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    setIsLiveTesting(false);
+    setFreqBands({ bass: 0, mid: 0, treble: 0 });
+  };
+
+  const startLiveTest = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+      const constraints: MediaStreamConstraints = {
+        audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
+
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      setIsLiveTesting(true);
+
+      const updateBands = () => {
+        animFrameRef.current = requestAnimationFrame(updateBands);
+        analyser.getByteFrequencyData(dataArray);
+
+        // Bass: ~0-250Hz (indices 0..4)
+        let bassSum = 0;
+        for (let i = 0; i < 4; i++) bassSum += dataArray[i] || 0;
+        const bass = Math.min(100, Math.round((bassSum / (4 * 255)) * 100));
+
+        // Mid: ~250-2000Hz (indices 4..20)
+        let midSum = 0;
+        for (let i = 4; i < 20; i++) midSum += dataArray[i] || 0;
+        const mid = Math.min(100, Math.round((midSum / (16 * 255)) * 100));
+
+        // Treble: ~2000-8000Hz (indices 20..48)
+        let trebleSum = 0;
+        for (let i = 20; i < 48; i++) trebleSum += dataArray[i] || 0;
+        const treble = Math.min(100, Math.round((trebleSum / (28 * 255)) * 100));
+
+        setFreqBands({ bass, mid, treble });
+      };
+
+      updateBands();
+    } catch (err) {
+      console.warn("Failed to start live equalizer test:", err);
+      stopLiveTest();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopLiveTest();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopLiveTest();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     async function loadDevices() {
@@ -241,6 +330,77 @@ export function VoiceRecordSettingsModal({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* 4. Acoustic Spectrum Equalizer (Bass / Mid / Treble) */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity size={14} className="text-[#ff7a00]" />
+                <span className="text-xs font-semibold text-white">Frequency Bands Equalizer</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => (isLiveTesting ? stopLiveTest() : startLiveTest())}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-mono transition-all cursor-pointer border ${
+                  isLiveTesting
+                    ? "bg-red-500/20 border-red-500/50 text-red-300 font-semibold"
+                    : "bg-[#1c1c28] border-[#2c2c3e] text-neutral-300 hover:text-white"
+                }`}
+              >
+                {isLiveTesting ? "Stop Live Test" : "Live Test Mic"}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+              Live acoustic frequency breakdown for current microphone input:
+            </p>
+
+            <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
+              {/* Bass Band */}
+              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
+                  <span>Bass</span>
+                  <span className="text-[#ff7a00] font-bold">{freqBands.bass}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 to-[#ff7a00] transition-all duration-75 rounded-full"
+                    style={{ width: `${Math.max(4, freqBands.bass)}%` }}
+                  />
+                </div>
+                <span className="text-[9px] text-neutral-500">60-250 Hz</span>
+              </div>
+
+              {/* Mid Band */}
+              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
+                  <span>Mid</span>
+                  <span className="text-cyan-400 font-bold">{freqBands.mid}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 transition-all duration-75 rounded-full"
+                    style={{ width: `${Math.max(4, freqBands.mid)}%` }}
+                  />
+                </div>
+                <span className="text-[9px] text-neutral-500">250-2k Hz</span>
+              </div>
+
+              {/* Treble Band */}
+              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
+                  <span>Treble</span>
+                  <span className="text-purple-400 font-bold">{freqBands.treble}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-violet-400 to-purple-500 transition-all duration-75 rounded-full"
+                    style={{ width: `${Math.max(4, freqBands.treble)}%` }}
+                  />
+                </div>
+                <span className="text-[9px] text-neutral-500">2k-8k Hz</span>
+              </div>
+            </div>
           </div>
         </div>
 
