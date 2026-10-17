@@ -1322,9 +1322,10 @@ export function GrokBotWorkspace() {
           mobileAgentsOpen
             ? "translate-x-0 shadow-2xl"
             : isCompactMode
-            ? "-translate-x-full"
-            : "-translate-x-full lg:translate-x-0"
+            ? "-translate-x-full invisible"
+            : "-translate-x-full max-lg:invisible lg:translate-x-0"
         }`}
+        aria-hidden={!mobileAgentsOpen && isCompactMode ? true : undefined}
       >
         {/* Header */}
         <div className="p-3 sm:p-3.5 border-b border-[#1c1c22] flex items-center justify-between">
