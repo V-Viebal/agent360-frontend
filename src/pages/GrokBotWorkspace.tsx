@@ -1323,6 +1323,9 @@ export function GrokBotWorkspace() {
     return () => navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
   }, []);
   const recognitionRef = useRef<any>(null);
+  const recognitionBaseTextRef = useRef<string>("");
+  const isContinuousVoiceActiveRef = useRef<boolean>(false);
+  const autoRestartVoiceAfterSpeechRef = useRef<boolean>(false);
   const silenceTimerRef = useRef<any>(null);
   const autoSendOnSilenceRef = useRef<boolean>(true);
   const vadModeRef = useRef<"continuous" | "manual" | "push_to_talk">("continuous");
@@ -1349,6 +1352,11 @@ export function GrokBotWorkspace() {
   }, []);
 
   const startVoiceRecording = async () => {
+    // Interrupt any ongoing bot speech immediately when user begins speaking (natural barge-in)
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+    }
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -1386,37 +1394,50 @@ export function GrokBotWorkspace() {
       recognition.lang = "vi-VN"; // Default Vietnamese speech recognition
 
       recognition.onstart = () => {
+        isContinuousVoiceActiveRef.current = true;
         setIsRecording(true);
         setVoiceError(null);
+        // Anchor the baseline text when recording starts so interim chunks do not duplicate
+        recognitionBaseTextRef.current = inputText.trim();
       };
 
       recognition.onresult = (event: any) => {
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
+        let finalTranscript = "";
+        let interimTranscript = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+          const res = event.results[i];
+          if (res.isFinal) {
+            finalTranscript += res[0].transcript;
+          } else {
+            interimTranscript += res[0].transcript;
+          }
         }
-        if (transcript.trim()) {
-          setInputText((prev) => {
-            const separator = prev && !prev.endsWith(" ") ? " " : "";
-            return prev + separator + transcript;
-          });
+
+        const base = recognitionBaseTextRef.current;
+        const currentSpoken = (finalTranscript + (interimTranscript ? " " + interimTranscript : "")).trim();
+        
+        if (currentSpoken) {
+          const fullText = base ? `${base} ${currentSpoken}` : currentSpoken;
+          setInputText(fullText);
 
           // Voice Activity Detection (VAD): Reset silence countdown
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
           }
-          silenceTimerRef.current = setTimeout(() => {
-            if (autoSendOnSilenceRef.current) {
+
+          // In continuous or push_to_talk mode, automatically stop and submit when user finishes speaking
+          if (autoSendOnSilenceRef.current && vadModeRef.current !== "manual") {
+            silenceTimerRef.current = setTimeout(() => {
               stopVoiceRecording();
-              // Auto-submit voice request if text was collected
               setTimeout(() => {
                 const form = composerFormRef.current;
                 if (form) {
                   form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
                 }
-              }, 300);
-            }
-          }, silenceDurationRef.current); // dynamic silence auto-stop and submit
+              }, 250);
+            }, silenceDurationRef.current);
+          }
         }
       };
 
@@ -1442,10 +1463,13 @@ export function GrokBotWorkspace() {
     }
   };
 
-  const stopVoiceRecording = () => {
+  const stopVoiceRecording = (disengageLoop: boolean = false) => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
+    }
+    if (disengageLoop) {
+      isContinuousVoiceActiveRef.current = false;
     }
     if (recognitionRef.current) {
       try {
@@ -2422,7 +2446,15 @@ export function GrokBotWorkspace() {
 
       if (isAutoSpeakEnabled && accumulated) {
         speakText(accumulated, {
-          onEnd: () => setSpeakingMsgId(null),
+          onEnd: () => {
+            setSpeakingMsgId(null);
+            // If continuous hands-free voice conversation is enabled, resume listening after bot finishes
+            if (isContinuousVoiceActiveRef.current && vadModeRef.current === "continuous") {
+              setTimeout(() => {
+                startVoiceRecording();
+              }, 400);
+            }
+          },
           onError: () => setSpeakingMsgId(null),
         });
       }
@@ -3940,7 +3972,7 @@ export function GrokBotWorkspace() {
                 type="button"
                 onClick={() => {
                   if (vadModeRef.current !== "push_to_talk") {
-                    if (isRecording) stopVoiceRecording();
+                    if (isRecording) stopVoiceRecording(true);
                     else startVoiceRecording();
                   }
                 }}

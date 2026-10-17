@@ -17,6 +17,7 @@ import {
   MapPin,
   Navigation,
   Maximize2,
+  Search,
 } from "lucide-react";
 import { InfraAgent } from "../types/agent";
 
@@ -38,6 +39,7 @@ export function A2ATopologyGraphModal({
   nodePingMs,
 }: A2ATopologyGraphModalProps) {
   const [selectedNodeId, setSelectedNodeId] = useState<string>(currentAgent.id);
+  const [topologySearchQuery, setTopologySearchQuery] = useState<string>("");
   const [agentPings, setAgentPings] = useState<Record<string, number>>({});
   const [isProbing, setIsProbing] = useState<boolean>(false);
 
@@ -215,6 +217,43 @@ export function A2ATopologyGraphModal({
           </div>
         </div>
 
+        {/* Search & Cloud Region Filter Toolbar */}
+        <div className="px-5 py-2.5 bg-[#12121a] border-b border-[#20202c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono shrink-0 select-none">
+          <div className="flex items-center gap-2 flex-1 max-w-sm bg-[#181824] border border-[#262638] focus-within:border-cyan-400 rounded-lg px-2.5 py-1 transition-colors">
+            <Search size={13} className="text-neutral-400 shrink-0" />
+            <input
+              type="text"
+              value={topologySearchQuery}
+              onChange={(e) => setTopologySearchQuery(e.target.value)}
+              placeholder="Search agent name, node (SWE, Mons, SRE)..."
+              className="w-full bg-transparent border-0 text-white placeholder-neutral-500 focus:outline-none text-xs font-sans"
+            />
+            {topologySearchQuery && (
+              <button
+                type="button"
+                onClick={() => setTopologySearchQuery("")}
+                className="text-neutral-500 hover:text-white"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+            {topologySearchQuery && (
+              <span className="text-cyan-400">
+                {allAgents.filter((a) =>
+                  a.name.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                  a.id.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                  (a.roleTag && a.roleTag.toLowerCase().includes(topologySearchQuery.toLowerCase())) ||
+                  (a.node && a.node.toLowerCase().includes(topologySearchQuery.toLowerCase()))
+                ).length} found
+              </span>
+            )}
+            <span className="text-neutral-500 hidden sm:inline">• Click node to inspect</span>
+          </div>
+        </div>
+
         {/* Graph Body */}
         <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-[#0a0a0f]">
           {/* Left 2 Cols: Interactive Topology Canvas with Pan & Zoom */}
@@ -245,6 +284,13 @@ export function A2ATopologyGraphModal({
                 {orchestrators.map((ag) => {
                   const isCur = ag.id === currentAgent.id;
                   const isSel = ag.id === selectedNodeId;
+                  const isMatch = Boolean(
+                    topologySearchQuery &&
+                      (ag.name.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                        ag.id.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                        (ag.roleTag && ag.roleTag.toLowerCase().includes(topologySearchQuery.toLowerCase())) ||
+                        (ag.node && ag.node.toLowerCase().includes(topologySearchQuery.toLowerCase())))
+                  );
                   return (
                     <div
                       key={ag.id}
@@ -335,6 +381,13 @@ export function A2ATopologyGraphModal({
                 {workers.map((ag) => {
                   const isCur = ag.id === currentAgent.id;
                   const isSel = ag.id === selectedNodeId;
+                  const isMatch = Boolean(
+                    topologySearchQuery &&
+                      (ag.name.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                        ag.id.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                        (ag.roleTag && ag.roleTag.toLowerCase().includes(topologySearchQuery.toLowerCase())) ||
+                        (ag.node && ag.node.toLowerCase().includes(topologySearchQuery.toLowerCase())))
+                  );
                   return (
                     <div
                       key={ag.id}
@@ -379,6 +432,13 @@ export function A2ATopologyGraphModal({
                   {specialists.map((ag) => {
                     const isCur = ag.id === currentAgent.id;
                     const isSel = ag.id === selectedNodeId;
+                  const isMatch = Boolean(
+                    topologySearchQuery &&
+                      (ag.name.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                        ag.id.toLowerCase().includes(topologySearchQuery.toLowerCase()) ||
+                        (ag.roleTag && ag.roleTag.toLowerCase().includes(topologySearchQuery.toLowerCase())) ||
+                        (ag.node && ag.node.toLowerCase().includes(topologySearchQuery.toLowerCase())))
+                  );
                     return (
                       <div
                         key={ag.id}
