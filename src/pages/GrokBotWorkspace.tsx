@@ -1348,6 +1348,21 @@ export function GrokBotWorkspace() {
   // Voice recording / Speech-to-text state
   const [isRecording, setIsRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [sttLang, setSttLang] = useState<"vi-VN" | "en-US">(() => {
+    try {
+      return (localStorage.getItem("agent360_stt_lang") as any) || "vi-VN";
+    } catch {
+      return "vi-VN";
+    }
+  });
+
+  const toggleSttLang = () => {
+    const next = sttLang === "vi-VN" ? "en-US" : "vi-VN";
+    setSttLang(next);
+    try {
+      localStorage.setItem("agent360_stt_lang", next);
+    } catch {}
+  };
   const [deviceToast, setDeviceToast] = useState<{ message: string; type: "info" | "warn" } | null>(null);
 
   // Listen to hardware audio devices connect / disconnect events (e.g. Bluetooth headset, USB mic)
@@ -1445,7 +1460,7 @@ export function GrokBotWorkspace() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = "vi-VN"; // Default Vietnamese speech recognition
+      recognition.lang = sttLang; // Dynamic STT language (vi-VN or en-US)
 
       recognition.onstart = () => {
         isContinuousVoiceActiveRef.current = true;
@@ -4248,6 +4263,16 @@ export function GrokBotWorkspace() {
                 title="Keyboard Shortcuts Cheat Sheet (Ctrl+/)"
               >
                 <Command size={15} />
+              </button>
+
+              {/* STT Language Accent Badge Toggle (VI / EN) */}
+              <button
+                type="button"
+                onClick={toggleSttLang}
+                className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1e1e28] hover:bg-[#28283a] text-neutral-300 hover:text-white border border-[#2a2a38] transition-colors cursor-pointer select-none"
+                title={`Current voice input language: ${sttLang === "vi-VN" ? "Tiếng Việt (vi-VN)" : "English (en-US)"}. Click to switch.`}
+              >
+                {sttLang === "vi-VN" ? "VI" : "EN"}
               </button>
 
               {/* Voice to text recording button (Supports Click Toggle & Push-to-Talk) */}
