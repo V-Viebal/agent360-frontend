@@ -1,4 +1,4 @@
-import { driver, Driver } from "driver.js";
+import { driver, Driver, DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 
 const STORAGE_KEY_SEEN_ONBOARDING = "agent360_has_seen_onboarding_tour";
@@ -64,7 +64,7 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       }
       driverObj.destroy();
     },
-    steps: [
+    steps: ([
       {
         element: "#tour-agent-selector",
         popover: {
@@ -110,7 +110,7 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
           align: "end",
         },
       },
-    ].filter((step) => {
+    ] as DriveStep[]).filter((step) => {
       // Filter out elements that may not currently exist in the DOM (e.g. collapsed tabs)
       if (typeof step.element === "string") {
         return Boolean(document.querySelector(step.element));

@@ -1908,10 +1908,10 @@ export function GrokBotWorkspace() {
   }, [isBrowserModalOpen]);
 
   useEffect(() => {
-    if (rightTab === "Library" && workspaceFiles.length === 0) {
+    if (rightTab === "Details" && detailSubTab === "Library" && workspaceFiles.length === 0) {
       loadWorkspaceTree();
     }
-  }, [rightTab]);
+  }, [rightTab, detailSubTab]);
 
   useEffect(() => {
     if (!selectedAgentId) return;
@@ -5211,7 +5211,7 @@ export function GrokBotWorkspace() {
           recordMilestone("triedVoiceOrShortcuts");
         }}
         onOpenSpecs={() => {
-          setIsRightSidebarOpen(true);
+          setIsBotInfoCollapsed(false);
           setRightTab("Details");
           recordMilestone("openedSpecsOrTopology");
         }}
