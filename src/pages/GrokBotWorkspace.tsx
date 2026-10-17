@@ -1553,7 +1553,13 @@ export function GrokBotWorkspace() {
               if (window.innerWidth >= 1024) {
                 setIsChatListCollapsed((prev) => !prev);
               } else {
-                setMobileChatsOpen(!mobileChatsOpen);
+                setMobileChatsOpen((prev) => {
+                  const nextState = !prev;
+                  if (nextState) {
+                    setIsChatListCollapsed(false);
+                  }
+                  return nextState;
+                });
                 setMobileAgentsOpen(false);
                 setMobileBotInfoOpen(false);
               }
@@ -1887,17 +1893,22 @@ export function GrokBotWorkspace() {
       <aside
         className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col border-l border-[#1e1e24] bg-[#0f0f14] shrink-0 transition-grok ${
           mobileChatsOpen
-            ? "flex w-[85vw] max-w-[300px] sm:w-[280px] translate-x-0 shadow-2xl"
+            ? "flex w-[85vw] max-w-[320px] sm:w-[280px] translate-x-0 shadow-2xl"
             : isChatListCollapsed
-            ? "hidden lg:flex lg:w-[56px] translate-x-0 shadow-none border-l border-[#1e1e24]"
-            : "hidden lg:flex lg:w-[280px] translate-x-0 shadow-none border-l border-[#1e1e24]"
+            ? "hidden lg:flex lg:w-[56px] translate-x-full lg:translate-x-0 shadow-none border-l border-[#1e1e24]"
+            : "hidden lg:flex lg:w-[280px] translate-x-full lg:translate-x-0 shadow-none border-l border-[#1e1e24]"
         }`}
       >
         {/* Header & Collapse Toggle */}
         {isChatListCollapsed ? (
           <div className="h-12 border-b border-[#1c1c22] flex items-center justify-center shrink-0">
             <button
-              onClick={() => setIsChatListCollapsed(false)}
+              onClick={() => {
+                setIsChatListCollapsed(false);
+                if (window.innerWidth < 1024) {
+                  setMobileChatsOpen(true);
+                }
+              }}
               className="h-8 w-8 rounded-xl bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#38384a] flex items-center justify-center text-neutral-300 hover:text-white transition-all cursor-pointer shadow-xs"
               title="Expand Conversations list"
             >
