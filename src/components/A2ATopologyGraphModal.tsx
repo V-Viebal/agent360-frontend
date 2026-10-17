@@ -10,6 +10,10 @@ import {
   ArrowUpRight,
   Wifi,
   RefreshCw,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Move,
 } from "lucide-react";
 import { InfraAgent } from "../types/agent";
 
@@ -151,6 +155,37 @@ export function A2ATopologyGraphModal({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Zoom & Pan Controls */}
+            <div className="hidden sm:flex items-center gap-1 bg-[#1c1c28] border border-[#262638] rounded-lg p-0.5 text-neutral-400">
+              <button
+                type="button"
+                onClick={() => handleZoom(-0.1)}
+                className="p-1 rounded hover:bg-[#252538] hover:text-white cursor-pointer"
+                title="Zoom Out"
+              >
+                <ZoomOut size={13} />
+              </button>
+              <span className="text-[10px] font-mono px-1 select-none text-neutral-300">
+                {Math.round(zoomScale * 100)}%
+              </span>
+              <button
+                type="button"
+                onClick={() => handleZoom(0.1)}
+                className="p-1 rounded hover:bg-[#252538] hover:text-white cursor-pointer"
+                title="Zoom In"
+              >
+                <ZoomIn size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={handleResetZoomPan}
+                className="p-1 rounded hover:bg-[#252538] hover:text-white cursor-pointer"
+                title="Reset View (100%)"
+              >
+                <RotateCcw size={12} />
+              </button>
+            </div>
+
             <button
               onClick={probeAllLatencies}
               disabled={isProbing}
@@ -171,8 +206,24 @@ export function A2ATopologyGraphModal({
 
         {/* Graph Body */}
         <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 lg:grid-cols-3 gap-6 bg-[#0a0a0f]">
-          {/* Left 2 Cols: Interactive Topology Canvas */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left 2 Cols: Interactive Topology Canvas with Pan & Zoom */}
+          <div
+            onMouseDown={handleMouseDownPan}
+            onMouseMove={handleMouseMovePan}
+            onMouseUp={handleMouseUpPan}
+            onMouseLeave={handleMouseUpPan}
+            className={`lg:col-span-2 space-y-6 relative overflow-hidden rounded-xl border border-[#1a1a24] bg-[#08080c] p-4 transition-transform ${
+              isPanning ? "cursor-grabbing" : "cursor-grab"
+            }`}
+          >
+            <div
+              style={{
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
+                transformOrigin: "top left",
+                transition: isPanning ? "none" : "transform 0.15s ease-out",
+              }}
+              className="space-y-6 w-full"
+            >
             {/* Level 1: Orchestration Hub */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-mono text-[#ff7a00]">
@@ -347,6 +398,7 @@ export function A2ATopologyGraphModal({
                 </div>
               </div>
             )}
+            </div>
           </div>
 
           {/* Right Col: Selected Node Telemetry & Delegation Handoff */}

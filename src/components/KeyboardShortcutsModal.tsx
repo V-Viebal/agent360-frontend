@@ -100,6 +100,10 @@ export function getCustomShortcutsMap(): Record<string, string[]> {
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
   const [customMap, setCustomMap] = useState<Record<string, string[]>>(() => getCustomShortcutsMap());
   const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [conflictWarning, setConflictWarning] = useState<string | null>(null);
+
+  // List of reserved browser hotkeys that shouldn't be overridden
+  const RESERVED_BROWSER_HOTKEYS = ["Ctrl+W", "Ctrl+T", "Ctrl+N", "Ctrl+R", "Ctrl+F4", "Alt+F4", "Ctrl+Tab"];
 
   useEffect(() => {
     if (isOpen) {
@@ -136,7 +140,29 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
           keys.push(formatted);
         }
 
+        const comboString = keys.join("+");
+        // Check for browser collision
+        if (RESERVED_BROWSER_HOTKEYS.includes(comboString)) {
+          setConflictWarning(`"${comboString}" conflicts with a reserved browser action. Please choose a different key combination.`);
+          setTimeout(() => setConflictWarning(null), 4000);
+          return;
+        }
+
+        // Check for collision with another active shortcut
+        const collidingItem = DEFAULT_SHORTCUTS.find((item) => {
+          if (item.id === recordingId) return false;
+          const otherKeys = (customMap[item.id] || item.defaultKeys).join("+");
+          return otherKeys === comboString;
+        });
+
+        if (collidingItem) {
+          setConflictWarning(`"${comboString}" is already assigned to "${collidingItem.description}". Please choose another combination.`);
+          setTimeout(() => setConflictWarning(null), 4000);
+          return;
+        }
+
         // Save recorded custom keys
+        setConflictWarning(null);
         const nextMap = { ...customMap, [recordingId]: keys };
         setCustomMap(nextMap);
         try {
@@ -200,6 +226,20 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             <X size={15} />
           </button>
         </div>
+
+        {/* Conflict Warning Toast */}
+        {conflictWarning && (
+          <div className="px-4 py-2 bg-red-500/15 border-b border-red-500/30 text-red-300 text-xs font-mono flex items-center justify-between gap-2 animate-in fade-in select-none">
+            <span className="truncate">{conflictWarning}</span>
+            <button
+              type="button"
+              onClick={() => setConflictWarning(null)}
+              className="text-red-400 hover:text-white cursor-pointer shrink-0"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        )}
 
         {/* Content list by category */}
         <div className="p-4 space-y-4 max-h-[65vh] overflow-y-auto">
