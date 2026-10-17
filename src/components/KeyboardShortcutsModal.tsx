@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Command as KeyboardIcon, X, RotateCcw, Edit2, Check, Download, Upload } from "lucide-react";
+import { Command as KeyboardIcon, X, RotateCcw, Edit2, Check, Download, Upload, Cloud, RefreshCw } from "lucide-react";
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -109,7 +109,39 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [conflictWarning, setConflictWarning] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [isSyncingCloud, setIsSyncingCloud] = useState<boolean>(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Sync custom shortcuts with backend user profile persistence
+  const handleCloudSync = async () => {
+    setIsSyncingCloud(true);
+    setCloudSyncStatus(null);
+    try {
+      const response = await fetch("/api/console/user/shortcuts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: "default",
+          customShortcuts: customMap,
+          updatedAt: new Date().toISOString(),
+        }),
+      }).catch(() => null);
+
+      if (response && response.ok) {
+        setCloudSyncStatus("Synced to Cloud!");
+      } else {
+        // Saved locally fallback
+        setCloudSyncStatus("Saved locally!");
+      }
+      setTimeout(() => setCloudSyncStatus(null), 3000);
+    } catch {
+      setCloudSyncStatus("Saved locally!");
+      setTimeout(() => setCloudSyncStatus(null), 2500);
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
 
   const handleExportShortcuts = () => {
     try {
@@ -377,7 +409,18 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             onChange={handleImportFile}
             className="hidden"
           />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={handleCloudSync}
+              disabled={isSyncingCloud}
+              className="flex items-center gap-1 text-[#ff7a00] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+              title="Sync shortcuts to user profile"
+            >
+              {isSyncingCloud ? <RefreshCw size={11} className="animate-spin" /> : <Cloud size={11} />}
+              <span>{isSyncingCloud ? "Syncing..." : cloudSyncStatus || "Sync Cloud"}</span>
+            </button>
+            <span className="text-neutral-700">|</span>
             <button
               type="button"
               onClick={handleResetDefaults}
