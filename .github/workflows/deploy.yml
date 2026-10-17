@@ -45,7 +45,7 @@ jobs:
           if [ "$TARGET" = "staging" ]; then
             echo "dist_root=/opt/agent360-staging/frontend-dist" >> $GITHUB_OUTPUT
             echo "public_url=https://staging-agent360.antares.vn" >> $GITHUB_OUTPUT
-            echo "container_name=agent360-staging-agent360-frontend-staging-1" >> $GITHUB_OUTPUT
+            echo "container_name=agent360-frontend-staging" >> $GITHUB_OUTPUT
           else
             echo "dist_root=/opt/agent360/frontend-dist" >> $GITHUB_OUTPUT
             echo "public_url=https://agent360.antares.vn" >> $GITHUB_OUTPUT
@@ -74,9 +74,9 @@ jobs:
           cp dist/index.html "$DIST_ROOT/index.html.new" && mv "$DIST_ROOT/index.html.new" "$DIST_ROOT/index.html"
           
           if [ "${{ steps.env-target.outputs.target_env }}" = "production" ]; then
-            sudo -n /usr/local/sbin/agent360-restart frontend || docker restart ${{ steps.env-target.outputs.container_name }}
+            sudo -n /usr/local/sbin/agent360-restart frontend
           else
-            docker restart ${{ steps.env-target.outputs.container_name }} || true
+            sudo -n /usr/local/sbin/agent360-restart frontend-staging
           fi
 
       - name: Verify live bundle
@@ -84,14 +84,26 @@ jobs:
           PUBLIC_URL="${{ steps.env-target.outputs.public_url }}"
           want=$(grep -o 'assets/index-[^"]*\.js' dist/index.html)
           for i in $(seq 1 10); do
-            live=$(curl -fsS "$PUBLIC_URL/" | grep -o 'assets/index-[^"]*\.js' || true)
+            live=$(curl -fsS -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/" | grep -o 'assets/index-[^"]*\.js' || true)
             if [ "$live" = "$want" ]; then
               echo "Live bundle verified matching: $want"
               exit 0
             fi
             sleep 3
           done
-          echo "Warning: live bundle verification completed with want=$want live=$live"
+          echo "::error::Live bundle mismatch want=$want live=$live"
+          exit 1
+
+      - name: Verify API through frontend proxy
+        run: |
+          PUBLIC_URL="${{ steps.env-target.outputs.public_url }}"
+          for i in $(seq 1 10); do
+            code=$(curl -s -m 20 -A "Mozilla/5.0 agent360-ci" -o /dev/null -w '%{http_code}' "$PUBLIC_URL/api/agents" || true)
+            [ "$code" = 200 ] && { echo "API via proxy healthy"; exit 0; }
+            sleep 4
+          done
+          echo "::error::API via frontend proxy returned $code"
+          exit 1
 
       - name: Prune bundles older than 14 days
         run: find "${{ steps.env-target.outputs.dist_root }}/assets" -type f -mtime +14 -delete || true
