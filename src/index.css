@@ -376,3 +376,19 @@ html.light,
 .driverjs-skyer-theme .driver-popover-arrow-side-bottom.driver-popover-arrow {
   border-bottom-color: #ff7a00 !important;
 }
+
+/* Global Typographic Balance & Anti-Orphan Guards */
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;
+}
+
+p, li, span, blockquote {
+  text-wrap: pretty;
+}
+
+/* Fallback for browsers that don't support text-wrap yet */
+@supports not (text-wrap: balance) {
+  h1, h2, h3, h4 {
+    word-break: break-word;
+  }
+}

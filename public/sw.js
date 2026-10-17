@@ -1,5 +1,7 @@
 // Skyer Service Worker — Offline Resilience, Fast Shell Cache & Web Notifications
-const CACHE_NAME = 'skyer-v1.0.7';
+// Cache name follows the build id passed at registration (/sw.js?v=<build>) so every deploy evicts old shells.
+const BUILD_ID = new URL(self.location.href).searchParams.get('v') || '1.0.8';
+const CACHE_NAME = 'skyer-' + BUILD_ID;
 const STATIC_ASSETS = [
   '/',
   '/app',

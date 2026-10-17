@@ -3,7 +3,12 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
+const APP_BUILD = process.env.APP_BUILD || new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+
 export default defineConfig({
+  define: {
+    __APP_BUILD__: JSON.stringify(APP_BUILD),
+  },
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

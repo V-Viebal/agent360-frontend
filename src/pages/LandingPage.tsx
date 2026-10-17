@@ -322,7 +322,7 @@ export function LandingPage() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] md:w-[900px] h-[350px] bg-[#ff7a00]/[0.05] blur-[120px] pointer-events-none -z-10" />
 
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl lg:text-[84px] font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.06] max-w-4xl mx-auto">
+          <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl lg:text-[84px] font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.06] max-w-4xl mx-auto text-balance">
             {t("hero.title")}
           </h1>
 
@@ -444,7 +444,7 @@ export function LandingPage() {
               <Server size={13} className="text-[#ff7a00]" />
               <span>{t("onPremise.badge")}</span>
             </div>
-            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal leading-tight">
+            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal leading-tight text-balance">
               {t("onPremise.title")}
             </h2>
             <p className="mt-4 text-neutral-400 text-sm sm:text-base leading-relaxed">
@@ -574,7 +574,7 @@ export function LandingPage() {
               <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
                 {t("interaction.badge")}
               </span>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
+              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight text-balance">
                 {t("interaction.title")}
               </h2>
               <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
@@ -677,7 +677,7 @@ export function LandingPage() {
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("parallel.badge")}
             </span>
-            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3">
+            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3 text-balance">
               {t("parallel.title")}
             </h2>
             <p className="mt-3 text-neutral-400 text-sm sm:text-base leading-relaxed">
@@ -776,7 +776,7 @@ export function LandingPage() {
               <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
                 NATIVE TOOL ACCESS
               </span>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
+              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight text-balance">
                 {t("tools.title")}
               </h2>
               <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
@@ -804,7 +804,7 @@ export function LandingPage() {
                 <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider font-medium">
                   {t("routines.badge")}
                 </span>
-                <h3 className="font-newsreader text-2xl sm:text-3xl text-white font-normal mt-2 mb-3">
+                <h3 className="font-newsreader text-2xl sm:text-3xl text-white font-normal mt-2 mb-3 text-balance">
                   {t("routines.title")}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
@@ -829,7 +829,7 @@ export function LandingPage() {
                 <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider font-medium">
                   {t("memory.badge")}
                 </span>
-                <h3 className="font-newsreader text-2xl sm:text-3xl text-white font-normal mt-2 mb-3">
+                <h3 className="font-newsreader text-2xl sm:text-3xl text-white font-normal mt-2 mb-3 text-balance">
                   {t("memory.title")}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
@@ -855,13 +855,13 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center mb-12 sm:mb-16">
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
-              MULTI-AGENT COLLABORATION
+              {t("hierarchy.badge")}
             </span>
-            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3">
+            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3 text-balance">
               {t("hierarchy.title")}
             </h2>
             <p className="mt-3 text-neutral-400 text-sm sm:text-base leading-relaxed">
-              Put a few Bots in the same thread and they pass work between themselves. You watch them take action instead of approving every intermediate step.
+              {t("hierarchy.subtitle")}
             </p>
           </div>
 
@@ -894,7 +894,7 @@ export function LandingPage() {
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("roles.badge")}
             </span>
-            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3">
+            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3 text-balance">
               {t("roles.title")}
             </h2>
             <p className="mt-3 text-neutral-400 text-sm sm:text-base leading-relaxed">
@@ -1080,7 +1080,7 @@ export function LandingPage() {
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("pricing.badge")}
             </span>
-            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3">
+            <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal mt-3 text-balance">
               {t("pricing.title")}
             </h2>
             <p className="mt-3 text-neutral-400 text-sm sm:text-base leading-relaxed">
@@ -1146,7 +1146,7 @@ export function LandingPage() {
             <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
               {t("faq.badge")}
             </span>
-            <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal mt-3">
+            <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal mt-3 text-balance">
               {t("faq.title")}
             </h2>
             <p className="mt-2.5 text-neutral-400 text-xs sm:text-sm">
@@ -1184,7 +1184,7 @@ export function LandingPage() {
       {/* 11. Final CTA: Meet your first Bot */}
       <section id="deploy" className="py-24 sm:py-32 text-center relative overflow-hidden">
         <div className="mx-auto max-w-3xl px-4 relative z-10">
-          <h2 className="font-newsreader text-3xl sm:text-5xl md:text-6xl text-white font-normal">
+          <h2 className="font-newsreader text-3xl sm:text-5xl md:text-6xl text-white font-normal text-balance">
             {t("cta.title")}
           </h2>
           <p className="mt-4 text-neutral-400 text-sm sm:text-base max-w-xl mx-auto">

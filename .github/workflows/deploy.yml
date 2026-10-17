@@ -61,6 +61,8 @@ jobs:
           npx tsc --noEmit -p .
 
       - name: Build
+        env:
+          APP_BUILD: ${{ github.sha }}
         run: |
           npm run build
           test -f dist/index.html
@@ -104,6 +106,12 @@ jobs:
           done
           echo "::error::API via frontend proxy returned $code"
           exit 1
+
+      - name: Verify service worker is never cached
+        run: |
+          cc=$(curl -fsSI -A "Mozilla/5.0 agent360-ci" "${{ steps.env-target.outputs.public_url }}/sw.js?v=${{ github.sha }}" | tr -d '\r' | awk -F': ' 'tolower($1)=="cache-control"{print $2}')
+          echo "sw.js cache-control: $cc"
+          case "$cc" in *no-store*|*no-cache*) ;; *) echo "::error::sw.js must not be cached (got: $cc)"; exit 1;; esac
 
       - name: Prune bundles older than 14 days
         run: find "${{ steps.env-target.outputs.dist_root }}/assets" -type f -mtime +14 -delete || true
