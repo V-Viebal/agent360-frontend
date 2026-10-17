@@ -1517,6 +1517,7 @@ export function GrokBotWorkspace() {
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
   const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
+  const [isTopologyModalOpen, setIsTopologyModalOpen] = useState(false);
   const [forkToast, setForkToast] = useState<string | null>(null);
   const [starredMsgIds, setStarredMsgIds] = useState<string[]>(() => {
     try {
@@ -3195,6 +3196,17 @@ export function GrokBotWorkspace() {
             >
               <MessageSquare size={16} />
             </button>
+            {/* Live A2A Multi-Agent Topology Graph Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsTopologyModalOpen(true)}
+              className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] flex items-center gap-1.5 text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors text-xs font-mono"
+              title="Open Live A2A Multi-Agent Topology Graph"
+            >
+              <Network size={14} className="text-cyan-400" />
+              <span className="hidden md:inline text-[11px] text-neutral-300">Topology</span>
+            </button>
+
             <button aria-label="Search within conversation" data-ux-target-min="24"
               type="button"
               onClick={() => setInSessionSearchOpen(!inSessionSearchOpen)}
@@ -4970,6 +4982,15 @@ export function GrokBotWorkspace() {
         onRequestDone={() => {
           setVoiceError(null);
         }}
+      />
+
+      <A2ATopologyGraphModal
+        isOpen={isTopologyModalOpen}
+        onClose={() => setIsTopologyModalOpen(false)}
+        currentAgent={selectedAgent}
+        allAgents={agents}
+        onSelectAgent={handleSelectAgent}
+        nodePingMs={nodePingMs}
       />
 
       <CommandPaletteModal
