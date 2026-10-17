@@ -1517,7 +1517,6 @@ export function GrokBotWorkspace() {
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
   const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
-  const [isTopologyModalOpen, setIsTopologyModalOpen] = useState(false);
   const [forkToast, setForkToast] = useState<string | null>(null);
   const [starredMsgIds, setStarredMsgIds] = useState<string[]>(() => {
     try {
@@ -3527,13 +3526,26 @@ export function GrokBotWorkspace() {
               }`}
               title="Jump to latest turn"
             >
-              {isStreaming && (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff7a00] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff7a00]" />
-                </span>
+              {isStreaming ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff7a00] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff7a00]" />
+                  </span>
+                  <span>Generating response</span>
+                  {turnTelemetry?.tokensPerSec ? (
+                    <span className="px-1.5 py-0.2 rounded bg-[#ff7a00]/20 text-[#ff7a00] font-bold text-[10px]">
+                      {turnTelemetry.tokensPerSec.toFixed(0)} t/s
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.2 rounded bg-[#ff7a00]/20 text-[#ff7a00] font-bold text-[10px]">
+                      Live
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span>Scroll to latest</span>
               )}
-              <span>{isStreaming ? "New messages incoming..." : "Scroll to latest"}</span>
               <ChevronDown size={14} className={isStreaming ? "animate-pulse text-[#ff7a00]" : ""} />
             </button>
           </div>
@@ -4937,14 +4949,6 @@ export function GrokBotWorkspace() {
         onRequestDone={() => {
           setVoiceError(null);
         }}
-      />
-
-      <A2ATopologyGraphModal
-        isOpen={isTopologyModalOpen}
-        onClose={() => setIsTopologyModalOpen(false)}
-        currentAgent={selectedAgent}
-        allAgents={agents}
-        onSelectAgent={handleSelectAgent}
       />
 
       <CommandPaletteModal
