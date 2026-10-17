@@ -1,3 +1,4 @@
+import { startOnboardingTour } from "../services/onboardingService";
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic } from "lucide-react";
 import { InfraAgent, AgentSession } from "../types/agent";
@@ -63,6 +64,31 @@ export function CommandPaletteModal({
         onClose();
       },
     }] : []),
+    {
+      id: "act-onboarding-tour",
+      type: "action",
+      title: "Interactive App Tour (Onboarding)",
+      subtitle: "Start step-by-step Driver.js guided walkthrough of Skyer Agent360",
+      icon: <Sparkles size={14} className="text-[#ff7a00]" />,
+      action: () => {
+        onClose();
+        setTimeout(() => startOnboardingTour({ force: true }), 300);
+      },
+    },
+    {
+      id: "act-onboarding-checklist",
+      type: "action",
+      title: "Getting Started Checklist",
+      subtitle: "Reopen the 4-step onboarding progress checklist widget",
+      icon: <Sparkles size={14} className="text-amber-400" />,
+      action: () => {
+        onClose();
+        try {
+          localStorage.removeItem("agent360_onboarding_checklist_dismissed");
+          window.dispatchEvent(new CustomEvent("agent360_milestone_updated"));
+        } catch {}
+      },
+    },
     {
       id: "act-new-chat",
       type: "action",

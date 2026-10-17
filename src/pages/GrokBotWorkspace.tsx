@@ -90,6 +90,7 @@ import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSetti
 import { CustomSelect, StatusBadge, IconButton, SearchInput } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { PermissionsModal } from "../components/PermissionsModal";
+import { OnboardingChecklistWidget, recordMilestone } from "../components/OnboardingChecklistWidget";
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
 import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
@@ -1959,6 +1960,7 @@ export function GrokBotWorkspace() {
   // Switch agent
   const handleSelectAgent = (agent: InfraAgent) => {
     setSelectedAgentId(agent.id);
+    recordMilestone("selectedAgent");
     setMobileAgentsOpen(false);
     try {
       localStorage.setItem("agent360_last_agent_id", agent.id);
@@ -2311,6 +2313,7 @@ export function GrokBotWorkspace() {
 
   // Core function to execute a single prompt stream
   const executeTurnStream = async (userText: string) => {
+    recordMilestone("sentMessage");
     const tempBotMsgId = `bot-${Date.now() + 1}`;
     const initialBotMsg: ChatMessage = {
       id: tempBotMsgId,
@@ -2917,6 +2920,19 @@ export function GrokBotWorkspace() {
                 <div
                   onClick={() => {
                     setIsUserMenuOpen(false);
+                    try {
+                      localStorage.removeItem("agent360_onboarding_checklist_dismissed");
+                      window.dispatchEvent(new CustomEvent("agent360_milestone_updated"));
+                    } catch {}
+                  }}
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                >
+                  <span>Getting Started Checklist</span>
+                  <span className="text-[10px] font-mono text-amber-400">Checklist</span>
+                </div>
+                <div
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
                     setIsPermissionsModalOpen(true);
                   }}
                   className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
@@ -3066,6 +3082,7 @@ export function GrokBotWorkspace() {
           <button aria-label="Command Palette (Ctrl+K / Cmd+K)"
             type="button"
             onClick={() => setIsCommandPaletteOpen(true)}
+            id="tour-command-palette-trigger"
             className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#14141c] hover:bg-[#1f1f2c] border border-[#262634] text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer mr-1"
             title="Command Palette (Ctrl+K / Cmd+K)"
           >
@@ -4064,6 +4081,7 @@ export function GrokBotWorkspace() {
       {/* 3. CONVERSATION SESSIONS LIST (COLLAPSIBLE, RIGHT OF CHAT) */}
       {/* ========================================================= */}
       <aside
+        id="tour-chat-sessions"
         className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok ${
           mobileChatsOpen
             ? "flex w-[85vw] max-w-[320px] sm:w-[280px] translate-x-0 shadow-2xl"
@@ -5182,6 +5200,26 @@ export function GrokBotWorkspace() {
           </div>
         </div>
       )}
+
+      <OnboardingChecklistWidget
+        onOpenTopology={() => {
+          setIsTopologyModalOpen(true);
+          recordMilestone("openedSpecsOrTopology");
+        }}
+        onOpenShortcuts={() => {
+          setIsKeyboardShortcutsOpen(true);
+          recordMilestone("triedVoiceOrShortcuts");
+        }}
+        onOpenSpecs={() => {
+          setIsRightSidebarOpen(true);
+          setRightTab("Details");
+          recordMilestone("openedSpecsOrTopology");
+        }}
+        onFocusComposer={() => {
+          const textarea = document.querySelector("#tour-prompt-composer textarea") as HTMLTextAreaElement;
+          if (textarea) textarea.focus();
+        }}
+      />
 
       <PromptRecipesModal
         isOpen={isRecipesModalOpen}
