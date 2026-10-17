@@ -93,6 +93,7 @@ import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar } from "../components/AgentAvatar";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
+import { PromptRecipesModal } from "../components/PromptRecipesModal";
 import { requestPermission, queryPermissionStatus } from "../services/permissionService";
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 
@@ -1415,6 +1416,8 @@ export function GrokBotWorkspace() {
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
+  const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
+  const [forkToast, setForkToast] = useState<string | null>(null);
   const [starredMsgIds, setStarredMsgIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("agent360_starred_messages");
@@ -1510,6 +1513,18 @@ export function GrokBotWorkspace() {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     } else if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  };
+
+  // Smooth scroll to bottom anchor when user submits a message
+  const smoothScrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    } else if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -1966,7 +1981,32 @@ export function GrokBotWorkspace() {
     }
   };
 
-    // New Chat session with Optimistic Insertion and Instant UI Feedback
+    const handleForkSession = (fromMsgIndex: number) => {
+    const forkedChatId = `session-fork-${Date.now().toString().slice(-6)}`;
+    const forkedMessages = messages.slice(0, fromMsgIndex + 1);
+    const lastMsg = forkedMessages[forkedMessages.length - 1];
+
+    const newSession: AgentSession = {
+      id: forkedChatId,
+      title: `Branch from ${selectedChat?.title || "Dialogue"}`,
+      updatedAt: "Just now",
+      messageCount: forkedMessages.length,
+      lastMessageSnippet: lastMsg ? lastMsg.content.slice(0, 60) + "..." : "Forked dialogue branch",
+    };
+
+    setChats([newSession, ...chats]);
+    setSelectedChatId(forkedChatId);
+    setMessages(forkedMessages);
+    setForkToast(`Branch created with ${forkedMessages.length} turns`);
+    setTimeout(() => setForkToast(null), 3000);
+
+    try {
+      localStorage.setItem("agent360_last_chat_id", forkedChatId);
+      localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, forkedChatId);
+    } catch {}
+  };
+
+  // New Chat session with Optimistic Insertion and Instant UI Feedback
   const handleNewChat = () => {
     const timestamp = Date.now();
     const newChatId = `session-${timestamp.toString().slice(-6)}`;
@@ -2207,9 +2247,13 @@ export function GrokBotWorkspace() {
       // Enqueue prompt for execution
       requestQueueRef.current.push(userText);
       setRequestQueue([...requestQueueRef.current]);
+
+      // Smooth scroll anchor on instant echo
+      requestAnimationFrame(() => smoothScrollToBottom());
     } else {
       isProcessingQueueRef.current = true;
       executeTurnStream(userText);
+      requestAnimationFrame(() => smoothScrollToBottom());
     }
   };
 
@@ -2502,7 +2546,19 @@ export function GrokBotWorkspace() {
                 <span className="text-[10px] font-mono text-neutral-500 truncate">System Owner</span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Quick hardware permission status indicators */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsPermissionsModalOpen(true);
+                }}
+                className="flex items-center gap-1 p-1 rounded-lg hover:bg-[#20202c] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                title="Browser Hardware & Sandbox Permissions (Click to manage)"
+              >
+                <ShieldCheck size={13} className="text-[#ff7a00]" />
+              </button>
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Online</span>
@@ -3117,7 +3173,23 @@ export function GrokBotWorkspace() {
                               </button>
                             </div>
 
-                            {/* 1. Copy Response CTA */}
+                            {/* Fork Session Branch CTA */}
+                            <div className="relative group">
+                              <button data-ux-target-min="24"
+                                type="button"
+                                onClick={() => handleForkSession(mIdx)}
+                                className="h-7 w-7 rounded-lg hover:bg-[#181822] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#282836]"
+                                aria-label="Fork session from here"
+                                title="Branch new session from this turn"
+                              >
+                                <GitFork size={13} className="text-cyan-400" />
+                              </button>
+                              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center px-2 py-0.5 rounded-md bg-[#161620] border border-[#262634] text-[10px] font-mono text-neutral-300 whitespace-nowrap shadow-lg z-20">
+                                Branch session from here
+                              </span>
+                            </div>
+
+                                                        {/* 1. Copy Response CTA */}
                             <div className="relative group">
                               <button data-ux-target-min="24"
                                 type="button"
@@ -3244,7 +3316,20 @@ export function GrokBotWorkspace() {
             </div>
           )}
 
-          {/* Voice Error Notification with Permission Quick-Fix */}
+          {/* Fork Session Branch Success Toast */}
+          {forkToast && (
+            <div className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <GitFork size={13} className="text-cyan-400" />
+                <span>{forkToast}</span>
+              </div>
+              <button type="button" onClick={() => setForkToast(null)} className="text-cyan-400 hover:text-white cursor-pointer">
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
+                    {/* Voice Error Notification with Permission Quick-Fix */}
           {voiceError && (
             <div className="px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
               <div className="flex items-center gap-2 truncate">
@@ -3400,6 +3485,16 @@ export function GrokBotWorkspace() {
               ) : (
                 <Plus size={16} />
               )}
+            </button>
+
+            {/* Prompt Recipes & Templates Popover Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsRecipesModalOpen(true)}
+              className="text-neutral-400 hover:text-[#ff7a00] transition-colors cursor-pointer p-0.5 shrink-0"
+              title="Open Prompt Recipes & Templates"
+            >
+              <Sparkles size={15} />
             </button>
 
             <input aria-label={
@@ -4531,6 +4626,14 @@ export function GrokBotWorkspace() {
           </div>
         </div>
       )}
+
+      <PromptRecipesModal
+        isOpen={isRecipesModalOpen}
+        onClose={() => setIsRecipesModalOpen(false)}
+        onSelectRecipe={(prompt) => {
+          setInputText(prompt);
+        }}
+      />
 
       <ConnectAppsModal
         isOpen={isConnectAppsOpen}
