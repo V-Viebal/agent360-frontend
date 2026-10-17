@@ -55,6 +55,7 @@ import {
   fetchAvailableModels,
   ModelOption,
   WorkspaceTreeNode,
+  updateAgentActiveModel,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
@@ -963,7 +964,7 @@ export function GrokBotWorkspace() {
   const loadWorkspaceTree = async () => {
     setIsLoadingTree(true);
     try {
-      const entries = await fetchWorkspaceTree();
+      const entries = await fetchWorkspaceTree(selectedAgent?.id || "mons");
       setWorkspaceFiles(entries);
     } finally {
       setIsLoadingTree(false);
@@ -975,7 +976,7 @@ export function GrokBotWorkspace() {
     setSelectedFilePath(node.path);
     setIsLoadingFile(true);
     try {
-      const content = await fetchWorkspaceFileContent(node.path);
+      const content = await fetchWorkspaceFileContent(selectedAgent?.id || "mons", node.path);
       setFileContent(content);
     } finally {
       setIsLoadingFile(false);
