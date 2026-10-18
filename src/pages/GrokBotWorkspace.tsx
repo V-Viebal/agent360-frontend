@@ -3194,6 +3194,13 @@ export function GrokBotWorkspace() {
           document.body.removeChild(a);
           return;
         }
+        // Rotate 90 degrees with 'r' key
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "r") {
+          e.preventDefault();
+          triggerHaptic(15);
+          setLightboxRotation((prev) => (prev + 90) % 360);
+          return;
+        }
       }
 
       // 4. Escape key closes open modals / menus or Computer Split
@@ -7298,7 +7305,7 @@ export function GrokBotWorkspace() {
                   type="button"
                   onClick={() => setLightboxRotation((prev) => (prev + 90) % 360)}
                   className="p-1 ml-1 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-colors flex items-center gap-1"
-                  title="Rotate 90° Clockwise"
+                  title="Rotate 90° Clockwise (R)"
                   aria-label="Rotate 90° Clockwise"
                 >
                   <RotateCw size={13} />
