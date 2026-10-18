@@ -36,6 +36,9 @@ importers:
       '@rollup/rollup-linux-x64-gnu':
         specifier: 4.64.5
         version: 4.64.5
+      '@rollup/rollup-win32-x64-msvc':
+        specifier: ^4.64.7
+        version: 4.64.7
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@6.4.4(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -622,6 +625,11 @@ packages:
 
   '@rollup/rollup-win32-x64-msvc@4.64.5':
     resolution: {integrity: sha512-IhV6ew/DuzUWwHaYmlh7MrPCV3lKFUq/amTEwysi4r/mwNPAEfAMh5dYWeTSPTeMy2pFHGMEWYtPkHzfX3tG5A==}
+    cpu: [x64]
+    os: [win32]
+
+  '@rollup/rollup-win32-x64-msvc@4.64.7':
+    resolution: {integrity: sha512-EhX6N3XPMEnVU5cRfNgzPOKcSucsbu3nNNWuoAaEuKIqmddBKHN5b9d4rPe65T1I+FaOT176JKiZNsUBp3rqbA==}
     cpu: [x64]
     os: [win32]
 
@@ -1492,6 +1500,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.64.5':
     optional: true
+
+  '@rollup/rollup-win32-x64-msvc@4.64.7': {}
 
   '@tailwindcss/node@4.3.3':
     dependencies:

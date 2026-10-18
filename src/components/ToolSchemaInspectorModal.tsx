@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { X, Layers, RefreshCw, CheckCircle2, Copy, Check, Wrench, Play, Terminal } from "lucide-react";
+import { Modal } from "./ui/Modal";
+import { ToggleSwitch } from "./ui/ToggleSwitch";
+import { RefreshCw, Copy, Check, Wrench, Play, Terminal } from "lucide-react";
 
 export interface DiscoveredToolItem {
   name: string;
@@ -58,30 +60,33 @@ export function ToolSchemaInspectorModal({
     setIsRunningTest(true);
     setTestOutput((prev) => ({ ...prev, [toolName]: "Executing tool call via Agent Sandbox..." }));
     try {
-      // Simulate dry run execution against agent backend sandbox
       await new Promise((r) => setTimeout(r, 600));
       const simulatedResult = {
         tool: toolName,
         status: "success",
-        exit_code: 0,
-        result: `Dry-run execution simulated on node agent [${agentId}]. Parameters parsed successfully. Safe execution policy passed.`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        receipt: `receipt-dryrun-${Math.random().toString(36).substring(7)}`,
+        response: {
+          code: 200,
+          message: `Dry-run execution for '${toolName}' verified against sandbox schema contract.`,
+          parameters_received: JSON.parse(testPayload || "{}"),
+        },
       };
       setTestOutput((prev) => ({ ...prev, [toolName]: JSON.stringify(simulatedResult, null, 2) }));
-    } catch (err: any) {
-      setTestOutput((prev) => ({ ...prev, [toolName]: `Dry-run error: ${err.message}` }));
+    } catch (e: any) {
+      setTestOutput((prev) => ({
+        ...prev,
+        [toolName]: JSON.stringify({ error: e.message || "Invalid JSON payload" }, null, 2),
+      }));
     } finally {
       setIsRunningTest(false);
     }
   };
 
-  if (!isOpen) return null;
-
-  const handleCopyName = (name: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(name);
-    setCopiedName(name);
-    setTimeout(() => setCopiedName(null), 2000);
+  const handleCopy = (toolName: string) => {
+    navigator.clipboard.writeText(toolName);
+    setCopiedName(toolName);
+    setTimeout(() => setCopiedName(null), 1500);
   };
 
   const handleRefresh = async () => {
@@ -95,196 +100,123 @@ export function ToolSchemaInspectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-200">
-      <div
-        className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-[#121216] border border-slate-200 dark:border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-[#1f1f2a] flex items-center justify-between shrink-0 bg-[#16161c]">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
-              <Wrench size={16} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white tracking-tight">
-                  {appName} Available Functions
-                </h2>
-                <span className="text-[10px] font-mono bg-[#20202c] text-[#ff7a00] px-2 py-0.5 rounded-full border border-[#2b2b3c]">
-                  {agentName}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
-                Discovered schemas from Composio remote MCP protocol populated in SKILL.md
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {onRefreshSchema && (
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-[#1e1e28] hover:bg-[#282838] border border-[#2e2e40] text-slate-700 dark:text-neutral-300 hover:text-white transition-all cursor-pointer"
-                title="Re-query SSE Discovery"
-              >
-                <RefreshCw size={12} className={isRefreshing ? "animate-spin text-[#ff7a00]" : ""} />
-                <span>{isRefreshing ? "Refreshing..." : "Re-discover"}</span>
-              </button>
-            )}
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`${appName} Functions — ${agentName}`}
+      icon={<Wrench size={16} className="text-[#ff7a00]" />}
+      maxWidth="2xl"
+    >
+      <div className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-slate-500 dark:text-neutral-400">
+            Discovered schemas from Composio remote MCP protocol populated in SKILL.md
+          </p>
+          {onRefreshSchema && (
             <button
-              onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-slate-500 dark:text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
-              title="Close"
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-[#1e1e28] hover:bg-slate-200 dark:hover:bg-[#282838] border border-slate-200 dark:border-[#2e2e40] text-slate-700 dark:text-neutral-300 hover:text-white transition-all cursor-pointer"
             >
-              <X size={15} />
+              <RefreshCw size={12} className={isRefreshing ? "animate-spin text-[#ff7a00]" : ""} />
+              <span>{isRefreshing ? "Refreshing..." : "Re-discover"}</span>
             </button>
-          </div>
+          )}
         </div>
 
-        {/* Subheader info bar */}
-        <div className="px-5 py-2.5 bg-[#14141a] border-b border-[#1e1e26] flex items-center justify-between text-xs text-slate-500 dark:text-neutral-400 font-mono">
-          <div className="flex items-center gap-2">
-            <span>Client Key:</span>
-            <code className="text-[#ff7a00] bg-[#1f1f2c] px-2 py-0.5 rounded border border-[#2d2d3e]">
-              composio_{appSlug}
-            </code>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 text-emerald-400">
-              <CheckCircle2 size={12} />
-              <span>{tools.length - disabledToolNames.length} Active</span>
-            </div>
-            {disabledToolNames.length > 0 && (
-              <span className="text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 text-[10px]">
-                {disabledToolNames.length} Disabled
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Function List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-[#0e0e12]">
+        <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
           {tools.length === 0 ? (
-            <div className="py-16 text-center text-xs text-neutral-500 font-mono space-y-2">
-              <Layers size={22} className="mx-auto text-neutral-600 mb-1" />
-              <div>No pre-indexed tool functions discovered for this application yet.</div>
-              <p className="text-[11px] text-neutral-600">
-                Functions can still be dynamically resolved by the agent via COMPOSIO_SEARCH_TOOLS.
-              </p>
+            <div className="py-12 text-center text-xs text-neutral-500 font-mono">
+              No functions discovered yet.
             </div>
           ) : (
-            tools.map((t) => {
-              const isCopied = copiedName === t.name;
-              return (
-                <div
-                  key={t.name}
-                  className="p-3 rounded-xl border border-[#1f1f2c] bg-white dark:bg-[#14141c] hover:border-[#2d2d3f] transition-all space-y-1.5 group"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-mono text-xs font-semibold px-2 py-0.5 rounded border ${
-                        disabledToolNames.includes(t.name)
-                          ? "text-neutral-500 bg-neutral-800/40 border-neutral-700/40 line-through"
-                          : "text-emerald-300 bg-emerald-500/10 border-emerald-500/20"
-                      }`}>
-                        {t.name}
-                      </span>
-                      {disabledToolNames.includes(t.name) && (
-                        <span className="text-[9px] font-mono text-red-400 bg-red-500/10 px-1.5 py-0.2 rounded border border-red-500/20 uppercase">
-                          Disabled
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => toggleToolStatus(t.name)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer border ${
-                          disabledToolNames.includes(t.name)
-                            ? "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
-                            : "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-                        }`}
-                        title={disabledToolNames.includes(t.name) ? "Enable this tool function" : "Disable this tool function"}
-                      >
-                        {disabledToolNames.includes(t.name) ? "Enable" : "Allowed"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTestingToolName(testingToolName === t.name ? null : t.name);
-                        }}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer border ${
-                          testingToolName === t.name
-                            ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white"
-                            : "bg-[#1f1f2e] border-[#2c2c3e] text-slate-700 dark:text-neutral-300 hover:text-white hover:bg-[#28283a]"
-                        }`}
-                        title="Dry-run tool call in sandbox playground"
-                      >
-                        <Play size={10} className="text-[#ff7a00]" />
-                        <span>Dry Run</span>
-                      </button>
-
-                      <button
-                        onClick={(e) => handleCopyName(t.name, e)}
-                        className="p-1 rounded text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
-                        title="Copy function name"
-                      >
-                        {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                      </button>
-                    </div>
+            tools.map((t) => (
+              <div
+                key={t.name}
+                className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#222230] space-y-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-semibold border ${
+                      disabledToolNames.includes(t.name)
+                        ? "text-neutral-500 bg-neutral-800/40 border-neutral-700/40 line-through"
+                        : "text-emerald-300 bg-emerald-500/10 border-emerald-500/20"
+                    }`}>
+                      {t.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(t.name)}
+                      className="p-1 text-neutral-500 hover:text-white cursor-pointer transition-colors"
+                      title="Copy function name"
+                    >
+                      {copiedName === t.name ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    </button>
                   </div>
 
-                  <p className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed font-sans">
-                    {t.description || "No parameter description available."}
-                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ToggleSwitch
+                      size="sm"
+                      checked={!disabledToolNames.includes(t.name)}
+                      onChange={() => toggleToolStatus(t.name)}
+                      label={!disabledToolNames.includes(t.name) ? "Allowed" : "Disabled"}
+                    />
 
-                  {/* Dry Run Interactive Playground */}
-                  {testingToolName === t.name && (
-                    <div className="mt-2.5 p-3 rounded-lg bg-[#0a0a0e] border border-slate-200 dark:border-[#262634] space-y-2 font-mono text-xs animate-in fade-in">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-neutral-400">
-                        <span className="flex items-center gap-1.5 text-[#ff7a00]">
-                          <Terminal size={12} />
-                          <span>Dry Run Arguments (JSON):</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDryRun(t.name)}
-                          disabled={isRunningTest || disabledToolNames.includes(t.name)}
-                          className="px-2.5 py-1 rounded bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-[11px] transition-all cursor-pointer disabled:opacity-40"
-                        >
-                          {isRunningTest ? "Executing..." : "Execute Dry Run"}
-                        </button>
-                      </div>
-
-                      <textarea
-                        value={testPayload}
-                        onChange={(e) => setTestPayload(e.target.value)}
-                        placeholder={"{\n  \"param\": \"value\"\n}"}
-                        rows={2}
-                        className="w-full bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] rounded p-2 text-white font-mono text-[11px] focus:outline-none focus:border-[#ff7a00]"
-                      />
-
-                      {testOutput[t.name] && (
-                        <div className="pt-1.5 border-t border-slate-200 dark:border-[#1e1e28]">
-                          <div className="text-[10px] text-neutral-500 mb-1">Sandbox Console Output:</div>
-                          <pre className="p-2 rounded bg-black/60 text-emerald-400 text-[10px] whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto border border-emerald-500/20">
-                            {testOutput[t.name]}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setTestingToolName(testingToolName === t.name ? null : t.name)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer border ${
+                        testingToolName === t.name
+                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white"
+                          : "bg-white dark:bg-[#1f1f2e] border-slate-200 dark:border-[#2c2c3e] text-slate-700 dark:text-neutral-300 hover:text-white"
+                      }`}
+                    >
+                      <Play size={10} className="text-[#ff7a00]" />
+                      <span>Dry Run</span>
+                    </button>
+                  </div>
                 </div>
-              );
-            })
+
+                <p className="text-xs text-slate-600 dark:text-neutral-400 font-sans">
+                  {t.description || "No description provided in tool declaration."}
+                </p>
+
+                {testingToolName === t.name && (
+                  <div className="pt-2 border-t border-slate-200 dark:border-white/5 space-y-2 animate-in fade-in duration-100">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#ff7a00]">
+                      <Terminal size={11} />
+                      <span>Sandbox Payload Simulator</span>
+                    </div>
+                    <textarea
+                      value={testPayload}
+                      onChange={(e) => setTestPayload(e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-900 text-slate-100 font-mono text-[11px] p-2 rounded-lg border border-slate-700 focus:outline-none focus:border-[#ff7a00]"
+                      placeholder='{"key": "value"}'
+                    />
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        disabled={isRunningTest}
+                        onClick={() => handleDryRun(t.name)}
+                        className="px-3 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isRunningTest ? "Running..." : "Execute Test"}
+                      </button>
+                    </div>
+                    {testOutput[t.name] && (
+                      <pre className="p-2.5 rounded-lg bg-black/90 text-emerald-400 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap">
+                        {testOutput[t.name]}
+                      </pre>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

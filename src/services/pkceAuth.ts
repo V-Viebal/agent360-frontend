@@ -1,0 +1,50 @@
+// Standard browser PKCE (Proof Key for Code Exchange) implementation for SPA OIDC
+export function generateRandomString(length = 64): string {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const array = new Uint8Array(length);
+  window.crypto.getRandomValues(array);
+  return Array.from(array, (x) => charset[x % charset.length]).join('');
+}
+
+export async function generateCodeChallenge(codeVerifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(codeVerifier);
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+export async function initiateSkyerSignIn(authConfig: {
+  endpoint: string;
+  appId: string;
+  localAppId: string;
+  apiResource: string;
+  redirectUri: string;
+  postLogoutRedirectUri: string;
+}) {
+  const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+  const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
+  const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
+
+  const codeVerifier = generateRandomString(64);
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  const state = generateRandomString(32);
+
+  // Store PKCE verifier and state in sessionStorage
+  sessionStorage.setItem('skyer_oidc_verifier', codeVerifier);
+  sessionStorage.setItem('skyer_oidc_state', state);
+
+  const url = new URL('/oidc/auth', authConfig.endpoint);
+  url.searchParams.set('client_id', clientId);
+  url.searchParams.set('redirect_uri', redirect);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', 'openid profile email offline_access');
+  url.searchParams.set('code_challenge', codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  url.searchParams.set('state', state);
+  url.searchParams.set('resource', authConfig.apiResource);
+
+  window.location.href = url.toString();
+}

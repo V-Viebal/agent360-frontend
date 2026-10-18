@@ -1,4 +1,5 @@
 import { authConfig } from '../config/authConfig';
+import { initiateSkyerSignIn } from '../services/pkceAuth';
 import { SkyerLogo } from "./SkyerLogo";
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -55,11 +56,9 @@ export function Navbar() {
 
   const handleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    const isLocal = window.location.origin.includes('localhost');
-    const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
-    const redirect = encodeURIComponent(isLocal ? (window.location.origin + '/app') : (authConfig.postLogoutRedirectUri + '/app'));
-    const signinUrl = authConfig.endpoint + 'oidc/auth?client_id=' + clientId + '&redirect_uri=' + redirect + '&response_type=code&scope=openid%20profile%20email%20offline_access&resource=' + encodeURIComponent(authConfig.apiResource);
-    window.location.href = signinUrl;
+    initiateSkyerSignIn(authConfig).catch((err) => {
+      console.error('[Auth] Failed to initiate Skyer OIDC sign in:', err);
+    });
   };
 
   // Close dropdown on route change

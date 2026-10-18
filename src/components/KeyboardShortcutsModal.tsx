@@ -37,6 +37,13 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     category: "Navigation & Search",
     customizable: true,
   },
+    {
+    id: "cycle_loop_mode",
+    defaultKeys: ["Ctrl", "Alt", "L"],
+    description: "Cycle Agent Loop Mode (Default ➔ Goal ➔ Mission)",
+    category: "Dialogue & Sessions",
+    customizable: true,
+  },
   {
     id: "toggle_plus_menu",
     defaultKeys: ["Ctrl", "/"],

@@ -1,3 +1,13 @@
+
+// Haptic feedback helper for mobile touch gestures
+function triggerHaptic(duration = 10) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(duration);
+    }
+  } catch {}
+}
+
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSection } from "../components/ui/DropdownMenu";
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
@@ -17,6 +27,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Monitor,
   Trash2,
+  Globe,
   MoreVertical,
   Pin,
   PinOff,
@@ -1352,6 +1363,8 @@ export function GrokBotWorkspace() {
     return "default";
   });
   const [loopPulse, setLoopPulse] = useState<string | null>(null);
+  const [loopModeToast, setLoopModeToast] = useState<{ mode: "default" | "goal" | "mission"; visible: boolean } | null>(null);
+  const loopToastTimerRef = useRef<any>(null);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(false);
   const [isComputerSplitOpen, setIsComputerSplitOpen] = useState<boolean>(() => {
@@ -2226,6 +2239,15 @@ export function GrokBotWorkspace() {
   const [lastAppsScrollTop, setLastAppsScrollTop] = useState(0);
   const [lastSubAgentsScrollTop, setLastSubAgentsScrollTop] = useState(0);
 
+  // Auto-scroll highlighted popover item into view when navigating via keyboard
+  useEffect(() => {
+    if (plusMenuSelectedIndex < 0 || !isPlusMenuOpen) return;
+    const activeEl = document.querySelector(`[data-popover-nav-idx="${plusMenuSelectedIndex}"]`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [plusMenuSelectedIndex, isPlusMenuOpen]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
@@ -2567,6 +2589,14 @@ export function GrokBotWorkspace() {
       localStorage.setItem(`skyer_loop_mode_${selectedAgentId}`, mode);
     } catch {}
     setTimeout(() => setLoopPulse(null), 400);
+
+    // Micro-HUD pill notification (1500ms duration)
+    if (loopToastTimerRef.current) clearTimeout(loopToastTimerRef.current);
+    setLoopModeToast({ mode, visible: true });
+    loopToastTimerRef.current = setTimeout(() => {
+      setLoopModeToast((prev) => prev ? { ...prev, visible: false } : null);
+    }, 1500);
+
     await updateAgentLoopMode(selectedAgentId, mode);
   };
 
@@ -3020,6 +3050,14 @@ export function GrokBotWorkspace() {
         return;
       }
 
+            // 1g. Fast Cycle Agent Loop Mode (Ctrl+Alt+L or Cmd+Option+L)
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        const nextMode = activeLoopMode === "default" ? "goal" : activeLoopMode === "goal" ? "mission" : "default";
+        handleSelectLoopMode(nextMode);
+        return;
+      }
+
       // 1f. Fast Toggle Add to prompt Popover (Ctrl+/ or Cmd+/)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "/") {
         e.preventDefault();
@@ -3081,7 +3119,7 @@ export function GrokBotWorkspace() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isComputerSplitOpen, selectedChatId]);
+  }, [isComputerSplitOpen, selectedChatId, activeLoopMode]);
 
   // Core function to execute a single prompt stream
   const executeTurnStream = async (userText: string) => {
@@ -4523,7 +4561,57 @@ export function GrokBotWorkspace() {
           </div>
         )}
 
-        {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
+        {/* Micro-HUD Pill Toast for Agent Loop Mode cycling */}
+      {loopModeToast && (
+        <div
+          data-testid="loop-mode-hud-toast"
+          className={`pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full backdrop-blur-xl border shadow-2xl transition-all duration-200 select-none ${
+            loopModeToast.visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95"
+          } ${
+            loopModeToast.mode === "goal"
+              ? "bg-emerald-950/90 dark:bg-emerald-950/90 border-emerald-500/40 text-emerald-200 shadow-emerald-500/10"
+              : loopModeToast.mode === "mission"
+              ? "bg-cyan-950/90 dark:bg-cyan-950/90 border-cyan-500/40 text-cyan-200 shadow-cyan-500/10"
+              : "bg-slate-900/90 dark:bg-[#14141c]/95 border-[#ff7a00]/40 text-neutral-100 shadow-[#ff7a00]/10"
+          }`}
+        >
+          <div
+            className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 shadow-xs ${
+              loopModeToast.mode === "goal"
+                ? "bg-emerald-500/20 text-emerald-400"
+                : loopModeToast.mode === "mission"
+                ? "bg-cyan-500/20 text-cyan-400"
+                : "bg-amber-500/20 text-[#ff7a00]"
+            }`}
+          >
+            {loopModeToast.mode === "goal" ? (
+              <Target size={12} className="stroke-[2.5]" />
+            ) : loopModeToast.mode === "mission" ? (
+              <Rocket size={12} className="stroke-[2.5]" />
+            ) : (
+              <CircleDot size={12} className="stroke-[2.5]" />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 font-mono text-xs">
+            <span className="font-semibold capitalize tracking-wide">
+              {loopModeToast.mode === "default" ? "Standard Loop" : `${loopModeToast.mode} Mode`}
+            </span>
+            <span className="text-[10px] opacity-60">|</span>
+            <span className="text-[10px] opacity-75">
+              {loopModeToast.mode === "goal"
+                ? "Goal-Driven Protocol"
+                : loopModeToast.mode === "mission"
+                ? "Multi-Step Mission"
+                : "Guarded Agent Loop"}
+            </span>
+          </div>
+          <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70 ml-1">
+            Ctrl+Alt+L
+          </span>
+        </div>
+      )}
+
+      {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
         <div className={`${isCompactMode ? "p-2.5 pb-3" : "p-4"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-2`}>
           {/* Request Queue Indicator */}
           {requestQueue.length > 0 && (
@@ -4829,11 +4917,21 @@ export function GrokBotWorkspace() {
                             e.preventDefault();
                             const selected = allNavItems[plusMenuSelectedIndex];
                             setIsPlusMenuOpen(false);
-                            if (selected.type === "app") {
-                              setInputText((prev) => (prev ? `${prev} /${selected.id} ` : `/${selected.id} `));
-                            } else {
-                              setInputText((prev) => (prev ? `${prev} @${selected.name} ` : `@${selected.name} `));
-                            }
+                            setInputText((prev) => {
+                              if (selected.type === "app") {
+                                const exists = prev.includes(`/${selected.id} `) || prev.endsWith(`/${selected.id}`);
+                                if (exists) {
+                                  return prev.replace(new RegExp(`/${selected.id}\\s*`, "g"), "").trimStart();
+                                }
+                                return prev ? `${prev} /${selected.id} ` : `/${selected.id} `;
+                              } else {
+                                const exists = prev.includes(`@${selected.name}`);
+                                if (exists) {
+                                  return prev.replace(new RegExp(`@${selected.name}\\s*`, "g"), "").trimStart();
+                                }
+                                return prev ? `${prev} @${selected.name} ` : `@${selected.name} `;
+                              }
+                            });
                             textareaRef.current?.focus();
                           }
                         }
@@ -5038,36 +5136,51 @@ export function GrokBotWorkspace() {
 
                         return agentApps.map((app, appIdx) => {
                           const isHighlighted = plusMenuSelectedIndex === appIdx;
+                          const isAlreadyAdded = inputText.includes(`/${app.id} `) || inputText.endsWith(`/${app.id}`);
                           return (
                           <button
                             key={app.id}
                             type="button"
+                            data-popover-nav-idx={appIdx}
                             onClick={() => {
                               setIsPlusMenuOpen(false);
-                              setInputText((prev) => (prev ? `${prev} /${app.id} ` : `/${app.id} `));
+                              setInputText((prev) => {
+                                if (isAlreadyAdded) {
+                                  // Remove the slash command cleanly
+                                  return prev
+                                    .replace(new RegExp(`/${app.id}\\s*`, "g"), "")
+                                    .trimStart();
+                                }
+                                return prev ? `${prev} /${app.id} ` : `/${app.id} `;
+                              });
                               textareaRef.current?.focus();
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
                                 ? "bg-[#ff7a00]/15 dark:bg-[#ff7a00]/20 border-[#ff7a00] text-slate-900 dark:text-white shadow-xs"
+                                : isAlreadyAdded
+                                ? "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/40 text-slate-900 dark:text-white"
                                 : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800/90 border border-slate-200/90 dark:border-white/10 flex items-center justify-center p-1 shrink-0 shadow-2xs transition-colors">
+                              <div className="h-6 w-6 rounded-lg bg-slate-50 dark:bg-neutral-800/90 border border-slate-200 dark:border-white/10 flex items-center justify-center p-1 shrink-0 shadow-2xs transition-colors">
                                 <img
                                   src={app.logoUrl}
                                   alt={app.name}
-                                  className="h-3.5 w-3.5 object-contain dark:brightness-100 dark:invert-0 filter contrast-125"
+                                  className="h-3.5 w-3.5 object-contain filter contrast-125 transition-all dark:brightness-100"
                                   onError={(e) => {
+                                    // Fallback to stylized initial icon if image fails
                                     (e.currentTarget as HTMLElement).style.display = 'none';
                                   }}
                                 />
                               </div>
                               <span className="truncate text-[11px]">{app.name}</span>
                             </div>
-                            <span className="text-[9px] font-mono text-neutral-500 group-hover:text-[#ff7a00] shrink-0">
-                              +Tool
+                            <span className={`text-[9px] font-mono shrink-0 ${
+                              isAlreadyAdded ? "text-amber-400 font-semibold" : "text-neutral-500 group-hover:text-[#ff7a00]"
+                            }`}>
+                              {isAlreadyAdded ? "Added" : "+Tool"}
                             </span>
                           </button>
                         );
@@ -5148,29 +5261,47 @@ export function GrokBotWorkspace() {
 
                         return displayList.map((ag, subIdx) => {
                           const isHighlighted = plusMenuSelectedIndex === (appsCount + subIdx);
+                          const isAlreadyMentioned = inputText.includes(`@${ag.name}`);
                           return (
                           <button
                             key={ag.id}
                             type="button"
+                            data-popover-nav-idx={appsCount + subIdx}
                             onClick={() => {
                               setIsPlusMenuOpen(false);
-                              setInputText((prev) => (prev ? `${prev} @${ag.name} ` : `@${ag.name} `));
+                              setInputText((prev) => {
+                                if (isAlreadyMentioned) {
+                                  // Remove the @mention cleanly
+                                  return prev
+                                    .replace(new RegExp(`@${ag.name}\\s*`, "g"), "")
+                                    .trimStart();
+                                }
+                                return prev ? `${prev} @${ag.name} ` : `@${ag.name} `;
+                              });
                               textareaRef.current?.focus();
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
                                 ? "bg-cyan-500/15 dark:bg-cyan-500/20 border-cyan-500 text-slate-900 dark:text-white shadow-xs"
-                                : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
+                                : isAlreadyMentioned
+                                ? "bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/40 text-slate-900 dark:text-white"
+                                : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <div className="h-5 w-5 rounded-full bg-amber-500/15 dark:bg-[#ff7a00]/20 border border-amber-500/40 dark:border-[#ff7a00]/30 flex items-center justify-center text-[10px] font-mono font-bold text-[#ff7a00] shrink-0 shadow-2xs">
-                                {ag.name.slice(0, 1)}
+                              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
+                                isAlreadyMentioned
+                                  ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                                  : "bg-amber-500/15 dark:bg-[#ff7a00]/20 border-amber-500/40 dark:border-[#ff7a00]/30 text-[#ff7a00]"
+                              }`}>
+                                {isAlreadyMentioned ? <Check size={11} className="stroke-[2.5]" /> : ag.name.slice(0, 1)}
                               </div>
                               <span className="truncate text-[11px]">{ag.name}</span>
                             </div>
-                            <span className="text-[9px] font-mono text-neutral-500 group-hover:text-cyan-400 shrink-0">
-                              @Mention
+                            <span className={`text-[9px] font-mono shrink-0 flex items-center gap-1 ${
+                              isAlreadyMentioned ? "text-emerald-400 font-semibold" : "text-neutral-500 group-hover:text-cyan-400"
+                            }`}>
+                              {isAlreadyMentioned ? "Active" : "@Mention"}
                             </span>
                           </button>
                         );
@@ -5198,30 +5329,46 @@ export function GrokBotWorkspace() {
               />
 
               {/* Plus / Add Files, Apps & Agents Trigger */}
-              <button aria-label="Add files, apps, or agents" data-ux-target-min="24"
-                type="button"
-                onClick={() => {
-                  setIsPlusMenuOpen((prev) => {
-                    const next = !prev;
-                    if (next) {
-                      setPlusMenuSearch("");
-                      setPlusMenuSelectedIndex(-1);
-                    }
-                    return next;
-                  });
-                }}
-                disabled={isUploadingFile}
-                className={`text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer p-0.5 rounded-full flex items-center justify-center shrink-0 ${
-                  isPlusMenuOpen ? "text-[#ff7a00] dark:text-[#ff7a00] rotate-45 scale-110" : ""
-                }`}
-                title="Add files, apps, or mention agents"
-              >
-                {isUploadingFile ? (
-                  <Loader2 size={16} className="animate-spin text-[#ff7a00]" />
-                ) : (
-                  <Plus size={16} className="transition-transform duration-200" />
-                )}
-              </button>
+              {(() => {
+                // Count active tools and mentions in prompt
+                const activeMentionsCount = (inputText.match(/@[a-zA-Z0-9_-]+/g) || []).length;
+                const activeToolsCount = (inputText.match(/\/[a-zA-Z0-9_-]+/g) || []).length;
+                const totalActiveItems = activeMentionsCount + activeToolsCount;
+
+                return (
+                  <div className="relative shrink-0 flex items-center">
+                    <button aria-label="Add files, apps, or agents" data-ux-target-min="24"
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen((prev) => {
+                          const next = !prev;
+                          if (next) {
+                            setPlusMenuSearch("");
+                            setPlusMenuSelectedIndex(-1);
+                          }
+                          return next;
+                        });
+                      }}
+                      disabled={isUploadingFile}
+                      className={`text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer p-1 rounded-full flex items-center justify-center shrink-0 ${
+                        isPlusMenuOpen ? "text-[#ff7a00] dark:text-[#ff7a00] rotate-45 scale-110" : ""
+                      }`}
+                      title="Add files, apps, or mention agents"
+                    >
+                      {isUploadingFile ? (
+                        <Loader2 size={16} className="animate-spin text-[#ff7a00]" />
+                      ) : (
+                        <Plus size={16} className="transition-transform duration-200" />
+                      )}
+                    </button>
+                    {totalActiveItems > 0 && !isPlusMenuOpen && (
+                      <span className="absolute -top-1 -right-1 h-3.5 min-w-[14px] px-1 rounded-full bg-[#ff7a00] text-black font-mono font-bold text-[8px] flex items-center justify-center shadow-xs pointer-events-none">
+                        {totalActiveItems}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
             {/* Prompt Recipes & Templates Popover Trigger */}
             <button
