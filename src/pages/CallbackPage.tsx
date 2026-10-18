@@ -53,6 +53,7 @@ export function CallbackPage() {
           redirect_uri: redirect,
           code_verifier: codeVerifier || "",
           resource: authConfig.apiResource,
+          scope: authConfig.apiScopes.join(" "),
         });
 
         const res = await fetch(tokenEndpoint, {

@@ -33,6 +33,7 @@ async function refreshToken(original: typeof fetch): Promise<string | null> {
         client_id: isLocal ? authConfig.localAppId : authConfig.appId,
         refresh_token: rt,
         resource: authConfig.apiResource,
+        scope: authConfig.apiScopes.join(" "),
       }).toString(),
     });
     if (!res.ok) return null;
