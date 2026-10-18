@@ -41,6 +41,7 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,8 +54,32 @@ export function CustomSelect({
       }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (!isOpen) return;
+
+      if (e.key === "Escape") {
         setIsOpen(false);
+        return;
+      }
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
+        return;
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+          onChange(filteredOptions[highlightedIndex].value);
+          setIsOpen(false);
+        }
+        return;
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -66,10 +91,15 @@ export function CustomSelect({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && searchable) {
-      setTimeout(() => searchInputRef.current?.focus(), 50);
+    if (isOpen) {
+      const idx = filteredOptions.findIndex((o) => o.value === value);
+      setHighlightedIndex(idx >= 0 ? idx : 0);
+      if (searchable) {
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
     } else {
       setSearchQuery("");
+      setHighlightedIndex(-1);
     }
   }, [isOpen, searchable]);
 
@@ -176,8 +206,9 @@ export function CustomSelect({
                 No matching options
               </div>
             ) : (
-              filteredOptions.map((opt) => {
+              filteredOptions.map((opt, idx) => {
                 const isSelected = opt.value === value;
+                const isHighlighted = idx === highlightedIndex;
                 return (
                   <div
                     key={opt.value}
@@ -185,9 +216,12 @@ export function CustomSelect({
                       onChange(opt.value);
                       setIsOpen(false);
                     }}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
                     className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors ${
                       isSelected
                         ? "bg-[#222230] text-[#ff7a00] font-semibold"
+                        : isHighlighted
+                        ? "bg-[#1c1c28] text-white"
                         : "text-neutral-300 hover:bg-[#1a1a24] hover:text-white"
                     }`}
                   >

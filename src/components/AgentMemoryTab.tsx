@@ -1,4 +1,5 @@
 import { useTranslation } from "../i18n/LanguageContext";
+import { CustomSelect } from "./ui/CustomSelect";
 import React, { useState, useEffect } from "react";
 import { Brain, Sparkles, Plus, Trash2, Edit2, Check, X, Shield, RefreshCw } from "lucide-react";
 

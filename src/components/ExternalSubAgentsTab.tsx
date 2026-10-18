@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CustomSelect } from "./ui/CustomSelect";
 import { Network, RefreshCw, Link2, Unlink, Activity, CheckCircle2, XCircle, Clock, Send, Loader2, GitBranch, KeyRound, AlertTriangle } from "lucide-react";
 import { a2aApi, A2AAuthError, A2AHealth, A2AMetrics, Delegation, ExternalAgent, ExternalBinding, operatorKey } from "../services/a2aApi";
 
