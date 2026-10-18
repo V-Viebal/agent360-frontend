@@ -62,7 +62,7 @@ export function Tabs<T extends string = string>({
               } ${
                 isActive
                   ? "text-[#ff7a00]"
-                  : "text-neutral-500 hover:text-slate-800 dark:hover:text-neutral-200"
+                  : "text-neutral-500 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               {tab.icon && <span className="shrink-0">{tab.icon}</span>}

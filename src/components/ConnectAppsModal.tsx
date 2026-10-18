@@ -744,7 +744,7 @@ export function ConnectAppsModal({
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap cursor-pointer ${
                     isActive
                       ? "bg-white text-black shadow-sm"
-                      : "bg-[#1d1d26] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200 hover:bg-[#252532] border border-[#282834]"
+                      : "bg-[#1d1d26] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-[#252532] border border-[#282834]"
                   }`}
                 >
                   {cat}

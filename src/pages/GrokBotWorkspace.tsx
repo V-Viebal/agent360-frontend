@@ -31,6 +31,8 @@ import {
   PinOff,
   Download,
   CheckCheck,
+  Archive,
+  ArchiveRestore,
   Edit2,
   Wifi,
   Camera, Maximize2,
@@ -612,10 +614,15 @@ function FormattedMessageContent({
               }`}
             >
               <div className="px-3 py-1.5 bg-[#14141c] border-b border-[#262634] flex items-center justify-between text-[11px] text-neutral-400 select-none">
-                <span className="flex items-center gap-1.5 text-[#ff7a00] font-mono">
-                  <Terminal size={12} />
-                  {lang}
-                </span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center gap-1.5 text-[#ff7a00] font-mono">
+                    <Terminal size={12} />
+                    {lang}
+                  </span>
+                  <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">
+                    ({code.trim().split("\n").length} lines)
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   <button aria-label={expandedBlock === idx ? "Collapse code block" : "Expand code block"} data-ux-target-min="24"
                     type="button"
@@ -651,8 +658,33 @@ function FormattedMessageContent({
                   )}
                   <button
                     type="button"
+                    onClick={() => {
+                      const extMap: Record<string, string> = {
+                        bash: "sh", sh: "sh", shell: "sh", zsh: "sh",
+                        python: "py", py: "py",
+                        javascript: "js", js: "js", typescript: "ts", ts: "ts",
+                        sql: "sql", json: "json", yaml: "yaml", yml: "yml",
+                        html: "html", css: "css", markdown: "md", md: "md"
+                      };
+                      const ext = extMap[lang.toLowerCase()] || "txt";
+                      const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+                      const a = document.createElement("a");
+                      a.href = URL.createObjectURL(blob);
+                      a.download = `snippet-${Date.now()}.${ext}`;
+                      a.click();
+                      URL.revokeObjectURL(a.href);
+                    }}
+                    className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-white/10"
+                    title="Tải mã nguồn về máy"
+                  >
+                    <Download size={11} />
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => handleCopyCode(code, idx)}
-                    className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-white/10"
+                    title="Sao chép toàn bộ khối mã"
                   >
                     {copiedBlock === idx ? (
                       <>
@@ -2224,6 +2256,7 @@ export function GrokBotWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isInitialLoadRef = useRef<boolean>(true);
+  const touchSwipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Search in conversation list
   const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -2255,7 +2288,7 @@ export function GrokBotWorkspace() {
     };
   }, [activeChatMenuId, activeAgentMenuId]);
 
-  const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned">("all");
+  const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned" | "archived">("all");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
   // Mobile Hold-Touch / Long-Press Action Sheet state
@@ -2397,6 +2430,31 @@ export function GrokBotWorkspace() {
       return [];
     }
   });
+
+  const [archivedChatIds, setArchivedChatIds] = useState<string[]>(() => {
+    try {
+      const v = localStorage.getItem("agent360_archived_chats");
+      return v ? JSON.parse(v) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleArchiveChat = (chatId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    triggerHaptic(15);
+    setArchivedChatIds((prev) => {
+      const isArchived = prev.includes(chatId);
+      const next = isArchived ? prev.filter((id) => id !== chatId) : [...prev, chatId];
+      try {
+        localStorage.setItem("agent360_archived_chats", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingChatTitle, setEditingChatTitle] = useState<string>("");
   const [expandedTerminalIdx, setExpandedTerminalIdx] = useState<number | null>(null);
@@ -3870,6 +3928,13 @@ export function GrokBotWorkspace() {
         c.lastMessageSnippet.toLowerCase().includes(chatSearchQuery.toLowerCase());
       if (!matchesSearch) return false;
 
+      const isArchived = archivedChatIds.includes(c.id);
+      if (chatFilterTab === "archived") {
+        return isArchived;
+      }
+      // Non-archived chats shown in other tabs
+      if (isArchived) return false;
+
       if (chatFilterTab === "pinned") {
         return pinnedChatIds.includes(c.id);
       }
@@ -4540,6 +4605,47 @@ export function GrokBotWorkspace() {
         style={{
           width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${computerChatWidthPercent}%` : undefined,
           flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `0 0 ${computerChatWidthPercent}%` : undefined,
+        }}
+        onTouchStart={(e) => {
+          if (window.innerWidth < 1024 && e.touches.length === 1) {
+            touchSwipeStartRef.current = {
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+              time: Date.now(),
+            };
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (window.innerWidth < 1024 && touchSwipeStartRef.current && e.changedTouches.length === 1) {
+            const touch = e.changedTouches[0];
+            const deltaX = touch.clientX - touchSwipeStartRef.current.x;
+            const deltaY = touch.clientY - touchSwipeStartRef.current.y;
+            const deltaTime = Date.now() - touchSwipeStartRef.current.time;
+
+            // Only trigger if horizontal swipe is intentional (> 45px) and fast (< 450ms)
+            if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && deltaTime < 450) {
+              if (deltaX > 0) {
+                // Swiped from left to right -> Open Left Agents Drawer (or close right chats drawer if open)
+                if (mobileChatsOpen) {
+                  setMobileChatsOpen(false);
+                } else if (!mobileAgentsOpen) {
+                  triggerHaptic(20);
+                  setMobileAgentsOpen(true);
+                  setMobileBotInfoOpen(false);
+                }
+              } else {
+                // Swiped from right to left -> Open Right Chat Sessions Drawer (or close left agents drawer if open)
+                if (mobileAgentsOpen) {
+                  setMobileAgentsOpen(false);
+                } else if (!mobileChatsOpen) {
+                  triggerHaptic(20);
+                  setMobileChatsOpen(true);
+                  setMobileBotInfoOpen(false);
+                }
+              }
+            }
+          }
+          touchSwipeStartRef.current = null;
         }}
         className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0"
       >
@@ -6738,9 +6844,10 @@ export function GrokBotWorkspace() {
                 activeTab={chatFilterTab}
                 onChange={(tabId) => setChatFilterTab(tabId as any)}
                 tabs={[
-                  { id: "all", label: "All", count: chats.length },
-                  { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).length || undefined },
-                  { id: "pinned", label: "Pinned", count: pinnedChatIds.length || undefined },
+                  { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
+                  { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).filter(id => !archivedChatIds.includes(id)).length || undefined },
+                  { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
+                  { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
                 ]}
               />
             </div>
@@ -6944,6 +7051,15 @@ export function GrokBotWorkspace() {
                                 label={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
                                 onClick={(e) => {
                                   togglePinChat(chat.id, e);
+                                  setActiveChatMenuId(null);
+                                }}
+                              />
+
+                              <DropdownMenuItem
+                                icon={archivedChatIds.includes(chat.id) ? <ArchiveRestore size={13} className="text-cyan-400" /> : <Archive size={13} className="text-neutral-400" />}
+                                label={archivedChatIds.includes(chat.id) ? "Bỏ lưu trữ (Khôi phục)" : "Lưu trữ phiên này"}
+                                onClick={(e) => {
+                                  toggleArchiveChat(chat.id, e);
                                   setActiveChatMenuId(null);
                                 }}
                               />
