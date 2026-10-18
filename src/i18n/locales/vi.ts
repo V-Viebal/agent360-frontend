@@ -702,4 +702,17 @@ export const vi = {
   "marketplace.catalogCountDesc": "Đang xem 12 Mẫu Nhân Viên AI Tự Hành Chuyên Biệt",
   "marketplace.hierarchyCountDesc": "Sơ Đồ Phân Cấp Giám Sát 4 Phòng Ban Doanh Nghiệp",
 
+
+  // Workspace Sidebar & Actions
+  "sidebar.teamOverview": "Sơ đồ đội ngũ",
+  "sidebar.teamOverviewTitle": "Sơ đồ phối hợp giữa {count} đồng đội (Nhấn Ctrl + G để mở)",
+  "sidebar.friendsCount": "{count} bạn",
+  "sidebar.filterAgents": "Lọc danh sách đồng đội...",
+
+
+  // Topology Modal Extra
+  "topoModal.heading": "Sơ đồ Phối hợp Đội ngũ",
+  "topoModal.badge": "{count} Đồng đội",
+  "topoModal.desc": "Mạng lưới liên kết, phân luồng công việc và kiểm tra độ trễ phản hồi thời gian thực",
+
 };

@@ -124,7 +124,7 @@ export const subAgentApi = {
       `/agents/${a(parent)}/subagents/${a(child)}/probe`,
       { method: "POST", body: JSON.stringify({ prompt }) }
     ),
-  delegations: (parent: string) => call<DelegationTask[]>(`/agents/${a(parent)}/delegations`),
+  delegations: (parent: string, limit?: number) => call<DelegationTask[]>(`/agents/${a(parent)}/delegations${limit ? `?limit=${limit}` : ''}`).then((res) => (limit && Array.isArray(res) ? res.slice(0, limit) : res)),
   ingestNative: (parent: string) =>
     call<{ ingested: number; tasks: DelegationTask[] }>(`/agents/${a(parent)}/delegations/ingest-native`, { method: "POST" }),
   create: (body: {

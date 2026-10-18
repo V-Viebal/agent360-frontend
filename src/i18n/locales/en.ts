@@ -702,4 +702,17 @@ export const en = {
   "marketplace.catalogCountDesc": "Browsing 12 Specialized AI Teammates",
   "marketplace.hierarchyCountDesc": "4 Department Supervision Hierarchy",
 
+
+  // Workspace Sidebar & Actions
+  "sidebar.teamOverview": "Team Topology",
+  "sidebar.teamOverviewTitle": "Team collaboration topology of {count} teammates (Press Ctrl + G to open)",
+  "sidebar.friendsCount": "{count} bots",
+  "sidebar.filterAgents": "Filter teammates...",
+
+
+  // Topology Modal Extra
+  "topoModal.heading": "Team Coordination Topology",
+  "topoModal.badge": "{count} Teammates",
+  "topoModal.desc": "Autonomous multi-agent network mesh, task delegation pipelines, and realtime ping telemetry",
+
 };

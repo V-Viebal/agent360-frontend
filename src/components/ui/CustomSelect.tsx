@@ -69,8 +69,10 @@ export function CustomSelect({
             />
           ) : (
             <>
-              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left">
-                {selectedOption ? selectedOption.label : placeholder}
+              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left group-hover/select-trigger:text-white transition-colors relative">
+                <span className="relative pb-0.5 border-b border-transparent group-hover/select-trigger:border-neutral-500/50 transition-colors">
+                  {selectedOption ? selectedOption.label : placeholder}
+                </span>
               </span>
               <ChevronDown
                 size={13}

@@ -251,14 +251,14 @@ export function A2ATopologyGraphModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-white tracking-wide">
-                  Sơ đồ Phối hợp Đội ngũ
+                  {t("topoModal.heading")}
                 </h3>
                 <span className="text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 px-2 py-0.5 rounded-full">
-                  {allAgents.length} Đồng đội
+                  {t("topoModal.badge", { count: allAgents.length })}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                Mạng lưới liên kết, phân luồng công việc và kiểm tra độ trễ phản hồi thời gian thực
+                {t("topoModal.desc")}
               </p>
             </div>
           </div>

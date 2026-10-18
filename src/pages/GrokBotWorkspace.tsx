@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
 import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network, Keyboard } from "lucide-react";
@@ -966,6 +967,7 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
 }
 
 export function GrokBotWorkspace() {
+  const { t } = useTranslation();
   const [agents, setAgents] = useState<InfraAgent[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -3428,17 +3430,17 @@ export function GrokBotWorkspace() {
                 type="button"
                 onClick={() => setIsTopologyModalOpen(true)}
                 className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border border-transparent hover:border-neutral-300 dark:hover:border-[#28283a] hover:bg-neutral-100 dark:hover:bg-[#161622] text-left transition-colors cursor-pointer group select-none"
-                title={`Sơ đồ phối hợp giữa ${agents.length} đồng đội (Nhấn Ctrl + G để mở)`}
+                title={t("sidebar.teamOverviewTitle", { count: agents.length })}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Network size={14} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors shrink-0" />
                   <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors truncate">
-                    Sơ đồ đội ngũ
+                    {t("sidebar.teamOverview")}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-[10px] font-mono text-neutral-400">
-                    {agents.length} bạn
+                    {t("sidebar.friendsCount", { count: agents.length })}
                   </span>
                   <span className="text-[10px] font-mono text-neutral-500">
                     Ctrl+G
@@ -3452,7 +3454,7 @@ export function GrokBotWorkspace() {
               <SearchInput
                 value={agentSearchQuery}
                 onChange={setAgentSearchQuery}
-                placeholder="Filter agents..."
+                placeholder={t("sidebar.filterAgents")}
               />
             </div>
 
@@ -4486,9 +4488,6 @@ export function GrokBotWorkspace() {
                     <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
                       Add to prompt
                     </span>
-                    <span className="text-[11px] font-mono text-neutral-500 hidden sm:inline">
-                      • <span className="text-[#ff7a00] font-medium">{selectedAgent.name}</span>
-                    </span>
                   </div>
 
                   {/* Instant Filter Search inside Popover */}
@@ -5246,6 +5245,8 @@ export function GrokBotWorkspace() {
                       handleSelectChat(chat);
                     }}
                     className={`w-full p-2.5 rounded-xl text-left flex items-center gap-2.5 transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
+                      activeChatMenuId === chat.id ? "z-40" : "z-auto"
+                    } ${
                       isSelected
                         ? "bg-[#22222c] text-white shadow-sm"
                         : "hover:bg-[#181820] text-neutral-400 hover:text-neutral-200"
@@ -5341,7 +5342,8 @@ export function GrokBotWorkspace() {
                             {activeChatMenuId === chat.id && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl shadow-black/90 z-[100] text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/5"
+                                className="absolute right-0 top-full mt-1 w-56 rounded-xl bg-[var(--bg-card)] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl shadow-black/80 z-50 text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none"
+                                style={{ backgroundColor: undefined }}
                               >
                                 {/* Search within conversation */}
                                 <button

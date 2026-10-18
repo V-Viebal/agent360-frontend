@@ -54,6 +54,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
   const [form, setForm] = useState({ child: "", role: "", capabilities: "", timeout: 300 });
   const [dlg, setDlg] = useState({ child: "", mode: "sync" as DelegationMode, objective: "", criteria: "" });
+  const [pageSize, setPageSize] = useState<number>(20);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [skill, setSkill] = useState<SkillSyncStatus | null>(null);
   const [hasKey, setHasKey] = useState(!!operatorKey.get());
@@ -78,7 +79,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
       const [bRes, hRes, tRes, st] = await Promise.all([
         subAgentApi.list(parent).catch(() => [] as SubAgentBinding[]),
         subAgentApi.health(parent).catch(() => [] as SubAgentHealth[]),
-        subAgentApi.delegations(parent).catch(() => [] as DelegationTask[]),
+        subAgentApi.delegations(parent, pageSize).catch(() => [] as DelegationTask[]),
         subAgentApi.skillStatus(parent).catch(() => null),
       ]);
       setSkill(st);
@@ -94,7 +95,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
 
   useEffect(() => {
     load();
-  }, [parent]);
+  }, [parent, pageSize]);
 
   useEffect(() => {
     const running = tasks.filter((t) => t.mode === "async" && ["running", "queued", "retry_queued"].includes(t.status));
@@ -349,7 +350,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
             );
           })}
 
-          <div className="p-2.5 rounded-xl border border-dashed border-[#2a2a38] bg-white dark:bg-slate-100 dark:bg-[#121218] space-y-1.5">
+          <div className="p-2.5 rounded-xl border border-dashed border-[#2a2a38] bg-[#121218] space-y-1.5">
             <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1"><Plus size={12} /> Bind sub-agent</div>
             <select value={form.child} onChange={(e) => setForm({ ...form, child: e.target.value })} className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
               <option value="">{t("subagents.selectAgent")}</option>
@@ -366,7 +367,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
 
       {view === "delegations" && (
         <div className="space-y-2">
-          <div className="p-2.5 rounded-xl border border-[#2a2a38] bg-white dark:bg-slate-100 dark:bg-[#121218] space-y-1.5">
+          <div className="p-2.5 rounded-xl border border-[#2a2a38] bg-[#121218] space-y-1.5">
             <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1"><Send size={12} /> New delegation</div>
             <div className="flex gap-1">
               <select value={dlg.child} onChange={(e) => setDlg({ ...dlg, child: e.target.value })} className="flex-1 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
@@ -456,6 +457,29 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
               )}
             </div>
           ))}
+
+          {/* Pagination Controls */}
+          {tasks.length > 0 && (
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)] text-[11px] font-mono text-neutral-400 select-none">
+              <span>Showing up to {pageSize} delegations</span>
+              <div className="flex items-center gap-1.5">
+                {[10, 20, 50].map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => setPageSize(sz)}
+                    className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
+                      pageSize === sz
+                        ? "bg-[#ff7a00] text-black font-bold"
+                        : "bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-300"
+                    }`}
+                  >
+                    {sz}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
