@@ -2,6 +2,7 @@
 // Haptic feedback helper for mobile touch gestures
 
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSection } from "../components/ui/DropdownMenu";
+import { Tabs, Tooltip, ConfirmDialog, CodeBlock, AgentPill } from "../components/ui";
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
@@ -29,7 +30,7 @@ import {
   Edit2,
   Wifi,
   Camera, Maximize2,
-  Minimize2,
+  Minimize2, ZoomIn, ZoomOut, RotateCcw,
   Search,
   Plus,
   Paperclip,
@@ -1664,6 +1665,10 @@ export function GrokBotWorkspace() {
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFileResult[]>([]);
   const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string } | null>(null);
+  const [lightboxZoom, setLightboxZoom] = useState<number>(1);
+  const [lightboxPan, setLightboxPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanningLightbox, setIsPanningLightbox] = useState<boolean>(false);
+  const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const dragCounterRef = useRef(0);
@@ -4737,7 +4742,7 @@ export function GrokBotWorkspace() {
           {attachedFiles.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap pb-1 px-1">
               {attachedFiles.map((f, i) => {
-                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(f.file_name) || (f.mime_type && f.mime_type.startsWith("image/"));
+                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(f.file_name);
                 return (
                   <div
                     key={f.url + i}
@@ -4746,7 +4751,7 @@ export function GrokBotWorkspace() {
                     {isImage && f.url ? (
                       <button
                         type="button"
-                        onClick={() => setLightboxImageUrl({ url: f.url, name: f.file_name })}
+                        onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); setLightboxImageUrl({ url: f.url, name: f.file_name }); }}
                         className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#ff7a00]/50 transition-all"
                         title="Click to view full image preview"
                       >
@@ -5834,17 +5839,7 @@ export function GrokBotWorkspace() {
       {isComputerSplitOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
-          <>
-            {/* Draggable Splitter Handle between Chat and Computer */}
-            <div
-              onMouseDown={() => setIsResizingComputerSplit(true)}
-              className="hidden lg:flex w-2.5 h-full cursor-col-resize hover:bg-[#ff7a00]/40 active:bg-[#ff7a00] transition-colors items-center justify-center shrink-0 z-30 select-none group bg-[#111118] border-x border-[#1c1c24]"
-              title={t("computer.dragSplitterTitle")}
-            >
-              <div className="w-1 h-8 rounded-full bg-neutral-600 group-hover:bg-[#ff7a00] group-hover:scale-y-125 transition-all" />
-            </div>
-
-            <section
+          <section
             data-testid="virtual-computer-split-pane"
             aria-label="Virtual Computer Interactive Workspace"
             className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
@@ -5953,7 +5948,6 @@ export function GrokBotWorkspace() {
               )}
             </div>
           </section>
-          </>
         );
       })()}
 
@@ -6103,44 +6097,19 @@ export function GrokBotWorkspace() {
               </div>
             )}
 
-            {/* Filter Tabs for Conversations: All / Unread / Pinned */}
-            <div className="px-2 pt-2 pb-1 flex items-center gap-1 border-b border-[#1c1c24] text-[11px] font-mono select-none">
-              <button data-ux-target-min="24"
-                type="button"
-                onClick={() => setChatFilterTab("all")}
-                className={`flex-1 py-1 rounded-md text-center transition-colors cursor-pointer ${
-                  chatFilterTab === "all"
-                    ? "bg-[#222230] text-[#ff7a00] font-semibold"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                All ({chats.length})
-              </button>
-              <button data-ux-target-min="24"
-                type="button"
-                onClick={() => setChatFilterTab("unread")}
-                className={`flex-1 py-1 rounded-md text-center transition-colors cursor-pointer flex items-center justify-center gap-1 ${
-                  chatFilterTab === "unread"
-                    ? "bg-[#222230] text-emerald-400 font-semibold"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                <span>Done</span>
-                {(unreadCompletedSessions[selectedAgent.id] || []).length > 0 && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                )}
-              </button>
-              <button data-ux-target-min="24"
-                type="button"
-                onClick={() => setChatFilterTab("pinned")}
-                className={`flex-1 py-1 rounded-md text-center transition-colors cursor-pointer ${
-                  chatFilterTab === "pinned"
-                    ? "bg-[#222230] text-amber-300 font-semibold"
-                    : "text-neutral-400 hover:text-white"
-                }`}
-              >
-                Pinned ({pinnedChatIds.length})
-              </button>
+            {/* Filter Tabs for Conversations: All / Unread / Pinned (Shared Tabs Primitive) */}
+            <div className="px-2 pt-2 pb-1 border-b border-[#1c1c24]">
+              <Tabs
+                size="sm"
+                className="w-full justify-between"
+                activeTab={chatFilterTab}
+                onChange={(tabId) => setChatFilterTab(tabId as any)}
+                tabs={[
+                  { id: "all", label: "All", count: chats.length },
+                  { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).length || undefined },
+                  { id: "pinned", label: "Pinned", count: pinnedChatIds.length || undefined },
+                ]}
+              />
             </div>
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
@@ -7291,11 +7260,94 @@ export function GrokBotWorkspace() {
                 </button>
               </div>
             </div>
-            <div className="p-3 flex items-center justify-center max-h-[80vh] overflow-hidden">
+            <div className="w-full flex items-center justify-between px-3.5 py-1.5 bg-[#0e0e14] border-b border-white/5 text-[11px] font-mono text-neutral-400">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom((prev) => Math.max(0.5, Math.round((prev - 0.25) * 100) / 100))}
+                  disabled={lightboxZoom <= 0.5}
+                  className="p-1 rounded hover:bg-white/10 hover:text-white disabled:opacity-30 cursor-pointer transition-colors"
+                  title="Zoom Out (-25%)"
+                  aria-label="Zoom Out"
+                >
+                  <ZoomOut size={13} />
+                </button>
+                <span className="min-w-[48px] text-center font-bold text-white tracking-wider">
+                  {Math.round(lightboxZoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom((prev) => Math.min(3, Math.round((prev + 0.25) * 100) / 100))}
+                  disabled={lightboxZoom >= 3}
+                  className="p-1 rounded hover:bg-white/10 hover:text-white disabled:opacity-30 cursor-pointer transition-colors"
+                  title="Zoom In (+25%)"
+                  aria-label="Zoom In"
+                >
+                  <ZoomIn size={13} />
+                </button>
+                {lightboxZoom !== 1 && (
+                  <button
+                    type="button"
+                    onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); }}
+                    className="flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/15 text-[10px] text-neutral-300 hover:text-white cursor-pointer transition-colors"
+                    title="Reset to 100%"
+                  >
+                    <RotateCcw size={10} />
+                    Reset
+                  </button>
+                )}
+              </div>
+              <span className="text-[10px] text-neutral-500">
+                Scroll or use buttons to zoom
+              </span>
+            </div>
+            <div
+              onWheel={(e) => {
+                if (e.deltaY < 0) {
+                  setLightboxZoom((prev) => Math.min(3, Math.round((prev + 0.15) * 100) / 100));
+                } else if (e.deltaY > 0) {
+                  setLightboxZoom((prev) => {
+                    const next = Math.max(0.5, Math.round((prev - 0.15) * 100) / 100);
+                    if (next <= 1) setLightboxPan({ x: 0, y: 0 });
+                    return next;
+                  });
+                }
+              }}
+              onMouseDown={(e) => {
+                if (lightboxZoom > 1) {
+                  e.preventDefault();
+                  setIsPanningLightbox(true);
+                  panStartRef.current = { x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y };
+                }
+              }}
+              onMouseMove={(e) => {
+                if (isPanningLightbox && lightboxZoom > 1) {
+                  setLightboxPan({
+                    x: e.clientX - panStartRef.current.x,
+                    y: e.clientY - panStartRef.current.y,
+                  });
+                }
+              }}
+              onMouseUp={() => setIsPanningLightbox(false)}
+              onMouseLeave={() => setIsPanningLightbox(false)}
+              className={`p-3 flex items-center justify-center max-h-[75vh] w-full overflow-hidden select-none ${
+                lightboxZoom > 1
+                  ? isPanningLightbox
+                    ? "cursor-grabbing"
+                    : "cursor-grab"
+                  : "cursor-default"
+              }`}
+            >
               <img
                 src={lightboxImageUrl.url}
                 alt={lightboxImageUrl.name}
-                className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-lg"
+                draggable={false}
+                style={{
+                  transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom})`,
+                  transformOrigin: "center center",
+                  transition: isPanningLightbox ? "none" : "transform 0.15s ease-out",
+                }}
+                className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg select-none pointer-events-none"
               />
             </div>
           </div>
@@ -7457,49 +7509,22 @@ export function GrokBotWorkspace() {
         </div>
       )}
 
-      {/* Delete Chat Confirmation Modal */}
-      {chatToDelete && (
-        <div
-          onClick={() => setChatToDelete(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm bg-[#14141c] border border-[#2a2a38] rounded-2xl p-5 shadow-2xl text-neutral-200 font-sans space-y-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                <Trash2 size={16} />
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-white">Delete Conversation?</h4>
-                <p className="text-[11px] text-neutral-400 mt-0.5">
-                  Are you sure you want to remove &quot;{chatToDelete.title}&quot;? This cannot be undone.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#22222e]">
-              <button data-ux-target-min="24"
-                type="button"
-                onClick={() => setChatToDelete(null)}
-                className="px-3 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button data-ux-target-min="24"
-                type="button"
-                onClick={(e) => {
-                  handleDeleteChat(chatToDelete.id, e);
-                  setChatToDelete(null);
-                }}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500 hover:bg-red-400 text-white transition-colors cursor-pointer shadow-sm"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Chat Confirmation Modal (Standard ConfirmDialog Shared Primitive) */}
+      <ConfirmDialog
+        isOpen={Boolean(chatToDelete)}
+        onClose={() => setChatToDelete(null)}
+        onConfirm={(e?: any) => {
+          if (chatToDelete) {
+            handleDeleteChat(chatToDelete.id, e);
+            setChatToDelete(null);
+          }
+        }}
+        title="Xóa phiên hội thoại?"
+        description={`Bạn có chắc chắn muốn xóa vĩnh viễn "${chatToDelete?.title || ""}"? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa phiên"
+        cancelLabel="Hủy"
+        variant="danger"
+      />
 
       <OnboardingChecklistWidget
         onOpenAgentsDrawer={() => {

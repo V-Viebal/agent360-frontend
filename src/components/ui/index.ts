@@ -5,3 +5,8 @@ export * from "./SearchInput";
 export * from "./DropdownMenu";
 export * from "./Modal";
 export * from "./ToggleSwitch";
+export * from "./Tabs";
+export * from "./Tooltip";
+export * from "./ConfirmDialog";
+export * from "./CodeBlock";
+export * from "./AgentPill";
