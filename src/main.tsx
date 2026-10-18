@@ -4,8 +4,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 import { installOperatorFetch } from "./services/operatorFetch";
+import { installAuthFetch } from "./services/authFetch";
 
+// authFetch (outer): token refresh on Bearer 401 + sign-in redirect; operatorFetch (inner): attaches tokens.
 installOperatorFetch();
+installAuthFetch();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
