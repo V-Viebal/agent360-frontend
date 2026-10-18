@@ -75,7 +75,6 @@ import {
   CircleDot,
   Target,
   Rocket,
-  Globe,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
 
