@@ -77,6 +77,34 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     }
   }
 
+
+  // 4. Enrich roles and permissions from backend /api/users/me (PostgreSQL database authority)
+  if (accessToken) {
+    try {
+      const backendRes = await fetch('/api/users/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (backendRes.ok) {
+        const backendData = await backendRes.json();
+        const backendRoles = Array.isArray(backendData.roles)
+          ? backendData.roles.map((r: any) => (typeof r === 'string' ? r : r.code || r.name))
+          : [];
+        user = {
+          sub: backendData.externalUserId || user?.sub || '',
+          name: backendData.displayName || user?.name || `${backendData.firstName || ''} ${backendData.lastName || ''}`.trim() || 'User',
+          email: backendData.email || user?.email,
+          picture: backendData.avatarUrl || user?.picture,
+          roles: Array.from(new Set([...(user?.roles || []), ...backendRoles])),
+          permissions: backendData.permissions || user?.permissions || [],
+        };
+      }
+    } catch (e) {
+      // Backend unavailable or network failure
+    }
+  }
+
   if (user) {
     try {
       sessionStorage.setItem("skyer_user_profile", JSON.stringify(user));
