@@ -13,7 +13,9 @@ export function SkyerLogo({ size = 32, className = "", showText = true, showBotB
       {/* Precision Icon Mark with Light / Dark Theme Support */}
       <div 
         style={{ width: size, height: size }}
-        className="rounded-[9px] bg-slate-100 dark:bg-[#0A0C13] border border-slate-200 dark:border-white/10 flex items-center justify-center p-1.5 shadow-xs dark:shadow-[0_0_15px_rgba(255,122,0,0.18)] transition-all duration-300 hover:border-[#ff7a00]/50 hover:shadow-[0_0_22px_rgba(255,122,0,0.25)] hover:scale-105 shrink-0"
+        className={`rounded-[8px] bg-slate-100 dark:bg-[#0A0C13] border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-xs dark:shadow-[0_0_15px_rgba(255,122,0,0.18)] transition-all duration-300 hover:border-[#ff7a00]/50 hover:shadow-[0_0_22px_rgba(255,122,0,0.25)] hover:scale-105 shrink-0 ${
+          size <= 24 ? "p-1" : size <= 32 ? "p-1.5" : "p-2"
+        }`}
       >
         <svg viewBox="0 0 36 36" width="100%" height="100%" fill="none" className="transition-transform duration-300 group-hover:rotate-6">
           {/* Upper Blade: Deep Slate in Light Mode, Pure White in Dark Mode */}

@@ -3734,7 +3734,7 @@ export function GrokBotWorkspace() {
           /* ========================================================= */
           <>
             {/* Top Header: Vertical Layout (Logo, Typography, Dropdown Infra) */}
-            <div className="p-3 border-b border-neutral-200 dark:border-[#1c1c22] flex flex-col gap-2.5 shrink-0 bg-[var(--bg-sidebar)]">
+            <div className="px-3 py-2 border-b border-neutral-200 dark:border-[#1c1c22] flex flex-col gap-1.5 shrink-0 bg-[var(--bg-sidebar)]">
               {/* Row 1: Logo & Brand Typography + Collapse Button */}
               <div className="flex items-center justify-between">
                 <a aria-label="Return to Skyer Home" href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity" title="Return to Skyer Home">

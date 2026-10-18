@@ -3,6 +3,7 @@ import { CustomSelect } from "./ui/CustomSelect";
 import { ToggleSwitch } from "./ui/ToggleSwitch";
 import {
   X,
+  Search,
   Settings,
   Palette,
   Globe,
@@ -110,6 +111,13 @@ export function SettingsModal({
   const [voiceProfile, setVoiceProfileState] = useState<VoiceAudioProfile>(() => getVoiceAudioProfile());
 
   // Layout Density State
+    const [tabSearchQuery, setTabSearchQuery] = useState("");
+  const [isTestRecording, setIsTestRecording] = useState(false);
+  const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null);
+  const [testSecondsLeft, setTestSecondsLeft] = useState(0);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const testChunksRef = React.useRef<Blob[]>([]);
+
   const [layoutDensity, setLayoutDensity] = useState<"compact" | "normal" | "comfortable">(() => {
     try {
       return (localStorage.getItem("skyer_layout_density") as any) || "normal";
@@ -157,6 +165,50 @@ export function SettingsModal({
     }
     setIsLiveTesting(false);
     setFreqBands({ bass: 0, mid: 0, treble: 0 });
+  };
+
+    const start3SecondTest = async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) return;
+      setTestAudioUrl(null);
+      testChunksRef.current = [];
+      const constraints: MediaStreamConstraints = {
+        audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) testChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(testChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        setTestAudioUrl(url);
+        setIsTestRecording(false);
+        setTestSecondsLeft(0);
+      };
+
+      recorder.start();
+      setIsTestRecording(true);
+      setTestSecondsLeft(3);
+
+      let countdown = 3;
+      const interval = setInterval(() => {
+        countdown -= 1;
+        setTestSecondsLeft(countdown);
+        if (countdown <= 0) {
+          clearInterval(interval);
+          if (recorder.state === 'recording') recorder.stop();
+        }
+      }, 1000);
+    } catch (err) {
+      console.warn('3s test error:', err);
+      setIsTestRecording(false);
+    }
   };
 
   const startLiveTest = async () => {
