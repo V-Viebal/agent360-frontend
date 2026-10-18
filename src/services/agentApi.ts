@@ -899,4 +899,9 @@ export async function fetchToolCallReceipts(sessionId: string, agentId?: string)
     if (!res.ok) {
       throw new Error(`Failed to fetch receipts: ${res.statusText}`);
     }
-    return await res.                                                                                                         
+    return await res.json();
+  } catch (err) {
+    console.warn("fetchToolCallReceipts fallback:", err);
+    return [];
+  }
+}
