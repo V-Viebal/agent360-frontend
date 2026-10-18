@@ -201,7 +201,7 @@ export function AgentConnectedAppsTab({
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center ${
             filter === "all"
               ? "bg-white dark:bg-[#242432] text-slate-900 dark:text-white shadow-xs"
-              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
+              : "text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
           }`}
         >
           All ({clients.length})
@@ -211,7 +211,7 @@ export function AgentConnectedAppsTab({
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
             filter === "composio"
               ? "bg-white dark:bg-[#242432] text-[#ff7a00] shadow-xs"
-              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
+              : "text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
           }`}
         >
           <Sparkles size={11} />
@@ -222,7 +222,7 @@ export function AgentConnectedAppsTab({
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center ${
             filter === "native"
               ? "bg-white dark:bg-[#242432] text-slate-900 dark:text-white shadow-xs"
-              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
+              : "text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
           }`}
         >
           Infra MCP ({nativeClients.length})

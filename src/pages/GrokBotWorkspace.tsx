@@ -4817,21 +4817,21 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       executeTurnStream(item.prompt);
                     }}
-                    className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-sm flex flex-col justify-between space-y-1.5"
+                    className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2.5 w-full overflow-hidden"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white group-hover:translate-x-0.5 transition-transform flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00]" />
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0" />
+                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate">
                         {item.title}
                       </span>
-                      <div className="flex items-center gap-1.5">
-                        {item.badge && (
-                          <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e]">
-                            {item.badge}
-                          </span>
-                        )}
-                        <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100" />
-                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {item.badge && (
+                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
+                          {item.badge}
+                        </span>
+                      )}
+                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0 hidden sm:block" />
                     </div>
                   </button>
                 ))}
@@ -8310,7 +8310,7 @@ export function GrokBotWorkspace() {
         description={
           <div className="space-y-1.5">
             <p>Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc <strong>{currentUser?.name || "Skyer Workspace"}</strong> không?</p>
-            <p className="text-[11px] text-neutral-400 font-mono">Toàn bộ token truy cập cục bộ sẽ được thu hồi và phiên Logto SSO sẽ kết thúc an toàn.</p>
+            <p className="text-[11px] text-neutral-400 font-mono">Toàn bộ token truy cập cục bộ sẽ được thu hồi và phiên đăng nhập sẽ kết thúc an toàn.</p>
           </div>
         }
         confirmLabel={t("auth.signOutConfirmBtn")}

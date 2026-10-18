@@ -279,7 +279,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           <button
             key={v}
             onClick={() => setView(v)}
-            className={`flex-1 py-1 rounded-lg font-medium cursor-pointer ${view === v ? "bg-[#242432] text-slate-900 dark:text-white" : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"}`}
+            className={`flex-1 py-1 rounded-lg font-medium cursor-pointer ${view === v ? "bg-[#242432] text-white font-semibold shadow-xs" : "text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"}`}
           >
             {v === "subagents" ? `Sub-Agents (${bindings.length})` : `Delegations (${tasks.length})`}
           </button>

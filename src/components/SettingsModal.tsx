@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { User, Mail, Key, LogOut } from "lucide-react";
-import { initiateSkyerSignOut } from "../services/pkceAuth";
+import { initiateSkyerSignOut, initiatePasswordReset } from "../services/pkceAuth";
 import { getCurrentUserProfile, UserProfile, updateUserProfile } from "../services/userService";
 import { Edit3, Save } from "lucide-react";
 import { authConfig } from "../config/authConfig";
@@ -768,26 +768,28 @@ export function SettingsModal({
                   </div>
                 </div>
 
-                {/* Logto Security & Password Management Center */}
+                {/* Security & Password Management Center */}
                 <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="space-y-0.5 text-center sm:text-left">
                     <span className="text-xs font-semibold text-blue-400 flex items-center justify-center sm:justify-start gap-1.5">
-                      <ShieldCheck size={14} className="text-blue-400" />
-                      <span>Trung tâm Bảo mật & Đổi mật khẩu Logto</span>
+                      <Key size={14} className="text-blue-400" />
+                      <span>{t("settings.securityPasswordTitle") || "Bảo mật & Đổi mật khẩu"}</span>
                     </span>
                     <p className="text-[11px] text-neutral-400">
-                      Đổi mật khẩu, thiết lập xác thực 2 bước (MFA/Passkey) và quản lý phiên đăng nhập tại Logto Identity.
+                      {t("settings.securityPasswordDesc")}
                     </p>
                   </div>
-                  <a
-                    href="https://auth-skyer.hmz.one"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 font-semibold text-xs transition-colors cursor-pointer shrink-0"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      initiatePasswordReset(authConfig);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 font-semibold text-xs transition-colors cursor-pointer shrink-0 shadow-xs"
                   >
-                    <span>Quản lý bảo mật</span>
-                    <ExternalLink size={12} />
-                  </a>
+                    <Key size={13} />
+                    <span>{t("settings.securityPasswordBtn") || "Đổi mật khẩu"}</span>
+                  </button>
                 </div>
 
                 {/* Sign Out Action in Profile */}

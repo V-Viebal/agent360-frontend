@@ -60,7 +60,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
             <span className="px-1.5 py-0.2 rounded-md bg-[#ff7a00]/20 text-[#ff7a00] text-[10px] font-mono uppercase font-bold">Secure</span>
           </h2>
           <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-            Đang xác thực phiên làm việc với Logto Identity... Vui lòng đăng nhập để tiếp tục.
+            Đang xác thực phiên làm việc an toàn... Vui lòng đăng nhập để tiếp tục.
           </p>
 
           <div className="flex items-center gap-2 text-xs text-[#ff7a00] font-medium bg-[#ff7a00]/10 px-4 py-2 rounded-xl border border-[#ff7a00]/20">

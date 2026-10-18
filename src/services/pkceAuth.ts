@@ -73,3 +73,36 @@ export function initiateSkyerSignOut(authConfig: {
 
   window.location.href = endSessionUrl.toString();
 }
+
+export async function initiatePasswordReset(authConfig: {
+  endpoint: string;
+  appId: string;
+  localAppId: string;
+  apiResource: string;
+  apiScopes?: string[];
+  redirectUri: string;
+}) {
+  const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+  const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
+  const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
+
+  const codeVerifier = generateRandomString(64);
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  const state = generateRandomString(32);
+
+  sessionStorage.setItem('skyer_oidc_verifier', codeVerifier);
+  sessionStorage.setItem('skyer_oidc_state', state);
+
+  const url = new URL('/oidc/auth', authConfig.endpoint);
+  url.searchParams.set('client_id', clientId);
+  url.searchParams.set('redirect_uri', redirect);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('scope', ['openid', 'profile', 'email', 'offline_access', ...(authConfig.apiScopes ?? [])].join(' '));
+  url.searchParams.set('code_challenge', codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  url.searchParams.set('state', state);
+  url.searchParams.set('resource', authConfig.apiResource);
+  url.searchParams.set('first_screen', 'reset_password');
+
+  window.location.href = url.toString();
+}

@@ -168,7 +168,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
 
       <div className="flex gap-1 p-1 bg-[#14141a] rounded-xl border border-slate-200 dark:border-[#20202a]">
         {(["external", "delegations"] as const).map((v) => (
-          <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`flex-1 h-7 rounded-lg ${view === v ? "bg-[#242432] text-slate-900 dark:text-white" : "text-slate-500 dark:text-neutral-400"}`}>
+          <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`flex-1 h-7 rounded-lg ${view === v ? "bg-[#242432] text-white font-semibold shadow-xs" : "text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"}`}>
             {v === "external" ? `External (${agents.length})` : `Delegations (${tasks.length})`}
           </button>
         ))}
