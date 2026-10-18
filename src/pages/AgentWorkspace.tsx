@@ -259,6 +259,8 @@ export function AgentWorkspace() {
             messages={currentMessages}
             onSendMessage={handleSendMessage}
             agentName={selectedAgent.name}
+            agentId={selectedAgent.id}
+            roleTag={selectedAgent.roleTag}
             pendingApprovals={pendingApprovals}
             onApproveTool={handleApproveTool}
             onDenyTool={handleDenyTool}

@@ -6,3 +6,5 @@ dist
 vite-dev.mjs
 server.js
 deploy/nginx/rendered.conf
+node_modules_old_899/
+package-lock.json

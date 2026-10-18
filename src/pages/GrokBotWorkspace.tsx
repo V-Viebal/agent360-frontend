@@ -113,6 +113,7 @@ import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from 
 import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar } from "../components/AgentAvatar";
+import { AgentAvatarModal } from "../components/AgentAvatarModal";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
 import { PromptRecipesModal } from "../components/PromptRecipesModal";
@@ -1169,6 +1170,7 @@ export function GrokBotWorkspace() {
   const [isSoundMenuOpen, setIsSoundMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isAvatarSetupModalOpen, setIsAvatarSetupModalOpen] = useState(false);
   const [settingsModalTab, setSettingsModalTab] = useState<"appearance" | "language" | "audio" | "privacy_export" | "voice_record">("appearance");
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
@@ -1337,6 +1339,7 @@ export function GrokBotWorkspace() {
   const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">("default");
+  const [loopPulse, setLoopPulse] = useState<string | null>(null);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(false);
   const [isComputerSplitOpen, setIsComputerSplitOpen] = useState<boolean>(() => {
@@ -1360,19 +1363,28 @@ export function GrokBotWorkspace() {
         localStorage.setItem("agent360_computer_split", next ? "true" : "false");
       } catch {}
       if (next) {
-        // Keep left sidebar and chat session list intact; only collapse rightmost bot info pane so computer has space
+        // Automatically collapse left sidebar, chat session list, and right bot info pane
+        // to give full focus and maximum canvas width to Virtual Computer + Chat
         setPrevLayoutBeforeComputer({
           leftCollapsed: isLeftSidebarCollapsed,
           chatCollapsed: isChatListCollapsed,
           botInfoCollapsed: isBotInfoCollapsed,
         });
+        setIsLeftSidebarCollapsed(true);
+        setIsChatListCollapsed(true);
         setIsBotInfoCollapsed(true);
+        setMobileAgentsOpen(false);
+        setMobileChatsOpen(false);
         setMobileBotInfoOpen(false);
       } else {
         // Restore previous user layout when closing Computer
         if (prevLayoutBeforeComputer) {
+          setIsLeftSidebarCollapsed(prevLayoutBeforeComputer.leftCollapsed);
+          setIsChatListCollapsed(prevLayoutBeforeComputer.chatCollapsed);
           setIsBotInfoCollapsed(prevLayoutBeforeComputer.botInfoCollapsed);
         } else {
+          setIsLeftSidebarCollapsed(false);
+          setIsChatListCollapsed(false);
           setIsBotInfoCollapsed(false);
         }
       }
@@ -1393,6 +1405,24 @@ export function GrokBotWorkspace() {
     window.innerWidth < 1024
   );
   const [isCompactMode, setIsCompactMode] = useState<boolean>(isInitialCompact);
+  const [layoutDensity, setLayoutDensity] = useState<"compact" | "normal" | "comfortable">(() => {
+    try {
+      return (localStorage.getItem("skyer_layout_density") as any) || "normal";
+    } catch {
+      return "normal";
+    }
+  });
+
+  useEffect(() => {
+    const handleDensityChange = (e: any) => {
+      if (e.detail?.density) {
+        setLayoutDensity(e.detail.density);
+      }
+    };
+    window.addEventListener("skyer_density_changed", handleDensityChange);
+    return () => window.removeEventListener("skyer_density_changed", handleDensityChange);
+  }, []);
+
 
   // Update compact mode dynamically on window resize
   useEffect(() => {
@@ -2159,6 +2189,10 @@ export function GrokBotWorkspace() {
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [plusMenuSearch, setPlusMenuSearch] = useState("");
   const plusMenuRef = useRef<HTMLDivElement>(null);
+  const appsScrollRef = useRef<HTMLDivElement>(null);
+  const subAgentsScrollRef = useRef<HTMLDivElement>(null);
+  const [lastAppsScrollTop, setLastAppsScrollTop] = useState(0);
+  const [lastSubAgentsScrollTop, setLastSubAgentsScrollTop] = useState(0);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -2168,11 +2202,20 @@ export function GrokBotWorkspace() {
     };
     if (isPlusMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      // Restore cached scroll positions after DOM paint
+      requestAnimationFrame(() => {
+        if (appsScrollRef.current && lastAppsScrollTop) {
+          appsScrollRef.current.scrollTop = lastAppsScrollTop;
+        }
+        if (subAgentsScrollRef.current && lastSubAgentsScrollTop) {
+          subAgentsScrollRef.current.scrollTop = lastSubAgentsScrollTop;
+        }
+      });
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isPlusMenuOpen]);
+  }, [isPlusMenuOpen, lastAppsScrollTop, lastSubAgentsScrollTop]);
 
   // Jump immediately to bottom on open / chat switch without smooth scroll animation
   const jumpToBottom = () => {
@@ -2472,6 +2515,8 @@ export function GrokBotWorkspace() {
 
   const handleSelectLoopMode = async (mode: "default" | "goal" | "mission") => {
     setActiveLoopMode(mode);
+    setLoopPulse(mode);
+    setTimeout(() => setLoopPulse(null), 400);
     await updateAgentLoopMode(selectedAgentId, mode);
   };
 
@@ -3642,7 +3687,13 @@ export function GrokBotWorkspace() {
                         key={ag.id}
                         style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
                         onClick={() => handleSelectAgent(ag)}
-                        className={`w-full p-2.5 rounded-xl text-left flex items-center gap-3 transition-colors cursor-pointer border animate-fade-in-stagger ${
+                        className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer border animate-fade-in-stagger ${
+                          layoutDensity === "compact"
+                            ? "p-1.5 gap-2"
+                            : layoutDensity === "comfortable"
+                            ? "p-3 gap-3.5"
+                            : "p-2.5 gap-3"
+                        } ${
                           isSelected
                             ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs"
                             : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
@@ -3896,11 +3947,7 @@ export function GrokBotWorkspace() {
                 }}
                 className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-300 dark:border-[#2a2a34] hover:border-neutral-400 dark:hover:border-[#383848] px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium text-neutral-900 dark:text-white shadow-sm cursor-pointer transition-all select-none"
               >
-                <div className="h-3.5 w-3.5 rounded-full bg-white flex items-center justify-center shrink-0">
-                  <div className="h-2 w-2 rounded-full bg-black flex items-center justify-center">
-                    <div className="h-0.5 w-0.5 rounded-full bg-white" />
-                  </div>
-                </div>
+                <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
                 <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent.name}</span>
               </div>
               {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
@@ -4640,8 +4687,8 @@ export function GrokBotWorkspace() {
           {/* Plus Add Popover Menu (Spans 100% full width of chat input and sits directly on top) */}
           <div ref={plusMenuRef} className="relative w-full">
             {isPlusMenuOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-3 w-full rounded-2xl bg-[#14141c]/95 dark:bg-[#121218]/95 border border-[#262634] shadow-2xl backdrop-blur-xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
-                <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#222230]">
+              <div className="absolute bottom-full left-0 right-0 mb-3 w-full rounded-2xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-2xl backdrop-blur-xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
+                <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
                       Add to prompt
@@ -4649,7 +4696,7 @@ export function GrokBotWorkspace() {
                   </div>
 
                   {/* Instant Filter Search inside Popover */}
-                  <div className="flex items-center gap-1.5 bg-[#181824] border border-[#262638] focus-within:border-[#ff7a00]/50 rounded-lg px-2 py-1 text-xs sm:w-56 transition-colors">
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#262638] focus-within:border-[#ff7a00]/50 rounded-lg px-2 py-1 text-xs sm:w-56 transition-colors">
                     <Search size={12} className="text-neutral-400 shrink-0" />
                     <input
                       type="text"
@@ -4657,7 +4704,7 @@ export function GrokBotWorkspace() {
                       value={plusMenuSearch}
                       onChange={(e) => setPlusMenuSearch(e.target.value)}
                       placeholder="Search files, apps, agents..."
-                      className="w-full bg-transparent border-0 text-[11px] text-white placeholder:text-neutral-500 focus:outline-none"
+                      className="w-full bg-transparent border-0 text-[11px] text-slate-900 dark:text-white placeholder:text-neutral-500 focus:outline-none"
                     />
                     {plusMenuSearch && (
                       <button
@@ -4671,9 +4718,9 @@ export function GrokBotWorkspace() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2.5 items-stretch">
                   {/* Column 1: Loop mode & Attached Files (Renamed & Enhanced with Built-in Mode Options from QwenPaw API) */}
-                  <div className="space-y-2">
+                  <div className="flex flex-col justify-between space-y-2 h-full">
                     <div className="flex items-center justify-between px-1">
                       <div>
                         <div className="text-xs font-semibold text-white tracking-tight">Loop mode</div>
@@ -4693,12 +4740,12 @@ export function GrokBotWorkspace() {
                         onClick={() => handleSelectLoopMode("default")}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "default"
-                            ? "bg-[#1f1f2e] border-[#ff7a00]/50 text-white shadow-xs"
-                            : "bg-[#181822]/80 hover:bg-[#20202e] border-transparent hover:border-[#2f2f42] text-neutral-300 hover:text-white"
+                            ? "bg-amber-500/10 dark:bg-[#1f1f2e] border-[#ff7a00] text-slate-900 dark:text-white shadow-xs"
+                            : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
                         }`}
                       >
-                        <div className="h-6 w-6 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-300 mt-0.5 shrink-0">
-                          <CircleDot size={13} className={activeLoopMode === "default" ? "text-[#ff7a00]" : "text-neutral-400"} />
+                        <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-transparent shadow-2xs flex items-center justify-center text-neutral-600 dark:text-neutral-300 mt-0.5 shrink-0 transition-colors">
+                          <CircleDot size={13} className={activeLoopMode === "default" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400"} />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
@@ -4719,12 +4766,12 @@ export function GrokBotWorkspace() {
                         onClick={() => handleSelectLoopMode("goal")}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "goal"
-                            ? "bg-[#1f1f2e] border-emerald-500/50 text-white shadow-xs"
-                            : "bg-[#181822]/80 hover:bg-[#20202e] border-transparent hover:border-[#2f2f42] text-neutral-300 hover:text-white"
+                            ? "bg-emerald-500/10 dark:bg-[#1f1f2e] border-emerald-500 text-slate-900 dark:text-white shadow-xs"
+                            : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
                         }`}
                       >
-                        <div className="h-6 w-6 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-300 mt-0.5 shrink-0">
-                          <Target size={13} className={activeLoopMode === "goal" ? "text-emerald-400" : "text-neutral-400"} />
+                        <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-transparent shadow-2xs flex items-center justify-center text-neutral-600 dark:text-neutral-300 mt-0.5 shrink-0 transition-colors">
+                          <Target size={13} className={activeLoopMode === "goal" ? "text-emerald-500 dark:text-emerald-400" : "text-slate-500 dark:text-neutral-400"} />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
@@ -4745,12 +4792,12 @@ export function GrokBotWorkspace() {
                         onClick={() => handleSelectLoopMode("mission")}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "mission"
-                            ? "bg-[#1f1f2e] border-cyan-500/50 text-white shadow-xs"
-                            : "bg-[#181822]/80 hover:bg-[#20202e] border-transparent hover:border-[#2f2f42] text-neutral-300 hover:text-white"
+                            ? "bg-cyan-500/10 dark:bg-[#1f1f2e] border-cyan-500 text-slate-900 dark:text-white shadow-xs"
+                            : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
                         }`}
                       >
-                        <div className="h-6 w-6 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-300 mt-0.5 shrink-0">
-                          <Rocket size={13} className={activeLoopMode === "mission" ? "text-cyan-400" : "text-neutral-400"} />
+                        <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-transparent shadow-2xs flex items-center justify-center text-neutral-600 dark:text-neutral-300 mt-0.5 shrink-0 transition-colors">
+                          <Rocket size={13} className={activeLoopMode === "mission" ? "text-cyan-500 dark:text-cyan-400" : "text-slate-500 dark:text-neutral-400"} />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
@@ -4773,7 +4820,7 @@ export function GrokBotWorkspace() {
                             setIsPlusMenuOpen(false);
                             fileInputRef.current?.click();
                           }}
-                          className="w-full flex items-center gap-2 p-1.5 rounded-lg text-xs text-left text-neutral-300 hover:text-white bg-[#181822]/60 hover:bg-[#20202e] transition-colors cursor-pointer group"
+                          className="w-full flex items-center gap-2 p-1.5 rounded-lg text-xs text-left text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/60 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent transition-colors cursor-pointer group"
                         >
                           <Paperclip size={12} className="text-neutral-400 group-hover:text-[#ff7a00]" />
                           <span className="text-[11px] font-medium truncate">Upload files and folders</span>
@@ -4782,8 +4829,8 @@ export function GrokBotWorkspace() {
                     </div>
                   </div>
 
-                  {/* Column 2: Connected Apps (Loaded from Selected Agent's Apps tab - Full List) */}
-                  <div className="space-y-1.5">
+                  {/* Column 2: Connected Apps (Loaded from Selected Agent's Apps tab - Full Height List) */}
+                  <div className="flex flex-col space-y-1.5 h-full">
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
                       <span>Connected Apps</span>
                       <div className="relative group/tooltip">
@@ -4805,7 +4852,11 @@ export function GrokBotWorkspace() {
                       </div>
                     </div>
 
-                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 scrollbar-none">
+                    <div
+                      ref={appsScrollRef}
+                      onScroll={(e) => setLastAppsScrollTop((e.target as HTMLElement).scrollTop)}
+                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none"
+                    >
                       {(() => {
                         // Priority 1: All apps loaded from Agent's active MCP clients with instant search
                         const q = plusMenuSearch.trim().toLowerCase();
@@ -4843,17 +4894,19 @@ export function GrokBotWorkspace() {
                               setInputText((prev) => (prev ? `${prev} /${app.id} ` : `/${app.id} `));
                               textareaRef.current?.focus();
                             }}
-                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-neutral-300 hover:text-white bg-[#181822]/80 hover:bg-[#20202e] border border-transparent hover:border-[#2f2f42] transition-colors cursor-pointer group"
+                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] transition-colors cursor-pointer group"
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <img
-                                src={app.logoUrl}
-                                alt={app.name}
-                                className="h-4 w-4 rounded-xs shrink-0 object-contain bg-white/5 p-0.5"
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLElement).style.display = 'none';
-                                }}
-                              />
+                              <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800/90 border border-slate-200/90 dark:border-white/10 flex items-center justify-center p-1 shrink-0 shadow-2xs transition-colors">
+                                <img
+                                  src={app.logoUrl}
+                                  alt={app.name}
+                                  className="h-3.5 w-3.5 object-contain dark:brightness-100 dark:invert-0 filter contrast-125"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              </div>
                               <span className="truncate text-[11px]">{app.name}</span>
                             </div>
                             <span className="text-[9px] font-mono text-neutral-500 group-hover:text-[#ff7a00] shrink-0">
@@ -4865,8 +4918,8 @@ export function GrokBotWorkspace() {
                     </div>
                   </div>
 
-                  {/* Column 3: Subagents & Team Agents (Loaded from Selected Agent's Agents tab - Full List) */}
-                  <div className="space-y-1.5">
+                  {/* Column 3: Subagents & Team Agents (Loaded from Selected Agent's Agents tab - Full Height List) */}
+                  <div className="flex flex-col space-y-1.5 h-full">
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
                       <span>Subagents</span>
                       <div className="relative group/tooltip">
@@ -4888,7 +4941,11 @@ export function GrokBotWorkspace() {
                       </div>
                     </div>
 
-                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 scrollbar-none">
+                    <div
+                      ref={subAgentsScrollRef}
+                      onScroll={(e) => setLastSubAgentsScrollTop((e.target as HTMLElement).scrollTop)}
+                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none"
+                    >
                       {(() => {
                         // All subagents configured on selected agent with instant search
                         const q = plusMenuSearch.trim().toLowerCase();
@@ -4918,10 +4975,10 @@ export function GrokBotWorkspace() {
                               setInputText((prev) => (prev ? `${prev} @${ag.name} ` : `@${ag.name} `));
                               textareaRef.current?.focus();
                             }}
-                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-neutral-300 hover:text-white bg-[#181822]/80 hover:bg-[#20202e] border border-transparent hover:border-[#2f2f42] transition-colors cursor-pointer group"
+                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] transition-colors cursor-pointer group"
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <div className="h-4 w-4 rounded-full bg-[#ff7a00]/20 border border-[#ff7a00]/30 flex items-center justify-center text-[9px] font-mono text-[#ff7a00] shrink-0">
+                              <div className="h-5 w-5 rounded-full bg-amber-500/15 dark:bg-[#ff7a00]/20 border border-amber-500/40 dark:border-[#ff7a00]/30 flex items-center justify-center text-[10px] font-mono font-bold text-[#ff7a00] shrink-0 shadow-2xs">
                                 {ag.name.slice(0, 1)}
                               </div>
                               <span className="truncate text-[11px]">{ag.name}</span>
@@ -5489,7 +5546,13 @@ export function GrokBotWorkspace() {
                       }
                       handleSelectChat(chat);
                     }}
-                    className={`w-full p-2.5 rounded-xl text-left flex items-center gap-2.5 transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
+                    className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
+                      layoutDensity === "compact"
+                        ? "p-1.5 gap-2"
+                        : layoutDensity === "comfortable"
+                        ? "p-3 gap-3"
+                        : "p-2.5 gap-2.5"
+                    } ${
                       activeChatMenuId === chat.id ? "z-40" : "z-auto"
                     } ${
                       isSelected
@@ -5767,6 +5830,7 @@ export function GrokBotWorkspace() {
               {/* Agent Avatar matching left sidebar */}
               <div
                 ref={mascotRef}
+                onClick={() => setIsAvatarSetupModalOpen(true)}
                 className="relative mb-2.5 transition-transform hover:scale-105 cursor-pointer group"
                 title={`${selectedAgent.name} (${selectedAgent.roleTag || "Agent"})`}
               >
@@ -5914,7 +5978,7 @@ export function GrokBotWorkspace() {
                     {/* Live Browser Fixed-Height Responsive Card */}
                     <div className="w-full rounded-2xl border border-[#262634] bg-[#101015] overflow-hidden shadow-xl flex flex-col shrink-0">
                       {/* Top Browser Bar */}
-                      <div className="h-9 px-3 bg-[#171720] border-b border-[#242430] flex items-center justify-between text-xs font-mono select-none shrink-0">
+                      <div className="h-9 px-3 bg-slate-100 dark:bg-[#171720] border-b border-slate-200 dark:border-[#242430] flex items-center justify-between text-xs font-mono select-none shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                           <span className="text-[11px] font-semibold text-white truncate">
@@ -5963,7 +6027,7 @@ export function GrokBotWorkspace() {
                           <div className="h-9 w-9 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                             <Maximize2 size={16} className="stroke-[2.5]" />
                           </div>
-                          <span className="text-[11px] font-mono font-semibold text-white bg-black/80 px-3 py-1 rounded-full border border-white/15 shadow-lg tracking-wide">
+                          <span className="text-[11px] font-mono font-semibold text-white! keep-white bg-slate-900/90 dark:bg-black/90 px-3 py-1 rounded-full border border-white/20 shadow-lg tracking-wide backdrop-blur-md">
                             Mở Computer Workspace
                           </span>
                         </div>
@@ -6424,7 +6488,13 @@ export function GrokBotWorkspace() {
         onSaved={refreshDetailsData}
       />
 
-            <SettingsModal
+            <AgentAvatarModal
+        isOpen={isAvatarSetupModalOpen}
+        onClose={() => setIsAvatarSetupModalOpen(false)}
+        agent={selectedAgent}
+      />
+
+      <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsModalTab}

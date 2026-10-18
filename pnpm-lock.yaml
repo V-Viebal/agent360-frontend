@@ -15,7 +15,7 @@ importers:
         specifier: ^1.10.1
         version: 1.10.1
       lucide-react:
-        specifier: ^0.468.0
+        specifier: 0.468.0
         version: 0.468.0(react@18.3.1)
       motion:
         specifier: ^11.11.17
@@ -33,6 +33,9 @@ importers:
         specifier: ^2.5.5
         version: 2.6.1
     devDependencies:
+      '@rollup/rollup-linux-x64-gnu':
+        specifier: 4.64.5
+        version: 4.64.5
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.3(vite@6.4.4(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -1467,8 +1470,7 @@ snapshots:
   '@rollup/rollup-linux-s390x-gnu@4.64.5':
     optional: true
 
-  '@rollup/rollup-linux-x64-gnu@4.64.5':
-    optional: true
+  '@rollup/rollup-linux-x64-gnu@4.64.5': {}
 
   '@rollup/rollup-linux-x64-musl@4.64.5':
     optional: true

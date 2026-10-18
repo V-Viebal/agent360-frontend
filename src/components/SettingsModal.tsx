@@ -108,6 +108,24 @@ export function SettingsModal({
   });
   const [voiceProfile, setVoiceProfileState] = useState<VoiceAudioProfile>(() => getVoiceAudioProfile());
 
+  // Layout Density State
+  const [layoutDensity, setLayoutDensity] = useState<"compact" | "normal" | "comfortable">(() => {
+    try {
+      return (localStorage.getItem("skyer_layout_density") as any) || "normal";
+    } catch {
+      return "normal";
+    }
+  });
+
+  const handleDensityChange = (density: "compact" | "normal" | "comfortable") => {
+    setLayoutDensity(density);
+    try {
+      localStorage.setItem("skyer_layout_density", density);
+      window.dispatchEvent(new CustomEvent("skyer_density_changed", { detail: { density } }));
+    } catch {}
+  };
+
+
   const handleProfileChange = (patch: Partial<VoiceAudioProfile>) => {
     setVoiceProfileState((prev) => {
       const next = { ...prev, ...patch };
@@ -482,7 +500,48 @@ export function SettingsModal({
                     );
                   })}
                 </div>
-              </div>
+              
+                {/* Layout Density Switcher (Compact / Normal / Comfortable) */}
+                <div className="pt-2 border-t border-slate-200 dark:border-[#222230]">
+                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
+                    Độ Giãn Bố Cục (Layout Density)
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
+                    Tối ưu mật độ thông tin hiển thị cho màn hình và cường độ làm việc:
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2.5 mt-3">
+                    {[
+                      { id: "compact", label: "Compact", desc: "Mật độ cao, hiển thị >30 agents" },
+                      { id: "normal", label: "Normal", desc: "Cân bằng tối ưu mặc định" },
+                      { id: "comfortable", label: "Comfortable", desc: "Khoảng cách rộng rãi, dễ đọc" },
+                    ].map((d) => {
+                      const isSel = layoutDensity === d.id;
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => handleDensityChange(d.id as any)}
+                          className={`p-3 rounded-xl border flex flex-col justify-between cursor-pointer transition-all ${
+                            isSel
+                              ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
+                              : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#ff7a00]/40"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold">{d.label}</span>
+                            {isSel && (
+                              <div className="h-4 w-4 rounded-full bg-[#ff7a00] text-black flex items-center justify-center">
+                                <Check size={10} className="stroke-[3]" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-neutral-400 mt-1">{d.desc}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+</div>
             )}
 
             {/* 2. LANGUAGE TAB */}

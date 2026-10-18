@@ -184,6 +184,12 @@ body {
 html.light,
 [data-theme="light"] {
   /* Semantic Surfaces: Card & elevated panels */
+  
+  /* Auto-invert white/monochrome SVG icons in Light Mode */
+  .dark\:invert-0:not(.keep-icon) {
+    filter: brightness(0.2) contrast(150%);
+  }
+
   /* Refined Tab Indicators & Sub-tab Pills in Light Mode */
   .bg-\[\#222230\],
   .bg-\[\#242432\],

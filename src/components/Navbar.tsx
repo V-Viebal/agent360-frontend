@@ -1,3 +1,4 @@
+import { authConfig } from '../config/authConfig';
 import { SkyerLogo } from "./SkyerLogo";
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -51,6 +52,15 @@ export function Navbar() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  const handleSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const isLocal = window.location.origin.includes('localhost');
+    const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
+    const redirect = encodeURIComponent(isLocal ? (window.location.origin + '/app') : (authConfig.postLogoutRedirectUri + '/app'));
+    const signinUrl = authConfig.endpoint + 'oidc/auth?client_id=' + clientId + '&redirect_uri=' + redirect + '&response_type=code&scope=openid%20profile%20email%20offline_access&resource=' + encodeURIComponent(authConfig.apiResource);
+    window.location.href = signinUrl;
+  };
 
   // Close dropdown on route change
   useEffect(() => {
@@ -323,7 +333,7 @@ export function Navbar() {
             className="text-xs font-medium text-neutral-200 hover:text-white px-3.5 py-1.5 rounded-full border border-white/10 hover:border-white/20 bg-white/5 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <LogIn size={13} className="text-[#ff7a00]" />
-            <span>{t("nav.signIn")}</span>
+            <span onClick={handleSignIn}>{t("nav.signIn")}</span>
           </Link>
 
           {/* LAUNCH APP CTA */}
@@ -441,7 +451,7 @@ export function Navbar() {
                 className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2"
               >
                 <LogIn size={14} className="text-[#ff7a00]" />
-                <span>{t("nav.signInSkyer")}</span>
+                <span onClick={handleSignIn}>{t("nav.signInSkyer")}</span>
               </Link>
               <Link
                 to="/app"

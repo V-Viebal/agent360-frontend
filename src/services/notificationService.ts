@@ -219,3 +219,44 @@ export function notifyTaskComplete(params: {
     }
   }
 }
+
+/**
+ * Subtle micro-haptic click sound for keyboard navigation and selection
+ */
+export function playMicroClick(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const isSoundEnabled = localStorage.getItem("agent360_sound_enabled") !== "false";
+    if (!isSoundEnabled) return;
+
+    let masterVolume = getNotificationVolume();
+    if (isAudioDuckingActive()) masterVolume *= 0.25;
+    if (masterVolume <= 0) return;
+
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.03);
+
+    gain.gain.setValueAtTime(masterVolume * 0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.035);
+
+    setTimeout(() => {
+      if (ctx.state !== "closed") ctx.close().catch(() => {});
+    }, 100);
+  } catch {}
+}

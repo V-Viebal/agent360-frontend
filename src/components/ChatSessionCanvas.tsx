@@ -4,6 +4,7 @@ import { ChatMessage, AgentSession } from "../types/agent";
 import { PendingApproval } from "../services/approvalApi";
 import { ApprovalCardModal } from "./ApprovalCardModal";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { AgentAvatar } from "./AgentAvatar";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import {
   Send,
@@ -28,6 +29,8 @@ interface ChatSessionCanvasProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, attachmentVirtualUri?: string) => void;
   agentName: string;
+  agentId?: string;
+  roleTag?: string;
   pendingApprovals?: PendingApproval[];
   onApproveTool?: (requestId: string, sessionId: string, scope?: "exact" | "similar") => Promise<void>;
   onDenyTool?: (requestId: string, sessionId: string, reason?: string) => Promise<void>;
@@ -38,6 +41,8 @@ export function ChatSessionCanvas({
   messages,
   onSendMessage,
   agentName,
+  agentId = "default",
+  roleTag = "Engineering",
   pendingApprovals = [],
   onApproveTool,
   onDenyTool,
@@ -160,15 +165,13 @@ export function ChatSessionCanvas({
               className={`flex gap-3 max-w-4xl ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
             >
               {/* Avatar */}
-              <div
-                className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs select-none ${
-                  isUser
-                    ? "bg-[#26211d] text-neutral-300 border border-white/10"
-                    : "bg-[#d86f4c] text-white shadow-[0_0_12px_rgba(216,111,76,0.3)]"
-                }`}
-              >
-                {isUser ? <User size={14} /> : <Bot size={14} />}
-              </div>
+              {isUser ? (
+                <div className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs select-none bg-[#26211d] text-neutral-300 border border-white/10">
+                  <User size={14} />
+                </div>
+              ) : (
+                <AgentAvatar agent={{ id: agentId, name: agentName, roleTag: roleTag as any }} size="sm" interactive={false} />
+              )}
 
               {/* Message Content Bubble */}
               <div
