@@ -81,6 +81,16 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */
+.badge-theme-transition,
+[class*="rounded-full"],
+[class*="rounded-lg"],
+[class*="rounded-xl"] {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .font-newsreader {
   font-family: var(--font-serif);
 }
