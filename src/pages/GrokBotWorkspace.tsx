@@ -5321,7 +5321,7 @@ export function GrokBotWorkspace() {
                     {mentions.map((mention) => {
                       const cleanName = mention.replace(/^@/, "");
                       const targetAgent = agents.find((a) => a.name.toLowerCase() === cleanName.toLowerCase() || a.id.toLowerCase() === cleanName.toLowerCase());
-                      const roleDesc = targetAgent?.roleTag || targetAgent?.title || "Team Autonomous Agent";
+                      const roleDesc = targetAgent?.roleTag || (targetAgent as { title?: string } | undefined)?.title || "Team Autonomous Agent";
 
                       return (
                         <div key={mention} className="relative group/chiptip inline-flex items-center animate-in zoom-in-75 fade-in duration-200">
