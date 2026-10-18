@@ -13,6 +13,7 @@ export interface AgentSession {
   unread?: boolean;
   session_id?: string;
   agentId?: string;
+  channel?: string;
 }
 
 export interface ToolCallItem {

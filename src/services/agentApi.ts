@@ -140,6 +140,23 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         ? new Date(c.updated_at).toLocaleDateString([], { month: "short", day: "numeric" })
         : "Recently";
 
+      // Extract or infer channel (telegram, zalo, discord, slack, or console)
+      let rawChannel = (c.channel || "").toLowerCase().trim();
+      if (!rawChannel) {
+        const sid = (c.session_id || c.id || "").toLowerCase();
+        if (sid.includes("telegram") || sid.startsWith("tg_") || sid.includes("tg-")) {
+          rawChannel = "telegram";
+        } else if (sid.includes("zalo") || sid.startsWith("zl_") || sid.includes("zl-")) {
+          rawChannel = "zalo";
+        } else if (sid.includes("discord")) {
+          rawChannel = "discord";
+        } else if (sid.includes("slack")) {
+          rawChannel = "slack";
+        } else {
+          rawChannel = "console";
+        }
+      }
+
       return {
         id: c.id,
         title: displayTitle,
@@ -150,6 +167,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         name: displayTitle,
         session_id: c.session_id,
         agentId: cleanAgentId || c.agent_id || "default",
+        channel: rawChannel,
         _rawUpdatedAt: c.updated_at || c.last_finished_at || c.created_at || ""
       };
     });

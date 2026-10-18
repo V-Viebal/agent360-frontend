@@ -2289,6 +2289,7 @@ export function GrokBotWorkspace() {
   }, [activeChatMenuId, activeAgentMenuId]);
 
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned" | "archived">("all");
+  const [channelFilter, setChannelFilter] = useState<string>("all");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
   // Mobile Hold-Touch / Long-Press Action Sheet state
@@ -3927,6 +3928,16 @@ export function GrokBotWorkspace() {
         c.title.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
         c.lastMessageSnippet.toLowerCase().includes(chatSearchQuery.toLowerCase());
       if (!matchesSearch) return false;
+
+      // Channel filter
+      if (channelFilter !== "all") {
+        const ch = (c.channel || "console").toLowerCase();
+        if (channelFilter === "other") {
+          if (["console", "telegram", "zalo"].includes(ch)) return false;
+        } else if (ch !== channelFilter) {
+          return false;
+        }
+      }
 
       const isArchived = archivedChatIds.includes(c.id);
       if (chatFilterTab === "archived") {
@@ -5714,7 +5725,7 @@ export function GrokBotWorkspace() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2.5 items-stretch">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5 items-stretch max-h-[70vh] md:max-h-none overflow-y-auto md:overflow-visible pr-0.5">
                   {/* Column 1: Add Files & Work Mode (Add files at the top, followed by clear work modes) */}
                   <div className="flex flex-col justify-between space-y-2 h-full">
                     {/* 1. Add Files Option (Placed at the very top as requested) */}
@@ -6690,7 +6701,7 @@ export function GrokBotWorkspace() {
             ? "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
             : isChatListCollapsed
             ? "hidden lg:flex lg:w-[56px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
-            : "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-none"
+            : "hidden lg:flex lg:w-[320px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
         }`}
       >
         {/* Subtle, Slim Resizer Splitter between Chat and Session Chats */}
@@ -6837,7 +6848,7 @@ export function GrokBotWorkspace() {
             )}
 
             {/* Filter Tabs for Conversations: All / Unread / Pinned (Shared Tabs Primitive) */}
-            <div className="px-2 pt-2 pb-1 border-b border-[#1c1c24]">
+            <div className="px-2 pt-2 pb-1 border-b border-slate-200 dark:border-[#1c1c24] space-y-1.5">
               <Tabs
                 size="sm"
                 className="w-full justify-between"
@@ -6850,6 +6861,42 @@ export function GrokBotWorkspace() {
                   { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
                 ]}
               />
+
+              {/* Sub-Channel Filter Bar (All / Console / Telegram / Zalo / Khác) */}
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 text-[10px] font-mono select-none">
+                {[
+                  { id: "all", label: "Tất cả kênh" },
+                  { id: "console", label: "Console" },
+                  { id: "telegram", label: "Telegram", badgeColor: "text-sky-400" },
+                  { id: "zalo", label: "Zalo", badgeColor: "text-blue-500" },
+                  { id: "other", label: "Khác" },
+                ].map((ch) => {
+                  const isActive = channelFilter === ch.id;
+                  const channelCount = ch.id === "all"
+                    ? chats.length
+                    : ch.id === "other"
+                    ? chats.filter(c => !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase())).length
+                    : chats.filter(c => (c.channel || "console").toLowerCase() === ch.id).length;
+
+                  if (ch.id !== "all" && channelCount === 0) return null;
+
+                  return (
+                    <button
+                      key={ch.id}
+                      type="button"
+                      onClick={() => setChannelFilter(ch.id)}
+                      className={`px-2 py-0.5 rounded-full shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
+                        isActive
+                          ? "bg-[#ff7a00]/15 border-[#ff7a00]/40 text-[#ff7a00] font-semibold shadow-xs"
+                          : "border-transparent text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      <span>{ch.label}</span>
+                      <span className="text-[9px] opacity-75 font-bold">({channelCount})</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
@@ -6996,11 +7043,41 @@ export function GrokBotWorkspace() {
                             className="bg-[#121218] border border-[#ff7a00] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
                           />
                         ) : (
-                          <span className={`text-xs font-medium truncate block ${
-                            (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) ? "text-emerald-300 font-semibold" : "text-white"
-                          }`}>
-                            {chat.title}
-                          </span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {(() => {
+                              const ch = (chat.channel || "console").toLowerCase();
+                              if (ch === "telegram") {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[9px] font-mono shrink-0 select-none" title="Kênh Telegram">
+                                    <Send size={9} className="rotate-45" />
+                                    <span>TG</span>
+                                  </span>
+                                );
+                              }
+                              if (ch === "zalo") {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-blue-600/15 border border-blue-500/30 text-blue-400 text-[9px] font-mono shrink-0 select-none font-bold" title="Kênh Zalo">
+                                    <MessageCircle size={9} />
+                                    <span>Zalo</span>
+                                  </span>
+                                );
+                              }
+                              if (ch !== "console") {
+                                return (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 text-[9px] font-mono shrink-0 select-none uppercase" title={`Kênh: ${chat.channel}`}>
+                                    <Radio size={9} />
+                                    <span>{chat.channel}</span>
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                            <span className={`text-xs font-medium truncate block ${
+                              (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) ? "text-emerald-300 font-semibold" : "text-white"
+                            }`}>
+                              {chat.title}
+                            </span>
+                          </div>
                         )}
 
                         <div className="flex items-center gap-1 shrink-0 relative">
