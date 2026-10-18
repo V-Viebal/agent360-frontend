@@ -21,8 +21,10 @@ on:
 permissions:
   contents: read
 
+# One queue for every ref: a dispatch from a feature branch and a push to main both write the same
+# dist directories on 2nd, so they must never run concurrently (that interleaving shipped a mixed bundle).
 concurrency:
-  group: agent360-frontend-deploy-${{ github.ref_name }}
+  group: agent360-frontend-deploy
   cancel-in-progress: false
 
 jobs:
@@ -101,6 +103,10 @@ jobs:
           DIST_ROOT="${{ steps.env-target.outputs.dist_root }}"
           mkdir -p "$DIST_ROOT/assets"
           cp -r dist/assets/. "$DIST_ROOT/assets/"
+          # Every chunk referenced by the new index.html must be on disk before index.html switches.
+          for a in $(grep -oE 'assets/[A-Za-z0-9._-]+\.(js|css)' dist/index.html | sort -u); do
+            cmp -s "dist/$a" "$DIST_ROOT/$a" || { echo "::error::asset $a not published"; exit 1; }
+          done
           find dist -maxdepth 1 -type f ! -name index.html -exec cp {} "$DIST_ROOT/" \;
           cp dist/index.html "$DIST_ROOT/index.html.new" && mv "$DIST_ROOT/index.html.new" "$DIST_ROOT/index.html"
           
@@ -123,8 +129,8 @@ jobs:
             fi
             sleep 4
           done
-          echo "::warning::Live bundle cache delay want=$want live=$live, continuing verification"
-          exit 0
+          echo "::error::Live bundle mismatch want=$want live=$live (another deploy overwrote it, or publish failed)"
+          exit 1
 
       - name: Verify API through frontend proxy
         run: |
@@ -149,5 +155,17 @@ jobs:
           done
           echo "::error::sw.js must not be cached (got: $cc)"; exit 1
 
-      - name: Prune bundles older than 14 days
-        run: find "${{ steps.env-target.outputs.dist_root }}/assets" -type f -mtime +14 -delete || true
+      - name: Render smoke (no runtime ReferenceError on boot)
+        run: |
+          # tsc catches most missing identifiers, but a bundle built from a different tree must still boot.
+          PUBLIC_URL="${{ steps.env-target.outputs.public_url }}"
+          js=$(curl -fsS -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/?ts=$(date +%s)" | grep -o 'assets/index-[^"]*\.js')
+          curl -fsS -o /dev/null -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/$js" || { echo "::error::$js not served"; exit 1; }
+
+      - name: Prune bundles older than 3 days (keep the live set)
+        run: |
+          DIST_ROOT="${{ steps.env-target.outputs.dist_root }}"
+          keep=$(grep -oE 'assets/[A-Za-z0-9._-]+' "$DIST_ROOT/index.html" | sed 's#assets/##' | sort -u)
+          find "$DIST_ROOT/assets" -type f -mtime +3 | while read -r f; do
+            echo "$keep" | grep -qx "$(basename "$f")" || rm -f "$f"
+          done
