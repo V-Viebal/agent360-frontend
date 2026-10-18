@@ -4,7 +4,8 @@ export const authConfig = {
   appId: "skyer-prod-app",
   localAppId: "skyer-local-app",
   apiResource: "https://api-agent360.antares.vn",
-  redirectUri: typeof window !== "undefined" && window.location.origin.includes("localhost")
+  // Each deployed origin (production, staging, localhost) must be registered on the Logto SPA app.
+  redirectUri: typeof window !== "undefined"
     ? `${window.location.origin}/callback`
     : "https://agent360.antares.vn/callback",
   postLogoutRedirectUri: typeof window !== "undefined"
