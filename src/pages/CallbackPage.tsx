@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { authConfig } from "../config/authConfig";
@@ -7,15 +7,17 @@ export function CallbackPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [errorMsg, setErrorMsg] = useState("");
+  const exchangedRef = useRef(false);
 
   useEffect(() => {
+    if (exchangedRef.current) return;
+
     async function exchangeToken() {
       try {
         const params = new URLSearchParams(window.location.search);
         const code = params.get("code");
         const error = params.get("error");
         const errorDesc = params.get("error_description");
-        const returnedState = params.get("state");
 
         if (error) {
           setStatus("error");
@@ -24,20 +26,25 @@ export function CallbackPage() {
         }
 
         if (!code) {
-          // Direct visit or empty callback
           navigate("/app", { replace: true });
           return;
         }
 
-        // Verify state and PKCE verifier
-        const storedState = sessionStorage.getItem("skyer_oidc_state");
-        const codeVerifier = sessionStorage.getItem("skyer_oidc_verifier");
+        // Deduplicate exchange in React 18 StrictMode
+        if (sessionStorage.getItem("skyer_last_exchanged_code") === code) {
+          setStatus("success");
+          navigate("/app", { replace: true });
+          return;
+        }
 
+        exchangedRef.current = true;
+        sessionStorage.setItem("skyer_last_exchanged_code", code);
+
+        const codeVerifier = sessionStorage.getItem("skyer_oidc_verifier");
         const isLocal = typeof window !== "undefined" && window.location.origin.includes("localhost");
         const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
         const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
 
-        // Exchange Authorization Code + PKCE code_verifier for access token
         const tokenEndpoint = new URL("/oidc/token", authConfig.endpoint).toString();
         const body = new URLSearchParams({
           grant_type: "authorization_code",
@@ -59,10 +66,13 @@ export function CallbackPage() {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           console.warn("[Auth] Token exchange error:", errData);
-          // If code was already exchanged or invalid, still allow transition to /app if session exists
-          sessionStorage.setItem("logto_auth_code", code);
-          setStatus("success");
-          setTimeout(() => navigate("/app", { replace: true }), 800);
+          if (sessionStorage.getItem("skyer_access_token")) {
+            setStatus("success");
+            navigate("/app", { replace: true });
+            return;
+          }
+          setStatus("error");
+          setErrorMsg(errData.message || errData.error_description || "Token exchange failed");
           return;
         }
 
@@ -73,15 +83,13 @@ export function CallbackPage() {
           if (tokenData.refresh_token) sessionStorage.setItem("skyer_refresh_token", tokenData.refresh_token);
         }
 
-        sessionStorage.setItem("logto_auth_code", code);
-        // Clear transient PKCE state
         sessionStorage.removeItem("skyer_oidc_verifier");
         sessionStorage.removeItem("skyer_oidc_state");
 
         setStatus("success");
         setTimeout(() => {
           navigate("/app", { replace: true });
-        }, 800);
+        }, 500);
       } catch (e: any) {
         setStatus("error");
         setErrorMsg(e.message || "Failed to process authorization callback");

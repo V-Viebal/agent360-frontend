@@ -4111,7 +4111,7 @@ export function GrokBotWorkspace() {
                         key={ag.id}
                         style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
                         onClick={() => handleSelectAgent(ag)}
-                        className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer border animate-fade-in-stagger ${
+                        className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer border animate-fade-in-stagger group ${
                           layoutDensity === "compact"
                             ? "px-2 py-1 gap-2"
                             : layoutDensity === "comfortable"
@@ -4181,10 +4181,10 @@ export function GrokBotWorkspace() {
                                     triggerHaptic(15);
                                     setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
                                   }}
-                                  className={`p-1 rounded hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors cursor-pointer ${
+                                  className={`p-1 rounded-lg transition-all cursor-pointer ${
                                     activeAgentMenuId === ag.id
                                       ? "text-[#ff7a00] bg-neutral-200 dark:bg-white/10 opacity-100"
-                                      : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-neutral-900 dark:hover:text-white"
+                                      : "text-neutral-400 hover:text-[#ff7a00] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                                   }`}
                                   title="Tùy chọn mở rộng cho Agent (Ghim, Chi tiết, Chat mới)"
                                 >
@@ -5489,7 +5489,7 @@ export function GrokBotWorkspace() {
                     <div
                       ref={appsScrollRef}
                       onScroll={(e) => { lastAppsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
-                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu"
+                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu smooth-scroll-container"
                     >
                       {(() => {
                         // Priority 1: All apps loaded from Agent's active MCP clients with instant search
@@ -5612,7 +5612,7 @@ export function GrokBotWorkspace() {
                     <div
                       ref={subAgentsScrollRef}
                       onScroll={(e) => { lastSubAgentsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
-                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu"
+                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu smooth-scroll-container"
                     >
                       {(() => {
                         // All subagents configured on selected agent with instant search

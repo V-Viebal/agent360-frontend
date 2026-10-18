@@ -132,7 +132,7 @@ export function DropdownMenu({
           : `absolute ${align === "left" ? "left-0" : "right-0"} ${
               placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
             } z-[100]`
-      } ${width} rounded-xl bg-[#14141c]/95 dark:bg-[#14141c]/95 border border-slate-200 dark:border-[#262634] p-1.5 shadow-lg backdrop-blur-xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
+      } ${width} rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-lg backdrop-blur-xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
     >
       {children}
     </div>

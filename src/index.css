@@ -121,6 +121,16 @@ body {
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* GPU Accelerated Smooth Momentum Scrolling for Touch & Desktop */
+.smooth-scroll-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  will-change: scroll-position;
+  transform: translateZ(0);
 }
 
 @keyframes fadeIn {
