@@ -1415,11 +1415,26 @@ export function GrokBotWorkspace() {
       try {
         localStorage.setItem("agent360_computer_split", next ? "true" : "false");
       } catch {}
-      // Keep all sidebars in their exact current state as configured by user
+
       if (next) {
+        // Remember layout before opening computer
+        setPrevLayoutBeforeComputer({
+          leftCollapsed: isLeftSidebarCollapsed,
+          chatCollapsed: isChatListCollapsed,
+          botInfoCollapsed: isBotInfoCollapsed,
+        });
+        // Collapse left sidebar when opening computer
+        setIsLeftSidebarCollapsed(true);
+        try { localStorage.setItem("agent360_left_sidebar_collapsed", "true"); } catch {}
         setMobileAgentsOpen(false);
         setMobileChatsOpen(false);
         setMobileBotInfoOpen(false);
+      } else {
+        // Restore layout when closing computer
+        if (prevLayoutBeforeComputer) {
+          setIsLeftSidebarCollapsed(prevLayoutBeforeComputer.leftCollapsed);
+          try { localStorage.setItem("agent360_left_sidebar_collapsed", prevLayoutBeforeComputer.leftCollapsed ? "true" : "false"); } catch {}
+        }
       }
       return next;
     });
@@ -3201,6 +3216,33 @@ export function GrokBotWorkspace() {
           e.preventDefault();
           triggerHaptic(15);
           setLightboxRotation((prev) => (prev + 90) % 360);
+          return;
+        }
+        // Reset Zoom & Rotation with '0' key
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === "0" || e.key === "Numpad0")) {
+          e.preventDefault();
+          triggerHaptic(15);
+          setLightboxZoom(1);
+          setLightboxPan({ x: 0, y: 0 });
+          setLightboxRotation(0);
+          return;
+        }
+        // Zoom in with '+' or '=' key
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === "+" || e.key === "=")) {
+          e.preventDefault();
+          triggerHaptic(10);
+          setLightboxZoom((prev) => Math.min(3, Math.round((prev + 0.25) * 100) / 100));
+          return;
+        }
+        // Zoom out with '-' or '_' key
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === "-" || e.key === "_")) {
+          e.preventDefault();
+          triggerHaptic(10);
+          setLightboxZoom((prev) => {
+            const next = Math.max(0.5, Math.round((prev - 0.25) * 100) / 100);
+            if (next <= 1) setLightboxPan({ x: 0, y: 0 });
+            return next;
+          });
           return;
         }
       }
@@ -5869,12 +5911,7 @@ export function GrokBotWorkspace() {
                 <span className="text-xs font-mono font-semibold text-white tracking-wide truncate">
                   {selectedAgent.name} Computer
                 </span>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
-                  {t("computer.liveSandbox")}
-                </span>
-                <span className="text-[11px] font-mono text-neutral-400 hidden md:inline px-2 py-0.5 rounded bg-white/5 border border-white/10">
-                  {selectedAgent.node}
-                </span>
+
               </div>
 
               {/* Action Buttons: Screenshot, Reload, Fullscreen modal, Open in new tab, and Close Split */}
@@ -7284,7 +7321,7 @@ export function GrokBotWorkspace() {
                   onClick={() => setLightboxZoom((prev) => Math.max(0.5, Math.round((prev - 0.25) * 100) / 100))}
                   disabled={lightboxZoom <= 0.5}
                   className="p-1 rounded hover:bg-white/10 hover:text-white disabled:opacity-30 cursor-pointer transition-colors"
-                  title="Zoom Out (-25%)"
+                  title="Zoom Out (-25%) (-)"
                   aria-label="Zoom Out"
                 >
                   <ZoomOut size={13} />
@@ -7297,7 +7334,7 @@ export function GrokBotWorkspace() {
                   onClick={() => setLightboxZoom((prev) => Math.min(3, Math.round((prev + 0.25) * 100) / 100))}
                   disabled={lightboxZoom >= 3}
                   className="p-1 rounded hover:bg-white/10 hover:text-white disabled:opacity-30 cursor-pointer transition-colors"
-                  title="Zoom In (+25%)"
+                  title="Zoom In (+25%) (+)"
                   aria-label="Zoom In"
                 >
                   <ZoomIn size={13} />
@@ -7321,7 +7358,7 @@ export function GrokBotWorkspace() {
                     type="button"
                     onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); setLightboxRotation(0); }}
                     className="flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/15 text-[10px] text-neutral-300 hover:text-white cursor-pointer transition-colors"
-                    title="Reset Zoom & Rotation"
+                    title="Reset Zoom & Rotation (0)"
                   >
                     <RotateCcw size={10} />
                     Reset
