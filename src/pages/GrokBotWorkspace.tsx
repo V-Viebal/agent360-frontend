@@ -1,45 +1,69 @@
-function ChannelChatIcon({ channel, isSelected, size = 13 }: { channel?: string; isSelected?: boolean; size?: number }) {
+function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string; isSelected?: boolean; size?: number }) {
   const ch = (channel || "console").toLowerCase();
+  
+  // 1. Official Telegram Logo SVG
   if (ch === "telegram") {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0" title="Telegram Session">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" title="Telegram">
+        <circle cx="12" cy="12" r="12" fill="#24A1DE"/>
         <path
-          d="M21.5 2.5L2.5 10.5L9.5 13.5L18.5 6.5L11.5 15.5L18.5 21.5L21.5 2.5Z"
-          fill={isSelected ? "currentColor" : "#24A1DE"}
-          stroke={isSelected ? "currentColor" : "#24A1DE"}
-          strokeWidth="1.5"
-          strokeLinejoin="round"
+          d="M5.4 11.9L16.8 7.3C17.3 7.1 17.8 7.4 17.6 8L15.7 17.1C15.5 17.7 14.8 17.9 14.3 17.5L11.2 15L9.6 16.5C9.4 16.7 9.1 16.6 9.1 16.3L9.3 13.7L14.7 8.8C14.9 8.6 14.7 8.3 14.4 8.5L7.8 12.7L5.4 11.9Z"
+          fill="white"
         />
       </svg>
     );
   }
+
+  // 2. Official Zalo Logo SVG (Iconic Speech Bubble with White Lettermark)
   if (ch === "zalo") {
     return (
-      <div
-        className={`rounded flex items-center justify-center font-bold font-sans select-none shrink-0 ${
-          isSelected ? "bg-black text-[#ff7a00]" : "bg-[#0068FF] text-white"
-        }`}
-        style={{ width: size, height: size, fontSize: Math.max(8, Math.round(size * 0.72)), lineHeight: 1 }}
-        title="Zalo Session"
-      >
-        Z
-      </div>
+      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className="shrink-0 select-none" title="Zalo">
+        <rect width="48" height="48" rx="12" fill="#0068FF" />
+        <path
+          d="M34.5 13H13.5C10.5 13 8 15.5 8 18.5V29.5C8 32.5 10.5 35 13.5 35H18L21 38.5C21.4 39 22.2 39 22.6 38.5L25.6 35H34.5C37.5 35 40 32.5 40 29.5V18.5C40 15.5 37.5 13 34.5 13Z"
+          fill="#0052CC"
+          opacity="0.35"
+        />
+        {/* Zalo official typography mark */}
+        <path
+          d="M14 20H23L16 28H23.5V30.5H13.5L20.5 22.5H14V20Z"
+          fill="white"
+        />
+        <circle cx="28" cy="25" r="3.2" fill="white" />
+        <path
+          d="M33 19H35.5V30.5H33V19Z"
+          fill="white"
+        />
+      </svg>
     );
   }
+
+  // 3. Official Discord Logo SVG
   if (ch === "discord") {
     return (
-      <div className={`shrink-0 ${isSelected ? "text-currentColor" : "text-[#5865F2]"}`} title="Discord Session">
-        <Radio size={size} />
-      </div>
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" title="Discord">
+        <rect width="24" height="24" rx="6" fill="#5865F2"/>
+        <path
+          d="M17.5 7.2C16.3 6.6 15 6.2 13.7 6C13.5 6.3 13.3 6.7 13.2 7C11.8 6.8 10.4 6.8 9 7C8.9 6.7 8.7 6.3 8.5 6C7.2 6.2 5.9 6.6 4.7 7.2C2.4 10.6 1.8 13.9 2.1 17.1C3.6 18.2 5.1 19 6.5 19.4C6.9 18.9 7.2 18.3 7.5 17.7C7 17.5 6.5 17.3 6 17C6.1 16.9 6.2 16.8 6.3 16.7C9.3 18.1 12.7 18.1 15.7 16.7C15.8 16.8 15.9 16.9 16 17C15.5 17.3 15 17.5 14.5 17.7C14.8 18.3 15.1 18.9 15.5 19.4C16.9 19 18.4 18.2 19.9 17.1C20.3 13.3 19.3 10.1 17.5 7.2ZM8.4 15.2C7.5 15.2 6.8 14.4 6.8 13.4C6.8 12.4 7.5 11.6 8.4 11.6C9.3 11.6 10 12.4 10 13.4C10 14.4 9.3 15.2 8.4 15.2ZM15.6 15.2C14.7 15.2 14 14.4 14 13.4C14 12.4 14.7 11.6 15.6 11.6C16.5 11.6 17.2 12.4 17.2 13.4C17.2 14.4 16.5 15.2 15.6 15.2Z"
+          fill="white"
+        />
+      </svg>
     );
   }
+
+  // 4. Official Slack Logo SVG
   if (ch === "slack") {
     return (
-      <div className={`shrink-0 ${isSelected ? "text-currentColor" : "text-[#E01E5A]"}`} title="Slack Session">
-        <Terminal size={size} />
-      </div>
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" title="Slack">
+        <path d="M5.04 14.07a2.02 2.02 0 1 1-2.02-2.02h2.02v2.02zm1.01 0a2.02 2.02 0 0 1 4.04 0v5.05a2.02 2.02 0 1 1-4.04 0v-5.05z" fill="#E01E5A"/>
+        <path d="M9.93 5.04a2.02 2.02 0 1 1-2.02-2.02v2.02h2.02zm0 1.01a2.02 2.02 0 0 1 0 4.04H4.88a2.02 2.02 0 1 1 0-4.04h5.05z" fill="#36C5F0"/>
+        <path d="M18.96 9.93a2.02 2.02 0 1 1 2.02 2.02h-2.02V9.93zm-1.01 0a2.02 2.02 0 0 1-4.04 0V4.88a2.02 2.02 0 1 1 4.04 0v5.05z" fill="#2EB67D"/>
+        <path d="M14.07 18.96a2.02 2.02 0 1 1 2.02 2.02v-2.02h-2.02zm0-1.01a2.02 2.02 0 0 1 0-4.04h5.05a2.02 2.02 0 1 1 0 4.04h-5.05z" fill="#ECB22E"/>
+      </svg>
     );
   }
+
+  // 5. Default Console Web Workspace
   return <MessageSquare size={size} className={isSelected ? "text-[#ff7a00]" : "text-neutral-400"} />;
 }
 
