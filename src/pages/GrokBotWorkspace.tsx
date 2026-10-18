@@ -2808,18 +2808,22 @@ export function GrokBotWorkspace() {
 
   // The selected agent's own browser (service + Chromium profile); refreshed while the Computer surface is visible.
   const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
-  const agentBrowserFor = selectedAgent?.slug || selectedAgent?.id || "";
+  // Resolve only once the agent list has loaded: before that `selectedAgent` is the first agent / a
+  // placeholder, and its browser would flash in for the agent the user actually selected.
+  const agentBrowserFor = isLoadingAgents ? "" : (selectedAgent?.slug || selectedAgent?.id || "");
   useEffect(() => {
+    setAgentBrowser(null);
     if (!agentBrowserFor) return;
     let alive = true;
     const ctrl = new AbortController();
+    const want = agentBrowserFor.replace(/^bot:agent360:/i, "").toLowerCase();
     const load = () => {
       if (document.hidden) return;
       fetchAgentBrowser(agentBrowserFor, ctrl.signal)
-        .then((info) => alive && setAgentBrowser(info))
+        // Never show another agent's browser if a late response races an agent switch.
+        .then((info) => alive && setAgentBrowser(info && info.agentId.toLowerCase() === want ? info : null))
         .catch(() => {});
     };
-    setAgentBrowser(null);
     load();
     const i = setInterval(load, 20000);
     return () => { alive = false; ctrl.abort(); clearInterval(i); };
@@ -6977,6 +6981,11 @@ export function GrokBotWorkspace() {
                         {/* The full Selkies desktop is only opened on demand (modal); a hidden 1024x768 live
                             iframe kept a second stream running per viewer and resized the shared display. */}
                         <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
+                        {browserTarget.profile && (
+                          <div data-testid="agent-browser-profile" className="absolute top-1.5 left-1.5 z-[5] px-1.5 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-neutral-200 pointer-events-none">
+                            {browserTarget.profile} · {agentBrowser?.service}
+                          </div>
+                        )}
                         {!browserTarget.isLive && (
                           <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-50 dark:bg-black px-3 text-center transition-colors">
                             {agentBrowser === null ? "Resolving agent browser…" : agentBrowser.cdpReachable ? `Opening profile ${agentBrowser.profile}…` : "Browser unreachable"}
