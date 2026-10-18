@@ -198,6 +198,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
       {/* Browser CDP Live Stream Viewer Modal */}
       {showBrowserModal && (
         <BrowserCdpViewerModal
+          agentId={agent.slug || agent.id}
           agentName={agent.name}
           onClose={() => setShowBrowserModal(false)}
         />

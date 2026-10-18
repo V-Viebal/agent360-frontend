@@ -1,44 +1,47 @@
+import { fetchAgentBrowser, agentBrowserImageUrl } from "./agentBrowserApi";
+
 export interface BrowserCdpTarget {
   id: string;
   title?: string;
   type?: string;
   url?: string;
-  devtoolsFrontendUrl?: string;
-  webSocketDebuggerUrl?: string;
-  faviconUrl?: string;
 }
 
 export interface BrowserCdpStatus {
   available: boolean;
+  /** Human label of the agent's browser (node · service); internal CDP endpoints never reach the client. */
   endpoint: string;
+  node?: string;
+  profile?: string;
   browserVersion?: string;
   targetCount: number;
   targets: BrowserCdpTarget[];
 }
 
-export async function fetchBrowserCdpStatus(): Promise<BrowserCdpStatus> {
+/** Status of one agent's own browser (its Chromium profile on its instance), resolved server-side over the internal network. */
+export async function fetchBrowserCdpStatus(agentId: string, signal?: AbortSignal): Promise<BrowserCdpStatus> {
   try {
-    const res = await fetch("/api/v1/agents/browser/cdp/status", {
-      headers: { Accept: "application/json" }
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch CDP status: ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (err) {
-    console.warn("Browser CDP status fallback", err);
+    const info = await fetchAgentBrowser(agentId, signal);
+    if (!info) return { available: false, endpoint: "no browser mapped for this agent", targetCount: 0, targets: [] };
+    const targets = info.tabs
+      .filter((t) => !t.anchor)
+      .map((t) => ({ id: t.targetId, title: t.title, url: t.url, type: "page" }));
     return {
-      available: false,
-      endpoint: "http://100.76.185.111:19223",
-      targetCount: 0,
-      targets: []
+      available: info.cdpReachable && info.profileWindowOpen,
+      endpoint: `${info.node} · ${info.service}`,
+      node: info.node,
+      profile: info.profile,
+      targetCount: targets.length,
+      targets,
     };
+  } catch (err) {
+    console.warn("Agent browser status unavailable", err);
+    return { available: false, endpoint: "unreachable", targetCount: 0, targets: [] };
   }
 }
 
-export function getBrowserCdpStreamUrl(targetId?: string, fps: number = 2): string {
-  const params = new URLSearchParams();
-  if (targetId) params.set("targetId", targetId);
-  params.set("fps", fps.toString());
-  return `/api/v1/agents/browser/cdp/stream?${params.toString()}`;
+/** Cache-busted JPEG of the agent's tab; the backend shares one capture per tab per second across viewers. */
+export function getBrowserCdpFrameUrl(agentId: string, targetId: string | undefined, nonce: number): string {
+  const base = agentBrowserImageUrl(agentId, nonce);
+  return targetId ? `${base}&pageId=${encodeURIComponent(targetId)}` : base;
 }

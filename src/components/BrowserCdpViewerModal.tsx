@@ -4,7 +4,7 @@ import {
   BrowserCdpStatus,
   BrowserCdpTarget,
   fetchBrowserCdpStatus,
-  getBrowserCdpStreamUrl,
+  getBrowserCdpFrameUrl,
 } from "../services/cdpApi";
 import {
   Globe,
@@ -20,10 +20,11 @@ import {
 
 interface BrowserCdpViewerModalProps {
   onClose: () => void;
+  agentId: string;
   agentName: string;
 }
 
-export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerModalProps) {
+export function BrowserCdpViewerModal({ onClose, agentId, agentName }: BrowserCdpViewerModalProps) {
   const { t } = useTranslation();
   const [cdpStatus, setCdpStatus] = useState<BrowserCdpStatus | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
   const loadStatus = async () => {
     setLoading(true);
     try {
-      const data = await fetchBrowserCdpStatus();
+      const data = await fetchBrowserCdpStatus(agentId);
       setCdpStatus(data);
       if (data.targets && data.targets.length > 0 && !selectedTargetId) {
         const page = data.targets.find((t) => t.type === "page") || data.targets[0];
@@ -45,12 +46,19 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
   };
 
   useEffect(() => {
+    setSelectedTargetId(null);
     loadStatus();
-  }, []);
+  }, [agentId]);
 
-  const streamUrl = selectedTargetId
-    ? getBrowserCdpStreamUrl(selectedTargetId, 3)
-    : getBrowserCdpStreamUrl(undefined, 3);
+  // ~1 fps frame polling of the agent's own tab, paused while hidden or paused.
+  const [nonce, setNonce] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isStreaming) return;
+    const i = setInterval(() => { if (!document.hidden) setNonce(Date.now()); }, 1000);
+    return () => clearInterval(i);
+  }, [isStreaming, agentId, selectedTargetId]);
+
+  const streamUrl = getBrowserCdpFrameUrl(agentId, selectedTargetId || undefined, nonce);
 
   const selectedTarget = cdpStatus?.targets.find((t) => t.id === selectedTargetId);
 
@@ -66,7 +74,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
                 <span>{t("browserCdp.title")}</span>
                 <span className="text-[10px] font-mono font-normal text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Live MJPEG
+                  Live
                 </span>
               </h3>
             </div>
@@ -126,7 +134,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
                 <AlertCircle size={32} className="text-amber-400 mx-auto" />
                 <p className="text-white font-semibold">{t("browserCdp.unreachable")}</p>
                 <p className="text-neutral-500 max-w-sm">
-                  Checking endpoint: {cdpStatus?.endpoint || "http://100.76.185.111:19223"}
+                  {cdpStatus?.endpoint || "Resolving agent browser…"}
                 </p>
               </div>
             ) : (
@@ -182,15 +190,15 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
             </div>
 
             <div className="pt-3 border-t border-[#2b241e] text-[10px] text-neutral-500 space-y-1">
-              <div>Version: {cdpStatus?.browserVersion || "Chromium 148"}</div>
-              <div>Node: 3rd (ai.hmz.one)</div>
+              <div>Profile: {cdpStatus?.profile || "—"}</div>
+              <div>Browser: {cdpStatus?.endpoint || "—"}</div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="px-6 py-2.5 bg-slate-50 dark:bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
-          <span>Operated by {agentName} via Project-scoped CDP Adapter</span>
+          <span>Operated by {agentName} · agent-scoped browser profile</span>
           <button
             onClick={onClose}
             className="hover:text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer"

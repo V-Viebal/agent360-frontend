@@ -11,9 +11,7 @@ export interface AgentBrowserInfo {
   node: string;
   service: string;
   viewerUrl: string;
-  cdpUrl: string;
   profile: string;
-  browserContextId?: string | null;
   cdpReachable: boolean;
   profileWindowOpen: boolean;
   tabs: AgentBrowserTab[];

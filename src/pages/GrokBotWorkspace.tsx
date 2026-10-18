@@ -266,8 +266,6 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
   const navUrlMatch = (toolCall.args || "").match(/https?:\/\/[^\s"',}]+/i);
   if (navUrlMatch) {
     screenUrl = navUrlMatch[0];
-  } else if (!screenImage && isScreenAction) {
-    screenUrl = "https://browser-gm.antares.vn";
   }
 
   // Pretty title
