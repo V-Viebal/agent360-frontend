@@ -35,7 +35,7 @@ export function agentBrowserImageUrl(agentId: string, nonce: number): string {
   return `/api/agents/${encodeURIComponent(bare(agentId))}/browser/image.jpg?t=${nonce}`;
 }
 
-/** Raise the agent's own profile window on the shared desktop before showing it. */
+/** Raise the agent's own profile window on the shared desktop before showing it (same-origin only; the API rejects cross-site callers). */
 export async function focusAgentBrowser(agentId: string): Promise<boolean> {
   try {
     const res = await fetch(`/api/agents/${encodeURIComponent(bare(agentId))}/browser/focus`, { method: "POST" });
