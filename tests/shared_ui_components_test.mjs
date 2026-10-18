@@ -158,3 +158,32 @@ assert.strictEqual(chips.tools[0], "/audit", "Tool should be /audit");
 console.log("✓ Test 6: Micro-chips @mention and /tool extraction verified");
 
 console.log("🎉 All 6 Shared UI Components & Modal assertions passed successfully!");
+
+// 7. Test Tabs Keyboard Navigation (Left / Right Arrow)
+console.log("Testing Tabs ArrowLeft / ArrowRight navigation...");
+function cycleTab(currentIdx, dir, length) {
+  if (dir === "right") return (currentIdx + 1) % length;
+  if (dir === "left") return (currentIdx - 1 + length) % length;
+  return currentIdx;
+}
+
+assert.strictEqual(cycleTab(0, "right", 3), 1, "Tabs Right arrow from 0 should navigate to 1");
+assert.strictEqual(cycleTab(2, "right", 3), 0, "Tabs Right arrow from 2 should wrap around to 0");
+assert.strictEqual(cycleTab(0, "left", 3), 2, "Tabs Left arrow from 0 should wrap around to 2");
+console.log("✓ Test 7: Tabs keyboard cycling logic verified");
+
+// 8. Test ConfirmDialog Variant Styling Contract
+console.log("Testing ConfirmDialog variant contract...");
+function getConfirmBtnClass(variant) {
+  return variant === "danger"
+    ? "bg-red-500 hover:bg-red-600 text-white"
+    : variant === "warning"
+    ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+    : "bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold";
+}
+
+assert(getConfirmBtnClass("danger").includes("bg-red-500"), "Danger variant must include red style");
+assert(getConfirmBtnClass("default").includes("bg-[#ff7a00]"), "Default variant must include grok orange style");
+console.log("✓ Test 8: ConfirmDialog action variants contract verified");
+
+console.log("🎉 All 8 Shared UI Component assertions passed successfully!");

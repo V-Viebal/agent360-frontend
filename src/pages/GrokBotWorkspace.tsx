@@ -5956,12 +5956,12 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <aside
         id="tour-chat-sessions"
-        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok ${
+        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok ${
           mobileChatsOpen
-            ? "flex w-[85vw] max-w-[320px] sm:w-[280px] translate-x-0 shadow-2xl"
+            ? "flex w-[85vw] max-w-[320px] sm:w-[280px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
             : isChatListCollapsed
-            ? "hidden lg:flex lg:w-[56px] translate-x-full lg:translate-x-0 shadow-none border-l border-[#1e1e24]"
-            : "hidden lg:flex lg:w-[280px] translate-x-full lg:translate-x-0 shadow-none border-l border-[#1e1e24]"
+            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0 lg:translate-x-0"
+            : "flex w-[85vw] max-w-[320px] sm:w-[280px] lg:w-[280px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-none"
         }`}
       >
         {/* Header & Collapse Toggle */}
