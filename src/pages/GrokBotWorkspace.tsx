@@ -4961,7 +4961,23 @@ export function GrokBotWorkspace() {
                   {/* Column 2: Connected Apps (Loaded from Selected Agent's Apps tab - Full Height List) */}
                   <div className="flex flex-col space-y-1.5 h-full">
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
-                      <span>Connected Apps</span>
+                      <div className="flex items-center gap-1.5">
+                        <span>Connected Apps</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-white/10 text-[9px] font-mono text-slate-700 dark:text-neutral-300">
+                          {(() => {
+                            const q = plusMenuSearch.trim().toLowerCase();
+                            let arr = currentAgentMcpClients.length > 0
+                              ? currentAgentMcpClients.map((c) => {
+                                  const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
+                                  const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || c.name.toLowerCase().includes(a.id.toLowerCase()));
+                                  return matched?.name || c.name || c.key;
+                                })
+                              : APPS_CATALOG.map((a) => a.name);
+                            if (q) arr = arr.filter((n) => n.toLowerCase().includes(q));
+                            return arr.length;
+                          })()}
+                        </span>
+                      </div>
                       <div className="relative group/tooltip">
                         <button
                           type="button"
@@ -5057,7 +5073,19 @@ export function GrokBotWorkspace() {
                   {/* Column 3: Subagents & Team Agents (Loaded from Selected Agent's Agents tab - Full Height List) */}
                   <div className="flex flex-col space-y-1.5 h-full">
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
-                      <span>Subagents</span>
+                      <div className="flex items-center gap-1.5">
+                        <span>Subagents</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-white/10 text-[9px] font-mono text-slate-700 dark:text-neutral-300">
+                          {(() => {
+                            const q = plusMenuSearch.trim().toLowerCase();
+                            const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
+                            const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
+                            let arr = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+                            if (q) arr = arr.filter((ag) => ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q) || ag.id.toLowerCase().includes(q));
+                            return arr.length;
+                          })()}
+                        </span>
+                      </div>
                       <div className="relative group/tooltip">
                         <button
                           type="button"
