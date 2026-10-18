@@ -71,8 +71,14 @@ import {
   CircleDot,
   Target,
   Rocket,
+  Globe,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
+
+/** Short haptic tick on supporting devices; silently ignored elsewhere. */
+const triggerHaptic = (ms = 10) => {
+  try { navigator.vibrate?.(ms); } catch { /* unsupported */ }
+};
 import {
   fetchInfraAgents,
   updateAgentActiveModel,
