@@ -84,7 +84,7 @@ export function ChannelConfigModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs">
         {/* Header */}
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-b border-[#242432] flex items-center justify-between">
+        <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-[#242432] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio size={15} className="text-[#ff7a00]" />
             <span className="font-semibold text-white tracking-wide uppercase font-mono">

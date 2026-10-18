@@ -245,7 +245,7 @@ export function CommandPaletteModal({
                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
                   isSelected
                     ? "bg-amber-500/10 text-slate-900 dark:text-white border border-[#ff7a00]/40 shadow-xs"
-                    : "hover:bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] text-slate-700 dark:text-neutral-300 border border-transparent"
+                    : "hover:bg-slate-50 dark:bg-[#181822] text-slate-700 dark:text-neutral-300 border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0 pr-3">

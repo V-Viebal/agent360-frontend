@@ -5337,11 +5337,11 @@ export function GrokBotWorkspace() {
                               <MoreVertical size={13} />
                             </button>
 
-                            {/* Dropdown Menu */}
+                            {/* Dropdown Menu - Solid elevated overlay matching CustomSelect and App standard */}
                             {activeChatMenuId === chat.id && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1 w-52 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] p-1.5 shadow-2xl z-[100] text-xs font-sans space-y-0.5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
+                                className="absolute right-0 top-full mt-1.5 w-60 rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl shadow-black/90 z-[100] text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/5"
                               >
                                 {/* Search within conversation */}
                                 <button
@@ -5351,7 +5351,7 @@ export function GrokBotWorkspace() {
                                     setInSessionSearchOpen(true);
                                     setActiveChatMenuId(null);
                                   }}
-                                  className="w-full text-left px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center gap-2 cursor-pointer transition-colors"
+                                  className="w-full text-left px-2.5 py-2 rounded-lg text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center gap-2.5 cursor-pointer transition-colors font-medium"
                                 >
                                   <Search size={13} className="text-[#ff7a00]" />
                                   <span>Tìm trong phiên này</span>
@@ -5364,7 +5364,7 @@ export function GrokBotWorkspace() {
                                     togglePinChat(chat.id, e);
                                     setActiveChatMenuId(null);
                                   }}
-                                  className="w-full text-left px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center gap-2 cursor-pointer transition-colors"
+                                  className="w-full text-left px-2.5 py-2 rounded-lg text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center gap-2.5 cursor-pointer transition-colors font-medium"
                                 >
                                   <Pin size={13} className={pinnedChatIds.includes(chat.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />
                                   <span>{pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}</span>
@@ -5378,13 +5378,13 @@ export function GrokBotWorkspace() {
                                     setEditingChatTitle(chat.title);
                                     setActiveChatMenuId(null);
                                   }}
-                                  className="w-full text-left px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center gap-2 cursor-pointer transition-colors"
+                                  className="w-full text-left px-2.5 py-2 rounded-lg text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center gap-2.5 cursor-pointer transition-colors font-medium"
                                 >
                                   <Edit2 size={13} className="text-cyan-400" />
                                   <span>Đổi tên phiên</span>
                                 </button>
 
-                                <div className="border-t border-slate-100 dark:border-[#222232] my-1 pt-1">
+                                <div className="border-t border-neutral-100 dark:border-[#222230] my-1 pt-1">
                                   <div className="px-2 py-0.5 text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
                                     Xuất dữ liệu
                                   </div>
@@ -5395,7 +5395,7 @@ export function GrokBotWorkspace() {
                                       setTimeout(() => handleExportSessionMarkdown(), 50);
                                       setActiveChatMenuId(null);
                                     }}
-                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
                                   >
                                     <span className="flex items-center gap-1.5">
                                       <Download size={11} className="text-[#ff7a00]" />
@@ -5410,7 +5410,7 @@ export function GrokBotWorkspace() {
                                       setTimeout(() => handleExportSessionJson(), 50);
                                       setActiveChatMenuId(null);
                                     }}
-                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
                                   >
                                     <span className="flex items-center gap-1.5">
                                       <Download size={11} className="text-cyan-400" />
@@ -5425,7 +5425,7 @@ export function GrokBotWorkspace() {
                                       setTimeout(() => handleExportAuditCertificate(), 50);
                                       setActiveChatMenuId(null);
                                     }}
-                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
                                   >
                                     <span className="flex items-center gap-1.5">
                                       <Download size={11} className="text-emerald-400" />
@@ -5435,7 +5435,7 @@ export function GrokBotWorkspace() {
                                   </button>
                                 </div>
 
-                                <div className="border-t border-slate-100 dark:border-[#222232] my-1 pt-1">
+                                <div className="border-t border-neutral-100 dark:border-[#222230] my-1 pt-1">
                                   <button
                                     type="button"
                                     onClick={() => {

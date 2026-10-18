@@ -460,7 +460,7 @@ export function SettingsModal({
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
                             ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                            : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
+                            : "bg-slate-50 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -506,7 +506,7 @@ export function SettingsModal({
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
                             ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                            : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
+                            : "bg-slate-50 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -572,7 +572,7 @@ export function SettingsModal({
                           className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                             isSelected
                               ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-xs"
-                              : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
+                              : "bg-slate-50 dark:bg-[#181822] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#38384c]"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 pr-1">
@@ -622,7 +622,7 @@ export function SettingsModal({
                   </div>
 
                   {/* System Voice Selection */}
-                  <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
+                  <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
                     <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                       <span className="font-medium">{t("settings.ttsVoiceLabel")}</span>
                       <span className="font-mono text-[#ff7a00] text-[11px]">
@@ -650,7 +650,7 @@ export function SettingsModal({
                   {/* Sliders for Rate & Pitch */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Speed Slider */}
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                         <span className="font-medium">{t("settings.ttsSpeedLabel")}</span>
                         <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechRate.toFixed(2)}x</span>
@@ -676,7 +676,7 @@ export function SettingsModal({
                     </div>
 
                     {/* Pitch Slider */}
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                         <span className="font-medium">{t("settings.ttsPitchLabel")}</span>
                         <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechPitch.toFixed(2)}</span>
@@ -777,7 +777,7 @@ export function SettingsModal({
                         onClose();
                         onOpenPermissions();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
                         <ShieldCheck size={16} />
@@ -796,7 +796,7 @@ export function SettingsModal({
                         onClose();
                         onStartTour();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
                         <Sparkles size={16} />
@@ -814,7 +814,7 @@ export function SettingsModal({
                       onClick={() => {
                         onResetChecklist();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-amber-500/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-amber-500/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-amber-500/15 text-amber-400">
                         <Sparkles size={16} />
@@ -833,7 +833,7 @@ export function SettingsModal({
                         onClose();
                         onInstallPwa();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
                       <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
                         <Smartphone size={16} />
@@ -855,7 +855,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportMarkdown}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
                         <Download size={14} className="text-[#ff7a00] shrink-0" />
                         <span className="truncate">Tệp văn bản (.md)</span>
@@ -865,7 +865,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportJson}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
                         <FileText size={14} className="text-cyan-400 shrink-0" />
                         <span className="truncate">Dữ liệu gốc (.json)</span>
@@ -875,7 +875,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportCertificate}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#181822] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
                         <Shield size={14} className="text-emerald-400 shrink-0" />
                         <span className="truncate">Chứng chỉ kiểm định (.html)</span>
@@ -1217,3 +1217,4 @@ export function SettingsModal({
     </div>
   );
 }
+                                                                                                                                                                                                                                          

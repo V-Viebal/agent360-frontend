@@ -124,7 +124,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
                 className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                   selectedCat === cat
                     ? "bg-[#ff7a00] border-[#ff7a00] text-black font-semibold shadow-xs"
-                    : "bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-white"
+                    : "bg-slate-50 dark:bg-[#181822] border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 {cat}
