@@ -1502,6 +1502,16 @@ export function GrokBotWorkspace() {
     }
   });
 
+  const [chatSessionsWidth, setChatSessionsWidth] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem("agent360_chat_sessions_w");
+      return v ? parseInt(v, 10) : 280;
+    } catch {
+      return 280;
+    }
+  });
+  const [isResizingChatSessions, setIsResizingChatSessions] = useState(false);
+
     // Adjustable Computer Split Ratio (20% to 80% with 35% default)
   const [computerChatWidthPercent, setComputerChatWidthPercent] = useState<number>(() => {
     try {
@@ -1533,6 +1543,14 @@ export function GrokBotWorkspace() {
         const newW = Math.min(560, Math.max(280, window.innerWidth - e.clientX));
         setBotInfoWidth(newW);
         try { localStorage.setItem("agent360_bot_info_w", newW.toString()); } catch {}
+      } else if (isResizingChatSessions) {
+        // Chat sessions is positioned to the left of Agent Specification (or right edge if bot info collapsed)
+        const offsetFromRight = window.innerWidth - e.clientX;
+        const currentBotInfoOffset = (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280) ? botInfoWidth : 0;
+        const computedWidth = offsetFromRight - currentBotInfoOffset;
+        const boundedW = Math.min(460, Math.max(220, computedWidth));
+        setChatSessionsWidth(boundedW);
+        try { localStorage.setItem("agent360_chat_sessions_w", boundedW.toString()); } catch {}
       }
     };
 
@@ -1540,9 +1558,10 @@ export function GrokBotWorkspace() {
       setIsResizingComputerSplit(false);
       setIsResizingLeft(false);
       setIsResizingRight(false);
+      setIsResizingChatSessions(false);
     };
 
-    if (isResizingLeft || isResizingRight || isResizingComputerSplit) {
+    if (isResizingLeft || isResizingRight || isResizingComputerSplit || isResizingChatSessions) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
@@ -1555,7 +1574,7 @@ export function GrokBotWorkspace() {
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isResizingLeft, isResizingRight, isResizingComputerSplit]);
+  }, [isResizingLeft, isResizingRight, isResizingComputerSplit, isResizingChatSessions, isBotInfoCollapsed, botInfoWidth]);
 
   // Collapse states per user request with localStorage persistence
   // 0. isLeftSidebarCollapsed: collapsible left sidebar showing only avatars & status
@@ -6053,14 +6072,27 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <aside
         id="tour-chat-sessions"
-        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok ${
+        style={{
+          width: !isChatListCollapsed && typeof window !== "undefined" && window.innerWidth >= 1024 ? `${chatSessionsWidth}px` : undefined,
+        }}
+        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok relative ${
           mobileChatsOpen
-            ? "flex w-[85vw] max-w-[320px] sm:w-[280px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
+            ? "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
             : isChatListCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0 lg:translate-x-0"
-            : "flex w-[85vw] max-w-[320px] sm:w-[280px] lg:w-[280px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-none"
+            : "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-none"
         }`}
       >
+        {/* Subtle, Slim Resizer Splitter between Chat and Session Chats */}
+        {!isChatListCollapsed && (
+          <div
+            onMouseDown={() => setIsResizingChatSessions(true)}
+            className="hidden lg:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/40 active:bg-[#ff7a00] transition-colors z-30 -ml-1 group"
+            title="Kéo để chỉnh độ rộng danh sách chat"
+          >
+            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
+          </div>
+        )}
         {/* Header & Collapse Toggle */}
         {(isChatListCollapsed && !mobileChatsOpen) ? (
           <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center shrink-0">
