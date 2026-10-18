@@ -1370,6 +1370,8 @@ export function GrokBotWorkspace() {
     }
   });
   const [chats, setChats] = useState<AgentSession[]>([]);
+  // Which agent the current `chats` list belongs to (avoids loading agent A's chat under agent B while switching).
+  const [chatsAgentId, setChatsAgentId] = useState<string>("");
   // Map of agentId -> recent session title
   const [agentRecentSessions, setAgentRecentSessions] = useState<Record<string, string>>(() => {
     try {
@@ -2661,6 +2663,7 @@ export function GrokBotWorkspace() {
       try {
         const loadedChats = await fetchAgentChats(selectedAgentId);
         setChats(loadedChats);
+        setChatsAgentId(selectedAgentId);
         if (loadedChats.length > 0 && loadedChats[0]?.title) {
           setAgentRecentSessions((prev) => {
             const next = { ...prev, [selectedAgentId]: loadedChats[0].title };
@@ -2690,7 +2693,8 @@ export function GrokBotWorkspace() {
 
   // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
   // Client-created sessions (session-*) are not in the server list yet and are allowed.
-  const selectedChatKnown = !!selectedChatId && (selectedChatId.startsWith("session-") || chats.some((c) => c.id === selectedChatId));
+  const selectedChatKnown = !!selectedChatId && (selectedChatId.startsWith("session-")
+    || (chatsAgentId === selectedAgentId && chats.some((c) => c.id === selectedChatId)));
 
   // When selectedChatId changes, fetch real messages with instant client cache display
   useEffect(() => {
