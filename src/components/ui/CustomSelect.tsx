@@ -87,11 +87,26 @@ export function CustomSelect({
         return;
       }
     };
+    const handleWindowBlur = () => {
+      setIsOpen(false);
+    };
+
+    const handleWindowScroll = (e: Event) => {
+      // If scroll happens outside the dropdown container, dismiss
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("scroll", handleWindowScroll, true);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("scroll", handleWindowScroll, true);
     };
   }, [isOpen]);
 
