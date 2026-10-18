@@ -24,7 +24,7 @@ import {
   CheckCheck,
   Edit2,
   Wifi,
-  Maximize2,
+  Camera, Maximize2,
   Minimize2,
   Search,
   Plus,
@@ -1338,7 +1338,13 @@ export function GrokBotWorkspace() {
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
-  const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">("default");
+  const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
+    try {
+      const saved = localStorage.getItem(`skyer_loop_mode_${selectedAgentId || "mons"}`);
+      if (saved === "default" || saved === "goal" || saved === "mission") return saved;
+    } catch {}
+    return "default";
+  });
   const [loopPulse, setLoopPulse] = useState<string | null>(null);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(false);
@@ -1454,12 +1460,30 @@ export function GrokBotWorkspace() {
     }
   });
 
+    // Adjustable Computer Split Ratio (20% to 80% with 35% default)
+  const [computerChatWidthPercent, setComputerChatWidthPercent] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem("agent360_computer_chat_percent");
+      return v ? parseFloat(v) : 35;
+    } catch {
+      return 35;
+    }
+  });
+  const [isResizingComputerSplit, setIsResizingComputerSplit] = useState(false);
+  const [isReloadingBrowser, setIsReloadingBrowser] = useState(false);
+  const [browserIframeKey, setBrowserIframeKey] = useState(0);
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isResizingLeft) {
+      if (isResizingComputerSplit) {
+        // Calculate percentage of clientX relative to window.innerWidth
+        const rawPercent = (e.clientX / window.innerWidth) * 100;
+        const boundedPercent = Math.min(75, Math.max(20, rawPercent));
+        setComputerChatWidthPercent(boundedPercent);
+        try { localStorage.setItem("agent360_computer_chat_percent", boundedPercent.toFixed(1)); } catch {}
+      } else if (isResizingLeft) {
         const newW = Math.min(480, Math.max(240, e.clientX));
         setLeftSidebarWidth(newW);
         try { localStorage.setItem("agent360_left_sidebar_w", newW.toString()); } catch {}
@@ -1471,11 +1495,12 @@ export function GrokBotWorkspace() {
     };
 
     const handleMouseUp = () => {
+      setIsResizingComputerSplit(false);
       setIsResizingLeft(false);
       setIsResizingRight(false);
     };
 
-    if (isResizingLeft || isResizingRight) {
+    if (isResizingLeft || isResizingRight || isResizingComputerSplit) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "col-resize";
@@ -1488,7 +1513,7 @@ export function GrokBotWorkspace() {
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isResizingLeft, isResizingRight]);
+  }, [isResizingLeft, isResizingRight, isResizingComputerSplit]);
 
   // Collapse states per user request with localStorage persistence
   // 0. isLeftSidebarCollapsed: collapsible left sidebar showing only avatars & status
@@ -2377,9 +2402,24 @@ export function GrokBotWorkspace() {
       setCurrentAgentSubBindings([]);
     });
 
-    fetchAgentLoopMode(selectedAgentId).then((cfg) => {
-      if (cfg?.mode) setActiveLoopMode(cfg.mode);
-    });
+    // Restore persistent Loop Mode per agent from localStorage with backend sync fallback
+    try {
+      const localSaved = localStorage.getItem(`skyer_loop_mode_${selectedAgentId}`);
+      if (localSaved === "default" || localSaved === "goal" || localSaved === "mission") {
+        setActiveLoopMode(localSaved);
+      } else {
+        fetchAgentLoopMode(selectedAgentId).then((cfg) => {
+          if (cfg?.mode) {
+            setActiveLoopMode(cfg.mode);
+            localStorage.setItem(`skyer_loop_mode_${selectedAgentId}`, cfg.mode);
+          }
+        });
+      }
+    } catch {
+      fetchAgentLoopMode(selectedAgentId).then((cfg) => {
+        if (cfg?.mode) setActiveLoopMode(cfg.mode);
+      });
+    }
   }, [selectedAgentId, mcpRefreshTrigger]);
 
   // Fetch agent-specific chats whenever selectedAgentId changes
@@ -2516,6 +2556,9 @@ export function GrokBotWorkspace() {
   const handleSelectLoopMode = async (mode: "default" | "goal" | "mission") => {
     setActiveLoopMode(mode);
     setLoopPulse(mode);
+    try {
+      localStorage.setItem(`skyer_loop_mode_${selectedAgentId}`, mode);
+    } catch {}
     setTimeout(() => setLoopPulse(null), 400);
     await updateAgentLoopMode(selectedAgentId, mode);
   };
@@ -2673,7 +2716,61 @@ export function GrokBotWorkspace() {
     URL.revokeObjectURL(url);
   };
 
-    const handleExportSessionMarkdown = () => {
+      // Export conversation as Word (.docx / rich-HTML MIME container)
+  const handleExportSessionDocx = () => {
+    if (messages.length === 0) return;
+    const title = `Skyer AI Session Report: ${selectedAgent.name}`;
+    const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${title}</title>
+        <style>
+          body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #111; }
+          h1 { color: #ff7a00; font-size: 18pt; border-bottom: 2px solid #ff7a00; padding-bottom: 6px; }
+          .meta { font-size: 9.5pt; color: #555; margin-bottom: 20px; }
+          .turn { margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+          .user { background: #fdf6ee; border-left: 4px solid #ff7a00; }
+          .bot { background: #f9f9fb; border-left: 4px solid #0284c7; }
+          .role { font-weight: bold; font-size: 11pt; margin-bottom: 6px; }
+          .time { font-size: 8.5pt; color: #888; font-weight: normal; }
+          .content { white-space: pre-wrap; }
+          .receipt { margin-top: 10px; font-family: Consolas, monospace; font-size: 9pt; background: #eee; padding: 8px; border-radius: 4px; }
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="meta">
+          <strong>Agent:</strong> ${selectedAgent.name} (@${selectedAgent.slug}) | <strong>Node:</strong> ${selectedAgent.node} | <strong>Model:</strong> ${selectedAgent.model} | <strong>Exported:</strong> ${new Date().toLocaleString()}
+        </div>
+        ${messages.map((m) => `
+          <div class="turn ${m.role === 'user' ? 'user' : 'bot'}">
+            <div class="role">${m.role === 'user' ? '👤 User Prompt' : '🤖 ' + selectedAgent.name} <span class="time">(${m.timestamp})</span></div>
+            <div class="content">${m.content}</div>
+            ${m.steps && m.steps.length > 0 ? `
+              <div class="receipt">
+                <strong>Execution Steps & Tool Receipts:</strong><br/>
+                ${m.steps.map((s) => s.kind === 'tool_call' ? `• Tool: <code>${s.tool}</code> (${s.state})` : `• <em>${s.text}</em>`).join('<br/>')}
+              </div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['﻿', htmlContent], {
+      type: 'application/msword;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `skyer-session-${selectedAgent.slug}-${selectedChatId || 'default'}.doc`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportSessionMarkdown = () => {
     if (messages.length === 0) return;
     const header = `# Skyer Agent Session Export: ${selectedAgent.name}\n` +
       `- **Agent:** ${selectedAgent.name} (@${selectedAgent.slug})\n` +
@@ -2906,6 +3003,24 @@ export function GrokBotWorkspace() {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "g") {
         e.preventDefault();
         setIsTopologyModalOpen((prev) => !prev);
+        return;
+      }
+
+      // 1e. Fast Toggle Virtual Computer Workspace (Ctrl+M or Cmd+M)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        handleToggleComputerSplit();
+        return;
+      }
+
+      // 1f. Fast Toggle Add to prompt Popover (Ctrl+/ or Cmd+/)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "/") {
+        e.preventDefault();
+        setIsPlusMenuOpen((prev) => {
+          const next = !prev;
+          if (next) setPlusMenuSearch("");
+          return next;
+        });
         return;
       }
 
@@ -3457,100 +3572,72 @@ export function GrokBotWorkspace() {
               </div>
 
               {/* User Profile Dropdown Menu in Collapsed State */}
-              {isUserMenuOpen && (
-                <div className="absolute bottom-2 left-[calc(100%+8px)] w-64 rounded-2xl bg-[#14141c]/95 border border-[#2e2e42] p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 z-50">
-                  <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
-                    <div className="text-xs font-semibold text-white">Dang M</div>
-                    <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setSettingsModalTab("appearance");
-                        setIsSettingsModalOpen(true);
-                      }}
-                      className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors border border-transparent hover:border-[#ff7a00]/30"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-[#ff7a00]/20 text-[#ff7a00]">
-                          <Settings size={14} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-white">Cài đặt Workspace</span>
-                          <span className="text-[10px] text-neutral-400">Giao diện, Tiếng nói, Âm thanh</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.5 rounded">
-                        Mở
-                      </span>
-                    </div>
-                    <div className="h-px bg-[#222230] my-1" />
-                    <div
-                      id="tour-command-palette-trigger"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setIsCommandPaletteOpen(true);
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Command size={13} className="text-[#ff7a00]" />
-                        <span>Command Palette</span>
-                      </div>
-                      <kbd className="px-1.5 py-0.5 rounded bg-[#222230] border border-[#303044] text-[9px] font-mono text-neutral-400">Ctrl+K</kbd>
-                    </div>
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setIsSettingsModalOpen(true);
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Settings size={13} className="text-[#ff7a00]" />
-                        <span>Cài đặt & Tuỳ chọn</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-[#ff7a00]">Settings</span>
-                    </div>
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleToggleBotInfo(false);
-                        setRightTab("Apps");
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                    >
-                      <span>Connected Apps</span>
-                      <span className="text-[10px] font-mono text-neutral-500">{connectedAppIds.length} apps</span>
-                    </div>
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleToggleBotInfo(false);
-                        setRightTab("Details");
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                    >
-                      <span>Fleet Diagnostics</span>
-                      <span className="text-[10px] font-mono text-emerald-400">Healthy</span>
-                    </div>
-                    <a
-                      href="https://community-agent360.antares.vn"
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>Community Forum</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-neutral-500 group-hover:text-[#ff7a00]">↗</span>
-                    </a>
-                  </div>
+              <DropdownMenu
+                isOpen={isUserMenuOpen}
+                onClose={() => setIsUserMenuOpen(false)}
+                anchorRef={userMenuRef}
+                align="left"
+                placement="top"
+                width="w-64"
+              >
+                <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
+                  <div className="text-xs font-semibold text-white">Dang M</div>
+                  <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
                 </div>
-              )}
+                <DropdownMenuItem
+                  icon={<Settings size={14} className="text-[#ff7a00]" />}
+                  label="Cài đặt Workspace"
+                  badge="Mở"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setSettingsModalTab("appearance");
+                    setIsSettingsModalOpen(true);
+                  }}
+                />
+                <DropdownMenuItem
+                  icon={<Command size={13} className="text-[#ff7a00]" />}
+                  label="Command Palette"
+                  badge="Ctrl+K"
+                  badgeColor="text-neutral-400"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setIsCommandPaletteOpen(true);
+                  }}
+                />
+                <DropdownMenuSection label="Hệ thống">
+                  <DropdownMenuItem
+                    icon={<Globe size={13} className="text-blue-400" />}
+                    label="Connected Apps"
+                    badge={connectedAppIds.length + ' apps'}
+                    badgeColor="text-neutral-400"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      handleToggleBotInfo(false);
+                      setRightTab("Apps");
+                    }}
+                  />
+                  <DropdownMenuItem
+                    icon={<Activity size={13} className="text-emerald-400" />}
+                    label="Fleet Diagnostics"
+                    badge="Healthy"
+                    badgeColor="text-emerald-400"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      handleToggleBotInfo(false);
+                      setRightTab("Details");
+                    }}
+                  />
+                  <DropdownMenuItem
+                    icon={<ExternalLink size={13} className="text-neutral-400" />}
+                    label="Community Forum"
+                    badge="↗"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      window.open("https://community-agent360.antares.vn", "_blank");
+                    }}
+                  />
+                </DropdownMenuSection>
+              </DropdownMenu>
             </div>
           </>
         ) : (
@@ -3809,88 +3896,73 @@ export function GrokBotWorkspace() {
                 </div>
               </div>
 
-              {/* User Profile Dropdown Menu */}
-              {isUserMenuOpen && (
-                <div className="absolute bottom-[calc(100%+8px)] left-2 right-2 rounded-2xl bg-[#14141c]/95 border border-[#2e2e42] p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 z-50">
-                  <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
-                    <div className="text-xs font-semibold text-white">Dang M</div>
-                    <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setIsSettingsModalOpen(true);
-                      }}
-                      className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors border border-transparent hover:border-[#ff7a00]/30"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-[#ff7a00]/20 text-[#ff7a00]">
-                          <Settings size={14} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-white">Cài đặt Workspace</span>
-                          <span className="text-[10px] text-neutral-400">Theme, Ngôn ngữ, Âm báo, Export</span>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.5 rounded">
-                        Open
-                      </span>
-                    </div>
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setIsCommandPaletteOpen(true);
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Command size={13} className="text-[#ff7a00]" />
-                        <span>Command Palette</span>
-                      </div>
-                      <kbd className="px-1.5 py-0.5 rounded bg-[#222230] border border-[#303044] text-[9px] font-mono text-neutral-400">Ctrl+K</kbd>
-                    </div>
-                    <div className="h-px bg-[#222230] my-1" />
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleToggleBotInfo(false);
-                        setRightTab("Apps");
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                    >
-                      <span>Connected Apps</span>
-                      <span className="text-[10px] font-mono text-neutral-500">{connectedAppIds.length} apps</span>
-                    </div>
-                    <div
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleToggleBotInfo(false);
-                        setRightTab("Details");
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
-                    >
-                      <span>Fleet Diagnostics</span>
-                      <span className="text-[10px] font-mono text-emerald-400">Healthy</span>
-                    </div>
-                    <a
-                      href="https://community-agent360.antares.vn"
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>Community Forum</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-neutral-500 group-hover:text-[#ff7a00]">
-                        ↗
-                      </span>
-                    </a>
-                  </div>
+              {/* User Profile Dropdown Menu in Expanded State */}
+              <DropdownMenu
+                isOpen={isUserMenuOpen}
+                onClose={() => setIsUserMenuOpen(false)}
+                anchorRef={userMenuRef}
+                align="left"
+                placement="top"
+                width="w-72"
+              >
+                <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
+                  <div className="text-xs font-semibold text-white">Dang M</div>
+                  <div className="text-[10px] font-mono text-neutral-400">dangm@viebal.com</div>
                 </div>
-              )}
+                <DropdownMenuItem
+                  icon={<Settings size={14} className="text-[#ff7a00]" />}
+                  label="Cài đặt Workspace"
+                  badge="Mở"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setSettingsModalTab("appearance");
+                    setIsSettingsModalOpen(true);
+                  }}
+                />
+                <DropdownMenuItem
+                  icon={<Command size={13} className="text-[#ff7a00]" />}
+                  label="Command Palette"
+                  badge="Ctrl+K"
+                  badgeColor="text-neutral-400"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    setIsCommandPaletteOpen(true);
+                  }}
+                />
+                <DropdownMenuSection label="Hệ thống">
+                  <DropdownMenuItem
+                    icon={<Globe size={13} className="text-blue-400" />}
+                    label="Connected Apps"
+                    badge={connectedAppIds.length + ' apps'}
+                    badgeColor="text-neutral-400"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      handleToggleBotInfo(false);
+                      setRightTab("Apps");
+                    }}
+                  />
+                  <DropdownMenuItem
+                    icon={<Activity size={13} className="text-emerald-400" />}
+                    label="Fleet Diagnostics"
+                    badge="Healthy"
+                    badgeColor="text-emerald-400"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      handleToggleBotInfo(false);
+                      setRightTab("Details");
+                    }}
+                  />
+                  <DropdownMenuItem
+                    icon={<ExternalLink size={13} className="text-neutral-400" />}
+                    label="Community Forum"
+                    badge="↗"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      window.open("https://community-agent360.antares.vn", "_blank");
+                    }}
+                  />
+                </DropdownMenuSection>
+              </DropdownMenu>
             </div>
           </>
         )}
@@ -3912,8 +3984,8 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <main
         style={{
-          width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1280 ? '35%' : isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '40%' : undefined,
-          flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1280 ? '0 0 35%' : isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '0 0 40%' : undefined,
+          width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${computerChatWidthPercent}%` : undefined,
+          flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `0 0 ${computerChatWidthPercent}%` : undefined,
         }}
         className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0"
       >
@@ -5209,7 +5281,17 @@ export function GrokBotWorkspace() {
       {isComputerSplitOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent);
         return (
-          <section
+          <>
+            {/* Draggable Splitter Handle between Chat and Computer */}
+            <div
+              onMouseDown={() => setIsResizingComputerSplit(true)}
+              className="hidden lg:flex w-2.5 h-full cursor-col-resize hover:bg-[#ff7a00]/40 active:bg-[#ff7a00] transition-colors items-center justify-center shrink-0 z-30 select-none group bg-[#111118] border-x border-[#1c1c24]"
+              title={t("computer.dragSplitterTitle")}
+            >
+              <div className="w-1 h-8 rounded-full bg-neutral-600 group-hover:bg-[#ff7a00] group-hover:scale-y-125 transition-all" />
+            </div>
+
+            <section
             aria-label="Virtual Computer Interactive Workspace"
             className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
           >
@@ -5228,8 +5310,42 @@ export function GrokBotWorkspace() {
                 </span>
               </div>
 
-              {/* Action Buttons: Fullscreen modal, Open in new tab, and Close Split */}
+              {/* Action Buttons: Screenshot, Reload, Fullscreen modal, Open in new tab, and Close Split */}
               <div className="flex items-center gap-1.5 shrink-0">
+                {/* 1. Quick Screenshot Button */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    triggerHaptic();
+                    playNotificationChime("retro");
+                    // Trigger simulated screen capture into composer
+                    const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${new Date().toLocaleTimeString()} Attached]`;
+                    setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
+                    textareaRef.current?.focus();
+                  }}
+                  className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-cyan-400 flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
+                  title={t("computer.screenshotBtn")}
+                >
+                  <Camera size={13} className="text-cyan-400" />
+                  <span className="hidden xl:inline text-[11px]">{t("computer.screenshotBtn")}</span>
+                </button>
+
+                {/* 2. Reload Session Button */}
+                <button
+                  type="button"
+                  disabled={isReloadingBrowser}
+                  onClick={() => {
+                    triggerHaptic();
+                    setIsReloadingBrowser(true);
+                    setBrowserIframeKey((k) => k + 1);
+                    setTimeout(() => setIsReloadingBrowser(false), 900);
+                  }}
+                  className="h-8 px-2 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
+                  title={t("computer.reloadProfileBtn")}
+                >
+                  <RefreshCw size={12} className={isReloadingBrowser ? "animate-spin text-[#ff7a00]" : ""} />
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleSetBrowserModalOpen(true)}
@@ -5280,6 +5396,7 @@ export function GrokBotWorkspace() {
               />
             </div>
           </section>
+          </>
         );
       })()}
 
@@ -5683,6 +5800,17 @@ export function GrokBotWorkspace() {
                               />
 
                               <DropdownMenuSection label="Xuất dữ liệu">
+                                <DropdownMenuItem
+                                  icon={<Download size={12} className="text-blue-400" />}
+                                  label="Word Document"
+                                  badge=".doc"
+                                  badgeColor="text-blue-400"
+                                  onClick={() => {
+                                    handleSelectChat(chat);
+                                    setTimeout(() => handleExportSessionDocx(), 50);
+                                    setActiveChatMenuId(null);
+                                  }}
+                                />
                                 <DropdownMenuItem
                                   icon={<Download size={12} className="text-[#ff7a00]" />}
                                   label="Báo cáo Markdown"

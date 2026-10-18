@@ -715,4 +715,16 @@ export const en = {
   "topoModal.badge": "{count} Teammates",
   "topoModal.desc": "Autonomous multi-agent network mesh, task delegation pipelines, and realtime ping telemetry",
 
+
+  "shortcuts.toggleComputer": "Toggle Virtual Computer Workspace (Auto-collapse sidebars)",
+
+
+  // Virtual Computer Toolbar & Splitter
+  "computer.screenshotBtn": "Capture screenshot to chat",
+  "computer.screenshotSuccess": "Screenshot attached to composer!",
+  "computer.reloadProfileBtn": "Reload browser session (Cookie / State)",
+  "computer.reloading": "Reloading...",
+  "computer.reloaded": "Reloaded successfully!",
+  "computer.dragSplitterTitle": "Drag to resize split between Chat and Virtual Computer Workspace",
+
 };

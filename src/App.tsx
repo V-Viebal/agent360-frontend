@@ -1,3 +1,4 @@
+import { CallbackPage } from './pages/CallbackPage';
 import { Routes, Route, Navigate } from "react-router-dom";
 import { GrokBotWorkspace } from "./pages/GrokBotWorkspace";
 import { LandingPage } from "./pages/LandingPage";
@@ -33,7 +34,10 @@ export default function App() {
       />
       <Route path="/landing" element={<Navigate to="/" replace />} />
 
-      {/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
+            {/* Logto OIDC Auth Callback */}
+      <Route path="/callback" element={<CallbackPage />} />
+
+{/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
       <Route path="/app" element={<GrokBotWorkspace />} />
       <Route path="/workspace" element={<Navigate to="/app" replace />} />
 

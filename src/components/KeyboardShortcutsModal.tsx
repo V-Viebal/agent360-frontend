@@ -31,6 +31,20 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     customizable: true,
   },
   {
+    id: "toggle_computer_workspace",
+    defaultKeys: ["Ctrl", "M"],
+    description: "Toggle Virtual Computer Workspace (Auto-collapse sidebars)",
+    category: "Navigation & Search",
+    customizable: true,
+  },
+  {
+    id: "toggle_plus_menu",
+    defaultKeys: ["Ctrl", "/"],
+    description: "Toggle Add to prompt menu (Loop mode, Connected Apps & Subagents)",
+    category: "Dialogue & Sessions",
+    customizable: true,
+  },
+  {
     id: "toggle_left_sidebar",
     defaultKeys: ["Ctrl", "B"],
     description: "Toggle left Agents sidebar (collapse / expand)",

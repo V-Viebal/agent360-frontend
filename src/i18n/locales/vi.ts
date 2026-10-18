@@ -715,4 +715,16 @@ export const vi = {
   "topoModal.badge": "{count} Đồng đội",
   "topoModal.desc": "Mạng lưới liên kết, phân luồng công việc và kiểm tra độ trễ phản hồi thời gian thực",
 
+
+  "shortcuts.toggleComputer": "Đóng/Mở Không gian Máy tính Ảo (Tự động thu gọn thanh biên)",
+
+
+  // Virtual Computer Toolbar & Splitter
+  "computer.screenshotBtn": "Chụp màn hình đưa vào chat",
+  "computer.screenshotSuccess": "Đã đính kèm ảnh chụp màn hình vào ô soạn thảo!",
+  "computer.reloadProfileBtn": "Làm mới phiên trình duyệt (Cookie / Session)",
+  "computer.reloading": "Đang làm mới...",
+  "computer.reloaded": "Đã làm mới thành công!",
+  "computer.dragSplitterTitle": "Kéo chuột để co giãn tỉ lệ giữa Chat và Màn hình Máy tính Ảo",
+
 };

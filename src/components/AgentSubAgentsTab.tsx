@@ -1,3 +1,4 @@
+import { CustomSelect } from "./ui/CustomSelect";
 import { useTranslation } from "../i18n/LanguageContext";
 import { operatorKey } from "../services/a2aApi";
 import { useEffect, useMemo, useState } from "react";
@@ -352,10 +353,13 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
 
           <div className="p-2.5 rounded-xl border border-dashed border-[#2a2a38] bg-[#121218] space-y-1.5">
             <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1"><Plus size={12} /> Bind sub-agent</div>
-            <select value={form.child} onChange={(e) => setForm({ ...form, child: e.target.value })} className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-              <option value="">{t("subagents.selectAgent")}</option>
-              {candidates.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <CustomSelect
+              value={form.child}
+              onChange={(val) => setForm({ ...form, child: val })}
+              placeholder={t("subagents.selectAgent")}
+              options={candidates.map((c) => ({ value: c, label: c }))}
+              className="w-full"
+            />
             <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <input value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} placeholder="Capabilities, comma separated" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <button disabled={!form.child || busy === "bind"} onClick={addBinding} className="w-full py-1.5 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1">
@@ -369,15 +373,25 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
         <div className="space-y-2">
           <div className="p-2.5 rounded-xl border border-[#2a2a38] bg-[#121218] space-y-1.5">
             <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1"><Send size={12} /> New delegation</div>
-            <div className="flex gap-1">
-              <select value={dlg.child} onChange={(e) => setDlg({ ...dlg, child: e.target.value })} className="flex-1 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-                <option value="">{t("subagents.subagentPlaceholder")}</option>
-                {bindings.filter((b) => b.enabled).map((b) => <option key={b.child_agent_id} value={b.child_agent_id}>{b.child_agent_id}</option>)}
-              </select>
-              <select value={dlg.mode} onChange={(e) => setDlg({ ...dlg, mode: e.target.value as DelegationMode })} className="bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-                <option value="sync">{t("subagents.sync")}</option>
-                <option value="async">{t("subagents.async")}</option>
-              </select>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <CustomSelect
+                  value={dlg.child}
+                  onChange={(val) => setDlg({ ...dlg, child: val })}
+                  placeholder={t("subagents.subagentPlaceholder")}
+                  options={bindings.filter((b) => b.enabled).map((b) => ({ value: b.child_agent_id, label: b.child_agent_id }))}
+                />
+              </div>
+              <div className="w-32">
+                <CustomSelect
+                  value={dlg.mode}
+                  onChange={(val) => setDlg({ ...dlg, mode: val as DelegationMode })}
+                  options={[
+                    { value: "sync", label: t("subagents.sync") },
+                    { value: "async", label: t("subagents.async") }
+                  ]}
+                />
+              </div>
             </div>
             <textarea value={dlg.objective} onChange={(e) => setDlg({ ...dlg, objective: e.target.value })} rows={2} placeholder="Objective" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <textarea value={dlg.criteria} onChange={(e) => setDlg({ ...dlg, criteria: e.target.value })} rows={2} placeholder="Acceptance criteria, one per line (e.g. Output contains 'DONE')" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
