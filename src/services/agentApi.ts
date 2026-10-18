@@ -138,7 +138,8 @@ export interface ModelOption {
 
 export async function fetchAvailableModels(): Promise<ModelOption[]> {
   try {
-    let res = await fetch(`${API_BASE_URL}/agents/models`, {
+    // compact view: ids/names only (~a few KB) instead of the ~820 KB raw provider catalog
+    let res = await fetch(`${API_BASE_URL}/agents/models?view=compact`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {

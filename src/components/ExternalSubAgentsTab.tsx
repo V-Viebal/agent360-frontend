@@ -48,7 +48,12 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
     } else setTasks([]);
     if (failed) setMsg(`Directory load failed: ${failed.reason?.message || failed.reason}`);
   };
-  useEffect(() => { load(); const i = setInterval(load, 8000); return () => clearInterval(i); }, [agentId]);
+  useEffect(() => {
+    load();
+    // Directory/ledger change slowly; skip polls while the tab is hidden.
+    const i = setInterval(() => { if (!document.hidden) load(); }, 20000);
+    return () => clearInterval(i);
+  }, [agentId]);
 
   const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
     setBusy(key); setMsg(null);

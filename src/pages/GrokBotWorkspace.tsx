@@ -2325,6 +2325,7 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     let isMounted = true;
     const probePing = async () => {
+      if (document.hidden) return; // no background-tab probes
       const start = performance.now();
       try {
         const res = await fetch("/api/agents/models", { method: "HEAD" });
@@ -2337,12 +2338,12 @@ export function GrokBotWorkspace() {
       }
     };
     probePing();
-    const interval = setInterval(probePing, 15000); // Probe every 15s
+    const interval = setInterval(probePing, 30000); // Probe every 30s while visible
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [selectedAgentId]);
+  }, []);
 
     const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
