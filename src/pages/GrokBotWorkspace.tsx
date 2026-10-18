@@ -114,6 +114,7 @@ import { requestPermission, queryPermissionStatus } from "../services/permission
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
+import { AgentBrowserInfo, agentBrowserImageUrl, fetchAgentBrowser, focusAgentBrowser } from "../services/agentBrowserApi";
 
 
 
@@ -755,19 +756,102 @@ export interface AgentBrowserMeta {
   label: string;
   isLive: boolean;
   hostNode: string;
-  cdpEndpoint: string;
+  profile: string;
   mode: string;
 }
 
-export function getAgentBrowserUrl(agent: InfraAgent): AgentBrowserMeta {
+// Per-agent browser identity resolved by the backend (/api/agents/{id}/browser). Each instance
+// has one Selkies desktop; agents differ by their own Chromium profile window.
+export function getAgentBrowserUrl(agent: InfraAgent, info?: AgentBrowserInfo | null): AgentBrowserMeta {
   return {
-    url: 'https://browser.hmz.one',
+    url: info?.viewerUrl || "",
     label: `${agent.name} Computer`,
-    isLive: true,
-    hostNode: 'Core VPS Cluster',
-    cdpEndpoint: 'https://cdp-browser.hmz.one',
-    mode: 'interactive CDP / noVNC',
+    isLive: Boolean(info?.cdpReachable && info?.profileWindowOpen),
+    hostNode: info ? `${info.node} · ${info.service}` : agent.node || "",
+    profile: info?.profile || "",
+    mode: "Selkies desktop · CDP",
   };
+}
+
+/**
+ * Interactive Selkies desktop for one agent. Focuses the agent's own profile window first,
+ * reloads the stream when the page returns from background (mobile Safari/Chrome suspend
+ * websockets), and retries with backoff if the desktop is unreachable.
+ */
+function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url: string; title: string; profile: string }) {
+  const [src, setSrc] = useState<string>("");
+  const [attempt, setAttempt] = useState(0);
+  const hiddenAt = useRef<number>(0);
+  useEffect(() => {
+    let alive = true;
+    focusAgentBrowser(agentId).finally(() => { if (alive) setSrc(url); });
+    return () => { alive = false; };
+  }, [agentId, url, attempt]);
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) { hiddenAt.current = Date.now(); return; }
+      // Back from >30 s in background: the websocket is usually dead on phones; reconnect cleanly.
+      if (hiddenAt.current && Date.now() - hiddenAt.current > 30000) setAttempt((a) => a + 1);
+      hiddenAt.current = 0;
+    };
+    const onOnline = () => setAttempt((a) => a + 1);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("online", onOnline);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("online", onOnline); };
+  }, []);
+  return (
+    <>
+      {src && (
+        <iframe
+          key={`${src}#${attempt}`}
+          src={src}
+          title={title}
+          className="w-full h-full border-0 bg-black"
+          allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
+          allowFullScreen
+          style={{ touchAction: "none" }}
+        />
+      )}
+      {profile && (
+        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-neutral-300 pointer-events-none">
+          profile: {profile}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setAttempt((a) => a + 1)}
+        className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-[#1c1c26]/90 border border-[#2c2c3e] text-[11px] font-mono text-neutral-300 hover:text-white"
+        title="Reconnect stream"
+      >
+        Reconnect
+      </button>
+    </>
+  );
+}
+
+/** Low-cost live preview: the agent's own tab screenshot, refreshed only while visible. */
+function AgentBrowserPreview({ agentId, enabled }: { agentId: string; enabled: boolean }) {
+  const [nonce, setNonce] = useState(() => Date.now());
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    const i = setInterval(() => { if (!document.hidden) setNonce(Date.now()); }, 5000);
+    return () => clearInterval(i);
+  }, [enabled, agentId]);
+  if (!enabled) return null;
+  return failed ? (
+    <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-neutral-500">
+      Preview unavailable — open full screen
+    </div>
+  ) : (
+    <img
+      src={agentBrowserImageUrl(agentId, nonce)}
+      alt="Agent browser preview"
+      className="absolute inset-0 w-full h-full object-contain"
+      onError={() => setFailed(true)}
+      onLoad={() => failed && setFailed(false)}
+    />
+  );
 }
 
 interface QuickSuggestion {
@@ -2367,6 +2451,25 @@ export function GrokBotWorkspace() {
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
+
+  // The selected agent's own browser (service + Chromium profile); refreshed while the Computer surface is visible.
+  const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
+  const agentBrowserFor = selectedAgent?.slug || selectedAgent?.id || "";
+  useEffect(() => {
+    if (!agentBrowserFor) return;
+    let alive = true;
+    const ctrl = new AbortController();
+    const load = () => {
+      if (document.hidden) return;
+      fetchAgentBrowser(agentBrowserFor, ctrl.signal)
+        .then((info) => alive && setAgentBrowser(info))
+        .catch(() => {});
+    };
+    setAgentBrowser(null);
+    load();
+    const i = setInterval(load, 20000);
+    return () => { alive = false; ctrl.abort(); clearInterval(i); };
+  }, [agentBrowserFor]);
 
   // Switch agent
   const handleSelectAgent = (agent: InfraAgent) => {
@@ -5693,7 +5796,7 @@ export function GrokBotWorkspace() {
             {/* Tab Content */}
             <div className="flex-1 p-3.5 overflow-y-auto">
               {rightTab === "Computer" && (() => {
-                const browserTarget = getAgentBrowserUrl(selectedAgent);
+                const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
                 return (
                   <div className="flex flex-col w-full">
                     {/* Live Browser Fixed-Height Responsive Card */}
@@ -5734,27 +5837,14 @@ export function GrokBotWorkspace() {
                         className="cursor-pointer group flex items-center justify-center rounded-b-2xl"
                         title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
                       >
-                        {/* Shrunk virtual viewport container (1024x768 virtual screen scaled to fit container) */}
-                        <div 
-                          style={{
-                            width: "1024px",
-                            height: "768px",
-                            position: "absolute",
-                            top: 0,
-                            left: "50%",
-                            transform: "translateX(-50%) scale(0.25)",
-                            transformOrigin: "top center",
-                            pointerEvents: "none"
-                          }}
-                        >
-                          <iframe
-                            key={`${selectedAgent.id}-${browserTarget.url}`}
-                            src={browserTarget.url}
-                            title={`${selectedAgent.name} Computer`}
-                            style={{ width: "100%", height: "100%", border: "none" }}
-                            loading="lazy"
-                          />
-                        </div>
+                        {/* The full Selkies desktop is only opened on demand (modal); a hidden 1024x768 live
+                            iframe kept a second stream running per viewer and resized the shared display. */}
+                        <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
+                        {!browserTarget.isLive && (
+                          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-neutral-500 px-3 text-center">
+                            {agentBrowser === null ? "Resolving agent browser…" : agentBrowser.cdpReachable ? `Opening profile ${agentBrowser.profile}…` : "Browser unreachable"}
+                          </div>
+                        )}
 
                         {/* Hover Overlay: Chế độ mặc định khi người dùng hover vào preview computer */}
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-10 select-none">
@@ -6142,7 +6232,7 @@ export function GrokBotWorkspace() {
       {/* FULL SCREEN INTERACTIVE BROWSER OVERLAY MODAL */}
       {/* ========================================================= */}
       {isBrowserModalOpen && (() => {
-        const browserTarget = getAgentBrowserUrl(selectedAgent);
+        const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
           <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md animate-in fade-in duration-150">
             {/* Top Navigation Bar with Controls & Close Button */}
@@ -6183,13 +6273,19 @@ export function GrokBotWorkspace() {
 
             {/* Interactive Browser Viewport */}
             <main className="flex-1 w-full h-full bg-black relative">
-              <iframe
-                key={`modal-${selectedAgent.id}-${browserTarget.url}`}
-                src={browserTarget.url}
-                title={`${selectedAgent.name} Interactive Workspace`}
-                className="w-full h-full border-0 bg-black"
-                allow="clipboard-read; clipboard-write; fullscreen"
-              />
+              {browserTarget.url ? (
+                <SelkiesViewer
+                  key={`modal-${selectedAgent.id}-${browserTarget.url}`}
+                  agentId={agentBrowserFor}
+                  url={browserTarget.url}
+                  title={`${selectedAgent.name} Interactive Workspace`}
+                  profile={browserTarget.profile}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
+                  {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+                </div>
+              )}
             </main>
           </div>
         );
