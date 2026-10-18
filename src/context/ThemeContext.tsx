@@ -55,7 +55,34 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.colorScheme = resolvedTheme;
   }, [resolvedTheme]);
 
+  const playThemeToggleSound = () => {
+    try {
+      // Micro haptic vibration
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(15);
+      }
+      // Subtle pleasant Web Audio API pop sound (frequency glide from 440Hz to 660Hz in 50ms)
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(480, now);
+        osc.frequency.exponentialRampToValueAtTime(720, now + 0.04);
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+    } catch {}
+  };
+
   const setThemeMode = (mode: ThemeMode) => {
+    playThemeToggleSound();
     setThemeModeState(mode);
     try {
       localStorage.setItem("skyer_theme_mode", mode);

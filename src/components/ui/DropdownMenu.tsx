@@ -132,7 +132,7 @@ export function DropdownMenu({
           : `absolute ${align === "left" ? "left-0" : "right-0"} ${
               placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
             } z-[100]`
-      } ${width} rounded-xl bg-[#14141c]/95 dark:bg-[#14141c]/95 border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
+      } ${width} rounded-xl bg-[#14141c]/95 dark:bg-[#14141c]/95 border border-slate-200 dark:border-[#262634] p-1.5 shadow-lg backdrop-blur-xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
     >
       {children}
     </div>
@@ -161,7 +161,7 @@ export function DropdownMenuItem({
         if (disabled) return;
         onClick(e);
       }}
-      className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-xs disabled:opacity-40 disabled:cursor-not-allowed ${
+      className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-xs disabled:opacity-40 disabled:cursor-not-allowed ${
         isDanger
           ? "text-red-500 hover:text-red-400 hover:bg-red-500/10"
           : "text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c]"

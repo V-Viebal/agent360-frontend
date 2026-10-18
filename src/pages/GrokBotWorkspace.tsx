@@ -4399,22 +4399,22 @@ export function GrokBotWorkspace() {
                   handleToggleBotInfo();
                   setMobileBotInfoOpen((prev) => !prev);
                 }}
-                className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-300 dark:border-[#2a2a34] hover:border-neutral-400 dark:hover:border-[#383848] px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium text-neutral-900 dark:text-white shadow-sm cursor-pointer transition-all select-none"
+                className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none"
               >
                 <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
                 <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent.name}</span>
-                <span className={`hidden sm:inline-flex items-center gap-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold ${
-                  activeLoopMode === 'goal'
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                    : activeLoopMode === 'mission'
-                    ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
-                    : 'bg-amber-500/10 text-[#ff7a00] border-[#ff7a00]/30'
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${
-                    activeLoopMode === 'goal' ? 'bg-emerald-400' : activeLoopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
-                  }`} />
-                  <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : activeLoopMode === 'mission' ? 'Nhiệm vụ' : 'Tiêu chuẩn'}</span>
-                </span>
+                {activeLoopMode !== "default" && (
+                  <span className={`hidden sm:inline-flex items-center gap-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold ${
+                    activeLoopMode === 'goal'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      activeLoopMode === 'goal' ? 'bg-emerald-400' : 'bg-cyan-400'
+                    }`} />
+                    <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : 'Nhiệm vụ'}</span>
+                  </span>
+                )}
               </div>
               {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
               <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex flex-col gap-1 px-3 py-2 rounded-xl bg-white dark:bg-[#161622] border border-neutral-200 dark:border-[#2a2a3c] text-[11px] font-mono shadow-2xl z-[100] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
@@ -5233,7 +5233,7 @@ export function GrokBotWorkspace() {
           {/* Plus Add Popover Menu (Spans 100% full width of chat input and sits directly on top) */}
           <div ref={plusMenuRef} className="relative w-full">
             {isPlusMenuOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-3 w-full rounded-2xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-2xl backdrop-blur-xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
+              <div className="absolute bottom-full left-0 right-0 mb-3 w-full rounded-xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-lg backdrop-blur-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
                 <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
@@ -5824,17 +5824,17 @@ export function GrokBotWorkspace() {
                   handleDropFiles(e.dataTransfer.files);
                 }
               }}
-              className={`relative flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${
+              className={`relative flex items-center gap-2 bg-white dark:bg-[#14141c] border ${
                 isDraggingFiles
                   ? "border-[#ff7a00] ring-2 ring-[#ff7a00]/30 bg-amber-500/5 dark:bg-[#ff7a00]/10"
                   : isRecording
                   ? "border-red-500/60 ring-2 ring-red-500/20"
-                  : "border-transparent hover:border-neutral-200/50 dark:border-white/[0.05] dark:hover:border-white/10 focus-within:border-neutral-400/40 dark:focus-within:border-white/20"
-              } rounded-full px-4 py-2.5 shadow-xl transition-all overflow-hidden`}
+                  : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[#ff7a00]/50 dark:focus-within:border-[#ff7a00]/50 focus-within:ring-1 focus-within:ring-[#ff7a00]/20"
+              } rounded-2xl px-4 py-2.5 shadow-xs transition-all overflow-hidden`}
             >
               {/* Drag-and-Drop Active Overlay */}
               {isDraggingFiles && (
-                <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#ff7a00] rounded-full backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#ff7a00] rounded-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
                   <Paperclip size={15} className="text-[#ff7a00] animate-bounce" />
                   <span className="text-xs font-mono font-semibold text-white tracking-wide">
                     Drop files here to attach to {selectedAgent.name}
@@ -6790,18 +6790,18 @@ export function GrokBotWorkspace() {
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
                   {selectedAgent.name}
                 </h2>
-                <span className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold inline-flex items-center gap-1 ${
-                  activeLoopMode === 'goal'
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                    : activeLoopMode === 'mission'
-                    ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
-                    : 'bg-amber-500/10 text-[#ff7a00] border-[#ff7a00]/30'
-                }`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${
-                    activeLoopMode === 'goal' ? 'bg-emerald-400' : activeLoopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
-                  }`} />
-                  <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : activeLoopMode === 'mission' ? 'Nhiệm vụ' : 'Tiêu chuẩn'}</span>
-                </span>
+                {activeLoopMode !== "default" && (
+                  <span className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold inline-flex items-center gap-1 ${
+                    activeLoopMode === 'goal'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      activeLoopMode === 'goal' ? 'bg-emerald-400' : 'bg-cyan-400'
+                    }`} />
+                    <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : 'Nhiệm vụ'}</span>
+                  </span>
+                )}
               </div>
 
               {/* Interactive Model Selector Dropdown */}
@@ -6859,7 +6859,7 @@ export function GrokBotWorkspace() {
                   });
 
                   return (
-                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-64 rounded-xl bg-[#14141c] border border-[#2a2a38] p-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-64 rounded-xl bg-[#14141c] border border-[#2a2a38] p-1.5 shadow-lg backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-1.5 pb-1.5 text-[10px] font-mono text-neutral-400 border-b border-[#22222e] flex items-center justify-between">
                       <span className="font-semibold text-white">Mô hình trí tuệ</span>
                       <span className="text-[9px] text-[#ff7a00] font-mono">{uniqueModelsList.length} models</span>
