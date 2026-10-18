@@ -24,6 +24,16 @@ interface AgentItem {
   enabled: boolean;
 }
 
+interface UserItem {
+  id: number;
+  logtoUserId: string;
+  email?: string;
+  firstName: string;
+  lastName: string;
+  displayName?: string;
+  roles: string[];
+}
+
 interface AssignmentItem {
   id: number;
   userId: number;
@@ -35,6 +45,7 @@ interface AssignmentItem {
 export function AdminAgentsPage() {
   const [agents, setAgents] = useState<AgentItem[]>([]);
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
+  const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -50,9 +61,10 @@ export function AdminAgentsPage() {
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
-      const [agentsRes, assignRes] = await Promise.all([
+      const [agentsRes, assignRes, usersRes] = await Promise.all([
         fetch("/api/v1/agents", { headers }),
         fetch("/api/v1/admin/agents/assignments", { headers }),
+        fetch("/api/v1/admin/users", { headers }),
       ]);
 
       if (agentsRes.ok) {
@@ -62,6 +74,13 @@ export function AdminAgentsPage() {
       if (assignRes.ok) {
         const as = await assignRes.json();
         setAssignments(Array.isArray(as) ? as : []);
+      }
+      if (usersRes.ok) {
+        const us = await usersRes.json();
+        setUsers(Array.isArray(us) ? us : []);
+        if (Array.isArray(us) && us.length > 0 && targetUserId <= 0) {
+          setTargetUserId(us[0].id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -198,7 +217,10 @@ export function AdminAgentsPage() {
                     </span>
                   </div>
                   <div className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                    Assigned to User #{item.userId}
+                    Assigned to: {(() => {
+                      const matched = users.find((u) => u.id === item.userId);
+                      return matched ? (matched.displayName || matched.email || `User #${item.userId}`) : `User #${item.userId}`;
+                    })()}
                   </div>
                 </div>
                 <button
@@ -315,14 +337,22 @@ export function AdminAgentsPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] text-neutral-400 mb-1 font-medium">Target User ID (Local DB)</label>
-                <input
-                  type="number"
+                <label className="block text-[11px] text-neutral-400 mb-1 font-medium">Target User / Member</label>
+                <select
                   value={targetUserId}
                   onChange={(e) => setTargetUserId(Number(e.target.value))}
-                  placeholder="e.g. 5"
                   className="w-full bg-[#181822] border border-[#282838] rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-[#ff7a00]"
-                />
+                >
+                  {users.length === 0 ? (
+                    <option value={targetUserId}>User #{targetUserId} (Manual)</option>
+                  ) : (
+                    users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.displayName || `${u.firstName} ${u.lastName}`.trim() || u.email || `User #${u.id}`} ({u.email || u.logtoUserId})
+                      </option>
+                    ))
+                  )}
+                </select>
               </div>
 
               <div>
