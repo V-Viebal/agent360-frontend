@@ -1414,31 +1414,11 @@ export function GrokBotWorkspace() {
       try {
         localStorage.setItem("agent360_computer_split", next ? "true" : "false");
       } catch {}
+      // Keep all sidebars in their exact current state as configured by user
       if (next) {
-        // Automatically collapse left sidebar, chat session list, and right bot info pane
-        // to give full focus and maximum canvas width to Virtual Computer + Chat
-        setPrevLayoutBeforeComputer({
-          leftCollapsed: isLeftSidebarCollapsed,
-          chatCollapsed: isChatListCollapsed,
-          botInfoCollapsed: isBotInfoCollapsed,
-        });
-        setIsLeftSidebarCollapsed(true);
-        setIsChatListCollapsed(true);
-        setIsBotInfoCollapsed(true);
         setMobileAgentsOpen(false);
         setMobileChatsOpen(false);
         setMobileBotInfoOpen(false);
-      } else {
-        // Restore previous user layout when closing Computer
-        if (prevLayoutBeforeComputer) {
-          setIsLeftSidebarCollapsed(prevLayoutBeforeComputer.leftCollapsed);
-          setIsChatListCollapsed(prevLayoutBeforeComputer.chatCollapsed);
-          setIsBotInfoCollapsed(prevLayoutBeforeComputer.botInfoCollapsed);
-        } else {
-          setIsLeftSidebarCollapsed(false);
-          setIsChatListCollapsed(false);
-          setIsBotInfoCollapsed(false);
-        }
       }
       return next;
     });
@@ -1683,6 +1663,7 @@ export function GrokBotWorkspace() {
 
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFileResult[]>([]);
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string } | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const dragCounterRef = useRef(0);
@@ -3184,8 +3165,37 @@ export function GrokBotWorkspace() {
         }
       }
 
+      // 3.5. Lightbox Hotkeys: Ctrl+C to copy image URL, Ctrl+S to download image, Esc to close
+      if (lightboxImageUrl) {
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "c") {
+          e.preventDefault();
+          navigator.clipboard.writeText(lightboxImageUrl.url);
+          triggerHaptic(20);
+          setForkToast("Image URL copied to clipboard");
+          setTimeout(() => setForkToast(null), 2500);
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          triggerHaptic(20);
+          const a = document.createElement("a");
+          a.href = lightboxImageUrl.url;
+          a.download = lightboxImageUrl.name;
+          a.target = "_blank";
+          a.rel = "noreferrer";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+      }
+
       // 4. Escape key closes open modals / menus or Computer Split
       if (e.key === "Escape") {
+        if (lightboxImageUrl) {
+          setLightboxImageUrl(null);
+          return;
+        }
         if (isComputerSplitOpen) {
           handleToggleComputerSplit(false);
           return;
@@ -4723,27 +4733,48 @@ export function GrokBotWorkspace() {
               </button>
             </div>
           )}
-          {/* Attached Files Preview Chips */}
+          {/* Attached Files Preview Chips with Image Thumbnails & Lightbox */}
           {attachedFiles.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap pb-1 px-1">
-              {attachedFiles.map((f, i) => (
-                <div
-                  key={f.url + i}
-                  className="inline-flex items-center gap-2 bg-[#1c1c28] border border-[#2e2e42] text-xs font-mono px-3 py-1.5 rounded-xl text-neutral-200 shadow-sm animate-in fade-in duration-150"
-                >
-                  <Paperclip size={13} className="text-[#ff7a00]" />
-                  <span className="max-w-[180px] truncate text-[11px] font-medium">{f.file_name}</span>
-                  <span className="text-[9px] text-neutral-500 font-mono">({Math.round(f.size / 1024) || 1} KB)</span>
-                  <button aria-label="Remove attachment" data-ux-target-min="24"
-                    type="button"
-                    onClick={() => removeAttachedFile(i)}
-                    className="text-neutral-400 hover:text-white p-0.5 rounded-full hover:bg-white/10 cursor-pointer ml-1"
-                    title="Remove attachment"
+              {attachedFiles.map((f, i) => {
+                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(f.file_name) || (f.mime_type && f.mime_type.startsWith("image/"));
+                return (
+                  <div
+                    key={f.url + i}
+                    className="inline-flex items-center gap-2 bg-slate-100 dark:bg-[#1c1c28] border border-slate-200 dark:border-[#2e2e42] text-xs font-mono px-2.5 py-1.5 rounded-xl text-slate-800 dark:text-neutral-200 shadow-sm animate-in zoom-in-95 fade-in duration-150 group/filechip"
                   >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
+                    {isImage && f.url ? (
+                      <button
+                        type="button"
+                        onClick={() => setLightboxImageUrl({ url: f.url, name: f.file_name })}
+                        className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#ff7a00]/50 transition-all"
+                        title="Click to view full image preview"
+                      >
+                        <img
+                          src={f.url}
+                          alt={f.file_name}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      </button>
+                    ) : (
+                      <Paperclip size={13} className="text-[#ff7a00] shrink-0" />
+                    )}
+                    <span className="max-w-[160px] truncate text-[11px] font-medium">{f.file_name}</span>
+                    <span className="text-[9px] text-slate-500 dark:text-neutral-500 font-mono">({Math.round(f.size / 1024) || 1} KB)</span>
+                    <button aria-label="Remove attachment" data-ux-target-min="24"
+                      type="button"
+                      onClick={() => removeAttachedFile(i)}
+                      className="text-slate-400 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 cursor-pointer ml-0.5 transition-colors"
+                      title="Remove attachment"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -5536,7 +5567,7 @@ export function GrokBotWorkspace() {
                   ? "border-[#ff7a00] ring-2 ring-[#ff7a00]/30 bg-amber-500/5 dark:bg-[#ff7a00]/10"
                   : isRecording
                   ? "border-red-500/60 ring-2 ring-red-500/20"
-                  : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"
+                  : "border-transparent hover:border-neutral-200/50 dark:border-white/[0.05] dark:hover:border-white/10 focus-within:border-neutral-400/40 dark:focus-within:border-white/20"
               } rounded-full px-4 py-2.5 shadow-xl transition-all overflow-hidden`}
             >
               {/* Drag-and-Drop Active Overlay */}
@@ -7198,6 +7229,78 @@ export function GrokBotWorkspace() {
         }}
         isPwaInstallable={Boolean(deferredPrompt)}
       />
+
+      {/* Fullscreen Image Lightbox Modal */}
+      {lightboxImageUrl && (
+        <div
+          onClick={() => setLightboxImageUrl(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200 select-none"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center justify-center p-2 rounded-2xl bg-[#121218] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-150"
+          >
+            <div className="w-full flex items-center justify-between px-3.5 py-2.5 border-b border-white/10 text-xs font-mono text-neutral-300">
+              <span className="truncate font-medium max-w-md">{lightboxImageUrl.name}</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Copy Image URL with Shortcut Badge */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(lightboxImageUrl.url);
+                    triggerHaptic(20);
+                    setForkToast("Image URL copied to clipboard");
+                    setTimeout(() => setForkToast(null), 2500);
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 cursor-pointer transition-colors text-[11px]"
+                  title="Copy Image URL (Ctrl+C)"
+                  aria-label="Copy Image URL"
+                >
+                  <Copy size={14} />
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70">
+                    Ctrl+C
+                  </span>
+                </button>
+
+                {/* Download Image with Shortcut Badge */}
+                <a
+                  href={lightboxImageUrl.url}
+                  download={lightboxImageUrl.name}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => triggerHaptic(20)}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 cursor-pointer transition-colors text-[11px]"
+                  title="Download image file (Ctrl+S)"
+                  aria-label="Download image file"
+                >
+                  <Download size={14} />
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70">
+                    Ctrl+S
+                  </span>
+                </a>
+
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setLightboxImageUrl(null)}
+                  className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-white/10 cursor-pointer transition-colors ml-1"
+                  title="Close (Esc)"
+                  aria-label="Close image preview"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <div className="p-3 flex items-center justify-center max-h-[80vh] overflow-hidden">
+              <img
+                src={lightboxImageUrl.url}
+                alt={lightboxImageUrl.name}
+                className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <StarredAndShortcutsModal
         isOpen={isStarredShortcutsModalOpen}
