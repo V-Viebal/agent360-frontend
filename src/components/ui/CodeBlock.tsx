@@ -45,17 +45,21 @@ export function CodeBlock({
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+          className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+            copied
+              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 scale-105 shadow-xs"
+              : "hover:bg-white/10 text-neutral-300 hover:text-white border border-transparent active:scale-95"
+          }`}
           title="Sao chép nội dung"
         >
           {copied ? (
             <>
               <Check size={12} className="text-emerald-400 stroke-[2.5]" />
-              <span className="text-[10px] text-emerald-400 font-mono">Copied</span>
+              <span className="text-[10px] text-emerald-400 font-mono font-semibold">Copied</span>
             </>
           ) : (
             <>
-              <Copy size={12} />
+              <Copy size={12} className="transition-transform duration-150" />
               <span className="text-[10px] font-mono">Copy</span>
             </>
           )}

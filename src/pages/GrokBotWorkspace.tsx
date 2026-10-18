@@ -4,7 +4,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string;
   // 1. Official Telegram Logo SVG
   if (ch === "telegram") {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" title="Telegram">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Telegram">
         <circle cx="12" cy="12" r="12" fill="#24A1DE"/>
         <path
           d="M5.4 11.9L16.8 7.3C17.3 7.1 17.8 7.4 17.6 8L15.7 17.1C15.5 17.7 14.8 17.9 14.3 17.5L11.2 15L9.6 16.5C9.4 16.7 9.1 16.6 9.1 16.3L9.3 13.7L14.7 8.8C14.9 8.6 14.7 8.3 14.4 8.5L7.8 12.7L5.4 11.9Z"
@@ -17,7 +17,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string;
   // 2. Official Zalo Logo SVG (Iconic Speech Bubble with White Lettermark)
   if (ch === "zalo") {
     return (
-      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className="shrink-0 select-none" title="Zalo">
+      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className="shrink-0 select-none" aria-label="Zalo">
         <rect width="48" height="48" rx="12" fill="#0068FF" />
         <path
           d="M34.5 13H13.5C10.5 13 8 15.5 8 18.5V29.5C8 32.5 10.5 35 13.5 35H18L21 38.5C21.4 39 22.2 39 22.6 38.5L25.6 35H34.5C37.5 35 40 32.5 40 29.5V18.5C40 15.5 37.5 13 34.5 13Z"
@@ -41,7 +41,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string;
   // 3. Official Discord Logo SVG
   if (ch === "discord") {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" title="Discord">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Discord">
         <rect width="24" height="24" rx="6" fill="#5865F2"/>
         <path
           d="M17.5 7.2C16.3 6.6 15 6.2 13.7 6C13.5 6.3 13.3 6.7 13.2 7C11.8 6.8 10.4 6.8 9 7C8.9 6.7 8.7 6.3 8.5 6C7.2 6.2 5.9 6.6 4.7 7.2C2.4 10.6 1.8 13.9 2.1 17.1C3.6 18.2 5.1 19 6.5 19.4C6.9 18.9 7.2 18.3 7.5 17.7C7 17.5 6.5 17.3 6 17C6.1 16.9 6.2 16.8 6.3 16.7C9.3 18.1 12.7 18.1 15.7 16.7C15.8 16.8 15.9 16.9 16 17C15.5 17.3 15 17.5 14.5 17.7C14.8 18.3 15.1 18.9 15.5 19.4C16.9 19 18.4 18.2 19.9 17.1C20.3 13.3 19.3 10.1 17.5 7.2ZM8.4 15.2C7.5 15.2 6.8 14.4 6.8 13.4C6.8 12.4 7.5 11.6 8.4 11.6C9.3 11.6 10 12.4 10 13.4C10 14.4 9.3 15.2 8.4 15.2ZM15.6 15.2C14.7 15.2 14 14.4 14 13.4C14 12.4 14.7 11.6 15.6 11.6C16.5 11.6 17.2 12.4 17.2 13.4C17.2 14.4 16.5 15.2 15.6 15.2Z"
@@ -54,7 +54,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string;
   // 4. Official Slack Logo SVG
   if (ch === "slack") {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" title="Slack">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Slack">
         <path d="M5.04 14.07a2.02 2.02 0 1 1-2.02-2.02h2.02v2.02zm1.01 0a2.02 2.02 0 0 1 4.04 0v5.05a2.02 2.02 0 1 1-4.04 0v-5.05z" fill="#E01E5A"/>
         <path d="M9.93 5.04a2.02 2.02 0 1 1-2.02-2.02v2.02h2.02zm0 1.01a2.02 2.02 0 0 1 0 4.04H4.88a2.02 2.02 0 1 1 0-4.04h5.05z" fill="#36C5F0"/>
         <path d="M18.96 9.93a2.02 2.02 0 1 1 2.02 2.02h-2.02V9.93zm-1.01 0a2.02 2.02 0 0 1-4.04 0V4.88a2.02 2.02 0 1 1 4.04 0v5.05z" fill="#2EB67D"/>
@@ -188,7 +188,7 @@ import {
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
-import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime } from "../services/notificationService";
+import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
 import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
@@ -374,6 +374,7 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
 
   const handleCopy = (type: "args" | "result", text: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    playMicroClick();
     navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 1800);
@@ -569,10 +570,24 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
                 <button
                   type="button"
                   onClick={(e) => handleCopy("args", cleanArgs, e)}
-                  className="hover:text-white flex items-center gap-1 cursor-pointer"
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                    copied === "args"
+                      ? "text-emerald-400 bg-emerald-500/15 scale-105 shadow-xs"
+                      : "text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95"
+                  }`}
+                  title="Sao chép tham số"
                 >
-                  {copied === "args" ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
-                  <span>{copied === "args" ? "Copied" : "Copy"}</span>
+                  {copied === "args" ? (
+                    <>
+                      <Check size={10} className="text-emerald-400 stroke-[2.5]" />
+                      <span className="font-medium">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={10} />
+                      <span>Copy</span>
+                    </>
+                  )}
                 </button>
               </div>
               <pre className="p-2.5 overflow-x-auto text-neutral-300 whitespace-pre max-h-48 overflow-y-auto">
@@ -590,10 +605,24 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
                 <button
                   type="button"
                   onClick={(e) => handleCopy("result", toolCall.result || "", e)}
-                  className="hover:text-white flex items-center gap-1 cursor-pointer"
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                    copied === "result"
+                      ? "text-emerald-400 bg-emerald-500/15 scale-105 shadow-xs"
+                      : "text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95"
+                  }`}
+                  title="Sao chép kết quả"
                 >
-                  {copied === "result" ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
-                  <span>{copied === "result" ? "Copied" : "Copy"}</span>
+                  {copied === "result" ? (
+                    <>
+                      <Check size={10} className="text-emerald-400 stroke-[2.5]" />
+                      <span className="font-medium">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={10} />
+                      <span>Copy</span>
+                    </>
+                  )}
                 </button>
               </div>
               <pre className="p-2.5 overflow-x-auto text-neutral-300 whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
@@ -634,6 +663,29 @@ function renderInlineMarkdown(rawText: string) {
   });
 }
 
+// Search Match Highlighting helper for conversation titles & snippets
+function renderSearchMatchHighlight(text: string, query: string) {
+  if (!query || !query.trim() || !text) return text;
+  const trimmed = query.trim();
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(${escaped})`, "gi");
+  const parts = text.split(regex);
+  if (parts.length === 1) return text;
+
+  return parts.map((part, i) =>
+    part.toLowerCase() === trimmed.toLowerCase() ? (
+      <mark
+        key={i}
+        className="bg-[#ff7a00]/30 text-[#ff7a00] font-semibold px-0.5 rounded transition-colors"
+      >
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
+
 // Formatted assistant message content with word wrapping and code block containment
 function FormattedMessageContent({
   content,
@@ -652,6 +704,7 @@ function FormattedMessageContent({
   const [expandedBlock, setExpandedBlock] = useState<number | null>(null);
 
   const handleCopyCode = (code: string, idx: number) => {
+    playMicroClick();
     navigator.clipboard.writeText(code);
     setCopiedBlock(idx);
     setTimeout(() => setCopiedBlock(null), 1800);
@@ -752,17 +805,21 @@ function FormattedMessageContent({
                   <button
                     type="button"
                     onClick={() => handleCopyCode(code, idx)}
-                    className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-white/10"
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-[10px] font-mono ${
+                      copiedBlock === idx
+                        ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 scale-105 shadow-xs"
+                        : "text-neutral-400 hover:text-white hover:bg-white/10 border border-transparent active:scale-95"
+                    }`}
                     title="Sao chép toàn bộ khối mã"
                   >
                     {copiedBlock === idx ? (
                       <>
-                        <Check size={11} className="text-emerald-400" />
-                        <span className="text-emerald-400">Copied</span>
+                        <Check size={11} className="text-emerald-400 stroke-[2.5]" />
+                        <span className="text-emerald-400 font-semibold">Copied</span>
                       </>
                     ) : (
                       <>
-                        <Copy size={11} />
+                        <Copy size={11} className="transition-transform duration-150" />
                         <span>Copy</span>
                       </>
                     )}
@@ -2260,6 +2317,18 @@ export function GrokBotWorkspace() {
 
   // Track previous chatId to save draft before switching
   const prevChatIdRef = useRef<string>(selectedChatId);
+  const filteredAgentsRef = useRef<InfraAgent[]>([]);
+  const filteredChatsRef = useRef<AgentSession[]>([]);
+  const selectedAgentIdRef = useRef<string>(selectedAgentId);
+  const selectedChatIdRef = useRef<string>(selectedChatId);
+
+  useEffect(() => {
+    selectedAgentIdRef.current = selectedAgentId;
+  }, [selectedAgentId]);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
 
   useEffect(() => {
     const prevId = prevChatIdRef.current;
@@ -3512,6 +3581,62 @@ export function GrokBotWorkspace() {
         return;
       }
 
+      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to cycle Agents
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        const list = filteredAgentsRef.current;
+        if (list.length > 0) {
+          e.preventDefault();
+          const curId = selectedAgentIdRef.current;
+          const curIdx = list.findIndex((a) => a.id === curId);
+          let nextIdx = 0;
+          if (e.key === "ArrowDown") {
+            nextIdx = curIdx >= 0 && curIdx < list.length - 1 ? curIdx + 1 : 0;
+          } else {
+            nextIdx = curIdx > 0 ? curIdx - 1 : list.length - 1;
+          }
+          const nextAgent = list[nextIdx];
+          if (nextAgent) {
+            triggerHaptic(12);
+            playMicroClick();
+            handleSelectAgent(nextAgent);
+            // Smoothly bring selected agent item into viewport
+            requestAnimationFrame(() => {
+              const el = document.querySelector(`[data-agent-item-id="${nextAgent.id}"]`);
+              el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            });
+          }
+        }
+        return;
+      }
+
+      // 2c. Keyboard Navigation: Ctrl + ArrowUp / ArrowDown (or Cmd + ArrowUp / ArrowDown) to cycle Chat Sessions
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        const list = filteredChatsRef.current;
+        if (list.length > 0) {
+          e.preventDefault();
+          const curId = selectedChatIdRef.current;
+          const curIdx = list.findIndex((c) => c.id === curId);
+          let nextIdx = 0;
+          if (e.key === "ArrowDown") {
+            nextIdx = curIdx >= 0 && curIdx < list.length - 1 ? curIdx + 1 : 0;
+          } else {
+            nextIdx = curIdx > 0 ? curIdx - 1 : list.length - 1;
+          }
+          const nextChat = list[nextIdx];
+          if (nextChat) {
+            triggerHaptic(12);
+            playMicroClick();
+            handleSelectChat(nextChat);
+            // Smoothly bring selected conversation item into viewport
+            requestAnimationFrame(() => {
+              const el = document.querySelector(`[data-chat-item-id="${nextChat.id}"]`);
+              el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            });
+          }
+        }
+        return;
+      }
+
       // 3. Home / End keyboard shortcuts for dialogue scrolling (when not actively editing text)
       const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
       const isInputFocused = targetTag === "input" || targetTag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
@@ -4040,6 +4165,10 @@ export function GrokBotWorkspace() {
       return 0;
     });
 
+  // Keep live references updated for global keyboard navigation
+  filteredAgentsRef.current = filteredAgents;
+  filteredChatsRef.current = filteredChats;
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors">
       {/* ========================================================= */}
@@ -4417,6 +4546,7 @@ export function GrokBotWorkspace() {
                     return (
                       <div
                         key={ag.id}
+                        data-agent-item-id={ag.id}
                         style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
                         onClick={() => handleSelectAgent(ag)}
                         className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer border animate-fade-in-stagger group ${
@@ -4995,7 +5125,7 @@ export function GrokBotWorkspace() {
               </div>
 
               {/* Grid of 4 dynamic, agent-specific quick prompt suggestion cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full text-left font-sans">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2.5 w-full text-left font-sans">
                 {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
                   <button
                     key={qIdx}
@@ -5003,15 +5133,15 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       executeTurnStream(item.prompt);
                     }}
-                    className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2.5 w-full overflow-hidden"
+                    className="p-2.5 sm:p-3 md:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2 w-full min-w-0"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0" />
-                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate">
+                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate min-w-0 block">
                         {item.title}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                       {item.badge && (
                         <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
                           {item.badge}
@@ -5634,7 +5764,7 @@ export function GrokBotWorkspace() {
           {/* Plus Add Popover Menu (Spans 100% full width of chat input and sits directly on top) */}
           <div ref={plusMenuRef} className="relative w-full">
             {isPlusMenuOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-3 w-full rounded-xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-lg backdrop-blur-xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
+              <div className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-0 md:mb-3 max-h-[82vh] md:max-h-none flex flex-col rounded-2xl md:rounded-xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-2xl backdrop-blur-xl p-3 sm:p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
                 <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
@@ -5659,7 +5789,7 @@ export function GrokBotWorkspace() {
                         let agentApps = currentAgentMcpClients.length > 0
                           ? currentAgentMcpClients.map((c) => {
                               const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
-                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || c.name.toLowerCase().includes(a.id.toLowerCase()));
+                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase())));
                               return { type: "app" as const, id: matched?.id || rawKey, name: matched?.name || c.name || c.key };
                             })
                           : APPS_CATALOG.map((a) => ({ type: "app" as const, id: a.id, name: a.name }));
@@ -5794,7 +5924,7 @@ export function GrokBotWorkspace() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5 items-stretch max-h-[70vh] md:max-h-none overflow-y-auto md:overflow-visible pr-0.5">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5 items-stretch overflow-y-auto md:overflow-visible pr-1 sm:pr-0.5 overscroll-contain">
                   {/* Column 1: Add Files & Work Mode (Add files at the top, followed by clear work modes) */}
                   <div className="flex flex-col justify-between space-y-2 h-full">
                     {/* 1. Add Files Option (Placed at the very top as requested) */}
@@ -5942,7 +6072,7 @@ export function GrokBotWorkspace() {
                             let arr = currentAgentMcpClients.length > 0
                               ? currentAgentMcpClients.map((c) => {
                                   const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
-                                  const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || c.name.toLowerCase().includes(a.id.toLowerCase()));
+                                  const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase())));
                                   return matched?.name || c.name || c.key;
                                 })
                               : APPS_CATALOG.map((a) => a.name);
@@ -5981,7 +6111,7 @@ export function GrokBotWorkspace() {
                         let agentApps = currentAgentMcpClients.length > 0
                           ? currentAgentMcpClients.map((c) => {
                               const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
-                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || c.name.toLowerCase().includes(a.id.toLowerCase()));
+                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase())));
                               return {
                                 id: matched?.id || rawKey,
                                 name: matched?.name || c.name || c.key,
@@ -6008,7 +6138,7 @@ export function GrokBotWorkspace() {
                           const isAlreadyAdded = inputText.includes(`/${app.id} `) || inputText.endsWith(`/${app.id}`);
                           return (
                           <button
-                            key={app.id}
+                            key={`popover-app-${app.id}-${appIdx}`}
                             type="button"
                             data-popover-nav-idx={appIdx}
                             onClick={() => {
@@ -6133,7 +6263,7 @@ export function GrokBotWorkspace() {
                           const isAlreadyMentioned = inputText.includes(`@${ag.name}`);
                           return (
                           <button
-                            key={ag.id}
+                            key={`popover-subagent-${ag.id}-${subIdx}`}
                             type="button"
                             data-popover-nav-idx={appsCount + subIdx}
                             onClick={() => {
@@ -7031,6 +7161,7 @@ export function GrokBotWorkspace() {
                 return (
                   <div
                     key={chat.id}
+                    data-chat-item-id={chat.id}
                     style={{ animationDelay: `${Math.min(cIdx * 20, 200)}ms` }}
                     onTouchStart={() => handleTouchStartChat(chat)}
                     onTouchEnd={handleTouchEndChat}
@@ -7130,7 +7261,7 @@ export function GrokBotWorkspace() {
                               if (ch === "zalo") {
                                 return (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-blue-600/15 border border-blue-500/30 text-blue-400 text-[9px] font-mono shrink-0 select-none font-bold" title="Kênh Zalo">
-                                    <MessageCircle size={9} />
+                                    <span className="text-[9px]">💬</span>
                                     <span>Zalo</span>
                                   </span>
                                 );
@@ -7148,7 +7279,7 @@ export function GrokBotWorkspace() {
                             <span className={`text-xs font-medium truncate block ${
                               (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) ? "text-emerald-300 font-semibold" : "text-white"
                             }`}>
-                              {chat.title}
+                              {renderSearchMatchHighlight(chat.title, chatSearchQuery)}
                             </span>
                           </div>
                         )}
@@ -7293,7 +7424,7 @@ export function GrokBotWorkspace() {
                         </div>
                       </div>
                       <span className="text-[11px] text-neutral-500 truncate block mt-0.5">
-                        {chat.lastMessageSnippet}
+                        {renderSearchMatchHighlight(chat.lastMessageSnippet, chatSearchQuery)}
                       </span>
                     </div>
                   </div>

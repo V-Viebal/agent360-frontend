@@ -129,7 +129,7 @@ export function AgentConnectedAppsTab({
     const matched = APPS_CATALOG.find(
       (a) =>
         a.id.toLowerCase() === rawKey ||
-        client.name.toLowerCase().includes(a.id.toLowerCase())
+        (a.id.length > 2 && (client.name.toLowerCase() === a.id.toLowerCase() || client.name.toLowerCase().includes(a.id.toLowerCase())))
     );
 
     return {

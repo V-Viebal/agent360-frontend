@@ -23,6 +23,20 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     category: "Navigation & Search",
     customizable: true,
   },
+  {
+    id: "cycle_agents",
+    defaultKeys: ["Alt", "↑ / ↓"],
+    description: "Cycle between Infra Agents in left sidebar",
+    category: "Navigation & Search",
+    customizable: false,
+  },
+  {
+    id: "cycle_chats",
+    defaultKeys: ["Ctrl", "↑ / ↓"],
+    description: "Cycle between Chat Sessions in conversation list",
+    category: "Navigation & Search",
+    customizable: false,
+  },
     {
     id: "toggle_chat_menu",
     defaultKeys: ["Alt", "M"],
