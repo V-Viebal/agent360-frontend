@@ -9,6 +9,8 @@ export function cleanModelDisplayName(rawModel: string): string {
 
 import { InfraAgent, AgentSession, ChatMessage } from "../types/agent";
 import { operatorKey } from "./a2aApi";
+import { initiateSkyerSignIn } from "./pkceAuth";
+import { authConfig } from "../config/authConfig";
 
 const API_BASE_URL = "/api";
 
@@ -19,7 +21,7 @@ export class AgentListAuthError extends Error {
   }
 }
 
-function hasCredential(): boolean {
+export function hasCredential(): boolean {
   try {
     return !!(sessionStorage.getItem("skyer_access_token") || operatorKey.get());
   } catch {
@@ -39,7 +41,15 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
   // do not exist on any runtime and every follow-up call 404s). Transient 401s right after sign-in are retried.
   // The workspace mounts while the SSO callback is still storing the token; calling before it exists only
   // produces 401s. Wait (bounded) for a credential, then call; 401 is retried only when a credential exists.
-  await waitForCredential(8000);
+  await waitForCredential(1500);
+  if (!hasCredential()) {
+    // No session and no operator key: an API call can only 401. Go to sign-in instead of probing.
+    if (typeof window !== "undefined" && window.location.pathname !== "/callback" && !(window as any).__agent360SignInRedirect) {
+      (window as any).__agent360SignInRedirect = true;
+      void initiateSkyerSignIn(authConfig);
+    }
+    throw new AgentListAuthError(401);
+  }
   let res: Response | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     res = await fetch(`${API_BASE_URL}/agents`, { headers: { Accept: "application/json" } });

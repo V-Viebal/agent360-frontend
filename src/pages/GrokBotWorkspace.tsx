@@ -2849,7 +2849,7 @@ export function GrokBotWorkspace() {
   const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
   // Resolve only once the agent list has loaded: before that `selectedAgent` is the first agent / a
   // placeholder, and its browser would flash in for the agent the user actually selected.
-  const agentBrowserFor = isLoadingAgents ? "" : (selectedAgent?.slug || selectedAgent?.id || "");
+  const agentBrowserFor = isLoadingAgents || !agents.some((a) => a.id === selectedAgent?.id) ? "" : (selectedAgent?.slug || selectedAgent?.id || "");
   useEffect(() => {
     setAgentBrowser(null);
     if (!agentBrowserFor) return;
