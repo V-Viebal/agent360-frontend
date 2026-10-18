@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { User, Mail, Key, LogOut } from "lucide-react";
 import { initiateSkyerSignOut } from "../services/pkceAuth";
 import { getCurrentUserProfile, UserProfile, updateUserProfile } from "../services/userService";
-import { Edit3, Check, Save } from "lucide-react";
+import { Edit3, Save } from "lucide-react";
 import { authConfig } from "../config/authConfig";
 import React, { useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";

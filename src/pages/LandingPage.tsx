@@ -260,6 +260,19 @@ export function LandingPage() {
   const [replayKey, setReplayKey] = useState(0);
   const [heroTask, setHeroTask] = useState("");
   const navigate = useNavigate();
+  const [hasSession, setHasSession] = useState(false);
+  useEffect(() => {
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    setHasSession(!!token);
+  }, []);
+  const handleSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    initiateSkyerSignIn(authConfig, "signIn").catch(console.error);
+  };
+  const handleSignUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    initiateSkyerSignIn(authConfig, "signUp").catch(console.error);
+  };
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
   // Stream the active Bot's execution log line by line; respect reduced motion.
