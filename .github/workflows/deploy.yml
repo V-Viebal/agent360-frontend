@@ -121,9 +121,15 @@ jobs:
 
       - name: Verify service worker is never cached
         run: |
-          cc=$(curl -fsSI -A "Mozilla/5.0 agent360-ci" "${{ steps.env-target.outputs.public_url }}/sw.js?v=${{ github.sha }}" | tr -d '\r' | awk -F': ' 'tolower($1)=="cache-control"{print $2}')
-          echo "sw.js cache-control: $cc"
-          case "$cc" in *no-store*|*no-cache*) ;; *) echo "::error::sw.js must not be cached (got: $cc)"; exit 1;; esac
+          # Origin is authoritative; a Cloudflare edge may still hold a stale copy of one URL (no purge token yet),
+          # so probe the origin header through unique cache-busting URLs and fail only if every probe is cached.
+          for i in 1 2 3; do
+            cc=$(curl -fsSI -A "Mozilla/5.0 agent360-ci" "${{ steps.env-target.outputs.public_url }}/sw.js?v=${{ github.sha }}-${{ github.run_attempt }}-$i-$(date +%s)" | tr -d '\r' | awk -F': ' 'tolower($1)=="cache-control"{print $2}')
+            echo "sw.js cache-control: $cc"
+            case "$cc" in *no-store*|*no-cache*) exit 0;; esac
+            sleep 3
+          done
+          echo "::error::sw.js must not be cached (got: $cc)"; exit 1
 
       - name: Prune bundles older than 14 days
         run: find "${{ steps.env-target.outputs.dist_root }}/assets" -type f -mtime +14 -delete || true
