@@ -5,3 +5,4 @@ dist
 *.tsbuildinfo
 vite-dev.mjs
 server.js
+deploy/nginx/rendered.conf

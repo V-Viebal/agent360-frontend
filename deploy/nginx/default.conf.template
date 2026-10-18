@@ -1,0 +1,82 @@
+# Agent360 frontend nginx (single source of truth for production and staging).
+# Rendered by CI: AGENT360_BACKEND_UPSTREAM=agent360-backend:8080 (prod) | agent360-backend-staging:8080 (staging),
+# then installed by `sudo agent360-restart frontend[-staging] <rendered.conf>` which runs `nginx -t` before reloading.
+default.conf
+default.conf
+server {
+    listen 80;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Compress text responses at the origin (Cloudflare re-compresses for browsers; internal/direct callers benefit here).
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_types application/json application/javascript text/css text/plain image/svg+xml application/manifest+json;
+
+
+    # Agent360 external A2A control plane (AgentTeams transport)
+    location ~ ^/api/(a2a/|agents/[^/]+/external-subagents|agents/[^/]+/a2a/) {
+        rewrite ^/api/(.*)$ /api/v1/$1 break;
+        proxy_pass http://agent360-a2a:8095;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 120s;
+    }
+
+    location /api/ {
+        proxy_pass http://${AGENT360_BACKEND_UPSTREAM}/api/v1/;
+        proxy_read_timeout 330s;
+        proxy_send_timeout 330s;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_connect_timeout 5s;
+        add_header X-Accel-Buffering no always;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Service worker, manifest and HTML shell must always revalidate, otherwise browsers/Cloudflare keep an
+    # old SW for a year and serve stale bundles after a deploy ("Illegal constructor").
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Service-Worker-Allowed "/" always;
+        try_files $uri =404;
+    }
+    location = /manifest.json {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+    }
+
+    # Vite content-hashed bundles are safe to cache forever.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800" always;
+    }
+}

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Versioned commit gate (enable once per checkout: git config core.hooksPath .githooks).
+# Blocks commits that break the TypeScript build. Bypass only with --no-verify.
+if git diff --cached --name-only | grep -qE '\.(ts|tsx)$|^package\.json$|^tsconfig'; then
+  echo "pre-commit: tsc --noEmit ..."
+  TSC=./node_modules/.bin/tsc; [ -x "$TSC" ] || TSC="npx --no-install tsc"
+  $TSC --noEmit -p . || { echo "pre-commit: typecheck failed, commit blocked"; exit 1; }
+fi

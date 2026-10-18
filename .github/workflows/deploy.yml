@@ -46,10 +46,12 @@ jobs:
             echo "dist_root=/opt/agent360-staging/frontend-dist" >> $GITHUB_OUTPUT
             echo "public_url=https://staging-agent360.antares.vn" >> $GITHUB_OUTPUT
             echo "container_name=agent360-frontend-staging" >> $GITHUB_OUTPUT
+            echo "backend_upstream=agent360-backend-staging:8080" >> $GITHUB_OUTPUT
           else
             echo "dist_root=/opt/agent360/frontend-dist" >> $GITHUB_OUTPUT
             echo "public_url=https://agent360.antares.vn" >> $GITHUB_OUTPUT
             echo "container_name=agent360-frontend" >> $GITHUB_OUTPUT
+            echo "backend_upstream=agent360-backend:8080" >> $GITHUB_OUTPUT
           fi
           echo "target_env=$TARGET" >> $GITHUB_OUTPUT
           echo "Target Environment: $TARGET"
@@ -67,6 +69,15 @@ jobs:
           npm run build
           test -f dist/index.html
 
+      - name: Render nginx config
+        env:
+          AGENT360_BACKEND_UPSTREAM: ${{ steps.env-target.outputs.backend_upstream }}
+        run: |
+          # Only our variable is substituted; nginx runtime variables ($host, $uri, ...) stay literal.
+          envsubst '${AGENT360_BACKEND_UPSTREAM}' < deploy/nginx/default.conf.template > deploy/nginx/rendered.conf
+          grep -q "proxy_pass http://${AGENT360_BACKEND_UPSTREAM}/api/v1/;" deploy/nginx/rendered.conf
+          ! grep -q '${AGENT360_BACKEND_UPSTREAM}' deploy/nginx/rendered.conf
+
       - name: Publish (assets first, index.html last)
         run: |
           DIST_ROOT="${{ steps.env-target.outputs.dist_root }}"
@@ -75,10 +86,11 @@ jobs:
           find dist -maxdepth 1 -type f ! -name index.html -exec cp {} "$DIST_ROOT/" \;
           cp dist/index.html "$DIST_ROOT/index.html.new" && mv "$DIST_ROOT/index.html.new" "$DIST_ROOT/index.html"
           
+          CONF="$GITHUB_WORKSPACE/deploy/nginx/rendered.conf"
           if [ "${{ steps.env-target.outputs.target_env }}" = "production" ]; then
-            sudo -n /usr/local/sbin/agent360-restart frontend
+            sudo -n /usr/local/sbin/agent360-restart frontend "$CONF"
           else
-            sudo -n /usr/local/sbin/agent360-restart frontend-staging
+            sudo -n /usr/local/sbin/agent360-restart frontend-staging "$CONF"
           fi
 
       - name: Verify live bundle

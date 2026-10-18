@@ -1,0 +1,30 @@
+name: Verify Frontend
+
+# Runs on every push and PR outside the deploy branches, so a broken typecheck/build is caught
+# before it reaches staging (concurrent agent sessions have pushed half-finished refactors).
+on:
+  pull_request:
+  push:
+    branches-ignore: [main, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Render nginx config for both environments
+        run: |
+          for u in agent360-backend:8080 agent360-backend-staging:8080; do
+            AGENT360_BACKEND_UPSTREAM=$u envsubst '${AGENT360_BACKEND_UPSTREAM}' < deploy/nginx/default.conf.template > /tmp/r.conf
+            grep -q "proxy_pass http://$u/api/v1/;" /tmp/r.conf
+            docker run --rm -v /tmp/r.conf:/etc/nginx/conf.d/default.conf:ro --add-host agent360-a2a:127.0.0.1 --add-host "${u%%:*}:127.0.0.1" nginx:alpine nginx -t
+          done
