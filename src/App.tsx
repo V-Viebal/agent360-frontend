@@ -1,34 +1,37 @@
+import { lazy, Suspense } from "react";
 import { AuthGuard } from "./components/AuthGuard";
 import { CallbackPage } from './pages/CallbackPage';
 import { Routes, Route, Navigate } from "react-router-dom";
 import { GrokBotWorkspace } from "./pages/GrokBotWorkspace";
 import { LandingPage } from "./pages/LandingPage";
-import { MarketplacePage } from "./pages/MarketplacePage";
-import { DocsPage } from "./pages/DocsPage";
-import { AgentDetailPage } from "./pages/AgentDetailPage";
-import { AgentStatsDashboardPage } from "./pages/AgentStatsDashboardPage";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./context/ThemeContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { OfflineBanner } from "./components/OfflineBanner";
-import { DesignTokensSandboxPage } from "./pages/DesignTokensSandboxPage";
 
-// Admin Portal Pages
-import { AdminLayout } from "./pages/admin/AdminLayout";
-import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
-import { AdminAgentsPage } from "./pages/admin/AdminAgentsPage";
-import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
-import { AdminBillingsPage } from "./pages/admin/AdminBillingsPage";
-import { AdminOrganizationsPage } from "./pages/admin/AdminOrganizationsPage";
-import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
-import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
+// Lazy-loaded secondary pages & admin portal to optimize initial bundle size
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage").then(m => ({ default: m.MarketplacePage })));
+const DocsPage = lazy(() => import("./pages/DocsPage").then(m => ({ default: m.DocsPage })));
+const AgentDetailPage = lazy(() => import("./pages/AgentDetailPage").then(m => ({ default: m.AgentDetailPage })));
+const AgentStatsDashboardPage = lazy(() => import("./pages/AgentStatsDashboardPage").then(m => ({ default: m.AgentStatsDashboardPage })));
+const DesignTokensSandboxPage = lazy(() => import("./pages/DesignTokensSandboxPage").then(m => ({ default: m.DesignTokensSandboxPage })));
+
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout").then(m => ({ default: m.AdminLayout })));
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage").then(m => ({ default: m.AdminDashboardPage })));
+const AdminAgentsPage = lazy(() => import("./pages/admin/AdminAgentsPage").then(m => ({ default: m.AdminAgentsPage })));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage").then(m => ({ default: m.AdminUsersPage })));
+const AdminBillingsPage = lazy(() => import("./pages/admin/AdminBillingsPage").then(m => ({ default: m.AdminBillingsPage })));
+const AdminOrganizationsPage = lazy(() => import("./pages/admin/AdminOrganizationsPage").then(m => ({ default: m.AdminOrganizationsPage })));
+const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage").then(m => ({ default: m.AdminSettingsPage })));
+const AdminAuditPage = lazy(() => import("./pages/admin/AdminAuditPage").then(m => ({ default: m.AdminAuditPage })));
 
 export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
         <OfflineBanner />
+      <Suspense fallback={<div className="min-h-screen bg-[#07090E] flex items-center justify-center text-xs font-mono text-neutral-400">Loading...</div>}>
       <Routes>
       {/* 1. Public Marketing Landing Page at "/" */}
       <Route
@@ -126,6 +129,7 @@ export default function App() {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+      </Suspense>
     </LanguageProvider>
     </ThemeProvider>
   );

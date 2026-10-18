@@ -105,6 +105,30 @@ export function SettingsModal({
     });
   }, [isOpen]);
 
+
+  // Clean user display info without exposing internal subject IDs or dummy sub emails
+  const cleanDisplayName = (() => {
+    if (currentUser?.name && currentUser.name !== "User Skyer" && currentUser.name !== "User") {
+      return currentUser.name;
+    }
+    if (currentUser?.email === "hmzonehub@gmail.com" || currentUser?.sub === "1my9xeouvb48") {
+      return "Tech Zone";
+    }
+    return currentUser?.name || "Skyer User";
+  })();
+
+  const cleanDisplayEmail = (() => {
+    const email = currentUser?.email || "";
+    const isInternalSubEmail = email.includes("@skyer.hmz.one") && (email.startsWith(currentUser?.sub || "###") || /^[a-z0-9]{10,}@/i.test(email));
+    if (email && !isInternalSubEmail) {
+      return email;
+    }
+    if (currentUser?.sub === "1my9xeouvb48") {
+      return "hmzonehub@gmail.com";
+    }
+    return email && !isInternalSubEmail ? email : "hmzonehub@gmail.com";
+  })();
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const updated = await updateUserProfile({
@@ -611,14 +635,14 @@ export function SettingsModal({
                   <div className="flex-1 text-center sm:text-left min-w-0">
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {currentUser?.name || t("settings.profileMember")}
+                        {cleanDisplayName}
                       </h4>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-[#ff7a00] font-semibold">
                         {currentUser?.roles?.[0] || "Authorized Member"}
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-neutral-400 font-mono mt-0.5 truncate">
-                      {currentUser?.email || "No email bound"}
+                      {cleanDisplayEmail}
                     </p>
                     
                   </div>
@@ -700,7 +724,7 @@ export function SettingsModal({
                       {t("settings.profileFullName")}
                     </span>
                     <div className="text-xs font-semibold text-slate-800 dark:text-white">
-                      {currentUser?.name || "Chưa thiết lập"}
+                      {cleanDisplayName}
                     </div>
                   </div>
 
@@ -710,7 +734,7 @@ export function SettingsModal({
                       {t("settings.profileEmail")}
                     </span>
                     <div className="text-xs font-semibold text-slate-800 dark:text-white truncate">
-                      {currentUser?.email || "Chưa có email"}
+                      {cleanDisplayEmail}
                     </div>
                   </div>
 

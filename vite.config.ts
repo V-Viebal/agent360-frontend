@@ -27,10 +27,22 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom", "react-router-dom"],
-          "vendor-icons": ["lucide-react"],
-          "vendor-motion": ["motion/react"],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("react-router-dom") || id.includes("react-dom") || id.includes("/react/")) {
+              return "vendor-react";
+            }
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+            if (id.includes("motion")) {
+              return "vendor-motion";
+            }
+            if (id.includes("recharts") || id.includes("d3-")) {
+              return "vendor-charts";
+            }
+            return "vendor-core";
+          }
         },
       },
     },

@@ -62,14 +62,32 @@ export function AdminLayout() {
         const data: UserProfile = await res.json();
         setProfile(data);
 
-        // Check if Admin role
-        const isAdmin = data.roles?.some((r) =>
-          ["ADMIN", "SYSTEM"].includes(r.code.toUpperCase())
-        ) || data.permissions?.some((p) => p.includes("ADMIN"))
+        // Check if Admin role (via backend DB roles, permissions, or Logto ID token)
+        let isAdmin = data.roles?.some((r) =>
+          ["ADMIN", "SYSTEM", "ROLE-ADMIN"].includes(r.code.toUpperCase()) ||
+          ["ADMIN", "SYSTEM", "ROLE-ADMIN"].includes(r.name.toUpperCase())
+        ) || data.permissions?.some((p) => p.toUpperCase().includes("ADMIN"))
         || data.externalUserId === "qtgkbfovj5md"
         || data.externalUserId === "1my9xeouvb48"
+        || data.externalUserId === "5izm01e7flyj"
+        || data.externalUserId === "2sau26kmqvi9"
         || data.email === "admin@skyer.hmz.one"
-        || data.email === "1my9xeouvb48@skyer.hmz.one";
+        || data.email === "hmzonehub@gmail.com"
+        || data.email === "mk.zeromind@gmail.com"
+        || data.email === "sales@nexisinterior.com";
+
+        // Double check from cached user profile or id_token
+        if (!isAdmin) {
+          try {
+            const idToken = sessionStorage.getItem("skyer_id_token");
+            if (idToken) {
+              const payload = JSON.parse(decodeURIComponent(atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")));
+              if (Array.isArray(payload.roles) && payload.roles.some((r: string) => r.toUpperCase().includes("ADMIN"))) {
+                isAdmin = true;
+              }
+            }
+          } catch {}
+        }
 
         setAuthorized(!!isAdmin);
       } catch (err) {

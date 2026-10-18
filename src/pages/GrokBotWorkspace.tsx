@@ -5543,6 +5543,32 @@ export function GrokBotWorkspace() {
                           if (e.key === "1") handleSelectLoopMode("default");
                           if (e.key === "2") handleSelectLoopMode("goal");
                           if (e.key === "3") handleSelectLoopMode("mission");
+                        } else if (e.key === "Tab") {
+                          e.preventDefault();
+                          // Cycle focus/selection between Apps column and Subagents column
+                          const appsLength = agentApps.length;
+                          const totalLength = allNavItems.length;
+                          if (totalLength === 0) return;
+
+                          if (e.shiftKey) {
+                            // Shift+Tab: backward column switch
+                            if (plusMenuSelectedIndex >= appsLength) {
+                              setPlusMenuSelectedIndex(0);
+                            } else if (plusMenuSelectedIndex >= 0) {
+                              setPlusMenuSelectedIndex(-1);
+                            } else {
+                              setPlusMenuSelectedIndex(appsLength > 0 ? appsLength : 0);
+                            }
+                          } else {
+                            // Tab: forward column switch (Search -> Apps -> Subagents -> Search)
+                            if (plusMenuSelectedIndex < 0) {
+                              setPlusMenuSelectedIndex(0);
+                            } else if (plusMenuSelectedIndex < appsLength && appsLength < totalLength) {
+                              setPlusMenuSelectedIndex(appsLength);
+                            } else {
+                              setPlusMenuSelectedIndex(-1);
+                            }
+                          }
                         } else if (e.key === "Enter") {
                           if (plusMenuSelectedIndex >= 0 && plusMenuSelectedIndex < allNavItems.length) {
                             e.preventDefault();
@@ -5986,6 +6012,10 @@ export function GrokBotWorkspace() {
                     <span className="flex items-center gap-1 hidden sm:inline-flex">
                       <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">0-3</span>
                       <span>Tệp / Chế độ</span>
+                    </span>
+                    <span className="flex items-center gap-1 hidden sm:inline-flex">
+                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">Tab</span>
+                      <span>Chuyển cột</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-3">

@@ -88,7 +88,7 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
   // 4. Enrich roles and permissions from backend /api/users/me (PostgreSQL database authority)
   if (accessToken) {
     try {
-      const backendRes = await fetch("/api/users/me", {
+      const backendRes = await fetch("/api/v1/users/me", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
