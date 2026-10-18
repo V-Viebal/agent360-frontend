@@ -146,22 +146,22 @@ export function ContextUsageBar({
         </button>
 
         {/* Hovering Context Detail Tooltip matching user screenshot */}
-        <div className="pointer-events-none absolute bottom-full right-0 mb-2.5 hidden group-hover/ctx:flex flex-col gap-1.5 p-3 rounded-2xl bg-[#18181f]/95 dark:bg-[#181820]/95 border border-white/10 shadow-2xl backdrop-blur-xl z-50 min-w-[190px] text-left animate-in fade-in zoom-in-95 duration-150 select-none">
-          <div className="text-[11px] font-sans text-neutral-400">{t("contextBar.window")}</div>
-          <div className="text-xs font-semibold text-white">
+        <div className="pointer-events-none absolute bottom-full right-0 mb-2.5 hidden group-hover/ctx:flex flex-col gap-1.5 p-3 rounded-2xl bg-white/95 dark:bg-[#181820]/95 border border-slate-200 dark:border-white/10 shadow-2xl backdrop-blur-xl z-50 min-w-[190px] text-left animate-in fade-in zoom-in-95 duration-150 select-none">
+          <div className="text-[11px] font-sans text-slate-500 dark:text-neutral-400">{t("contextBar.window")}</div>
+          <div className="text-xs font-semibold text-slate-900 dark:text-white">
             {ratio}% used ({leftPercent}% left)
           </div>
-          <div className="text-[11px] font-mono text-neutral-400">
+          <div className="text-[11px] font-mono text-slate-600 dark:text-neutral-400">
             {usedK}k / {maxK}k tokens used
           </div>
 
-          <div className="pt-1 mt-0.5 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-neutral-400">
+          <div className="pt-1 mt-0.5 border-t border-slate-200 dark:border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-neutral-400">
             <div className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 18 18" className="transform -rotate-90 shrink-0">
-                <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-neutral-700" />
-                <circle cx="9" cy="9" r="6" stroke="#9ca3af" strokeWidth="2.5" strokeDasharray={37.7} strokeDashoffset={37.7 - (ratio / 100) * 37.7} strokeLinecap="round" fill="transparent" />
+                <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-slate-300 dark:text-neutral-700" />
+                <circle cx="9" cy="9" r="6" stroke="#ff7a00" strokeWidth="2.5" strokeDasharray={37.7} strokeDashoffset={37.7 - (ratio / 100) * 37.7} strokeLinecap="round" fill="transparent" />
               </svg>
-              <span className="truncate max-w-[110px] text-neutral-300">{t("contextBar.autoGc")}</span>
+              <span className="truncate max-w-[110px] text-slate-700 dark:text-neutral-300">{t("contextBar.autoGc")}</span>
             </div>
             <span className="text-[#ff7a00] hover:underline cursor-pointer">{t("contextBar.compact")}</span>
           </div>
@@ -173,7 +173,7 @@ export function ContextUsageBar({
           )}
 
           {/* Arrow */}
-          <div className="absolute right-2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-[#181820]" />
+          <div className="absolute right-2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-white dark:border-t-[#181820]" />
         </div>
       </div>
     );

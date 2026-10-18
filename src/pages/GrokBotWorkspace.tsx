@@ -1237,15 +1237,7 @@ export function GrokBotWorkspace() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const mascotRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutsideUser = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutsideUser);
-    return () => document.removeEventListener("mousedown", handleClickOutsideUser);
-  }, []);
+  // Note: DropdownMenu handles its own outside clicks via anchorRef and portal
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -3623,7 +3615,7 @@ export function GrokBotWorkspace() {
                 </div>
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-[#ff7a00]" />}
-                  label="Cài đặt Workspace"
+                  label="Cài đặt (Settings)"
                   badge="Mở"
                   onClick={() => {
                     setIsUserMenuOpen(false);
@@ -3948,7 +3940,7 @@ export function GrokBotWorkspace() {
                 </div>
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-[#ff7a00]" />}
-                  label="Cài đặt Workspace"
+                  label="Cài đặt (Settings)"
                   badge="Mở"
                   onClick={() => {
                     setIsUserMenuOpen(false);
@@ -4111,6 +4103,17 @@ export function GrokBotWorkspace() {
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
           <div className="flex items-center gap-1.5 shrink-0">
+
+            <button aria-label="Mở cài đặt (Settings)" data-ux-target-min="24"
+              onClick={() => {
+                setSettingsModalTab("appearance");
+                setIsSettingsModalOpen(true);
+              }}
+              className="h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors"
+              title="Cài đặt (Settings)"
+            >
+              <Settings size={15} />
+            </button>
 
             <button aria-label={isChatListCollapsed ? "Expand Conversations list" : "Collapse Conversations list"} data-ux-target-min="24"
               onClick={() => {
@@ -5549,6 +5552,7 @@ export function GrokBotWorkspace() {
             </div>
 
             <section
+            data-testid="virtual-computer-split-pane"
             aria-label="Virtual Computer Interactive Workspace"
             className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
           >
@@ -5560,7 +5564,7 @@ export function GrokBotWorkspace() {
                   {selectedAgent.name} Computer
                 </span>
                 <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
-                  Live Sandbox
+                  {t("computer.liveSandbox")}
                 </span>
                 <span className="text-[11px] font-mono text-neutral-400 hidden md:inline px-2 py-0.5 rounded bg-white/5 border border-white/10">
                   {selectedAgent.node}
@@ -5607,11 +5611,11 @@ export function GrokBotWorkspace() {
                   type="button"
                   onClick={() => handleSetBrowserModalOpen(true)}
                   className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
-                  title="Mở rộng toàn màn hình (Modal)"
+                  title={t("computer.zenMode")}
                   aria-label="Expand full screen modal"
                 >
                   <Maximize2 size={13} />
-                  <span className="hidden sm:inline text-[11px]">Full Modal</span>
+                  <span className="hidden sm:inline text-[11px]">{t("computer.zenMode")}</span>
                 </button>
 
                 <a
@@ -5619,18 +5623,18 @@ export function GrokBotWorkspace() {
                   target="_blank"
                   rel="noreferrer"
                   className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
-                  title="Mở trong tab mới (External Window)"
+                  title={t("computer.openExternal")}
                   aria-label="Open external window"
                 >
                   <ExternalLink size={13} />
-                  <span className="hidden sm:inline text-[11px]">Tab mới</span>
+                  <span className="hidden sm:inline text-[11px]">{t("computer.openExternal")}</span>
                 </a>
 
                 <button
                   type="button"
                   onClick={() => handleToggleComputerSplit(false)}
                   className="h-8 w-8 rounded-lg bg-[#22222e] hover:bg-red-500/20 hover:text-red-400 border border-[#303042] hover:border-red-500/30 text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
-                  title="Đóng Computer (Esc)"
+                  title={t("computer.closeComputer")}
                   aria-label="Close Virtual Computer"
                 >
                   <X size={15} />
@@ -6375,12 +6379,12 @@ export function GrokBotWorkspace() {
                 return (
                   <div className="flex flex-col w-full">
                     {/* Live Browser Fixed-Height Responsive Card */}
-                    <div className="w-full rounded-2xl border border-[#262634] bg-[#101015] overflow-hidden shadow-xl flex flex-col shrink-0">
+                    <div className="w-full rounded-2xl border border-slate-200 dark:border-[#262634] bg-slate-900 dark:bg-[#101015] overflow-hidden shadow-xl flex flex-col shrink-0">
                       {/* Top Browser Bar */}
                       <div className="h-9 px-3 bg-slate-100 dark:bg-[#171720] border-b border-slate-200 dark:border-[#242430] flex items-center justify-between text-xs font-mono select-none shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                          <span className="text-[11px] font-semibold text-white truncate">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                          <span className="text-[11px] font-semibold text-slate-900 dark:text-white truncate">
                             {selectedAgent.name} Computer
                           </span>
                         </div>

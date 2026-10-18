@@ -270,7 +270,7 @@ export function A2ATopologyGraphModal({
                 type="button"
                 onClick={() => handleZoom(-0.1)}
                 className="p-1 rounded-lg hover:bg-white/10 hover:text-white cursor-pointer transition-colors"
-                title="Thu nhỏ (-)"
+                title={t("topology.zoomOut")}
               >
                 <ZoomOut size={13} />
               </button>
@@ -281,7 +281,7 @@ export function A2ATopologyGraphModal({
                 type="button"
                 onClick={() => handleZoom(0.1)}
                 className="p-1 rounded-lg hover:bg-white/10 hover:text-white cursor-pointer transition-colors"
-                title="Phóng to (+)"
+                title={t("topology.zoomIn")}
               >
                 <ZoomIn size={13} />
               </button>
@@ -289,7 +289,7 @@ export function A2ATopologyGraphModal({
                 type="button"
                 onClick={handleAutoFitToScreen}
                 className="px-2 py-0.5 rounded-lg text-[10px] font-mono hover:bg-white/10 hover:text-white cursor-pointer transition-colors flex items-center gap-1"
-                title="Vừa vặn màn hình"
+                title={t("topology.fitScreen")}
               >
                 <Maximize2 size={11} />
                 <span>Fit</span>
@@ -298,7 +298,7 @@ export function A2ATopologyGraphModal({
                 type="button"
                 onClick={handleResetZoomPan}
                 className="p-1 rounded-lg hover:bg-white/10 hover:text-white cursor-pointer transition-colors"
-                title="Mặc định 100%"
+                title={t("topology.resetZoom")}
               >
                 <RotateCcw size={12} />
               </button>
@@ -310,10 +310,10 @@ export function A2ATopologyGraphModal({
               onClick={runPingProbing}
               disabled={isProbing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a1a24] hover:bg-[#242434] border border-[#2a2a3c] text-xs font-medium text-slate-800 dark:text-neutral-200 hover:text-white transition-colors cursor-pointer"
-              title="Đo lại độ trễ kết nối"
+              title={t("topology.reprobePing")}
             >
               <RefreshCw size={12} className={isProbing ? "animate-spin text-[#ff7a00]" : "text-[#ff7a00]"} />
-              <span className="hidden sm:inline">Đo Ping</span>
+              <span className="hidden sm:inline">{isProbing ? t("topology.probing") : t("topology.probePing")}</span>
             </button>
 
             {/* Export Latency Telemetry */}
@@ -322,7 +322,7 @@ export function A2ATopologyGraphModal({
                 type="button"
                 onClick={() => exportLatencyData("csv")}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                title="Xuất file đo kiểm CSV"
+                title={t("topology.exportCsv")}
               >
                 <Download size={11} className="text-[#ff7a00]" />
                 <span>CSV</span>
@@ -331,7 +331,7 @@ export function A2ATopologyGraphModal({
                 type="button"
                 onClick={() => exportLatencyData("json")}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                title="Xuất file đo kiểm JSON"
+                title={t("topology.exportJson")}
               >
                 <Download size={11} className="text-cyan-400" />
                 <span>JSON</span>
@@ -356,7 +356,7 @@ export function A2ATopologyGraphModal({
               type="text"
               value={topologySearchQuery}
               onChange={(e) => setTopologySearchQuery(e.target.value)}
-              placeholder="Tìm theo tên bạn đồng đội, chuyên môn, máy chủ..."
+              placeholder={t("topology.searchPlaceholder")}
               className="w-full bg-transparent text-white placeholder-neutral-500 font-sans text-xs focus:outline-none"
             />
             {topologySearchQuery && (
@@ -371,10 +371,10 @@ export function A2ATopologyGraphModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0 font-mono text-xs">
-            <span className="text-neutral-500 text-[11px] hidden sm:inline">Cụm máy:</span>
+            <span className="text-neutral-500 text-[11px] hidden sm:inline">{t("topology.filterCluster")}</span>
             <div className="flex items-center gap-1 bg-[#1a1a24] p-0.5 rounded-xl border border-[#2a2a3c]">
               {[
-                { id: "all", label: "Tất cả" },
+                { id: "all", label: t("topology.clusterAll") },
                 { id: "core", label: "Node 3rd" },
                 { id: "giamoc", label: "Node 6th" },
                 { id: "control", label: "Node 7th" },
@@ -421,7 +421,7 @@ export function A2ATopologyGraphModal({
                 <div className="flex items-center gap-2 text-xs font-mono text-[#ff7a00]">
                   <Radio size={13} className="animate-pulse" />
                   <span className="font-semibold uppercase tracking-wider">
-                    Nhóm 1: Điều phối & Quản trị dự án
+                    {t("topology.tier1")}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -447,7 +447,7 @@ export function A2ATopologyGraphModal({
                             {renderPingBadge(ag.id)}
                             {isCur && (
                               <span className="text-[9px] font-mono bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                                Đang chọn
+                                {t("topology.currentlySelected")}
                               </span>
                             )}
                           </div>
@@ -501,7 +501,7 @@ export function A2ATopologyGraphModal({
                 <div className="flex items-center gap-2 text-xs font-mono text-cyan-400">
                   <Cpu size={13} />
                   <span className="font-semibold uppercase tracking-wider">
-                    Nhóm 2: Lập trình viên & Kỹ sư Vận hành
+                    {t("topology.tier2")}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -527,7 +527,7 @@ export function A2ATopologyGraphModal({
                             {renderPingBadge(ag.id)}
                             {isCur && (
                               <span className="text-[9px] font-mono bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                                Đang chọn
+                                {t("topology.currentlySelected")}
                               </span>
                             )}
                           </div>
@@ -547,7 +547,7 @@ export function A2ATopologyGraphModal({
                   <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
                     <Layers size={13} />
                     <span className="font-semibold uppercase tracking-wider">
-                      Nhóm 3: Kiểm thử & Chuyên gia Chuyên ngành
+                      {t("topology.tier3")}
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -584,7 +584,7 @@ export function A2ATopologyGraphModal({
               <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-neutral-400 border-b border-[#20202e] pb-1">
                 <span className="flex items-center gap-1 text-[#ff7a00]">
                   <Navigation size={11} />
-                  <span>Bản đồ thu nhỏ</span>
+                  <span>{t("topology.minimap")}</span>
                 </span>
                 <span className="text-[10px] text-white font-semibold">{Math.round(zoomScale * 100)}%</span>
               </div>
@@ -637,7 +637,7 @@ export function A2ATopologyGraphModal({
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs font-mono text-[#ff7a00]">
                 <Sparkles size={14} />
-                <span className="font-semibold uppercase tracking-wider">Thông tin bạn đồng đội</span>
+                <span className="font-semibold uppercase tracking-wider">{t("topology.teammateInfo")}</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#181824] border border-[#262638] space-y-2">
@@ -646,7 +646,7 @@ export function A2ATopologyGraphModal({
                   {renderPingBadge(activeSelectedAgent.id)}
                 </div>
                 <div className="text-xs font-mono text-[#ff7a00] font-medium">
-                  {activeSelectedAgent.roleTag || "Đồng đội AI"}
+                  {activeSelectedAgent.roleTag || t("topology.defaultRole")}
                 </div>
                 {activeSelectedAgent.description && (
                   <p className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed font-sans pt-2 border-t border-[#242434]">
@@ -657,23 +657,23 @@ export function A2ATopologyGraphModal({
 
               <div className="space-y-2 text-xs font-mono text-slate-500 dark:text-neutral-400 p-4 rounded-2xl bg-[#181824] border border-[#262638]">
                 <div className="flex items-center justify-between">
-                  <span>Máy chủ:</span>
+                  <span>{t("topology.hostNode")}</span>
                   <span className="text-white font-medium">{activeSelectedAgent.node}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Mô hình trí tuệ:</span>
+                  <span>{t("topology.intelModel")}</span>
                   <span className="text-[#ff7a00] font-medium">{activeSelectedAgent.model ? (activeSelectedAgent.model.includes("/") ? activeSelectedAgent.model.split("/").pop() : activeSelectedAgent.model) : "default"}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Thời gian phản hồi:</span>
+                  <span>{t("topology.latency")}</span>
                   <span className="text-emerald-400 font-medium">
                     {agentPings[activeSelectedAgent.id] ?? nodePingMs ?? 25}ms RTT
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Trạng thái:</span>
+                  <span>{t("topology.statusLabel")}</span>
                   <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                    <CheckCircle2 size={12} /> {activeSelectedAgent.status || "Sẵn sàng"}
+                    <CheckCircle2 size={12} /> {activeSelectedAgent.status || t("topology.statusReady")}
                   </span>
                 </div>
               </div>
@@ -688,7 +688,7 @@ export function A2ATopologyGraphModal({
                 }}
                 className="w-full py-2.5 px-4 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-[#ff7a00]/20"
               >
-                <span>Chuyển sang làm việc cùng {activeSelectedAgent.name}</span>
+                <span>{t("topology.switchTeammate", { name: activeSelectedAgent.name })}</span>
                 <ArrowUpRight size={15} />
               </button>
             </div>
@@ -697,13 +697,13 @@ export function A2ATopologyGraphModal({
 
         {/* Modal Footer */}
         <div className="px-6 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-          <span>Skyer Không Gian Đồng Đội AI</span>
+          <span>{t("topology.footerBrand")}</span>
           <button
             type="button"
             onClick={onClose}
             className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
           >
-            Đóng bảng
+            {t("topology.closeModal")}
           </button>
         </div>
       </div>
