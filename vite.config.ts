@@ -10,6 +10,11 @@ export default defineConfig({
     __APP_BUILD__: JSON.stringify(APP_BUILD),
   },
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    esbuildOptions: {
+      target: "esnext",
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
