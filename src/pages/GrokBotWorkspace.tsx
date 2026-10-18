@@ -2892,6 +2892,7 @@ export function GrokBotWorkspace() {
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
+  const hasNoAgents = !isLoadingAgents && agents.length === 0;
 
   // The selected agent's own browser (service + Chromium profile); refreshed while the Computer surface is visible.
   const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
@@ -3690,6 +3691,7 @@ export function GrokBotWorkspace() {
   // Send message or queue when agent is in progress
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
+    if (hasNoAgents) return;
     if (!inputText.trim()) return;
 
     // Request notification permission on first user interaction if supported
@@ -4576,13 +4578,24 @@ export function GrokBotWorkspace() {
               <div
                 id="tour-bot-spec-trigger"
                 onClick={() => {
-                  handleToggleBotInfo();
-                  setMobileBotInfoOpen((prev) => !prev);
+                  if (!hasNoAgents) {
+                    handleToggleBotInfo();
+                    setMobileBotInfoOpen((prev) => !prev);
+                  }
                 }}
                 className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none"
               >
-                <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
-                <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent.name}</span>
+                {hasNoAgents ? (
+                  <>
+                    <Shield size={14} className="text-[#ff7a00]" />
+                    <span className="truncate max-w-[160px] sm:max-w-[220px] text-xs text-neutral-900 dark:text-white font-mono">Chưa có Agent</span>
+                  </>
+                ) : (
+                  <>
+                    <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
+                    <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Mons"}</span>
+                  </>
+                )}
                 {activeLoopMode !== "default" && (
                   <span className={`hidden sm:inline-flex items-center gap-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold ${
                     activeLoopMode === 'goal'
@@ -4732,6 +4745,40 @@ export function GrokBotWorkspace() {
           ref={messagesContainerRef}
           className={`flex-1 overflow-y-auto ${isCompactMode ? "px-3 py-3 space-y-3.5" : "px-4 md:px-8 py-5 space-y-5"} max-w-3xl mx-auto w-full`}
         >
+          {hasNoAgents ? (
+            <div className="h-full min-h-[420px] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300 select-none">
+              <div className="w-16 h-16 rounded-3xl bg-[#ff7a00]/10 border border-[#ff7a00]/25 flex items-center justify-center mb-5 shadow-lg shadow-[#ff7a00]/5">
+                <Bot size={32} className="text-[#ff7a00]" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
+                Bạn chưa được phân quyền quản lý Agent nào
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-md mb-6 leading-relaxed">
+                Tài khoản của bạn hiện chưa được phân công Agent trên hạ tầng Skyer. Hãy liên hệ Quản trị viên (Admin) để được gán quyền sử dụng hoặc cấp quyền vận hành.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => alert("Tính năng tự tạo Agent riêng trên hạ tầng VPS đang được phát triển và sẽ sớm ra mắt!")}
+                  className="px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all cursor-pointer shadow-md flex items-center gap-2 group"
+                >
+                  <Plus size={15} className="group-hover:rotate-90 transition-transform" />
+                  <span>Tạo Agent mới</span>
+                  <span className="ml-1 px-1.5 py-0.5 rounded-md bg-black/20 text-black text-[9px] font-mono uppercase tracking-wider font-bold">
+                    Incoming
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-[#181824] hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200 dark:border-[#2a2a3c] text-slate-700 dark:text-neutral-300 text-xs font-medium transition-colors cursor-pointer"
+                >
+                  Kiểm tra lại quyền
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
           {/* Lean dialogue flow without redundant banners */}
 
           {isLoadingMessages ? (
@@ -5030,8 +5077,8 @@ export function GrokBotWorkspace() {
               );
             })
           )}
-
-          
+          </>
+          )}
 
           <div ref={messagesEndRef} />
         </div>
@@ -6231,12 +6278,15 @@ export function GrokBotWorkspace() {
                   }
                 }
               }}
+              disabled={hasNoAgents}
               placeholder={
-                isRecording
+                hasNoAgents
+                  ? "Chưa có Agent được gán cho tài khoản của bạn (Tính năng tạo Agent đang Incoming)..."
+                  : isRecording
                   ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
                   : isStreaming
                   ? `Agent is responding • Enter to queue next request, or click Stop...`
-                  : `Message ${selectedAgent.name}... (Enter to send, Shift+Enter for new line)`
+                  : `Message ${selectedAgent?.name || "Agent"}... (Enter to send, Shift+Enter for new line)`
               }
               aria-label={`Message ${selectedAgent.name}`}
               className="flex-1 bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed scrollbar-none"
