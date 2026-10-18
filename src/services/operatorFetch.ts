@@ -1,28 +1,7 @@
-import { operatorKey } from "./a2aApi";
+import { operatorKey } from "./operatorKey";
 
-/**
- * Attach the operator key to mutating agent-runtime proxy calls (/api/agents/{id}/...), which the
- * backend protects when Agent360:Security:ProtectRuntimeProxyWrites is on. Uses a dedicated header so
- * existing Authorization headers are never overwritten. Reads and other origins are untouched.
- */
-// Mirrors the backend OperatorWriteGuardMiddleware + runtime proxy guard. Chat send/stop, uploads and the
-// turn-telemetry beacon stay open server-side, so they are not listed here.
 const PROTECTED = new RegExp(
-  "^/api(?:/v\\d+)?/(?:" +
-    [
-      "agents/[^/]+/(?:agent-status|config/|cron/|mcp|tools|skills|workspace/|memory|compact-context|active-model|media/send)",
-      "agents/(?:approvals/|compact-context|iam/)",
-      "approvals/",
-      "libraries/skills/",
-      "mcps/",
-      "tools/",
-      "schedules/",
-      "media/",
-      "chats/[^/]+/share",
-      "integrations/",
-      "mcp(?:/|$)",
-    ].join("|") +
-    ")"
+  "^/api/agents/[^/]+/(?:tools|mcp|subagents|memory|profile|system-prompt|environment|schedule|skills|loop-mode)"
 );
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -48,8 +27,6 @@ export function installOperatorFetch(): void {
     }
 
     if (!key || !WRITE.has(method)) return original(input, init);
-    const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const url = new URL(raw, window.location.origin);
     if (url.origin !== window.location.origin || !PROTECTED.test(url.pathname)) return original(input, init);
     const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
     if (!headers.has("X-Agent360-Operator-Token")) headers.set("X-Agent360-Operator-Token", key);

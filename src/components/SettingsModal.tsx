@@ -382,9 +382,9 @@ export function SettingsModal({
         {/* Modal Body: Left Tab Nav & Right Content Panel */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Navigation Tabs (Grouped into System vs Voice Recording) */}
-          <div className="w-full md:w-56 bg-[#0f0f15] border-b md:border-b-0 md:border-r border-[#20202c] p-2.5 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
+          <div className="w-full md:w-56 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2.5 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
             {/* GROUP 1: SYSTEM SETTINGS */}
-            <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold select-none">
+            <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
               {t("settings.groupSystem") || "Hệ thống"}
             </div>
 
@@ -394,10 +394,10 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === "appearance"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Palette size={15} className={activeTab === "appearance" ? "text-[#ff7a00]" : "text-neutral-400"} />
+              <Palette size={15} className={activeTab === "appearance" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
               <span>{t("settings.tabAppearance")}</span>
             </button>
             <button
@@ -406,7 +406,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "language"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Globe size={15} />
@@ -418,7 +418,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "audio"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Volume2 size={15} />
@@ -430,7 +430,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "privacy_export"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <ShieldCheck size={15} />
@@ -438,7 +438,7 @@ export function SettingsModal({
             </button>
 
             {/* GROUP 2: VOICE RECORDING SETTINGS */}
-            <div className="hidden md:block px-2.5 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold border-t border-[#1e1e28] mt-2 select-none">
+            <div className="hidden md:block px-2.5 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold border-t border-slate-200 dark:border-[#1e1e28] mt-2 select-none">
               {t("settings.groupVoice") || "Giọng nói & Thu âm"}
             </div>
 
@@ -448,7 +448,7 @@ export function SettingsModal({
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "voice_record"
                   ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
-                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
+                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Mic size={15} className={activeTab === "voice_record" ? "text-[#ff7a00]" : "text-cyan-400"} />

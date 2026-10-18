@@ -885,7 +885,7 @@ function AgentBrowserPreview({ agentId, enabled }: { agentId: string; enabled: b
         onLoad={() => { setLoaded(true); setFailures(0); }}
       />
       {!loaded && (
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-neutral-500">
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black">
           {failures > 0 ? "Waiting for the agent's browser…" : "Loading preview…"}
         </div>
       )}
@@ -5482,6 +5482,34 @@ export function GrokBotWorkspace() {
                 e.target.style.height = Math.min(e.target.scrollHeight, 130) + "px";
               }}
               onKeyDown={(e) => {
+                // Fast Backspace LIFO tag deletion when cursor is at the very beginning of user-written text or prompt is composed only of tags
+                if (e.key === "Backspace") {
+                  const target = e.currentTarget;
+                  const start = target.selectionStart;
+                  const end = target.selectionEnd;
+                  // Only trigger tag deletion if there is no active text selection
+                  if (start === end) {
+                    const textBefore = target.value.substring(0, start);
+                    // Match trailing mention or tool right before cursor
+                    const trailingTagMatch = textBefore.match(/(@[a-zA-Z0-9_-]+|\/[a-zA-Z0-9_-]+)\s*$/);
+                    if (trailingTagMatch) {
+                      e.preventDefault();
+                      const tagToRemove = trailingTagMatch[0];
+                      const newTextBefore = textBefore.substring(0, textBefore.length - tagToRemove.length);
+                      const textAfter = target.value.substring(end);
+                      const nextInput = (newTextBefore + textAfter).trimStart();
+                      setInputText(nextInput);
+                      setTimeout(() => {
+                        const newCursorPos = Math.max(0, start - tagToRemove.length);
+                        target.selectionStart = target.selectionEnd = newCursorPos;
+                        target.style.height = "auto";
+                        target.style.height = Math.min(target.scrollHeight, 130) + "px";
+                      }, 0);
+                      return;
+                    }
+                  }
+                }
+
                 // If Ctrl+Enter or Cmd+Enter is pressed, insert a clean newline without sending
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
@@ -5739,12 +5767,12 @@ export function GrokBotWorkspace() {
             </div>
 
             {/* Iframe Workspace with automatic viewport scaling */}
-            <div className="flex-1 w-full h-full bg-black relative overflow-hidden flex items-center justify-center">
+            <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
               <iframe
                 key={`split-${selectedAgent.id}-${browserTarget.url}`}
                 src={browserTarget.url}
                 title={`${selectedAgent.name} Computer Live Split`}
-                className="w-full h-full border-0 bg-black absolute inset-0"
+                className="w-full h-full border-0 bg-slate-50 dark:bg-black absolute inset-0 transition-colors"
                 style={{
                   minWidth: "100%",
                   minHeight: "100%",
@@ -6508,15 +6536,15 @@ export function GrokBotWorkspace() {
                       {/* Embedded Live Iframe Viewport: Fixed 190px responsive height with hover action */}
                       <div 
                         onClick={() => handleToggleComputerSplit(true)}
-                        style={{ height: "190px", width: "100%", position: "relative", overflow: "hidden", backgroundColor: "#000", flexShrink: 0 }}
-                        className="cursor-pointer group flex items-center justify-center rounded-b-2xl"
+                        style={{ height: "190px", width: "100%", position: "relative", overflow: "hidden", flexShrink: 0 }}
+                        className="cursor-pointer group flex items-center justify-center rounded-b-2xl bg-white dark:bg-black transition-colors"
                         title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
                       >
                         {/* The full Selkies desktop is only opened on demand (modal); a hidden 1024x768 live
                             iframe kept a second stream running per viewer and resized the shared display. */}
                         <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
                         {!browserTarget.isLive && (
-                          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-neutral-500 px-3 text-center">
+                          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-50 dark:bg-black px-3 text-center transition-colors">
                             {agentBrowser === null ? "Resolving agent browser…" : agentBrowser.cdpReachable ? `Opening profile ${agentBrowser.profile}…` : "Browser unreachable"}
                           </div>
                         )}
@@ -6947,7 +6975,7 @@ export function GrokBotWorkspace() {
             </header>
 
             {/* Interactive Browser Viewport */}
-            <main className="flex-1 w-full h-full bg-black relative">
+            <main className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative transition-colors">
               {browserTarget.url ? (
                 <SelkiesViewer
                   key={`modal-${selectedAgent.id}-${browserTarget.url}`}
@@ -6957,7 +6985,7 @@ export function GrokBotWorkspace() {
                   profile={browserTarget.profile}
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-black transition-colors">
                   {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
                 </div>
               )}
