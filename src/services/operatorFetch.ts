@@ -1,7 +1,21 @@
-import { operatorKey } from "./operatorKey";
+import { operatorKey } from "./a2aApi";
 
 const PROTECTED = new RegExp(
-  "^/api/agents/[^/]+/(?:tools|mcp|subagents|memory|profile|system-prompt|environment|schedule|skills|loop-mode)"
+  "^/api(?:/v\\d+)?/(?:" +
+    [
+      "agents/[^/]+/(?:agent-status|config/|cron/|mcp|tools|skills|workspace/|memory|compact-context|active-model|media/send)",
+      "agents/(?:approvals/|compact-context|iam/)",
+      "approvals/",
+      "libraries/skills/",
+      "mcps/",
+      "tools/",
+      "schedules/",
+      "media/",
+      "chats/[^/]+/share",
+      "integrations/",
+      "mcp(?:/|$)",
+    ].join("|") +
+    ")"
 );
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
