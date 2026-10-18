@@ -1457,9 +1457,15 @@ export function GrokBotWorkspace() {
           chatCollapsed: isChatListCollapsed,
           botInfoCollapsed: isBotInfoCollapsed,
         });
-        // Collapse left sidebar when opening computer
+        // Collapse all sidebars to give full canvas to Virtual Computer + Chat
         setIsLeftSidebarCollapsed(true);
-        try { localStorage.setItem("agent360_left_sidebar_collapsed", "true"); } catch {}
+        setIsChatListCollapsed(true);
+        setIsBotInfoCollapsed(true);
+        try {
+          localStorage.setItem("agent360_left_sidebar_collapsed", "true");
+          localStorage.setItem("agent360_chat_list_collapsed", "true");
+          localStorage.setItem("agent360_bot_info_collapsed", "true");
+        } catch {}
         setMobileAgentsOpen(false);
         setMobileChatsOpen(false);
         setMobileBotInfoOpen(false);
@@ -1467,7 +1473,13 @@ export function GrokBotWorkspace() {
         // Restore layout when closing computer
         if (prevLayoutBeforeComputer) {
           setIsLeftSidebarCollapsed(prevLayoutBeforeComputer.leftCollapsed);
-          try { localStorage.setItem("agent360_left_sidebar_collapsed", prevLayoutBeforeComputer.leftCollapsed ? "true" : "false"); } catch {}
+          setIsChatListCollapsed(prevLayoutBeforeComputer.chatCollapsed);
+          setIsBotInfoCollapsed(prevLayoutBeforeComputer.botInfoCollapsed);
+          try {
+            localStorage.setItem("agent360_left_sidebar_collapsed", prevLayoutBeforeComputer.leftCollapsed ? "true" : "false");
+            localStorage.setItem("agent360_chat_list_collapsed", prevLayoutBeforeComputer.chatCollapsed ? "true" : "false");
+            localStorage.setItem("agent360_bot_info_collapsed", prevLayoutBeforeComputer.botInfoCollapsed ? "true" : "false");
+          } catch {}
         }
       }
       return next;
@@ -1590,6 +1602,7 @@ export function GrokBotWorkspace() {
   const [isChatListCollapsed, setIsChatListCollapsed] = useState<boolean>(() => {
     if (isInitialCompact) return true;
     try {
+      if (localStorage.getItem("agent360_computer_split") === "true") return true;
       const saved = localStorage.getItem("agent360_chat_list_collapsed");
       return saved !== null ? saved === "true" : false;
     } catch {
@@ -1600,6 +1613,7 @@ export function GrokBotWorkspace() {
   const [isBotInfoCollapsed, setIsBotInfoCollapsed] = useState<boolean>(() => {
     if (isInitialCompact) return true;
     try {
+      if (localStorage.getItem("agent360_computer_split") === "true") return true;
       const saved = localStorage.getItem("agent360_bot_info_collapsed");
       return saved !== null ? saved === "true" : false;
     } catch {
