@@ -20,6 +20,7 @@ import {
 
 interface AgentProfileHeaderProps {
   agent: InfraAgent;
+  loopMode?: string;
   onRefresh?: () => void;
   onModelChanged?: (newModel: string) => void;
 }
@@ -33,7 +34,7 @@ const AVAILABLE_MODELS = [
   { providerId: "llm360", model: "gemini-3.7-flash-tiered", label: "gemini-3.7-flash-tiered" },
 ];
 
-export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentProfileHeaderProps) {
+export function AgentProfileHeader({ agent, loopMode = 'default', onRefresh, onModelChanged }: AgentProfileHeaderProps) {
   const { t } = useTranslation();
   const [showSkillModal, setShowSkillModal] = useState<boolean>(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
@@ -70,6 +71,18 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             </h1>
             <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-[#d86f4c]/15 text-[#d86f4c] border border-[#d86f4c]/30">
               {agent.roleTag}
+            </span>
+            <span className={`text-[10px] font-mono uppercase font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+              loopMode === 'goal'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : loopMode === 'mission'
+                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                : 'bg-amber-500/10 text-[#ff7a00] border-amber-500/30'
+            }`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${
+                loopMode === 'goal' ? 'bg-emerald-400' : loopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
+              }`} />
+              <span>{loopMode}</span>
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-2xl leading-relaxed">

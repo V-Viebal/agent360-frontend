@@ -4021,6 +4021,18 @@ export function GrokBotWorkspace() {
               >
                 <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
                 <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent.name}</span>
+                <span className={`hidden sm:inline-flex items-center gap-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold ${
+                  activeLoopMode === 'goal'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : activeLoopMode === 'mission'
+                    ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
+                    : 'bg-amber-500/10 text-[#ff7a00] border-[#ff7a00]/30'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    activeLoopMode === 'goal' ? 'bg-emerald-400' : activeLoopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
+                  }`} />
+                  <span>{activeLoopMode}</span>
+                </span>
               </div>
               {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
               <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex flex-col gap-1 px-3 py-2 rounded-xl bg-white dark:bg-[#161622] border border-neutral-200 dark:border-[#2a2a3c] text-[11px] font-mono shadow-2xl z-[100] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
@@ -5968,9 +5980,23 @@ export function GrokBotWorkspace() {
                 <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
               </div>
 
-              <h2 className="text-sm font-semibold text-white tracking-tight">
-                {selectedAgent.name}
-              </h2>
+              <div className="flex items-center gap-1.5 justify-center">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
+                  {selectedAgent.name}
+                </h2>
+                <span className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold inline-flex items-center gap-1 ${
+                  activeLoopMode === 'goal'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : activeLoopMode === 'mission'
+                    ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
+                    : 'bg-amber-500/10 text-[#ff7a00] border-[#ff7a00]/30'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    activeLoopMode === 'goal' ? 'bg-emerald-400' : activeLoopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
+                  }`} />
+                  <span>{activeLoopMode}</span>
+                </span>
+              </div>
 
               {/* Interactive Model Selector Dropdown */}
               <div className="relative mt-1.5">
