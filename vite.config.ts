@@ -42,13 +42,23 @@ export default defineConfig({
       usePolling: true,
       interval: 800,
     },
+    // Local dev: AGENT360_API_TARGET=http://127.0.0.1:5290 runs against a local backend (paths are mapped to
+    // /api/v1 like the production nginx). Without it the dev server proxies to the production frontend origin.
     proxy: {
-      "/api": {
-        target: "https://agent360.antares.vn",
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path,
-      },
+      "/api": process.env.AGENT360_API_TARGET
+        ? {
+            target: process.env.AGENT360_API_TARGET,
+            changeOrigin: true,
+            ws: true,
+            rewrite: (p) => p.replace(/^\/api\//, "/api/v1/"),
+          }
+        : {
+            target: "https://agent360.antares.vn",
+            changeOrigin: true,
+            ws: true,
+            secure: false,
+            rewrite: (p) => p,
+          },
     },
   },
 });
