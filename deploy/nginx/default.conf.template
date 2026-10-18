@@ -1,8 +1,6 @@
 # Agent360 frontend nginx (single source of truth for production and staging).
 # Rendered by CI: AGENT360_BACKEND_UPSTREAM=agent360-backend:8080 (prod) | agent360-backend-staging:8080 (staging),
 # then installed by `sudo agent360-restart frontend[-staging] <rendered.conf>` which runs `nginx -t` before reloading.
-default.conf
-default.conf
 server {
     listen 80;
     server_name localhost;
