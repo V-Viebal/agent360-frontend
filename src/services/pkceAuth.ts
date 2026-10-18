@@ -21,6 +21,7 @@ export async function initiateSkyerSignIn(authConfig: {
   appId: string;
   localAppId: string;
   apiResource: string;
+  apiScopes?: string[];
   redirectUri: string;
   postLogoutRedirectUri: string;
 }) {
@@ -40,7 +41,7 @@ export async function initiateSkyerSignIn(authConfig: {
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('redirect_uri', redirect);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', ['openid', 'profile', 'email', 'offline_access', ...authConfig.apiScopes].join(' '));
+  url.searchParams.set('scope', ['openid', 'profile', 'email', 'offline_access', ...(authConfig.apiScopes ?? [])].join(' '));
   url.searchParams.set('code_challenge', codeChallenge);
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('state', state);
