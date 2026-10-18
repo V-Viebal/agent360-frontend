@@ -22,7 +22,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.agents || []);
     // Filter to load only enabled agents (handling both backend DTO and direct Skyer schema)
-    const enabledOnly = rawList.filter((a: any) => a.enabled !== false && a.startup_status !== 'disabled');
+    const enabledOnly = rawList.filter((a: any) => a.enabled !== false && a.startup_status !== 'disabled' && a.id !== 'default');
     return enabledOnly.map((a: any) => {
       const idStr = (a.id || "").toLowerCase();
       const slugStr = (a.slug || "").toLowerCase();

@@ -1351,6 +1351,15 @@ export function GrokBotWorkspace() {
     }
   });
   const [chats, setChats] = useState<AgentSession[]>([]);
+  // Map of agentId -> recent session title
+  const [agentRecentSessions, setAgentRecentSessions] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem("agent360_recent_sessions_map");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   // Track completed unread session IDs: { [agentId: string]: Set<string> }
   const [unreadCompletedSessions, setUnreadCompletedSessions] = useState<Record<string, string[]>>(() => {
     try {
@@ -2572,6 +2581,13 @@ export function GrokBotWorkspace() {
       try {
         const loadedChats = await fetchAgentChats(selectedAgentId);
         setChats(loadedChats);
+        if (loadedChats.length > 0 && loadedChats[0]?.title) {
+          setAgentRecentSessions((prev) => {
+            const next = { ...prev, [selectedAgentId]: loadedChats[0].title };
+            try { localStorage.setItem("agent360_recent_sessions_map", JSON.stringify(next)); } catch {}
+            return next;
+          });
+        }
       if (loadedChats.length > 0) {
         const savedChatKey = `agent360_last_chat_${selectedAgentId}`;
         const savedChatId = localStorage.getItem(savedChatKey) || localStorage.getItem("agent360_last_chat_id");
@@ -2722,16 +2738,16 @@ export function GrokBotWorkspace() {
   };
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0] || {
-    id: "default",
-    name: "Skyer",
-    slug: "skyer-bot",
+    id: "mons",
+    name: "Mons",
+    slug: "mons",
     roleTag: "Engineering",
     node: "3rd (ai.hmz.one)",
     status: "active",
-    model: "skyer-4.7",
+    model: "grok-4.7",
     uptime: "Online",
     memoryUsageMb: 256,
-    description: "Default Autonomous Agent",
+    description: "Core Development Agent for Core CoPaw AI",
     tools: [],
     sessions: [],
   };
@@ -4030,10 +4046,10 @@ export function GrokBotWorkspace() {
                         onClick={() => handleSelectAgent(ag)}
                         className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer border animate-fade-in-stagger ${
                           layoutDensity === "compact"
-                            ? "p-1.5 gap-2"
+                            ? "px-2 py-1 gap-2"
                             : layoutDensity === "comfortable"
-                            ? "p-3 gap-3.5"
-                            : "p-2.5 gap-3"
+                            ? "px-2.5 py-2 gap-2.5"
+                            : "px-2 py-1.5 gap-2.5"
                         } ${
                           isSelected
                             ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs"
@@ -4097,8 +4113,8 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className="text-[11px] font-mono text-neutral-500 truncate block mt-0.5">
-                            {ag.model}
+                          <span className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 truncate block mt-0.5" title={agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model}>
+                            {agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model}
                           </span>
                         </div>
                       </div>

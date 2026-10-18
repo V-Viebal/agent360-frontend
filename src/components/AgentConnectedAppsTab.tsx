@@ -168,8 +168,8 @@ export function AgentConnectedAppsTab({
       {/* Top Controls: Counts, Filters, Add Button */}
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-white tracking-tight">{t("connectedApps.tabTitle")}</span>
-          <span className="text-[10px] font-mono bg-[#1e1e28] text-slate-500 dark:text-neutral-400 px-2 py-0.5 rounded-full border border-[#2b2b3a]">
+          <span className="font-semibold text-slate-900 dark:text-white tracking-tight">{t("connectedApps.tabTitle")}</span>
+          <span className="text-[10px] font-mono bg-slate-100 dark:bg-[#1e1e28] text-slate-600 dark:text-neutral-400 px-2 py-0.5 rounded-full border border-slate-200 dark:border-[#2b2b3a]">
             {clients.length}
           </span>
         </div>
@@ -178,7 +178,7 @@ export function AgentConnectedAppsTab({
           <button
             onClick={loadMcpClients}
             disabled={loading}
-            className="p-1.5 rounded-lg text-slate-500 dark:text-neutral-400 hover:text-white bg-[#16161f] hover:bg-[#20202c] border border-[#242432] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#16161f] hover:bg-slate-200 dark:hover:bg-[#20202c] border border-slate-200 dark:border-[#242432] transition-colors cursor-pointer"
             title="Refresh connected tools"
           >
             <RefreshCw size={12} className={loading ? "animate-spin text-[#ff7a00]" : ""} />
@@ -195,13 +195,13 @@ export function AgentConnectedAppsTab({
       </div>
 
       {/* Filter Tabs: All, Composio, Native MCP */}
-      <div className="flex items-center gap-1 p-1 bg-[#14141a] rounded-xl border border-[#20202a] text-[11px]">
+      <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-[#14141a] rounded-xl border border-slate-200 dark:border-[#20202a] text-[11px]">
         <button
           onClick={() => setFilter("all")}
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center ${
             filter === "all"
-              ? "bg-[#242432] text-white shadow-xs"
-              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"
+              ? "bg-white dark:bg-[#242432] text-slate-900 dark:text-white shadow-xs"
+              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
           }`}
         >
           All ({clients.length})
@@ -210,8 +210,8 @@ export function AgentConnectedAppsTab({
           onClick={() => setFilter("composio")}
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
             filter === "composio"
-              ? "bg-[#242432] text-[#ff7a00] shadow-xs"
-              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"
+              ? "bg-white dark:bg-[#242432] text-[#ff7a00] shadow-xs"
+              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
           }`}
         >
           <Sparkles size={11} />
@@ -221,8 +221,8 @@ export function AgentConnectedAppsTab({
           onClick={() => setFilter("native")}
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center ${
             filter === "native"
-              ? "bg-[#242432] text-white shadow-xs"
-              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:text-neutral-200"
+              ? "bg-white dark:bg-[#242432] text-slate-900 dark:text-white shadow-xs"
+              : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200"
           }`}
         >
           Infra MCP ({nativeClients.length})
@@ -230,10 +230,10 @@ export function AgentConnectedAppsTab({
       </div>
 
       {/* Integration Info Banner */}
-      <div className="p-2.5 rounded-xl bg-[#14141d] border border-[#222232] text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed flex items-start gap-2">
-        <Shield size={13} className="text-emerald-400 shrink-0 mt-0.5" />
+      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#14141d] border border-slate-200 dark:border-[#222232] text-[11px] text-slate-600 dark:text-neutral-400 leading-relaxed flex items-start gap-2">
+        <Shield size={13} className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
         <div>
-          Loaded directly from <strong className="text-white font-mono">{agentName}</strong>'s Skyer MCP driver layer. Adding tools hot-patches this agent's runtime.
+          Loaded directly from <strong className="text-slate-900 dark:text-white font-mono">{agentName}</strong>'s Skyer MCP driver layer. Adding tools hot-patches this agent's runtime.
         </div>
       </div>
 
@@ -264,23 +264,23 @@ export function AgentConnectedAppsTab({
               <div
                 key={client.key}
                 onClick={(e) => meta.isComposio && handleInspectSchema(client, e)}
-                className={`group p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
+                className={`group p-2.5 rounded-xl border border-slate-200 dark:border-[#20202c] bg-white dark:bg-[#14141c] hover:border-[#ff7a00]/40 dark:hover:border-[#2f2f42] hover:bg-slate-50 dark:hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
                 title={meta.isComposio ? "Click to inspect tool functions" : ""}
               >
                 {/* Logo + Names */}
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className="h-8 w-8 rounded-lg bg-[#1f1f2b] border border-[#2b2b3d] flex items-center justify-center p-1.5 shrink-0 overflow-hidden shadow-xs">
+                  <div className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-[#1f1f2b] border border-slate-200 dark:border-[#2b2b3d] flex items-center justify-center p-1.5 shrink-0 overflow-hidden shadow-xs">
                     <img
                       src={meta.logoUrl}
                       alt={meta.name}
-                      className="h-full w-full object-contain filter drop-shadow-xs"
+                      className="h-full w-full object-contain filter drop-shadow-xs dark:brightness-100"
                       loading="lazy"
                       onError={(e) => {
                         const target = e.currentTarget;
                         target.style.display = "none";
                         if (target.parentElement) {
                           target.parentElement.className =
-                            "h-8 w-8 rounded-lg bg-neutral-800 text-white flex items-center justify-center text-[11px] font-bold";
+                            "h-8 w-8 rounded-lg bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-white flex items-center justify-center text-[11px] font-bold border border-slate-200 dark:border-transparent";
                           target.parentElement.textContent = meta.name[0].toUpperCase();
                         }
                       }}
@@ -289,17 +289,43 @@ export function AgentConnectedAppsTab({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-semibold text-white truncate block">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white truncate block">
                         {meta.name}
                       </span>
                       {meta.isComposio ? (
-                        <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded border border-[#ff7a00]/20 shrink-0">
+                        <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded border border-[#ff7a00]/20 shrink-0 font-medium">
                           Composio
                         </span>
                       ) : (
-                        <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 bg-neutral-800 px-1.5 py-0.2 rounded shrink-0">
-                          {client.transport}
-                        </span>
+                        <div className="relative group/transport shrink-0">
+                          <span
+                            className="text-[9px] font-mono text-slate-700 dark:text-neutral-300 bg-slate-200 dark:bg-neutral-800 hover:bg-slate-300 dark:hover:bg-neutral-700 px-1.5 py-0.2 rounded border border-slate-300/80 dark:border-transparent shrink-0 font-medium cursor-help transition-colors inline-block"
+                            title={client.command || client.url || `Transport: ${client.transport}`}
+                          >
+                            {client.transport}
+                          </span>
+                          {(client.command || client.url) && (
+                            <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/transport:flex flex-col gap-1 p-2 rounded-xl bg-slate-900/95 dark:bg-[#181824]/95 border border-slate-700/60 dark:border-[#2f2f44] text-[10px] font-mono text-slate-100 dark:text-neutral-200 shadow-xl backdrop-blur-md z-40 max-w-xs whitespace-normal break-all animate-in fade-in zoom-in-95 duration-150">
+                              <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-neutral-400 border-b border-white/10 pb-0.5">
+                                <span>Driver / Transport</span>
+                                <span className="text-[#ff7a00] font-bold">{client.transport}</span>
+                              </div>
+                              <div className="text-[10px] leading-tight text-neutral-300">
+                                {client.command ? (
+                                  <>
+                                    <span className="text-neutral-500">cmd: </span>
+                                    <span className="text-emerald-400 font-semibold">{client.command}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-neutral-500">url: </span>
+                                    <span className="text-cyan-400 font-semibold">{client.url}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                     <p className="text-[10px] text-slate-500 dark:text-neutral-400 truncate mt-0.5 leading-tight font-mono">

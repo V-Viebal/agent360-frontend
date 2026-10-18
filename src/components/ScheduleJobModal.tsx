@@ -155,7 +155,7 @@ export function ScheduleJobModal({
                   { value: "slack", label: "Slack Workspace" },
                 ]}
                 className="w-full"
-                triggerClassName="w-full bg-[#181824] border border-[#2a2a3c] hover:border-[#ff7a00]/70 rounded-xl px-3 py-2 text-white font-mono text-xs"
+                triggerClassName="w-full bg-[#181824] border border-[#2a2a3c] hover:border-[#ff7a00]/70 rounded-lg px-2.5 py-1.5 text-white font-mono text-[11px]"
               />
             </div>
           </div>
