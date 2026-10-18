@@ -137,6 +137,7 @@ import { requestPermission, queryPermissionStatus } from "../services/permission
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
+import { operatorKey } from "../services/a2aApi";
 import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab } from "../services/agentBrowserApi";
 
 
@@ -840,8 +841,24 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
       {error && (
         <>
           <AgentBrowserPreview agentId={agentId} enabled />
-          <div className="absolute top-2 left-2 px-2 py-1 rounded bg-black/75 border border-white/10 text-[11px] font-mono text-neutral-300">
-            {error === "auth" ? "Watch-only preview · nhập operator key để điều khiển desktop" : `Desktop unavailable (${error}) · showing preview`}
+          <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
+            {error === "auth" ? (
+              <>
+                <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
+                <form
+                  className="flex items-center gap-1"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const v = (new FormData(e.currentTarget).get("k") as string || "").trim();
+                    if (v) { operatorKey.set(v); setAttempt((a) => a + 1); }
+                  }}
+                >
+                  <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
+                    className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
+                  <button type="submit" className="h-6 px-2 rounded bg-[#ff7a00] text-black! text-[11px] font-semibold">Mở desktop</button>
+                </form>
+              </>
+            ) : `Desktop unavailable (${error}) · showing preview`}
           </div>
         </>
       )}
