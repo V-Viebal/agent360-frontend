@@ -100,10 +100,12 @@ body {
 }
 
 /* Custom utility for clean scrollable tabs */
-.no-scrollbar::-webkit-scrollbar {
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
   display: none;
 }
-.no-scrollbar {
+.no-scrollbar,
+.scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -181,83 +183,299 @@ body {
 /* Comprehensive Light Mode Overrides for Workspace, Modals & Components */
 html.light,
 [data-theme="light"] {
-  /* Surfaces */
-  .bg-\[\#0c0c0e\],
+  /* Semantic Surfaces: Card & elevated panels */
+  /* Refined Tab Indicators & Sub-tab Pills in Light Mode */
+  .bg-\[\#222230\],
+  .bg-\[\#242432\],
+  .bg-\[\#22222e\],
+  .bg-\[\#181820\] {
+    background-color: var(--bg-active-tab);
+    color: var(--text-primary);
+  }
+
+  /* Input fields in Light Mode */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(.keep-dark),
+  textarea:not(.keep-dark) {
+    color: var(--text-primary);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* Code block containers in tabs / file preview */
+  pre:not(.keep-dark),
+  code:not(.keep-dark) {
+    color: var(--text-primary);
+  }
+
+  .bg-\[\#04060a\],
+  .bg-\[\#07090e\],
+  .bg-\[\#08090d\],
+  .bg-\[\#080a0f\],
+  .bg-\[\#09090d\],
+  .bg-\[\#090b10\],
+  .bg-\[\#090c12\],
+  .bg-\[\#0a0806\],
+  .bg-\[\#0a0a0e\],
+  .bg-\[\#0a0a0f\],
+  .bg-\[\#0a0c13\],
+  .bg-\[\#0a0d14\],
+  .bg-\[\#0a1510\],
+  .bg-\[\#0b0d12\],
+  .bg-\[\#0b0e14\],
+  .bg-\[\#0b0e16\],
+  .bg-\[\#0c0a08\],
+  .bg-\[\#0c0c12\],
+  .bg-\[\#0c0e15\],
+  .bg-\[\#0c1018\],
   .bg-\[\#0d0d12\],
+  .bg-\[\#0d111a\],
+  .bg-\[\#0e0c0a\],
+  .bg-\[\#0e0e12\],
+  .bg-\[\#0e0e13\],
+  .bg-\[\#0e0e14\],
+  .bg-\[\#0e1017\],
+  .bg-\[\#0e1117\],
+  .bg-\[\#0e131d\],
   .bg-\[\#0f0f13\],
   .bg-\[\#0f0f14\],
   .bg-\[\#0f0f15\],
-  .bg-\[\#101014\],
+  .bg-\[\#100d0b\],
   .bg-\[\#101015\],
   .bg-\[\#101016\],
+  .bg-\[\#101017\],
+  .bg-\[\#120e0c\],
+  .bg-\[\#120f0c\],
+  .bg-\[\#121216\],
   .bg-\[\#121217\],
   .bg-\[\#121218\],
+  .bg-\[\#12121a\],
+  .bg-\[\#12151d\],
+  .bg-\[\#14100d\],
   .bg-\[\#14141a\],
   .bg-\[\#14141c\],
+  .bg-\[\#14141d\],
   .bg-\[\#15151c\],
+  .bg-\[\#16120f\],
+  .bg-\[\#16161c\],
   .bg-\[\#16161d\],
   .bg-\[\#16161e\],
+  .bg-\[\#16161f\],
   .bg-\[\#161620\],
   .bg-\[\#161622\],
+  .bg-\[\#17120e\],
+  .bg-\[\#17130f\],
+  .bg-\[\#171310\],
   .bg-\[\#171720\],
+  .bg-\[\#181310\],
   .bg-\[\#181820\],
   .bg-\[\#181822\],
   .bg-\[\#181824\],
+  .bg-\[\#181826\],
+  .bg-\[\#18221c\],
+  .bg-\[\#191922\],
+  .bg-\[\#1a1410\],
   .bg-\[\#1a1a22\],
   .bg-\[\#1a1a24\],
+  .bg-\[\#1b1b24\],
+  .bg-\[\#1c1713\],
   .bg-\[\#1c1c24\],
   .bg-\[\#1c1c26\],
   .bg-\[\#1c1c28\],
+  .bg-\[\#1d1d26\],
+  .bg-\[\#1d1d27\],
+  .bg-\[\#1e1e28\],
+  .bg-\[\#1e1e2c\],
+  .bg-\[\#1f1f26\],
+  .bg-\[\#1f1f28\],
+  .bg-\[\#1f1f2b\],
   .bg-\[\#1f1f2c\],
   .bg-\[\#1f1f2e\],
+  .bg-\[\#20202a\],
+  .bg-\[\#20202c\],
+  .bg-\[\#20202e\],
   .bg-\[\#22222c\],
+  .bg-\[\#22222e\],
   .bg-\[\#222230\],
+  .bg-\[\#232330\],
+  .bg-\[\#242432\],
+  .bg-\[\#242434\],
+  .bg-\[\#252530\],
+  .bg-\[\#252532\],
   .bg-\[\#252534\],
-  .bg-\[\#2a2a34\] {
+  .bg-\[\#252536\],
+  .bg-\[\#252538\],
+  .bg-\[\#26211d\],
+  .bg-\[\#262638\],
+  .bg-\[\#282838\],
+  .bg-\[\#28283a\],
+  .bg-\[\#2a2a34\],
+  .bg-\[\#2b241e\],
+  .bg-\[\#0a0a0f\]\/95,
+  .bg-\[\#0c0a08\]\/50,
+  .bg-\[\#0c0c12\]\/95,
+  .bg-\[\#0c0e15\]\/95,
+  .bg-\[\#0c1018\]\/90,
+  .bg-\[\#0f1118\]\/95,
+  .bg-\[\#101018\]\/95,
+  .bg-\[\#121218\]\/95,
+  .bg-\[\#14100d\]\/90,
+  .bg-\[\#14141a\]\/70,
+  .bg-\[\#14141c\]\/40,
+  .bg-\[\#14141c\]\/50,
+  .bg-\[\#14141c\]\/90,
+  .bg-\[\#14141c\]\/95,
+  .bg-\[\#161622\]\/60,
+  .bg-\[\#181824\]\/95,
+  .bg-\[\#1c1713\]\/90,
+  .bg-\[\#221812\]\/95,
+  .bg-\[\#26211d\]\/60 {
     background-color: var(--bg-card);
   }
 
+  /* Glassmorphism / Subtles in light mode */
+  .bg-white\/\[0\.02\],
+  .bg-white\/\[0\.03\],
+  .bg-white\/\[0\.04\],
+  .bg-white\/\[0\.06\],
+  .bg-white\/\[0\.08\],
+  .bg-white\/5,
+  .bg-white\/10 {
+    background-color: rgba(15, 23, 42, 0.03);
+  }
+
   /* Hover states in light mode */
-  .hover\:bg-\[\#1a1a24\]:hover,
-  .hover\:bg-\[\#1c1c24\]:hover,
-  .hover\:bg-\[\#1c1c28\]:hover,
+  .hover\:bg-\[\#0e131d\]:hover,
+  .hover\:bg-\[\#14141c\]:hover,
+  .hover\:bg-\[\#161620\]:hover,
+  .hover\:bg-\[\#161622\]:hover,
+  .hover\:bg-\[\#171310\]:hover,
+  .hover\:bg-\[\#181310\]:hover,
   .hover\:bg-\[\#181820\]:hover,
   .hover\:bg-\[\#181822\]:hover,
   .hover\:bg-\[\#191922\]:hover,
+  .hover\:bg-\[\#1a1a22\]:hover,
+  .hover\:bg-\[\#1a1a24\]:hover,
+  .hover\:bg-\[\#1c1c24\]:hover,
+  .hover\:bg-\[\#1c1c26\]:hover,
+  .hover\:bg-\[\#1c1c28\]:hover,
+  .hover\:bg-\[\#1e1e2c\]:hover,
+  .hover\:bg-\[\#1f1f26\]:hover,
+  .hover\:bg-\[\#1f1f28\]:hover,
   .hover\:bg-\[\#1f1f2c\]:hover,
+  .hover\:bg-\[\#1f1f2e\]:hover,
+  .hover\:bg-\[\#20202a\]:hover,
+  .hover\:bg-\[\#20202c\]:hover,
+  .hover\:bg-\[\#20202e\]:hover,
   .hover\:bg-\[\#22222e\]:hover,
-  .hover\:bg-\[\#252534\]:hover {
+  .hover\:bg-\[\#222230\]:hover,
+  .hover\:bg-\[\#232330\]:hover,
+  .hover\:bg-\[\#242434\]:hover,
+  .hover\:bg-\[\#252530\]:hover,
+  .hover\:bg-\[\#252532\]:hover,
+  .hover\:bg-\[\#252534\]:hover,
+  .hover\:bg-\[\#252536\]:hover,
+  .hover\:bg-\[\#252538\]:hover,
+  .hover\:bg-\[\#26211d\]:hover,
+  .hover\:bg-\[\#282838\]:hover,
+  .hover\:bg-\[\#28283a\]:hover,
+  .hover\:bg-\[\#2b241e\]:hover,
+  .hover\:bg-\[\#382f28\]:hover,
+  .hover\:bg-white\/\[0\.04\]:hover,
+  .hover\:bg-white\/\[0\.06\]:hover,
+  .hover\:bg-white\/\[0\.08\]:hover,
+  .hover\:bg-white\/5:hover,
+  .hover\:bg-white\/10:hover {
     background-color: var(--bg-card-hover);
   }
 
   /* Borders in light mode */
+  .border-\[\#0c0c0e\],
+  .border-\[\#0f0f14\],
   .border-\[\#1c1c22\],
   .border-\[\#1c1c24\],
+  .border-\[\#1c1c26\],
   .border-\[\#1e1e24\],
   .border-\[\#1e1e26\],
   .border-\[\#1e1e28\],
+  .border-\[\#1f1f2a\],
+  .border-\[\#1f1f2c\],
   .border-\[\#202028\],
   .border-\[\#20202a\],
   .border-\[\#20202c\],
+  .border-\[\#20202e\],
   .border-\[\#22222c\],
+  .border-\[\#22222d\],
   .border-\[\#22222e\],
+  .border-\[\#222230\],
+  .border-\[\#222232\],
+  .border-\[\#222234\],
+  .border-\[\#232330\],
   .border-\[\#242430\],
   .border-\[\#242432\],
+  .border-\[\#242434\],
   .border-\[\#252532\],
+  .border-\[\#26201a\],
+  .border-\[\#26211d\],
+  .border-\[\#262632\],
   .border-\[\#262634\],
+  .border-\[\#262636\],
+  .border-\[\#262638\],
+  .border-\[\#282834\],
   .border-\[\#282836\],
+  .border-\[\#282838\],
+  .border-\[\#28283a\],
   .border-\[\#2a2a34\],
   .border-\[\#2a2a38\],
+  .border-\[\#2a2a3a\],
   .border-\[\#2a2a3c\],
+  .border-\[\#2b241e\],
+  .border-\[\#2b2b3a\],
+  .border-\[\#2b2b3c\],
+  .border-\[\#2b2b3d\],
+  .border-\[\#2b2b3e\],
+  .border-\[\#2c2c3c\],
   .border-\[\#2c2c3e\],
+  .border-\[\#2d2d3e\],
+  .border-\[\#2d2d3f\],
+  .border-\[\#2e2e3e\],
+  .border-\[\#2e2e40\],
   .border-\[\#2e2e42\],
+  .border-\[\#2f2f42\],
   .border-\[\#303040\],
-  .border-\[\#303042\] {
+  .border-\[\#303042\],
+  .border-\[\#303044\],
+  .border-\[\#323246\],
+  .border-\[\#343446\],
+  .border-\[\#382f28\],
+  .border-\[\#383848\],
+  .border-\[\#38384a\],
+  .border-\[\#38384c\],
+  .border-\[\#383850\],
+  .border-\[\#3a3a4c\],
+  .border-\[\#1c1c22\]\/60,
+  .border-\[\#242432\]\/60,
+  .border-\[\#26211d\]\/60,
+  .border-\[\#2b2b38\]\/70,
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/15,
+  .border-white\/20,
+  .border-white\/\[0\.04\],
+  .border-white\/\[0\.06\],
+  .border-white\/\[0\.08\],
+  .border-white\/\[0\.1\],
+  .border-white\/\[0\.15\],
+  .border-white\/\[0\.2\],
+  .border-white\/\[0\.25\] {
     border-color: var(--border-card);
   }
 
   /* Text readability in light mode */
   .text-white:not(.keep-white),
+  .text-neutral-100:not(.keep-white),
   .text-neutral-200:not(.keep-white),
   .text-neutral-300:not(.keep-white) {
     color: var(--text-primary);
@@ -271,6 +489,20 @@ html.light,
     color: var(--text-muted);
   }
 
+  /* Dark mode modal/overlay backdrops adaptation */
+  .bg-black\/70,
+  .bg-black\/75,
+  .bg-black\/80,
+  .bg-black\/90,
+  .bg-black\/95 {
+    background-color: rgba(15, 23, 42, 0.45) !important;
+  }
+
+  /* Dropdown & popup card elevation shadow in light mode */
+  .shadow-2xl {
+    box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.12), 0 0 1px 1px rgba(15, 23, 42, 0.08) !important;
+  }
+
   /* Keep pure white text on solid colored accents/CTAs */
   .bg-\[\#ff7a00\],
   button.bg-\[\#ff7a00\],
@@ -278,10 +510,12 @@ html.light,
   .bg-amber-500,
   .bg-red-500,
   .bg-emerald-500,
+  .bg-blue-500,
   .keep-white {
     color: #ffffff !important;
   }
 }
+
 
 /* ------------------- Driver.js Skyer Premium Theme (Adapted from App360) ------------------- */
 .driverjs-skyer-theme {
@@ -442,4 +676,102 @@ html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-bt
 
 .driver-popover {
   z-index: 100002 !important;
+}
+
+
+/* ==========================================================================
+   Modern Micro-Animations & Fluid Spring Transitions for Consistent UI/UX
+   ========================================================================== */
+
+/* Modern spring & smooth cubic bezier curves */
+:root {
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.12);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Grok-style smooth responsive panel transition */
+.transition-grok {
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 200ms ease,
+              border-color 180ms ease !important;
+  will-change: width, transform;
+}
+
+.transition-grok-transform {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+              width 240ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  will-change: transform, width;
+}
+
+/* Micro-interaction: Active tap scale feedback on buttons & cards */
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active,
+.interactive-tap:active {
+  transform: scale(0.975);
+  transition: transform 75ms ease-out;
+}
+
+/* Universal hover elevation & subtle border glow for interactive buttons */
+.btn-micro,
+.action-icon-btn {
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+              background-color 150ms ease,
+              border-color 150ms ease,
+              color 150ms ease,
+              box-shadow 180ms ease;
+}
+
+.btn-micro:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* Staggered message fade-in animation for chat turns */
+@keyframes staggerFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-stagger {
+  animation: staggerFadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Pulsing neon status halo */
+@keyframes neonPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+    box-shadow: 0 0 8px 3px rgba(16, 185, 129, 0.25);
+  }
+}
+
+.pulse-neon-online {
+  animation: neonPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Micro smooth shimmer for badges & alerts */
+@keyframes badgeGlow {
+  0%, 100% {
+    border-color: rgba(255, 122, 0, 0.25);
+  }
+  50% {
+    border-color: rgba(255, 122, 0, 0.6);
+    box-shadow: 0 0 10px rgba(255, 122, 0, 0.15);
+  }
+}
+
+.glow-active-badge {
+  animation: badgeGlow 3s ease-in-out infinite;
 }

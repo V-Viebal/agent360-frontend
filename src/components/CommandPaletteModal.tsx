@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { startOnboardingTour } from "../services/onboardingService";
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic } from "lucide-react";
@@ -35,6 +36,7 @@ export function CommandPaletteModal({
   infraInstances,
   onCompactContext,
 }: CommandPaletteModalProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -258,7 +260,7 @@ export function CommandPaletteModal({
 
                 {isSelected && (
                   <div className="flex items-center gap-1 text-[10px] font-mono text-[#ff7a00] shrink-0">
-                    <span>Jump</span>
+                    <span>{t("cmdPalette.jump")}</span>
                     <CornerDownLeft size={11} />
                   </div>
                 )}
@@ -276,11 +278,11 @@ export function CommandPaletteModal({
         {/* Footer shortcuts */}
         <div className="px-4 py-2.5 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500 select-none">
           <div className="flex items-center gap-3">
-            <span>↑↓ Navigate</span>
-            <span>↵ Select</span>
-            <span>ESC Close</span>
+            <span>{t("cmdPalette.navigate")}</span>
+            <span>{t("cmdPalette.select")}</span>
+            <span>{t("cmdPalette.close")}</span>
           </div>
-          <span>Skyer Command Palette</span>
+          <span>{t("cmdPalette.title")}</span>
         </div>
       </div>
     </div>

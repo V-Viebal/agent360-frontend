@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import { Zap, Sparkles, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { compactAgentContext, CompactContextResponse } from "../services/agentApi";
@@ -19,6 +20,7 @@ export function ContextUsageBar({
   onCompacted,
   className = "",
 }: ContextUsageBarProps) {
+  const { t } = useTranslation();
   const [isCompacting, setIsCompacting] = useState(false);
   const [compactResult, setCompactResult] = useState<string | null>(null);
   const [liveTokens, setLiveTokens] = useState<number>(estimatedTokens);
@@ -94,34 +96,85 @@ export function ContextUsageBar({
   const isCompactTrigger = className.includes("compact-trigger");
 
   if (isCompactTrigger) {
+    const usedK = (currentTokens / 1000).toFixed(currentTokens >= 10000 ? 0 : 1);
+    const maxK = (safeMax / 1000).toFixed(0);
+    const leftPercent = Math.max(0, 100 - ratio);
+
+    // SVG Circular Progress math
+    const radius = 6.5;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (ratio / 100) * circumference;
+
     return (
-      <div className="relative inline-flex items-center">
+      <div className="relative inline-flex items-center group/ctx">
         <button
           type="button"
           onClick={handleCompact}
           disabled={isCompacting}
-          title={`Context: ${ratio}% (${currentTokens.toLocaleString()} / ${safeMax.toLocaleString()} tokens). Click to compact context & GC.`}
-          className={`flex items-center gap-1 h-6 px-1.5 rounded-full border transition-all cursor-pointer text-[10px] font-mono ${
-            isHigh
-              ? "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
-              : isMedium
-              ? "bg-[#ff7a00]/10 text-[#ff7a00] border-[#ff7a00]/25 hover:bg-[#ff7a00]/20"
-              : "bg-white/5 text-neutral-400 border-white/10 hover:text-white hover:bg-white/10"
-          } ${className}`}
+          aria-label={`Context window: ${ratio}% used`}
+          className={`relative p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center shrink-0 ${className}`}
         >
           {isCompacting ? (
-            <Loader2 size={10} className="animate-spin text-[#ff7a00]" />
+            <Loader2 size={15} className="animate-spin text-[#ff7a00]" />
           ) : (
-            <Zap size={10} className={isHigh ? "animate-pulse text-amber-400" : "text-[#ff7a00]"} />
+            <svg width="17" height="17" viewBox="0 0 18 18" className="transform -rotate-90">
+              {/* Background ring */}
+              <circle
+                cx="9"
+                cy="9"
+                r={radius}
+                stroke="currentColor"
+                strokeWidth="2.2"
+                fill="transparent"
+                className="text-neutral-700/60 dark:text-[#2d2d3a]"
+              />
+              {/* Progress ring */}
+              <circle
+                cx="9"
+                cy="9"
+                r={radius}
+                stroke={isHigh ? "#f59e0b" : isMedium ? "#ff7a00" : "#9ca3af"}
+                strokeWidth="2.2"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                fill="transparent"
+                className="transition-all duration-500 ease-out"
+              />
+            </svg>
           )}
-          <span className="text-[9px] font-mono leading-none">{ratio}%</span>
         </button>
 
-        {compactResult && (
-          <span className="absolute bottom-full mb-1.5 right-0 bg-[#0e0e14] border border-[#262636] text-emerald-400 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
-            {compactResult}
-          </span>
-        )}
+        {/* Hovering Context Detail Tooltip matching user screenshot */}
+        <div className="pointer-events-none absolute bottom-full right-0 mb-2.5 hidden group-hover/ctx:flex flex-col gap-1.5 p-3 rounded-2xl bg-[#18181f]/95 dark:bg-[#181820]/95 border border-white/10 shadow-2xl backdrop-blur-xl z-50 min-w-[190px] text-left animate-in fade-in zoom-in-95 duration-150 select-none">
+          <div className="text-[11px] font-sans text-neutral-400">{t("contextBar.window")}</div>
+          <div className="text-xs font-semibold text-white">
+            {ratio}% used ({leftPercent}% left)
+          </div>
+          <div className="text-[11px] font-mono text-neutral-400">
+            {usedK}k / {maxK}k tokens used
+          </div>
+
+          <div className="pt-1 mt-0.5 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-neutral-400">
+            <div className="flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 18 18" className="transform -rotate-90 shrink-0">
+                <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-neutral-700" />
+                <circle cx="9" cy="9" r="6" stroke="#9ca3af" strokeWidth="2.5" strokeDasharray={37.7} strokeDashoffset={37.7 - (ratio / 100) * 37.7} strokeLinecap="round" fill="transparent" />
+              </svg>
+              <span className="truncate max-w-[110px] text-neutral-300">{t("contextBar.autoGc")}</span>
+            </div>
+            <span className="text-[#ff7a00] hover:underline cursor-pointer">{t("contextBar.compact")}</span>
+          </div>
+
+          {compactResult && (
+            <div className="mt-1 text-[10px] text-emerald-400 font-mono">
+              ✓ {compactResult}
+            </div>
+          )}
+
+          {/* Arrow */}
+          <div className="absolute right-2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-[#181820]" />
+        </div>
       </div>
     );
   }

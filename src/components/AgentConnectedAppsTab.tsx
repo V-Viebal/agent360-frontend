@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { ToolSchemaInspectorModal, DiscoveredToolItem } from "./ToolSchemaInspectorModal";
 import { useState, useEffect } from "react";
 import {
@@ -26,6 +27,7 @@ export function AgentConnectedAppsTab({
   onOpenConnectModal,
   onRefreshTrigger = 0,
 }: AgentConnectedAppsTabProps) {
+  const { t } = useTranslation();
   const [clients, setClients] = useState<AgentMcpClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
@@ -166,7 +168,7 @@ export function AgentConnectedAppsTab({
       {/* Top Controls: Counts, Filters, Add Button */}
       <div className="flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-1.5">
-          <span className="font-semibold text-white tracking-tight">Connected Apps</span>
+          <span className="font-semibold text-white tracking-tight">{t("connectedApps.tabTitle")}</span>
           <span className="text-[10px] font-mono bg-[#1e1e28] text-slate-500 dark:text-neutral-400 px-2 py-0.5 rounded-full border border-[#2b2b3a]">
             {clients.length}
           </span>
@@ -187,7 +189,7 @@ export function AgentConnectedAppsTab({
             className="flex items-center gap-1 bg-[#ff7a00] hover:bg-[#ff8c1a] text-black font-semibold px-2.5 py-1 rounded-lg text-[11px] shadow-sm transition-all cursor-pointer"
           >
             <Plus size={12} className="stroke-[2.5]" />
-            <span>Add app</span>
+            <span>{t("connectedApps.addApp")}</span>
           </button>
         </div>
       </div>
@@ -245,7 +247,7 @@ export function AgentConnectedAppsTab({
         ) : displayedClients.length === 0 ? (
           <div className="py-12 flex flex-col items-center justify-center text-center text-xs text-neutral-500 font-mono space-y-3 p-4 border border-dashed border-slate-200 dark:border-[#22222e] rounded-2xl">
             <Layers size={22} className="text-neutral-600" />
-            <div>No connected apps in this view.</div>
+            <div>{t("connectedApps.empty")}</div>
             <button
               onClick={onOpenConnectModal}
               className="text-[#ff7a00] hover:underline cursor-pointer font-sans text-xs font-medium"
@@ -310,7 +312,7 @@ export function AgentConnectedAppsTab({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                     <CheckCircle2 size={10} />
-                    <span>Active</span>
+                    <span>{t("connectedApps.statusActive")}</span>
                   </span>
 
                   {meta.isComposio && (

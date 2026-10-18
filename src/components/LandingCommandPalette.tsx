@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Command, CornerDownLeft, Search } from "lucide-react";
@@ -30,6 +31,7 @@ export function appTaskUrl(prompt: string, agent?: string) {
 }
 
 export function LandingCommandPalette({ roles, onSelectRole }: Props) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -158,10 +160,10 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
               {idx === cursor && <CornerDownLeft size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />}
             </li>
           ))}
-          {items.length === 0 && <li className="px-5 py-6 text-sm text-neutral-500">No matches.</li>}
+          {items.length === 0 && <li className="px-5 py-6 text-sm text-neutral-500">{t("cmdPalette.noMatches")}</li>}
         </ul>
         <div className="flex items-center justify-between border-t border-white/[0.06] px-4 h-9 text-[11px] text-neutral-500">
-          <span className="flex items-center gap-1.5"><Command size={11} />K to toggle · ↑↓ to move</span>
+          <span className="flex items-center gap-1.5"><Command size={11} />{t("cmdPalette.toggleHelp")}</span>
           <span className="flex items-center gap-1">Enter <ArrowRight size={11} /></span>
         </div>
       </div>

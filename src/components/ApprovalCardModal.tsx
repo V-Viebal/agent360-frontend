@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState } from "react";
 import { PendingApproval } from "../services/approvalApi";
 import {
@@ -23,6 +24,7 @@ export function ApprovalCardModal({
   onDeny,
   onClose,
 }: ApprovalCardModalProps) {
+  const { t } = useTranslation();
   const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   if (!approvals || approvals.length === 0) {
@@ -81,7 +83,7 @@ export function ApprovalCardModal({
               </div>
 
               <div>
-                <span className="text-neutral-500 font-mono text-[10px] block mb-0.5">REQUESTED TOOL</span>
+                <span className="text-neutral-500 font-mono text-[10px] block mb-0.5">{t("approval.requestedTool")}</span>
                 <div className="flex items-center gap-2 font-mono text-white text-xs bg-[#0c0a08] px-3 py-2 rounded-lg border border-white/5">
                   <Terminal size={13} className="text-[#d86f4c]" />
                   <span>{app.tool_name}</span>
@@ -90,7 +92,7 @@ export function ApprovalCardModal({
 
               {app.reasoning && (
                 <div>
-                  <span className="text-neutral-500 font-mono text-[10px] block mb-0.5">AGENT REASONING</span>
+                  <span className="text-neutral-500 font-mono text-[10px] block mb-0.5">{t("approval.agentReasoning")}</span>
                   <p className="text-slate-700 dark:text-neutral-300 text-xs leading-relaxed bg-[#0c0a08]/50 p-2.5 rounded-lg border border-white/5 font-mono">
                     {app.reasoning}
                   </p>
@@ -105,7 +107,7 @@ export function ApprovalCardModal({
                   className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 font-medium text-xs flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40"
                 >
                   <XCircle size={13} />
-                  <span>Deny</span>
+                  <span>{t("approval.deny")}</span>
                 </button>
                 <button
                   disabled={submittingId === app.request_id}
@@ -113,7 +115,7 @@ export function ApprovalCardModal({
                   className="px-3.5 py-1.5 rounded-lg bg-[#d86f4c] hover:bg-[#c2410c] text-white font-medium text-xs flex items-center gap-1 transition-all shadow-[0_0_12px_rgba(216,111,76,0.3)] cursor-pointer disabled:opacity-40"
                 >
                   <CheckCircle size={13} />
-                  <span>Approve & Execute</span>
+                  <span>{t("approval.approve")}</span>
                 </button>
               </div>
             </div>
@@ -122,7 +124,7 @@ export function ApprovalCardModal({
 
         {/* Footer */}
         <div className="px-6 py-3 bg-slate-50 dark:bg-[#17120e] border-t border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
-          <span>Decisions recorded in audit log</span>
+          <span>{t("approval.auditNotice")}</span>
           <button
             onClick={onClose}
             className="hover:text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer"

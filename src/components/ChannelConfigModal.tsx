@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { X, Save, Shield, Bot, Send, Radio, Check, Key } from "lucide-react";
 import { AgentChannelConfig, updateAgentChannelConfig } from "../services/agentApi";
@@ -19,6 +20,7 @@ export function ChannelConfigModal({
   agentName,
   onSaved,
 }: ChannelConfigModalProps) {
+  const { t } = useTranslation();
   const [enabled, setEnabled] = useState(false);
   const [botToken, setBotToken] = useState("");
   const [botPrefix, setBotPrefix] = useState("");
@@ -101,7 +103,7 @@ export function ChannelConfigModal({
         <form onSubmit={handleSave} className="p-4 space-y-4">
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-[#242432]">
             <div className="flex flex-col">
-              <span className="font-medium text-white">Channel Status</span>
+              <span className="font-medium text-white">{t("channelConfig.status")}</span>
               <span className="text-[10px] text-slate-500 dark:text-neutral-400">
                 Route queries from {channel.name} to {agentName}
               </span>
@@ -123,7 +125,7 @@ export function ChannelConfigModal({
             <div className="space-y-1.5">
               <label className="text-slate-700 dark:text-neutral-300 font-medium flex items-center gap-1.5">
                 <Key size={13} className="text-[#ff7a00]" />
-                <span>Bot Token / API Secret</span>
+                <span>{t("channelConfig.token")}</span>
               </label>
               <input
                 type="password"
@@ -136,7 +138,7 @@ export function ChannelConfigModal({
           )}
 
           <div className="space-y-1.5">
-            <label className="text-slate-700 dark:text-neutral-300 font-medium">Trigger Prefix (Optional)</label>
+            <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("channelConfig.prefix")}</label>
             <input
               type="text"
               value={botPrefix}
@@ -154,7 +156,7 @@ export function ChannelConfigModal({
                 onChange={(e) => setRequireMention(e.target.checked)}
                 className="rounded accent-[#ff7a00]"
               />
-              <span className="text-[11px]">Require Mention</span>
+              <span className="text-[11px]">{t("channelConfig.requireMention")}</span>
             </label>
 
             <label className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-[#161620] border border-[#222230] text-slate-700 dark:text-neutral-300 cursor-pointer select-none">
@@ -164,7 +166,7 @@ export function ChannelConfigModal({
                 onChange={(e) => setShowThinking(e.target.checked)}
                 className="rounded accent-[#ff7a00]"
               />
-              <span className="text-[11px]">Show Thinking</span>
+              <span className="text-[11px]">{t("channelConfig.showThinking")}</span>
             </label>
           </div>
 
@@ -189,14 +191,14 @@ export function ChannelConfigModal({
                 {saveSuccess ? (
                   <>
                     <Check size={13} className="stroke-[3]" />
-                    <span>Saved!</span>
+                    <span>{t("channelConfig.saved")}</span>
                   </>
                 ) : saving ? (
-                  <span>Saving...</span>
+                  <span>{t("channelConfig.saving")}</span>
                 ) : (
                   <>
                     <Save size={13} />
-                    <span>Save Config</span>
+                    <span>{t("channelConfig.save")}</span>
                   </>
                 )}
               </button>

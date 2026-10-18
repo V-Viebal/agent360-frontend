@@ -1,10 +1,15 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
-import { Mic, X, Volume2, Globe, Sliders, CheckCircle2, ShieldCheck, Keyboard, Activity } from "lucide-react";
+import { Mic,
+  Wifi, X, Volume2, Globe, Sliders, CheckCircle2, ShieldCheck, Keyboard, Activity } from "lucide-react";
 import {
   AudioInputDeviceOption,
   getAvailableAudioInputDevices,
   getSelectedAudioDeviceId,
   setSelectedAudioDeviceId,
+  getVoiceAudioProfile,
+  setVoiceAudioProfile,
+  VoiceAudioProfile,
   broadcastAudioSettingChange,
 } from "../services/permissionService";
 
@@ -15,6 +20,8 @@ interface VoiceRecordSettingsModalProps {
   onSttLangChange: (lang: "vi-VN" | "en-US") => void;
   onOpenShortcuts?: () => void;
   onOpenPermissions?: () => void;
+  agentId?: string;
+  agentName?: string;
 }
 
 export function VoiceRecordSettingsModal({
@@ -24,9 +31,12 @@ export function VoiceRecordSettingsModal({
   onSttLangChange,
   onOpenShortcuts,
   onOpenPermissions,
+  agentId,
+  agentName,
 }: VoiceRecordSettingsModalProps) {
+  const { t } = useTranslation();
   const [audioDevices, setAudioDevices] = useState<AudioInputDeviceOption[]>([]);
-  const [selectedMicId, setSelectedMicId] = useState<string>(() => getSelectedAudioDeviceId());
+  const [selectedMicId, setSelectedMicId] = useState<string>(() => getSelectedAudioDeviceId(agentId));
   const [vadMode, setVadMode] = useState<"continuous" | "manual" | "push_to_talk">(() => {
     try {
       return (localStorage.getItem("agent360_vad_mode") as any) || "continuous";
@@ -44,6 +54,16 @@ export function VoiceRecordSettingsModal({
   });
 
   // Frequency bands (Bass / Mid / Treble) for live Equalizer Monitor
+    const [voiceProfile, setVoiceProfileState] = useState<VoiceAudioProfile>(() => getVoiceAudioProfile());
+
+  const handleProfileChange = (patch: Partial<VoiceAudioProfile>) => {
+    setVoiceProfileState((prev) => {
+      const next = { ...prev, ...patch };
+      setVoiceAudioProfile(next);
+      return next;
+    });
+  };
+
   const [isLiveTesting, setIsLiveTesting] = useState(false);
   const [freqBands, setFreqBands] = useState<{ bass: number; mid: number; treble: number }>({
     bass: 0,
@@ -136,15 +156,16 @@ export function VoiceRecordSettingsModal({
     async function loadDevices() {
       const devs = await getAvailableAudioInputDevices();
       setAudioDevices(devs);
+      setSelectedMicId(getSelectedAudioDeviceId(agentId));
     }
     if (isOpen) {
       loadDevices();
     }
-  }, [isOpen]);
+  }, [isOpen, agentId]);
 
   const handleDeviceChange = (devId: string) => {
     setSelectedMicId(devId);
-    setSelectedAudioDeviceId(devId);
+    setSelectedAudioDeviceId(devId, agentId);
   };
 
   const handleVadModeChange = (mode: "continuous" | "manual" | "push_to_talk") => {
@@ -332,6 +353,98 @@ export function VoiceRecordSettingsModal({
             )}
           </div>
 
+                    {/* 3.1 Network Bandwidth & Low Latency Profile */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Wifi size={14} className="text-cyan-400" />
+                <span className="text-xs font-semibold text-white">Network & Low-Latency Profile</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                WebRTC Optimized
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+              Tune audio bitrate and acoustic filters for optimal voice responsiveness under low bandwidth:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+              {/* Bitrate selection */}
+              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 space-y-1.5">
+                <span className="text-[10px] text-neutral-400 block">Opus Bitrate:</span>
+                <div className="flex items-center gap-1">
+                  {[32, 64, 128].map((kbps) => (
+                    <button
+                      key={kbps}
+                      type="button"
+                      onClick={() => handleProfileChange({ bitrateKbps: kbps })}
+                      className={`flex-1 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors border ${
+                        voiceProfile.bitrateKbps === kbps
+                          ? "bg-cyan-500/20 border-cyan-500 text-cyan-300"
+                          : "bg-[#181824] border-[#262638] text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      {kbps}k
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ultra Low Latency Mode */}
+              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-neutral-400">Ultra-Low Latency:</span>
+                  <input
+                    type="checkbox"
+                    checked={voiceProfile.lowLatencyMode}
+                    onChange={(e) => handleProfileChange({ lowLatencyMode: e.target.checked })}
+                    className="accent-cyan-400 h-3.5 w-3.5 cursor-pointer"
+                  />
+                </div>
+                <span className="text-[9px] text-neutral-500">
+                  {voiceProfile.lowLatencyMode ? "Zero buffer delay (<80ms)" : "Standard buffer smoothing"}
+                </span>
+              </div>
+            </div>
+
+            {/* Acoustic Filters Toggles */}
+            <div className="grid grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
+              <button
+                type="button"
+                onClick={() => handleProfileChange({ noiseSuppression: !voiceProfile.noiseSuppression })}
+                className={`py-1 px-1.5 rounded border text-center transition-colors cursor-pointer ${
+                  voiceProfile.noiseSuppression
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                    : "bg-[#12121a] border-[#222230] text-neutral-500"
+                }`}
+              >
+                Noise Suppress {voiceProfile.noiseSuppression ? "✓" : "✗"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleProfileChange({ echoCancellation: !voiceProfile.echoCancellation })}
+                className={`py-1 px-1.5 rounded border text-center transition-colors cursor-pointer ${
+                  voiceProfile.echoCancellation
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                    : "bg-[#12121a] border-[#222230] text-neutral-500"
+                }`}
+              >
+                Echo Cancel {voiceProfile.echoCancellation ? "✓" : "✗"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleProfileChange({ autoGainControl: !voiceProfile.autoGainControl })}
+                className={`py-1 px-1.5 rounded border text-center transition-colors cursor-pointer ${
+                  voiceProfile.autoGainControl
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                    : "bg-[#12121a] border-[#222230] text-neutral-500"
+                }`}
+              >
+                Auto Gain {voiceProfile.autoGainControl ? "✓" : "✗"}
+              </button>
+            </div>
+          </div>
+
           {/* 4. Acoustic Spectrum Equalizer (Bass / Mid / Treble) */}
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
             <div className="flex items-center justify-between">
@@ -359,7 +472,7 @@ export function VoiceRecordSettingsModal({
               {/* Bass Band */}
               <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
-                  <span>Bass</span>
+                  <span>{t("voiceSettings.bass")}</span>
                   <span className="text-[#ff7a00] font-bold">{freqBands.bass}%</span>
                 </div>
                 <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
@@ -374,7 +487,7 @@ export function VoiceRecordSettingsModal({
               {/* Mid Band */}
               <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
-                  <span>Mid</span>
+                  <span>{t("voiceSettings.mid")}</span>
                   <span className="text-cyan-400 font-bold">{freqBands.mid}%</span>
                 </div>
                 <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
@@ -389,7 +502,7 @@ export function VoiceRecordSettingsModal({
               {/* Treble Band */}
               <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
-                  <span>Treble</span>
+                  <span>{t("voiceSettings.treble")}</span>
                   <span className="text-purple-400 font-bold">{freqBands.treble}%</span>
                 </div>
                 <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
@@ -417,7 +530,7 @@ export function VoiceRecordSettingsModal({
                 className="hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <ShieldCheck size={13} className="text-[#ff7a00]" />
-                <span>Permissions</span>
+                <span>{t("voiceSettings.permissionsBtn")}</span>
               </button>
             )}
             {onOpenShortcuts && (
@@ -432,7 +545,7 @@ export function VoiceRecordSettingsModal({
                   className="hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
                 >
                   <Keyboard size={13} className="text-cyan-400" />
-                  <span>Shortcuts</span>
+                  <span>{t("voiceSettings.shortcutsBtn")}</span>
                 </button>
               </>
             )}

@@ -334,7 +334,7 @@ export function LandingPage() {
             onSubmit={submitHeroTask}
             className="mt-10 sm:mt-12 mx-auto max-w-2xl rounded-2xl border border-white/[0.1] bg-neutral-100 dark:bg-[#0b0d12] p-2 text-left focus-within:border-neutral-400 dark:focus-within:border-white/25 shadow-md dark:shadow-none transition-colors"
           >
-            <label htmlFor="hero-task" className="sr-only">Describe a task for your Bot</label>
+            <label htmlFor="hero-task" className="sr-only">{t("landing.describeTask")}</label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <input
                 id="hero-task"
@@ -1029,7 +1029,7 @@ export function LandingPage() {
                 {visibleLogs < activeRole.previewData.logs.length ? (
                   <div className="flex items-center gap-2 text-neutral-500" aria-live="polite">
                     <span className="inline-block h-3 w-1.5 bg-neutral-400 animate-pulse" />
-                    <span>working…</span>
+                    <span>{t("landing.working")}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 pt-2">
@@ -1041,11 +1041,11 @@ export function LandingPage() {
                       }}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white border border-white/10 transition-colors text-[11px] font-mono cursor-pointer"
                     >
-                      <span>↻ Replay run</span>
+                      <span>{t("landing.replayRun")}</span>
                     </button>
                     <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      Turn completed • 100% deterministic receipts verified
+                      {t("landing.turnCompleted")}
                     </span>
                   </div>
                 )}

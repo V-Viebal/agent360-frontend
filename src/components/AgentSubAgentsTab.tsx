@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { operatorKey } from "../services/a2aApi";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, RefreshCw, Trash2, Zap, Network, CheckCircle2, XCircle, Clock, Send, RotateCcw, Ban, ScanSearch } from "lucide-react";
@@ -42,6 +43,7 @@ function Badge({ status }: { status: string }) {
 }
 
 export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
+  const { t } = useTranslation();
   const parent = normalizeAgentId(agentId);
   const [view, setView] = useState<"subagents" | "delegations">("subagents");
   const [bindings, setBindings] = useState<SubAgentBinding[]>([]);
@@ -73,16 +75,16 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
   const load = async () => {
     setLoading(true);
     try {
-      const [b, h, t, st] = await Promise.all([
-        subAgentApi.list(parent),
-        subAgentApi.health(parent),
-        subAgentApi.delegations(parent),
+      const [bRes, hRes, tRes, st] = await Promise.all([
+        subAgentApi.list(parent).catch(() => [] as SubAgentBinding[]),
+        subAgentApi.health(parent).catch(() => [] as SubAgentHealth[]),
+        subAgentApi.delegations(parent).catch(() => [] as DelegationTask[]),
         subAgentApi.skillStatus(parent).catch(() => null),
       ]);
       setSkill(st);
-      setBindings(b);
-      setHealth(Object.fromEntries(h.map((x) => [x.child_agent_id, x])));
-      setTasks(t);
+      setBindings(bRes);
+      setHealth(Object.fromEntries(hRes.map((x) => [x.child_agent_id, x])));
+      setTasks(tRes);
     } catch (e: any) {
       flash(e.message, false);
     } finally {
@@ -278,7 +280,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
         <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-semibold mb-1">
           <Network size={12} className="text-[#ff7a00]" /> {parent}
         </div>
-        {bindings.length === 0 && <div className="text-neutral-500 pl-3">└── (no sub-agents)</div>}
+        {bindings.length === 0 && <div className="text-neutral-500 pl-3">{t("subagents.noSubagents")}</div>}
         {bindings.map((b, i) => {
           const ts = tasks.filter((t) => t.child_agent_id === b.child_agent_id);
           const running = ts.filter((t) => ["running", "queued", "retry_queued"].includes(t.status)).length;
@@ -350,7 +352,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           <div className="p-2.5 rounded-xl border border-dashed border-[#2a2a38] bg-white dark:bg-slate-100 dark:bg-[#121218] space-y-1.5">
             <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1"><Plus size={12} /> Bind sub-agent</div>
             <select value={form.child} onChange={(e) => setForm({ ...form, child: e.target.value })} className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-              <option value="">Select agent…</option>
+              <option value="">{t("subagents.selectAgent")}</option>
               {candidates.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
@@ -368,12 +370,12 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
             <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1"><Send size={12} /> New delegation</div>
             <div className="flex gap-1">
               <select value={dlg.child} onChange={(e) => setDlg({ ...dlg, child: e.target.value })} className="flex-1 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-                <option value="">Sub-agent…</option>
+                <option value="">{t("subagents.subagentPlaceholder")}</option>
                 {bindings.filter((b) => b.enabled).map((b) => <option key={b.child_agent_id} value={b.child_agent_id}>{b.child_agent_id}</option>)}
               </select>
               <select value={dlg.mode} onChange={(e) => setDlg({ ...dlg, mode: e.target.value as DelegationMode })} className="bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-                <option value="sync">sync</option>
-                <option value="async">async</option>
+                <option value="sync">{t("subagents.sync")}</option>
+                <option value="async">{t("subagents.async")}</option>
               </select>
             </div>
             <textarea value={dlg.objective} onChange={(e) => setDlg({ ...dlg, objective: e.target.value })} rows={2} placeholder="Objective" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
@@ -398,28 +400,28 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
             </div>
           </div>
 
-          {tasks.length === 0 && <div className="py-6 text-center text-neutral-500 font-mono">No delegations yet.</div>}
-          {tasks.map((t) => (
-            <div key={t.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
-              <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={() => setExpanded(expanded === t.id ? null : t.id)}>
+          {tasks.length === 0 && <div className="py-6 text-center text-neutral-500 font-mono">{t("subagents.noDelegations")}</div>}
+          {tasks.map((task) => (
+            <div key={task.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
+              <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={() => setExpanded(expanded === task.id ? null : task.id)}>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-mono text-slate-500 dark:text-neutral-400">{t.parent_agent_id}→</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{t.child_agent_id}</span>
-                  <span className="text-[10px] font-mono text-neutral-500">{t.mode}{t.source === "native-tool-call" ? " · auto" : ""} · #{t.attempt}</span>
+                  <span className="font-mono text-slate-500 dark:text-neutral-400">{task.parent_agent_id}→</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{task.child_agent_id}</span>
+                  <span className="text-[10px] font-mono text-neutral-500">{task.mode}{task.source === "native-tool-call" ? " · auto" : ""} · #{task.attempt}</span>
                 </div>
-                <Badge status={t.status} />
+                <Badge status={task.status} />
               </div>
-              <p className="text-slate-700 dark:text-neutral-300 line-clamp-2">{t.objective}</p>
-              {expanded === t.id && (
+              <p className="text-slate-700 dark:text-neutral-300 line-clamp-2">{task.objective}</p>
+              {expanded === task.id && (
                 <div className="space-y-1.5 pt-1 border-t border-[#20202c]">
-                  {t.output && <pre className="whitespace-pre-wrap text-[11px] text-slate-800 dark:text-neutral-200 bg-[#0f0f14] p-2 rounded-lg max-h-48 overflow-y-auto">{t.output}</pre>}
-                  {t.error && <div className="text-rose-300 text-[11px]">Error: {t.error}</div>}
-                  {t.acceptance && (
+                  {task.output && <pre className="whitespace-pre-wrap text-[11px] text-slate-800 dark:text-neutral-200 bg-[#0f0f14] p-2 rounded-lg max-h-48 overflow-y-auto">{task.output}</pre>}
+                  {task.error && <div className="text-rose-300 text-[11px]">Error: {task.error}</div>}
+                  {task.acceptance && (
                     <div className="space-y-0.5">
                       <div className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
-                        {t.acceptance.reviewer}: {t.acceptance.decision} ({t.acceptance.score}) — {t.acceptance.reason}
+                        {task.acceptance.reviewer}: {task.acceptance.decision} ({task.acceptance.score}) — {task.acceptance.reason}
                       </div>
-                      {t.acceptance.checks.map((c) => (
+                      {task.acceptance.checks.map((c) => (
                         <div key={c.criterion} className="flex items-start gap-1 text-[11px]">
                           {c.result === "pass" ? <CheckCircle2 size={11} className="text-emerald-400 mt-0.5" /> : c.result === "fail" ? <XCircle size={11} className="text-rose-400 mt-0.5" /> : <Clock size={11} className="text-amber-400 mt-0.5" />}
                           <span className="text-slate-700 dark:text-neutral-300">{c.criterion}</span>
@@ -428,25 +430,25 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                     </div>
                   )}
                   <div className="text-[10px] font-mono text-neutral-500 break-all">
-                    {t.native_task_id && <>task: {t.native_task_id} · </>}session: {t.session_id || "-"}
+                    {task.native_task_id && <>task: {task.native_task_id} · </>}session: {task.session_id || "-"}
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {["completed", "under_review"].includes(t.status) && (
+                    {["completed", "under_review"].includes(task.status) && (
                       <>
-                        <button onClick={() => review(t, "accepted", "rule-based")} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer">Rule check</button>
-                        <button onClick={() => review(t, "accepted", "human")} className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 cursor-pointer">Accept</button>
-                        <button onClick={() => review(t, "rejected", "human")} className="px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 cursor-pointer">Reject</button>
+                        <button onClick={() => review(task, "accepted", "rule-based")} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer">{t("subagents.ruleCheck")}</button>
+                        <button onClick={() => review(task, "accepted", "human")} className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 cursor-pointer">{t("subagents.accept")}</button>
+                        <button onClick={() => review(task, "rejected", "human")} className="px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 cursor-pointer">{t("subagents.reject")}</button>
                       </>
                     )}
-                    {t.status === "rejected" && t.attempt < t.max_attempts && (
-                      <button onClick={() => retry(t)} className="px-2 py-0.5 rounded-md bg-[#ff7a00]/15 border border-[#ff7a00]/30 text-[#ff7a00] cursor-pointer flex items-center gap-1"><RotateCcw size={11} /> Retry</button>
+                    {task.status === "rejected" && task.attempt < task.max_attempts && (
+                      <button onClick={() => retry(task)} className="px-2 py-0.5 rounded-md bg-[#ff7a00]/15 border border-[#ff7a00]/30 text-[#ff7a00] cursor-pointer flex items-center gap-1"><RotateCcw size={11} /> Retry</button>
                     )}
-                    {["running", "queued", "retry_queued"].includes(t.status) && (
+                    {["running", "queued", "retry_queued"].includes(task.status) && (
                       <>
-                        {t.mode === "async" && (
-                          <button onClick={() => run(`s-${t.id}`, async () => { const u = await subAgentApi.syncStatus(t.id); setTasks((p) => p.map((x) => (x.id === t.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer">Check status</button>
+                        {task.mode === "async" && (
+                          <button onClick={() => run(`s-${task.id}`, async () => { const u = await subAgentApi.syncStatus(task.id); setTasks((p) => p.map((x) => (x.id === task.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-800 dark:text-neutral-200 cursor-pointer">{t("subagents.checkStatus")}</button>
                         )}
-                        <button onClick={() => run(`c-${t.id}`, async () => { const u = await subAgentApi.cancel(t.id); setTasks((p) => p.map((x) => (x.id === t.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-500 dark:text-neutral-400 cursor-pointer flex items-center gap-1"><Ban size={11} /> Cancel</button>
+                        <button onClick={() => run(`c-${task.id}`, async () => { const u = await subAgentApi.cancel(task.id); setTasks((p) => p.map((x) => (x.id === task.id ? u : x))); })} className="px-2 py-0.5 rounded-md bg-[#1f1f2b] border border-[#2b2b3d] text-slate-500 dark:text-neutral-400 cursor-pointer flex items-center gap-1"><Ban size={11} /> Cancel</button>
                       </>
                     )}
                   </div>

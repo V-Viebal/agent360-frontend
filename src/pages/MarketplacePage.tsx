@@ -213,7 +213,7 @@ export function MarketplacePage() {
           </div>
 
           <div className="text-xs font-mono text-neutral-400 hidden sm:block">
-            {activeView === "catalog" ? "Browsing 12 Specialized AI Teammates" : "4 Department Supervision Hierarchy"}
+            {activeView === "catalog" ? t("marketplace.catalogCountDesc") : t("marketplace.hierarchyCountDesc")}
           </div>
         </div>
 

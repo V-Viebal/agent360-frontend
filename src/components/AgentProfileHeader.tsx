@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState } from "react";
 import { InfraAgent } from "../types/agent";
 import { SkillPoolModal } from "./SkillPoolModal";
@@ -33,6 +34,7 @@ const AVAILABLE_MODELS = [
 ];
 
 export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentProfileHeaderProps) {
+  const { t } = useTranslation();
   const [showSkillModal, setShowSkillModal] = useState<boolean>(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState<boolean>(false);
   const [showBrowserModal, setShowBrowserModal] = useState<boolean>(false);
@@ -139,7 +141,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             title="Inspect Agent Browser CDP Stream"
           >
             <Globe size={13} className="text-blue-400" />
-            <span>Browser</span>
+            <span>{t("profile.tabBrowser")}</span>
           </button>
 
           {/* Token Analytics Dashboard Button */}
@@ -149,7 +151,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             title="View Token Usage & Metrics"
           >
             <BarChart3 size={13} className="text-amber-400" />
-            <span>Usage</span>
+            <span>{t("profile.tabUsage")}</span>
           </button>
 
           {/* Skills Catalog Button */}
@@ -159,7 +161,7 @@ export function AgentProfileHeader({ agent, onRefresh, onModelChanged }: AgentPr
             title="Browse Skills & Capabilities"
           >
             <Sparkles size={13} />
-            <span>Skills</span>
+            <span>{t("profile.tabSkills")}</span>
           </button>
 
           {onRefresh && (

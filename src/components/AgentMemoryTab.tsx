@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import { Brain, Sparkles, Plus, Trash2, Edit2, Check, X, Shield, RefreshCw } from "lucide-react";
 
@@ -44,6 +45,7 @@ const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
 };
 
 export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTabProps) {
+  const { t } = useTranslation();
   const [memories, setMemories] = useState<MemoryItem[]>(() => {
     try {
       const saved = localStorage.getItem(`agent360_memory_${agentSlug}`);
@@ -97,14 +99,14 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
   const getCategoryBadge = (cat: MemoryItem["category"]) => {
     switch (cat) {
       case "rule":
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-500/10 text-red-400 border border-red-500/20 uppercase">Rule</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-500/10 text-red-400 border border-red-500/20 uppercase">{t("memory.rule")}</span>;
       case "preference":
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">Pref</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">{t("memory.pref")}</span>;
       case "project":
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">Project</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">{t("memory.project")}</span>;
       case "fact":
       default:
-        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">Fact</span>;
+        return <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">{t("memory.fact")}</span>;
     }
   };
 
@@ -115,7 +117,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
         <div className="flex items-center justify-between">
           <span className="font-semibold text-white flex items-center gap-1.5">
             <Brain size={13} className="text-[#ff7a00]" />
-            <span>Persistent Memory (MEMORY.md)</span>
+            <span>{t("memory.tabTitle")}</span>
           </span>
           <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
             {memories.length} entries
@@ -149,7 +151,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
           className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] border border-[#ff7a00]/30 text-[10px] font-mono cursor-pointer transition-colors"
         >
           <Plus size={11} />
-          <span>Add</span>
+          <span>{t("memory.add")}</span>
         </button>
       </div>
 
@@ -157,16 +159,16 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
       {isAdding && (
         <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#ff7a00]/30 space-y-2 animate-in fade-in">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300">
-            <span>New Knowledge Entry</span>
+            <span>{t("memory.newEntry")}</span>
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as any)}
               className="bg-white dark:bg-[#121218] border border-[#2a2a3a] rounded px-2 py-0.5 text-[10px] text-white focus:outline-none"
             >
-              <option value="fact">Fact</option>
-              <option value="rule">Rule (Mandate)</option>
-              <option value="preference">Preference</option>
-              <option value="project">Project Context</option>
+              <option value="fact">{t("memory.fact")}</option>
+              <option value="rule">{t("memory.ruleMandate")}</option>
+              <option value="preference">{t("memory.preference")}</option>
+              <option value="project">{t("memory.projectContext")}</option>
             </select>
           </div>
           <textarea

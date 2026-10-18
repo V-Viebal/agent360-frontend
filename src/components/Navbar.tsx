@@ -80,7 +80,7 @@ export function Navbar() {
                   : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
               }`}
             >
-              <span>Product</span>
+              <span>{t("nav.product")}</span>
               <ChevronDown
                 size={12}
                 className={`transition-transform duration-200 ${openDropdown === "product" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
@@ -101,7 +101,7 @@ export function Navbar() {
                       AI Employees
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Specialized autonomous teammates across Finance, Sales, CX, and Operations.
+                      {t("nav.productAiEmployeesDesc")}
                     </div>
                   </div>
                 </a>
@@ -115,10 +115,10 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors">
-                      Multi-Agent Coordination (ACP)
+                      {t("nav.productMultiAgentTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Connect bots in one thread. Delegate tasks with verified execution receipts.
+                      {t("nav.productMultiAgentDesc")}
                     </div>
                   </div>
                 </a>
@@ -132,10 +132,10 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-purple-400 transition-colors">
-                      Virtual Computer Workspace
+                      {t("nav.productWorkspaceTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Persistent browser cookies, isolated execution sandbox, and live tool access.
+                      {t("nav.productWorkspaceDesc")}
                     </div>
                   </div>
                 </Link>
@@ -154,7 +154,7 @@ export function Navbar() {
                   : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
               }`}
             >
-              <span>Solutions</span>
+              <span>{t("nav.solutions")}</span>
               <ChevronDown
                 size={12}
                 className={`transition-transform duration-200 ${openDropdown === "solutions" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
@@ -172,11 +172,11 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
-                      <span>On-Premise Private Cluster</span>
-                      <span className="text-[9px] font-mono bg-emerald-400/15 text-emerald-400 px-1.5 py-0.2 rounded">Sovereign</span>
+                      <span>{t("nav.solOnPremTitle")}</span>
+                      <span className="text-[9px] font-mono bg-emerald-400/15 text-emerald-400 px-1.5 py-0.2 rounded">{t("nav.solOnPremBadge")}</span>
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      100% Air-gapped deployment behind your firewall with local vLLM / Ollama inference.
+                      {t("nav.solOnPremDesc")}
                     </div>
                   </div>
                 </a>
@@ -190,22 +190,22 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
-                      Corporate Role Catalog
+                      {t("nav.solRoleCatalogTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Templates categorized by company scale (Startup, SME, Global Enterprise).
+                      {t("nav.solRoleCatalogDesc")}
                     </div>
                   </div>
                 </Link>
 
                 <div className="pt-2 mt-1 border-t border-white/[0.06] px-2.5 pb-1 flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                  <span>Architecture Docs & Security:</span>
+                  <span>{t("nav.solArchSecurity")}</span>
                   <a
                     href="/skyer-enterprise-whitepaper.md"
                     target="_blank"
                     className="text-[#ff7a00] hover:underline flex items-center gap-1 font-sans text-xs"
                   >
-                    Whitepaper <ExternalLink size={10} />
+                    {t("nav.whitepaper")} <ExternalLink size={10} />
                   </a>
                 </div>
               </div>
@@ -223,7 +223,7 @@ export function Navbar() {
                   : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
               }`}
             >
-              <span>Resources</span>
+              <span>{t("nav.resources")}</span>
               <ChevronDown
                 size={12}
                 className={`transition-transform duration-200 ${openDropdown === "resources" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
@@ -241,10 +241,10 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
-                      Documentation & API
+                      {t("nav.resDocsTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Skyer ACP protocols, tool integration guides, and runbooks.
+                      {t("nav.resDocsDesc")}
                     </div>
                   </div>
                 </Link>
@@ -258,10 +258,10 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors">
-                      Fleet Telemetry & Load
+                      {t("nav.resTelemetryTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Live memory saturation, CPU radar, and active agent execution metrics.
+                      {t("nav.resTelemetryDesc")}
                     </div>
                   </div>
                 </Link>
@@ -277,11 +277,11 @@ export function Navbar() {
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
-                      <span>Community Forum</span>
+                      <span>{t("nav.resCommunityTitle")}</span>
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
-                      Discuss multi-agent patterns with enterprise AI engineers.
+                      {t("nav.resCommunityDesc")}
                     </div>
                   </div>
                 </a>
@@ -313,7 +313,7 @@ export function Navbar() {
             rel="noopener noreferrer"
             className="text-xs font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/[0.06] transition-all flex items-center gap-1"
           >
-            <span>GitHub</span>
+            <span>{t("nav.github")}</span>
             <ExternalLink size={11} className="text-neutral-500" />
           </a>
 
@@ -350,7 +350,7 @@ export function Navbar() {
         <div className="md:hidden bg-[#0c0e15] border-b border-white/10 px-4 py-6 space-y-4 max-h-[85vh] overflow-y-auto">
           {/* Section 1: Core Navigation */}
           <div className="space-y-1">
-            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">Platform</span>
+            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">{t("nav.mobilePlatform")}</span>
             <a
               href="/#bots"
               onClick={() => setMobileMenuOpen(false)}
@@ -364,14 +364,14 @@ export function Navbar() {
               className="block text-sm text-emerald-400 font-medium py-2 px-1 flex items-center gap-2"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>On-Premise Private Cluster</span>
+              <span>{t("nav.solOnPremTitle")}</span>
             </a>
             <a
               href="/#hierarchy"
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-[#ff7a00] font-medium py-2 px-1"
             >
-              Multi-Agent Coordination (ACP)
+              {t("nav.productMultiAgentTitle")}
             </a>
             <Link
               to="/marketplace"
@@ -413,7 +413,7 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-emerald-400 font-medium py-2 px-1 flex items-center justify-between"
             >
-              <span>Community Forum</span>
+              <span>{t("nav.resCommunityTitle")}</span>
               <ExternalLink size={12} />
             </a>
             <a
@@ -422,7 +422,7 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-neutral-300 hover:text-white py-2 px-1 flex items-center justify-between"
             >
-              <span>Enterprise Whitepaper (PDF/MD)</span>
+              <span>{t("nav.mobileWhitepaper")}</span>
               <ExternalLink size={12} />
             </a>
           </div>
@@ -430,7 +430,7 @@ export function Navbar() {
           {/* Section 3: Language & Action Buttons */}
           <div className="pt-3 border-t border-white/10 space-y-3">
             <div className="flex items-center justify-between px-1">
-              <span className="text-xs text-neutral-400 font-mono">Language / Ngôn ngữ:</span>
+              <span className="text-xs text-neutral-400 font-mono">{t("nav.langLabel")}</span>
               <LanguageSelector />
             </div>
 
@@ -441,7 +441,7 @@ export function Navbar() {
                 className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2"
               >
                 <LogIn size={14} className="text-[#ff7a00]" />
-                <span>Sign In to Skyer</span>
+                <span>{t("nav.signInSkyer")}</span>
               </Link>
               <Link
                 to="/app"

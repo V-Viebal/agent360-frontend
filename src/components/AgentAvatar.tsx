@@ -23,7 +23,7 @@ interface AgentAvatarProps {
     name?: string;
     roleTag?: string;
   };
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
@@ -122,6 +122,7 @@ export function AgentAvatar({ agent, size = "md", className = "" }: AgentAvatarP
     sm: "h-7 w-7 rounded-xl",
     md: "h-8 w-8 rounded-xl",
     lg: "h-11 w-11 rounded-2xl",
+    xl: "h-14 w-14 rounded-2xl",
   }[size];
 
   const iconSize = {
@@ -129,13 +130,17 @@ export function AgentAvatar({ agent, size = "md", className = "" }: AgentAvatarP
     sm: 14,
     md: 16,
     lg: 22,
+    xl: 28,
   }[size];
 
   return (
     <div
-      className={`relative flex items-center justify-center shrink-0 bg-gradient-to-tr ${profile.gradient} shadow-md border ${profile.accentBorder} ${sizeBox} ${className}`}
+      className={`relative flex items-center justify-center shrink-0 bg-gradient-to-tr ${profile.gradient} shadow-md border ${profile.accentBorder} ${sizeBox} transition-all duration-300 ease-out hover:scale-110 hover:shadow-lg hover:shadow-orange-500/20 hover:brightness-110 hover:border-white/40 cursor-pointer group/avatar select-none ${className}`}
     >
-      <IconComponent size={iconSize} className={profile.iconColor} />
+      <IconComponent
+        size={iconSize}
+        className={`${profile.iconColor} transition-transform duration-300 ease-out group-hover/avatar:scale-110 group-hover/avatar:-rotate-6`}
+      />
     </div>
   );
 }

@@ -15,6 +15,8 @@ interface CustomSelectProps {
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
+  iconOnly?: boolean;
+  dropdownAlign?: "left" | "right";
 }
 
 export function CustomSelect({
@@ -24,6 +26,8 @@ export function CustomSelect({
   placeholder = "Select...",
   className = "",
   triggerClassName = "",
+  iconOnly = false,
+  dropdownAlign = "right",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,23 +44,40 @@ export function CustomSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isFullWidth = className.includes("w-full");
+
   return (
-    <div ref={containerRef} className={`relative inline-block text-left select-none ${className}`}>
+    <div ref={containerRef} className={`relative ${isFullWidth ? "block w-full" : "inline-block"} text-left select-none ${className}`}>
       {/* Trigger Button with Tooltip */}
-      <div className="relative group/select-trigger inline-block max-w-full">
+      <div className={`relative group/select-trigger ${isFullWidth ? "block w-full" : "inline-block max-w-full"}`}>
         <button aria-label={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder} data-ux-target-min="24"
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           title={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder}
-          className={`flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full ${triggerClassName}`}
+          className={
+            iconOnly
+              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs ${triggerClassName}`
+              : triggerClassName
+              ? `flex items-center justify-between gap-1.5 transition-all cursor-pointer min-w-0 max-w-full ${triggerClassName}`
+              : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full`
+          }
         >
-          <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left">
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
-          <ChevronDown
-            size={13}
-            className={`text-neutral-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
-          />
+          {iconOnly ? (
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${isOpen ? "rotate-180 text-[#ff7a00]" : "text-neutral-400"}`}
+            />
+          ) : (
+            <>
+              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left">
+                {selectedOption ? selectedOption.label : placeholder}
+              </span>
+              <ChevronDown
+                size={13}
+                className={`text-neutral-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+              />
+            </>
+          )}
         </button>
 
         {/* Floating Custom Tooltip on Hover with Top Z-Index */}
@@ -81,7 +102,7 @@ export function CustomSelect({
 
       {/* Dropdown Menu Always On Top */}
       {isOpen && (
-        <div className="absolute right-0 z-[100] mt-1.5 w-52 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
+        <div className={`absolute ${dropdownAlign === "left" ? "left-0" : "right-0"} z-[100] mt-1.5 w-52 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100`}>
           <div className="space-y-0.5 max-h-56 overflow-y-auto">
             {options.map((opt) => {
               const isSelected = opt.value === value;

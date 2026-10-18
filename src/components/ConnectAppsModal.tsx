@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState } from "react";
 import {
   Search,
@@ -548,6 +549,7 @@ export function ConnectAppsModal({
   onAppConnected,
   onAppDisconnected,
 }: ConnectAppsModalProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [loadingAppId, setLoadingAppId] = useState<string | null>(null);
@@ -685,7 +687,7 @@ export function ConnectAppsModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white tracking-tight">Connect Apps & Tools</h2>
+                <h2 className="text-sm font-semibold text-white tracking-tight">{t("connectApps.title")}</h2>
                 <span className="text-[10px] font-mono bg-[#20202c] text-[#ff7a00] px-2 py-0.5 rounded-full border border-[#2b2b3c]">
                   {targetAgentName}
                 </span>
@@ -858,10 +860,10 @@ export function ConnectAppsModal({
                           ) : isConnected ? (
                             <>
                               <Check size={12} className="text-emerald-400" />
-                              <span>Connected</span>
+                              <span>{t("connectApps.connected")}</span>
                             </>
                           ) : (
-                            <span>Add</span>
+                            <span>{t("connectApps.add")}</span>
                           )}
                         </button>
                       </div>

@@ -2,7 +2,7 @@ import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
 import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network, Keyboard } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
-import { ConnectAppsModal } from "../components/ConnectAppsModal";
+import { ConnectAppsModal, APPS_CATALOG } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
 import { AgentSubAgentsTab } from "../components/AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
@@ -15,6 +15,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Monitor,
   Trash2,
+  MoreVertical,
   Pin,
   PinOff,
   Download,
@@ -83,6 +84,7 @@ import {
   fetchWorkspaceTree,
   fetchWorkspaceFileContent,
   fetchAgentMcpClients,
+  AgentMcpClient,
   fetchAvailableModels,
   ModelOption,
   WorkspaceTreeNode,
@@ -90,6 +92,7 @@ import {
   compactAgentContext,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
+import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime } from "../services/notificationService";
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
@@ -966,7 +969,74 @@ export function GrokBotWorkspace() {
   const [agents, setAgents] = useState<InfraAgent[]>([]);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
-  const [selectedInstance, setSelectedInstance] = useState<string>("all");
+  const [isOnlineState, setIsOnlineState] = useState<boolean>(() => {
+    return typeof navigator !== "undefined" ? navigator.onLine : true;
+  });
+
+  useEffect(() => {
+    const onOnline = () => setIsOnlineState(true);
+    const onOffline = () => setIsOnlineState(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
+    // Listen for Background Sync trigger from Service Worker
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === "FLUSH_OFFLINE_PROMPTS") {
+          setIsOnlineState(true);
+        }
+      };
+      navigator.serviceWorker.addEventListener("message", handleMessage);
+      return () => {
+        navigator.serviceWorker.removeEventListener("message", handleMessage);
+      };
+    }
+  }, []);
+
+  // Offline-queue flush runs before executeTurnStream is declared; call it through a ref.
+  const executeTurnStreamRef = useRef<((prompt: string) => void) | null>(null);
+
+  const [offlinePendingQueue, setOfflinePendingQueue] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("skyer_offline_pending_prompts");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Auto flush offline queue when connection is restored
+  useEffect(() => {
+    if (isOnlineState && offlinePendingQueue.length > 0) {
+      const toSend = [...offlinePendingQueue];
+      setOfflinePendingQueue([]);
+      try {
+        localStorage.removeItem("skyer_offline_pending_prompts");
+      } catch {}
+
+      // Dispatch queued messages sequentially
+      toSend.forEach((prompt, idx) => {
+        setTimeout(() => {
+          executeTurnStreamRef.current?.(prompt);
+        }, idx * 1000);
+      });
+    }
+  }, [isOnlineState, offlinePendingQueue]);
+
+
+  const [selectedInstance, setSelectedInstance] = useState<string>(() => {
+    try {
+      return localStorage.getItem("agent360_selected_instance_filter") || "all";
+    } catch {
+      return "all";
+    }
+  });
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(() => {
     try {
       return localStorage.getItem("agent360_sound_enabled") !== "false";
@@ -984,6 +1054,7 @@ export function GrokBotWorkspace() {
   const [isSoundMenuOpen, setIsSoundMenuOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsModalTab, setSettingsModalTab] = useState<"appearance" | "language" | "audio" | "privacy_export" | "voice_record">("appearance");
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
   const [isStarredShortcutsModalOpen, setIsStarredShortcutsOpen] = useState(false);
@@ -1148,6 +1219,8 @@ export function GrokBotWorkspace() {
   const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Agents" | "Details">("Computer");
     const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
+  const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
+  const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(false);
   const [isComputerSplitOpen, setIsComputerSplitOpen] = useState<boolean>(() => {
@@ -1158,6 +1231,12 @@ export function GrokBotWorkspace() {
     }
   });
 
+  const [prevLayoutBeforeComputer, setPrevLayoutBeforeComputer] = useState<{
+    leftCollapsed: boolean;
+    chatCollapsed: boolean;
+    botInfoCollapsed: boolean;
+  } | null>(null);
+
   const handleToggleComputerSplit = (forceState?: boolean) => {
     setIsComputerSplitOpen((prev) => {
       const next = forceState !== undefined ? forceState : !prev;
@@ -1165,13 +1244,20 @@ export function GrokBotWorkspace() {
         localStorage.setItem("agent360_computer_split", next ? "true" : "false");
       } catch {}
       if (next) {
-        if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-          setIsLeftSidebarCollapsed(true);
-          setIsChatListCollapsed(true);
-          try {
-            localStorage.setItem("agent360_left_sidebar_collapsed", "true");
-            localStorage.setItem("agent360_chat_list_collapsed", "true");
-          } catch {}
+        // Keep left sidebar and chat session list intact; only collapse rightmost bot info pane so computer has space
+        setPrevLayoutBeforeComputer({
+          leftCollapsed: isLeftSidebarCollapsed,
+          chatCollapsed: isChatListCollapsed,
+          botInfoCollapsed: isBotInfoCollapsed,
+        });
+        setIsBotInfoCollapsed(true);
+        setMobileBotInfoOpen(false);
+      } else {
+        // Restore previous user layout when closing Computer
+        if (prevLayoutBeforeComputer) {
+          setIsBotInfoCollapsed(prevLayoutBeforeComputer.botInfoCollapsed);
+        } else {
+          setIsBotInfoCollapsed(false);
         }
       }
       return next;
@@ -1203,13 +1289,13 @@ export function GrokBotWorkspace() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Resizable layout column widths with localStorage persistence
+  // Resizable layout column widths with localStorage persistence (comfortable 320px default)
   const [leftSidebarWidth, setLeftSidebarWidth] = useState<number>(() => {
     try {
       const v = localStorage.getItem("agent360_left_sidebar_w");
-      return v ? parseInt(v, 10) : 260;
+      return v ? parseInt(v, 10) : 320;
     } catch {
-      return 260;
+      return 320;
     }
   });
 
@@ -1228,7 +1314,7 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingLeft) {
-        const newW = Math.min(420, Math.max(200, e.clientX));
+        const newW = Math.min(480, Math.max(240, e.clientX));
         setLeftSidebarWidth(newW);
         try { localStorage.setItem("agent360_left_sidebar_w", newW.toString()); } catch {}
       } else if (isResizingRight) {
@@ -1547,32 +1633,31 @@ export function GrokBotWorkspace() {
             clearTimeout(silenceTimerRef.current);
           }
 
-          // In continuous or push_to_talk mode, automatically stop and submit when user finishes speaking
-          if (autoSendOnSilenceRef.current && vadModeRef.current !== "manual") {
+          // In continuous or push_to_talk mode, automatically stop and submit when user finishes speaking naturally
+          if (autoSendOnSilenceRef.current && vadModeRef.current !== "manual" && currentSpoken.length >= 2) {
             silenceTimerRef.current = setTimeout(() => {
-              // Dual-signal verification: check if acoustic energy has subsided below conversational threshold
-              if (audioEnergyLevelRef.current > 18) {
-                // User is still vocalizing or trailing off; grant grace window
-                console.log("[VAD] Acoustic energy still active (" + audioEnergyLevelRef.current + "%), extending silence window...");
-                silenceTimerRef.current = setTimeout(() => {
-                  stopVoiceRecording();
-                  setTimeout(() => {
-                    const form = composerFormRef.current;
-                    if (form) {
-                      form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                    }
-                  }, 250);
-                }, 800);
-                return;
-              }
-
-              stopVoiceRecording();
-              setTimeout(() => {
-                const form = composerFormRef.current;
-                if (form) {
-                  form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+              // Intelligent Dual-signal verification:
+              // Check if acoustic energy has truly subsided below conversational floor (<16%)
+              const checkEnergyAndCommit = (retriesLeft: number) => {
+                if (audioEnergyLevelRef.current > 16 && retriesLeft > 0) {
+                  // User is pausing mid-sentence or still vocalizing; grant dynamic grace slice
+                  silenceTimerRef.current = setTimeout(() => {
+                    checkEnergyAndCommit(retriesLeft - 1);
+                  }, 600);
+                  return;
                 }
-              }, 250);
+
+                // Natural end-of-speech detected: finalize voice and dispatch message
+                stopVoiceRecording();
+                setTimeout(() => {
+                  const form = composerFormRef.current;
+                  if (form) {
+                    form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                  }
+                }, 200);
+              };
+
+              checkEnergyAndCommit(2);
             }, silenceDurationRef.current);
           }
         }
@@ -1641,14 +1726,64 @@ export function GrokBotWorkspace() {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Input composer
+  // Input composer with Draft Persistence per Session
   const [inputText, setInputText] = useState(() => {
     try {
-      return new URLSearchParams(window.location.search).get("prompt")?.slice(0, 2000) || "";
+      const urlPrompt = new URLSearchParams(window.location.search).get("prompt")?.slice(0, 2000);
+      if (urlPrompt) return urlPrompt;
+      const lastChatId = localStorage.getItem("agent360_last_chat_id");
+      if (lastChatId) {
+        const savedDraft = localStorage.getItem(`agent360_draft_${lastChatId}`);
+        if (savedDraft) return savedDraft;
+      }
+      return "";
     } catch {
       return "";
     }
   });
+
+  // Track previous chatId to save draft before switching
+  const prevChatIdRef = useRef<string>(selectedChatId);
+
+  useEffect(() => {
+    const prevId = prevChatIdRef.current;
+    if (prevId && prevId !== selectedChatId) {
+      // Save draft of previous chat if non-empty
+      try {
+        if (inputText.trim()) {
+          localStorage.setItem(`agent360_draft_${prevId}`, inputText);
+        } else {
+          localStorage.removeItem(`agent360_draft_${prevId}`);
+        }
+      } catch {}
+
+      // Load draft of newly selected chat
+      try {
+        const nextDraft = selectedChatId ? localStorage.getItem(`agent360_draft_${selectedChatId}`) : "";
+        setInputText(nextDraft || "");
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
+      } catch {}
+    }
+    prevChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
+  // Realtime debounce autosave draft for active session
+  useEffect(() => {
+    if (!selectedChatId) return;
+    const timer = setTimeout(() => {
+      try {
+        if (inputText.trim()) {
+          localStorage.setItem(`agent360_draft_${selectedChatId}`, inputText);
+        } else {
+          localStorage.removeItem(`agent360_draft_${selectedChatId}`);
+        }
+      } catch {}
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [inputText, selectedChatId]);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [pendingPrompt, setPendingPrompt] = useState<string>(() => {
@@ -1677,6 +1812,23 @@ export function GrokBotWorkspace() {
 
   // Search in conversation list
   const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [activeChatMenuId, setActiveChatMenuId] = useState<string | null>(null);
+  // Outside click listener to dismiss active chat 3-dots menu
+  useEffect(() => {
+    const handleOutsideChatMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-chat-menu-container="true"]')) {
+        setActiveChatMenuId(null);
+      }
+    };
+    if (activeChatMenuId) {
+      document.addEventListener("mousedown", handleOutsideChatMenu);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideChatMenu);
+    };
+  }, [activeChatMenuId]);
+
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned">("all");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
@@ -1856,8 +2008,15 @@ export function GrokBotWorkspace() {
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
   const isUserScrolledUpRef = useRef<boolean>(false);
 
+  // Map of last scroll positions per session
+  const sessionScrollPositionsRef = useRef<Record<string, number>>({});
+
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
+    // Save scroll position for active session
+    if (selectedChatId) {
+      sessionScrollPositionsRef.current[selectedChatId] = el.scrollTop;
+    }
     // Calculate distance from bottom
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     const isScrolledUp = distanceFromBottom > 160;
@@ -1865,6 +2024,39 @@ export function GrokBotWorkspace() {
     setShowScrollBottomBtn(isScrolledUp);
   };
   const [isConnectAppsOpen, setIsConnectAppsOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutsideExport = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutsideExport);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsideExport);
+    };
+  }, [isExportMenuOpen]);
+  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [plusMenuSearch, setPlusMenuSearch] = useState("");
+  const plusMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
+        setIsPlusMenuOpen(false);
+      }
+    };
+    if (isPlusMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isPlusMenuOpen]);
 
   // Jump immediately to bottom on open / chat switch without smooth scroll animation
   const jumpToBottom = () => {
@@ -2059,7 +2251,14 @@ export function GrokBotWorkspace() {
       setMessages(cachedTurns);
       setShowPollCard(false);
       setIsLoadingMessages(false);
-      setTimeout(jumpToBottom, 0);
+      setTimeout(() => {
+        const savedPos = sessionScrollPositionsRef.current[selectedChatId];
+        if (typeof savedPos === "number" && messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = savedPos;
+        } else {
+          jumpToBottom();
+        }
+      }, 0);
     } else {
       setIsLoadingMessages(true);
     }
@@ -2491,10 +2690,24 @@ export function GrokBotWorkspace() {
         return;
       }
 
+      // 1c. Fast Toggle Active Session Menu (Alt+M)
+      if (e.altKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        setActiveChatMenuId((prev) => (prev ? null : selectedChatId));
+        return;
+      }
+
       // 1b. Fast Toggle Left Sidebar (Ctrl+B or Cmd+B)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "b") {
         e.preventDefault();
         handleToggleLeftSidebar();
+        return;
+      }
+
+      // 1d. Fast Open Topology Modal (Ctrl+G or Cmd+G)
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        setIsTopologyModalOpen((prev) => !prev);
         return;
       }
 
@@ -2527,8 +2740,13 @@ export function GrokBotWorkspace() {
         }
       }
 
-      // 4. Escape key closes open modals / menus
+      // 4. Escape key closes open modals / menus or Computer Split
       if (e.key === "Escape") {
+        if (isComputerSplitOpen) {
+          handleToggleComputerSplit(false);
+          return;
+        }
+        setIsPlusMenuOpen(false);
         setIsCommandPaletteOpen(false);
         setIsPermissionsModalOpen(false);
         setIsRecipesModalOpen(false);
@@ -2726,6 +2944,8 @@ export function GrokBotWorkspace() {
     }
   };
 
+  executeTurnStreamRef.current = (prompt: string) => { executeTurnStream(prompt); };
+
   const processNextInQueue = () => {
     if (requestQueueRef.current.length > 0) {
       const nextPrompt = requestQueueRef.current.shift()!;
@@ -2755,8 +2975,42 @@ export function GrokBotWorkspace() {
       setAttachedFiles([]);
     }
     setInputText("");
+    if (selectedChatId) {
+      try { localStorage.removeItem(`agent360_draft_${selectedChatId}`); } catch {}
+    }
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
     if (isRecording) {
       stopVoiceRecording();
+    }
+
+    // If completely offline: queue prompt locally and notify user optimistically
+    if (!isOnlineState) {
+      const offlineMsg: ChatMessage = {
+        id: `usr-offline-${Date.now()}`,
+        role: "user",
+        content: userText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        metadata: { isOfflineQueued: true },
+      };
+      setMessages((prev) => [...prev, offlineMsg]);
+      setOfflinePendingQueue((prev) => {
+        const next = [...prev, userText];
+        try {
+        localStorage.setItem("skyer_offline_pending_prompts", JSON.stringify(next));
+        if (typeof navigator !== "undefined" && "serviceWorker" in navigator && "SyncManager" in window) {
+          navigator.serviceWorker.ready.then((reg: any) => {
+            if (reg && reg.sync) {
+              reg.sync.register("skyer-sync-prompts").catch(() => {});
+            }
+          });
+        }
+      } catch {}
+        return next;
+      });
+      requestAnimationFrame(() => smoothScrollToBottom());
+      return;
     }
 
     // Instant Local Message Echo: append to messages immediately so user gets 0ms visual confirmation
@@ -2914,25 +3168,16 @@ export function GrokBotWorkspace() {
           /* COLLAPSED VIEW: Minimal Rail Showing Only Avatar & State */
           /* ========================================================= */
           <>
-            {/* Collapsed Header: Brand Skyer Logo (Click to Expand) & Topology */}
-            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center gap-1.5 shrink-0 bg-[var(--bg-sidebar)] px-1">
+            {/* Collapsed Header: Clean Centered Skyer Logo */}
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center shrink-0 bg-[var(--bg-sidebar)]">
               <button
                 type="button"
                 onClick={() => handleToggleLeftSidebar(false)}
-                className="p-1 rounded-xl hover:bg-[#1f1f2c] transition-transform hover:scale-105 cursor-pointer"
-                title="Expand Agents Sidebar (Ctrl+B)"
+                className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-[#1f1f2c] transition-transform hover:scale-105 cursor-pointer"
+                title="Bấm để mở danh sách Agent & Hạ tầng (Ctrl+B)"
                 aria-label="Expand Agents Sidebar"
               >
                 <SkyerLogo size={26} showText={false} showBotBadge={false} />
-              </button>
-              <button
-                aria-label="Sơ đồ đội ngũ (Ctrl+G)"
-                type="button"
-                onClick={() => setIsTopologyModalOpen(true)}
-                className="h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-cyan-500/40 flex items-center justify-center text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer shadow-xs"
-                title="Sơ đồ đội ngũ (Ctrl+G)"
-              >
-                <Network size={13} />
               </button>
             </div>
 
@@ -3017,6 +3262,7 @@ export function GrokBotWorkspace() {
                     <div
                       onClick={() => {
                         setIsUserMenuOpen(false);
+                        setSettingsModalTab("appearance");
                         setIsSettingsModalOpen(true);
                       }}
                       className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs text-white hover:bg-[#ff7a00]/15 hover:text-[#ff7a00] font-medium cursor-pointer transition-colors border border-transparent hover:border-[#ff7a00]/30"
@@ -3035,6 +3281,20 @@ export function GrokBotWorkspace() {
                       </span>
                     </div>
                     <div className="h-px bg-[#222230] my-1" />
+                    <div
+                      id="tour-command-palette-trigger"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsCommandPaletteOpen(true);
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Command size={13} className="text-[#ff7a00]" />
+                        <span>Command Palette</span>
+                      </div>
+                      <kbd className="px-1.5 py-0.5 rounded bg-[#222230] border border-[#303044] text-[9px] font-mono text-neutral-400">Ctrl+K</kbd>
+                    </div>
                     <div
                       onClick={() => {
                         setIsUserMenuOpen(false);
@@ -3093,66 +3353,73 @@ export function GrokBotWorkspace() {
           /* EXPANDED VIEW: Full Agent List with Selector & Details   */
           /* ========================================================= */
           <>
-            {/* Header */}
-            <div className="h-12 px-3 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between gap-1.5 min-w-0 shrink-0 bg-[var(--bg-sidebar)]">
-              <a aria-label="Return to Skyer Home" href="/" className="hover:opacity-90 transition-opacity shrink-0" title="Return to Skyer Home">
-                <SkyerLogo size={24} showText={true} showBotBadge={false} />
-              </a>
-              <div className="flex items-center gap-1">
-                {/* Collapse trigger button on desktop */}
-                <button
-                  aria-label="Collapse Agents Sidebar"
-                  data-ux-target-min="24"
-                  onClick={() => handleToggleLeftSidebar(true)}
-                  className="hidden lg:flex h-7 w-7 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer shrink-0"
-                  title="Collapse Agents Sidebar (Ctrl+B)"
-                >
-                  <PanelLeftClose size={14} />
-                </button>
-                {/* Close drawer button on mobile */}
-                <button
-                  aria-label="Close drawer"
-                  data-ux-target-min="24"
-                  onClick={() => setMobileAgentsOpen(false)}
-                  className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white shrink-0"
-                  title="Close drawer"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
+            {/* Top Header: Vertical Layout (Logo, Typography, Dropdown Infra) */}
+            <div className="p-3 border-b border-neutral-200 dark:border-[#1c1c22] flex flex-col gap-2.5 shrink-0 bg-[var(--bg-sidebar)]">
+              {/* Row 1: Logo & Brand Typography + Collapse Button */}
+              <div className="flex items-center justify-between">
+                <a aria-label="Return to Skyer Home" href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity" title="Return to Skyer Home">
+                  <SkyerLogo size={24} showText={true} showBotBadge={false} />
+                </a>
 
-            {/* Instance Fleet Selector (Moved above Sơ đồ đội ngũ, clean non-highlight styling) */}
-            <div className="px-2 pt-2 pb-1 border-b border-neutral-200 dark:border-[#1c1c22]/60">
-              <CustomSelect
-                value={selectedInstance}
-                onChange={(val) => {
-                  setSelectedInstance(val);
-                  const nextMatching = agents.filter((a) => {
-                    if (val === "all") return true;
-                    if (a.instanceId) return a.instanceId === val;
-                    const id = a.id.toLowerCase();
-                    const node = (a.node || "").toLowerCase();
-                    if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
-                    if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
-                    if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
-                    if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
-                    if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
-                    if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
-                    if (val === "node-5th") return node.includes("5th") || node.includes("storage");
-                    return false;
-                  });
-                  if (nextMatching.length > 0) {
-                    const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
-                    if (!alreadySelected) {
-                      handleSelectAgent(nextMatching[0]);
+                <div className="flex items-center gap-1">
+                  {/* Collapse trigger button on desktop */}
+                  <button
+                    aria-label="Collapse Agents Sidebar"
+                    data-ux-target-min="24"
+                    onClick={() => handleToggleLeftSidebar(true)}
+                    className="hidden lg:flex h-7 w-7 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                    title="Collapse Agents Sidebar (Ctrl+B)"
+                  >
+                    <PanelLeftClose size={14} />
+                  </button>
+                  {/* Close drawer button on mobile */}
+                  <button
+                    aria-label="Close drawer"
+                    data-ux-target-min="24"
+                    onClick={() => setMobileAgentsOpen(false)}
+                    className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white shrink-0"
+                    title="Close drawer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 2: Dropdown Infra Instances stacked vertically under Logo & Typography */}
+              <div className="w-full">
+                <CustomSelect
+                  value={selectedInstance}
+                  onChange={(val) => {
+                    setSelectedInstance(val);
+                    try {
+                      localStorage.setItem("agent360_selected_instance_filter", val);
+                    } catch {}
+                    const nextMatching = agents.filter((a) => {
+                      if (val === "all") return true;
+                      if (a.instanceId) return a.instanceId === val;
+                      const id = a.id.toLowerCase();
+                      const node = (a.node || "").toLowerCase();
+                      if (val === "node-6th") return node.includes("6th") || node.includes("ai-gm") || id.includes("mons") || id.includes("swe");
+                      if (val === "node-3rd") return node.includes("3rd") || node.includes("ai.hmz") || id.includes("default") || id.includes("qa");
+                      if (val === "node-4th") return node.includes("4th") || node.includes("browser") || id.includes("mkai");
+                      if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
+                      if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
+                      if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
+                      if (val === "node-5th") return node.includes("5th") || node.includes("storage");
+                      return false;
+                    });
+                    if (nextMatching.length > 0) {
+                      const alreadySelected = nextMatching.some((a) => a.id === selectedAgentId);
+                      if (!alreadySelected) {
+                        handleSelectAgent(nextMatching[0]);
+                      }
                     }
-                  }
-                }}
-                options={INFRA_INSTANCES}
-                className="w-full"
-                triggerClassName="w-full bg-[#14141c] hover:bg-[#1c1c26] text-neutral-300 hover:text-white border-[#242432] hover:border-[#343446] px-2.5 py-1.5 rounded-lg text-xs font-mono font-normal shadow-none"
-              />
+                  }}
+                  options={INFRA_INSTANCES}
+                  className="w-full"
+                  triggerClassName="w-full bg-transparent hover:bg-white/[0.04] text-neutral-300 hover:text-white border-0 shadow-none px-2 py-1.5 rounded-xl text-xs font-mono font-medium"
+                />
+              </div>
             </div>
 
             {/* Team Network Overview Button (Lean, Normal Option, Details on Hover) */}
@@ -3359,6 +3626,19 @@ export function GrokBotWorkspace() {
                         Open
                       </span>
                     </div>
+                    <div
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsCommandPaletteOpen(true);
+                      }}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-neutral-300 hover:bg-[#1f1f2c] hover:text-white cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Command size={13} className="text-[#ff7a00]" />
+                        <span>Command Palette</span>
+                      </div>
+                      <kbd className="px-1.5 py-0.5 rounded bg-[#222230] border border-[#303044] text-[9px] font-mono text-neutral-400">Ctrl+K</kbd>
+                    </div>
                     <div className="h-px bg-[#222230] my-1" />
                     <div
                       onClick={() => {
@@ -3421,14 +3701,14 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <main
         style={{
-          width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '30%' : undefined,
-          flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '0 0 30%' : undefined,
+          width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1280 ? '35%' : isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '40%' : undefined,
+          flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1280 ? '0 0 35%' : isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? '0 0 40%' : undefined,
         }}
         className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0"
       >
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
         <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[var(--bg-workspace)]/85 backdrop-blur-md z-10">
-          {/* Left button: mobile drawer or expand collapsed left sidebar on desktop */}
+          {/* Left button: mobile drawer only on mobile viewport */}
           <button aria-label="Toggle Agents Sidebar" data-ux-target-min="24"
             onClick={() => {
               if (window.innerWidth >= 1024) {
@@ -3439,16 +3719,10 @@ export function GrokBotWorkspace() {
                 setMobileBotInfoOpen(false);
               }
             }}
-            className={`${isCompactMode || isLeftSidebarCollapsed ? "flex" : "lg:hidden flex"} h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors`}
-            title={isLeftSidebarCollapsed ? "Expand Agents Sidebar (Ctrl+B)" : "Toggle Agents Sidebar"}
+            className="lg:hidden flex h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors"
+            title="Toggle Agents Sidebar"
           >
-            {/* Show PanelLeftOpen on desktop when collapsed; on mobile always show Menu drawer icon */}
-            <span className="hidden lg:inline-flex">
-              {isLeftSidebarCollapsed ? <PanelLeftOpen size={16} /> : <Menu size={16} />}
-            </span>
-            <span className="lg:hidden inline-flex">
-              <Menu size={16} />
-            </span>
+            <Menu size={16} />
           </button>
 
           {/* Middle Group: Capsule Info + Telemetry HUD */}
@@ -3468,34 +3742,37 @@ export function GrokBotWorkspace() {
                   </div>
                 </div>
                 <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent.name}</span>
-                {nodePingMs !== null && (
-                  <span
-                    className={`hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono border ${
-                      nodePingMs < 80
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : nodePingMs < 200
-                        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                        : "bg-red-500/10 text-red-400 border-red-500/20"
-                    }`}
-                    title={`Live round-trip ping to ${selectedAgent.node}: ${nodePingMs}ms`}
-                  >
-                    <Wifi size={9} />
-                    <span>{nodePingMs}ms</span>
-                  </span>
-                )}
-                <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded ml-1 shrink-0">
-                  {isBotInfoCollapsed ? "Info ▸" : "Info ▾"}
-                </span>
               </div>
-              {/* Rich Tooltip for Capsule: Lean UI without cluttering header */}
-              <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 hidden group-hover:flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-[#161622] border border-[#2a2a3c] text-[10px] font-mono shadow-xl z-30 whitespace-nowrap">
-                <div className="flex items-center gap-1.5 text-neutral-200">
-                  <span className="text-[#ff7a00] font-semibold">{selectedAgent.roleTag || "Agent"}</span>
-                  <span>•</span>
-                  <span className="text-emerald-400">{selectedAgent.status || "active"}</span>
+              {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
+              <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex flex-col gap-1 px-3 py-2 rounded-xl bg-white dark:bg-[#161622] border border-neutral-200 dark:border-[#2a2a3c] text-[11px] font-mono shadow-2xl z-[100] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between gap-3 text-neutral-800 dark:text-neutral-200 border-b border-neutral-100 dark:border-[#242436] pb-1.5">
+                  <span className="text-[#ff7a00] font-semibold">{selectedAgent.roleTag || "AI Teammate"}</span>
+                  {nodePingMs !== null && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono border ${
+                        nodePingMs < 80
+                          ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/30"
+                          : nodePingMs < 200
+                          ? "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/30"
+                          : "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30"
+                      }`}
+                    >
+                      <Wifi size={10} />
+                      <span>{nodePingMs}ms</span>
+                    </span>
+                  )}
                 </div>
-                <span className="text-neutral-400">{selectedAgent.node}</span>
-                <span className="text-neutral-500 text-[9px]">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
+                <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
+                  <span>Hạ tầng node:</span>
+                  <span className="text-neutral-900 dark:text-neutral-200 font-semibold">{selectedAgent.node}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
+                  <span>Mô hình AI:</span>
+                  <span className="text-neutral-700 dark:text-neutral-300">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
+                </div>
+                <div className="pt-0.5 text-[9px] text-[#ff7a00] flex items-center justify-center">
+                  <span>Bấm để {isBotInfoCollapsed ? "mở" : "đóng"} Specification</span>
+                </div>
               </div>
             </div>
 
@@ -3504,49 +3781,7 @@ export function GrokBotWorkspace() {
             </div>
           </div>
 
-          {/* Right action group: Command Palette + Audio Chime + Conversation drawer toggle */}
-          <div className="flex items-center gap-1">
-            <ThemeSelector />
-            <LanguageSelector />
-          </div>
-
-          {/* Live Virtual Computer Toggle Button */}
-          <button
-            type="button"
-            onClick={() => handleToggleComputerSplit()}
-            className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-mono transition-all cursor-pointer ${
-              isComputerSplitOpen
-                ? "bg-[#ff7a00]/15 border-[#ff7a00]/40 text-[#ff7a00] shadow-xs"
-                : "bg-[#181820] hover:bg-[#22222e] border-[#242430] text-neutral-300 hover:text-white"
-            }`}
-            title={isComputerSplitOpen ? "Đóng Virtual Computer" : "Mở Virtual Computer (Desktop 3:7 / Mobile Full)"}
-            aria-label="Toggle Virtual Computer Mode"
-          >
-            <Monitor size={14} className={isComputerSplitOpen ? "text-[#ff7a00] animate-pulse" : ""} />
-            <span className="hidden sm:inline font-sans text-xs font-medium">Computer</span>
-            {isComputerSplitOpen && (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] hidden sm:inline-block" />
-            )}
-          </button>
-          {/* Context Token Usage Trigger moved to top header */}
-          <ContextUsageBar
-            agentId={selectedAgent.id}
-            sessionId={selectedChat?.id}
-            estimatedTokens={selectedChat?.messageCount ? selectedChat.messageCount * 380 : 1200}
-            maxTokens={128000}
-            className="compact-trigger mr-1 hidden sm:inline-flex"
-          />
-
-          <button aria-label="Command Palette (Ctrl+K / Cmd+K)"
-            type="button"
-            onClick={() => setIsCommandPaletteOpen(true)}
-            id="tour-command-palette-trigger"
-            className="hidden sm:flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#14141c] hover:bg-[#1f1f2c] border border-[#262634] text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer mr-1"
-            title="Command Palette (Ctrl+K / Cmd+K)"
-          >
-            <Command size={13} className="text-[#ff7a00]" />
-            <span className="text-[11px]">Ctrl+K</span>
-          </button>
+          {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
           <div className="flex items-center gap-1.5 shrink-0">
 
             <button aria-label={isChatListCollapsed ? "Expand Conversations list" : "Collapse Conversations list"} data-ux-target-min="24"
@@ -3572,18 +3807,7 @@ export function GrokBotWorkspace() {
             </button>
 
 
-            <button aria-label="Search within conversation" data-ux-target-min="24"
-              type="button"
-              onClick={() => setInSessionSearchOpen(!inSessionSearchOpen)}
-              className={`h-8 w-8 rounded-lg border flex items-center justify-center cursor-pointer shrink-0 transition-colors ${
-                inSessionSearchOpen
-                  ? "bg-[#ff7a00]/15 border-[#ff7a00]/30 text-[#ff7a00]"
-                  : "bg-[#181820] hover:bg-[#22222e] border-[#242430] text-neutral-400 hover:text-white"
-              }`}
-              title="Search within conversation"
-            >
-              <Search size={15} />
-            </button>
+
           </div>
         </div>
 
@@ -3744,6 +3968,12 @@ export function GrokBotWorkspace() {
                   {isUser ? (
                     <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words">
                       <p className="whitespace-pre-wrap select-text break-words break-all">{msg.content}</p>
+                      {msg.metadata?.isOfflineQueued && (
+                        <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
+                          <span>Chờ đồng bộ mạng (Tự gửi khi có mạng)</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* Assistant Turn: Structured Content Blocks + Agent Tool Cards */
@@ -4247,41 +4477,266 @@ export function GrokBotWorkspace() {
             return null;
           })()}
 
-          <form
-            id="tour-prompt-composer"
-            ref={composerFormRef}
-            onSubmit={handleSendMessage}
-            className={`flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
-          >
-            {/* Hidden native file input */}
-            <input data-ux-target-min="16"
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+          {/* Plus Add Popover Menu (Spans 100% full width of chat input and sits directly on top) */}
+          <div ref={plusMenuRef} className="relative w-full">
+            {isPlusMenuOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-3 w-full rounded-2xl bg-[#14141c]/95 dark:bg-[#121218]/95 border border-[#262634] shadow-2xl backdrop-blur-xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
+                <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#222230]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
+                      Add to prompt
+                    </span>
+                    <span className="text-[11px] font-mono text-neutral-500 hidden sm:inline">
+                      • <span className="text-[#ff7a00] font-medium">{selectedAgent.name}</span>
+                    </span>
+                  </div>
 
-            {/* Plus / File Attachment Trigger */}
-            <button aria-label="Add file to message (images, scripts, docs)" data-ux-target-min="24"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingFile}
-              className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer p-0.5 shrink-0"
-              title="Add file to message (images, scripts, docs)"
+                  {/* Instant Filter Search inside Popover */}
+                  <div className="flex items-center gap-1.5 bg-[#181824] border border-[#262638] focus-within:border-[#ff7a00]/50 rounded-lg px-2 py-1 text-xs sm:w-56 transition-colors">
+                    <Search size={12} className="text-neutral-400 shrink-0" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={plusMenuSearch}
+                      onChange={(e) => setPlusMenuSearch(e.target.value)}
+                      placeholder="Search files, apps, agents..."
+                      className="w-full bg-transparent border-0 text-[11px] text-white placeholder:text-neutral-500 focus:outline-none"
+                    />
+                    {plusMenuSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPlusMenuSearch("")}
+                        className="text-neutral-400 hover:text-white cursor-pointer"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5">
+                  {/* Column 1: Files and folders */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold px-1">
+                      Files & Docs
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsPlusMenuOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-neutral-200 hover:text-white bg-[#181822] hover:bg-[#20202e] border border-[#262638] hover:border-[#38384e] transition-all cursor-pointer group"
+                    >
+                      <div className="h-7 w-7 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-white group-hover:bg-[#ff7a00]/20 transition-colors shrink-0">
+                        <Paperclip size={14} />
+                      </div>
+                      <div className="flex flex-col text-left truncate">
+                        <span className="font-medium text-xs">Files and folders</span>
+                        <span className="text-[10px] text-neutral-500 truncate">Attach images, data, docs</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Column 2: Connected Apps (Loaded from Selected Agent's Apps tab - Full List) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
+                      <span>Connected Apps</span>
+                      <div className="relative group/tooltip">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsPlusMenuOpen(false);
+                            handleToggleBotInfo(false);
+                            setRightTab("Apps");
+                          }}
+                          className="p-1 rounded-md text-neutral-400 hover:text-[#ff7a00] hover:bg-white/5 transition-colors cursor-pointer"
+                          aria-label="View Apps in sidebar"
+                        >
+                          <ExternalLink size={12} />
+                        </button>
+                        <div className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/tooltip:flex px-2 py-0.5 rounded bg-[#1c1c28] border border-[#2e2e42] text-[10px] font-mono text-neutral-200 whitespace-nowrap shadow-lg z-30">
+                          View in sidebar
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 scrollbar-none">
+                      {(() => {
+                        // Priority 1: All apps loaded from Agent's active MCP clients with instant search
+                        const q = plusMenuSearch.trim().toLowerCase();
+                        let agentApps = currentAgentMcpClients.length > 0
+                          ? currentAgentMcpClients.map((c) => {
+                              const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
+                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || c.name.toLowerCase().includes(a.id.toLowerCase()));
+                              return {
+                                id: matched?.id || rawKey,
+                                name: matched?.name || c.name || c.key,
+                                logoUrl: matched?.logoUrl || `https://logos.composio.dev/api/${rawKey}`,
+                                isConnected: true,
+                              };
+                            })
+                          : APPS_CATALOG.map((a) => ({ ...a, isConnected: connectedAppIds.includes(a.id) }));
+
+                        if (q) {
+                          agentApps = agentApps.filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q));
+                        }
+
+                        if (agentApps.length === 0) {
+                          return (
+                            <div className="p-2 text-center text-[11px] text-neutral-500 font-mono">
+                              No connected apps for this agent
+                            </div>
+                          );
+                        }
+
+                        return agentApps.map((app) => (
+                          <button
+                            key={app.id}
+                            type="button"
+                            onClick={() => {
+                              setIsPlusMenuOpen(false);
+                              setInputText((prev) => (prev ? `${prev} /${app.id} ` : `/${app.id} `));
+                              textareaRef.current?.focus();
+                            }}
+                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-neutral-300 hover:text-white bg-[#181822]/80 hover:bg-[#20202e] border border-transparent hover:border-[#2f2f42] transition-colors cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                              <img
+                                src={app.logoUrl}
+                                alt={app.name}
+                                className="h-4 w-4 rounded-xs shrink-0 object-contain bg-white/5 p-0.5"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                              <span className="truncate text-[11px]">{app.name}</span>
+                            </div>
+                            <span className="text-[9px] font-mono text-neutral-500 group-hover:text-[#ff7a00] shrink-0">
+                              +Tool
+                            </span>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Column 3: Subagents & Team Agents (Loaded from Selected Agent's Agents tab - Full List) */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
+                      <span>Subagents</span>
+                      <div className="relative group/tooltip">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsPlusMenuOpen(false);
+                            handleToggleBotInfo(false);
+                            setRightTab("Agents");
+                          }}
+                          className="p-1 rounded-md text-neutral-400 hover:text-[#ff7a00] hover:bg-white/5 transition-colors cursor-pointer"
+                          aria-label="View Subagents in sidebar"
+                        >
+                          <ExternalLink size={12} />
+                        </button>
+                        <div className="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden group-hover/tooltip:flex px-2 py-0.5 rounded bg-[#1c1c28] border border-[#2e2e42] text-[10px] font-mono text-neutral-200 whitespace-nowrap shadow-lg z-30">
+                          View in sidebar
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 scrollbar-none">
+                      {(() => {
+                        // All subagents configured on selected agent with instant search
+                        const q = plusMenuSearch.trim().toLowerCase();
+                        const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
+                        const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
+                        // If no direct subagents configured yet, show all team members across fleet
+                        let displayList = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+
+                        if (q) {
+                          displayList = displayList.filter((ag) => ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q) || ag.id.toLowerCase().includes(q));
+                        }
+
+                        if (displayList.length === 0) {
+                          return (
+                            <div className="p-2 text-center text-[11px] text-neutral-500 font-mono">
+                              No subagents bound to this agent
+                            </div>
+                          );
+                        }
+
+                        return displayList.map((ag) => (
+                          <button
+                            key={ag.id}
+                            type="button"
+                            onClick={() => {
+                              setIsPlusMenuOpen(false);
+                              setInputText((prev) => (prev ? `${prev} @${ag.name} ` : `@${ag.name} `));
+                              textareaRef.current?.focus();
+                            }}
+                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-neutral-300 hover:text-white bg-[#181822]/80 hover:bg-[#20202e] border border-transparent hover:border-[#2f2f42] transition-colors cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                              <div className="h-4 w-4 rounded-full bg-[#ff7a00]/20 border border-[#ff7a00]/30 flex items-center justify-center text-[9px] font-mono text-[#ff7a00] shrink-0">
+                                {ag.name.slice(0, 1)}
+                              </div>
+                              <span className="truncate text-[11px]">{ag.name}</span>
+                            </div>
+                            <span className="text-[9px] font-mono text-neutral-500 group-hover:text-cyan-400 shrink-0">
+                              @Mention
+                            </span>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <form
+              id="tour-prompt-composer"
+              ref={composerFormRef}
+              onSubmit={handleSendMessage}
+              className={`flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
             >
-              {isUploadingFile ? (
-                <Loader2 size={16} className="animate-spin text-[#ff7a00]" />
-              ) : (
-                <Plus size={16} />
-              )}
-            </button>
+              {/* Hidden native file input */}
+              <input data-ux-target-min="16"
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
+              {/* Plus / Add Files, Apps & Agents Trigger */}
+              <button aria-label="Add files, apps, or agents" data-ux-target-min="24"
+                type="button"
+                onClick={() => {
+                  setIsPlusMenuOpen((prev) => {
+                    const next = !prev;
+                    if (next) setPlusMenuSearch("");
+                    return next;
+                  });
+                }}
+                disabled={isUploadingFile}
+                className={`text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer p-0.5 rounded-full flex items-center justify-center shrink-0 ${
+                  isPlusMenuOpen ? "text-[#ff7a00] dark:text-[#ff7a00] rotate-45 scale-110" : ""
+                }`}
+                title="Add files, apps, or mention agents"
+              >
+                {isUploadingFile ? (
+                  <Loader2 size={16} className="animate-spin text-[#ff7a00]" />
+                ) : (
+                  <Plus size={16} className="transition-transform duration-200" />
+                )}
+              </button>
 
             {/* Prompt Recipes & Templates Popover Trigger */}
             <button
               type="button"
               onClick={() => setIsRecipesModalOpen(true)}
-              className="text-neutral-400 hover:text-[#ff7a00] transition-colors cursor-pointer p-0.5 shrink-0"
+              className="text-neutral-400 hover:text-[#ff7a00] transition-colors cursor-pointer p-0.5 shrink-0 flex items-center justify-center translate-y-[1px]"
               title="Open Prompt Recipes & Templates"
             >
               <Sparkles size={15} />
@@ -4298,6 +4753,24 @@ export function GrokBotWorkspace() {
                 e.target.style.height = Math.min(e.target.scrollHeight, 130) + "px";
               }}
               onKeyDown={(e) => {
+                // If Ctrl+Enter or Cmd+Enter is pressed, insert a clean newline without sending
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  const target = e.currentTarget;
+                  const start = target.selectionStart;
+                  const end = target.selectionEnd;
+                  const val = target.value;
+                  const nextVal = val.substring(0, start) + "\n" + val.substring(end);
+                  setInputText(nextVal);
+                  setTimeout(() => {
+                    target.selectionStart = target.selectionEnd = start + 1;
+                    target.style.height = "auto";
+                    target.style.height = Math.min(target.scrollHeight, 130) + "px";
+                  }, 0);
+                  return;
+                }
+
+                // Ordinary Enter sends the message immediately unless Shift is held
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   composerFormRef.current?.requestSubmit();
@@ -4314,13 +4787,23 @@ export function GrokBotWorkspace() {
                   : `Message ${selectedAgent.name}... (Enter to send, Shift+Enter for new line)`
               }
               aria-label={`Message ${selectedAgent.name}`}
-              className="flex-1 bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed"
+              className="flex-1 bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed scrollbar-none"
             />
 
-            <div className="flex items-center gap-2 text-neutral-400 shrink-0">
+            <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
+              {/* Context Token Usage Circular Ring Trigger (Hover for detail) */}
+              <ContextUsageBar
+                agentId={selectedAgent.id}
+                sessionId={selectedChat?.id}
+                estimatedTokens={selectedChat?.messageCount ? selectedChat.messageCount * 380 : 1200}
+                maxTokens={128000}
+                className="compact-trigger text-neutral-400 hover:text-white"
+              />
+
               {/* Live WebRTC Audio Visualizer */}
               <AudioVisualizerWaveform
                 isRecording={isRecording}
+                agentId={selectedAgent?.id}
                 onAudioLevel={(lvl) => {
                   audioEnergyLevelRef.current = lvl;
                   setLiveVoiceEnergy(lvl);
@@ -4340,9 +4823,14 @@ export function GrokBotWorkspace() {
                 )}
               </button>
 
-              {/* Voice to text recording button (Supports Click Toggle & Push-to-Talk) */}
+              {/* Voice to text recording button (Supports Click Toggle, Push-to-Talk & Right-Click for Voice Settings) */}
               <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
                 type="button"
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setSettingsModalTab("voice_record");
+                  setIsSettingsModalOpen(true);
+                }}
                 onClick={() => {
                   if (vadModeRef.current !== "push_to_talk") {
                     if (isRecording) stopVoiceRecording(true);
@@ -4410,6 +4898,7 @@ export function GrokBotWorkspace() {
               </button>
             </div>
           </form>
+          </div>
         </div>
       </main>
 
@@ -4421,7 +4910,7 @@ export function GrokBotWorkspace() {
         return (
           <section
             aria-label="Virtual Computer Interactive Workspace"
-            className="fixed inset-0 z-50 lg:static lg:z-10 lg:w-[70%] lg:flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden"
+            className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
           >
             {/* Top Control Bar */}
             <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
@@ -4475,13 +4964,17 @@ export function GrokBotWorkspace() {
               </div>
             </div>
 
-            {/* Iframe Workspace */}
-            <div className="flex-1 w-full h-full bg-black relative">
+            {/* Iframe Workspace with automatic viewport scaling */}
+            <div className="flex-1 w-full h-full bg-black relative overflow-hidden flex items-center justify-center">
               <iframe
                 key={`split-${selectedAgent.id}-${browserTarget.url}`}
                 src={browserTarget.url}
                 title={`${selectedAgent.name} Computer Live Split`}
-                className="w-full h-full border-0 bg-black"
+                className="w-full h-full border-0 bg-black absolute inset-0"
+                style={{
+                  minWidth: "100%",
+                  minHeight: "100%",
+                }}
                 allow="clipboard-read; clipboard-write; fullscreen"
               />
             </div>
@@ -4818,47 +5311,146 @@ export function GrokBotWorkspace() {
                           </span>
                         )}
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          {/* Pin Toggle */}
-                          <button aria-label={pinnedChatIds.includes(chat.id) ? "Unpin session" : "Pin session to top"} data-ux-target-min="24"
-                            type="button"
-                            onClick={(e) => togglePinChat(chat.id, e)}
-                            className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
-                              pinnedChatIds.includes(chat.id) ? "text-amber-400" : "text-neutral-500 opacity-0 group-hover:opacity-100 hover:text-white"
-                            }`}
-                            title={pinnedChatIds.includes(chat.id) ? "Unpin session" : "Pin session to top"}
-                          >
-                            <Pin size={11} className={pinnedChatIds.includes(chat.id) ? "fill-amber-400" : ""} />
-                          </button>
+                        <div className="flex items-center gap-1 shrink-0 relative">
+                          {pinnedChatIds.includes(chat.id) && (
+                            <span className="text-amber-400 p-0.5" title="Đã ghim">
+                              <Pin size={11} className="fill-amber-400" />
+                            </span>
+                          )}
 
-                          {/* Quick Rename */}
-                          {editingChatId !== chat.id && (
-                            <button aria-label="Rename session" data-ux-target-min="24"
+                          {/* 3-Dots More Options Menu */}
+                          <div className="relative" data-chat-menu-container="true">
+                            <button
+                              aria-label="Tùy chọn phiên"
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingChatId(chat.id);
-                                setEditingChatTitle(chat.title);
+                                setActiveChatMenuId(activeChatMenuId === chat.id ? null : chat.id);
                               }}
-                              className="p-1 rounded text-neutral-500 opacity-0 group-hover:opacity-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                              title="Rename session"
+                              className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
+                                activeChatMenuId === chat.id
+                                  ? "text-[#ff7a00] bg-white/10 opacity-100"
+                                  : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-white"
+                              }`}
+                              title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
                             >
-                              <Edit2 size={11} />
+                              <MoreVertical size={13} />
                             </button>
-                          )}
 
-                          {/* Delete Session */}
-                          <button aria-label="Delete conversation" data-ux-target-min="24"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setChatToDelete(chat);
-                            }}
-                            className="p-1 rounded text-neutral-500 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                            title="Delete conversation"
-                          >
-                            <Trash2 size={11} />
-                          </button>
+                            {/* Dropdown Menu */}
+                            {activeChatMenuId === chat.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-full mt-1 w-52 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] p-1.5 shadow-2xl z-[100] text-xs font-sans space-y-0.5 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
+                              >
+                                {/* Search within conversation */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleSelectChat(chat);
+                                    setInSessionSearchOpen(true);
+                                    setActiveChatMenuId(null);
+                                  }}
+                                  className="w-full text-left px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <Search size={13} className="text-[#ff7a00]" />
+                                  <span>Tìm trong phiên này</span>
+                                </button>
+
+                                {/* Pin / Unpin */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    togglePinChat(chat.id, e);
+                                    setActiveChatMenuId(null);
+                                  }}
+                                  className="w-full text-left px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <Pin size={13} className={pinnedChatIds.includes(chat.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />
+                                  <span>{pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}</span>
+                                </button>
+
+                                {/* Rename */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingChatId(chat.id);
+                                    setEditingChatTitle(chat.title);
+                                    setActiveChatMenuId(null);
+                                  }}
+                                  className="w-full text-left px-2 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center gap-2 cursor-pointer transition-colors"
+                                >
+                                  <Edit2 size={13} className="text-cyan-400" />
+                                  <span>Đổi tên phiên</span>
+                                </button>
+
+                                <div className="border-t border-slate-100 dark:border-[#222232] my-1 pt-1">
+                                  <div className="px-2 py-0.5 text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
+                                    Xuất dữ liệu
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportSessionMarkdown(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                                  >
+                                    <span className="flex items-center gap-1.5">
+                                      <Download size={11} className="text-[#ff7a00]" />
+                                      <span>Báo cáo Markdown</span>
+                                    </span>
+                                    <span className="text-[10px] text-[#ff7a00] font-mono">.md</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportSessionJson(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                                  >
+                                    <span className="flex items-center gap-1.5">
+                                      <Download size={11} className="text-cyan-400" />
+                                      <span>Audit Trail JSON</span>
+                                    </span>
+                                    <span className="text-[10px] text-cyan-400 font-mono">.json</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportAuditCertificate(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202e] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
+                                  >
+                                    <span className="flex items-center gap-1.5">
+                                      <Download size={11} className="text-emerald-400" />
+                                      <span>Execution Receipt</span>
+                                    </span>
+                                    <span className="text-[10px] text-emerald-400 font-mono">.html</span>
+                                  </button>
+                                </div>
+
+                                <div className="border-t border-slate-100 dark:border-[#222232] my-1 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setChatToDelete(chat);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                    className="w-full text-left px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer transition-colors"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Xóa cuộc hội thoại</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
 
                           {(unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) && (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
@@ -4953,34 +5545,18 @@ export function GrokBotWorkspace() {
               </button>
             </div>
 
-            {/* Mascot & Name with Mouse-following Eye Animation & Interactive Model Switcher */}
+            {/* Dedicated Agent Identity Avatar matching Left Sidebar & Interactive Model Switcher */}
             <div className="p-5 flex flex-col items-center text-center border-b border-[#1c1c22]">
-              {/* Interactive Eyes Mascot */}
+              {/* Agent Avatar matching left sidebar */}
               <div
                 ref={mascotRef}
-                className="h-14 w-14 rounded-full bg-white flex items-center justify-center shadow-lg mb-2.5 relative transition-transform hover:scale-105 cursor-pointer"
-                title={`${selectedAgent.name} mascot`}
+                className="relative mb-2.5 transition-transform hover:scale-105 cursor-pointer group"
+                title={`${selectedAgent.name} (${selectedAgent.roleTag || "Agent"})`}
               >
-                <div className="flex items-center gap-2">
-                  {/* Left Eye */}
-                  <div className="h-3.5 w-3.5 rounded-full bg-black flex items-center justify-center relative overflow-hidden">
-                    <div
-                      className="h-1.5 w-1.5 rounded-full bg-white transition-transform duration-75"
-                      style={{
-                        transform: `translate(${mousePos.x}px, ${mousePos.y}px)`,
-                      }}
-                    />
-                  </div>
-                  {/* Right Eye */}
-                  <div className="h-3.5 w-3.5 rounded-full bg-black flex items-center justify-center relative overflow-hidden">
-                    <div
-                      className="h-1.5 w-1.5 rounded-full bg-white transition-transform duration-75"
-                      style={{
-                        transform: `translate(${mousePos.x}px, ${mousePos.y}px)`,
-                      }}
-                    />
-                  </div>
-                </div>
+                <AgentAvatar agent={selectedAgent} size="xl" className="shadow-xl" />
+                
+                {/* Active Status Beacon Badge */}
+                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
               </div>
 
               <h2 className="text-sm font-semibold text-white tracking-tight">
@@ -5129,11 +5705,11 @@ export function GrokBotWorkspace() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button aria-label="Expand full screen" data-ux-target-min="24"
+                          <button aria-label="Mở Computer Workspace" data-ux-target-min="24"
                             type="button"
-                            onClick={() => handleSetBrowserModalOpen(true)}
-                            className="p-1 text-neutral-400 hover:text-white hover:bg-[#232330] rounded transition-colors cursor-pointer"
-                            title="Expand full screen"
+                            onClick={() => handleToggleComputerSplit(true)}
+                            className="p-1 text-neutral-400 hover:text-[#ff7a00] hover:bg-[#232330] rounded transition-colors cursor-pointer"
+                            title="Mở Computer Workspace (Tỉ lệ 3:7)"
                           >
                             <Maximize2 size={13} />
                           </button>
@@ -5149,11 +5725,12 @@ export function GrokBotWorkspace() {
                         </div>
                       </div>
 
-                      {/* Embedded Live Iframe Viewport: Fixed 190px responsive height with clean shrunk preview scale */}
+                      {/* Embedded Live Iframe Viewport: Fixed 190px responsive height with hover action */}
                       <div 
-                        onClick={() => handleSetBrowserModalOpen(true)}
+                        onClick={() => handleToggleComputerSplit(true)}
                         style={{ height: "190px", width: "100%", position: "relative", overflow: "hidden", backgroundColor: "#000", flexShrink: 0 }}
                         className="cursor-pointer group flex items-center justify-center rounded-b-2xl"
+                        title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
                       >
                         {/* Shrunk virtual viewport container (1024x768 virtual screen scaled to fit container) */}
                         <div 
@@ -5177,13 +5754,13 @@ export function GrokBotWorkspace() {
                           />
                         </div>
 
-                        {/* Hover Overlay: Click to expand */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px] flex flex-col items-center justify-center gap-1.5 z-10 select-none">
-                          <div className="h-8 w-8 rounded-full bg-[#ff7a00]/90 text-black flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                            <Maximize2 size={14} />
+                        {/* Hover Overlay: Chế độ mặc định khi người dùng hover vào preview computer */}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-10 select-none">
+                          <div className="h-9 w-9 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                            <Maximize2 size={16} className="stroke-[2.5]" />
                           </div>
-                          <span className="text-[11px] font-mono font-medium text-white bg-black/70 px-2.5 py-1 rounded-md border border-white/10">
-                            Click to expand full screen
+                          <span className="text-[11px] font-mono font-semibold text-white bg-black/80 px-3 py-1 rounded-full border border-white/15 shadow-lg tracking-wide">
+                            Mở Computer Workspace
                           </span>
                         </div>
                       </div>
@@ -5640,7 +6217,12 @@ export function GrokBotWorkspace() {
             <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+        initialTab={settingsModalTab}
         onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+        sttLang={sttLang}
+        onSttLangChange={setSttLang}
+        agentId={selectedAgent?.id}
+        agentName={selectedAgent?.name}
         onStartTour={() => startOnboardingTour({ force: true })}
         onResetChecklist={() => {
           try {
@@ -5685,6 +6267,8 @@ export function GrokBotWorkspace() {
         onSttLangChange={setSttLang}
         onOpenShortcuts={() => setIsKeyboardShortcutsOpen(true)}
         onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+        agentId={selectedAgent?.id}
+        agentName={selectedAgent?.name}
       />
 
       <PermissionsModal

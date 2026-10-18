@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState } from "react";
 import { AgentSession } from "../types/agent";
 import {
@@ -26,6 +27,7 @@ export function CollapsibleSessionsRail({
   onNewSession,
   agentName,
 }: CollapsibleSessionsRailProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -55,7 +57,7 @@ export function CollapsibleSessionsRail({
               className="text-[11px] font-mono flex items-center gap-1 text-neutral-300 hover:text-white bg-[#1c1713] hover:bg-[#26211d] border border-[#26211d] px-2.5 py-1 rounded-md transition-colors cursor-pointer"
             >
               <Plus size={11} className="text-[#d86f4c]" />
-              <span>New Session</span>
+              <span>{t("sessions.newSession")}</span>
             </button>
           )}
 
@@ -97,7 +99,7 @@ export function CollapsibleSessionsRail({
 
                 <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-neutral-500">
                   <span>{sess.messageCount} turns</span>
-                  {isActive && <span className="text-[#d86f4c] font-bold">● Active</span>}
+                  {isActive && <span className="text-[#d86f4c] font-bold">{t("sessions.active")}</span>}
                 </div>
               </div>
             );

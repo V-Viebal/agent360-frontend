@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
@@ -36,6 +37,7 @@ interface PermissionsModalProps {
 }
 
 export function PermissionsModal({ isOpen, onClose, onRequestDone }: PermissionsModalProps) {
+  const { t } = useTranslation();
   const [permissions, setPermissions] = useState<PermissionStatusDetail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [requestingType, setRequestingType] = useState<PermissionType | null>(null);
@@ -275,28 +277,28 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 size={11} />
-            <span>Granted</span>
+            <span>{t("permissions.granted")}</span>
           </span>
         );
       case "prompt":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <HelpCircle size={11} />
-            <span>Not Requested</span>
+            <span>{t("permissions.notRequested")}</span>
           </span>
         );
       case "denied":
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-red-500/10 text-red-400 border border-red-500/20">
             <AlertCircle size={11} />
-            <span>Blocked / Denied</span>
+            <span>{t("permissions.blocked")}</span>
           </span>
         );
       case "unsupported":
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-neutral-500/10 text-slate-500 dark:text-neutral-400 border border-neutral-500/20">
-            <span>Unavailable</span>
+            <span>{t("permissions.unavailable")}</span>
           </span>
         );
     }
@@ -318,7 +320,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
               <ShieldCheck size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Browser Permissions & Hardware</h3>
+              <h3 className="text-sm font-semibold text-white">{t("permissions.title")}</h3>
               <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Manage hardware permissions for voice input, audio playback, and alerts
               </p>
@@ -399,7 +401,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-white">Voice Input & Silence Detection (VAD)</span>
+                <span className="text-xs font-semibold text-white">{t("permissions.voiceInput")}</span>
                 <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                   Configure automatic silence timeout and speech submission mode
                 </p>
@@ -413,7 +415,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
             {audioDevices.length > 0 && (
               <div className="pt-1 space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
-                  <span>Input Microphone:</span>
+                  <span>{t("permissions.inputMic")}</span>
                   <span className="text-[10px] text-neutral-500 font-sans">{audioDevices.length} available</span>
                 </div>
                 <select
@@ -421,7 +423,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                   onChange={(e) => handleDeviceChange(e.target.value)}
                   className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
                 >
-                  <option value="">Default System Microphone</option>
+                  <option value="">{t("permissions.defaultMic")}</option>
                   {audioDevices.map((d) => (
                     <option key={d.deviceId} value={d.deviceId}>
                       {d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`}
@@ -463,7 +465,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
             {/* Audio Output Device & Speaker Chime Test */}
             <div className="pt-2 border-t border-slate-200 dark:border-[#22222e] space-y-2">
               <div className="flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
-                <span>Audio Playback & Alert Speaker (Keys 1-4 to test):</span>
+                <span>{t("permissions.playbackSpeaker")}</span>
                 <span className="text-[10px] text-neutral-500 font-sans">
                   {outputDevices.length > 0 ? `${outputDevices.length} available` : "System Default"}
                 </span>

@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import { Command as KeyboardIcon, X, RotateCcw, Edit2, Check, Download, Upload, Cloud, RefreshCw } from "lucide-react";
 
@@ -22,7 +23,14 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     category: "Navigation & Search",
     customizable: true,
   },
-  {
+    {
+    id: "toggle_chat_menu",
+    defaultKeys: ["Alt", "M"],
+    description: "Toggle active conversation options menu (Search, Export, Rename)",
+    category: "Navigation & Search",
+    customizable: true,
+  },
+{
     id: "toggle_left_sidebar",
     defaultKeys: ["Ctrl", "B"],
     description: "Toggle left Agents sidebar (collapse / expand)",
@@ -105,6 +113,7 @@ export function getCustomShortcutsMap(): Record<string, string[]> {
 }
 
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
+  const { t } = useTranslation();
   const [customMap, setCustomMap] = useState<Record<string, string[]>>(() => getCustomShortcutsMap());
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [conflictWarning, setConflictWarning] = useState<string | null>(null);
@@ -291,7 +300,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               <KeyboardIcon size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Keyboard Shortcuts</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t("shortcuts.title")}</h3>
               <p className="text-[11px] text-slate-500 dark:text-neutral-400">
                 Click any shortcut with an edit icon to record your custom key combination
               </p>
@@ -356,7 +365,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isRecording ? (
                             <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#ff7a00]/20 border border-[#ff7a00] text-[#ff7a00] font-mono text-[11px] animate-pulse">
-                              <span>Press keys... (ESC to cancel)</span>
+                              <span>{t("shortcuts.pressKeys")}</span>
                             </div>
                           ) : (
                             <>
@@ -428,7 +437,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               title="Reset all shortcuts to factory defaults"
             >
               <RotateCcw size={12} />
-              <span>Reset</span>
+              <span>{t("shortcuts.reset")}</span>
             </button>
             <span className="text-neutral-700">|</span>
             <button
@@ -438,7 +447,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               title="Export custom shortcuts to JSON file"
             >
               <Download size={12} />
-              <span>Export</span>
+              <span>{t("shortcuts.export")}</span>
             </button>
             <button
               type="button"
@@ -447,7 +456,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               title="Import shortcuts from JSON file"
             >
               <Upload size={12} />
-              <span>Import</span>
+              <span>{t("shortcuts.import")}</span>
             </button>
           </div>
           <button

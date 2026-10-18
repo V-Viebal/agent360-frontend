@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React from "react";
 import { Terminal, Shield, RefreshCw, Trash2, Cpu, FileText, CheckCircle, Sparkles } from "lucide-react";
 
@@ -54,6 +55,7 @@ interface SlashCommandMenuProps {
 }
 
 export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuProps) {
+  const { t } = useTranslation();
   const cleanQuery = query.toLowerCase().replace(/^\//, "");
   const filtered = SLASH_COMMANDS.filter(
     (c) =>
@@ -69,9 +71,9 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
       <div className="px-3 py-1.5 border-b border-[#22222e] flex items-center justify-between text-[10px] font-mono text-neutral-400 select-none">
         <span className="flex items-center gap-1.5 text-[#ff7a00]">
           <Sparkles size={11} />
-          <span>Quick Slash Commands</span>
+          <span>{t("slashMenu.title")}</span>
         </span>
-        <span>Select or continue typing</span>
+        <span>{t("slashMenu.subtitle")}</span>
       </div>
       <div className="max-h-56 overflow-y-auto space-y-0.5 mt-1 p-1">
         {filtered.map((cmd) => (

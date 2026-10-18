@@ -257,21 +257,28 @@ export async function getAvailableAudioInputDevices(): Promise<AudioInputDeviceO
   }
 }
 
-export function getSelectedAudioDeviceId(): string {
+export function getSelectedAudioDeviceId(agentId?: string): string {
   if (typeof window === "undefined") return "";
   try {
+    if (agentId) {
+      const perAgent = localStorage.getItem(`agent360_preferred_mic_${agentId}`);
+      if (perAgent) return perAgent;
+    }
     return localStorage.getItem("agent360_preferred_mic_id") || "";
   } catch {
     return "";
   }
 }
 
-export function setSelectedAudioDeviceId(deviceId: string): void {
+export function setSelectedAudioDeviceId(deviceId: string, agentId?: string): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem("agent360_preferred_mic_id", deviceId);
-    window.dispatchEvent(new CustomEvent("agent360_mic_device_changed", { detail: { deviceId } }));
-    broadcastAudioSettingChange("MIC_CHANGED", { deviceId });
+    if (agentId) {
+      localStorage.setItem(`agent360_preferred_mic_${agentId}`, deviceId);
+    }
+    window.dispatchEvent(new CustomEvent("agent360_mic_device_changed", { detail: { deviceId, agentId } }));
+    broadcastAudioSettingChange("MIC_CHANGED", { deviceId, agentId });
   } catch {}
 }
 
@@ -346,4 +353,34 @@ export function broadcastAudioSettingChange(type: "MIC_CHANGED" | "SPEAKER_CHANG
       audioBroadcastChannel.postMessage({ type, ...payload });
     } catch {}
   }
+}
+
+export interface VoiceAudioProfile {
+  bitrateKbps: number; // 32, 64, 128
+  noiseSuppression: boolean;
+  echoCancellation: boolean;
+  autoGainControl: boolean;
+  lowLatencyMode: boolean;
+}
+
+export function getVoiceAudioProfile(): VoiceAudioProfile {
+  if (typeof window === "undefined") {
+    return { bitrateKbps: 64, noiseSuppression: true, echoCancellation: true, autoGainControl: true, lowLatencyMode: true };
+  }
+  try {
+    const raw = localStorage.getItem("agent360_voice_audio_profile");
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { bitrateKbps: 64, noiseSuppression: true, echoCancellation: true, autoGainControl: true, lowLatencyMode: true };
+}
+
+export function setVoiceAudioProfile(profile: Partial<VoiceAudioProfile>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getVoiceAudioProfile();
+    const updated = { ...current, ...profile };
+    localStorage.setItem("agent360_voice_audio_profile", JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent("agent360_voice_profile_changed", { detail: updated }));
+    broadcastAudioSettingChange("VAD_CHANGED", { profile: updated });
+  } catch {}
 }

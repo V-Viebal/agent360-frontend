@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import {
   BrowserCdpStatus,
@@ -23,6 +24,7 @@ interface BrowserCdpViewerModalProps {
 }
 
 export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerModalProps) {
+  const { t } = useTranslation();
   const [cdpStatus, setCdpStatus] = useState<BrowserCdpStatus | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState<boolean>(true);
@@ -61,7 +63,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
             <Globe size={18} />
             <div>
               <h3 className="font-semibold text-sm text-white font-sans flex items-center gap-2">
-                <span>Remote Browser CDP Stream</span>
+                <span>{t("browserCdp.title")}</span>
                 <span className="text-[10px] font-mono font-normal text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Live MJPEG
@@ -78,12 +80,12 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
               {isStreaming ? (
                 <>
                   <Pause size={12} className="text-amber-400" />
-                  <span>Pause Stream</span>
+                  <span>{t("browserCdp.pause")}</span>
                 </>
               ) : (
                 <>
                   <Play size={12} className="text-emerald-400" />
-                  <span>Resume Stream</span>
+                  <span>{t("browserCdp.resume")}</span>
                 </>
               )}
             </button>
@@ -122,7 +124,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
             ) : !cdpStatus?.available ? (
               <div className="text-center p-8 space-y-2 text-slate-500 dark:text-neutral-400 font-mono text-xs">
                 <AlertCircle size={32} className="text-amber-400 mx-auto" />
-                <p className="text-white font-semibold">Remote Browser CDP Unreachable</p>
+                <p className="text-white font-semibold">{t("browserCdp.unreachable")}</p>
                 <p className="text-neutral-500 max-w-sm">
                   Checking endpoint: {cdpStatus?.endpoint || "http://100.76.185.111:19223"}
                 </p>
@@ -130,7 +132,7 @@ export function BrowserCdpViewerModal({ onClose, agentName }: BrowserCdpViewerMo
             ) : (
               <div className="text-center p-8 space-y-2 text-slate-500 dark:text-neutral-400 font-mono text-xs">
                 <Pause size={32} className="text-neutral-500 mx-auto" />
-                <p className="text-slate-700 dark:text-neutral-300">Stream paused. Click Resume Stream to reconnect.</p>
+                <p className="text-slate-700 dark:text-neutral-300">Stream paused. Click {t("browserCdp.resume")} to reconnect.</p>
               </div>
             )}
 

@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { X, Clock, Calendar, Save, Trash2, Check, Radio } from "lucide-react";
 import { AgentScheduleJob, createOrUpdateSchedule, deleteSchedule } from "../services/agentApi";
@@ -27,6 +28,7 @@ export function ScheduleJobModal({
   agentName,
   onSaved,
 }: ScheduleJobModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [cronExpr, setCronExpr] = useState("0 9 * * *");
   const [timezone, setTimezone] = useState("Asia/Ho_Chi_Minh");
@@ -115,7 +117,7 @@ export function ScheduleJobModal({
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-4 space-y-3.5">
           <div className="space-y-1">
-            <label className="text-slate-700 dark:text-neutral-300 font-medium">Task Name</label>
+            <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("scheduleJob.name")}</label>
             <input
               type="text"
               required
@@ -128,7 +130,7 @@ export function ScheduleJobModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium font-mono">Cron Expression</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium font-mono">{t("scheduleJob.cron")}</label>
               <input
                 type="text"
                 required
@@ -140,7 +142,7 @@ export function ScheduleJobModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium">Target Channel</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("scheduleJob.targetChannel")}</label>
               <select
                 value={targetChannel}
                 onChange={(e) => setTargetChannel(e.target.value)}

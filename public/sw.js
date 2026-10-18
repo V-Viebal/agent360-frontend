@@ -32,6 +32,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+
+// Background Sync API: Automatically flush offline queued prompts upon connection recovery
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'skyer-sync-prompts') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        for (const client of windowClients) {
+          client.postMessage({ type: 'FLUSH_OFFLINE_PROMPTS' });
+        }
+      })
+    );
+  }
+});
+
 // Listen for background notifications and message dispatches
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'NOTIFY_TASK_COMPLETE') {

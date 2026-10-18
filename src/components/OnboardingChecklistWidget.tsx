@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import {
   Sparkles,
@@ -75,6 +76,7 @@ export function OnboardingChecklistWidget({
   onFocusComposer,
   variant = "floating",
 }: OnboardingChecklistWidgetProps) {
+  const { t } = useTranslation();
   const [milestones, setMilestones] = useState<OnboardingMilestones>(() => getStoredMilestones());
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -148,10 +150,10 @@ export function OnboardingChecklistWidget({
           </div>
           <div>
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white tracking-wide">
-              Làm quen cùng đội ngũ AI
+              {t("onboarding.title")}
             </h4>
             <p className="text-[10px] text-neutral-400 font-mono">
-              {completedSteps}/{totalSteps} bước ({progressPercent}%)
+              {t("onboarding.steps", { completed: completedSteps, total: totalSteps, percent: progressPercent })}
             </p>
           </div>
         </div>
@@ -162,13 +164,13 @@ export function OnboardingChecklistWidget({
             onClick={() => handleToggleCollapse()}
             className="p-1 rounded text-neutral-400 hover:text-white hover:bg-white/5 transition-colors text-[11px] font-mono px-1.5 cursor-pointer"
           >
-            {isCollapsed ? "Mở rộng" : "Thu gọn"}
+            {isCollapsed ? t("onboarding.expand") : t("onboarding.collapse")}
           </button>
           <button
             type="button"
             onClick={handleDismiss}
             className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-            title="Đóng bảng hướng dẫn"
+            title={t("onboarding.dismiss")}
           >
             <X size={14} />
           </button>
@@ -201,9 +203,9 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">1. Chọn đồng đội bạn muốn làm việc cùng</span>
+                <span className="text-xs font-medium">{t("onboarding.step1Title")}</span>
                 {milestones.selectedAgent && (
-                  <span className="text-[10px] font-mono text-emerald-400">Đã chọn</span>
+                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step1Done")}</span>
                 )}
               </div>
               <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
@@ -222,7 +224,7 @@ export function OnboardingChecklistWidget({
                     }}
                     className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
-                    <span>Mở danh sách đồng đội</span> <ChevronRight size={11} />
+                    <span>{t("onboarding.step1Action")}</span> <ChevronRight size={11} />
                   </button>
                 </div>
               )}
@@ -246,9 +248,9 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">2. Giao việc đầu tiên cho đồng đội</span>
+                <span className="text-xs font-medium">{t("onboarding.step2Title")}</span>
                 {milestones.sentMessage ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Đã gửi</span>
+                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step2Done")}</span>
                 ) : (
                   <button
                     type="button"
@@ -282,9 +284,9 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">3. Xem sơ đồ phối hợp giữa các bạn</span>
+                <span className="text-xs font-medium">{t("onboarding.step3Title")}</span>
                 {milestones.openedSpecsOrTopology ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Đã xem</span>
+                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step3Done")}</span>
                 ) : (
                   <button
                     type="button"
@@ -321,9 +323,9 @@ export function OnboardingChecklistWidget({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">4. Nói chuyện rảnh tay hoặc xem phím tắt</span>
+                <span className="text-xs font-medium">{t("onboarding.step4Title")}</span>
                 {milestones.triedVoiceOrShortcuts ? (
-                  <span className="text-[10px] font-mono text-emerald-400">Đã biết</span>
+                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step4Done")}</span>
                 ) : (
                   <button
                     type="button"
@@ -351,7 +353,7 @@ export function OnboardingChecklistWidget({
               className="text-[11px] font-medium text-[#ff7a00] hover:text-[#ff9433] transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Sparkles size={13} />
-              <span>Dẫn tôi đi tham quan 1 vòng</span>
+              <span>{t("onboarding.tourBtn")}</span>
             </button>
 
             {isAllCompleted ? (

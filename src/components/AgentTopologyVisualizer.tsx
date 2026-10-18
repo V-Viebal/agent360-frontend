@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState } from "react";
 import {
   Users,
@@ -73,6 +74,7 @@ const TOPOLOGY_NODES: TopologyNode[] = [
 ];
 
 export function AgentTopologyVisualizer() {
+  const { t } = useTranslation();
   const [selectedNode, setSelectedNode] = useState<TopologyNode>(TOPOLOGY_NODES[0]);
   const [copiedYaml, setCopiedYaml] = useState(false);
 
@@ -166,14 +168,14 @@ agent team:
         <div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#ff7a00] animate-pulse" />
-            <h4 className="text-base font-semibold text-white">AI Workforce Hierarchy Topology</h4>
+            <h4 className="text-base font-semibold text-white">{t("topoVis.title")}</h4>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
             Interactive multi-agent supervision tree modeled after AI Teammates & Skyer sandboxes.
           </p>
         </div>
         <div className="text-[11px] font-mono bg-white/5 border border-white/10 px-2.5 py-1 rounded text-neutral-300">
-          Process Mode: <span className="text-[#ff7a00] font-semibold">Hierarchical</span>
+          Process Mode: <span className="text-[#ff7a00] font-semibold">{t("topoVis.hierarchical")}</span>
         </div>
       </div>
 
@@ -196,7 +198,7 @@ agent team:
                     <Users size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white">Lead Manager Agent</div>
+                    <div className="text-xs font-semibold text-white">{t("topoVis.leadManager")}</div>
                     <div className="text-[10px] text-neutral-500 font-mono">Qwen 2.5 72B</div>
                   </div>
                 </div>
@@ -215,7 +217,7 @@ agent team:
             <div className="h-[1px] w-12 bg-white/10" />
             <div className="flex items-center gap-1 text-[#ff7a00] text-[11px]">
               <ArrowDown size={14} className="animate-bounce" />
-              <span>Delegation & ACP Protocol</span>
+              <span>{t("topoVis.protocol")}</span>
             </div>
             <div className="h-[1px] w-12 bg-white/10" />
           </div>
@@ -268,7 +270,7 @@ agent team:
 
           <div className="space-y-3 text-xs">
             <div>
-              <span className="text-neutral-500 font-mono block text-[11px] mb-1">Operating Status:</span>
+              <span className="text-neutral-500 font-mono block text-[11px] mb-1">{t("topoVis.operatingStatus")}</span>
               <div className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg font-mono flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="truncate">{selectedNode.status}</span>
@@ -276,7 +278,7 @@ agent team:
             </div>
 
             <div>
-              <span className="text-neutral-500 font-mono block text-[11px] mb-1">Runtime Specification:</span>
+              <span className="text-neutral-500 font-mono block text-[11px] mb-1">{t("topoVis.runtimeSpec")}</span>
               <p className="text-neutral-300 font-sans leading-relaxed text-[11px]">
                 {selectedNode.description}
               </p>
@@ -284,7 +286,7 @@ agent team:
 
             {selectedNode.tools && (
               <div>
-                <span className="text-neutral-500 font-mono block text-[11px] mb-1.5">Provisioned Toolchain:</span>
+                <span className="text-neutral-500 font-mono block text-[11px] mb-1.5">{t("topoVis.toolchain")}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedNode.tools.map((t) => (
                     <span key={t} className="text-[10px] font-mono bg-white/5 border border-white/10 px-2 py-0.5 rounded text-neutral-300">
@@ -303,7 +305,7 @@ agent team:
                 title="Download agent360-agent-workforce-config.yaml"
               >
                 <Download size={13} />
-                <span>Export Agent Config</span>
+                <span>{t("topoVis.exportConfig")}</span>
               </button>
 
               <button

@@ -28,11 +28,22 @@ import {
   speakText,
   stopSpeaking,
 } from "../services/speechService";
-import { Sliders, RefreshCw, Play, Square, Bell, Mic } from "lucide-react";
+import { Sliders, RefreshCw, Play, Square, Bell, Mic, Wifi, Activity, CheckCircle2 } from "lucide-react";
+import {
+  AudioInputDeviceOption,
+  getAvailableAudioInputDevices,
+  getSelectedAudioDeviceId,
+  setSelectedAudioDeviceId,
+  getVoiceAudioProfile,
+  setVoiceAudioProfile,
+  VoiceAudioProfile,
+  broadcastAudioSettingChange,
+} from "../services/permissionService";
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: SettingsTab;
   // External action handlers passed from workspace
   onOpenPermissions?: () => void;
   onStartTour?: () => void;
@@ -42,13 +53,19 @@ interface SettingsModalProps {
   onExportCertificate?: () => void;
   onInstallPwa?: () => void;
   isPwaInstallable?: boolean;
+  // Voice Recording props
+  sttLang?: "vi-VN" | "en-US";
+  onSttLangChange?: (lang: "vi-VN" | "en-US") => void;
+  agentId?: string;
+  agentName?: string;
 }
 
-type SettingsTab = "appearance" | "language" | "audio" | "privacy_export";
+export type SettingsTab = "appearance" | "language" | "audio" | "privacy_export" | "voice_record";
 
 export function SettingsModal({
   isOpen,
   onClose,
+  initialTab = "appearance",
   onOpenPermissions,
   onStartTour,
   onResetChecklist,
@@ -57,8 +74,165 @@ export function SettingsModal({
   onExportCertificate,
   onInstallPwa,
   isPwaInstallable,
+  sttLang = "vi-VN",
+  onSttLangChange,
+  agentId,
+  agentName,
 }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
+
+  // Voice Recording state
+  const [audioDevices, setAudioDevices] = useState<AudioInputDeviceOption[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string>(() => getSelectedAudioDeviceId(agentId));
+  const [vadMode, setVadMode] = useState<"continuous" | "manual" | "push_to_talk">(() => {
+    try {
+      return (localStorage.getItem("agent360_vad_mode") as any) || "continuous";
+    } catch {
+      return "continuous";
+    }
+  });
+  const [silenceDuration, setSilenceDuration] = useState<number>(() => {
+    try {
+      const v = localStorage.getItem("agent360_vad_silence_ms");
+      return v ? parseInt(v, 10) : 2400;
+    } catch {
+      return 2400;
+    }
+  });
+  const [voiceProfile, setVoiceProfileState] = useState<VoiceAudioProfile>(() => getVoiceAudioProfile());
+
+  const handleProfileChange = (patch: Partial<VoiceAudioProfile>) => {
+    setVoiceProfileState((prev) => {
+      const next = { ...prev, ...patch };
+      setVoiceAudioProfile(next);
+      return next;
+    });
+  };
+
+  const [isLiveTesting, setIsLiveTesting] = useState(false);
+  const [freqBands, setFreqBands] = useState<{ bass: number; mid: number; treble: number }>({
+    bass: 0,
+    mid: 0,
+    treble: 0,
+  });
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const animFrameRef = React.useRef<number | null>(null);
+
+  const stopLiveTest = () => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    setIsLiveTesting(false);
+    setFreqBands({ bass: 0, mid: 0, treble: 0 });
+  };
+
+  const startLiveTest = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+      const constraints: MediaStreamConstraints = {
+        audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      audioContextRef.current = ctx;
+
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      setIsLiveTesting(true);
+
+      const updateBands = () => {
+        animFrameRef.current = requestAnimationFrame(updateBands);
+        analyser.getByteFrequencyData(dataArray);
+
+        let bassSum = 0;
+        for (let i = 0; i < 4; i++) bassSum += dataArray[i] || 0;
+        const bass = Math.min(100, Math.round((bassSum / (4 * 255)) * 100));
+
+        let midSum = 0;
+        for (let i = 4; i < 20; i++) midSum += dataArray[i] || 0;
+        const mid = Math.min(100, Math.round((midSum / (16 * 255)) * 100));
+
+        let trebleSum = 0;
+        for (let i = 20; i < 48; i++) trebleSum += dataArray[i] || 0;
+        const treble = Math.min(100, Math.round((trebleSum / (28 * 255)) * 100));
+
+        setFreqBands({ bass, mid, treble });
+      };
+
+      updateBands();
+    } catch (err) {
+      console.warn("Failed to start live equalizer test:", err);
+      stopLiveTest();
+    }
+  };
+
+  React.useEffect(() => {
+    return () => {
+      stopLiveTest();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      stopLiveTest();
+    }
+  }, [isOpen]);
+
+  React.useEffect(() => {
+    async function loadDevices() {
+      const devs = await getAvailableAudioInputDevices();
+      setAudioDevices(devs);
+      setSelectedMicId(getSelectedAudioDeviceId(agentId));
+    }
+    if (isOpen) {
+      loadDevices();
+    }
+  }, [isOpen, agentId]);
+
+  const handleDeviceChange = (devId: string) => {
+    setSelectedMicId(devId);
+    setSelectedAudioDeviceId(devId, agentId);
+  };
+
+  const handleVadModeChange = (mode: "continuous" | "manual" | "push_to_talk") => {
+    setVadMode(mode);
+    try {
+      localStorage.setItem("agent360_vad_mode", mode);
+      window.dispatchEvent(new CustomEvent("agent360_vad_settings_changed", { detail: { mode, silenceDuration } }));
+      broadcastAudioSettingChange("VAD_CHANGED", { detail: { mode, silenceDuration } });
+    } catch {}
+  };
+
+  const handleSilenceChange = (ms: number) => {
+    setSilenceDuration(ms);
+    try {
+      localStorage.setItem("agent360_vad_silence_ms", ms.toString());
+      window.dispatchEvent(new CustomEvent("agent360_vad_settings_changed", { detail: { mode: vadMode, silenceDuration: ms } }));
+      broadcastAudioSettingChange("VAD_CHANGED", { detail: { mode: vadMode, silenceDuration: ms } });
+    } catch {}
+  };
 
   // Theme state
   const { themeMode, resolvedTheme, setThemeMode } = useTheme();
@@ -115,20 +289,20 @@ export function SettingsModal({
   const themeOptions: { id: ThemeMode; label: string; desc: string; icon: React.ReactNode }[] = [
     {
       id: "system",
-      label: "Hệ thống (System Auto)",
-      desc: "Tự động đổi sáng hoặc tối theo cài đặt máy tính của bạn",
+      label: t("settings.themeSystemLabel"),
+      desc: t("settings.themeSystemDesc"),
       icon: <Monitor size={16} />,
     },
     {
       id: "dark",
-      label: "Ban đêm (Dark OLED)",
-      desc: "Nền đen êm mắt, đỡ chói khi làm việc buổi tối",
+      label: t("settings.themeDarkLabel"),
+      desc: t("settings.themeDarkDesc"),
       icon: <Moon size={16} className="text-blue-400" />,
     },
     {
       id: "light",
-      label: "Ban ngày (Light Mode)",
-      desc: "Giao diện sáng sủa, dễ nhìn dưới ánh sáng phòng",
+      label: t("settings.themeLightLabel"),
+      desc: t("settings.themeLightDesc"),
       icon: <Sun size={16} className="text-amber-500" />,
     },
   ];
@@ -136,20 +310,20 @@ export function SettingsModal({
   const langOptions: { id: LanguageSelection; label: string; desc: string; flag: string }[] = [
     {
       id: "auto",
-      label: "Tự động (Theo vị trí máy)",
-      desc: `Vị trí máy: ${detectedTimezone} • ${language === "vi" ? "Tiếng Việt" : "English"}`,
+      label: t("settings.langAutoLabel"),
+      desc: t("settings.langAutoDesc", { tz: detectedTimezone, cur: language === "vi" ? "Tiếng Việt" : "English" }),
       flag: "🌐",
     },
     {
       id: "vi",
-      label: "Tiếng Việt",
-      desc: "Toàn bộ giao diện và trao đổi hiển thị bằng Tiếng Việt thân thiện",
+      label: t("settings.langViLabel"),
+      desc: t("settings.langViDesc"),
       flag: "🇻🇳",
     },
     {
       id: "en",
-      label: "English",
-      desc: "Giao diện chuẩn tiếng Anh quốc tế (en-US)",
+      label: t("settings.langEnLabel"),
+      desc: t("settings.langEnDesc"),
       flag: "🇺🇸",
     },
   ];
@@ -170,9 +344,9 @@ export function SettingsModal({
               <Settings size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Cài đặt không gian làm việc</h3>
+              <h3 className="text-sm font-semibold text-white">{t("settings.title") || "Cài đặt"}</h3>
               <p className="text-[11px] text-slate-500 dark:text-neutral-400">
-                Tuỳ chỉnh cách nhìn, ngôn ngữ, chuông báo và quyền hạn thiết bị
+                Tuỳ chỉnh hệ thống, giao diện và thiết bị thu âm giọng nói
               </p>
             </div>
           </div>
@@ -187,19 +361,24 @@ export function SettingsModal({
 
         {/* Modal Body: Left Tab Nav & Right Content Panel */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-          {/* Navigation Tabs */}
-          <div className="w-full md:w-48 bg-[#0f0f15] border-b md:border-b-0 md:border-r border-[#20202c] p-2 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
+          {/* Navigation Tabs (Grouped into System vs Voice Recording) */}
+          <div className="w-full md:w-52 bg-[#0f0f15] border-b md:border-b-0 md:border-r border-[#20202c] p-2 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
+            {/* GROUP 1: SYSTEM SETTINGS */}
+            <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold select-none">
+              {t("settings.groupSystem") || "Hệ thống"}
+            </div>
+
             <button
               type="button"
               onClick={() => setActiveTab("appearance")}
-              className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+              className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === "appearance"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
-                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
+                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Palette size={15} />
-              <span>Giao diện (Màu sắc)</span>
+              <Palette size={15} className={activeTab === "appearance" ? "text-[#ff7a00]" : "text-neutral-400"} />
+              <span>{t("settings.tabAppearance")}</span>
             </button>
             <button
               type="button"
@@ -211,7 +390,7 @@ export function SettingsModal({
               }`}
             >
               <Globe size={15} />
-              <span>Ngôn ngữ (Tiếng nói)</span>
+              <span>{t("settings.tabLanguage")}</span>
             </button>
             <button
               type="button"
@@ -223,7 +402,7 @@ export function SettingsModal({
               }`}
             >
               <Volume2 size={15} />
-              <span>Âm báo (Chuông tin nhắn)</span>
+              <span>{t("settings.tabAudio")}</span>
             </button>
             <button
               type="button"
@@ -235,7 +414,25 @@ export function SettingsModal({
               }`}
             >
               <ShieldCheck size={15} />
-              <span>Quyền & Hướng dẫn</span>
+              <span>{t("settings.tabPrivacy")}</span>
+            </button>
+
+            {/* GROUP 2: VOICE RECORDING SETTINGS */}
+            <div className="hidden md:block px-2.5 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold border-t border-[#1e1e28] mt-2 select-none">
+              {t("settings.groupVoice") || "Giọng nói & Thu âm"}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("voice_record")}
+              className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                activeTab === "voice_record"
+                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
+                  : "text-slate-500 dark:text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              <Mic size={15} className={activeTab === "voice_record" ? "text-[#ff7a00]" : "text-cyan-400"} />
+              <span>{t("settings.tabVoiceRecord") || "Cài đặt Thu âm & Micro"}</span>
             </button>
           </div>
 
@@ -246,10 +443,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Chọn màu sắc hiển thị
+                    {t("settings.themeHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Đang chọn: <span className="text-[#ff7a00] font-semibold capitalize">{themeMode === "system" ? "Tự động theo máy" : themeMode === "dark" ? "Ban đêm" : "Ban ngày"}</span>
+                    {t("settings.themeCurrent")} <span className="text-[#ff7a00] font-semibold capitalize">{themeMode === "system" ? t("settings.themeSystemName") : themeMode === "dark" ? t("settings.themeDarkName") : t("settings.themeLightName")}</span>
                   </p>
                 </div>
 
@@ -292,10 +489,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Ngôn ngữ trò chuyện & hiển thị
+                    {t("settings.langHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Hệ thống có thể tự chọn theo vị trí máy của bạn hoặc bạn tự chọn ngôn ngữ thích hợp
+                    {t("settings.langSubtitle")}
                   </p>
                 </div>
 
@@ -340,10 +537,10 @@ export function SettingsModal({
                     <div>
                       <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
                         <Bell size={14} className="text-[#ff7a00]" />
-                        <span>Chuông thông báo (Audio Chime)</span>
+                        <span>{t("settings.audioChimeTitle")}</span>
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                        Báo âm thanh khi Agent hoàn tất tác vụ hoặc có session mới
+                        {t("settings.audioChimeDesc")}
                       </p>
                     </div>
                     <button
@@ -361,7 +558,7 @@ export function SettingsModal({
                           : "bg-white/5 border-white/10 text-slate-500 dark:text-neutral-400"
                       }`}
                     >
-                      {isSoundEnabled ? "Đang bật (Enabled)" : "Tắt tiếng (Muted)"}
+                      {isSoundEnabled ? t("settings.audioEnabled") : t("settings.audioMuted")}
                     </button>
                   </div>
 
@@ -396,9 +593,9 @@ export function SettingsModal({
                                 playNotificationChime(preset.id as SoundPreset);
                               }}
                               className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white text-[10px] font-mono transition-colors"
-                              title="Nghe thử"
+                              title={t("settings.audioTestBtn")}
                             >
-                              Thử
+                              {t("settings.audioTestBtn")}
                             </button>
                             {isSelected && (
                               <div className="h-4 w-4 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
@@ -417,17 +614,17 @@ export function SettingsModal({
                   <div>
                     <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
                       <Mic size={14} className="text-cyan-400" />
-                      <span>Giọng đọc trợ lý (Voice Dynamics & TTS)</span>
+                      <span>{t("settings.ttsTitle")}</span>
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                      Hiệu chỉnh tốc độ, cao độ và chọn chất giọng tiếng Việt / tiếng Anh đọc to phản hồi
+                      {t("settings.ttsDesc")}
                     </p>
                   </div>
 
                   {/* System Voice Selection */}
                   <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
                     <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
-                      <span className="font-medium">Chất giọng hệ thống:</span>
+                      <span className="font-medium">{t("settings.ttsVoiceLabel")}</span>
                       <span className="font-mono text-[#ff7a00] text-[11px]">
                         {systemVoices.find(v => v.voiceURI === selectedVoiceURI)?.lang || "Tự động nhận diện"}
                       </span>
@@ -441,7 +638,7 @@ export function SettingsModal({
                       }}
                       className="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] rounded-lg px-2.5 py-2 focus:outline-none focus:border-[#ff7a00] cursor-pointer"
                     >
-                      <option value="">Tự động nhận diện (Tiếng Việt & English)</option>
+                      <option value="">{t("settings.ttsVoiceAuto")}</option>
                       {systemVoices.map((v) => (
                         <option key={v.voiceURI} value={v.voiceURI}>
                           {v.name} ({v.lang})
@@ -455,7 +652,7 @@ export function SettingsModal({
                     {/* Speed Slider */}
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
-                        <span className="font-medium">Tốc độ đọc (Speed):</span>
+                        <span className="font-medium">{t("settings.ttsSpeedLabel")}</span>
                         <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechRate.toFixed(2)}x</span>
                       </div>
                       <input
@@ -472,16 +669,16 @@ export function SettingsModal({
                         className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] font-mono text-neutral-500">
-                        <span>0.8x (Chậm)</span>
-                        <span>1.0x (Chuẩn)</span>
-                        <span>1.5x (Nhanh)</span>
+                        <span>{t("settings.ttsSpeedSlow")}</span>
+                        <span>{t("settings.ttsSpeedNormal")}</span>
+                        <span>{t("settings.ttsSpeedFast")}</span>
                       </div>
                     </div>
 
                     {/* Pitch Slider */}
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
-                        <span className="font-medium">Cao độ giọng (Pitch):</span>
+                        <span className="font-medium">{t("settings.ttsPitchLabel")}</span>
                         <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechPitch.toFixed(2)}</span>
                       </div>
                       <input
@@ -498,9 +695,9 @@ export function SettingsModal({
                         className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] font-mono text-neutral-500">
-                        <span>0.7 (Trầm)</span>
-                        <span>1.0 (Tự nhiên)</span>
-                        <span>1.4 (Thanh)</span>
+                        <span>{t("settings.ttsPitchLow")}</span>
+                        <span>{t("settings.ttsPitchNormal")}</span>
+                        <span>{t("settings.ttsPitchHigh")}</span>
                       </div>
                     </div>
                   </div>
@@ -515,7 +712,7 @@ export function SettingsModal({
                           setIsTestingSpeech(false);
                         } else {
                           setIsTestingSpeech(true);
-                          speakText("Xin chào, tốc độ và cao độ giọng nói đã được hiệu chỉnh chính xác theo cài đặt của bạn.", {
+                          speakText(t("settings.ttsTestSpeakText"), {
                             rate: speechRate,
                             pitch: speechPitch,
                             voiceURI: selectedVoiceURI,
@@ -533,12 +730,12 @@ export function SettingsModal({
                       {isTestingSpeech ? (
                         <>
                           <Square size={13} className="fill-red-400" />
-                          <span>Dừng nghe thử</span>
+                          <span>{t("settings.ttsAuditionStop")}</span>
                         </>
                       ) : (
                         <>
                           <Play size={13} className="text-[#ff7a00] fill-[#ff7a00]" />
-                          <span>Nghe thử mẫu giọng nói tiếng Việt</span>
+                          <span>{t("settings.ttsAuditionStart")}</span>
                         </>
                       )}
                     </button>
@@ -551,9 +748,9 @@ export function SettingsModal({
                         saveStoredSpeechSettings({ rate: 1.05, pitch: 1.0, voiceURI: "" });
                       }}
                       className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer"
-                      title="Khôi phục mặc định"
+                      title={t("settings.ttsResetDefault")}
                     >
-                      Mặc định
+                      {t("settings.ttsResetDefault")}
                     </button>
                   </div>
                 </div>
@@ -565,10 +762,10 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
                   <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
-                    Quyền hạn thiết bị & Hướng dẫn bắt đầu
+                    {t("settings.permsHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Cho phép dùng micro để nói chuyện và xem lại các bước hướng dẫn
+                    {t("settings.permsSubtitle")}
                   </p>
                 </div>
 
@@ -586,8 +783,8 @@ export function SettingsModal({
                         <ShieldCheck size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Quyền Micro & Âm thanh</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Bật micro để nói chuyện trực tiếp</div>
+                        <div className="text-xs font-semibold text-white">{t("settings.permMicTitle")}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.permMicDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -605,8 +802,8 @@ export function SettingsModal({
                         <Sparkles size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Tham quan 1 vòng ứng dụng</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Xem nhanh các góc làm việc chính</div>
+                        <div className="text-xs font-semibold text-white">{t("settings.tourTitle")}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.tourDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -623,8 +820,8 @@ export function SettingsModal({
                         <Sparkles size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Mở lại bảng Checklist</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Xem lại các bước làm quen ban đầu</div>
+                        <div className="text-xs font-semibold text-white">{t("settings.checklistTitle")}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.checklistDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -642,8 +839,8 @@ export function SettingsModal({
                         <Smartphone size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white">Cài app về máy tính / điện thoại</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">Dùng như một ứng dụng độc lập</div>
+                        <div className="text-xs font-semibold text-white">{t("settings.pwaTitle")}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.pwaDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -684,6 +881,320 @@ export function SettingsModal({
                         <span className="truncate">Chứng chỉ kiểm định (.html)</span>
                       </button>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. VOICE RECORDING & MICROPHONE SETTINGS TAB */}
+            {activeTab === "voice_record" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between pb-2 border-b border-[#222230]">
+                  <div>
+                    <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <Mic size={14} className="text-[#ff7a00]" />
+                      <span>{t("settings.tabVoiceRecord") || "Cài đặt Thu âm & Micro"}</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
+                      {agentName ? `Hiệu chỉnh thiết bị micro và tham số bắt giọng cho Agent ${agentName}` : "Hiệu chỉnh tham số nhận diện giọng nói, micro và độ nhạy VAD"}
+                    </p>
+                  </div>
+                  {agentName && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#ff7a00]/10 text-[#ff7a00] border border-[#ff7a00]/30 shrink-0">
+                      Agent: {agentName}
+                    </span>
+                  )}
+                </div>
+
+                {/* 1. Speech Recognition Input Language Accent (VI / EN) */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe size={15} className="text-[#ff7a00]" />
+                      <span className="text-xs font-semibold text-white">Input Language Accent (STT)</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-[#ff7a00] font-bold">
+                      {sttLang === "vi-VN" ? "Tiếng Việt" : "English"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed">
+                    Select the primary speech-to-text recognition model for best transcription accuracy:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <button
+                      type="button"
+                      onClick={() => onSttLangChange?.("vi-VN")}
+                      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
+                        sttLang === "vi-VN"
+                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <span>Tiếng Việt (vi-VN)</span>
+                      {sttLang === "vi-VN" && <CheckCircle2 size={13} className="text-[#ff7a00]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSttLangChange?.("en-US")}
+                      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
+                        sttLang === "en-US"
+                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      <span>English (en-US)</span>
+                      {sttLang === "en-US" && <CheckCircle2 size={13} className="text-[#ff7a00]" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Microphone Hardware Device */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-neutral-300">
+                    <span className="font-semibold text-white">Target Microphone Hardware:</span>
+                    <span className="text-[10px] text-neutral-500 font-sans">
+                      {audioDevices.length > 0 ? `${audioDevices.length} connected` : "Default"}
+                    </span>
+                  </div>
+                  <select
+                    value={selectedMicId}
+                    onChange={(e) => handleDeviceChange(e.target.value)}
+                    className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
+                  >
+                    <option value="">Default System Microphone</option>
+                    {audioDevices.map((d) => (
+                      <option key={d.deviceId} value={d.deviceId}>
+                        {d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 3. Voice Activity Detection (VAD) Mode & Silence Threshold */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white">Interaction Mode</span>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
+                      {vadMode === "continuous" ? "Hands-Free VAD" : vadMode === "push_to_talk" ? "Push-to-Talk" : "Manual"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                    <button
+                      type="button"
+                      onClick={() => handleVadModeChange("continuous")}
+                      className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                        vadMode === "continuous"
+                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      Auto Silence
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVadModeChange("manual")}
+                      className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                        vadMode === "manual"
+                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      Manual Toggle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVadModeChange("push_to_talk")}
+                      className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
+                        vadMode === "push_to_talk"
+                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                      }`}
+                    >
+                      Push-to-Talk
+                    </button>
+                  </div>
+
+                  {vadMode === "continuous" && (
+                    <div className="pt-1 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
+                      <span>Silence Pause Window:</span>
+                      <div className="flex items-center gap-1.5">
+                        {[1500, 2400, 3500].map((ms) => (
+                          <button
+                            key={ms}
+                            type="button"
+                            onClick={() => handleSilenceChange(ms)}
+                            className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
+                              silenceDuration === ms
+                                ? "bg-[#ff7a00] text-black font-bold"
+                                : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
+                            }`}
+                          >
+                            {(ms / 1000).toFixed(1)}s
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3.1 Network Bandwidth & Low Latency Profile */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wifi size={14} className="text-cyan-400" />
+                      <span className="text-xs font-semibold text-white">Network & Low-Latency Profile</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      WebRTC Optimized
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+                    Tune audio bitrate and acoustic filters for optimal voice responsiveness under low bandwidth:
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 space-y-1.5">
+                      <span className="text-[10px] text-neutral-400 block">Opus Bitrate:</span>
+                      <div className="flex items-center gap-1">
+                        {[32, 64, 128].map((kbps) => (
+                          <button
+                            key={kbps}
+                            type="button"
+                            onClick={() => handleProfileChange({ bitrateKbps: kbps })}
+                            className={`flex-1 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors border ${
+                              voiceProfile.bitrateKbps === kbps
+                                ? "bg-cyan-500/20 border-cyan-500 text-cyan-300"
+                                : "bg-[#181824] border-[#262638] text-neutral-400 hover:text-white"
+                            }`}
+                          >
+                            {kbps}k
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-neutral-400">Ultra-Low Latency:</span>
+                        <input
+                          type="checkbox"
+                          checked={voiceProfile.lowLatencyMode}
+                          onChange={(e) => handleProfileChange({ lowLatencyMode: e.target.checked })}
+                          className="accent-cyan-400 h-3.5 w-3.5 cursor-pointer"
+                        />
+                      </div>
+                      <span className="text-[9px] text-neutral-500">
+                        {voiceProfile.lowLatencyMode ? "Zero buffer delay (<80ms)" : "Standard buffer smoothing"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
+                    <button
+                      type="button"
+                      onClick={() => handleProfileChange({ noiseSuppression: !voiceProfile.noiseSuppression })}
+                      className={`py-1 px-1.5 rounded border text-center transition-colors cursor-pointer ${
+                        voiceProfile.noiseSuppression
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                          : "bg-[#12121a] border-[#222230] text-neutral-500"
+                      }`}
+                    >
+                      Noise Suppress {voiceProfile.noiseSuppression ? "✓" : "✗"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleProfileChange({ echoCancellation: !voiceProfile.echoCancellation })}
+                      className={`py-1 px-1.5 rounded border text-center transition-colors cursor-pointer ${
+                        voiceProfile.echoCancellation
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                          : "bg-[#12121a] border-[#222230] text-neutral-500"
+                      }`}
+                    >
+                      Echo Cancel {voiceProfile.echoCancellation ? "✓" : "✗"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleProfileChange({ autoGainControl: !voiceProfile.autoGainControl })}
+                      className={`py-1 px-1.5 rounded border text-center transition-colors cursor-pointer ${
+                        voiceProfile.autoGainControl
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                          : "bg-[#12121a] border-[#222230] text-neutral-500"
+                      }`}
+                    >
+                      Auto Gain {voiceProfile.autoGainControl ? "✓" : "✗"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Acoustic Spectrum Equalizer (Bass / Mid / Treble) */}
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity size={14} className="text-[#ff7a00]" />
+                      <span className="text-xs font-semibold text-white">Frequency Bands Equalizer</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => (isLiveTesting ? stopLiveTest() : startLiveTest())}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-mono transition-all cursor-pointer border ${
+                        isLiveTesting
+                          ? "bg-red-500/20 border-red-500/50 text-red-300 font-semibold"
+                          : "bg-[#1c1c28] border-[#2c2c3e] text-neutral-300 hover:text-white"
+                      }`}
+                    >
+                      {isLiveTesting ? "Stop Live Test" : "Live Test Mic"}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+                    Live acoustic frequency breakdown for current microphone input:
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
+                    {/* Bass Band */}
+                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                      <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
+                        <span>Bass</span>
+                        <span className="text-[#ff7a00] font-bold">{freqBands.bass}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-[#ff7a00] transition-all duration-75 rounded-full"
+                          style={{ width: `${Math.max(4, freqBands.bass)}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] text-neutral-500">60-250 Hz</span>
+                    </div>
+
+                    {/* Mid Band */}
+                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                      <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
+                        <span>Mid</span>
+                        <span className="text-cyan-400 font-bold">{freqBands.mid}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-teal-400 to-cyan-500 transition-all duration-75 rounded-full"
+                          style={{ width: `${Math.max(4, freqBands.mid)}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] text-neutral-500">250-2k Hz</span>
+                    </div>
+
+                    {/* Treble Band */}
+                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                      <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
+                        <span>Treble</span>
+                        <span className="text-purple-400 font-bold">{freqBands.treble}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-violet-400 to-purple-500 transition-all duration-75 rounded-full"
+                          style={{ width: `${Math.max(4, freqBands.treble)}%` }}
+                        />
+                      </div>
+                      <span className="text-[9px] text-neutral-500">2k-8k Hz</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -94,7 +94,7 @@ export function DocsPage() {
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
             <Link to="/" className="hover:text-neutral-900 dark:text-white transition-colors">Skyer</Link>
             <ChevronRight size={12} />
-            <span className="text-neutral-900 dark:text-white font-medium">Documentation</span>
+            <span className="text-neutral-900 dark:text-white font-medium">{t("docs.breadcrumb")}</span>
             <ChevronRight size={12} />
             <span className="text-[#ff7a00]">{activeDoc.title}</span>
           </div>
@@ -106,7 +106,7 @@ export function DocsPage() {
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
             >
-              <span>Skyer Specs</span>
+              <span>{t("docs.specsLink")}</span>
               <ExternalLink size={12} />
             </a>
             <span className="text-neutral-600">•</span>
@@ -116,7 +116,7 @@ export function DocsPage() {
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
             >
-              <span>AI Teammates Architecture</span>
+              <span>{t("docs.aiTeammatesLink")}</span>
               <ExternalLink size={12} />
             </a>
           </div>
@@ -131,7 +131,7 @@ export function DocsPage() {
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500" />
             <input
               type="text"
-              placeholder="Search documentation..."
+              placeholder={t("docs.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white dark:bg-[#0d111a] border border-neutral-200 dark:border-[var(--border-subtle)] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 rounded-xl pl-9 pr-3 py-2 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/50"
@@ -200,7 +200,7 @@ export function DocsPage() {
               to="/marketplace"
               className="inline-flex items-center gap-1 text-[11px] font-medium text-[#ff7a00] hover:underline pt-1"
             >
-              Browse Marketplace <ArrowRight size={11} />
+              {t("docs.browseMarketplace")} <ArrowRight size={11} />
             </Link>
           </div>
         </aside>
@@ -231,7 +231,7 @@ export function DocsPage() {
           <div className="rounded-xl border border-[#ff7a00]/25 bg-[#ff7a00]/5 p-5 space-y-2.5">
             <div className="text-xs font-mono uppercase tracking-wider text-[#ff7a00] font-semibold flex items-center gap-1.5">
               <CheckCircle2 size={14} />
-              <span>Key Architectural Guarantees</span>
+              <span>{t("docs.keyGuarantees")}</span>
             </div>
             <ul className="space-y-1.5 text-xs text-neutral-700 dark:text-neutral-300 font-sans">
               {activeDoc.keyTakeaways.map((takeaway, idx) => (
@@ -284,7 +284,7 @@ export function DocsPage() {
             <div className="space-y-3">
               <div className="text-xs font-mono uppercase tracking-wider text-[#ff7a00] font-semibold flex items-center gap-1.5">
                 <GitBranch size={14} />
-                <span>Supervision Tree Architecture</span>
+                <span>{t("docs.supervisionTree")}</span>
               </div>
               <AgentTopologyVisualizer />
             </div>
@@ -318,7 +318,7 @@ export function DocsPage() {
                     }`}
                   >
                     <Terminal size={12} />
-                    <span>Try in Sandbox</span>
+                    <span>{t("docs.tryInSandbox")}</span>
                   </button>
                 )}
               </div>
@@ -367,7 +367,7 @@ export function DocsPage() {
                       to="/app"
                       className="text-[11px] font-sans text-[#ff7a00] hover:underline flex items-center gap-1"
                     >
-                      <span>Open Workspace</span>
+                      <span>{t("docs.openWorkspace")}</span>
                       <ExternalLink size={10} />
                     </Link>
                   </div>
@@ -375,10 +375,10 @@ export function DocsPage() {
 
                 <div className="space-y-1.5 min-h-[140px] bg-black/40 p-3 rounded-lg border border-white/5">
                   <div className="text-neutral-500 text-[11px] flex items-center justify-between border-b border-white/5 pb-1 mb-2">
-                    <span>Sandboxed Execution Trace (Kernel Container)</span>
+                    <span>{t("docs.sandboxedTrace")}</span>
                     <span className="text-emerald-400 flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Zero Host Mutation</span>
+                      <span>{t("docs.zeroMutation")}</span>
                     </span>
                   </div>
 
@@ -413,7 +413,7 @@ export function DocsPage() {
               to="/marketplace"
               className="text-xs font-medium text-neutral-400 hover:text-neutral-900 dark:text-white flex items-center gap-1.5"
             >
-              <span>Explore Agent Marketplace</span>
+              <span>{t("docs.exploreMarketplace")}</span>
             </Link>
 
             <Link

@@ -46,6 +46,7 @@ export interface ChatMessage {
   evidenceStatus?: "observed" | "inferred" | "unknown";
   steps?: ChatStep[];
   toolCalls?: ToolCallItem[];
+  metadata?: Record<string, any>;
 }
 
 export interface InfraAgent {

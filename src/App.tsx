@@ -9,11 +9,14 @@ import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./context/ThemeContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { DesignTokensSandboxPage } from "./pages/DesignTokensSandboxPage";
 
 export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
+        <OfflineBanner />
       <Routes>
       {/* 1. Public Marketing Landing Page at "/" */}
       <Route
@@ -89,6 +92,9 @@ export default function App() {
           </div>
         }
       />
+
+            {/* UI Design Tokens & Theme Sandbox */}
+      <Route path="/design-tokens" element={<DesignTokensSandboxPage />} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />

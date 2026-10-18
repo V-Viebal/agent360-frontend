@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, AgentSession } from "../types/agent";
 import { PendingApproval } from "../services/approvalApi";
@@ -41,6 +42,7 @@ export function ChatSessionCanvas({
   onApproveTool,
   onDenyTool,
 }: ChatSessionCanvasProps) {
+  const { t } = useTranslation();
   const [inputText, setInputText] = useState("");
   const [showThinkingGlobally, setShowThinkingGlobally] = useState<boolean>(true);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
@@ -105,7 +107,7 @@ export function ChatSessionCanvas({
       {/* Session Title Bar with Thinking Blocks Toggle & Approval Indicator */}
       <div className="px-6 py-2.5 border-b border-[#26211d] bg-[#100d0b] flex items-center justify-between text-xs font-mono shrink-0 select-none">
         <div className="flex items-center gap-2 text-neutral-300">
-          <span className="text-[#d86f4c] font-semibold">Active Session:</span>
+          <span className="text-[#d86f4c] font-semibold">{t("chat.activeSession")}</span>
           <span className="text-white font-sans font-medium">{session?.title || "Default Dialogue Space"}</span>
           <span className="text-neutral-500 text-[11px]">({messages.length} messages)</span>
         </div>
@@ -317,7 +319,7 @@ export function ChatSessionCanvas({
             className="h-10 px-4 rounded-xl bg-[#d86f4c] hover:bg-[#c2410c] disabled:opacity-40 disabled:hover:bg-[#d86f4c] text-white font-medium text-xs flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(216,111,76,0.3)] cursor-pointer"
           >
             <Send size={13} />
-            <span>Send</span>
+            <span>{t("chat.send")}</span>
           </button>
         </form>
       </div>

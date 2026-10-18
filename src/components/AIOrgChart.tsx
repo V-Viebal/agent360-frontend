@@ -439,7 +439,7 @@ export function AIOrgChart() {
           {/* Level 1: C-Level Executive */}
           <div className="flex flex-col items-center">
             <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-2 font-semibold">
-              Tier 1 • Strategic Command & Gatekeeper
+              {t("orgChart.tier1")}
             </div>
             <button
               onClick={() => setSelectedNodeId(executive.id)}
@@ -472,7 +472,7 @@ export function AIOrgChart() {
           <div className="flex flex-col items-center justify-center text-neutral-500 text-xs font-mono">
             <div className="h-6 w-[2px] bg-gradient-to-b from-[#ff7a00] to-white/20" />
             <div className="text-[10px] font-mono uppercase text-[#ff7a00] px-3 py-0.5 bg-white/5 rounded-full border border-white/5 my-1">
-              Multi-Department ACP Delegation
+              {t("orgChart.delegationFlow")}
             </div>
             <div className="h-6 w-[2px] bg-white/20" />
           </div>
@@ -480,7 +480,7 @@ export function AIOrgChart() {
           {/* Level 2: Department Directors */}
           <div>
             <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest text-center mb-3 font-semibold">
-              Tier 2 • Department Directors (Autonomous Planning & Review)
+              {t("orgChart.tier2")}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {directors.map((dir) => {
@@ -522,7 +522,7 @@ export function AIOrgChart() {
           {/* Level 3: Specialized Workers */}
           <div>
             <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest text-center mb-3 font-semibold">
-              Tier 3 • Execution Specialists (Sandboxed TDD & Operations)
+              {t("orgChart.tier3")}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
               {specialists.map((spec) => {
@@ -560,7 +560,7 @@ export function AIOrgChart() {
               <div className="flex items-center gap-2">
                 <Radio size={14} className="text-[#ff7a00] animate-pulse" />
                 <span className="text-xs font-mono font-semibold text-white">
-                  Inter-Department Autonomous Communication (ACP Channel)
+                  {t("orgChart.interDeptComm")}
                 </span>
               </div>
 
@@ -599,13 +599,13 @@ export function AIOrgChart() {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 border border-[#ff7a00]/30 text-[#ff7a00] text-xs font-mono transition-all cursor-pointer active:scale-95"
                 >
                   <MessageSquare size={12} />
-                  <span>{isSimulating ? "Restart Scenario" : "Run Scenario"}</span>
+                  <span>{isSimulating ? t("orgChart.restartScenario") : t("orgChart.runScenario")}</span>
                 </button>
               </div>
             </div>
 
             <div className="text-[11px] font-mono text-neutral-400">
-              Active Scenario: <span className="text-[#ff7a00] font-semibold">{activeScenario.name}</span>
+              {t("orgChart.activeScenario")} <span className="text-[#ff7a00] font-semibold">{activeScenario.name}</span>
             </div>
 
             {isSimulating ? (
@@ -642,7 +642,7 @@ export function AIOrgChart() {
               </div>
             ) : (
               <div className="bg-[#090c12] border border-white/5 p-4 rounded-xl text-center text-xs text-neutral-500 font-mono">
-                Click "Run Scenario" to view the multi-agent execution turn for <strong className="text-neutral-300">{activeScenario.name}</strong>.
+                {t("orgChart.clickRunDesc")}
               </div>
             )}
           </div>
@@ -656,7 +656,7 @@ export function AIOrgChart() {
                 {selectedNode.department}
               </span>
               <span className="text-[10px] font-mono text-neutral-400 capitalize">
-                Level: {selectedNode.level}
+                {t("orgChart.levelLabel")} {selectedNode.level}
               </span>
             </div>
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -664,7 +664,7 @@ export function AIOrgChart() {
               <span className="text-xs text-neutral-400 font-normal">({selectedNode.title})</span>
             </h3>
             <div className="text-xs text-neutral-400 font-mono mt-1">
-              Backend Model: <span className="text-neutral-200">{selectedNode.model}</span>
+              {t("orgChart.modelLabel")} <span className="text-neutral-200">{selectedNode.model}</span>
             </div>
           </div>
 

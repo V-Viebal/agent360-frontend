@@ -1,15 +1,18 @@
 import React, { useEffect, useRef } from "react";
+import { getVoiceAudioProfile } from "../services/permissionService";
 
 interface AudioVisualizerWaveformProps {
   isRecording: boolean;
   className?: string;
   onAudioLevel?: (level: number) => void;
+  agentId?: string;
 }
 
 export function AudioVisualizerWaveform({
   isRecording,
   className = "",
   onAudioLevel,
+  agentId,
 }: AudioVisualizerWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -47,11 +50,14 @@ export function AudioVisualizerWaveform({
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
 
-        const preferredDeviceId = localStorage.getItem("agent360_preferred_mic_id") || undefined;
-        const audioConstraints: MediaTrackConstraints = {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+        const preferredDeviceId = (agentId ? localStorage.getItem(`agent360_preferred_mic_${agentId}`) : null) || localStorage.getItem("agent360_preferred_mic_id") || undefined;
+        const profile = getVoiceAudioProfile();
+        // `latency` is a valid constraint in Chromium but missing from lib.dom MediaTrackConstraints.
+        const audioConstraints: MediaTrackConstraints & { latency?: number } = {
+          echoCancellation: profile.echoCancellation,
+          noiseSuppression: profile.noiseSuppression,
+          autoGainControl: profile.autoGainControl,
+          latency: profile.lowLatencyMode ? 0.02 : undefined,
         };
         if (preferredDeviceId) {
           audioConstraints.deviceId = { exact: preferredDeviceId };

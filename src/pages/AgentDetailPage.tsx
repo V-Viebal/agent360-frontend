@@ -138,11 +138,11 @@ export function AgentDetailPage() {
                 <span className="text-neutral-400">Mode: {agent.teamConfig.collaborationMode}</span>
               </div>
               <div className="text-neutral-700 dark:text-neutral-300">
-                <span className="text-neutral-500">Autonomous Teammate Pipeline: </span>
+                <span className="text-neutral-500">{t("detail.teammatePipeline")} </span>
                 {agent.teamConfig.teammateRoles.join(" ⇄ ")}
               </div>
               <div className="text-neutral-400">
-                <span className="text-neutral-500">Expected Authoritative Output: </span>
+                <span className="text-neutral-500">{t("detail.expectedOutput")} </span>
                 {agent.teamConfig.expectedOutput}
               </div>
             </div>
@@ -189,7 +189,7 @@ export function AgentDetailPage() {
                   <Terminal size={14} className="text-[#ff7a00]" />
                   {t("detail.terminalTrace")}
                 </span>
-                <span className="text-emerald-400">Exit Code: 0 (PASS)</span>
+                <span className="text-emerald-400">{t("detail.exitCodePass")}</span>
               </div>
 
               <div className="rounded-xl border border-[var(--border-subtle)] bg-black/80 p-5 font-mono text-xs space-y-2 text-neutral-700 dark:text-neutral-300 shadow-inner">

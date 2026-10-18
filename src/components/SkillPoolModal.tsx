@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { SkillItem, fetchLiveSkills } from "../services/skillsApi";
 import {
@@ -18,6 +19,7 @@ interface SkillPoolModalProps {
 }
 
 export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
+  const { t } = useTranslation();
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>("");
@@ -87,10 +89,10 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
               onChange={(e) => setFilterSource(e.target.value)}
               className="bg-[#0c0a08] border border-[#2b241e] rounded-xl px-2.5 py-1.5 text-xs text-slate-700 dark:text-neutral-300 font-mono focus:outline-none"
             >
-              <option value="all">All Sources</option>
-              <option value="custom">Custom Skills</option>
-              <option value="customized">Customized</option>
-              <option value="builtin">Built-in</option>
+              <option value="all">{t("skillPool.allSources")}</option>
+              <option value="custom">{t("skillPool.customSkills")}</option>
+              <option value="customized">{t("skillPool.customized")}</option>
+              <option value="builtin">{t("skillPool.builtin")}</option>
             </select>
 
             <button
