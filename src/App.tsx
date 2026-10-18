@@ -13,6 +13,15 @@ import { LanguageProvider } from "./i18n/LanguageContext";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { DesignTokensSandboxPage } from "./pages/DesignTokensSandboxPage";
 
+// Admin Portal Pages
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminAgentsPage } from "./pages/admin/AdminAgentsPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
+import { AdminBillingsPage } from "./pages/admin/AdminBillingsPage";
+import { AdminOrganizationsPage } from "./pages/admin/AdminOrganizationsPage";
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -34,10 +43,10 @@ export default function App() {
       />
       <Route path="/landing" element={<Navigate to="/" replace />} />
 
-            {/* Logto OIDC Auth Callback */}
+      {/* Logto OIDC Auth Callback */}
       <Route path="/callback" element={<CallbackPage />} />
 
-{/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
+      {/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
       <Route path="/app" element={<GrokBotWorkspace />} />
       <Route path="/workspace" element={<Navigate to="/app" replace />} />
 
@@ -97,8 +106,19 @@ export default function App() {
         }
       />
 
-            {/* UI Design Tokens & Theme Sandbox */}
+      {/* UI Design Tokens & Theme Sandbox */}
       <Route path="/design-tokens" element={<DesignTokensSandboxPage />} />
+
+      {/* 4. Admin Portal System Routes (/admin/*) */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboardPage />} />
+        <Route path="agents" element={<AdminAgentsPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="billings" element={<AdminBillingsPage />} />
+        <Route path="organizations" element={<AdminOrganizationsPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
+      </Route>
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />

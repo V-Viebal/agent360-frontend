@@ -4,8 +4,8 @@ import { initiateSkyerSignIn } from "./pkceAuth";
 /**
  * Attach the Skyer (Logto) access token to same-origin /api/* calls. The backend requires it for workspace
  * files and chat history (Agent360:Security:RequireAuthForSensitiveReads). On 401 the token is refreshed once
- * with the stored refresh token; if that fails the user is sent to sign in. Existing Authorization headers
- * (operator key flows) are never overwritten.
+ * with the stored refresh token. If token cannot be refreshed and there is no active session,
+ * prompt user gently rather than aggressive instant redirects to avoid loops.
  */
 const ACCESS = "skyer_access_token";
 const REFRESH = "skyer_refresh_token";
@@ -75,14 +75,13 @@ export function installAuthFetch(): void {
 
     const fresh = await getRefreshed(original);
     if (fresh) return withToken(fresh);
-    // A single protected read failing must not throw an operator (unlocked key, no SSO) out of the app:
-    // only send the user to sign-in when they have neither a session nor an operator key.
+
+    // Only redirect if explicitly on a protected path that mandates auth and user hasn't already attempted auth
     const hasOperatorKey = (() => { try { return !!localStorage.getItem("agent360.a2a.operatorKey"); } catch { return false; } })();
-    if (hasOperatorKey || sessionStorage.getItem(ACCESS)) return res;
-    if (!(window as any).__agent360SignInRedirect) {
-      (window as any).__agent360SignInRedirect = true;
-      void initiateSkyerSignIn(authConfig);
+    if (hasOperatorKey || sessionStorage.getItem(ACCESS) || window.location.pathname === "/callback") {
+      return res;
     }
+
     return res;
   };
   (wrapped as any).__agent360Auth = true;

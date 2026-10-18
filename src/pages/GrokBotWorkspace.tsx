@@ -1,3 +1,4 @@
+import { getCurrentUserProfile, UserProfile } from "../services/userService";
 
 // Haptic feedback helper for mobile touch gestures
 
@@ -1309,6 +1310,14 @@ export function GrokBotWorkspace() {
   const [isChangingModel, setIsChangingModel] = useState<boolean>(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    getCurrentUserProfile().then((u) => {
+      if (u) setCurrentUser(u);
+    });
+  }, []);
+
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -3909,10 +3918,14 @@ export function GrokBotWorkspace() {
             <div ref={userMenuRef} className="p-2 border-t border-[#1c1c22] flex flex-col items-center relative select-none shrink-0">
               <div
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] hover:border-[#ff7a00] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative"
-                title="Dang M (System Owner) - Account & Cài đặt"
+                className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] hover:border-[#ff7a00] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative overflow-hidden"
+                title={`${currentUser?.name || "User"} (${currentUser?.roles?.[0] || "Operator"}) - Cài đặt`}
               >
-                DM
+                {currentUser?.picture ? (
+                  <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  (currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : "US")
+                )}
                 <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-[#0c0c0e]" />
               </div>
 
@@ -4260,12 +4273,16 @@ export function GrokBotWorkspace() {
                 className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0">
-                    DM
+                  <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0 overflow-hidden">
+                    {currentUser?.picture ? (
+                      <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      (currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : "US")
+                    )}
                   </div>
                   <div className="flex flex-col truncate">
-                    <span className="text-xs text-neutral-200 font-medium truncate">Dang M</span>
-                    <span className="text-[10px] font-mono text-neutral-500 truncate">System Owner</span>
+                    <span className="text-xs text-neutral-200 font-medium truncate">{currentUser?.name || "Dang M"}</span>
+                    <span className="text-[10px] font-mono text-neutral-500 truncate">{currentUser?.email || (currentUser?.roles?.[0] ? currentUser.roles[0] : "System Owner")}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -5497,7 +5514,7 @@ export function GrokBotWorkspace() {
                     <div
                       ref={appsScrollRef}
                       onScroll={(e) => { lastAppsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
-                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu smooth-scroll-container"
+                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1.5 overscroll-contain transform-gpu smooth-scroll-container"
                     >
                       {(() => {
                         // Priority 1: All apps loaded from Agent's active MCP clients with instant search
@@ -5620,7 +5637,7 @@ export function GrokBotWorkspace() {
                     <div
                       ref={subAgentsScrollRef}
                       onScroll={(e) => { lastSubAgentsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
-                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu smooth-scroll-container"
+                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1.5 overscroll-contain transform-gpu smooth-scroll-container"
                     >
                       {(() => {
                         // All subagents configured on selected agent with instant search
