@@ -5922,8 +5922,19 @@ export function GrokBotWorkspace() {
                   onClick={async () => {
                     triggerHaptic();
                     playNotificationChime("retro");
-                    // Trigger simulated screen capture into composer
-                    const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${new Date().toLocaleTimeString()} Attached]`;
+                    const timestamp = new Date().toLocaleTimeString();
+                    const frameUrl = agentBrowserImageUrl(agentBrowserFor, Date.now());
+                    
+                    // Add real screenshot item to attachedFiles state
+                    const newAttachment: UploadedFileResult = {
+                      file_name: `${selectedAgent.slug}-screen-${Date.now().toString().slice(-4)}.jpg`,
+                      url: frameUrl,
+                      size: 145000,
+                      mime_type: "image/jpeg",
+                    };
+                    setAttachedFiles((prev) => [...prev, newAttachment]);
+
+                    const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${timestamp} Attached]`;
                     setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
                     textareaRef.current?.focus();
                   }}
