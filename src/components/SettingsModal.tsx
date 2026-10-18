@@ -620,9 +620,7 @@ export function SettingsModal({
                     <p className="text-xs text-slate-500 dark:text-neutral-400 font-mono mt-0.5 truncate">
                       {currentUser?.email || "No email bound"}
                     </p>
-                    <p className="text-[11px] text-neutral-500 font-mono mt-1">
-                      Subject ID: <code className="text-neutral-400">{currentUser?.sub ? currentUser.sub.slice(0, 16) + "..." : "local-operator"}</code>
-                    </p>
+                    
                   </div>
 
                   <button

@@ -1365,6 +1365,30 @@ export function GrokBotWorkspace() {
     });
   }, []);
 
+
+  // Clean user display info without exposing internal subject IDs or dummy sub emails
+  const cleanDisplayName = (() => {
+    if (currentUser?.name && currentUser.name !== "User Skyer" && currentUser.name !== "User") {
+      return currentUser.name;
+    }
+    if (currentUser?.email === "hmzonehub@gmail.com" || currentUser?.sub === "1my9xeouvb48") {
+      return "Tech Zone";
+    }
+    return currentUser?.name || "Skyer User";
+  })();
+
+  const cleanDisplayEmail = (() => {
+    const email = currentUser?.email || "";
+    const isInternalSubEmail = email.includes("@skyer.hmz.one") && (email.startsWith(currentUser?.sub || "###") || /^[a-z0-9]{10,}@/i.test(email));
+    if (email && !isInternalSubEmail) {
+      return email;
+    }
+    if (currentUser?.sub === "1my9xeouvb48") {
+      return "hmzonehub@gmail.com";
+    }
+    return email && !isInternalSubEmail ? email : "Authorized Session";
+  })();
+
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -4031,8 +4055,8 @@ export function GrokBotWorkspace() {
                 width="w-64"
               >
                 <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
-                  <div className="text-xs font-semibold text-white">{currentUser?.name || "Member"}</div>
-                  <div className="text-[10px] font-mono text-neutral-400">{currentUser?.email || (currentUser?.roles?.[0] ? currentUser.roles[0] : "Authorized Session")}</div>
+                  <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
+                  <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-[#ff7a00]" />}
@@ -4055,29 +4079,7 @@ export function GrokBotWorkspace() {
                   }}
                 />
                 <DropdownMenuSection label="Hệ thống">
-                {isAdmin && (
-                  <DropdownMenuItem
-                    icon={<Shield size={13} className="text-[#ff7a00]" />}
-                    label="Admin Portal"
-                    badge="Mở"
-                    badgeColor="text-[#ff7a00]"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      window.location.href = "/admin/dashboard";
-                    }}
-                  />
-                )}
-                  <DropdownMenuItem
-                    icon={<Globe size={13} className="text-blue-400" />}
-                    label="Connected Apps"
-                    badge={connectedAppIds.length + ' apps'}
-                    badgeColor="text-neutral-400"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      handleToggleBotInfo(false);
-                      setRightTab("Apps");
-                    }}
-                  />
+
                   <DropdownMenuItem
                     icon={<Activity size={13} className="text-emerald-400" />}
                     label="Fleet Diagnostics"
@@ -4421,8 +4423,8 @@ export function GrokBotWorkspace() {
                     )}
                   </div>
                   <div className="flex flex-col truncate">
-                    <span className="text-xs text-neutral-200 font-medium truncate">{currentUser?.name || "Dang M"}</span>
-                    <span className="text-[10px] font-mono text-neutral-500 truncate">{currentUser?.email || (currentUser?.roles?.[0] ? currentUser.roles[0] : "System Owner")}</span>
+                    <span className="text-xs text-neutral-200 font-medium truncate">{cleanDisplayName}</span>
+                    <span className="text-[10px] font-mono text-neutral-500 truncate">{cleanDisplayEmail}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -4459,8 +4461,8 @@ export function GrokBotWorkspace() {
                 width="w-72"
               >
                 <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
-                  <div className="text-xs font-semibold text-white">{currentUser?.name || "Member"}</div>
-                  <div className="text-[10px] font-mono text-neutral-400">{currentUser?.email || (currentUser?.roles?.[0] ? currentUser.roles[0] : "Authorized Session")}</div>
+                  <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
+                  <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-[#ff7a00]" />}
@@ -4483,29 +4485,7 @@ export function GrokBotWorkspace() {
                   }}
                 />
                 <DropdownMenuSection label="Hệ thống">
-                {isAdmin && (
-                  <DropdownMenuItem
-                    icon={<Shield size={13} className="text-[#ff7a00]" />}
-                    label="Admin Portal"
-                    badge="Mở"
-                    badgeColor="text-[#ff7a00]"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      window.location.href = "/admin/dashboard";
-                    }}
-                  />
-                )}
-                  <DropdownMenuItem
-                    icon={<Globe size={13} className="text-blue-400" />}
-                    label="Connected Apps"
-                    badge={connectedAppIds.length + ' apps'}
-                    badgeColor="text-neutral-400"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      handleToggleBotInfo(false);
-                      setRightTab("Apps");
-                    }}
-                  />
+
                   <DropdownMenuItem
                     icon={<Activity size={13} className="text-emerald-400" />}
                     label="Fleet Diagnostics"
@@ -5554,8 +5534,12 @@ export function GrokBotWorkspace() {
                           if (subAgentsScrollRef.current) {
                             subAgentsScrollRef.current.scrollTop = subAgentsScrollRef.current.scrollHeight;
                           }
-                        } else if (!plusMenuSearch && (e.key === "1" || e.key === "2" || e.key === "3")) {
+                        } else if (!plusMenuSearch && (e.key === "0" || e.key === "1" || e.key === "2" || e.key === "3")) {
                           e.preventDefault();
+                          if (e.key === "0") {
+                            setIsPlusMenuOpen(false);
+                            fileInputRef.current?.click();
+                          }
                           if (e.key === "1") handleSelectLoopMode("default");
                           if (e.key === "2") handleSelectLoopMode("goal");
                           if (e.key === "3") handleSelectLoopMode("mission");
@@ -5623,9 +5607,12 @@ export function GrokBotWorkspace() {
                           <Paperclip size={14} className="stroke-[2.5]" />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
-                          <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-[#ff7a00] transition-colors">
-                            Add Files
-                          </span>
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-[#ff7a00] transition-colors">
+                              Add Files
+                            </span>
+                            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-neutral-400">0</span>
+                          </div>
                           <span className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
                             Chọn ảnh, văn bản, mã nguồn từ máy
                           </span>
@@ -5997,8 +5984,8 @@ export function GrokBotWorkspace() {
                       <span>Đầu/Cuối</span>
                     </span>
                     <span className="flex items-center gap-1 hidden sm:inline-flex">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">1-3</span>
-                      <span>Chế độ</span>
+                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">0-3</span>
+                      <span>Tệp / Chế độ</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
