@@ -6765,15 +6765,15 @@ export function GrokBotWorkspace() {
             </div>
 
             {/* 4 Main Tabs: Computer | Apps | Agents | Details */}
-            <div className="flex items-center justify-around border-b border-[#1c1c22] text-xs font-medium text-neutral-400 px-2 shrink-0">
+            <div className="flex items-center justify-around border-b border-neutral-200 dark:border-[#1c1c22] text-xs font-medium text-neutral-500 dark:text-neutral-400 px-2 shrink-0">
               {(["Computer", "Apps", "Agents", "Details"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setRightTab(tab)}
                   className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-mono ${
                     rightTab === tab
-                      ? "text-white border-[#ff7a00] font-semibold"
-                      : "border-transparent hover:text-neutral-200"
+                      ? "text-neutral-900 dark:text-white border-[#ff7a00] font-semibold"
+                      : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
                   }`}
                 >
                   {tab}
