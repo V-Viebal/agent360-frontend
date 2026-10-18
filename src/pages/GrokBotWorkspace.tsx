@@ -1704,6 +1704,8 @@ export function GrokBotWorkspace() {
   const [lightboxZoom, setLightboxZoom] = useState<number>(1);
   const [lightboxPan, setLightboxPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [lightboxRotation, setLightboxRotation] = useState<number>(0);
+  const [lightboxMeta, setLightboxMeta] = useState<{ width: number; height: number; size?: number } | null>(null);
+  const [showLightboxMeta, setShowLightboxMeta] = useState<boolean>(false);
   const [isPanningLightbox, setIsPanningLightbox] = useState<boolean>(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lightboxModalRef = useRef<HTMLDivElement>(null);
@@ -3291,6 +3293,13 @@ export function GrokBotWorkspace() {
           }
           return;
         }
+        // Toggle Image Metadata with 'i' key
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "i") {
+          e.preventDefault();
+          triggerHaptic(15);
+          setShowLightboxMeta((prev) => !prev);
+          return;
+        }
       }
 
       // 4. Escape key closes open modals / menus or Computer Split
@@ -4850,7 +4859,14 @@ export function GrokBotWorkspace() {
                     {isImage && f.url ? (
                       <button
                         type="button"
-                        onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); setLightboxRotation(0); setLightboxImageUrl({ url: f.url, name: f.file_name }); }}
+                        onClick={() => {
+                          setLightboxZoom(1);
+                          setLightboxPan({ x: 0, y: 0 });
+                          setLightboxRotation(0);
+                          setLightboxMeta(null);
+                          setShowLightboxMeta(false);
+                          setLightboxImageUrl({ url: f.url, name: f.file_name });
+                        }}
                         className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#ff7a00]/50 transition-all"
                         title="Click to view full image preview"
                       >
@@ -7396,6 +7412,22 @@ export function GrokBotWorkspace() {
                   </span>
                 </a>
 
+                {/* Info / Metadata Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic(15);
+                    setShowLightboxMeta((prev) => !prev);
+                  }}
+                  className={`p-1 rounded-lg cursor-pointer transition-colors text-[11px] flex items-center gap-1 ${
+                    showLightboxMeta ? "bg-white/20 text-white" : "text-neutral-400 hover:text-white hover:bg-white/10"
+                  }`}
+                  title="Toggle Image Info / Metadata (I)"
+                  aria-label="Toggle Image Metadata"
+                >
+                  <Info size={14} />
+                </button>
+
                 {/* Fullscreen Button */}
                 <button
                   type="button"
@@ -7530,6 +7562,13 @@ export function GrokBotWorkspace() {
                 src={lightboxImageUrl.url}
                 alt={lightboxImageUrl.name}
                 draggable={false}
+                onLoad={(e) => {
+                  const target = e.currentTarget;
+                  setLightboxMeta({
+                    width: target.naturalWidth,
+                    height: target.naturalHeight,
+                  });
+                }}
                 style={{
                   transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`,
                   transformOrigin: "center center",
@@ -7537,6 +7576,33 @@ export function GrokBotWorkspace() {
                 }}
                 className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg select-none pointer-events-none"
               />
+
+              {/* Floating Metadata Card */}
+              {showLightboxMeta && lightboxMeta && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute bottom-4 left-4 z-40 p-3 rounded-xl bg-slate-900/95 dark:bg-[#14141c]/95 border border-white/10 shadow-2xl backdrop-blur-xl text-left text-xs font-mono space-y-1.5 animate-in fade-in zoom-in-95 duration-150"
+                >
+                  <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between gap-4">
+                    <span>Image Metadata</span>
+                    <span className="text-[#ff7a00]">EXIF / Info</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-6 text-neutral-300">
+                    <span className="text-neutral-500">Dimensions:</span>
+                    <span className="font-semibold text-white">{lightboxMeta.width} × {lightboxMeta.height} px</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-6 text-neutral-300">
+                    <span className="text-neutral-500">Aspect Ratio:</span>
+                    <span className="text-cyan-400 font-semibold">
+                      {(lightboxMeta.width / lightboxMeta.height).toFixed(2)} : 1
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-6 text-neutral-300">
+                    <span className="text-neutral-500">Zoom / Angle:</span>
+                    <span>{Math.round(lightboxZoom * 100)}% | {lightboxRotation}°</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
