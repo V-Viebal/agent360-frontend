@@ -236,7 +236,7 @@ export function CustomSelect({
             />
           ) : (
             <>
-              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left group-hover/select-trigger:text-white transition-colors relative">
+              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left group-hover/select-trigger:text-slate-900 dark:group-hover/select-trigger:text-white transition-colors relative">
                 <span className="relative pb-0.5 border-b border-transparent group-hover/select-trigger:border-neutral-500/50 transition-colors">
                   {selectedOption ? selectedOption.label : placeholder}
                 </span>
@@ -287,10 +287,10 @@ export function CustomSelect({
               width: `${dropdownPosition.width}px`,
               zIndex: 99999,
             }}
-            className={`rounded-2xl bg-[#14141c]/95 dark:bg-[#14141c]/95 border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}
+            className={`rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}
           >
             {searchable && (
-              <div className="p-1 mb-1 border-b border-[#22222e] flex items-center gap-1.5 px-2 bg-[#101016] rounded-xl text-xs font-mono">
+              <div className="p-1 mb-1 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-1.5 px-2 bg-slate-50 dark:bg-[#101016] rounded-xl text-xs font-mono">
                 <Search size={12} className="text-neutral-500 shrink-0" />
                 <input
                   ref={searchInputRef}
@@ -298,7 +298,7 @@ export function CustomSelect({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search..."
-                  className="w-full bg-transparent border-0 text-white placeholder-neutral-500 focus:outline-none py-1 text-xs"
+                  className="w-full bg-transparent border-0 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none py-1 text-xs"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -327,22 +327,22 @@ export function CustomSelect({
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors ${
                         isSelected
-                          ? "bg-[#222230] text-[#ff7a00] font-semibold"
+                          ? "bg-amber-500/10 dark:bg-[#222230] text-[#ff7a00] font-semibold"
                           : isHighlighted
-                          ? "bg-[#1c1c28] text-white"
-                          : "text-neutral-300 hover:bg-[#1a1a24] hover:text-white"
+                          ? "bg-slate-100 dark:bg-[#1c1c28] text-slate-900 dark:text-white"
+                          : "text-slate-800 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#1a1a24] hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       <div className="flex flex-col truncate pr-2">
                         <span className="truncate">{opt.label}</span>
                         {opt.description && (
-                          <span className="text-[10px] text-neutral-500 font-normal truncate">
+                          <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-normal truncate">
                             {opt.description}
                           </span>
                         )}
                       </div>
                       {opt.badge && (
-                        <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded ml-1 shrink-0">
+                        <span className="text-[9px] font-mono font-medium text-[#ea580c] dark:text-[#ff7a00] bg-orange-500/10 dark:bg-[#ff7a00]/10 px-1.5 py-0.2 rounded ml-1 shrink-0 border border-orange-500/20 dark:border-[#ff7a00]/20">
                           {opt.badge}
                         </span>
                       )}

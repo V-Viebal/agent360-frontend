@@ -3738,7 +3738,7 @@ export function GrokBotWorkspace() {
                   }}
                   options={INFRA_INSTANCES}
                   className="w-full"
-                  triggerClassName="w-full bg-transparent hover:bg-white/[0.04] text-neutral-300 hover:text-white border-0 shadow-none px-2 py-1.5 rounded-xl text-xs font-mono font-medium"
+                  triggerClassName="w-full bg-transparent hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-800 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white border-0 shadow-none px-2 py-1.5 rounded-xl text-xs font-mono font-medium"
                 />
               </div>
             </div>
@@ -5318,47 +5318,66 @@ export function GrokBotWorkspace() {
               return (
                 <div className="flex flex-wrap items-center justify-between gap-1.5 px-3 py-1 mb-1.5 animate-in fade-in duration-150">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {mentions.map((mention) => (
-                      <span
-                        key={mention}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-mono shadow-2xs group"
-                      >
-                        <span className="font-semibold">{mention}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInputText((prev) =>
-                              prev.replace(new RegExp(`${mention}\\s*`, "g"), "").trimStart()
-                            );
-                          }}
-                          className="text-cyan-500 hover:text-cyan-700 dark:hover:text-cyan-200 cursor-pointer p-0.5 rounded-full"
-                          aria-label={`Remove ${mention}`}
-                        >
-                          <X size={10} />
-                        </button>
-                      </span>
-                    ))}
+                    {mentions.map((mention) => {
+                      const cleanName = mention.replace(/^@/, "");
+                      const targetAgent = agents.find((a) => a.name.toLowerCase() === cleanName.toLowerCase() || a.id.toLowerCase() === cleanName.toLowerCase());
+                      const roleDesc = targetAgent?.roleTag || targetAgent?.title || "Team Autonomous Agent";
 
-                    {tools.map((tool) => (
-                      <span
-                        key={tool}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-mono shadow-2xs group"
-                      >
-                        <span className="font-semibold">{tool}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInputText((prev) =>
-                              prev.replace(new RegExp(`${tool}\\s*`, "g"), "").trimStart()
-                            );
-                          }}
-                          className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-200 cursor-pointer p-0.5 rounded-full"
-                          aria-label={`Remove ${tool}`}
-                        >
-                          <X size={10} />
-                        </button>
-                      </span>
-                    ))}
+                      return (
+                        <div key={mention} className="relative group/chiptip inline-flex items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-mono shadow-2xs">
+                            <span className="font-semibold">{mention}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInputText((prev) =>
+                                  prev.replace(new RegExp(`${mention}\\s*`, "g"), "").trimStart()
+                                );
+                              }}
+                              className="text-cyan-500 hover:text-cyan-700 dark:hover:text-cyan-200 cursor-pointer p-0.5 rounded-full"
+                              aria-label={`Remove ${mention}`}
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                          <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/chiptip:flex px-2 py-1 rounded-lg bg-slate-900/95 dark:bg-[#1c1c28]/95 border border-slate-700 dark:border-[#2e2e42] text-[10px] font-mono text-slate-100 whitespace-nowrap shadow-xl z-30 flex-col gap-0.5">
+                            <div className="font-semibold text-cyan-400">{targetAgent?.name || mention}</div>
+                            <div className="text-[9px] text-neutral-400 max-w-[200px] truncate">{roleDesc}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {tools.map((tool) => {
+                      const rawKey = tool.replace(/^\//, "").toLowerCase();
+                      const matchedApp = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || a.name.toLowerCase().includes(rawKey));
+                      const toolTitle = matchedApp?.name || tool;
+                      const toolDesc = matchedApp?.description || "MCP tool capability integration";
+
+                      return (
+                        <div key={tool} className="relative group/chiptip inline-flex items-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-mono shadow-2xs">
+                            <span className="font-semibold">{tool}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInputText((prev) =>
+                                  prev.replace(new RegExp(`${tool}\\s*`, "g"), "").trimStart()
+                                );
+                              }}
+                              className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-200 cursor-pointer p-0.5 rounded-full"
+                              aria-label={`Remove ${tool}`}
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                          <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/chiptip:flex px-2 py-1 rounded-lg bg-slate-900/95 dark:bg-[#1c1c28]/95 border border-slate-700 dark:border-[#2e2e42] text-[10px] font-mono text-slate-100 whitespace-nowrap shadow-xl z-30 flex-col gap-0.5">
+                            <div className="font-semibold text-amber-400">{toolTitle}</div>
+                            <div className="text-[9px] text-neutral-400 max-w-[220px] truncate">{toolDesc}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {totalChips >= 2 && (
