@@ -299,7 +299,12 @@ export function AgentConnectedAppsTab({
                       ) : (
                         <div className="relative group/transport shrink-0">
                           <span
-                            className="text-[9px] font-mono text-slate-700 dark:text-neutral-300 bg-slate-200 dark:bg-neutral-800 hover:bg-slate-300 dark:hover:bg-neutral-700 px-1.5 py-0.2 rounded border border-slate-300/80 dark:border-transparent shrink-0 font-medium cursor-help transition-colors inline-block"
+                            className="text-[9px] font-mono text-slate-700 dark:text-neutral-200 bg-slate-200 dark:bg-neutral-800 hover:bg-slate-300 dark:hover:bg-neutral-700 px-1.5 py-0.5 rounded border border-slate-300 dark:border-neutral-700 shrink-0 font-medium cursor-help transition-colors inline-block shadow-2xs"
+                            style={{
+                              backgroundColor: "var(--transport-badge-bg, var(--bg-pill, #e2e8f0))",
+                              color: "var(--transport-badge-text, var(--text-primary, #334155))",
+                              borderColor: "var(--border-subtle, #cbd5e1)",
+                            }}
                             title={client.command || client.url || `Transport: ${client.transport}`}
                           >
                             {client.transport}

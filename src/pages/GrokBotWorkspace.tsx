@@ -2125,6 +2125,7 @@ export function GrokBotWorkspace() {
   // Search in conversation list
   const [chatSearchQuery, setChatSearchQuery] = useState("");
   const [activeChatMenuId, setActiveChatMenuId] = useState<string | null>(null);
+  const [activeAgentMenuId, setActiveAgentMenuId] = useState<string | null>(null);
   // Outside click listener to dismiss active chat 3-dots menu
   useEffect(() => {
     const handleOutsideChatMenu = (e: MouseEvent) => {
@@ -2133,13 +2134,23 @@ export function GrokBotWorkspace() {
         setActiveChatMenuId(null);
       }
     };
+    const handleOutsideAgentMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-agent-menu-container=\"true\"]")) {
+        setActiveAgentMenuId(null);
+      }
+    };
     if (activeChatMenuId) {
       document.addEventListener("mousedown", handleOutsideChatMenu);
     }
+    if (activeAgentMenuId) {
+      document.addEventListener("mousedown", handleOutsideAgentMenu);
+    }
     return () => {
       document.removeEventListener("mousedown", handleOutsideChatMenu);
+      document.removeEventListener("mousedown", handleOutsideAgentMenu);
     };
-  }, [activeChatMenuId]);
+  }, [activeChatMenuId, activeAgentMenuId]);
 
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned">("all");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
@@ -2248,6 +2259,33 @@ export function GrokBotWorkspace() {
       return next;
     });
   };
+  const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>(() => {
+    try {
+      const v = localStorage.getItem("agent360_pinned_agents");
+      return v ? JSON.parse(v) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const togglePinAgent = (agentId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    triggerHaptic(15);
+    setPinnedAgentIds((prev) => {
+      const isPinned = prev.includes(agentId);
+      const next = isPinned ? prev.filter((id) => id !== agentId) : [agentId, ...prev];
+      try {
+        localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+
+
   const [pinnedChatIds, setPinnedChatIds] = useState<string[]>(() => {
     try {
       const v = localStorage.getItem("agent360_pinned_chats");
@@ -2492,6 +2530,20 @@ export function GrokBotWorkspace() {
       setAgents(loadedAgents);
       setSkills(loadedSkills);
       setIsLoadingAgents(false);
+
+      // Pre-populate recent sessions map for each agent from initial data
+      if (Array.isArray(loadedAgents)) {
+        setAgentRecentSessions((prev) => {
+          const next = { ...prev };
+          for (const ag of loadedAgents) {
+            if (!next[ag.id] && ag.sessions && ag.sessions.length > 0 && ag.sessions[0]?.title) {
+              next[ag.id] = ag.sessions[0].title;
+            }
+          }
+          try { localStorage.setItem("agent360_recent_sessions_map", JSON.stringify(next)); } catch {}
+          return next;
+        });
+      }
 
       // Subscribe to live SSE health pulse across infra fleet
       try {
@@ -3676,6 +3728,12 @@ export function GrokBotWorkspace() {
       return node.includes("2nd");
     }
     return false;
+  }).sort((a, b) => {
+    const isPinA = pinnedAgentIds.includes(a.id);
+    const isPinB = pinnedAgentIds.includes(b.id);
+    if (isPinA && !isPinB) return -1;
+    if (!isPinA && isPinB) return 1;
+    return 0;
   });
 
   const filteredChats = chats
@@ -4073,43 +4131,91 @@ export function GrokBotWorkspace() {
                             <span className="text-xs font-medium text-neutral-900 dark:text-white truncate block">
                               {ag.name}
                             </span>
-                            <div className="relative group shrink-0">
+                            <div className="flex items-center gap-1 shrink-0">
+                              {pinnedAgentIds.includes(ag.id) && (
+                                <span className="text-amber-400 p-0.5" title="Đã ghim agent">
+                                  <Pin size={11} className="fill-amber-400" />
+                                </span>
+                              )}
+
                               {(() => {
                                 const hasError = ag.status === "degraded";
                                 const unreadList = unreadCompletedSessions[ag.id] || [];
                                 const hasUnreadCompleted = unreadList.length > 0;
 
-                                // Lean State: Chỉ báo ĐỎ khi lỗi, chỉ báo XANH khi có việc chạy xong chưa xem, còn lại im lặng (neutral chìm)
-                                return (
-                                  <span className="inline-flex items-center justify-center p-1 rounded-full hover:bg-white/10 transition-colors cursor-help">
-                                    {hasError ? (
-                                      <span
-                                        className="h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-                                        title="Agent gặp sự cố hạ tầng hoặc cần can thiệp"
-                                      />
-                                    ) : hasUnreadCompleted ? (
-                                      <span
-                                        className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                                        title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
-                                      />
-                                    ) : (
-                                      <span
-                                        className="h-1.5 w-1.5 rounded-full bg-neutral-600/40"
-                                        title="Idle / Sẵn sàng"
-                                      />
-                                    )}
-                                  </span>
-                                );
+                                if (hasError) {
+                                  return (
+                                    <span
+                                      className="h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] mr-0.5"
+                                      title="Agent gặp sự cố hạ tầng hoặc cần can thiệp"
+                                    />
+                                  );
+                                }
+                                if (hasUnreadCompleted) {
+                                  return (
+                                    <span
+                                      className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.8)] mr-0.5"
+                                      title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
+                                    />
+                                  );
+                                }
+                                return null;
                               })()}
-                              {/* Rich Tooltip displaying role, node & model */}
-                              <div className="pointer-events-none absolute right-0 bottom-full mb-1.5 hidden group-hover:flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg bg-[#161622] border border-[#2a2a3c] text-[10px] font-mono shadow-xl z-30 whitespace-nowrap">
-                                <div className="flex items-center gap-1.5 text-neutral-200">
-                                  <span className="text-[#ff7a00] font-semibold">{ag.roleTag || "Agent"}</span>
-                                  <span>•</span>
-                                  <span className="text-emerald-400">{ag.status || "active"}</span>
-                                </div>
-                                <span className="text-neutral-400">{ag.node}</span>
-                                <span className="text-neutral-500 text-[9px]">{ag.model}</span>
+
+                              {/* 3-Dots More Options Menu for Agent */}
+                              <div className="relative" data-agent-menu-container="true">
+                                <button
+                                  aria-label="Tùy chọn agent"
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(15);
+                                    setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
+                                  }}
+                                  className={`p-1 rounded hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors cursor-pointer ${
+                                    activeAgentMenuId === ag.id
+                                      ? "text-[#ff7a00] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-neutral-900 dark:hover:text-white"
+                                  }`}
+                                  title="Tùy chọn mở rộng cho Agent (Ghim, Chi tiết, Chat mới)"
+                                >
+                                  <MoreVertical size={13} />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                <DropdownMenu
+                                  isOpen={activeAgentMenuId === ag.id}
+                                  onClose={() => setActiveAgentMenuId(null)}
+                                  align="right"
+                                  width="w-52"
+                                >
+                                  <DropdownMenuItem
+                                    icon={<Pin size={13} className={pinnedAgentIds.includes(ag.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                                    label={pinnedAgentIds.includes(ag.id) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
+                                    onClick={(e) => {
+                                      togglePinAgent(ag.id, e);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Plus size={13} className="text-[#ff7a00]" />}
+                                    label="Tạo Chat mới với Agent"
+                                    onClick={() => {
+                                      handleSelectAgent(ag);
+                                      setTimeout(() => handleNewChat(), 50);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Bot size={13} className="text-cyan-400" />}
+                                    label="Xem thông số kỹ thuật"
+                                    onClick={() => {
+                                      handleSelectAgent(ag);
+                                      handleToggleBotInfo(false);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                </DropdownMenu>
                               </div>
                             </div>
                           </div>

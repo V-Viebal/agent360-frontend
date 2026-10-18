@@ -5,6 +5,9 @@
 
 
 :root {
+  --transport-badge-bg: #262626;
+  --transport-badge-text: #e5e5e5;
+  --transport-badge-border: #404040;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Newsreader', Georgia, Cambria, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -40,6 +43,9 @@
 
 :root.light,
 [data-theme="light"] {
+  --transport-badge-bg: #e2e8f0;
+  --transport-badge-text: #1e293b;
+  --transport-badge-border: #cbd5e1;
   /* Theme Tokens - Light Mode (Refined Slate Clean Tone) */
   --bg-page: #f8fafc;
   --bg-workspace: #ffffff;
