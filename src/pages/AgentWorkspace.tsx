@@ -66,7 +66,7 @@ export function AgentWorkspace() {
     }
 
     checkApprovals();
-    const interval = setInterval(checkApprovals, 5000);
+    const interval = setInterval(() => { if (!document.hidden) checkApprovals(); }, 5000);
     return () => {
       mounted = false;
       clearInterval(interval);
