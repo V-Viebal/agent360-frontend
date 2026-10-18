@@ -1,3 +1,48 @@
+function ChannelChatIcon({ channel, isSelected, size = 13 }: { channel?: string; isSelected?: boolean; size?: number }) {
+  const ch = (channel || "console").toLowerCase();
+  if (ch === "telegram") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0" title="Telegram Session">
+        <path
+          d="M21.5 2.5L2.5 10.5L9.5 13.5L18.5 6.5L11.5 15.5L18.5 21.5L21.5 2.5Z"
+          fill={isSelected ? "currentColor" : "#24A1DE"}
+          stroke={isSelected ? "currentColor" : "#24A1DE"}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (ch === "zalo") {
+    return (
+      <div
+        className={`rounded flex items-center justify-center font-bold font-sans select-none shrink-0 ${
+          isSelected ? "bg-black text-[#ff7a00]" : "bg-[#0068FF] text-white"
+        }`}
+        style={{ width: size, height: size, fontSize: Math.max(8, Math.round(size * 0.72)), lineHeight: 1 }}
+        title="Zalo Session"
+      >
+        Z
+      </div>
+    );
+  }
+  if (ch === "discord") {
+    return (
+      <div className={`shrink-0 ${isSelected ? "text-currentColor" : "text-[#5865F2]"}`} title="Discord Session">
+        <Radio size={size} />
+      </div>
+    );
+  }
+  if (ch === "slack") {
+    return (
+      <div className={`shrink-0 ${isSelected ? "text-currentColor" : "text-[#E01E5A]"}`} title="Slack Session">
+        <Terminal size={size} />
+      </div>
+    );
+  }
+  return <MessageSquare size={size} className={isSelected ? "text-[#ff7a00]" : "text-neutral-400"} />;
+}
+
 import { getCurrentUserProfile, UserProfile } from "../services/userService";
 import { initiateSkyerSignOut } from "../services/pkceAuth";
 import { authConfig } from "../config/authConfig";
@@ -6820,14 +6865,18 @@ export function GrokBotWorkspace() {
                       handleSelectChat(c);
                       // Keep current collapsed/expanded state when switching chat
                     }}
-                    className={`h-7 w-7 rounded-xl flex items-center justify-center text-[10px] font-mono cursor-pointer transition-all border ${
+                    className={`h-7 w-7 rounded-xl flex items-center justify-center text-[10px] font-mono cursor-pointer transition-all border relative ${
                       isSelected
                         ? "bg-[#ff7a00] border-[#ff7a00] text-black font-bold shadow-md shadow-[#ff7a00]/25"
                         : "bg-[#16161e] border-[#22222d] text-neutral-400 hover:text-white hover:bg-[#20202c] hover:border-[#303042]"
                     }`}
-                    title={c.title}
+                    title={`${c.title} (${c.channel || "console"})`}
                   >
-                    {displayLetter}
+                    {c.channel && c.channel.toLowerCase() !== "console" ? (
+                      <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
+                    ) : (
+                      displayLetter
+                    )}
                   </button>
                 );
               })}
@@ -7007,7 +7056,7 @@ export function GrokBotWorkspace() {
 
                       {/* Default MessageSquare icon (hidden when checked or when hovering on desktop) */}
                       <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden"}>
-                        <MessageSquare size={13} className={isSelected ? "text-[#ff7a00]" : "text-neutral-400"} />
+                        <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={13} />
                         {(() => {
                           const isUnreadCompleted = (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id);
                           if (isUnreadCompleted) {
