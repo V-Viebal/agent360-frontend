@@ -18,7 +18,7 @@ export interface TokenUsageReport {
 
 export async function fetchTokenUsageReport(): Promise<TokenUsageReport | null> {
   try {
-    const res = await fetch("/api/v1/agents/analytics/token-usage", {
+    const res = await fetch("/api/agents/analytics/token-usage", {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {

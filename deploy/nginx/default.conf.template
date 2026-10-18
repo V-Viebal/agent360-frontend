@@ -4,6 +4,15 @@
 server {
     listen 80;
     server_name localhost;
+    server_tokens off;
+
+    # Baseline browser hardening (inherited by locations that set no add_header of their own).
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+
     root /usr/share/nginx/html;
     index index.html;
 
@@ -44,11 +53,23 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     location / {
         add_header Cache-Control "no-cache" always;
         try_files $uri $uri/ /index.html;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     # Service worker, manifest and HTML shell must always revalidate, otherwise browsers/Cloudflare keep an
@@ -57,13 +78,31 @@ server {
         add_header Cache-Control "no-cache, no-store, must-revalidate" always;
         add_header Service-Worker-Allowed "/" always;
         try_files $uri =404;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
     location = /manifest.json {
         add_header Cache-Control "no-cache" always;
         try_files $uri =404;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
     location = /index.html {
         add_header Cache-Control "no-cache" always;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     # Vite content-hashed bundles are safe to cache forever.
@@ -71,6 +110,12 @@ server {
         expires 1y;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
         try_files $uri =404;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     # Static files only: API paths ending in an image extension (e.g. /api/agents/{id}/browser/image.jpg)
@@ -78,5 +123,11 @@ server {
     location ~* ^/(?!api/).*\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf)$ {
         expires 7d;
         add_header Cache-Control "public, max-age=604800" always;
+        # security headers (re-declared: nginx drops inherited add_header when a location sets its own)
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 }

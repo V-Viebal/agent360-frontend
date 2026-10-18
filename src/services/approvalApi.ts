@@ -12,8 +12,8 @@ export interface PendingApproval {
 export async function fetchPendingApprovals(sessionId?: string): Promise<PendingApproval[]> {
   try {
     const url = sessionId
-      ? `/api/v1/approvals?sessionId=${encodeURIComponent(sessionId)}`
-      : `/api/v1/approvals`;
+      ? `/api/approvals?sessionId=${encodeURIComponent(sessionId)}`
+      : `/api/approvals`;
 
     const res = await fetch(url, {
       headers: { Accept: "application/json" }
@@ -34,7 +34,7 @@ export async function approveToolExecution(
   sessionId: string,
   scope: "exact" | "similar" = "exact"
 ): Promise<{ success: boolean; message: string }> {
-  const res = await fetch("/api/v1/approvals/approve", {
+  const res = await fetch("/api/approvals/approve", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
@@ -54,7 +54,7 @@ export async function denyToolExecution(
   sessionId: string,
   reason: string = "User denied via Agent360 Console"
 ): Promise<{ success: boolean; message: string }> {
-  const res = await fetch("/api/v1/approvals/deny", {
+  const res = await fetch("/api/approvals/deny", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({

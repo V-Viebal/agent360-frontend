@@ -2319,7 +2319,7 @@ export function GrokBotWorkspace() {
 
       // Subscribe to live SSE health pulse across infra fleet
       try {
-        const healthSource = new EventSource("/api/v1/agents/health/stream");
+        const healthSource = new EventSource("/api/agents/health/stream");
         healthSource.addEventListener("health_pulse", (e) => {
           try {
             const data = JSON.parse(e.data);
