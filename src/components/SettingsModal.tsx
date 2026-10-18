@@ -435,7 +435,29 @@ export function SettingsModal({
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Navigation Tabs (Grouped into System vs Voice Recording) */}
           <div className="w-full md:w-56 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2.5 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
-            {/* GROUP 1: SYSTEM SETTINGS */}
+                      {/* Mobile Swipe / Dismiss Handle */}
+          <div className="md:hidden w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto my-1.5 shrink-0" />
+
+          {/* Quick Filter Search in Sidebar */}
+          <div className="hidden md:block px-2 pb-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#222230] text-xs">
+              <Search size={12} className="text-slate-400 dark:text-neutral-500 shrink-0" />
+              <input
+                type="text"
+                value={tabSearchQuery}
+                onChange={(e) => setTabSearchQuery(e.target.value)}
+                placeholder="Lọc cài đặt..."
+                className="w-full bg-transparent border-0 text-slate-800 dark:text-neutral-200 placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none text-[11px]"
+              />
+              {tabSearchQuery && (
+                <button type="button" onClick={() => setTabSearchQuery("")} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* GROUP 1: SYSTEM SETTINGS */}
             <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
               {t("settings.groupSystem") || "Hệ thống"}
             </div>
