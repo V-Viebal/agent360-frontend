@@ -1687,6 +1687,7 @@ export function GrokBotWorkspace() {
   const [lightboxRotation, setLightboxRotation] = useState<number>(0);
   const [isPanningLightbox, setIsPanningLightbox] = useState<boolean>(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lightboxModalRef = useRef<HTMLDivElement>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const dragCounterRef = useRef(0);
@@ -3192,10 +3193,25 @@ export function GrokBotWorkspace() {
       if (lightboxImageUrl) {
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "c") {
           e.preventDefault();
-          navigator.clipboard.writeText(lightboxImageUrl.url);
           triggerHaptic(20);
-          setForkToast("Image URL copied to clipboard");
-          setTimeout(() => setForkToast(null), 2500);
+          (async () => {
+            try {
+              const res = await fetch(lightboxImageUrl.url);
+              const blob = await res.blob();
+              if (navigator.clipboard && (window as any).ClipboardItem) {
+                const item = new (window as any).ClipboardItem({ [blob.type || "image/png"]: blob });
+                await navigator.clipboard.write([item]);
+                setForkToast("Image copied to clipboard!");
+              } else {
+                await navigator.clipboard.writeText(lightboxImageUrl.url);
+                setForkToast("Image URL copied to clipboard");
+              }
+            } catch (err) {
+              await navigator.clipboard.writeText(lightboxImageUrl.url);
+              setForkToast("Image URL copied to clipboard");
+            }
+            setTimeout(() => setForkToast(null), 2500);
+          })();
           return;
         }
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "s") {
@@ -3245,10 +3261,24 @@ export function GrokBotWorkspace() {
           });
           return;
         }
+        // Native Fullscreen toggle with 'f' key
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "f") {
+          e.preventDefault();
+          triggerHaptic(20);
+          if (!document.fullscreenElement) {
+            lightboxModalRef.current?.requestFullscreen?.();
+          } else {
+            document.exitFullscreen?.();
+          }
+          return;
+        }
       }
 
       // 4. Escape key closes open modals / menus or Computer Split
       if (e.key === "Escape") {
+        if (document.fullscreenElement) {
+          try { document.exitFullscreen?.(); } catch {}
+        }
         if (lightboxImageUrl) {
           setLightboxImageUrl(null);
           return;
@@ -7267,7 +7297,13 @@ export function GrokBotWorkspace() {
       {/* Fullscreen Image Lightbox Modal */}
       {lightboxImageUrl && (
         <div
-          onClick={() => setLightboxImageUrl(null)}
+          ref={lightboxModalRef}
+          onClick={() => {
+            if (document.fullscreenElement) {
+              try { document.exitFullscreen?.(); } catch {}
+            }
+            setLightboxImageUrl(null);
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200 select-none"
         >
           <div
@@ -7277,18 +7313,33 @@ export function GrokBotWorkspace() {
             <div className="w-full flex items-center justify-between px-3.5 py-2.5 border-b border-white/10 text-xs font-mono text-neutral-300">
               <span className="truncate font-medium max-w-md">{lightboxImageUrl.name}</span>
               <div className="flex items-center gap-1.5 shrink-0">
-                {/* Copy Image URL with Shortcut Badge */}
+                {/* Copy Image (Blob or URL) with Shortcut Badge */}
                 <button
                   type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(lightboxImageUrl.url);
+                  onClick={async () => {
                     triggerHaptic(20);
-                    setForkToast("Image URL copied to clipboard");
+                    try {
+                      // Attempt to fetch blob and copy as real image item
+                      const res = await fetch(lightboxImageUrl.url);
+                      const blob = await res.blob();
+                      if (navigator.clipboard && (window as any).ClipboardItem) {
+                        const item = new (window as any).ClipboardItem({ [blob.type || "image/png"]: blob });
+                        await navigator.clipboard.write([item]);
+                        setForkToast("Image copied to clipboard!");
+                      } else {
+                        await navigator.clipboard.writeText(lightboxImageUrl.url);
+                        setForkToast("Image URL copied to clipboard");
+                      }
+                    } catch (e) {
+                      // Fallback to plain URL copy
+                      await navigator.clipboard.writeText(lightboxImageUrl.url);
+                      setForkToast("Image URL copied to clipboard");
+                    }
                     setTimeout(() => setForkToast(null), 2500);
                   }}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 cursor-pointer transition-colors text-[11px]"
-                  title="Copy Image URL (Ctrl+C)"
-                  aria-label="Copy Image URL"
+                  title="Copy Image / URL (Ctrl+C)"
+                  aria-label="Copy Image"
                 >
                   <Copy size={14} />
                   <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70">
@@ -7313,10 +7364,36 @@ export function GrokBotWorkspace() {
                   </span>
                 </a>
 
+                {/* Fullscreen Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic(20);
+                    if (!document.fullscreenElement) {
+                      lightboxModalRef.current?.requestFullscreen?.();
+                    } else {
+                      document.exitFullscreen?.();
+                    }
+                  }}
+                  className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 cursor-pointer transition-colors text-[11px] flex items-center gap-1"
+                  title="Fullscreen (F)"
+                  aria-label="Toggle Fullscreen"
+                >
+                  <Maximize2 size={14} />
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70">
+                    F
+                  </span>
+                </button>
+
                 {/* Close Button */}
                 <button
                   type="button"
-                  onClick={() => setLightboxImageUrl(null)}
+                  onClick={() => {
+                    if (document.fullscreenElement) {
+                      try { document.exitFullscreen?.(); } catch {}
+                    }
+                    setLightboxImageUrl(null);
+                  }}
                   className="text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-white/10 cursor-pointer transition-colors ml-1"
                   title="Close (Esc)"
                   aria-label="Close image preview"
@@ -7862,6 +7939,33 @@ export function GrokBotWorkspace() {
           </div>
         </div>
       )}
+      {/* Global Toast Primitive Notification */}
+      <Toast
+        toast={
+          forkToast
+            ? { id: "fork", message: forkToast, variant: "info" }
+            : deviceToast
+            ? {
+                id: "device",
+                message: deviceToast.message,
+                variant: "info",
+                action: { label: "Configure", onClick: () => setIsPermissionsModalOpen(true) },
+              }
+            : voiceError
+            ? {
+                id: "voice",
+                message: voiceError,
+                variant: "error",
+                action: { label: "Permissions", onClick: () => setIsPermissionsModalOpen(true) },
+              }
+            : null
+        }
+        onDismiss={() => {
+          setForkToast(null);
+          setDeviceToast(null);
+          setVoiceError(null);
+        }}
+      />
     </div>
   );
 }

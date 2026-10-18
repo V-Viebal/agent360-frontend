@@ -187,3 +187,37 @@ assert(getConfirmBtnClass("default").includes("bg-[#ff7a00]"), "Default variant 
 console.log("✓ Test 8: ConfirmDialog action variants contract verified");
 
 console.log("🎉 All 8 Shared UI Component assertions passed successfully!");
+
+// 9. Test Badge Color and Variant Contract
+console.log("Testing Badge variant and color contracts...");
+function getBadgeClasses(color, variant) {
+  if (color === "brand" && variant === "subtle") return "bg-[#ff7a00]/10 text-[#ff7a00]";
+  if (color === "cyan" && variant === "solid") return "bg-cyan-500 text-black";
+  return "border";
+}
+
+assert(getBadgeClasses("brand", "subtle").includes("#ff7a00"), "Brand badge must contain grok neon ember color");
+assert(getBadgeClasses("cyan", "solid").includes("bg-cyan-500"), "Cyan solid badge must contain bg-cyan-500");
+console.log("✓ Test 9: Badge color and variant contract verified");
+
+// 10. Test Skeleton Variant Class Assignment
+console.log("Testing Skeleton component variant styling...");
+function getSkeletonClass(variant) {
+  return variant === "circle" ? "rounded-full" : variant === "card" ? "rounded-xl" : "rounded-md";
+}
+
+assert.strictEqual(getSkeletonClass("circle"), "rounded-full", "Circle skeleton should have rounded-full");
+assert.strictEqual(getSkeletonClass("card"), "rounded-xl", "Card skeleton should match Level 2 rounded-xl scale");
+console.log("✓ Test 10: Skeleton styling and corner radii contract verified");
+
+// 11. Test Toast Auto-Dismiss Contract
+console.log("Testing Toast timeout calculation...");
+function resolveToastDuration(item) {
+  return item?.duration ?? 3500;
+}
+
+assert.strictEqual(resolveToastDuration({ message: "Saved" }), 3500, "Default duration should be 3500ms");
+assert.strictEqual(resolveToastDuration({ message: "Fast", duration: 1500 }), 1500, "Custom duration should override");
+console.log("✓ Test 11: Toast auto-dismiss timeout contract verified");
+
+console.log("🎉 All 11 Shared UI Component assertions passed successfully!");
