@@ -18,7 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 declare const __APP_BUILD__: string;
 
 // Register Progressive Web App Service Worker for offline resilience
-if ("serviceWorker" in navigator && !window.location.host.includes("localhost")) {
+if ("serviceWorker" in navigator && !window.location.host.includes("localhost") && !window.location.host.includes("127.0.0.1") && !window.location.host.startsWith("172.")) {
   window.addEventListener("load", () => {
     // Versioned URL + updateViaCache:none: a new build always installs a new SW even if a CDN or the
     // browser still holds an old /sw.js; reload once when the new SW takes control.

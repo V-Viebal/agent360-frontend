@@ -5308,6 +5308,83 @@ export function GrokBotWorkspace() {
               </div>
             )}
 
+            {/* Micro-chips preview for active @mentions and /tools in prompt input with Clear All */}
+            {(() => {
+              const mentions = Array.from(new Set(inputText.match(/@[a-zA-Z0-9_-]+/g) || []));
+              const tools = Array.from(new Set(inputText.match(/\/[a-zA-Z0-9_-]+/g) || []));
+              const totalChips = mentions.length + tools.length;
+              if (totalChips === 0) return null;
+
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-1.5 px-3 py-1 mb-1.5 animate-in fade-in duration-150">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {mentions.map((mention) => (
+                      <span
+                        key={mention}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-mono shadow-2xs group"
+                      >
+                        <span className="font-semibold">{mention}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInputText((prev) =>
+                              prev.replace(new RegExp(`${mention}\\s*`, "g"), "").trimStart()
+                            );
+                          }}
+                          className="text-cyan-500 hover:text-cyan-700 dark:hover:text-cyan-200 cursor-pointer p-0.5 rounded-full"
+                          aria-label={`Remove ${mention}`}
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+
+                    {tools.map((tool) => (
+                      <span
+                        key={tool}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-mono shadow-2xs group"
+                      >
+                        <span className="font-semibold">{tool}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInputText((prev) =>
+                              prev.replace(new RegExp(`${tool}\\s*`, "g"), "").trimStart()
+                            );
+                          }}
+                          className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-200 cursor-pointer p-0.5 rounded-full"
+                          aria-label={`Remove ${tool}`}
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {totalChips >= 2 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputText((prev) => {
+                          let cleaned = prev;
+                          mentions.forEach((m) => {
+                            cleaned = cleaned.replace(new RegExp(`${m}\\s*`, "g"), "");
+                          });
+                          tools.forEach((t) => {
+                            cleaned = cleaned.replace(new RegExp(`${t}\\s*`, "g"), "");
+                          });
+                          return cleaned.trimStart();
+                        });
+                      }}
+                      className="text-[10px] font-mono text-neutral-400 hover:text-red-400 transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-red-500/10 shrink-0"
+                    >
+                      Clear all ({totalChips})
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             <form
               id="tour-prompt-composer"
               ref={composerFormRef}
