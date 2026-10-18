@@ -2688,9 +2688,13 @@ export function GrokBotWorkspace() {
     loadAgentChats();
   }, [selectedAgentId, agents.length]);
 
+  // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
+  // Client-created sessions (session-*) are not in the server list yet and are allowed.
+  const selectedChatKnown = !!selectedChatId && (selectedChatId.startsWith("session-") || chats.some((c) => c.id === selectedChatId));
+
   // When selectedChatId changes, fetch real messages with instant client cache display
   useEffect(() => {
-    if (!selectedChatId) return;
+    if (!selectedChatId || !selectedChatKnown) return;
 
     isInitialLoadRef.current = true;
     let mounted = true;
@@ -2734,7 +2738,7 @@ export function GrokBotWorkspace() {
     return () => {
       mounted = false;
     };
-  }, [selectedChatId, selectedAgentId]);
+  }, [selectedChatId, selectedAgentId, selectedChatKnown]);
 
   const loadWorkspaceTree = async () => {
     setIsLoadingTree(true);
