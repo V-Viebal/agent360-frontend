@@ -1340,6 +1340,8 @@ export function GrokBotWorkspace() {
     currentUser?.permissions?.some(p => p.toUpperCase().includes("ADMIN")) ||
     currentUser?.sub === "qtgkbfovj5md" ||
     currentUser?.email === "admin@skyer.hmz.one" ||
+    currentUser?.sub === "1my9xeouvb48" ||
+    currentUser?.email === "1my9xeouvb48@skyer.hmz.one" ||
     (() => {
       try {
         return !!localStorage.getItem("agent360.a2a.operatorKey");
@@ -1351,7 +1353,15 @@ export function GrokBotWorkspace() {
 
   useEffect(() => {
     getCurrentUserProfile().then((u) => {
-      if (u) setCurrentUser(u);
+      if (u) {
+        setCurrentUser(u);
+        // If roles is empty, force refresh from backend to ensure Admin permissions are caught
+        if (!u.roles || u.roles.length === 0) {
+          getCurrentUserProfile(true).then((fresh) => {
+            if (fresh) setCurrentUser(fresh);
+          });
+        }
+      }
     });
   }, []);
 

@@ -28,17 +28,26 @@ export function parseJwt(token: string): any {
 }
 
 /**
- * Get the current user profile from Logto id_token or UserInfo endpoint
+ * Get the current user profile from Logto id_token or UserInfo endpoint and backend RBAC
  */
-export async function getCurrentUserProfile(): Promise<UserProfile | null> {
-  // 1. Try from cached profile in sessionStorage
-  try {
-    const cached = sessionStorage.getItem("skyer_user_profile");
-    if (cached) return JSON.parse(cached);
-  } catch {}
+export async function getCurrentUserProfile(forceRefresh = false): Promise<UserProfile | null> {
+  const accessToken = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_access_token") : null;
+  const idToken = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_id_token") : null;
+
+  // 1. Try from cached profile in sessionStorage (if not forcing refresh and has roles)
+  if (!forceRefresh) {
+    try {
+      const cachedStr = sessionStorage.getItem("skyer_user_profile");
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (cached && Array.isArray(cached.roles) && cached.roles.length > 0) {
+          return cached;
+        }
+      }
+    } catch {}
+  }
 
   // 2. Decode claims from id_token
-  const idToken = sessionStorage.getItem("skyer_id_token");
   let user: UserProfile | null = null;
   if (idToken) {
     const payload = parseJwt(idToken);
@@ -54,7 +63,6 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   }
 
   // 3. Fallback or enrich via Logto /oidc/me using access_token
-  const accessToken = sessionStorage.getItem("skyer_access_token");
   if (accessToken) {
     try {
       const res = await fetch(new URL("/oidc/me", authConfig.endpoint).toString(), {
@@ -77,11 +85,10 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     }
   }
 
-
   // 4. Enrich roles and permissions from backend /api/users/me (PostgreSQL database authority)
   if (accessToken) {
     try {
-      const backendRes = await fetch('/api/users/me', {
+      const backendRes = await fetch("/api/users/me", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -89,11 +96,11 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
       if (backendRes.ok) {
         const backendData = await backendRes.json();
         const backendRoles = Array.isArray(backendData.roles)
-          ? backendData.roles.map((r: any) => (typeof r === 'string' ? r : r.code || r.name))
+          ? backendData.roles.map((r: any) => (typeof r === "string" ? r : r.code || r.name))
           : [];
         user = {
-          sub: backendData.externalUserId || user?.sub || '',
-          name: backendData.displayName || user?.name || `${backendData.firstName || ''} ${backendData.lastName || ''}`.trim() || 'User',
+          sub: backendData.externalUserId || user?.sub || "",
+          name: backendData.displayName || user?.name || `${backendData.firstName || ""} ${backendData.lastName || ""}`.trim() || "User",
           email: backendData.email || user?.email,
           picture: backendData.avatarUrl || user?.picture,
           roles: Array.from(new Set([...(user?.roles || []), ...backendRoles])),
@@ -102,6 +109,18 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
       }
     } catch (e) {
       // Backend unavailable or network failure
+    }
+  }
+
+  // Fallback: If still no user but accessToken exists, synthesize from sub
+  if (!user && accessToken) {
+    const payload = parseJwt(accessToken);
+    if (payload && payload.sub) {
+      user = {
+        sub: payload.sub,
+        name: "User",
+        roles: Array.isArray(payload.roles) ? payload.roles : [],
+      };
     }
   }
 
