@@ -780,13 +780,18 @@ export function getAgentBrowserUrl(agent: InfraAgent, info?: AgentBrowserInfo | 
  */
 function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url: string; title: string; profile: string }) {
   const [src, setSrc] = useState<string>("");
+  // Selkies treats a bare URL as the single "primary" controller: every new phone/desktop tab
+  // kicked the previous one and reconfigured the shared display. #collab joins as a co-controller
+  // and #shared as a watch-only viewer, so several devices can stay connected at once.
+  const [mode, setMode] = useState<"collab" | "shared">(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches ? "shared" : "collab");
   const [attempt, setAttempt] = useState(0);
   const hiddenAt = useRef<number>(0);
   useEffect(() => {
     let alive = true;
-    focusAgentBrowser(agentId).finally(() => { if (alive) setSrc(url); });
+    focusAgentBrowser(agentId).finally(() => { if (alive) setSrc(`${url.replace(/#.*$/, "")}#${mode}`); });
     return () => { alive = false; };
-  }, [agentId, url, attempt]);
+  }, [agentId, url, attempt, mode]);
   useEffect(() => {
     const onVis = () => {
       if (document.hidden) { hiddenAt.current = Date.now(); return; }
@@ -817,14 +822,24 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
           profile: {profile}
         </div>
       )}
-      <button
-        type="button"
-        onClick={() => setAttempt((a) => a + 1)}
-        className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-[#1c1c26]/90 border border-[#2c2c3e] text-[11px] font-mono text-neutral-300 hover:text-white"
-        title="Reconnect stream"
-      >
-        Reconnect
-      </button>
+      <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
+          className="px-2.5 py-1 rounded-lg bg-[#1c1c26]/90 border border-[#2c2c3e] text-[11px] font-mono text-neutral-300 hover:text-white"
+          title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
+        >
+          {mode === "shared" ? "Control" : "Watch only"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAttempt((a) => a + 1)}
+          className="px-2.5 py-1 rounded-lg bg-[#1c1c26]/90 border border-[#2c2c3e] text-[11px] font-mono text-neutral-300 hover:text-white"
+          title="Reconnect stream"
+        >
+          Reconnect
+        </button>
+      </div>
     </>
   );
 }
@@ -5819,7 +5834,7 @@ export function GrokBotWorkspace() {
                             <Maximize2 size={13} />
                           </button>
                           <a aria-label="Open in new window"
-                            href={browserTarget.url}
+                            href={browserTarget.url ? `${browserTarget.url}#collab` : undefined}
                             target="_blank"
                             rel="noreferrer"
                             className="p-1 text-neutral-400 hover:text-white hover:bg-[#232330] rounded transition-colors cursor-pointer"
@@ -6250,7 +6265,7 @@ export function GrokBotWorkspace() {
               {/* Action buttons */}
               <div className="flex items-center gap-2">
                 <a aria-label="Open in new browser tab"
-                  href={browserTarget.url}
+                  href={browserTarget.url ? `${browserTarget.url}#collab` : undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2.5 py-1 rounded-lg bg-[#1c1c26] hover:bg-[#252534] border border-[#2c2c3e] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
