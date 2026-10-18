@@ -328,16 +328,7 @@ export function Navbar() {
           {/* Theme Selector (System / Light / Dark) */}
           <ThemeSelector />
 
-          {/* GitHub Source Link */}
-          <a
-            href="https://github.com/v-viebal/agent360"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium text-neutral-400 hover:text-white px-3 py-1.5 rounded-full hover:bg-white/[0.06] transition-all flex items-center gap-1"
-          >
-            <span>{t("nav.github")}</span>
-            <ExternalLink size={11} className="text-neutral-500" />
-          </a>
+
 
           {/* Conditional Auth & App CTA */}
           {!hasSession ? (

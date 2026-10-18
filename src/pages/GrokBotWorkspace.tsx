@@ -6483,13 +6483,18 @@ export function GrokBotWorkspace() {
       <aside
         id="tour-chat-sessions"
         style={{
-          width: !isChatListCollapsed && typeof window !== "undefined" && window.innerWidth >= 1024 ? `${chatSessionsWidth}px` : undefined,
+          width:
+            typeof window !== "undefined" && window.innerWidth >= 1024
+              ? isChatListCollapsed
+                ? "56px"
+                : `${chatSessionsWidth}px`
+              : undefined,
         }}
         className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok relative ${
           mobileChatsOpen
             ? "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
             : isChatListCollapsed
-            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0 lg:translate-x-0"
+            ? "hidden lg:flex lg:w-[56px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
             : "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-none"
         }`}
       >

@@ -319,8 +319,13 @@ export function LandingPage() {
       {/* 1. Announcement Bar */}
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.015] backdrop-blur-md px-4 py-2 sm:py-2.5 text-center text-xs tracking-wide text-neutral-400">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0" />
-          <strong className="font-medium text-white">{t("announcement.badge")}</strong>
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0 animate-pulse" />
+          <strong className="font-medium text-white flex items-center gap-1">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a00] to-amber-300 font-bold">
+              Skyer
+            </span>
+            <span>{t("announcement.badge").replace("Skyer", "").trim()}</span>
+          </strong>
           <span className="text-neutral-600 hidden sm:inline">•</span>
           <span className="text-neutral-300 font-medium">{t("announcement.onPremise")}</span>
           <span className="text-neutral-600 hidden sm:inline">&</span>
@@ -338,7 +343,25 @@ export function LandingPage() {
 
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl lg:text-[84px] font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.06] max-w-4xl mx-auto text-balance">
-            {t("hero.title")}
+            {(() => {
+              const title = t("hero.title") || "Meet Skyer. AI teammates you can give real work to.";
+              if (title.includes("Skyer")) {
+                const parts = title.split("Skyer");
+                return (
+                  <>
+                    {parts[0]}
+                    <span className="relative inline-block font-semibold">
+                      <span className="absolute -inset-1 rounded-2xl bg-[#ff7a00]/25 blur-xl pointer-events-none -z-10" />
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a00] via-[#ffa149] to-amber-300 drop-shadow-[0_0_35px_rgba(255,122,0,0.45)]">
+                        Skyer
+                      </span>
+                    </span>
+                    {parts.slice(1).join("Skyer")}
+                  </>
+                );
+              }
+              return title;
+            })()}
           </h1>
 
           <p className="mt-6 sm:mt-8 max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed">
@@ -542,10 +565,11 @@ export function LandingPage() {
                     <ExternalLink size={11} className="text-[#ff7a00]" />
                   </a>
                   <a
-                    href="https://github.com/v-viebal/agent360"
+                    href="https://app360.antares.vn"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff7a00] hover:text-amber-400"
+                    title="Deploy Skyer on App360 Sovereign Platform"
                   >
                     <span>{t("onPremise.exploreRunbook")}</span>
                     <ArrowRight size={12} />
@@ -1223,7 +1247,24 @@ export function LandingPage() {
       <section id="deploy" className="py-24 sm:py-32 text-center relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-4 relative z-10">
           <h2 className="font-newsreader text-3xl sm:text-5xl md:text-6xl text-white font-normal text-balance">
-            {t("cta.title")}
+            {(() => {
+              const ctaText = t("cta.title") || "Start with your first Skyer AI teammate.";
+              if (ctaText.includes("Skyer")) {
+                const parts = ctaText.split("Skyer");
+                return (
+                  <>
+                    {parts[0]}
+                    <span className="relative inline-block font-semibold">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a00] via-[#ffa149] to-amber-300 drop-shadow-[0_0_25px_rgba(255,122,0,0.4)]">
+                        Skyer
+                      </span>
+                    </span>
+                    {parts.slice(1).join("Skyer")}
+                  </>
+                );
+              }
+              return ctaText;
+            })()}
           </h2>
           <p className="mt-4 text-neutral-400 text-sm sm:text-base max-w-2xl mx-auto">
             An AI teammate you can trust to get work done. Deploy in parallel 24/7 with verifiable execution receipts.
