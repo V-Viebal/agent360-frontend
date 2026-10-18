@@ -3792,23 +3792,20 @@ export function GrokBotWorkspace() {
                           <AgentAvatar agent={ag} size="md" />
 
                           {/* Lean State: ĐỎ khi sự cố, XANH khi xong việc chưa đọc, CAM khi selected */}
-                          {hasError ? (
+                          {/* Unread notification badge at top-right */}
+                          {hasUnreadCompleted && (
                             <span
-                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[#0c0c0e] animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.9)]"
-                            />
-                          ) : hasUnreadCompleted ? (
-                            <span
-                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                            />
-                          ) : isSelected ? (
-                            <span
-                              className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-[#ff7a00] ring-2 ring-[#0c0c0e]"
-                            />
-                          ) : (
-                            <span
-                              className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-neutral-600/40 group-hover:bg-neutral-400 transition-colors"
+                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#0c0c0e] animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                              title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
                             />
                           )}
+                          {/* Online status beacon at bottom-right consistent across all sidebars */}
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] ${
+                              hasError ? "bg-red-500 animate-pulse" : "bg-emerald-400"
+                            }`}
+                            title={hasError ? "Sự cố hạ tầng" : "Đang hoạt động (Online)"}
+                          />
                         </div>
                       </button>
                     );
@@ -4043,12 +4040,15 @@ export function GrokBotWorkspace() {
                             : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
                         }`}
                       >
-                        {/* Dedicated Agent Identity Avatar */}
+                        {/* Dedicated Agent Identity Avatar with consistent health beacon */}
                         <div className="relative shrink-0">
                           <AgentAvatar agent={ag} size="md" />
-                          {isSelected && (
-                            <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#ff7a00] border border-[#0c0c0e]" />
-                          )}
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] ${
+                              ag.status === "degraded" ? "bg-red-500 animate-pulse" : "bg-emerald-400"
+                            }`}
+                            title={ag.status === "degraded" ? "Sự cố hạ tầng" : "Đang hoạt động (Online)"}
+                          />
                         </div>
 
                         {/* Agent Details: Lean typography with rich status tooltip */}
@@ -4286,7 +4286,7 @@ export function GrokBotWorkspace() {
                   <span className={`h-1.5 w-1.5 rounded-full ${
                     activeLoopMode === 'goal' ? 'bg-emerald-400' : activeLoopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
                   }`} />
-                  <span>{activeLoopMode}</span>
+                  <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : activeLoopMode === 'mission' ? 'Nhiệm vụ' : 'Tiêu chuẩn'}</span>
                 </span>
               </div>
               {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
@@ -4806,15 +4806,15 @@ export function GrokBotWorkspace() {
           </div>
           <div className="flex items-center gap-1.5 font-mono text-xs">
             <span className="font-semibold capitalize tracking-wide">
-              {loopModeToast.mode === "default" ? "Standard Loop" : `${loopModeToast.mode} Mode`}
+              {loopModeToast.mode === "goal" ? "Chế độ: Mục tiêu" : loopModeToast.mode === "mission" ? "Chế độ: Nhiệm vụ dài hạn" : "Chế độ: Tiêu chuẩn"}
             </span>
             <span className="text-[10px] opacity-60">|</span>
             <span className="text-[10px] opacity-75">
               {loopModeToast.mode === "goal"
-                ? "Goal-Driven Protocol"
+                ? "Hoàn thành mục tiêu đề ra"
                 : loopModeToast.mode === "mission"
-                ? "Multi-Step Mission"
-                : "Guarded Agent Loop"}
+                ? "Nhiệm vụ phức tạp nhiều giai đoạn"
+                : "Tương tác hỗ trợ tiêu chuẩn"}
             </span>
           </div>
           <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70 ml-1">
@@ -5192,22 +5192,51 @@ export function GrokBotWorkspace() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2.5 items-stretch">
-                  {/* Column 1: Loop mode & Attached Files (Renamed & Enhanced with Built-in Mode Options from QwenPaw API) */}
+                  {/* Column 1: Add Files & Work Mode (Add files at the top, followed by clear work modes) */}
                   <div className="flex flex-col justify-between space-y-2 h-full">
-                    <div className="flex items-center justify-between px-1">
-                      <div>
-                        <div className="text-xs font-semibold text-white tracking-tight">Loop mode</div>
-                        <div className="text-[10px] text-neutral-400">Choose how the agent should continue</div>
+                    {/* 1. Add Files Option (Placed at the very top as requested) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between px-1">
+                        <div>
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">Tệp đính kèm</div>
+                          <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Tải lên tệp hoặc thư mục</div>
+                        </div>
+                        <Paperclip size={13} className="text-[#ff7a00]" />
                       </div>
-                      <SlidersHorizontal size={13} className="text-neutral-500" />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPlusMenuOpen(false);
+                          fileInputRef.current?.click();
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border border-[#ff7a00]/30 bg-[#ff7a00]/10 hover:bg-[#ff7a00]/20 text-slate-900 dark:text-white group shadow-xs"
+                      >
+                        <div className="h-7 w-7 rounded-lg bg-[#ff7a00] flex items-center justify-center text-black shrink-0 shadow-xs transition-transform group-hover:scale-105">
+                          <Paperclip size={14} className="stroke-[2.5]" />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0 flex-1">
+                          <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-[#ff7a00] transition-colors">
+                            Add Files
+                          </span>
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                            Chọn ảnh, văn bản, mã nguồn từ máy
+                          </span>
+                        </div>
+                      </button>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="text-[9px] font-mono uppercase tracking-wider text-neutral-500 font-bold px-1">
-                        BUILT-IN
+                    {/* 2. Work Mode Section (Chế độ làm việc rõ ràng, thân thiện) */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-[#222230]">
+                      <div className="flex items-center justify-between px-1">
+                        <div>
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">Chế độ làm việc</div>
+                          <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Chọn cách thức agent xử lý</div>
+                        </div>
+                        <SlidersHorizontal size={13} className="text-neutral-500" />
                       </div>
 
-                      {/* 1. Default Mode */}
+                      {/* Default: Trò chuyện chuẩn */}
                       <button
                         type="button"
                         onClick={() => handleSelectLoopMode("default")}
@@ -5222,18 +5251,18 @@ export function GrokBotWorkspace() {
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-white">Default</span>
+                            <span className="font-semibold text-xs text-slate-900 dark:text-white">Tiêu chuẩn</span>
                             {activeLoopMode === "default" && (
                               <span className="h-2 w-2 rounded-full bg-[#ff7a00] shrink-0 ml-1" />
                             )}
                           </div>
-                          <span className="text-[10px] text-neutral-400 leading-snug">
-                            The standard guarded agent loop.
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug">
+                            Trò chuyện tương tác và hỗ trợ thông thường.
                           </span>
                         </div>
                       </button>
 
-                      {/* 2. Goal Mode */}
+                      {/* Goal: Bám sát mục tiêu */}
                       <button
                         type="button"
                         onClick={() => handleSelectLoopMode("goal")}
@@ -5248,18 +5277,18 @@ export function GrokBotWorkspace() {
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-white">Goal</span>
+                            <span className="font-semibold text-xs text-slate-900 dark:text-white">Mục tiêu</span>
                             {activeLoopMode === "goal" && (
                               <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0 ml-1" />
                             )}
                           </div>
-                          <span className="text-[10px] text-neutral-400 leading-snug">
-                            Work persistently toward a concrete, verifiable goal.
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug">
+                            Tự động hoàn thành trọn vẹn mục tiêu đề ra.
                           </span>
                         </div>
                       </button>
 
-                      {/* 3. Mission Mode */}
+                      {/* Mission: Nhiệm vụ đa bước */}
                       <button
                         type="button"
                         onClick={() => handleSelectLoopMode("mission")}
@@ -5274,31 +5303,16 @@ export function GrokBotWorkspace() {
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-white">Mission</span>
+                            <span className="font-semibold text-xs text-slate-900 dark:text-white">Nhiệm vụ dài hạn</span>
                             {activeLoopMode === "mission" && (
                               <span className="h-2 w-2 rounded-full bg-cyan-400 shrink-0 ml-1" />
                             )}
                           </div>
-                          <span className="text-[10px] text-neutral-400 leading-snug">
-                            Run a structured, persistent multi-step task.
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug">
+                            Thực thi dự án phức tạp nhiều giai đoạn.
                           </span>
                         </div>
                       </button>
-
-                      {/* 4. Files & Folders Attachment Option */}
-                      <div className="pt-1 border-t border-[#222230]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsPlusMenuOpen(false);
-                            fileInputRef.current?.click();
-                          }}
-                          className="w-full flex items-center gap-2 p-1.5 rounded-lg text-xs text-left text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/60 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent transition-colors cursor-pointer group"
-                        >
-                          <Paperclip size={12} className="text-neutral-400 group-hover:text-[#ff7a00]" />
-                          <span className="text-[11px] font-medium truncate">Upload files and folders</span>
-                        </button>
-                      </div>
                     </div>
                   </div>
 
@@ -6634,8 +6648,15 @@ export function GrokBotWorkspace() {
               >
                 <AgentAvatar agent={selectedAgent} size="xl" className="shadow-xl" />
                 
-                {/* Active Status Beacon Badge */}
-                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                {/* Active Status Beacon Badge: Red when degraded, Green when healthy/online */}
+                <span
+                  className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-[#0c0c0e] ${
+                    selectedAgent.status === "degraded"
+                      ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse"
+                      : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                  }`}
+                  title={selectedAgent.status === "degraded" ? "Sự cố hạ tầng" : "Đang hoạt động (Online)"}
+                />
               </div>
 
               <div className="flex items-center gap-1.5 justify-center">
@@ -6652,7 +6673,7 @@ export function GrokBotWorkspace() {
                   <span className={`h-1.5 w-1.5 rounded-full ${
                     activeLoopMode === 'goal' ? 'bg-emerald-400' : activeLoopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
                   }`} />
-                  <span>{activeLoopMode}</span>
+                  <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : activeLoopMode === 'mission' ? 'Nhiệm vụ' : 'Tiêu chuẩn'}</span>
                 </span>
               </div>
 
@@ -7077,7 +7098,7 @@ export function GrokBotWorkspace() {
                           .map((ch) => (
                             <div
                               key={ch.type}
-                              className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all ${
                                 ch.enabled
                                   ? "bg-[#181824] border-[#2e2e42] text-white"
                                   : "bg-[#101016] border-[#1e1e28] text-neutral-500 opacity-70"

@@ -372,9 +372,9 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
               options={candidates.map((c) => ({ value: c, label: c }))}
               className="w-full"
             />
-            <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
-            <input value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} placeholder="Capabilities, comma separated" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
-            <button disabled={!form.child || busy === "bind"} onClick={addBinding} className="w-full py-1.5 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1">
+            <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
+            <input value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} placeholder="Capabilities, comma separated" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
+            <button disabled={!form.child || busy === "bind"} onClick={addBinding} className="w-full py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
               {busy === "bind" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Bind & sync skill
             </button>
           </div>
@@ -405,10 +405,10 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                 />
               </div>
             </div>
-            <textarea value={dlg.objective} onChange={(e) => setDlg({ ...dlg, objective: e.target.value })} rows={2} placeholder="Objective" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
-            <textarea value={dlg.criteria} onChange={(e) => setDlg({ ...dlg, criteria: e.target.value })} rows={2} placeholder="Acceptance criteria, one per line (e.g. Output contains 'DONE')" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
+            <textarea value={dlg.objective} onChange={(e) => setDlg({ ...dlg, objective: e.target.value })} rows={2} placeholder="Objective" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
+            <textarea value={dlg.criteria} onChange={(e) => setDlg({ ...dlg, criteria: e.target.value })} rows={2} placeholder="Acceptance criteria, one per line (e.g. Output contains 'DONE')" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
             <div className="flex gap-1">
-              <button disabled={!dlg.child || !dlg.objective || busy === "dlg"} onClick={createDelegation} className="flex-1 py-1.5 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1">
+              <button disabled={!dlg.child || !dlg.objective || busy === "dlg"} onClick={createDelegation} className="flex-1 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
                 {busy === "dlg" ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Delegate
               </button>
               <button
