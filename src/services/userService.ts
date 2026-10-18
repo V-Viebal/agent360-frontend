@@ -28,7 +28,7 @@ export function parseJwt(token: string): any {
 }
 
 /**
- * Get the current user profile from Logto id_token or UserInfo endpoint and backend RBAC
+ * Get the current user profile from Logto id_token and backend PostgreSQL RBAC
  */
 export async function getCurrentUserProfile(forceRefresh = false): Promise<UserProfile | null> {
   const accessToken = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_access_token") : null;
@@ -62,33 +62,22 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
     }
   }
 
-  // 3. Fallback or enrich via Logto /oidc/me using access_token
-  if (accessToken) {
-    try {
-      const res = await fetch(new URL("/oidc/me", authConfig.endpoint).toString(), {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        user = {
-          sub: data.sub || user?.sub || "",
-          name: data.name || user?.name || data.email?.split("@")[0] || "User",
-          email: data.email || user?.email,
-          picture: data.picture || user?.picture,
-          roles: Array.isArray(data.roles) ? data.roles : (user?.roles || []),
-        };
-      }
-    } catch (e) {
-      console.warn("[User] Failed to fetch /oidc/me:", e);
+  // 3. Fallback synthesis from access_token if id_token was missing
+  if (!user && accessToken) {
+    const payload = parseJwt(accessToken);
+    if (payload && payload.sub) {
+      user = {
+        sub: payload.sub,
+        name: "User",
+        roles: Array.isArray(payload.roles) ? payload.roles : [],
+      };
     }
   }
 
-  // 4. Enrich roles and permissions from backend /api/users/me (PostgreSQL database authority)
+  // 4. Enrich roles, email and permissions from backend /api/users/me (PostgreSQL database authority)
   if (accessToken) {
     try {
-      const backendRes = await fetch("/api/v1/users/me", {
+      const backendRes = await fetch("/api/users/me", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -109,18 +98,6 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
       }
     } catch (e) {
       // Backend unavailable or network failure
-    }
-  }
-
-  // Fallback: If still no user but accessToken exists, synthesize from sub
-  if (!user && accessToken) {
-    const payload = parseJwt(accessToken);
-    if (payload && payload.sub) {
-      user = {
-        sub: payload.sub,
-        name: "User",
-        roles: Array.isArray(payload.roles) ? payload.roles : [],
-      };
     }
   }
 

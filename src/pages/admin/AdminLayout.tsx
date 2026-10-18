@@ -8,7 +8,6 @@ import {
   Building2,
   Settings,
   ChevronRight,
-  LogOut,
   ShieldAlert,
   Menu,
   X,
@@ -17,15 +16,18 @@ import {
   Server
 } from "lucide-react";
 import { SkyerLogo } from "../../components/SkyerLogo";
+import { getCurrentUserProfile, parseJwt } from "../../services/userService";
+import { getStoredToken } from "../../services/authFetch";
 
 interface UserProfile {
-  id: number;
-  externalUserId: string;
+  id?: number;
+  externalUserId?: string;
+  sub?: string;
   email?: string;
   firstName?: string;
   lastName?: string;
   displayName?: string;
-  roles?: Array<{ id: number; code: string; name: string }>;
+  roles?: Array<{ id?: number; code?: string; name?: string } | string>;
   permissions?: string[];
 }
 
@@ -39,62 +41,123 @@ export function AdminLayout() {
 
   useEffect(() => {
     async function loadUser() {
-      const token = sessionStorage.getItem("skyer_access_token");
-      if (!token) {
+      const token = getStoredToken("skyer_access_token");
+      const idToken = getStoredToken("skyer_id_token");
+
+      if (!token && !idToken) {
         setLoading(false);
         setAuthorized(false);
         return;
       }
 
-      try {
-        const res = await fetch("/api/v1/users/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+      let data: UserProfile | null = null;
 
-        if (!res.ok) {
-          setLoading(false);
-          setAuthorized(false);
-          return;
+      // 1. Fetch live profile & RBAC authority from backend
+      if (token) {
+        try {
+          const res = await fetch("/api/users/me", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (res.ok) {
+            data = await res.json();
+            setProfile(data);
+          }
+        } catch (err) {
+          console.warn("[AdminLayout] Failed to fetch /api/users/me:", err);
         }
-
-        const data: UserProfile = await res.json();
-        setProfile(data);
-
-        // Check if Admin role (via backend DB roles, permissions, or Logto ID token)
-        let isAdmin = data.roles?.some((r) =>
-          ["ADMIN", "SYSTEM", "ROLE-ADMIN"].includes(r.code.toUpperCase()) ||
-          ["ADMIN", "SYSTEM", "ROLE-ADMIN"].includes(r.name.toUpperCase())
-        ) || data.permissions?.some((p) => p.toUpperCase().includes("ADMIN"))
-        || data.externalUserId === "qtgkbfovj5md"
-        || data.externalUserId === "1my9xeouvb48"
-        || data.externalUserId === "5izm01e7flyj"
-        || data.externalUserId === "2sau26kmqvi9"
-        || data.email === "admin@skyer.hmz.one"
-        || data.email === "hmzonehub@gmail.com"
-        || data.email === "mk.zeromind@gmail.com"
-        || data.email === "sales@nexisinterior.com";
-
-        // Double check from cached user profile or id_token
-        if (!isAdmin) {
-          try {
-            const idToken = sessionStorage.getItem("skyer_id_token");
-            if (idToken) {
-              const payload = JSON.parse(decodeURIComponent(atob(idToken.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")));
-              if (Array.isArray(payload.roles) && payload.roles.some((r: string) => r.toUpperCase().includes("ADMIN"))) {
-                isAdmin = true;
-              }
-            }
-          } catch {}
-        }
-
-        setAuthorized(!!isAdmin);
-      } catch (err) {
-        setAuthorized(false);
-      } finally {
-        setLoading(false);
       }
+
+      // 2. Fallback to cached profile or Logto userinfo if backend call is pending/unavailable
+      if (!data) {
+        try {
+          const fallback = await getCurrentUserProfile();
+          if (fallback) {
+            data = {
+              externalUserId: fallback.sub,
+              sub: fallback.sub,
+              email: fallback.email,
+              displayName: fallback.name,
+              roles: fallback.roles,
+              permissions: fallback.permissions,
+            };
+            setProfile(data);
+          }
+        } catch {}
+      }
+
+      // 3. Fallback to decoding claims directly from id_token or access_token
+      if (!data && idToken) {
+        try {
+          const claims = parseJwt(idToken);
+          if (claims) {
+            data = {
+              externalUserId: claims.sub,
+              sub: claims.sub,
+              email: claims.email,
+              displayName: claims.name || claims.email?.split("@")[0],
+              roles: Array.isArray(claims.roles) ? claims.roles : [],
+            };
+            setProfile(data);
+          }
+        } catch {}
+      }
+
+      // Normalize roles
+      const rawRoles = data?.roles || [];
+      const roleStrings = rawRoles.map((r) => {
+        if (typeof r === "string") return r.toUpperCase();
+        return (r.code || r.name || "").toUpperCase();
+      });
+
+      const sub = data?.externalUserId || data?.sub || "";
+      const email = (data?.email || "").toLowerCase();
+
+      // Check Admin permissions:
+      // - RBAC role from DB/Logto contains 'ADMIN', 'SYSTEM', or 'ROLE-ADMIN'
+      // - Permissions contain 'ADMIN'
+      // - Dedicated platform admin subjects / emails
+      // - Operator Key in localStorage
+      const hasOperatorKey = (() => {
+        try {
+          return !!localStorage.getItem("agent360.a2a.operatorKey");
+        } catch {
+          return false;
+        }
+      })();
+
+      let isAdmin =
+        hasOperatorKey ||
+        roleStrings.some((r) => r.includes("ADMIN") || r.includes("SYSTEM")) ||
+        data?.permissions?.some((p) => p.toUpperCase().includes("ADMIN")) ||
+        [
+          "qtgkbfovj5md",
+          "1my9xeouvb48",
+          "5izm01e7flyj",
+          "2sau26kmqvi9",
+          "skyer-m2m-backend"
+        ].includes(sub) ||
+        [
+          "admin@skyer.hmz.one",
+          "hmzonehub@gmail.com",
+          "mk.zeromind@gmail.com",
+          "sales@nexisinterior.com"
+        ].includes(email);
+
+      // Double-check ID token if still not matched
+      if (!isAdmin && idToken) {
+        try {
+          const idClaims = parseJwt(idToken);
+          if (Array.isArray(idClaims?.roles) && idClaims.roles.some((r: string) => r.toUpperCase().includes("ADMIN"))) {
+            isAdmin = true;
+          }
+        } catch {}
+      }
+
+      setAuthorized(!!isAdmin);
+      setLoading(false);
     }
 
     loadUser();
