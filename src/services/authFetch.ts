@@ -74,6 +74,10 @@ export function installAuthFetch(): void {
 
     const fresh = await getRefreshed(original);
     if (fresh) return withToken(fresh);
+    // A single protected read failing must not throw an operator (unlocked key, no SSO) out of the app:
+    // only send the user to sign-in when they have neither a session nor an operator key.
+    const hasOperatorKey = (() => { try { return !!localStorage.getItem("agent360.a2a.operatorKey"); } catch { return false; } })();
+    if (hasOperatorKey || sessionStorage.getItem(ACCESS)) return res;
     if (!(window as any).__agent360SignInRedirect) {
       (window as any).__agent360SignInRedirect = true;
       void initiateSkyerSignIn(authConfig);

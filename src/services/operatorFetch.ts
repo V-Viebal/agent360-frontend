@@ -20,7 +20,8 @@ const PROTECTED = new RegExp(
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // Reads the backend protects (Admin agent list, chat/workspace history): an unlocked operator key satisfies them
 // when there is no Logto session, so the operator console keeps working without SSO.
-const PROTECTED_READ = /^\/api(?:\/v\d+)?\/agents(?:$|\/[^/]+\/(?:chats|workspace))/;
+// Must mirror backend SensitiveReadGuardMiddleware + the Admin agent list (chats, workspace, memory, browser, sessions).
+const PROTECTED_READ = /^\/api(?:\/v\d+)?\/(?:agents(?:$|\/(?:chats|workspace|sessions)\/|\/[^/]+\/(?:chats|workspace|memory|browser))|chats\/)/;
 
 export function installOperatorFetch(): void {
   if (typeof window === "undefined" || (window.fetch as any).__agent360Operator) return;
