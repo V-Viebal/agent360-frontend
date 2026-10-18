@@ -847,25 +847,34 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
 /** Low-cost live preview: the agent's own tab screenshot, refreshed only while visible. */
 function AgentBrowserPreview({ agentId, enabled }: { agentId: string; enabled: boolean }) {
   const [nonce, setNonce] = useState(() => Date.now());
-  const [failed, setFailed] = useState(false);
+  const [failures, setFailures] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (!enabled) return;
+    setFailures(0);
+    setLoaded(false);
+    // 5 s while healthy; back off to 20 s after errors so a stalled tab is not hammered.
     const i = setInterval(() => { if (!document.hidden) setNonce(Date.now()); }, 5000);
     return () => clearInterval(i);
   }, [enabled, agentId]);
   if (!enabled) return null;
-  return failed ? (
-    <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-neutral-500">
-      Preview unavailable — open full screen
-    </div>
-  ) : (
-    <img
-      src={agentBrowserImageUrl(agentId, nonce)}
-      alt="Agent browser preview"
-      className="absolute inset-0 w-full h-full object-contain"
-      onError={() => setFailed(true)}
-      onLoad={() => failed && setFailed(false)}
-    />
+  return (
+    <>
+      <img
+        key={agentId}
+        src={agentBrowserImageUrl(agentId, failures > 2 ? Math.floor(nonce / 20000) * 20000 : nonce)}
+        alt="Agent browser preview"
+        className="absolute inset-0 w-full h-full object-contain"
+        style={{ visibility: loaded ? "visible" : "hidden" }}
+        onError={() => setFailures((f) => f + 1)}
+        onLoad={() => { setLoaded(true); setFailures(0); }}
+      />
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-neutral-500">
+          {failures > 0 ? "Waiting for the agent's browser…" : "Loading preview…"}
+        </div>
+      )}
+    </>
   );
 }
 
