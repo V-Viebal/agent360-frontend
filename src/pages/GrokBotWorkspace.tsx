@@ -4918,7 +4918,7 @@ export function GrokBotWorkspace() {
             <div
               role="status"
               data-testid="pending-task-banner"
-              className="mb-2 flex flex-col sm:flex-row sm:items-center gap-2 rounded-2xl border border-white/10 bg-[#121218] px-4 py-3 text-xs text-neutral-300"
+              className="mb-2 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-white/10 bg-[#121218] px-4 py-3 text-xs text-neutral-300"
             >
               <span className="flex-1 min-w-0">
                 <span className="text-neutral-500">Task from Skyer home:</span>{" "}
@@ -6575,7 +6575,7 @@ export function GrokBotWorkspace() {
                   });
 
                   return (
-                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-64 rounded-2xl bg-[#14141c] border border-[#2a2a38] p-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-64 rounded-xl bg-[#14141c] border border-[#2a2a38] p-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-1.5 pb-1.5 text-[10px] font-mono text-neutral-400 border-b border-[#22222e] flex items-center justify-between">
                       <span className="font-semibold text-white">Mô hình trí tuệ</span>
                       <span className="text-[9px] text-[#ff7a00] font-mono">{uniqueModelsList.length} models</span>
@@ -7215,7 +7215,7 @@ export function GrokBotWorkspace() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center justify-center p-2 rounded-2xl bg-[#121218] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-150"
+            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center justify-center p-2 rounded-xl bg-[#121218] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-150"
           >
             <div className="w-full flex items-center justify-between px-3.5 py-2.5 border-b border-white/10 text-xs font-mono text-neutral-300">
               <span className="truncate font-medium max-w-md">{lightboxImageUrl.name}</span>
@@ -7456,7 +7456,7 @@ export function GrokBotWorkspace() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-[#14141c] border border-[#262634] rounded-2xl p-4 shadow-2xl text-neutral-200 font-sans space-y-3"
+            className="w-full max-w-md bg-[#14141c] border border-[#262634] rounded-xl p-4 shadow-2xl text-neutral-200 font-sans space-y-3"
           >
             <div className="flex items-center justify-between border-b border-[#22222e] pb-2">
               <span className="text-sm font-semibold text-white">Forward Response to Another Agent</span>
@@ -7498,7 +7498,7 @@ export function GrokBotWorkspace() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-2xl bg-[#121218] border border-[#242432] p-5 shadow-2xl text-neutral-200 font-sans"
+            className="w-full max-w-sm rounded-xl bg-[#121218] border border-[#242432] p-5 shadow-2xl text-neutral-200 font-sans"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
@@ -7607,7 +7607,7 @@ export function GrokBotWorkspace() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
           >
             {/* Header / Session Title */}
             <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
@@ -7694,7 +7694,7 @@ export function GrokBotWorkspace() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
