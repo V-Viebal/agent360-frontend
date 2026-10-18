@@ -1,4 +1,6 @@
 import { getCurrentUserProfile, UserProfile } from "../services/userService";
+import { initiateSkyerSignOut } from "../services/pkceAuth";
+import { authConfig } from "../config/authConfig";
 
 // Haptic feedback helper for mobile touch gestures
 
@@ -24,6 +26,7 @@ import {
   Trash2,
   Globe,
   MoreVertical,
+  LogOut,
   Pin,
   PinOff,
   Download,
@@ -1313,6 +1316,7 @@ export function GrokBotWorkspace() {
   const [isChangingModel, setIsChangingModel] = useState<boolean>(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
@@ -4029,6 +4033,17 @@ export function GrokBotWorkspace() {
                     }}
                   />
                 </DropdownMenuSection>
+                <DropdownMenuSection label="Tài khoản & Phiên">
+                  <DropdownMenuItem
+                    icon={<LogOut size={13} className="text-rose-400" />}
+                    label="Đăng xuất (Sign Out)"
+                    variant="danger"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsSignOutConfirmOpen(true);
+                    }}
+                  />
+                </DropdownMenuSection>
               </DropdownMenu>
             </div>
           </>
@@ -4418,6 +4433,17 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       window.open("https://community-agent360.antares.vn", "_blank");
+                    }}
+                  />
+                </DropdownMenuSection>
+                <DropdownMenuSection label="Tài khoản & Phiên">
+                  <DropdownMenuItem
+                    icon={<LogOut size={13} className="text-rose-400" />}
+                    label="Đăng xuất (Sign Out)"
+                    variant="danger"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsSignOutConfirmOpen(true);
                     }}
                   />
                 </DropdownMenuSection>
@@ -8077,6 +8103,26 @@ export function GrokBotWorkspace() {
           </div>
         </div>
       )}
+
+      {/* Sign Out Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={isSignOutConfirmOpen}
+        onClose={() => setIsSignOutConfirmOpen(false)}
+        onConfirm={() => {
+          setIsSignOutConfirmOpen(false);
+          initiateSkyerSignOut(authConfig);
+        }}
+        title="Xác nhận đăng xuất"
+        description={
+          <div className="space-y-1.5">
+            <p>Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc <strong>{currentUser?.name || "Skyer Workspace"}</strong> không?</p>
+            <p className="text-[11px] text-neutral-400 font-mono">Toàn bộ token truy cập cục bộ sẽ được thu hồi và phiên Logto SSO sẽ kết thúc an toàn.</p>
+          </div>
+        }
+        confirmLabel="Đăng xuất ngay"
+        cancelLabel="Ở lại"
+        variant="danger"
+      />
 
       {/* Delete Chat Confirmation Modal (Standard ConfirmDialog Shared Primitive) */}
       <ConfirmDialog
