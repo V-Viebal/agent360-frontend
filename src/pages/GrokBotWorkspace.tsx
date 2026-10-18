@@ -2213,6 +2213,7 @@ export function GrokBotWorkspace() {
   }, [isExportMenuOpen]);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [plusMenuSearch, setPlusMenuSearch] = useState("");
+  const [plusMenuSelectedIndex, setPlusMenuSelectedIndex] = useState<number>(-1);
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const appsScrollRef = useRef<HTMLDivElement>(null);
   const subAgentsScrollRef = useRef<HTMLDivElement>(null);
@@ -4786,7 +4787,51 @@ export function GrokBotWorkspace() {
                       type="text"
                       autoFocus
                       value={plusMenuSearch}
-                      onChange={(e) => setPlusMenuSearch(e.target.value)}
+                      onChange={(e) => {
+                        setPlusMenuSearch(e.target.value);
+                        setPlusMenuSelectedIndex(-1);
+                      }}
+                      onKeyDown={(e) => {
+                        // Gather navigable items across loop modes, apps, and subagents
+                        const q = plusMenuSearch.trim().toLowerCase();
+                        let agentApps = currentAgentMcpClients.length > 0
+                          ? currentAgentMcpClients.map((c) => {
+                              const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
+                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || c.name.toLowerCase().includes(a.id.toLowerCase()));
+                              return { type: "app" as const, id: matched?.id || rawKey, name: matched?.name || c.name || c.key };
+                            })
+                          : APPS_CATALOG.map((a) => ({ type: "app" as const, id: a.id, name: a.name }));
+                        if (q) agentApps = agentApps.filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q));
+
+                        const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
+                        const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
+                        let displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+                        if (q) displayAgents = displayAgents.filter((ag) => ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q) || ag.id.toLowerCase().includes(q));
+                        const agentItems = displayAgents.map((ag) => ({ type: "subagent" as const, id: ag.id, name: ag.name }));
+
+                        const allNavItems = [...agentApps, ...agentItems];
+                        if (allNavItems.length === 0) return;
+
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setPlusMenuSelectedIndex((prev) => (prev + 1 >= allNavItems.length ? 0 : prev + 1));
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setPlusMenuSelectedIndex((prev) => (prev <= 0 ? allNavItems.length - 1 : prev - 1));
+                        } else if (e.key === "Enter") {
+                          if (plusMenuSelectedIndex >= 0 && plusMenuSelectedIndex < allNavItems.length) {
+                            e.preventDefault();
+                            const selected = allNavItems[plusMenuSelectedIndex];
+                            setIsPlusMenuOpen(false);
+                            if (selected.type === "app") {
+                              setInputText((prev) => (prev ? `${prev} /${selected.id} ` : `/${selected.id} `));
+                            } else {
+                              setInputText((prev) => (prev ? `${prev} @${selected.name} ` : `@${selected.name} `));
+                            }
+                            textareaRef.current?.focus();
+                          }
+                        }
+                      }}
                       placeholder="Search files, apps, agents..."
                       className="w-full bg-transparent border-0 text-[11px] text-slate-900 dark:text-white placeholder:text-neutral-500 focus:outline-none"
                     />
@@ -4969,7 +5014,9 @@ export function GrokBotWorkspace() {
                           );
                         }
 
-                        return agentApps.map((app) => (
+                        return agentApps.map((app, appIdx) => {
+                          const isHighlighted = plusMenuSelectedIndex === appIdx;
+                          return (
                           <button
                             key={app.id}
                             type="button"
@@ -4978,7 +5025,11 @@ export function GrokBotWorkspace() {
                               setInputText((prev) => (prev ? `${prev} /${app.id} ` : `/${app.id} `));
                               textareaRef.current?.focus();
                             }}
-                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] transition-colors cursor-pointer group"
+                            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
+                              isHighlighted
+                                ? "bg-[#ff7a00]/15 dark:bg-[#ff7a00]/20 border-[#ff7a00] text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
+                            }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
                               <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800/90 border border-slate-200/90 dark:border-white/10 flex items-center justify-center p-1 shrink-0 shadow-2xs transition-colors">
@@ -4997,7 +5048,8 @@ export function GrokBotWorkspace() {
                               +Tool
                             </span>
                           </button>
-                        ));
+                        );
+                      });
                       })()}
                     </div>
                   </div>
@@ -5050,7 +5102,19 @@ export function GrokBotWorkspace() {
                           );
                         }
 
-                        return displayList.map((ag) => (
+                        // Calculate offset for subagents keyboard index
+                        const appsCount = (() => {
+                          const qApp = plusMenuSearch.trim().toLowerCase();
+                          let arr = currentAgentMcpClients.length > 0
+                            ? currentAgentMcpClients.map((c) => c.key.toLowerCase().replace(/^composio_/, ""))
+                            : APPS_CATALOG.map((a) => a.id);
+                          if (qApp) arr = arr.filter((id) => id.includes(qApp));
+                          return arr.length;
+                        })();
+
+                        return displayList.map((ag, subIdx) => {
+                          const isHighlighted = plusMenuSelectedIndex === (appsCount + subIdx);
+                          return (
                           <button
                             key={ag.id}
                             type="button"
@@ -5059,7 +5123,11 @@ export function GrokBotWorkspace() {
                               setInputText((prev) => (prev ? `${prev} @${ag.name} ` : `@${ag.name} `));
                               textareaRef.current?.focus();
                             }}
-                            className="w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] transition-colors cursor-pointer group"
+                            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
+                              isHighlighted
+                                ? "bg-cyan-500/15 dark:bg-cyan-500/20 border-cyan-500 text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
+                            }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
                               <div className="h-5 w-5 rounded-full bg-amber-500/15 dark:bg-[#ff7a00]/20 border border-amber-500/40 dark:border-[#ff7a00]/30 flex items-center justify-center text-[10px] font-mono font-bold text-[#ff7a00] shrink-0 shadow-2xs">
@@ -5071,7 +5139,8 @@ export function GrokBotWorkspace() {
                               @Mention
                             </span>
                           </button>
-                        ));
+                        );
+                      });
                       })()}
                     </div>
                   </div>
@@ -5100,7 +5169,10 @@ export function GrokBotWorkspace() {
                 onClick={() => {
                   setIsPlusMenuOpen((prev) => {
                     const next = !prev;
-                    if (next) setPlusMenuSearch("");
+                    if (next) {
+                      setPlusMenuSearch("");
+                      setPlusMenuSelectedIndex(-1);
+                    }
                     return next;
                   });
                 }}
