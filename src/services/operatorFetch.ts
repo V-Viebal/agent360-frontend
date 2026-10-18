@@ -18,6 +18,9 @@ const PROTECTED = new RegExp(
     ")"
 );
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+// Reads the backend protects (Admin agent list, chat/workspace history): an unlocked operator key satisfies them
+// when there is no Logto session, so the operator console keeps working without SSO.
+const PROTECTED_READ = /^\/api(?:\/v\d+)?\/agents(?:$|\/[^/]+\/(?:chats|workspace))/;
 
 export function installOperatorFetch(): void {
   if (typeof window === "undefined" || (window.fetch as any).__agent360Operator) return;
@@ -34,7 +37,8 @@ export function installOperatorFetch(): void {
       if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
       }
-      if (key && WRITE.has(method) && PROTECTED.test(url.pathname) && !headers.has("X-Agent360-Operator-Token")) {
+      if (key && !headers.has("X-Agent360-Operator-Token") &&
+          ((WRITE.has(method) && PROTECTED.test(url.pathname)) || (!token && !WRITE.has(method) && PROTECTED_READ.test(url.pathname)))) {
         headers.set("X-Agent360-Operator-Token", key);
       }
       return original(input, { ...init, headers });
