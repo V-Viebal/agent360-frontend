@@ -5324,8 +5324,8 @@ export function GrokBotWorkspace() {
                       const roleDesc = targetAgent?.roleTag || targetAgent?.title || "Team Autonomous Agent";
 
                       return (
-                        <div key={mention} className="relative group/chiptip inline-flex items-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-mono shadow-2xs">
+                        <div key={mention} className="relative group/chiptip inline-flex items-center animate-in zoom-in-75 fade-in duration-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-mono shadow-2xs hover:border-cyan-400/60 transition-all">
                             <span className="font-semibold">{mention}</span>
                             <button
                               type="button"
@@ -5355,8 +5355,8 @@ export function GrokBotWorkspace() {
                       const toolDesc = matchedApp?.description || "MCP tool capability integration";
 
                       return (
-                        <div key={tool} className="relative group/chiptip inline-flex items-center">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-mono shadow-2xs">
+                        <div key={tool} className="relative group/chiptip inline-flex items-center animate-in zoom-in-75 fade-in duration-200">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-mono shadow-2xs hover:border-amber-400/60 transition-all">
                             <span className="font-semibold">{tool}</span>
                             <button
                               type="button"

@@ -31,7 +31,22 @@ export function installOperatorFetch(): void {
   const original = window.fetch.bind(window);
   const wrapped = (input: RequestInfo | URL, init?: RequestInit) => {
     const method = (init?.method || (input instanceof Request ? input.method : "GET")).toUpperCase();
+    const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    const url = new URL(raw, window.location.origin);
     const key = operatorKey.get();
+    const token = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_access_token") : null;
+
+    if (url.origin === window.location.origin && url.pathname.startsWith("/api/")) {
+      const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      if (key && WRITE.has(method) && PROTECTED.test(url.pathname) && !headers.has("X-Agent360-Operator-Token")) {
+        headers.set("X-Agent360-Operator-Token", key);
+      }
+      return original(input, { ...init, headers });
+    }
+
     if (!key || !WRITE.has(method)) return original(input, init);
     const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(raw, window.location.origin);
