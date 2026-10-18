@@ -3864,6 +3864,11 @@ export function GrokBotWorkspace() {
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0">
                           <AgentAvatar agent={ag} size="md" />
+                          {pinnedAgentIds.includes(ag.id) && (
+                            <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30" title="Đã ghim agent">
+                              <Pin size={8} className="fill-amber-400" />
+                            </span>
+                          )}
 
                           {/* Lean State: ĐỎ khi sự cố, XANH khi xong việc chưa đọc, CAM khi selected */}
                           {/* Unread notification badge at top-right */}
