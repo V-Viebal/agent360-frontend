@@ -17,6 +17,7 @@ interface CustomSelectProps {
   triggerClassName?: string;
   iconOnly?: boolean;
   dropdownAlign?: "left" | "right";
+  showTooltip?: boolean;
 }
 
 export function CustomSelect({
@@ -28,6 +29,7 @@ export function CustomSelect({
   triggerClassName = "",
   iconOnly = false,
   dropdownAlign = "right",
+  showTooltip = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,7 +67,9 @@ export function CustomSelect({
           {iconOnly ? (
             <ChevronDown
               size={12}
-              className={`transition-transform duration-200 ${isOpen ? "rotate-180 text-[#ff7a00]" : "text-neutral-400"}`}
+              className={`transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                isOpen ? "rotate-180 text-[#ff7a00]" : "text-neutral-400 hover:text-white"
+              }`}
             />
           ) : (
             <>
@@ -76,30 +80,34 @@ export function CustomSelect({
               </span>
               <ChevronDown
                 size={13}
-                className={`text-neutral-400 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                className={`transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 ${
+                  isOpen ? "rotate-180 text-[#ff7a00]" : "text-neutral-400 group-hover/select-trigger:text-neutral-200"
+                }`}
               />
             </>
           )}
         </button>
 
-        {/* Floating Custom Tooltip on Hover with Top Z-Index */}
-        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[100] hidden group-hover/select-trigger:block whitespace-nowrap rounded-lg bg-white dark:bg-[#0e1017] border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] font-sans text-slate-900 dark:text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
-          <div className="flex items-center gap-1.5">
-            <span className="font-medium text-[#ff7a00]">{selectedOption ? selectedOption.label : placeholder}</span>
-            {selectedOption?.badge && (
-              <span className="text-[9px] font-mono text-neutral-400 bg-white/10 px-1 py-0.2 rounded">
-                {selectedOption.badge}
-              </span>
-            )}
-          </div>
-          {selectedOption?.description && (
-            <div className="text-[10px] text-neutral-400 font-normal">
-              {selectedOption.description}
+        {/* Floating Custom Tooltip on Hover (Optional, off by default to keep UI lean) */}
+        {showTooltip && (
+          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[100] hidden group-hover/select-trigger:block whitespace-nowrap rounded-lg bg-white dark:bg-[#0e1017] border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] font-sans text-slate-900 dark:text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+            <div className="flex items-center gap-1.5">
+              <span className="font-medium text-[#ff7a00]">{selectedOption ? selectedOption.label : placeholder}</span>
+              {selectedOption?.badge && (
+                <span className="text-[9px] font-mono text-neutral-400 bg-white/10 px-1 py-0.2 rounded">
+                  {selectedOption.badge}
+                </span>
+              )}
             </div>
-          )}
-          {/* Arrow */}
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-x-4 border-x-transparent border-b-4 border-b-[#0e1017]" />
-        </div>
+            {selectedOption?.description && (
+              <div className="text-[10px] text-neutral-400 font-normal">
+                {selectedOption.description}
+              </div>
+            )}
+            {/* Arrow */}
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-x-4 border-x-transparent border-b-4 border-b-[#0e1017]" />
+          </div>
+        )}
       </div>
 
       {/* Dropdown Menu Always On Top */}

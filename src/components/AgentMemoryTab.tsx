@@ -113,7 +113,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
   return (
     <div className="space-y-3 text-xs font-sans pb-4">
       {/* Header Info Banner */}
-      <div className="p-3 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] space-y-1.5">
+      <div className="p-3 rounded-xl bg-[#14141c] border border-slate-200 dark:border-[#22222e] space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-white flex items-center gap-1.5">
             <Brain size={13} className="text-[#ff7a00]" />
@@ -130,7 +130,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
 
       {/* Filter and Add Button */}
       <div className="flex items-center justify-between gap-2 select-none">
-        <div className="flex items-center gap-1 bg-white dark:bg-[#121218] p-1 rounded-lg border border-[#20202c] text-[10px] font-mono">
+        <div className="flex items-center gap-1 bg-[#121218] p-1 rounded-lg border border-[#20202c] text-[10px] font-mono">
           {(["all", "rule", "preference", "project", "fact"] as const).map((cat) => (
             <button
               key={cat}
@@ -163,7 +163,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value as any)}
-              className="bg-white dark:bg-[#121218] border border-[#2a2a3a] rounded px-2 py-0.5 text-[10px] text-white focus:outline-none"
+              className="bg-[#121218] border border-[#2a2a3a] rounded px-2 py-0.5 text-[10px] text-white focus:outline-none"
             >
               <option value="fact">{t("memory.fact")}</option>
               <option value="rule">{t("memory.ruleMandate")}</option>
@@ -204,7 +204,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
         {filtered.map((item) => (
           <div
             key={item.id}
-            className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-[#20202c] hover:border-[#2a2a3c] transition-colors space-y-1.5 group"
+            className="p-2.5 rounded-xl bg-[#121218] border border-[#20202c] hover:border-[#2a2a3c] transition-colors space-y-1.5 group"
           >
             <div className="flex items-center justify-between">
               {getCategoryBadge(item.category)}

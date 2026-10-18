@@ -3288,16 +3288,23 @@ export function GrokBotWorkspace() {
           /* COLLAPSED VIEW: Minimal Rail Showing Only Avatar & State */
           /* ========================================================= */
           <>
-            {/* Collapsed Header: Clean Centered Skyer Logo */}
+            {/* Collapsed Header: Logo with Hover Expand Icon transition */}
             <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-center shrink-0 bg-[var(--bg-sidebar)]">
               <button
                 type="button"
                 onClick={() => handleToggleLeftSidebar(false)}
-                className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-[#1f1f2c] transition-transform hover:scale-105 cursor-pointer"
+                className="relative h-9 w-9 rounded-xl flex items-center justify-center hover:bg-[#1f1f2c] text-neutral-400 hover:text-white transition-all cursor-pointer group"
                 title="Bấm để mở danh sách Agent & Hạ tầng (Ctrl+B)"
                 aria-label="Expand Agents Sidebar"
               >
-                <SkyerLogo size={26} showText={false} showBotBadge={false} />
+                {/* Logo visible by default, hidden on hover */}
+                <div className="transition-all duration-200 group-hover:opacity-0 group-hover:scale-75">
+                  <SkyerLogo size={24} showText={false} showBotBadge={false} />
+                </div>
+                {/* PanelLeftOpen icon revealed on hover */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 text-[#ff7a00]">
+                  <PanelLeftOpen size={18} />
+                </div>
               </button>
             </div>
 

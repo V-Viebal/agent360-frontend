@@ -277,7 +277,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
       </div>
 
       {/* Topology */}
-      <div className="p-2.5 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-slate-200 dark:border-[#22222e] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
+      <div className="p-2.5 rounded-xl bg-[#14141c] border border-slate-200 dark:border-slate-200 dark:border-[#22222e] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
         <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-semibold mb-1">
           <Network size={12} className="text-[#ff7a00]" /> {parent}
         </div>
@@ -301,7 +301,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           {bindings.map((b) => {
             const h = health[b.child_agent_id];
             return (
-              <div key={b.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
+              <div key={b.id} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`h-2 w-2 rounded-full ${h?.callable ? "bg-emerald-400" : "bg-rose-400"}`} title={h?.callable ? "online" : "offline/disabled"} />
@@ -403,7 +403,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
 
           {tasks.length === 0 && <div className="py-6 text-center text-neutral-500 font-mono">{t("subagents.noDelegations")}</div>}
           {tasks.map((task) => (
-            <div key={task.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
+            <div key={task.id} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
               <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={() => setExpanded(expanded === task.id ? null : task.id)}>
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className="font-mono text-slate-500 dark:text-neutral-400">{task.parent_agent_id}→</span>

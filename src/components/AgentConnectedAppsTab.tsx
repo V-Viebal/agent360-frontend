@@ -264,7 +264,7 @@ export function AgentConnectedAppsTab({
               <div
                 key={client.key}
                 onClick={(e) => meta.isComposio && handleInspectSchema(client, e)}
-                className={`group p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
+                className={`group p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] hover:border-[#2f2f42] hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
                 title={meta.isComposio ? "Click to inspect tool functions" : ""}
               >
                 {/* Logo + Names */}

@@ -94,7 +94,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
       )}
 
       {/* Topology */}
-      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-100 dark:bg-[#101016] border border-[#20202c] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
+      <div className="p-2.5 rounded-xl bg-[#101016] border border-[#20202c] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
         <div className="flex items-center gap-1 text-slate-900 dark:text-white"><GitBranch size={11} />{parentRef}</div>
         {bindings.length === 0 && <div className="pl-3 text-neutral-500">└── (no external sub-agents)</div>}
         {bindings.map((b, i) => (
@@ -113,7 +113,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
       {view === "external" && agents.map((a) => {
         const b = bound(a.agent_ref);
         return (
-          <div key={a.agent_ref} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
+          <div key={a.agent_ref} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-slate-900 dark:text-white font-semibold truncate">{a.display_name}</div>
@@ -140,7 +140,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
 
       {view === "delegations" && (
         <div className="space-y-2">
-          <div className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1.5">
+          <div className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
             <select aria-label="External sub-agent to delegate to" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
               {bindings.map((b) => <option key={b.id} value={b.child_agent_ref}>{b.child_agent_ref}</option>)}
             </select>
@@ -151,7 +151,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
             </button>
           </div>
           {tasks.map((t) => (
-            <div key={t.id} className="p-2.5 rounded-xl border border-[#20202c] bg-white dark:bg-[#14141c] space-y-1">
+            <div key={t.id} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1">
               <button aria-expanded={open === t.id} aria-label={`Delegation ${t.correlation_id} ${t.status}`} onClick={() => setOpen(open === t.id ? null : t.id)} className="w-full min-h-[44px] text-left">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-[10px] text-slate-700 dark:text-neutral-300 truncate">{t.correlation_id}</span>
