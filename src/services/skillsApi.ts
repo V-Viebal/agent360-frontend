@@ -10,7 +10,7 @@ export interface SkillItem {
 
 export async function fetchLiveSkills(): Promise<SkillItem[]> {
   try {
-    const res = await fetch("/api/v1/agents/skills", {
+    const res = await fetch("/api/agents/skills", {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {

@@ -606,32 +606,8 @@ export function ConnectAppsModal({
           throw new Error(connData.error || "Integration connection failed");
         }
 
-        // Hot-patch into Skyer agent MCP registry
-        const mcpPatchRes = await fetch("/api/mcp", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Agent-Id": targetAgentId,
-          },
-          body: JSON.stringify({
-            client_key: `composio_${app.id}`,
-            client: {
-              name: app.id,
-              description: `Composio ${app.name} MCP integration for ${targetAgentName}`,
-              transport: "sse",
-              url: "https://connect.composio.dev/mcp",
-              headers: {
-                Authorization: "Bearer ck_hRHd3TK_vE4wwTBlUaX3",
-              },
-              enabled: true,
-            },
-          }),
-        });
-
-        if (!mcpPatchRes.ok) {
-          console.warn("[HotPatch] /api/mcp POST returned status:", mcpPatchRes.status);
-        }
-
+        // The backend /integrations/composio/connect call above already registers the MCP client on the agent
+        // with the agent-scoped Composio key resolved server-side; no client-side key or second hot-patch.
         onAppConnected?.(app.id);
 
         if (connData.redirect_url) {

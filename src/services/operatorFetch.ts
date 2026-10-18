@@ -5,7 +5,25 @@ import { operatorKey } from "./a2aApi";
  * backend protects when Agent360:Security:ProtectRuntimeProxyWrites is on. Uses a dedicated header so
  * existing Authorization headers are never overwritten. Reads and other origins are untouched.
  */
-const PROTECTED = /^\/api\/agents\/[^/]+\/(agent-status|config\/|cron\/|mcp|tools|skills|workspace\/|memory)/;
+// Mirrors the backend OperatorWriteGuardMiddleware + runtime proxy guard. Chat send/stop, uploads and the
+// turn-telemetry beacon stay open server-side, so they are not listed here.
+const PROTECTED = new RegExp(
+  "^/api(?:/v\\d+)?/(?:" +
+    [
+      "agents/[^/]+/(?:agent-status|config/|cron/|mcp|tools|skills|workspace/|memory|compact-context|active-model|media/send)",
+      "agents/(?:approvals/|compact-context|iam/)",
+      "approvals/",
+      "libraries/skills/",
+      "mcps/",
+      "tools/",
+      "schedules/",
+      "media/",
+      "chats/[^/]+/share",
+      "integrations/",
+      "mcp(?:/|$)",
+    ].join("|") +
+    ")"
+);
 const WRITE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export function installOperatorFetch(): void {
