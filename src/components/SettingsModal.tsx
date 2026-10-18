@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
+import { ToggleSwitch } from "./ui/ToggleSwitch";
 import {
   X,
   Settings,
@@ -1136,19 +1137,14 @@ export function SettingsModal({
                       </div>
                     </div>
 
-                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 flex flex-col justify-between">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-neutral-400">Ultra-Low Latency:</span>
-                        <input
-                          type="checkbox"
-                          checked={voiceProfile.lowLatencyMode}
-                          onChange={(e) => handleProfileChange({ lowLatencyMode: e.target.checked })}
-                          className="accent-cyan-400 h-3.5 w-3.5 cursor-pointer"
-                        />
-                      </div>
-                      <span className="text-[9px] text-neutral-500">
-                        {voiceProfile.lowLatencyMode ? "Zero buffer delay (<80ms)" : "Standard buffer smoothing"}
-                      </span>
+                    <div className="bg-[#12121a] border border-[#222230] rounded-xl p-2.5">
+                      <ToggleSwitch
+                        size="sm"
+                        checked={voiceProfile.lowLatencyMode}
+                        onChange={(checked) => handleProfileChange({ lowLatencyMode: checked })}
+                        label="Ultra-Low Latency"
+                        description={voiceProfile.lowLatencyMode ? "Zero buffer delay (<80ms)" : "Standard buffer smoothing"}
+                      />
                     </div>
                   </div>
 

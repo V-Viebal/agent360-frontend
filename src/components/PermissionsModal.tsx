@@ -1,6 +1,8 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
+import { Modal } from "./ui/Modal";
+import { ToggleSwitch } from "./ui/ToggleSwitch";
 import {
   ShieldCheck,
   Mic,
@@ -306,47 +308,26 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
   };
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
-      >
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
-              <ShieldCheck size={18} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">{t("permissions.title")}</h3>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
-                Manage hardware permissions for voice input, audio playback, and alerts
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={loadPermissions}
-              disabled={isLoading}
-              title="Refresh status"
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <RefreshCw size={14} className={isLoading ? "animate-spin text-[#ff7a00]" : ""} />
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <X size={15} />
-            </button>
-          </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-2">
+          <span>{t("permissions.title")}</span>
+          <button
+            type="button"
+            onClick={loadPermissions}
+            disabled={isLoading}
+            title="Refresh status"
+            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <RefreshCw size={13} className={isLoading ? "animate-spin text-[#ff7a00]" : ""} />
+          </button>
         </div>
-
+      }
+      icon={<ShieldCheck size={18} className="text-[#ff7a00]" />}
+      maxWidth="lg"
+    >
         {/* Content list */}
         <div className="p-4 space-y-2.5 max-h-[65vh] overflow-y-auto">
           {permissions.map((perm) => {
@@ -614,16 +595,15 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
 
         {/* Footer info */}
         <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-          <span>Skyer Hardware Security Sandbox</span>
+          <span>Skyer Hardware Security Sandbox ({permissions.filter((p) => p.state === "granted").length}/{permissions.length} granted)</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all cursor-pointer shadow-sm"
           >
             Done
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
