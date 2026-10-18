@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { Sparkles, Terminal, Shield, Code, Cpu, BookOpen, X, Search, ArrowRight } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Modal } from "./ui/Modal";
+import { SearchInput } from "./ui/SearchInput";
 
 export interface PromptRecipe {
   id: string;
@@ -57,8 +59,6 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
   const [search, setSearch] = useState("");
   const [selectedCat, setSelectedCat] = useState<string>("All");
 
-  if (!isOpen) return null;
-
   const categories = ["All", "Code", "Infra", "Security", "Architecture"];
 
   const filtered = PROMPT_RECIPES.filter((r) => {
@@ -71,106 +71,77 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
   });
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Prompt Recipes & Task Templates"
+      icon={<Sparkles size={16} className="text-[#ff7a00]" />}
+      maxWidth="xl"
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
-      >
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
-              <Sparkles size={16} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Prompt Recipes & Task Templates</h3>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
-                Pre-engineered prompts for engineering, infrastructure RCA, and audits
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X size={15} />
-          </button>
-        </div>
+      {/* Search & Category Tabs */}
+      <div className="p-3 border-b border-slate-200 dark:border-[#1c1c24] bg-slate-50 dark:bg-[#14141a] space-y-2">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search templates (e.g. review, RCA, security)..."
+          className="w-full"
+        />
 
-        {/* Search & Category Tabs */}
-        <div className="p-3 border-b border-[#1c1c24] bg-[#14141a] space-y-2">
-          <div className="flex items-center gap-2 bg-[#1c1c26] border border-[#2a2a3c] rounded-xl px-3 py-1.5 text-xs text-white">
-            <Search size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />
-            <input
-              type="text"
-              autoFocus
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search templates (e.g. review, RCA, security)..."
-              className="w-full bg-transparent border-0 focus:outline-none placeholder-neutral-500 font-sans"
-            />
-          </div>
-
-          <div className="flex items-center gap-1 text-[10px] font-mono select-none">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCat(cat)}
-                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                  selectedCat === cat
-                    ? "bg-[#ff7a00] border-[#ff7a00] text-black font-semibold shadow-xs"
-                    : "bg-slate-50 dark:bg-[#181822] border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-white"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Recipes List */}
-        <div className="p-3 max-h-[55vh] overflow-y-auto space-y-2 bg-[#0e0e14]">
-          {filtered.map((recipe) => (
-            <div
-              key={recipe.id}
-              onClick={() => {
-                onSelectRecipe(recipe.prompt);
-                onClose();
-              }}
-              className="p-3.5 rounded-xl bg-white dark:bg-[#14141c] hover:bg-slate-100 dark:bg-[#1c1c28] border border-slate-200 dark:border-[#22222e] hover:border-[#ff7a00]/40 transition-all cursor-pointer group shadow-xs space-y-1.5"
+        <div className="flex items-center gap-1 text-[10px] font-mono select-none">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCat(cat)}
+              className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                selectedCat === cat
+                  ? "bg-[#ff7a00] border-[#ff7a00] text-black font-semibold shadow-xs"
+                  : "bg-white dark:bg-[#181822] border-slate-200 dark:border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-white"
+              }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
-                  {recipe.title}
-                </span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-white/5 text-slate-500 dark:text-neutral-400 border border-white/10 shrink-0">
-                  {recipe.category}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed font-sans">
-                {recipe.description}
-              </p>
-              <div className="flex items-center justify-between pt-1 border-t border-[#1c1c24] text-[10px] font-mono text-neutral-500">
-                <span className="truncate max-w-[85%]">{recipe.prompt.slice(0, 90)}...</span>
-                <span className="text-[#ff7a00] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Use ↵
-                </span>
-              </div>
-            </div>
+              {cat}
+            </button>
           ))}
-
-          {filtered.length === 0 && (
-            <div className="py-12 text-center text-xs font-mono text-neutral-500">
-              No prompt recipes matching query.
-            </div>
-          )}
         </div>
       </div>
-    </div>
+
+      {/* Recipes List */}
+      <div className="p-3 max-h-[55vh] overflow-y-auto space-y-2 bg-slate-50/50 dark:bg-[#0e0e14]">
+        {filtered.map((recipe) => (
+          <div
+            key={recipe.id}
+            onClick={() => {
+              onSelectRecipe(recipe.prompt);
+              onClose();
+            }}
+            className="p-3.5 rounded-xl bg-white dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#22222e] hover:border-[#ff7a00]/40 transition-all cursor-pointer group shadow-xs space-y-1.5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-[#ff7a00] transition-colors">
+                {recipe.title}
+              </span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-white/5 text-slate-500 dark:text-neutral-400 border border-slate-200 dark:border-white/10 shrink-0">
+                {recipe.category}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed font-sans">
+              {recipe.description}
+            </p>
+            <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-[#1c1c24] text-[10px] font-mono text-neutral-500">
+              <span className="truncate max-w-[85%]">{recipe.prompt.slice(0, 90)}...</span>
+              <span className="text-[#ff7a00] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                Use ↵
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {filtered.length === 0 && (
+          <div className="py-12 text-center text-xs font-mono text-neutral-500">
+            No prompt recipes matching query.
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
