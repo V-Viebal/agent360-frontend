@@ -26,21 +26,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # A push to main deploys staging first (live gate), then production; staging failure stops production.
+  # Push to `staging` (or dispatch target=staging) deploys only staging.
+  plan:
     runs-on: [self-hosted, linux, 2nd]
+    outputs:
+      targets: ${{ steps.p.outputs.targets }}
+    steps:
+      - id: p
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.target_environment }}" = "staging" ]; then
+            T='["staging"]'
+          elif [ "${{ github.ref_name }}" = "staging" ]; then
+            T='["staging"]'
+          else
+            T='["staging","production"]'
+          fi
+          echo "targets=$T" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: plan
+    runs-on: [self-hosted, linux, 2nd]
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        target: ${{ fromJSON(needs.plan.outputs.targets) }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Resolve Environment Target
         id: env-target
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TARGET="${{ github.event.inputs.target_environment }}"
-          elif [ "${{ github.ref_name }}" = "staging" ]; then
-            TARGET="staging"
-          else
-            TARGET="production"
-          fi
+          TARGET="${{ matrix.target }}"
 
           if [ "$TARGET" = "staging" ]; then
             echo "dist_root=/opt/agent360-staging/frontend-dist" >> $GITHUB_OUTPUT
