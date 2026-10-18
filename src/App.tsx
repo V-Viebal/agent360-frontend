@@ -21,6 +21,7 @@ import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminBillingsPage } from "./pages/admin/AdminBillingsPage";
 import { AdminOrganizationsPage } from "./pages/admin/AdminOrganizationsPage";
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage";
+import { AdminAuditPage } from "./pages/admin/AdminAuditPage";
 
 export default function App() {
   return (
@@ -117,6 +118,7 @@ export default function App() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="billings" element={<AdminBillingsPage />} />
         <Route path="organizations" element={<AdminOrganizationsPage />} />
+        <Route path="audit" element={<AdminAuditPage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
       </Route>
 

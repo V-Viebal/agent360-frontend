@@ -84,6 +84,7 @@ export function AdminLayout() {
     { label: "User Management", path: "/admin/users", icon: Users },
     { label: "Billings & Usage", path: "/admin/billings", icon: CreditCard },
     { label: "Organizations", path: "/admin/organizations", icon: Building2 },
+    { label: "Security Audit", path: "/admin/audit", icon: ShieldAlert },
     { label: "Platform Settings", path: "/admin/settings", icon: Settings },
   ];
 
