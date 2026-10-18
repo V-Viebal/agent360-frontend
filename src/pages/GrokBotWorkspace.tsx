@@ -799,8 +799,9 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
   // Selkies treats a bare URL as the single "primary" controller: every new phone/desktop tab
   // kicked the previous one and reconfigured the shared display. #collab joins as a co-controller
   // and #shared as a watch-only viewer, so several devices can stay connected at once.
-  const [mode, setMode] = useState<"collab" | "shared">(() =>
-    typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches ? "shared" : "collab");
+  // #collab on every device: a #shared (watch-only) Selkies client stays on "Waiting for stream" until some
+  // controller has initialised the stream, so a phone opening first saw a black screen. Watch-only is a toggle.
+  const [mode, setMode] = useState<"collab" | "shared">("collab");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const hiddenAt = useRef<number>(0);
@@ -851,7 +852,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
         />
       )}
       {profile && (
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-neutral-300 pointer-events-none">
+        <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
           profile: {profile}
         </div>
       )}
@@ -6989,7 +6990,7 @@ export function GrokBotWorkspace() {
                             iframe kept a second stream running per viewer and resized the shared display. */}
                         <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
                         {browserTarget.profile && (
-                          <div data-testid="agent-browser-profile" className="absolute top-1.5 left-1.5 z-[5] px-1.5 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-neutral-200 pointer-events-none">
+                          <div data-testid="agent-browser-profile" className="absolute top-1.5 left-1.5 z-[5] px-1.5 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
                             {browserTarget.profile} · {agentBrowser?.service}
                           </div>
                         )}
