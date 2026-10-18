@@ -85,3 +85,39 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 
   return user;
 }
+
+/**
+ * Update user display name and avatar (locally and via Logto /oidc/me patch if supported)
+ */
+export async function updateUserProfile(updates: { name?: string; picture?: string }): Promise<UserProfile | null> {
+  const current = await getCurrentUserProfile();
+  if (!current) return null;
+
+  const updated: UserProfile = {
+    ...current,
+    name: updates.name !== undefined ? updates.name : current.name,
+    picture: updates.picture !== undefined ? updates.picture : current.picture,
+  };
+
+  try {
+    sessionStorage.setItem('skyer_user_profile', JSON.stringify(updated));
+    localStorage.setItem('skyer_user_profile', JSON.stringify(updated));
+  } catch {}
+
+  // Attempt to sync to Logto custom data / userinfo if available
+  const accessToken = sessionStorage.getItem('skyer_access_token');
+  if (accessToken && authConfig.endpoint) {
+    try {
+      await fetch(new URL('/api/users/me', authConfig.endpoint).toString(), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(updates),
+      }).catch(() => {});
+    } catch {}
+  }
+
+  return updated;
+}

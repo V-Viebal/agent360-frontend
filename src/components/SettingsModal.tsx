@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { User, Mail, Key, LogOut } from "lucide-react";
 import { initiateSkyerSignOut } from "../services/pkceAuth";
-import { getCurrentUserProfile, UserProfile } from "../services/userService";
+import { getCurrentUserProfile, UserProfile, updateUserProfile } from "../services/userService";
+import { Edit3, Check, Save } from "lucide-react";
 import { authConfig } from "../config/authConfig";
 import React, { useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
@@ -87,14 +88,36 @@ export function SettingsModal({
   agentId,
   agentName,
 }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
+  const [editName, setEditName] = useState<string>("");
+  const [editAvatar, setEditAvatar] = useState<string>("");
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     getCurrentUserProfile().then((u) => {
-      if (u) setCurrentUser(u);
+      if (u) {
+        setCurrentUser(u);
+        setEditName(u.name || "");
+        setEditAvatar(u.picture || "");
+      }
     });
   }, [isOpen]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated = await updateUserProfile({
+      name: editName.trim(),
+      picture: editAvatar.trim(),
+    });
+    if (updated) {
+      setCurrentUser(updated);
+      setIsEditingProfile(false);
+      setProfileSaveSuccess(true);
+      setTimeout(() => setProfileSaveSuccess(false), 3000);
+    }
+  };
 
   React.useEffect(() => {
     if (isOpen && initialTab) {
@@ -601,7 +624,75 @@ export function SettingsModal({
                       Subject ID: <code className="text-neutral-400">{currentUser?.sub ? currentUser.sub.slice(0, 16) + "..." : "local-operator"}</code>
                     </p>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditName(currentUser?.name || "");
+                      setEditAvatar(currentUser?.picture || "");
+                      setIsEditingProfile(!isEditingProfile);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a2a38] bg-white dark:bg-[#1c1c26] hover:border-[#ff7a00]/50 text-xs font-semibold text-slate-700 dark:text-neutral-300 hover:text-[#ff7a00] transition-all flex items-center gap-1.5 cursor-pointer shadow-xs self-center sm:self-start"
+                  >
+                    <Edit3 size={13} />
+                    <span>{isEditingProfile ? t("settings.profileEditCancel") : t("settings.profileEditBtn")}</span>
+                  </button>
                 </div>
+
+                {/* Profile Edit Inline Form */}
+                {isEditingProfile && (
+                  <form onSubmit={handleSaveProfile} className="p-4 rounded-2xl bg-[#ff7a00]/5 border border-[#ff7a00]/30 space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                      <Edit3 size={14} className="text-[#ff7a00]" />
+                      <span>{t("settings.profileEditTitle")}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-slate-600 dark:text-neutral-300">{t("settings.profileEditNameLabel")}</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Nguyen Van A"
+                          className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-slate-600 dark:text-neutral-300">{t("settings.profileEditAvatarLabel")}</label>
+                        <input
+                          type="url"
+                          value={editAvatar}
+                          onChange={(e) => setEditAvatar(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingProfile(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white cursor-pointer"
+                      >
+                        {t("settings.profileEditCancel")}
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3.5 py-1.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                      >
+                        <Save size={13} />
+                        <span>{t("settings.profileEditSave")}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {profileSaveSuccess && (
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2 animate-in fade-in duration-150">
+                    <Check size={14} className="text-emerald-400" />
+                    <span>{t("settings.profileEditSuccess")}</span>
+                  </div>
+                )}
 
                 {/* Detailed Metadata Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
