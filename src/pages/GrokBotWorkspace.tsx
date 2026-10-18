@@ -131,7 +131,7 @@ import { requestPermission, queryPermissionStatus } from "../services/permission
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
-import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab } from "../services/agentBrowserApi";
 
 
 
@@ -878,30 +878,56 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
 
 /** Low-cost live preview: the agent's own tab screenshot, refreshed only while visible. */
 function AgentBrowserPreview({ agentId, enabled }: { agentId: string; enabled: boolean }) {
-  const [nonce, setNonce] = useState(() => Date.now());
+  const [src, setSrc] = useState<string>("");
   const [failures, setFailures] = useState(0);
-  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (!enabled) return;
+    let alive = true;
+    let current = "";
+    let fails = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ctrl = new AbortController();
+    setSrc("");
     setFailures(0);
-    setLoaded(false);
-    // 5 s while healthy; back off to 20 s after errors so a stalled tab is not hammered.
-    const i = setInterval(() => { if (!document.hidden) setNonce(Date.now()); }, 5000);
-    return () => clearInterval(i);
+    const tick = async () => {
+      if (!document.hidden) {
+        try {
+          const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now()), ctrl.signal);
+          if (!alive) { URL.revokeObjectURL(next); return; }
+          if (current) URL.revokeObjectURL(current);
+          current = next;
+          fails = 0;
+          setSrc(next);
+          setFailures(0);
+        } catch {
+          if (!alive) return;
+          fails += 1;
+          setFailures(fails);
+        }
+      }
+      // 5 s while healthy; back off to 20 s after errors so a stalled tab is not hammered.
+      if (alive) timer = setTimeout(tick, fails > 2 ? 20000 : 5000);
+    };
+    tick();
+    return () => {
+      alive = false;
+      ctrl.abort();
+      if (timer) clearTimeout(timer);
+      if (current) URL.revokeObjectURL(current);
+    };
   }, [enabled, agentId]);
   if (!enabled) return null;
   return (
     <>
-      <img
-        key={agentId}
-        src={agentBrowserImageUrl(agentId, failures > 2 ? Math.floor(nonce / 20000) * 20000 : nonce)}
-        alt="Agent browser preview"
-        className="absolute inset-0 w-full h-full object-contain"
-        style={{ visibility: loaded ? "visible" : "hidden" }}
-        onError={() => setFailures((f) => f + 1)}
-        onLoad={() => { setLoaded(true); setFailures(0); }}
-      />
-      {!loaded && (
+      {src && (
+        <img
+          key={agentId}
+          src={src}
+          alt="Agent browser preview"
+          className="absolute inset-0 w-full h-full object-contain"
+        />
+      )}
+      {!src && (
         <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black">
           {failures > 0 ? "Waiting for the agent's browser…" : "Loading preview…"}
         </div>

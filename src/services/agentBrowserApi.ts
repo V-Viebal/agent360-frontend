@@ -48,6 +48,16 @@ export function agentBrowserImageUrl(agentId: string, nonce: number): string {
   return `/api/agents/${encodeURIComponent(bare(agentId))}/browser/image.jpg?t=${nonce}`;
 }
 
+/**
+ * Fetch a screenshot through the authenticated fetch (an <img src> cannot carry the Skyer bearer token, and
+ * the backend requires sign-in for agent screenshots). Returns an object URL; the caller revokes the previous one.
+ */
+export async function fetchAgentBrowserFrame(url: string, signal?: AbortSignal): Promise<string> {
+  const res = await fetch(url, { signal, headers: { Accept: "image/jpeg" } });
+  if (!res.ok) throw new Error(`frame ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}
+
 /** Raise the agent's own profile window on the shared desktop before showing it (same-origin only; the API rejects cross-site callers). */
 export async function focusAgentBrowser(agentId: string): Promise<boolean> {
   try {

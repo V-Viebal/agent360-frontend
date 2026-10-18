@@ -6,6 +6,7 @@ import {
   fetchBrowserCdpStatus,
   getBrowserCdpFrameUrl,
 } from "../services/cdpApi";
+import { fetchAgentBrowserFrame } from "../services/agentBrowserApi";
 import {
   Globe,
   Radio,
@@ -50,15 +51,33 @@ export function BrowserCdpViewerModal({ onClose, agentId, agentName }: BrowserCd
     loadStatus();
   }, [agentId]);
 
-  // ~1 fps frame polling of the agent's own tab, paused while hidden or paused.
-  const [nonce, setNonce] = useState(() => Date.now());
+  // ~1 fps frame polling of the agent's own tab (authenticated fetch -> object URL), paused while hidden.
+  const [streamUrl, setStreamUrl] = useState<string>("");
   useEffect(() => {
     if (!isStreaming) return;
-    const i = setInterval(() => { if (!document.hidden) setNonce(Date.now()); }, 1000);
-    return () => clearInterval(i);
+    let alive = true;
+    let current = "";
+    let busy = false;
+    const ctrl = new AbortController();
+    const tick = async () => {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        const next = await fetchAgentBrowserFrame(getBrowserCdpFrameUrl(agentId, selectedTargetId || undefined, Date.now()), ctrl.signal);
+        if (!alive) { URL.revokeObjectURL(next); return; }
+        if (current) URL.revokeObjectURL(current);
+        current = next;
+        setStreamUrl(next);
+      } catch {
+        /* keep the last frame */
+      } finally {
+        busy = false;
+      }
+    };
+    tick();
+    const i = setInterval(tick, 1000);
+    return () => { alive = false; ctrl.abort(); clearInterval(i); if (current) URL.revokeObjectURL(current); };
   }, [isStreaming, agentId, selectedTargetId]);
-
-  const streamUrl = getBrowserCdpFrameUrl(agentId, selectedTargetId || undefined, nonce);
 
   const selectedTarget = cdpStatus?.targets.find((t) => t.id === selectedTargetId);
 
