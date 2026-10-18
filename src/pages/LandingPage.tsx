@@ -1,3 +1,5 @@
+import { initiateSkyerSignIn } from "../services/pkceAuth";
+import { authConfig } from "../config/authConfig";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Link, useNavigate } from "react-router-dom";
@@ -415,18 +417,41 @@ export function LandingPage() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 max-w-md sm:max-w-none mx-auto">
-            <Link
-              to="/app"
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-white text-black hover:bg-neutral-200 px-8 text-sm font-semibold transition-all shadow-sm active:scale-98"
-            >
-              {t("hero.launchApp")}
-            </Link>
-            <a
-              href="#bots"
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-98"
-            >
-              {t("hero.exploreTeammates")}
-            </a>
+            {hasSession ? (
+              <>
+                <Link
+                  to="/app"
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-[#ff7a00] text-black hover:bg-[#ff8f26] px-8 text-sm font-semibold transition-all shadow-[0_0_25px_rgba(255,122,0,0.35)] active:scale-98"
+                >
+                  {t("hero.launchApp")}
+                </Link>
+                <a
+                  href="#bots"
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-98"
+                >
+                  {t("hero.exploreTeammates")}
+                </a>
+              </>
+            ) : (
+              <>
+                {/* Sign Up Primary CTA when no session */}
+                <button
+                  type="button"
+                  onClick={handleSignUp}
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-[#ff7a00] text-black hover:bg-[#ff8f26] px-8 text-sm font-semibold transition-all shadow-[0_0_25px_rgba(255,122,0,0.35)] active:scale-98 cursor-pointer"
+                >
+                  Sign Up
+                </button>
+                {/* Sign In Secondary CTA */}
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/25 px-8 text-sm font-medium text-white transition-all active:scale-98 cursor-pointer"
+                >
+                  {t("nav.signIn")}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </section>

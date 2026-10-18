@@ -29,6 +29,12 @@ import { useTranslation } from "../i18n/LanguageContext";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    setHasSession(!!token);
+  }, []);
   const [openDropdown, setOpenDropdown] = useState<"product" | "solutions" | "resources" | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -56,8 +62,15 @@ export function Navbar() {
 
   const handleSignIn = (e: React.MouseEvent) => {
     e.preventDefault();
-    initiateSkyerSignIn(authConfig).catch((err) => {
+    initiateSkyerSignIn(authConfig, 'signIn').catch((err) => {
       console.error('[Auth] Failed to initiate Skyer OIDC sign in:', err);
+    });
+  };
+
+  const handleSignUp = (e: React.MouseEvent) => {
+    e.preventDefault();
+    initiateSkyerSignIn(authConfig, 'signUp').catch((err) => {
+      console.error('[Auth] Failed to initiate Skyer OIDC sign up:', err);
     });
   };
 
@@ -326,22 +339,39 @@ export function Navbar() {
             <ExternalLink size={11} className="text-neutral-500" />
           </a>
 
-          {/* SIGN IN BUTTON */}
-          <Link
-            to="/app"
-            className="text-xs font-medium text-neutral-200 hover:text-white px-3.5 py-1.5 rounded-full border border-white/10 hover:border-white/20 bg-white/5 transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <LogIn size={13} className="text-[#ff7a00]" />
-            <span onClick={handleSignIn}>{t("nav.signIn")}</span>
-          </Link>
+          {/* Conditional Auth & App CTA */}
+          {!hasSession ? (
+            <>
+              {/* Sign In Button */}
+              <button
+                type="button"
+                onClick={handleSignIn}
+                className="text-xs font-medium text-neutral-200 hover:text-white px-3.5 py-1.5 rounded-full border border-white/10 hover:border-white/20 bg-white/5 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <LogIn size={13} className="text-[#ff7a00]" />
+                <span>{t("nav.signIn")}</span>
+              </button>
 
-          {/* LAUNCH APP CTA */}
-          <Link
-            to="/app"
-            className="text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95"
-          >
-            Launch App
-          </Link>
+              {/* Sign Up Button (When no session) */}
+              <button
+                type="button"
+                onClick={handleSignUp}
+                className="text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95 cursor-pointer"
+              >
+                Sign Up
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Launch Workspace CTA (When authenticated) */}
+              <Link
+                to="/app"
+                className="text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95 cursor-pointer"
+              >
+                Launch App
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu trigger */}
@@ -444,21 +474,39 @@ export function Navbar() {
             </div>
 
             <div className="flex flex-col gap-2 pt-1">
-              <Link
-                to="/app"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2"
-              >
-                <LogIn size={14} className="text-[#ff7a00]" />
-                <span onClick={handleSignIn}>{t("nav.signInSkyer")}</span>
-              </Link>
-              <Link
-                to="/app"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-center text-sm font-medium bg-[#ff7a00] text-black py-2.5 rounded-full shadow-md"
-              >
-                Launch App
-              </Link>
+              {!hasSession ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      setMobileMenuOpen(false);
+                      handleSignIn(e);
+                    }}
+                    className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <LogIn size={14} className="text-[#ff7a00]" />
+                    <span>{t("nav.signInSkyer")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      setMobileMenuOpen(false);
+                      handleSignUp(e);
+                    }}
+                    className="text-center text-sm font-semibold bg-[#ff7a00] text-black py-2.5 rounded-full shadow-md cursor-pointer"
+                  >
+                    Sign Up
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/app"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center text-sm font-semibold bg-[#ff7a00] text-black py-2.5 rounded-full shadow-md"
+                >
+                  Launch App
+                </Link>
+              )}
             </div>
           </div>
         </div>

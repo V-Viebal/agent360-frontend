@@ -16,15 +16,18 @@ export async function generateCodeChallenge(codeVerifier: string): Promise<strin
     .replace(/=+$/, '');
 }
 
-export async function initiateSkyerSignIn(authConfig: {
-  endpoint: string;
-  appId: string;
-  localAppId: string;
-  apiResource: string;
-  apiScopes?: string[];
-  redirectUri: string;
-  postLogoutRedirectUri: string;
-}) {
+export async function initiateSkyerSignIn(
+  authConfig: {
+    endpoint: string;
+    appId: string;
+    localAppId: string;
+    apiResource: string;
+    apiScopes?: string[];
+    redirectUri: string;
+    postLogoutRedirectUri: string;
+  },
+  mode: 'signIn' | 'signUp' = 'signIn'
+) {
   const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
   const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
   const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
@@ -46,6 +49,9 @@ export async function initiateSkyerSignIn(authConfig: {
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('state', state);
   url.searchParams.set('resource', authConfig.apiResource);
+  if (mode === 'signUp') {
+    url.searchParams.set('interaction_mode', 'signUp');
+  }
 
   window.location.href = url.toString();
 }

@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { User, Mail, Key, LogOut } from "lucide-react";
+import { getCurrentUserProfile, UserProfile, initiateSkyerSignOut } from "../services/pkceAuth";
+import { authConfig } from "../config/authConfig";
 import React, { useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
 import { ToggleSwitch } from "./ui/ToggleSwitch";
@@ -63,7 +67,7 @@ interface SettingsModalProps {
   agentName?: string;
 }
 
-export type SettingsTab = "appearance" | "language" | "audio" | "privacy_export" | "voice_record";
+export type SettingsTab = "profile" | "appearance" | "language" | "audio" | "privacy_export" | "voice_record";
 
 export function SettingsModal({
   isOpen,
@@ -83,6 +87,13 @@ export function SettingsModal({
   agentName,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    getCurrentUserProfile().then((u) => {
+      if (u) setCurrentUser(u);
+    });
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (isOpen && initialTab) {
@@ -457,7 +468,25 @@ export function SettingsModal({
             </div>
           </div>
 
-          {/* GROUP 1: SYSTEM SETTINGS */}
+          {/* GROUP 1: USER PROFILE */}
+            <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
+              Tài khoản
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("profile")}
+              className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "profile"
+                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
+                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <User size={15} className={activeTab === "profile" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
+              <span>Hồ sơ người dùng</span>
+            </button>
+
+            {/* GROUP 1: SYSTEM SETTINGS */}
             <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
               {t("settings.groupSystem") || "Hệ thống"}
             </div>
@@ -532,6 +561,120 @@ export function SettingsModal({
 
           {/* Right Panel Content */}
           <div className="flex-1 p-5 overflow-y-auto space-y-5 bg-white dark:bg-[#121218]">
+            {/* 0. PROFILE TAB */}
+            {activeTab === "profile" && (
+              <div className="space-y-5 animate-in fade-in duration-150">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Hồ sơ cá nhân & Thông tin tài khoản</h3>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400">
+                    Thông tin định danh và phiên đăng nhập được xác thực thông qua Skyer SSO (Logto).
+                  </p>
+                </div>
+
+                {/* Profile Avatar Card */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] flex flex-col sm:flex-row items-center gap-4">
+                  <div className="relative shrink-0">
+                    <div className="h-16 w-16 rounded-2xl bg-[#2a2a34] text-[#ff7a00] border-2 border-[#ff7a00]/40 flex items-center justify-center text-xl font-bold overflow-hidden shadow-md">
+                      {currentUser?.picture ? (
+                        <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : "US"
+                      )}
+                    </div>
+                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#161620]" title="Phiên hoạt động online" />
+                  </div>
+
+                  <div className="flex-1 text-center sm:text-left min-w-0">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {currentUser?.name || "Thành viên Skyer"}
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-[#ff7a00] font-semibold">
+                        {currentUser?.roles?.[0] || "Authorized Member"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-neutral-400 font-mono mt-0.5 truncate">
+                      {currentUser?.email || "No email bound"}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 font-mono mt-1">
+                      Subject ID: <code className="text-neutral-400">{currentUser?.sub ? currentUser.sub.slice(0, 16) + "..." : "local-operator"}</code>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Detailed Metadata Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                      <User size={12} className="text-[#ff7a00]" />
+                      Họ và Tên
+                    </span>
+                    <div className="text-xs font-semibold text-slate-800 dark:text-white">
+                      {currentUser?.name || "Chưa thiết lập"}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                      <Mail size={12} className="text-cyan-400" />
+                      Email Đăng Ký
+                    </span>
+                    <div className="text-xs font-semibold text-slate-800 dark:text-white truncate">
+                      {currentUser?.email || "Chưa có email"}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                      <Key size={12} className="text-emerald-400" />
+                      Quyền hạn & Roles
+                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {currentUser?.roles && currentUser.roles.length > 0 ? (
+                        currentUser.roles.map((r) => (
+                          <span key={r} className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+                            {r}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-neutral-400 font-mono">member</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                      <ShieldCheck size={12} className="text-blue-400" />
+                      Phiên SSO Hiện Tại
+                    </span>
+                    <div className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Xác thực hợp lệ</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sign Out Action in Profile */}
+                <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-semibold text-rose-400">Đăng xuất tài khoản</span>
+                    <p className="text-[11px] text-neutral-400">Kết thúc phiên làm việc hiện tại và thu hồi token OIDC</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      initiateSkyerSignOut(authConfig);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    <LogOut size={13} />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 1. APPEARANCE TAB */}
             {activeTab === "appearance" && (
               <div className="space-y-4 animate-in fade-in duration-150">

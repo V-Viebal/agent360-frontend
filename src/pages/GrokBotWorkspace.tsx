@@ -1335,6 +1335,7 @@ export function GrokBotWorkspace() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const isAdmin = !!(currentUser?.roles?.some(r => r.toUpperCase() === "ADMIN") || currentUser?.sub === "qtgkbfovj5md");
 
   useEffect(() => {
     getCurrentUserProfile().then((u) => {
@@ -3912,6 +3913,16 @@ export function GrokBotWorkspace() {
 
             {/* Collapsed Agents List */}
             <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-2 flex flex-col items-center scrollbar-none">
+              {isAdmin && (
+                <a
+                  href="/admin"
+                  title="Bảng điều khiển Quản trị (Admin Portal)"
+                  className="relative h-10 w-10 rounded-xl flex items-center justify-center bg-[#ff7a00]/15 border border-[#ff7a00]/40 text-[#ff7a00] hover:bg-[#ff7a00]/25 hover:border-[#ff7a00] transition-all cursor-pointer shrink-0 shadow-sm shadow-[#ff7a00]/20 group"
+                >
+                  <Shield size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#ff7a00] ring-1 ring-black" />
+                </a>
+              )}
               {isLoadingAgents ? (
                 <div className="space-y-2.5 p-1 w-full flex flex-col items-center">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -4176,6 +4187,31 @@ export function GrokBotWorkspace() {
                 </div>
               </button>
             </div>
+
+            {/* Admin Management Navigation for Admin Role */}
+            {isAdmin && (
+              <div className="p-2 border-b border-[#1c1c22]">
+                <a
+                  href="/admin"
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[#ff7a00]/20 via-[#ff7a00]/10 to-transparent border border-[#ff7a00]/40 hover:border-[#ff7a00] hover:bg-[#ff7a00]/25 text-[#ff7a00] transition-all group shadow-sm shadow-[#ff7a00]/10 select-none cursor-pointer"
+                  title="Truy cập Bảng điều khiển Quản trị, phân quyền Member và quản lý Fleet"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="h-7 w-7 rounded-lg bg-[#ff7a00]/20 border border-[#ff7a00]/40 flex items-center justify-center text-[#ff7a00] shrink-0">
+                      <Shield size={14} className="group-hover:scale-110 transition-transform" />
+                    </div>
+                    <div className="flex flex-col truncate text-left">
+                      <span className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors flex items-center gap-1.5">
+                        Quản trị Hệ thống
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#ff7a00]/30 text-[#ff7a00] text-[9px] font-mono font-bold uppercase">Admin</span>
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-mono truncate">Phân quyền Agent & User Directory</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-[#ff7a00]/70 group-hover:translate-x-0.5 group-hover:text-[#ff7a00] transition-all shrink-0 ml-1" />
+                </a>
+              </div>
+            )}
 
             {/* Search Agents */}
             <div className="p-2 border-b border-[#1c1c22]">
@@ -4581,9 +4617,7 @@ export function GrokBotWorkspace() {
               </div>
             </div>
 
-            <div className="hidden md:flex">
-              <TelemetryHud telemetry={turnTelemetry} isStreaming={isStreaming} />
-            </div>
+
           </div>
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
@@ -7385,6 +7419,41 @@ export function GrokBotWorkspace() {
                   {/* Sub-tab 3: Overview */}
                   {detailSubTab === "Overview" && (
                     <div className="space-y-4">
+                  {/* Real-time Turn Telemetry & Performance Metrics (Moved to Detail Tab per request) */}
+                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
+                    <div className="flex items-center justify-between text-white font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <Activity size={13} className="text-[#ff7a00]" />
+                        <span>Hiệu năng & Telemetry</span>
+                      </span>
+                      {turnTelemetry?.estimatedCostUsd !== undefined && (
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          ${turnTelemetry.estimatedCostUsd.toFixed(4)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                        <span className="text-[10px] text-neutral-500">TTFT (Latency)</span>
+                        <span className="text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                        <span className="text-[10px] text-neutral-500">Tốc độ sinh (Speed)</span>
+                        <span className="text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                        <span className="text-[10px] text-neutral-500">Thời gian phản hồi</span>
+                        <span className="text-neutral-300 font-bold">{turnTelemetry?.totalDurationMs ? `${(turnTelemetry.totalDurationMs / 1000).toFixed(1)}s` : "—"}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                        <span className="text-[10px] text-neutral-500">Model hoạt động</span>
+                        <span className="text-[#ff7a00] font-bold truncate" title={turnTelemetry?.model || selectedAgent.model}>
+                          {(turnTelemetry?.model || selectedAgent.model).split("/").pop()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   {/* Agent Persona & System Governance */}
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
                     <div className="flex items-center justify-between text-white font-semibold">

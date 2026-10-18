@@ -1,3 +1,4 @@
+import { AuthGuard } from "./components/AuthGuard";
 import { CallbackPage } from './pages/CallbackPage';
 import { Routes, Route, Navigate } from "react-router-dom";
 import { GrokBotWorkspace } from "./pages/GrokBotWorkspace";
@@ -48,7 +49,7 @@ export default function App() {
       <Route path="/callback" element={<CallbackPage />} />
 
       {/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
-      <Route path="/app" element={<GrokBotWorkspace />} />
+      <Route path="/app" element={<AuthGuard><GrokBotWorkspace /></AuthGuard>} />
       <Route path="/workspace" element={<Navigate to="/app" replace />} />
 
       {/* 3. Marketplace Catalog */}
@@ -111,7 +112,7 @@ export default function App() {
       <Route path="/design-tokens" element={<DesignTokensSandboxPage />} />
 
       {/* 4. Admin Portal System Routes (/admin/*) */}
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/admin" element={<AuthGuard><AdminLayout /></AuthGuard>}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboardPage />} />
         <Route path="agents" element={<AdminAgentsPage />} />

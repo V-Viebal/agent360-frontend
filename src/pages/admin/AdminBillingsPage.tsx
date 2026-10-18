@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CreditCard, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle, ArrowRight, ShieldCheck } from "lucide-react";
+import { CreditCard, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle, ArrowRight, ShieldCheck, TestTube } from "lucide-react";
 
 interface TopupPackage {
   id: string;
@@ -22,6 +22,9 @@ export function AdminBillingsPage() {
   const [loading, setLoading] = useState(true);
   const [topupLoadingId, setTopupLoadingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [mockMode, setMockMode] = useState<boolean>(() => {
+    return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  });
 
   async function loadWallet() {
     setLoading(true);
@@ -48,11 +51,14 @@ export function AdminBillingsPage() {
     const orderCode = params.get("orderCode");
 
     if (status === "TOPUP_PAID" && orderCode) {
-      setFeedback(`Đang xác nhận đơn hàng PayOS #${orderCode}...`);
+      setFeedback(`Đang tự động đồng bộ đơn hàng #${orderCode}...`);
       fetch(`/api/v1/billing/sync-order?orderCode=${orderCode}`, { method: "POST" })
-        .then(() => {
-          setFeedback(`Giao dịch #${orderCode} đã thanh toán thành công! Tokens đã được nạp vào ví.`);
+        .then((res) => res.json())
+        .then((data) => {
+          setFeedback(`Giao dịch #${orderCode} đã thanh toán thành công! Tokens (+${data.tokensCredited ? Number(data.tokensCredited).toLocaleString() : ""}) đã nạp vào ví.`);
           loadWallet();
+          // Clear query params to clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname);
         })
         .catch(() => loadWallet());
     } else {
@@ -60,7 +66,7 @@ export function AdminBillingsPage() {
     }
   }, []);
 
-  async function handleBuyTopup(pkg: TopupPackage) {
+  async function handleBuyTopup(pkg: TopupPackage, forceMock: boolean = false) {
     setTopupLoadingId(pkg.id);
     try {
       const token = sessionStorage.getItem("skyer_access_token");
@@ -70,13 +76,17 @@ export function AdminBillingsPage() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ packageId: pkg.id }),
+        body: JSON.stringify({ 
+          packageId: pkg.id,
+          mock: forceMock || mockMode 
+        }),
       });
 
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
-          window.location.href = data.url; // Redirect directly to PayOS VietQR gateway
+          // Both Mock and Real PayOS return a redirect URL (App360 pattern)
+          window.location.href = data.url;
         }
       } else {
         const err = await res.json().catch(() => ({}));
@@ -98,19 +108,47 @@ export function AdminBillingsPage() {
             Quản lý số dư token suy luận, tốc độ tiêu hao theo ngày và cổng nạp tiền PayOS (VietQR) tự động.
           </p>
         </div>
-        <button
-          onClick={loadWallet}
-          className="p-2 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-2 text-xs"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          <span>Làm mới ví</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Mock Simulation Toggle for Local Testing (App360 Pattern) */}
+          <button
+            onClick={() => setMockMode(!mockMode)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              mockMode
+                ? "bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20"
+                : "bg-[#161620] border-[#262634] text-neutral-400 hover:text-neutral-200"
+            }`}
+            title="Bật/Tắt chế độ giả lập thanh toán local không qua ngân hàng thật"
+          >
+            <TestTube size={13} />
+            <span>Dev Mock: {mockMode ? "BẬT" : "TẮT"}</span>
+          </button>
+
+          <button
+            onClick={loadWallet}
+            className="p-2 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-2 text-xs"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <span>Làm mới ví</span>
+          </button>
+        </div>
       </div>
 
       {feedback && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
-          <CheckCircle size={16} />
-          <span>{feedback}</span>
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={16} />
+            <span>{feedback}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="text-emerald-400/60 hover:text-emerald-400 text-xs cursor-pointer">Đóng</button>
+        </div>
+      )}
+
+      {mockMode && (
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2.5">
+          <TestTube size={16} className="text-amber-400 shrink-0" />
+          <span>
+            <strong>Chế độ Giả lập Thanh toán (Local Simulation) đang kích hoạt:</strong> Khi nhấn Nạp tiền, hệ thống sẽ mô phỏng phản hồi từ PayOS và hoàn tất nạp token ngay lập tức mà không cần chuyển khoản tiền thật.
+          </span>
         </div>
       )}
 
@@ -199,7 +237,7 @@ export function AdminBillingsPage() {
               disabled={topupLoadingId === pkg.id}
               className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-[#ff7a00] hover:text-black text-xs font-semibold text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <span>{topupLoadingId === pkg.id ? "Đang mở PayOS..." : "Nạp ngay qua PayOS"}</span>
+              <span>{topupLoadingId === pkg.id ? "Đang xử lý..." : mockMode ? "Nạp Test Giả lập (Mock)" : "Nạp ngay qua PayOS"}</span>
               <ArrowRight size={14} />
             </button>
           </div>
