@@ -1,11 +1,74 @@
 import { useEffect, useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
 import { Network, RefreshCw, Link2, Unlink, Activity, CheckCircle2, XCircle, Clock, Send, Loader2, GitBranch, KeyRound, AlertTriangle } from "lucide-react";
-import { a2aApi, A2AAuthError, A2AHealth, A2AMetrics, Delegation, ExternalAgent, ExternalBinding, operatorKey } from "../services/a2aApi";
+import { a2aApi, A2AAuthError, A2AHealth, A2AMetrics, A2AThread, Delegation, ExternalAgent, ExternalBinding, operatorKey } from "../services/a2aApi";
+
+const ROLE_STYLE: Record<string, string> = {
+  parent: "border-sky-500/30 bg-sky-500/5", child: "border-emerald-500/30 bg-emerald-500/5",
+  operator: "border-violet-500/30 bg-violet-500/5", system: "border-neutral-500/30 bg-neutral-500/5",
+};
+
+/** v2 thread: every turn of the delegation, live, with an operator reply box for open questions and follow-ups. */
+function DelegationThread({ task, onChanged }: { task: Delegation; onChanged: () => void }) {
+  const [thread, setThread] = useState<A2AThread | null>(null);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try { const t = await a2aApi.thread(task.id); if (alive) setThread(t); } catch (e: any) { if (alive) setErr(e.message); }
+    };
+    tick();
+    const live = ["sent", "delivered", "running", "awaiting_parent"].includes(task.status);
+    const i = setInterval(() => { if (!document.hidden) tick(); }, live ? 3000 : 15000);
+    return () => { alive = false; clearInterval(i); };
+  }, [task.id, task.status]);
+  const pending = thread?.pending_question;
+  const canFollow = thread?.status === "under_review";
+  const send = async (kind: "answer" | "followup" | "approval", value?: string) => {
+    const v = (value ?? text).trim();
+    if (!v && kind !== "approval") return;
+    setSending(true); setErr(null);
+    try { await a2aApi.postMessage(task.id, kind, v); setText(""); setThread(await a2aApi.thread(task.id)); onChanged(); }
+    catch (e: any) { setErr(e.message); } finally { setSending(false); }
+  };
+  if (!thread) return <div className="text-[10px] text-neutral-500">Loading conversation…</div>;
+  return (
+    <div className="space-y-1" aria-label="Delegation conversation">
+      <div className="text-[10px] font-mono text-neutral-500">turns {thread.conversation.turn_count}/{thread.conversation.max_turns} · questions {thread.conversation.question_count}/{thread.conversation.max_questions}</div>
+      {thread.turns.map((m) => (
+        <div key={m.turn_no} className={`p-1.5 rounded-lg border text-[11px] ${ROLE_STYLE[m.role] || ""}`} data-turn-kind={m.kind} data-turn-role={m.role}>
+          <div className="text-[9px] font-mono uppercase text-neutral-500">#{m.turn_no} {m.role} · {m.kind}{m.blocking ? " · waiting" : ""}</div>
+          <div className="whitespace-pre-wrap text-slate-800 dark:text-neutral-200 max-h-32 overflow-auto">{m.text}</div>
+          {m.options.length > 0 && pending?.turn_no === m.turn_no && (
+            <div className="flex flex-wrap gap-1 pt-1">{m.options.map((o) => (
+              <button key={o} disabled={sending} onClick={() => send(m.kind === "approval_request" ? "approval" : "answer", o)} aria-label={`Answer ${o}`} className="min-h-[36px] px-2 rounded-md bg-[#1d1d26] border border-[#2b2b3a] text-slate-800 dark:text-neutral-200">{o}</button>
+            ))}</div>
+          )}
+        </div>
+      ))}
+      {pending && (
+        <div className="flex items-center gap-1 text-[11px] text-amber-300"><AlertTriangle size={11} />{pending.kind === "approval_request" ? "Write approval requested (operator only)" : `Waiting for an answer to #${pending.turn_no}`}</div>
+      )}
+      {(pending || canFollow) && (
+        <div className="flex gap-1">
+          <input aria-label={pending ? "Answer the sub-agent question" : "Follow-up question to the sub-agent"} value={text} onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") send(pending ? (pending.kind === "approval_request" ? "approval" : "answer") : "followup"); }}
+            placeholder={pending ? "Answer as operator…" : "Ask a follow-up…"} className="flex-1 min-h-[40px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 text-slate-900 dark:text-white" />
+          <button disabled={sending || (!text.trim() && pending?.kind !== "approval_request")} onClick={() => send(pending ? (pending.kind === "approval_request" ? "approval" : "answer") : "followup")}
+            aria-label={pending ? "Send answer" : "Send follow-up"} className="min-h-[40px] px-3 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50">{sending ? "…" : pending ? (pending.kind === "approval_request" ? "Approve" : "Answer") : "Follow up"}</button>
+        </div>
+      )}
+      {err && <div className="text-[10px] text-red-300">{err}</div>}
+    </div>
+  );
+}
 
 const STATUS_STYLE: Record<string, string> = {
   accepted: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30",
   under_review: "text-amber-300 bg-amber-500/10 border-amber-500/30",
+  awaiting_parent: "text-violet-300 bg-violet-500/10 border-violet-500/30",
   running: "text-sky-300 bg-sky-500/10 border-sky-500/30",
   sent: "text-sky-300 bg-sky-500/10 border-sky-500/30",
   delivered: "text-sky-300 bg-sky-500/10 border-sky-500/30",
@@ -156,6 +219,11 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
               {busy === "send" ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}Delegate
             </button>
           </div>
+          {tasks.some((t) => t.status === "awaiting_parent") && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg border border-violet-500/30 bg-violet-500/10 text-[11px] text-violet-200" aria-label="Open sub-agent questions">
+              <AlertTriangle size={11} />{tasks.filter((t) => t.status === "awaiting_parent").length} sub-agent question(s) waiting for {agentName}
+            </div>
+          )}
           {tasks.map((t) => (
             <div key={t.id} className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1">
               <button aria-expanded={open === t.id} aria-label={`Delegation ${t.correlation_id} ${t.status}`} onClick={() => setOpen(open === t.id ? null : t.id)} className="w-full min-h-[44px] text-left">
@@ -174,13 +242,14 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
                     const r = t.self_check.find((s) => s.criterion === c)?.result;
                     return <div key={c} className="flex items-center gap-1 text-[11px]">{r === "pass" ? <CheckCircle2 size={11} className="text-emerald-400" /> : r === "fail" ? <XCircle size={11} className="text-red-400" /> : <Clock size={11} className="text-neutral-500" />}<span className="text-slate-700 dark:text-neutral-300">{c}</span></div>;
                   })}</div>
+                  <DelegationThread task={t} onChanged={load} />
                   {t.acceptance && <div className="text-[10px] text-slate-500 dark:text-neutral-400">Decision: {t.acceptance.decision} {t.acceptance.reason || t.acceptance.feedback || ""} {t.acceptance.reviewer ? `by ${t.acceptance.reviewer}` : ""}</div>}
                   <div className="flex gap-1">
                     {t.status === "under_review" && <>
                       <button onClick={() => run(`a${t.id}`, () => a2aApi.review(t.id, "accept"), "Accepted")} aria-label="Accept delegation result" className="min-h-[44px] px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">Accept</button>
                       <button onClick={() => { const f = window.prompt("Reject feedback (one retry)"); if (f) run(`r${t.id}`, () => a2aApi.review(t.id, "reject", f), "Rejected → retry queued"); }} aria-label="Reject delegation result and retry once" className="min-h-[44px] px-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300">Reject + retry</button>
                     </>}
-                    {["sent", "delivered", "running"].includes(t.status) && <button onClick={() => run(`c${t.id}`, () => a2aApi.cancel(t.id), "Cancelled")} aria-label="Cancel delegation" className="min-h-[44px] px-3 rounded-lg bg-[#1d1d26] border border-[#282834] text-slate-700 dark:text-neutral-300">Cancel</button>}
+                    {["sent", "delivered", "running", "awaiting_parent"].includes(t.status) && <button onClick={() => run(`c${t.id}`, () => a2aApi.cancel(t.id), "Cancelled")} aria-label="Cancel delegation" className="min-h-[44px] px-3 rounded-lg bg-[#1d1d26] border border-[#282834] text-slate-700 dark:text-neutral-300">Cancel</button>}
                   </div>
                 </div>
               )}

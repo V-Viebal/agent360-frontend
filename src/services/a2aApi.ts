@@ -16,6 +16,19 @@ export interface Delegation {
   evidence: { type: string; ref: string; summary: string }[]; self_check: { criterion: string; result: string }[];
   acceptance: { decision: string; reviewer?: string; reason?: string; feedback?: string } | null;
   created_at: string; updated_at: string; deadline_at: string | null; child_session_id: string | null;
+  turn_count?: number; question_count?: number; awaiting_since?: string | null; question_deadline_at?: string | null;
+}
+export interface A2ATurn {
+  turn_no: number; role: "parent" | "child" | "operator" | "system"; kind: string; text: string; options: string[];
+  blocking: boolean; in_reply_to: number | null; author_ref: string | null; created_at: string;
+}
+export interface A2AThread {
+  task_id: string; correlation_id: string; status: string; pending_question: A2ATurn | null; turns: A2ATurn[];
+  conversation: { max_turns: number; max_questions: number; turn_count: number; question_count: number; on_question_timeout: string };
+}
+export interface A2AInboxItem {
+  task_id: string; correlation_id: string; child_agent_ref: string; objective: string; question: A2ATurn;
+  awaiting_since: string | null; question_deadline_at: string | null;
 }
 
 export interface A2AHealth { status: "ok" | "degraded"; reasons: string[]; enabled: boolean; agents: number; bound_children: string[] }
@@ -63,4 +76,12 @@ export const a2aApi = {
   review: (id: string, decision: "accept" | "reject", feedback?: string) =>
     j<Delegation>(`/a2a/delegations/${enc(id)}/review`, { method: "POST", body: JSON.stringify({ decision, feedback, reviewer: "agent360-ui" }) }),
   cancel: (id: string) => j<Delegation>(`/a2a/delegations/${enc(id)}/cancel`, { method: "POST" }),
+  // v2 multi-turn conversation
+  thread: (id: string, after = 0, wait = 0) => j<A2AThread>(`/a2a/delegations/${enc(id)}/messages?after=${after}&wait=${wait}`),
+  postMessage: (id: string, kind: "answer" | "followup" | "redirect" | "approval", text: string) =>
+    j<{ task: Delegation }>(`/a2a/delegations/${enc(id)}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ kind, text, author: "operator:agent360-ui", message_id: `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }),
+    }),
+  inbox: (agentId: string) => j<A2AInboxItem[]>(`/agents/${enc(bare(agentId))}/a2a/inbox`),
 };
