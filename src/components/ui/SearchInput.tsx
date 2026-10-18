@@ -18,7 +18,7 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div
-      className={`flex items-center gap-2 bg-[#14141c] border border-[#22222e] focus-within:border-neutral-500 rounded-xl px-2.5 py-1.5 text-xs text-neutral-300 transition-colors ${className}`}
+      className={`flex items-center gap-2 bg-[#14141c] border border-[#22222e] focus-within:border-neutral-500 rounded-lg px-2.5 py-1.5 text-xs text-neutral-300 transition-colors ${className}`}
     >
       <Search size={13} className="text-neutral-500 shrink-0" />
       <input aria-label={placeholder} data-ux-target-min="16"

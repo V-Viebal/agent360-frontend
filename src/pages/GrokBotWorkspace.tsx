@@ -30,7 +30,7 @@ import {
   Edit2,
   Wifi,
   Camera, Maximize2,
-  Minimize2, ZoomIn, ZoomOut, RotateCcw,
+  Minimize2, ZoomIn, ZoomOut, RotateCcw, RotateCw,
   Search,
   Plus,
   Paperclip,
@@ -1667,6 +1667,7 @@ export function GrokBotWorkspace() {
   const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string } | null>(null);
   const [lightboxZoom, setLightboxZoom] = useState<number>(1);
   const [lightboxPan, setLightboxPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [lightboxRotation, setLightboxRotation] = useState<number>(0);
   const [isPanningLightbox, setIsPanningLightbox] = useState<boolean>(false);
   const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -4117,11 +4118,9 @@ export function GrokBotWorkspace() {
         {!isLeftSidebarCollapsed && (
           <div
             onMouseDown={() => setIsResizingLeft(true)}
-            className="hidden lg:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 group"
+            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 -mr-0.5"
             title="Drag to resize agents sidebar"
-          >
-            <div className="w-0.5 h-8 bg-neutral-600 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2" />
-          </div>
+          />
         )}
       </aside>
 
@@ -4751,7 +4750,7 @@ export function GrokBotWorkspace() {
                     {isImage && f.url ? (
                       <button
                         type="button"
-                        onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); setLightboxImageUrl({ url: f.url, name: f.file_name }); }}
+                        onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); setLightboxRotation(0); setLightboxImageUrl({ url: f.url, name: f.file_name }); }}
                         className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#ff7a00]/50 transition-all"
                         title="Click to view full image preview"
                       >
@@ -5839,7 +5838,17 @@ export function GrokBotWorkspace() {
       {isComputerSplitOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
-          <section
+          <>
+            {/* Minimalist Resizer Splitter between Chat and Computer */}
+            <div
+              onMouseDown={() => setIsResizingComputerSplit(true)}
+              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[#ff7a00]/60 active:bg-[#ff7a00] transition-colors shrink-0 z-30 select-none group"
+              title={t("computer.dragSplitterTitle") || "Kéo để thay đổi tỷ lệ"}
+            >
+              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[#ff7a00] group-hover:h-9 transition-all" />
+            </div>
+
+            <section
             data-testid="virtual-computer-split-pane"
             aria-label="Virtual Computer Interactive Workspace"
             className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
@@ -5948,6 +5957,7 @@ export function GrokBotWorkspace() {
               )}
             </div>
           </section>
+          </>
         );
       })()}
 
@@ -6456,11 +6466,9 @@ export function GrokBotWorkspace() {
         {!isBotInfoCollapsed && (
           <div
             onMouseDown={() => setIsResizingRight(true)}
-            className="hidden xl:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 group -ml-1"
+            className="hidden xl:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 -ml-0.5"
             title="Drag to resize agent specification pane"
-          >
-            <div className="w-0.5 h-8 bg-neutral-600 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2" />
-          </div>
+          />
         )}
         {!isBotInfoCollapsed && (
           <>
@@ -7285,12 +7293,26 @@ export function GrokBotWorkspace() {
                 >
                   <ZoomIn size={13} />
                 </button>
-                {lightboxZoom !== 1 && (
+                {/* Rotate 90 Clockwise Button */}
+                <button
+                  type="button"
+                  onClick={() => setLightboxRotation((prev) => (prev + 90) % 360)}
+                  className="p-1 ml-1 rounded hover:bg-white/10 hover:text-white cursor-pointer transition-colors flex items-center gap-1"
+                  title="Rotate 90° Clockwise"
+                  aria-label="Rotate 90° Clockwise"
+                >
+                  <RotateCw size={13} />
+                  {lightboxRotation !== 0 && (
+                    <span className="text-[9px] text-[#ff7a00] font-bold">{lightboxRotation}°</span>
+                  )}
+                </button>
+
+                {(lightboxZoom !== 1 || lightboxRotation !== 0) && (
                   <button
                     type="button"
-                    onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); }}
+                    onClick={() => { setLightboxZoom(1); setLightboxPan({ x: 0, y: 0 }); setLightboxRotation(0); }}
                     className="flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/15 text-[10px] text-neutral-300 hover:text-white cursor-pointer transition-colors"
-                    title="Reset to 100%"
+                    title="Reset Zoom & Rotation"
                   >
                     <RotateCcw size={10} />
                     Reset
@@ -7343,7 +7365,7 @@ export function GrokBotWorkspace() {
                 alt={lightboxImageUrl.name}
                 draggable={false}
                 style={{
-                  transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom})`,
+                  transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom}) rotate(${lightboxRotation}deg)`,
                   transformOrigin: "center center",
                   transition: isPanningLightbox ? "none" : "transform 0.15s ease-out",
                 }}

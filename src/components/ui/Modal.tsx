@@ -60,7 +60,7 @@ export function Modal({
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full ${maxWidthMap[maxWidth]} rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10 ${className}`}
+        className={`w-full ${maxWidthMap[maxWidth]} rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10 ${className}`}
       >
         {/* Header */}
         {(title || icon) && (

@@ -224,7 +224,7 @@ export function CustomSelect({
               ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
               : triggerClassName
               ? `flex items-center justify-between gap-1.5 transition-all cursor-pointer min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
-              : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed`
+              : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-lg px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed`
           }
         >
           {iconOnly ? (
@@ -287,10 +287,10 @@ export function CustomSelect({
               width: `${dropdownPosition.width}px`,
               zIndex: 99999,
             }}
-            className={`rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}
+            className={`rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}
           >
             {searchable && (
-              <div className="p-1 mb-1 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-1.5 px-2 bg-slate-50 dark:bg-[#101016] rounded-xl text-xs font-mono">
+              <div className="p-1 mb-1 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-1.5 px-2 bg-slate-50 dark:bg-[#101016] rounded-lg text-xs font-mono">
                 <Search size={12} className="text-neutral-500 shrink-0" />
                 <input
                   ref={searchInputRef}
@@ -325,7 +325,7 @@ export function CustomSelect({
                         triggerRef.current?.focus();
                       }}
                       onMouseEnter={() => setHighlightedIndex(idx)}
-                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors ${
+                      className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
                         isSelected
                           ? "bg-amber-500/10 dark:bg-[#222230] text-[#ff7a00] font-semibold"
                           : isHighlighted

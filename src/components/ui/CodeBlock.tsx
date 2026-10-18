@@ -32,7 +32,7 @@ export function CodeBlock({
 
   return (
     <div
-      className={`rounded-2xl border border-slate-200 dark:border-[#222230] bg-slate-900 dark:bg-[#0c0c12] overflow-hidden text-xs font-mono shadow-md ${className}`}
+      className={`rounded-xl border border-slate-200 dark:border-[#222230] bg-slate-900 dark:bg-[#0c0c12] overflow-hidden text-xs font-mono shadow-md ${className}`}
     >
       {/* Code Block Header */}
       <div className="flex items-center justify-between px-3.5 py-2 bg-slate-800/80 dark:bg-[#14141c] border-b border-slate-700/60 dark:border-[#1e1e28] text-[11px] text-neutral-400 select-none">
