@@ -1547,6 +1547,8 @@ export function GrokBotWorkspace() {
   const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
     if (isInitialCompact) return false;
     try {
+      // When computer split is open on load/reload, left sidebar should default to collapsed
+      if (localStorage.getItem("agent360_computer_split") === "true") return true;
       const saved = localStorage.getItem("agent360_left_sidebar_collapsed");
       return saved !== null ? saved === "true" : false;
     } catch {
