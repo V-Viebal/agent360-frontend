@@ -2568,9 +2568,16 @@ export function GrokBotWorkspace() {
       } catch {}
 
       if (loadedAgents.length > 0) {
-        const savedAgentId = localStorage.getItem("agent360_last_agent_id");
-        const found = savedAgentId && loadedAgents.find((a) => a.id === savedAgentId);
-        const targetId = found ? savedAgentId : loadedAgents[0].id;
+        // ?agent= (deep link, id or slug) wins over the last-used agent; both must exist in the loaded list.
+        let urlAgent = "";
+        try { urlAgent = new URLSearchParams(window.location.search).get("agent") || ""; } catch {}
+        const pick = (want: string | null) => {
+          if (!want) return undefined;
+          const bare = want.replace(/^bot:agent360:/i, "").toLowerCase();
+          return loadedAgents.find((a) => a.id === want || a.id.toLowerCase() === `bot:agent360:${bare}` || (a.slug || "").toLowerCase() === bare);
+        };
+        const found = pick(urlAgent) || pick(localStorage.getItem("agent360_last_agent_id"));
+        const targetId = found ? found.id : loadedAgents[0].id;
         setSelectedAgentId(targetId);
         try {
           localStorage.setItem("agent360_last_agent_id", targetId);
