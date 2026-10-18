@@ -1,12 +1,5 @@
 
 // Haptic feedback helper for mobile touch gestures
-function triggerHaptic(duration = 10) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-      navigator.vibrate(duration);
-    }
-  } catch {}
-}
 
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSection } from "../components/ui/DropdownMenu";
 import { useTranslation } from "../i18n/LanguageContext";
