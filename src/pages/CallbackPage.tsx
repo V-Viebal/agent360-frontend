@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { authConfig } from "../config/authConfig";
 import { getCurrentUserProfile } from "../services/userService";
+import { setStoredToken } from "../services/authFetch";
 
 export function CallbackPage() {
   const navigate = useNavigate();
@@ -27,8 +28,10 @@ export function CallbackPage() {
         }
 
         if (!code) {
-          // Direct visit or empty callback
-          navigate("/app", { replace: true });
+          // Direct visit or empty callback: navigate to target or default
+          const target = sessionStorage.getItem("skyer_return_url") || "/app";
+          sessionStorage.removeItem("skyer_return_url");
+          navigate(target, { replace: true });
           return;
         }
 
@@ -36,7 +39,9 @@ export function CallbackPage() {
         const lastExchanged = sessionStorage.getItem("skyer_last_exchanged_code");
         if (lastExchanged === code) {
           setStatus("success");
-          navigate("/app", { replace: true });
+          const target = sessionStorage.getItem("skyer_return_url") || "/app";
+          sessionStorage.removeItem("skyer_return_url");
+          navigate(target, { replace: true });
           return;
         }
 
@@ -61,7 +66,7 @@ export function CallbackPage() {
           redirect_uri: redirect,
           code_verifier: codeVerifier || "",
           resource: authConfig.apiResource,
-          scope: authConfig.apiScopes.join(" "),
+          scope: ["openid", "profile", "email", "offline_access", ...authConfig.apiScopes].join(" "),
         });
 
         const res = await fetch(tokenEndpoint, {
@@ -75,9 +80,11 @@ export function CallbackPage() {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           console.warn("[Auth] Token exchange response:", res.status, errData);
-          if (sessionStorage.getItem("skyer_access_token")) {
+          if (sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")) {
             setStatus("success");
-            navigate("/app", { replace: true });
+            const target = sessionStorage.getItem("skyer_return_url") || "/app";
+            sessionStorage.removeItem("skyer_return_url");
+            navigate(target, { replace: true });
             return;
           }
           setStatus("error");
@@ -87,9 +94,9 @@ export function CallbackPage() {
 
         const tokenData = await res.json();
         if (tokenData.access_token) {
-          sessionStorage.setItem("skyer_access_token", tokenData.access_token);
-          if (tokenData.id_token) sessionStorage.setItem("skyer_id_token", tokenData.id_token);
-          if (tokenData.refresh_token) sessionStorage.setItem("skyer_refresh_token", tokenData.refresh_token);
+          setStoredToken("skyer_access_token", tokenData.access_token);
+          if (tokenData.id_token) setStoredToken("skyer_id_token", tokenData.id_token);
+          if (tokenData.refresh_token) setStoredToken("skyer_refresh_token", tokenData.refresh_token);
         }
 
         // Clear transient PKCE state
@@ -100,9 +107,11 @@ export function CallbackPage() {
         await getCurrentUserProfile();
 
         setStatus("success");
+        const target = sessionStorage.getItem("skyer_return_url") || "/app";
+        sessionStorage.removeItem("skyer_return_url");
         setTimeout(() => {
-          navigate("/app", { replace: true });
-        }, 400);
+          navigate(target, { replace: true });
+        }, 300);
       } catch (e: any) {
         setStatus("error");
         setErrorMsg(e.message || "Failed to process authorization callback");

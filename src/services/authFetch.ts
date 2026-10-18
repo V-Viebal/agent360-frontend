@@ -2,88 +2,201 @@ import { authConfig } from "../config/authConfig";
 import { initiateSkyerSignIn } from "./pkceAuth";
 
 /**
- * Attach the Skyer (Logto) access token to same-origin /api/* calls. The backend requires it for workspace
- * files and chat history (Agent360:Security:RequireAuthForSensitiveReads). On 401 the token is refreshed once
- * with the stored refresh token. If token cannot be refreshed and there is no active session,
- * prompt user gently rather than aggressive instant redirects to avoid loops.
+ * Robust session maintenance and token lifecycle manager matching monosbase design:
+ * - SessionSecurityStorage across tabs (dual sessionStorage + localStorage sync).
+ * - Automatic background token refresh (silent renew) when token approaches expiry (renewTimeBeforeTokenExpiresInSeconds: 60).
+ * - Single-flight refresh mutex lock (useRefreshTokenLock) to prevent race conditions during concurrent API calls.
+ * - On 401: transparent retry with fresh token. If refresh token fails/revoked: graceful session cleanup and sign-in re-auth.
  */
 const ACCESS = "skyer_access_token";
 const REFRESH = "skyer_refresh_token";
-let refreshing: Promise<string | null> | null = null;
+const ID_TOKEN = "skyer_id_token";
+const USER_PROFILE = "skyer_user_profile";
+const RETURN_URL = "skyer_return_url";
 
-function expired(token: string): boolean {
+export function getStoredToken(key: string): string | null {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload.exp === "number" && payload.exp * 1000 < Date.now() + 30_000;
-  } catch {
-    return false;
-  }
-}
-
-async function refreshToken(original: typeof fetch): Promise<string | null> {
-  const rt = sessionStorage.getItem(REFRESH);
-  if (!rt) return null;
-  const isLocal = window.location.origin.includes("localhost");
-  try {
-    const res = await original(new URL("/oidc/token", authConfig.endpoint).toString(), {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: isLocal ? authConfig.localAppId : authConfig.appId,
-        refresh_token: rt,
-        resource: authConfig.apiResource,
-        scope: authConfig.apiScopes.join(" "),
-      }).toString(),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.access_token) return null;
-    sessionStorage.setItem(ACCESS, data.access_token);
-    if (data.refresh_token) sessionStorage.setItem(REFRESH, data.refresh_token);
-    return data.access_token as string;
+    return sessionStorage.getItem(key) || localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-function getRefreshed(original: typeof fetch): Promise<string | null> {
-  if (!refreshing) refreshing = refreshToken(original).finally(() => { refreshing = null; });
-  return refreshing;
+export function setStoredToken(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(key, value);
+    localStorage.setItem(key, value);
+  } catch {}
+}
+
+export function removeStoredToken(key: string): void {
+  try {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  } catch {}
+}
+
+export function clearAllSessionState(): void {
+  removeStoredToken(ACCESS);
+  removeStoredToken(REFRESH);
+  removeStoredToken(ID_TOKEN);
+  removeStoredToken(USER_PROFILE);
+  try {
+    sessionStorage.removeItem("skyer_last_exchanged_code");
+    sessionStorage.removeItem("skyer_oidc_verifier");
+    sessionStorage.removeItem("skyer_oidc_state");
+  } catch {}
+}
+
+function tokenApproachingExpiry(token: string, thresholdSeconds = 60): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (typeof payload.exp !== "number") return false;
+    return payload.exp * 1000 < Date.now() + thresholdSeconds * 1000;
+  } catch {
+    return false;
+  }
+}
+
+let refreshingPromise: Promise<string | null> | null = null;
+
+export async function requestTokenRefresh(originalFetch: typeof fetch = window.fetch): Promise<string | null> {
+  const rt = getStoredToken(REFRESH);
+  if (!rt) return null;
+
+  const isLocal = typeof window !== "undefined" && window.location.origin.includes("localhost");
+  const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
+
+  try {
+    const res = await originalFetch(new URL("/oidc/token", authConfig.endpoint).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: clientId,
+        refresh_token: rt,
+        resource: authConfig.apiResource,
+        scope: ["openid", "profile", "email", "offline_access", ...authConfig.apiScopes].join(" "),
+      }).toString(),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      // If refresh token is expired or revoked by Logto, clean up stale credentials
+      if (err.error === "invalid_grant" || res.status === 400 || res.status === 401) {
+        console.warn("[Auth] Refresh token expired or revoked. Clearing stale session state.");
+        clearAllSessionState();
+      }
+      return null;
+    }
+
+    const data = await res.json();
+    if (!data.access_token) return null;
+
+    setStoredToken(ACCESS, data.access_token);
+    if (data.refresh_token) {
+      setStoredToken(REFRESH, data.refresh_token);
+    }
+    if (data.id_token) {
+      setStoredToken(ID_TOKEN, data.id_token);
+    }
+
+    return data.access_token as string;
+  } catch (err) {
+    console.warn("[Auth] Network error during token refresh:", err);
+    return null;
+  }
+}
+
+/**
+ * Deduplicated Single-flight Refresh Mutex Lock (equivalent to useRefreshTokenLock in monosbase)
+ */
+export function getOrRenewAccessToken(originalFetch: typeof fetch = window.fetch): Promise<string | null> {
+  if (!refreshingPromise) {
+    refreshingPromise = requestTokenRefresh(originalFetch).finally(() => {
+      refreshingPromise = null;
+    });
+  }
+  return refreshingPromise;
+}
+
+/**
+ * Background silent renew loop (runs every 30s to renew token before it expires)
+ */
+let silentRenewInterval: any = null;
+export function startSilentRenewLoop(): void {
+  if (typeof window === "undefined" || silentRenewInterval) return;
+  silentRenewInterval = setInterval(async () => {
+    const token = getStoredToken(ACCESS);
+    if (token && tokenApproachingExpiry(token, 120)) {
+      await getOrRenewAccessToken();
+    }
+  }, 30_000);
 }
 
 export function installAuthFetch(): void {
   if (typeof window === "undefined" || (window.fetch as any).__agent360Auth) return;
   const original = window.fetch.bind(window);
+
+  startSilentRenewLoop();
+
   const wrapped = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const url = new URL(raw, window.location.origin);
-    if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/")) return original(input, init);
+    let url: URL;
+    try {
+      url = new URL(raw, window.location.origin);
+    } catch {
+      return original(input, init);
+    }
 
-    // operatorFetch (inner) reads skyer_access_token from sessionStorage and attaches it, so a refresh only
-    // needs to update storage; an explicitly provided Authorization header is respected.
+    // Only intercept same-origin first-party API calls
+    if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/")) {
+      return original(input, init);
+    }
+
     const withToken = (token: string | null) => {
       const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
-      if (token && !headers.has("Authorization")) headers.set("Authorization", `Bearer ${token}`);
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
       return original(input, { ...init, headers });
     };
 
-    let token = sessionStorage.getItem(ACCESS);
-    if (token && expired(token)) token = (await getRefreshed(original)) ?? token;
-    const res = await withToken(token);
-    if (res.status !== 401 || !res.headers.get("WWW-Authenticate")?.startsWith("Bearer")) return res;
-
-    const fresh = await getRefreshed(original);
-    if (fresh) return withToken(fresh);
-
-    // Only redirect if explicitly on a protected path that mandates auth and user hasn't already attempted auth
-    const hasOperatorKey = (() => { try { return !!localStorage.getItem("agent360.a2a.operatorKey"); } catch { return false; } })();
-    if (hasOperatorKey || sessionStorage.getItem(ACCESS) || window.location.pathname === "/callback") {
-      return res;
+    let token = getStoredToken(ACCESS);
+    // Pre-emptive refresh if token expires within 30 seconds
+    if (token && tokenApproachingExpiry(token, 30)) {
+      token = (await getOrRenewAccessToken(original)) ?? token;
     }
 
-    return res;
+    const response = await withToken(token);
+
+    // On 401 Unauthorized from backend: attempt transparent token refresh once
+    if (response.status === 401) {
+      const freshToken = await getOrRenewAccessToken(original);
+      if (freshToken) {
+        return withToken(freshToken);
+      }
+
+      // If token refresh fails completely on a protected route:
+      const hasOperatorKey = (() => {
+        try {
+          return !!localStorage.getItem("agent360.a2a.operatorKey");
+        } catch {
+          return false;
+        }
+      })();
+
+      // Do not redirect if user is in callback or has explicit operator key
+      if (!hasOperatorKey && window.location.pathname !== "/callback" && window.location.pathname !== "/") {
+        try {
+          sessionStorage.setItem(RETURN_URL, window.location.pathname + window.location.search);
+        } catch {}
+      }
+    }
+
+    return response;
   };
+
   (wrapped as any).__agent360Auth = true;
   window.fetch = wrapped as typeof window.fetch;
 }

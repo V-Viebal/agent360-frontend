@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { CreditCard, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle, ArrowRight, ShieldCheck, TestTube } from "lucide-react";
+import { CreditCard, Zap, TrendingUp, DollarSign, RefreshCw, CheckCircle, ArrowRight, ShieldCheck, TestTube, FileText } from "lucide-react";
+import { DataTable, Column } from "../../components/ui/DataTable";
 
 interface TopupPackage {
   id: string;
@@ -22,6 +23,108 @@ export function AdminBillingsPage() {
   const [loading, setLoading] = useState(true);
   const [topupLoadingId, setTopupLoadingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  interface TransactionItem {
+    id: string;
+    orderCode: string;
+    packageName: string;
+    tokens: number;
+    amount: number;
+    status: "PAID" | "PENDING" | "FAILED";
+    createdAt: string;
+  }
+
+  const [transactions, setTransactions] = useState<TransactionItem[]>([
+    {
+      id: "tx_topup_01",
+      orderCode: "17829104",
+      packageName: "Gói Cơ Bản (Starter)",
+      tokens: 2500000,
+      amount: 100000,
+      status: "PAID",
+      createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    },
+    {
+      id: "tx_topup_02",
+      orderCode: "17829105",
+      packageName: "Gói Mở Rộng (Pro Fleet)",
+      tokens: 15000000,
+      amount: 500000,
+      status: "PAID",
+      createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    },
+    {
+      id: "tx_topup_03",
+      orderCode: "17829106",
+      packageName: "Gói Doanh Nghiệp (Enterprise)",
+      tokens: 75000000,
+      amount: 2000000,
+      status: "PAID",
+      createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
+    },
+  ]);
+
+  const transactionColumns: Column<TransactionItem>[] = [
+    {
+      header: "Mã Đơn / Order Code",
+      accessorKey: "orderCode",
+      sortable: true,
+      cell: (tx) => (
+        <div>
+          <span className="font-mono font-bold text-slate-900 dark:text-white">#{tx.orderCode}</span>
+          <div className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono">ID: {tx.id}</div>
+        </div>
+      ),
+    },
+    {
+      header: "Gói Nạp",
+      accessorKey: "packageName",
+      sortable: true,
+      cell: (tx) => <span className="font-medium text-slate-800 dark:text-neutral-200">{tx.packageName}</span>,
+    },
+    {
+      header: "Tokens Cộng",
+      accessorKey: "tokens",
+      sortable: true,
+      cell: (tx) => (
+        <span className="font-mono font-bold text-[#ff7a00]">
+          +{Number(tx.tokens).toLocaleString()} Tokens
+        </span>
+      ),
+    },
+    {
+      header: "Số Tiền (VND)",
+      accessorKey: "amount",
+      sortable: true,
+      cell: (tx) => (
+        <span className="font-mono text-slate-700 dark:text-neutral-300">
+          {Number(tx.amount).toLocaleString()} đ
+        </span>
+      ),
+    },
+    {
+      header: "Trạng Thái",
+      accessorKey: "status",
+      sortable: true,
+      cell: (tx) => (
+        <span className="px-2 py-0.5 rounded-full font-mono text-[10px] uppercase font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          {tx.status}
+        </span>
+      ),
+    },
+    {
+      header: "Thời Gian",
+      accessorKey: "createdAt",
+      sortable: true,
+      className: "text-right",
+      cell: (tx) => (
+        <span className="font-mono text-[11px] text-slate-500 dark:text-neutral-400">
+          {new Date(tx.createdAt).toLocaleString()}
+        </span>
+      ),
+    },
+  ];
+
   const [mockMode, setMockMode] = useState<boolean>(() => {
     return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
   });
@@ -242,6 +345,26 @@ export function AdminBillingsPage() {
             </button>
           </div>
         ))}
+      </div>
+
+
+      {/* Transaction History & Audit Ledger */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] shadow-xs space-y-4">
+        <div className="flex items-center gap-2">
+          <CreditCard size={16} className="text-[#ff7a00]" />
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Lịch sử giao dịch & Đối soát VietQR PayOS ({transactions.length})
+          </h2>
+        </div>
+
+        <DataTable
+          data={transactions}
+          columns={transactionColumns}
+          searchPlaceholder="Tìm kiếm theo mã đơn, gói nạp, số tokens..."
+          emptyTitle="Chưa có giao dịch nào"
+          emptyDescription="Các lượt nạp token thành công sẽ được đối soát tự động tại đây."
+          pageSize={5}
+        />
       </div>
 
       {/* Gateway Information */}

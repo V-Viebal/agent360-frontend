@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { authConfig } from "../config/authConfig";
 import { initiateSkyerSignIn } from "../services/pkceAuth";
-import { Loader2, ShieldCheck, LogIn } from "lucide-react";
+import { getStoredToken, requestTokenRefresh } from "../services/authFetch";
+import { Loader2 } from "lucide-react";
 import { SkyerLogo } from "./SkyerLogo";
 
 interface AuthGuardProps {
@@ -12,24 +13,39 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-    const hasOperatorKey = (() => {
-      try {
-        return !!localStorage.getItem("agent360.a2a.operatorKey");
-      } catch {
-        return false;
-      }
-    })();
+    async function checkAuthSession() {
+      const token = getStoredToken("skyer_access_token");
+      const refreshToken = getStoredToken("skyer_refresh_token");
+      const hasOperatorKey = (() => {
+        try {
+          return !!localStorage.getItem("agent360.a2a.operatorKey");
+        } catch {
+          return false;
+        }
+      })();
 
-    if (token || hasOperatorKey) {
-      setIsAuthenticated(true);
-    } else {
+      if (hasOperatorKey || token) {
+        setIsAuthenticated(true);
+        return;
+      }
+
+      // If access token is absent or expired but refresh token exists: attempt silent refresh first (monosbase pattern)
+      if (refreshToken) {
+        const renewed = await requestTokenRefresh();
+        if (renewed) {
+          setIsAuthenticated(true);
+          return;
+        }
+      }
+
       setIsAuthenticated(false);
       // Immediately redirect to Logto OIDC sign-in without rendering app canvas
       initiateSkyerSignIn(authConfig).catch((err) => {
         console.error("[AuthGuard] Auto redirect failed:", err);
       });
     }
+
+    checkAuthSession();
   }, []);
 
   if (isAuthenticated === null || isAuthenticated === false) {

@@ -1,4 +1,6 @@
 // Standard browser PKCE (Proof Key for Code Exchange) implementation for SPA OIDC
+import { clearAllSessionState, getStoredToken } from "./authFetch";
+
 export function generateRandomString(length = 64): string {
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
   const array = new Uint8Array(length);
@@ -60,12 +62,8 @@ export function initiateSkyerSignOut(authConfig: {
   endpoint: string;
   postLogoutRedirectUri: string;
 }) {
-  const idToken = sessionStorage.getItem("skyer_id_token");
-  sessionStorage.removeItem("skyer_access_token");
-  sessionStorage.removeItem("skyer_id_token");
-  sessionStorage.removeItem("skyer_refresh_token");
-  sessionStorage.removeItem("skyer_user_profile");
-  sessionStorage.removeItem("skyer_last_exchanged_code");
+  const idToken = getStoredToken("skyer_id_token");
+  clearAllSessionState();
 
   const endSessionUrl = new URL("/oidc/session/end", authConfig.endpoint);
   endSessionUrl.searchParams.set("post_logout_redirect_uri", authConfig.postLogoutRedirectUri);

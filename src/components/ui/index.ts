@@ -17,3 +17,5 @@ export * from "./EmptyState";
 export * from "./Kbd";
 export * from "./Divider";
 export * from "./MetricStatCard";
+
+export * from "./DataTable";
