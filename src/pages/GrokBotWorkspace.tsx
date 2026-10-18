@@ -1641,6 +1641,8 @@ export function GrokBotWorkspace() {
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFileResult[]>([]);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Voice recording / Speech-to-text state
@@ -1882,10 +1884,29 @@ export function GrokBotWorkspace() {
 
     setIsUploadingFile(true);
     try {
+      let uploadSuccessCount = 0;
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const res = await uploadFileToGateway(file, selectedAgent.id);
         setAttachedFiles((prev) => [...prev, res]);
+        uploadSuccessCount++;
+      }
+      if (uploadSuccessCount > 0) {
+        triggerHaptic(25);
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+          gain.gain.setValueAtTime(0.06, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.2);
+        } catch {}
       }
     } catch (err: any) {
       console.error("File upload failed:", err);
@@ -1893,6 +1914,44 @@ export function GrokBotWorkspace() {
     } finally {
       setIsUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDropFiles = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingFile(true);
+    try {
+      let uploadSuccessCount = 0;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const res = await uploadFileToGateway(file, selectedAgent.id);
+        setAttachedFiles((prev) => [...prev, res]);
+        uploadSuccessCount++;
+      }
+      if (uploadSuccessCount > 0) {
+        triggerHaptic(30);
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12); // A5
+          gain.gain.setValueAtTime(0.06, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.2);
+        } catch {}
+      }
+    } catch (err: any) {
+      console.error("Drag and drop file upload failed:", err);
+      alert(`Upload failed: ${err.message}`);
+    } finally {
+      setIsUploadingFile(false);
+      setIsDraggingFiles(false);
+      dragCounterRef.current = 0;
     }
   };
 
@@ -4104,16 +4163,7 @@ export function GrokBotWorkspace() {
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
           <div className="flex items-center gap-1.5 shrink-0">
 
-            <button aria-label="Mở cài đặt (Settings)" data-ux-target-min="24"
-              onClick={() => {
-                setSettingsModalTab("appearance");
-                setIsSettingsModalOpen(true);
-              }}
-              className="h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors"
-              title="Cài đặt (Settings)"
-            >
-              <Settings size={15} />
-            </button>
+
 
             <button aria-label={isChatListCollapsed ? "Expand Conversations list" : "Collapse Conversations list"} data-ux-target-min="24"
               onClick={() => {
@@ -5408,8 +5458,53 @@ export function GrokBotWorkspace() {
               id="tour-prompt-composer"
               ref={composerFormRef}
               onSubmit={handleSendMessage}
-              className={`flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${isRecording ? "border-red-500/60 ring-2 ring-red-500/20" : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"} rounded-full px-4 py-2.5 shadow-xl transition-all`}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounterRef.current += 1;
+                if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+                  setIsDraggingFiles(true);
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounterRef.current -= 1;
+                if (dragCounterRef.current <= 0) {
+                  setIsDraggingFiles(false);
+                  dragCounterRef.current = 0;
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingFiles(false);
+                dragCounterRef.current = 0;
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleDropFiles(e.dataTransfer.files);
+                }
+              }}
+              className={`relative flex items-center gap-2 bg-neutral-100 dark:bg-[#16161d] border ${
+                isDraggingFiles
+                  ? "border-[#ff7a00] ring-2 ring-[#ff7a00]/30 bg-amber-500/5 dark:bg-[#ff7a00]/10"
+                  : isRecording
+                  ? "border-red-500/60 ring-2 ring-red-500/20"
+                  : "border-neutral-300 dark:border-[#262632] focus-within:border-neutral-500"
+              } rounded-full px-4 py-2.5 shadow-xl transition-all overflow-hidden`}
             >
+              {/* Drag-and-Drop Active Overlay */}
+              {isDraggingFiles && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#ff7a00] rounded-full backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                  <Paperclip size={15} className="text-[#ff7a00] animate-bounce" />
+                  <span className="text-xs font-mono font-semibold text-white tracking-wide">
+                    Drop files here to attach to {selectedAgent.name}
+                  </span>
+                </div>
+              )}
               {/* Hidden native file input */}
               <input data-ux-target-min="16"
                 ref={fileInputRef}
