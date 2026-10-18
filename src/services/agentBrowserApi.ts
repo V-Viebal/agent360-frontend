@@ -1,3 +1,5 @@
+import { operatorKey } from "./a2aApi";
+
 export interface AgentBrowserTab {
   targetId: string;
   title: string;
@@ -54,4 +56,34 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export class DesktopAuthError extends Error {}
+
+/**
+ * Signed URL (`https://desktop/a360/{token}/`, 8 h) for the agent's Selkies desktop. The desktop hosts
+ * only accept requests under that token path, so the operator key is required; without it the caller
+ * should fall back to the screenshot preview.
+ */
+export async function issueAgentDesktopUrl(agentId: string, mode: "control" | "watch" = "control"): Promise<string> {
+  const key = operatorKey.get();
+  const res = await fetch(`/api/agents/${encodeURIComponent(bare(agentId))}/browser/viewer?mode=${mode}`, {
+    method: "POST",
+    headers: { Accept: "application/json", ...(key ? { "X-Agent360-Operator-Token": key } : {}) },
+  });
+  if (res.status === 401) throw new DesktopAuthError("Operator key required to open the agent desktop");
+  if (!res.ok) throw new Error(`viewer ${res.status}`);
+  const body = (await res.json()) as { url: string };
+  return body.url;
+}
+
+/** Opens the desktop in a new tab; the tab is opened synchronously so popup blockers allow it. */
+export function openAgentDesktopTab(agentId: string, hash = "#collab"): void {
+  const w = window.open("about:blank", "_blank");
+  issueAgentDesktopUrl(agentId, hash === "#shared" ? "watch" : "control")
+    .then((url) => { if (w) { w.opener = null; w.location.href = url + hash; } })
+    .catch((e) => {
+      w?.close();
+      window.alert(e instanceof DesktopAuthError ? "Cần operator key để mở desktop của agent." : `Không mở được desktop: ${e.message}`);
+    });
 }

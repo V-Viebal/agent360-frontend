@@ -131,7 +131,7 @@ import { requestPermission, queryPermissionStatus } from "../services/permission
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
-import { AgentBrowserInfo, agentBrowserImageUrl, fetchAgentBrowser, focusAgentBrowser } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab } from "../services/agentBrowserApi";
 
 
 
@@ -801,10 +801,19 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
   const [mode, setMode] = useState<"collab" | "shared">(() =>
     typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches ? "shared" : "collab");
   const [attempt, setAttempt] = useState(0);
+  const [error, setError] = useState<string>("");
   const hiddenAt = useRef<number>(0);
   useEffect(() => {
     let alive = true;
-    focusAgentBrowser(agentId).finally(() => { if (alive) setSrc(`${url.replace(/#.*$/, "")}#${mode}`); });
+    setError("");
+    // The desktop host only serves /a360/{signed-token}/, so a fresh signed URL is requested per (re)connect.
+    Promise.all([issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control"), focusAgentBrowser(agentId)])
+      .then(([signed]) => { if (alive) setSrc(`${signed}#${mode}`); })
+      .catch((e) => {
+        if (!alive) return;
+        setSrc("");
+        setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
+      });
     return () => { alive = false; };
   }, [agentId, url, attempt, mode]);
   useEffect(() => {
@@ -821,6 +830,14 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
   }, []);
   return (
     <>
+      {error && (
+        <>
+          <AgentBrowserPreview agentId={agentId} enabled />
+          <div className="absolute top-2 left-2 px-2 py-1 rounded bg-black/75 border border-white/10 text-[11px] font-mono text-neutral-300">
+            {error === "auth" ? "Watch-only preview · nhập operator key để điều khiển desktop" : `Desktop unavailable (${error}) · showing preview`}
+          </div>
+        </>
+      )}
       {src && (
         <iframe
           key={`${src}#${attempt}`}
@@ -5758,7 +5775,7 @@ export function GrokBotWorkspace() {
       {/* 2.5 LIVE COMPUTER EXPAND PANE (Desktop: 70% width, Mobile: Fullscreen) */}
       {/* ========================================================= */}
       {isComputerSplitOpen && (() => {
-        const browserTarget = getAgentBrowserUrl(selectedAgent);
+        const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
           <>
             {/* Draggable Splitter Handle between Chat and Computer */}
@@ -5838,7 +5855,8 @@ export function GrokBotWorkspace() {
                 </button>
 
                 <a
-                  href={browserTarget.url}
+                  href={browserTarget.url ? "#" : undefined}
+                  onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
                   target="_blank"
                   rel="noreferrer"
                   className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
@@ -5863,17 +5881,19 @@ export function GrokBotWorkspace() {
 
             {/* Iframe Workspace with automatic viewport scaling */}
             <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
-              <iframe
-                key={`split-${selectedAgent.id}-${browserTarget.url}`}
-                src={browserTarget.url}
-                title={`${selectedAgent.name} Computer Live Split`}
-                className="w-full h-full border-0 bg-slate-50 dark:bg-black absolute inset-0 transition-colors"
-                style={{
-                  minWidth: "100%",
-                  minHeight: "100%",
-                }}
-                allow="clipboard-read; clipboard-write; fullscreen"
-              />
+              {browserTarget.url ? (
+                <SelkiesViewer
+                  key={`split-${selectedAgent.id}-${browserTarget.url}`}
+                  agentId={agentBrowserFor}
+                  url={browserTarget.url}
+                  title={`${selectedAgent.name} Computer Live Split`}
+                  profile={browserTarget.profile}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
+                  {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+                </div>
+              )}
             </div>
           </section>
           </>
@@ -6617,7 +6637,8 @@ export function GrokBotWorkspace() {
                             <Maximize2 size={13} />
                           </button>
                           <a aria-label="Open in new window"
-                            href={browserTarget.url ? `${browserTarget.url}#collab` : undefined}
+                            href={browserTarget.url ? "#" : undefined}
+                            onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
                             target="_blank"
                             rel="noreferrer"
                             className="p-1 text-neutral-400 hover:text-white hover:bg-[#232330] rounded transition-colors cursor-pointer"
@@ -7048,7 +7069,8 @@ export function GrokBotWorkspace() {
               {/* Action buttons */}
               <div className="flex items-center gap-2">
                 <a aria-label="Open in new browser tab"
-                  href={browserTarget.url ? `${browserTarget.url}#collab` : undefined}
+                  href={browserTarget.url ? "#" : undefined}
+                            onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2.5 py-1 rounded-lg bg-[#1c1c26] hover:bg-[#252534] border border-[#2c2c3e] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
