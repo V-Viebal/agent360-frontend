@@ -86,6 +86,7 @@ const triggerHaptic = (ms = 10) => {
 };
 import {
   fetchInfraAgents,
+  AgentListAuthError,
   updateAgentActiveModel,
   fetchAgentChats,
   fetchChatMessages,
@@ -1138,6 +1139,8 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
 export function GrokBotWorkspace() {
   const { t } = useTranslation();
   const [agents, setAgents] = useState<InfraAgent[]>([]);
+  // Agent-scoped loads only run for an id that exists in the real fleet (stale/unknown ids would 404 on every API).
+  const isKnownAgent = (id: string | null | undefined) => !!id && agents.some((a) => a.id === id);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isOnlineState, setIsOnlineState] = useState<boolean>(() => {
@@ -1355,7 +1358,13 @@ export function GrokBotWorkspace() {
     } catch {}
 
     try {
-      return localStorage.getItem("agent360_last_agent_id") || "";
+      // Ids stored while the UI was on the old mock fleet (e.g. bot:agent360:swe-lead) do not exist on any runtime.
+      const last = localStorage.getItem("agent360_last_agent_id") || "";
+      if (/^bot:agent360:(swe-lead|sre-sentinel|qa-vision|kb-researcher)$/i.test(last)) {
+        localStorage.removeItem("agent360_last_agent_id");
+        return "";
+      }
+      return last;
     } catch {
       return "";
     }
@@ -2526,7 +2535,7 @@ export function GrokBotWorkspace() {
       try {
         [loadedAgents, loadedSkills] = await Promise.all([
           fetchInfraAgents(),
-          fetchSkills(selectedAgentId || undefined),
+          fetchSkills(undefined),
         ]);
         if (loadedAgents.length === 0) {
           setBackendError("No active agents returned from cluster. Running in Standby mode.");
@@ -2534,7 +2543,9 @@ export function GrokBotWorkspace() {
           setBackendError(null);
         }
       } catch (err: any) {
-        setBackendError("Cluster API is unreachable (5290). Running in local sandbox preview.");
+        setBackendError(err?.name === "AgentListAuthError" || err instanceof AgentListAuthError
+          ? err.message
+          : "Cluster API is unreachable. Showing no agents until it responds.");
       }
 
       setAgents(loadedAgents);
@@ -2607,7 +2618,7 @@ export function GrokBotWorkspace() {
 
   // Fetch agent-specific MCP clients, loop mode and subagents whenever selectedAgentId changes
   useEffect(() => {
-    if (!selectedAgentId) return;
+    if (!isKnownAgent(selectedAgentId)) return;
     fetchAgentMcpClients(selectedAgentId).then((clients) => {
       setCurrentAgentMcpClients(clients);
       const appIds = clients.map((c) => c.key.toLowerCase().replace(/^composio_/, ""));
@@ -2640,11 +2651,11 @@ export function GrokBotWorkspace() {
         if (cfg?.mode) setActiveLoopMode(cfg.mode);
       });
     }
-  }, [selectedAgentId, mcpRefreshTrigger]);
+  }, [selectedAgentId, mcpRefreshTrigger, agents.length]);
 
   // Fetch agent-specific chats whenever selectedAgentId changes
   useEffect(() => {
-    if (!selectedAgentId) return;
+    if (!isKnownAgent(selectedAgentId)) return;
     async function loadAgentChats() {
       setIsLoadingChats(true);
       try {
@@ -2675,7 +2686,7 @@ export function GrokBotWorkspace() {
       }
     }
     loadAgentChats();
-  }, [selectedAgentId]);
+  }, [selectedAgentId, agents.length]);
 
   // When selectedChatId changes, fetch real messages with instant client cache display
   useEffect(() => {
@@ -2715,6 +2726,9 @@ export function GrokBotWorkspace() {
       }
       setIsLoadingMessages(false);
       setTimeout(jumpToBottom, 0);
+    }).catch(() => {
+      // Keep whatever real (cached) turns we have; never substitute canned dialogue.
+      if (mounted) setIsLoadingMessages(false);
     });
 
     return () => {
@@ -2762,7 +2776,7 @@ export function GrokBotWorkspace() {
   }, [rightTab, detailSubTab]);
 
   useEffect(() => {
-    if (!selectedAgentId) return;
+    if (!isKnownAgent(selectedAgentId)) return;
     setLoadingChannels(true);
     fetchAgentChannels(selectedAgentId)
       .then(setChannels)
@@ -2772,7 +2786,7 @@ export function GrokBotWorkspace() {
     fetchAgentSchedules(selectedAgentId)
       .then(setSchedules)
       .finally(() => setLoadingSchedules(false));
-  }, [selectedAgentId, rightTab]);
+  }, [selectedAgentId, rightTab, agents.length]);
 
   const refreshDetailsData = () => {
     if (!selectedAgentId) return;

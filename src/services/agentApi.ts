@@ -11,14 +11,28 @@ import { InfraAgent, AgentSession, ChatMessage } from "../types/agent";
 
 const API_BASE_URL = "/api";
 
+/** Thrown when the fleet list needs a (different) sign-in; callers show it instead of fake agents. */
+export class AgentListAuthError extends Error {
+  constructor(public status: number) {
+    super(status === 403 ? "Your account is not allowed to view the agent fleet." : "Sign in to load your agents.");
+  }
+}
+
 export async function fetchInfraAgents(): Promise<InfraAgent[]> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/agents`, {
-      headers: { Accept: "application/json" }
-    });
-    if (!res.ok) {
-      throw new Error(`Failed to fetch agents: ${res.statusText}`);
-    }
+  // Real data only: a failed fleet load must never be replaced by mock agents (their ids such as `swe-lead`
+  // do not exist on any runtime and every follow-up call 404s). Transient 401s right after sign-in are retried.
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(`${API_BASE_URL}/agents`, { headers: { Accept: "application/json" } });
+    if (res.ok || (res.status !== 401 && res.status < 500)) break;
+    await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+  }
+  if (!res || !res.ok) {
+    const status = res?.status ?? 0;
+    if (status === 401 || status === 403) throw new AgentListAuthError(status);
+    throw new Error(`Failed to fetch agents: HTTP ${status}`);
+  }
+  {
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.agents || []);
     // Filter to load only enabled agents (handling both backend DTO and direct Skyer schema)
@@ -65,10 +79,6 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         sessions: a.sessions || []
       };
     });
-  } catch (err) {
-    console.warn("Backend API not reachable, falling back to mock infra agents", err);
-    const { MOCK_INFRA_AGENTS } = await import("../data/mockInfraAgents");
-    return MOCK_INFRA_AGENTS;
   }
 }
 
@@ -516,9 +526,9 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
     if (chatId.startsWith("session-")) {
       return [];
     }
-    console.warn("fetchChatMessages fallback to mock dialogues", err);
-    const { MOCK_MESSAGES_BY_SESSION } = await import("../data/mockInfraAgents");
-    return MOCK_MESSAGES_BY_SESSION[chatId] || [];
+    // Real data only: never show canned dialogues for a chat that failed to load.
+    console.warn("fetchChatMessages failed", err);
+    throw err;
   }
 }
 
