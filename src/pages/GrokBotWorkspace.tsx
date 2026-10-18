@@ -4078,7 +4078,7 @@ export function GrokBotWorkspace() {
                 <DropdownMenuSection label="Tài khoản & Phiên">
                   <DropdownMenuItem
                     icon={<LogOut size={13} className="text-rose-400" />}
-                    label="Đăng xuất (Sign Out)"
+                    label={t("auth.signOut")}
                     variant="danger"
                     onClick={() => {
                       setIsUserMenuOpen(false);
@@ -4506,7 +4506,7 @@ export function GrokBotWorkspace() {
                 <DropdownMenuSection label="Tài khoản & Phiên">
                   <DropdownMenuItem
                     icon={<LogOut size={13} className="text-rose-400" />}
-                    label="Đăng xuất (Sign Out)"
+                    label={t("auth.signOut")}
                     variant="danger"
                     onClick={() => {
                       setIsUserMenuOpen(false);
@@ -8212,15 +8212,15 @@ export function GrokBotWorkspace() {
           setIsSignOutConfirmOpen(false);
           initiateSkyerSignOut(authConfig);
         }}
-        title="Xác nhận đăng xuất"
+        title={t("auth.signOutConfirmTitle")}
         description={
           <div className="space-y-1.5">
             <p>Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc <strong>{currentUser?.name || "Skyer Workspace"}</strong> không?</p>
             <p className="text-[11px] text-neutral-400 font-mono">Toàn bộ token truy cập cục bộ sẽ được thu hồi và phiên Logto SSO sẽ kết thúc an toàn.</p>
           </div>
         }
-        confirmLabel="Đăng xuất ngay"
-        cancelLabel="Ở lại"
+        confirmLabel={t("auth.signOutConfirmBtn")}
+        cancelLabel={t("auth.signOutCancelBtn")}
         variant="danger"
       />
 

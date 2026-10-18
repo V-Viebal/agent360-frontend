@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { User, Mail, Key, LogOut } from "lucide-react";
-import { getCurrentUserProfile, UserProfile, initiateSkyerSignOut } from "../services/pkceAuth";
+import { initiateSkyerSignOut } from "../services/pkceAuth";
+import { getCurrentUserProfile, UserProfile } from "../services/userService";
 import { authConfig } from "../config/authConfig";
 import React, { useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
@@ -470,7 +471,7 @@ export function SettingsModal({
 
           {/* GROUP 1: USER PROFILE */}
             <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
-              Tài khoản
+              {t("settings.groupAccount") || "Tài khoản"}
             </div>
 
             <button
@@ -483,7 +484,7 @@ export function SettingsModal({
               }`}
             >
               <User size={15} className={activeTab === "profile" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
-              <span>Hồ sơ người dùng</span>
+              <span>{t("settings.tabProfile") || "Hồ sơ người dùng"}</span>
             </button>
 
             {/* GROUP 1: SYSTEM SETTINGS */}
@@ -565,9 +566,9 @@ export function SettingsModal({
             {activeTab === "profile" && (
               <div className="space-y-5 animate-in fade-in duration-150">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Hồ sơ cá nhân & Thông tin tài khoản</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{t("settings.profileHeader")}</h3>
                   <p className="text-xs text-slate-500 dark:text-neutral-400">
-                    Thông tin định danh và phiên đăng nhập được xác thực thông qua Skyer SSO (Logto).
+                    {t("settings.profileSubtitle")}
                   </p>
                 </div>
 
@@ -581,13 +582,13 @@ export function SettingsModal({
                         currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : "US"
                       )}
                     </div>
-                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#161620]" title="Phiên hoạt động online" />
+                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#161620]" title={t("settings.profileOnline")} />
                   </div>
 
                   <div className="flex-1 text-center sm:text-left min-w-0">
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {currentUser?.name || "Thành viên Skyer"}
+                        {currentUser?.name || t("settings.profileMember")}
                       </h4>
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-[#ff7a00] font-semibold">
                         {currentUser?.roles?.[0] || "Authorized Member"}
@@ -607,7 +608,7 @@ export function SettingsModal({
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
                     <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <User size={12} className="text-[#ff7a00]" />
-                      Họ và Tên
+                      {t("settings.profileFullName")}
                     </span>
                     <div className="text-xs font-semibold text-slate-800 dark:text-white">
                       {currentUser?.name || "Chưa thiết lập"}
@@ -617,7 +618,7 @@ export function SettingsModal({
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
                     <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <Mail size={12} className="text-cyan-400" />
-                      Email Đăng Ký
+                      {t("settings.profileEmail")}
                     </span>
                     <div className="text-xs font-semibold text-slate-800 dark:text-white truncate">
                       {currentUser?.email || "Chưa có email"}
@@ -627,7 +628,7 @@ export function SettingsModal({
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
                     <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <Key size={12} className="text-emerald-400" />
-                      Quyền hạn & Roles
+                      {t("settings.profileRoles")}
                     </span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {currentUser?.roles && currentUser.roles.length > 0 ? (
@@ -645,11 +646,11 @@ export function SettingsModal({
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
                     <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <ShieldCheck size={12} className="text-blue-400" />
-                      Phiên SSO Hiện Tại
+                      {t("settings.profileSsoSession")}
                     </span>
                     <div className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Xác thực hợp lệ</span>
+                      <span>{t("settings.profileSsoValid")}</span>
                     </div>
                   </div>
                 </div>
@@ -657,8 +658,8 @@ export function SettingsModal({
                 {/* Sign Out Action in Profile */}
                 <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20 flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <span className="text-xs font-semibold text-rose-400">Đăng xuất tài khoản</span>
-                    <p className="text-[11px] text-neutral-400">Kết thúc phiên làm việc hiện tại và thu hồi token OIDC</p>
+                    <span className="text-xs font-semibold text-rose-400">{t("settings.profileSignOutTitle")}</span>
+                    <p className="text-[11px] text-neutral-400">{t("settings.profileSignOutDesc")}</p>
                   </div>
                   <button
                     type="button"
@@ -669,7 +670,7 @@ export function SettingsModal({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition-colors cursor-pointer shadow-xs"
                   >
                     <LogOut size={13} />
-                    <span>Đăng xuất</span>
+                    <span>{t("auth.signOut")}</span>
                   </button>
                 </div>
               </div>

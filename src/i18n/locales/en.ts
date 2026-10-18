@@ -626,6 +626,25 @@ export const en = {
 
 
   // Settings Modal Complete
+  // Settings Profile & Auth Keys
+  "settings.groupAccount": "Account",
+  "settings.tabProfile": "User Profile",
+  "settings.profileHeader": "Personal Profile & Account Information",
+  "settings.profileSubtitle": "Identity and session verified via Skyer SSO (Logto).",
+  "settings.profileMember": "Skyer Member",
+  "settings.profileOnline": "Active online session",
+  "settings.profileFullName": "Full Name",
+  "settings.profileEmail": "Registered Email",
+  "settings.profileRoles": "Permissions & Roles",
+  "settings.profileSsoSession": "Current SSO Session",
+  "settings.profileSsoValid": "Authenticated",
+  "settings.profileSignOutTitle": "Sign Out Account",
+  "settings.profileSignOutDesc": "Terminate current active session and revoke OIDC tokens",
+  "auth.signOut": "Sign out",
+  "auth.signOutConfirmTitle": "Confirm Sign Out",
+  "auth.signOutConfirmDesc": "Are you sure you want to sign out of your current session? All local access tokens will be securely revoked.",
+  "auth.signOutConfirmBtn": "Sign out",
+  "auth.signOutCancelBtn": "Stay",
   "settings.title": "Settings",
   "settings.subtitle": "Customize appearance, language, audio notifications, and device permissions",
   "settings.tabAppearance": "Appearance (Theme)",

@@ -626,6 +626,25 @@ export const vi = {
 
 
   // Settings Modal Complete
+  // Settings Profile & Auth Keys
+  "settings.groupAccount": "Tài khoản",
+  "settings.tabProfile": "Hồ sơ người dùng",
+  "settings.profileHeader": "Hồ sơ cá nhân & Thông tin tài khoản",
+  "settings.profileSubtitle": "Thông tin định danh và phiên đăng nhập được xác thực thông qua Skyer SSO (Logto).",
+  "settings.profileMember": "Thành viên Skyer",
+  "settings.profileOnline": "Phiên hoạt động online",
+  "settings.profileFullName": "Họ và Tên",
+  "settings.profileEmail": "Email Đăng Ký",
+  "settings.profileRoles": "Quyền hạn & Roles",
+  "settings.profileSsoSession": "Phiên SSO Hiện Tại",
+  "settings.profileSsoValid": "Xác thực hợp lệ",
+  "settings.profileSignOutTitle": "Đăng xuất tài khoản",
+  "settings.profileSignOutDesc": "Kết thúc phiên làm việc hiện tại và thu hồi token OIDC",
+  "auth.signOut": "Đăng xuất",
+  "auth.signOutConfirmTitle": "Xác nhận đăng xuất",
+  "auth.signOutConfirmDesc": "Bạn có chắc chắn muốn đăng xuất khỏi phiên làm việc không? Toàn bộ token truy cập cục bộ sẽ được thu hồi an toàn.",
+  "auth.signOutConfirmBtn": "Đăng xuất",
+  "auth.signOutCancelBtn": "Ở lại",
   "settings.title": "Cài đặt",
   "settings.subtitle": "Tuỳ chỉnh cách nhìn, ngôn ngữ, chuông báo và quyền hạn thiết bị",
   "settings.tabAppearance": "Giao diện (Màu sắc)",
