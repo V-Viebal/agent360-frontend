@@ -30,10 +30,17 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     category: "Navigation & Search",
     customizable: true,
   },
-{
+  {
     id: "toggle_left_sidebar",
     defaultKeys: ["Ctrl", "B"],
     description: "Toggle left Agents sidebar (collapse / expand)",
+    category: "Navigation & Search",
+    customizable: true,
+  },
+  {
+    id: "open_topology",
+    defaultKeys: ["Ctrl", "G"],
+    description: "Open A2A Multi-Agent Topology Graph (Sơ đồ đội ngũ)",
     category: "Navigation & Search",
     customizable: true,
   },

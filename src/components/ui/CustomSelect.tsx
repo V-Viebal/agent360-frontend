@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Search } from "lucide-react";
 
 export interface SelectOption {
   value: string;
@@ -8,16 +8,20 @@ export interface SelectOption {
   description?: string;
 }
 
-interface CustomSelectProps {
+export interface CustomSelectProps {
   options: SelectOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
+  dropdownClassName?: string;
   iconOnly?: boolean;
   dropdownAlign?: "left" | "right";
   showTooltip?: boolean;
+  disabled?: boolean;
+  searchable?: boolean;
+  "aria-label"?: string;
 }
 
 export function CustomSelect({
@@ -27,12 +31,18 @@ export function CustomSelect({
   placeholder = "Select...",
   className = "",
   triggerClassName = "",
+  dropdownClassName = "",
   iconOnly = false,
   dropdownAlign = "right",
   showTooltip = false,
+  disabled = false,
+  searchable = false,
+  "aria-label": ariaLabel,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedOption = options.find((o) => o.value === value);
 
@@ -42,9 +52,35 @@ export function CustomSelect({
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && searchable) {
+      setTimeout(() => searchInputRef.current?.focus(), 50);
+    } else {
+      setSearchQuery("");
+    }
+  }, [isOpen, searchable]);
+
+  const filteredOptions = searchQuery.trim()
+    ? options.filter(
+        (o) =>
+          o.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (o.description && o.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (o.badge && o.badge.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : options;
 
   const isFullWidth = className.includes("w-full");
 
@@ -52,16 +88,19 @@ export function CustomSelect({
     <div ref={containerRef} className={`relative ${isFullWidth ? "block w-full" : "inline-block"} text-left select-none ${className}`}>
       {/* Trigger Button with Tooltip */}
       <div className={`relative group/select-trigger ${isFullWidth ? "block w-full" : "inline-block max-w-full"}`}>
-        <button aria-label={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder} data-ux-target-min="24"
+        <button
+          aria-label={ariaLabel || (selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder)}
+          data-ux-target-min="24"
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          disabled={disabled}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
           title={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder}
           className={
             iconOnly
-              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs ${triggerClassName}`
+              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
               : triggerClassName
-              ? `flex items-center justify-between gap-1.5 transition-all cursor-pointer min-w-0 max-w-full ${triggerClassName}`
-              : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full`
+              ? `flex items-center justify-between gap-1.5 transition-all cursor-pointer min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
+              : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-xl px-2.5 py-1.5 text-xs font-mono transition-all cursor-pointer shadow-sm min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed`
           }
         >
           {iconOnly ? (
@@ -88,7 +127,7 @@ export function CustomSelect({
           )}
         </button>
 
-        {/* Floating Custom Tooltip on Hover (Optional, off by default to keep UI lean) */}
+        {/* Floating Custom Tooltip on Hover */}
         {showTooltip && (
           <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[100] hidden group-hover/select-trigger:block whitespace-nowrap rounded-lg bg-white dark:bg-[#0e1017] border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] font-sans text-slate-900 dark:text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
             <div className="flex items-center gap-1.5">
@@ -104,7 +143,6 @@ export function CustomSelect({
                 {selectedOption.description}
               </div>
             )}
-            {/* Arrow */}
             <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-x-4 border-x-transparent border-b-4 border-b-[#0e1017]" />
           </div>
         )}
@@ -112,40 +150,65 @@ export function CustomSelect({
 
       {/* Dropdown Menu Always On Top */}
       {isOpen && (
-        <div className={`absolute ${dropdownAlign === "left" ? "left-0" : "right-0"} z-[100] mt-1.5 w-52 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100`}>
-          <div className="space-y-0.5 max-h-56 overflow-y-auto">
-            {options.map((opt) => {
-              const isSelected = opt.value === value;
-              return (
-                <div
-                  key={opt.value}
-                  onClick={() => {
-                    onChange(opt.value);
-                    setIsOpen(false);
-                  }}
-                  className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
-                    isSelected
-                      ? "bg-[#222230] text-[#ff7a00] font-semibold"
-                      : "text-neutral-300 hover:bg-[#1a1a24] hover:text-white"
-                  }`}
-                >
-                  <div className="flex flex-col truncate">
-                    <span className="truncate">{opt.label}</span>
-                    {opt.description && (
-                      <span className="text-[10px] text-neutral-500 font-normal truncate">
-                        {opt.description}
+        <div
+          className={`absolute ${
+            dropdownAlign === "left" ? "left-0" : "right-0"
+          } z-[100] mt-1.5 w-60 min-w-full rounded-2xl bg-[#14141c]/95 dark:bg-[#14141c]/95 border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}
+        >
+          {searchable && (
+            <div className="p-1 mb-1 border-b border-[#22222e] flex items-center gap-1.5 px-2 bg-[#101016] rounded-xl text-xs font-mono">
+              <Search size={12} className="text-neutral-500 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="w-full bg-transparent border-0 text-white placeholder-neutral-500 focus:outline-none py-1 text-xs"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
+
+          <div className="space-y-0.5 max-h-56 overflow-y-auto scrollbar-none">
+            {filteredOptions.length === 0 ? (
+              <div className="py-3 text-center text-[11px] font-mono text-neutral-500">
+                No matching options
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <div
+                    key={opt.value}
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs cursor-pointer transition-colors ${
+                      isSelected
+                        ? "bg-[#222230] text-[#ff7a00] font-semibold"
+                        : "text-neutral-300 hover:bg-[#1a1a24] hover:text-white"
+                    }`}
+                  >
+                    <div className="flex flex-col truncate pr-2">
+                      <span className="truncate">{opt.label}</span>
+                      {opt.description && (
+                        <span className="text-[10px] text-neutral-500 font-normal truncate">
+                          {opt.description}
+                        </span>
+                      )}
+                    </div>
+                    {opt.badge && (
+                      <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded ml-1 shrink-0">
+                        {opt.badge}
                       </span>
                     )}
+                    {isSelected && <Check size={12} className="text-[#ff7a00] ml-1 shrink-0 stroke-[2.5]" />}
                   </div>
-                  {opt.badge && (
-                    <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded ml-1 shrink-0">
-                      {opt.badge}
-                    </span>
-                  )}
-                  {isSelected && <Check size={12} className="text-[#ff7a00] ml-1 shrink-0" />}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       )}

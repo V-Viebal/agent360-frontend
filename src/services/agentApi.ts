@@ -57,7 +57,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         instanceId: instanceKey,
         status: a.status || (a.startup_status === "running" ? "active" : "idle"),
         model: cleanModelDisplayName((typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna"),
-        runtimeVersion: a.runtimeVersion || "Skyer v2.2",
+        runtimeVersion: (a.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer"),
         uptime: a.uptime || "Online (Private)",
         memoryUsageMb: a.memoryUsageMb || 256,
         description: a.description || "Active autonomous infrastructure agent",
@@ -904,4 +904,58 @@ export async function fetchToolCallReceipts(sessionId: string, agentId?: string)
     console.warn("fetchToolCallReceipts fallback:", err);
     return [];
   }
+}
+
+export interface AgentLoopModeConfig {
+  mode: "default" | "goal" | "mission";
+  updated_at?: string;
+  options?: {
+    max_steps?: number;
+    require_verification?: boolean;
+    auto_continue?: boolean;
+  };
+}
+
+export async function fetchAgentLoopMode(agentId: string): Promise<AgentLoopModeConfig> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/loop-mode`, {
+      headers: { Accept: "application/json", "X-Agent-Id": cleanId },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.mode) return data;
+    }
+  } catch (err) {
+    console.warn(`fetchAgentLoopMode fallback for ${agentId}:`, err);
+  }
+  // Local fallback
+  try {
+    const saved = localStorage.getItem(`agent360_loop_mode_${agentId}`);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return { mode: "default" };
+}
+
+export async function updateAgentLoopMode(agentId: string, mode: "default" | "goal" | "mission"): Promise<AgentLoopModeConfig> {
+  const config: AgentLoopModeConfig = {
+    mode,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/loop-mode`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Agent-Id": cleanId },
+      body: JSON.stringify(config),
+    }).catch(() => null);
+  } catch {}
+
+  try {
+    localStorage.setItem(`agent360_loop_mode_${agentId}`, JSON.stringify(config));
+    window.dispatchEvent(new CustomEvent("agent360_loop_mode_changed", { detail: { agentId, mode } }));
+  } catch {}
+
+  return config;
 }

@@ -28,12 +28,23 @@ export async function sendConsoleChatMessageStream(
 
   const targetAgent = (agentId || "mons").toLowerCase();
 
-  // Format standard Skyer console input
+  // Read active agent loop mode (default / goal / mission) from localStorage cache
+  let activeLoopMode = "default";
+  try {
+    const raw = localStorage.getItem(`agent360_loop_mode_${targetAgent}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.mode) activeLoopMode = parsed.mode;
+    }
+  } catch {}
+
+  // Format standard Skyer console input with loop_mode support
   const payload = {
     user_id: "default",
     session_id: sessionId || `session-${Date.now()}`,
     agent_id: targetAgent,
     channel: "console",
+    loop_mode: activeLoopMode,
     input: [
       {
         role: "user",

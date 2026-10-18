@@ -1,3 +1,4 @@
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSection } from "../components/ui/DropdownMenu";
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
@@ -67,6 +68,9 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
+  CircleDot,
+  Target,
+  Rocket,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
 import {
@@ -91,6 +95,9 @@ import {
   WorkspaceTreeNode,
   sendTurnTelemetryBeacon,
   compactAgentContext,
+  fetchAgentLoopMode,
+  updateAgentLoopMode,
+  AgentLoopModeConfig,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
@@ -1331,6 +1338,7 @@ export function GrokBotWorkspace() {
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
+  const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">("default");
   const [mcpRefreshTrigger, setMcpRefreshTrigger] = useState(0);
   const [isBrowserModalOpen, setIsBrowserModalOpen] = useState<boolean>(false);
   const [isComputerSplitOpen, setIsComputerSplitOpen] = useState<boolean>(() => {
@@ -2311,12 +2319,25 @@ export function GrokBotWorkspace() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch agent-specific MCP clients and chats whenever selectedAgentId changes
+  // Fetch agent-specific MCP clients, loop mode and subagents whenever selectedAgentId changes
   useEffect(() => {
     if (!selectedAgentId) return;
     fetchAgentMcpClients(selectedAgentId).then((clients) => {
+      setCurrentAgentMcpClients(clients);
       const appIds = clients.map((c) => c.key.toLowerCase().replace(/^composio_/, ""));
       setConnectedAppIds(appIds);
+    }).catch(() => {
+      setCurrentAgentMcpClients([]);
+    });
+
+    subAgentApi.list(selectedAgentId).then((bindings) => {
+      setCurrentAgentSubBindings(bindings || []);
+    }).catch(() => {
+      setCurrentAgentSubBindings([]);
+    });
+
+    fetchAgentLoopMode(selectedAgentId).then((cfg) => {
+      if (cfg?.mode) setActiveLoopMode(cfg.mode);
     });
   }, [selectedAgentId, mcpRefreshTrigger]);
 
@@ -2449,6 +2470,11 @@ export function GrokBotWorkspace() {
     if (!selectedAgentId) return;
     fetchAgentChannels(selectedAgentId).then(setChannels);
     fetchAgentSchedules(selectedAgentId).then(setSchedules);
+  };
+
+  const handleSelectLoopMode = async (mode: "default" | "goal" | "mission") => {
+    setActiveLoopMode(mode);
+    await updateAgentLoopMode(selectedAgentId, mode);
   };
 
   const handleToggleChannel = async (channelType: string, currentEnabled: boolean) => {
@@ -2890,7 +2916,7 @@ export function GrokBotWorkspace() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isComputerSplitOpen, selectedChatId]);
 
   // Core function to execute a single prompt stream
   const executeTurnStream = async (userText: string) => {
@@ -3678,7 +3704,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className="text-[10px] font-mono text-neutral-500 truncate block mt-0.5">
+                          <span className="text-[11px] font-mono text-neutral-500 truncate block mt-0.5">
                             {ag.model}
                           </span>
                         </div>
@@ -4648,27 +4674,114 @@ export function GrokBotWorkspace() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5">
-                  {/* Column 1: Files and folders */}
-                  <div className="space-y-1.5">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold px-1">
-                      Files & Docs
+                  {/* Column 1: Loop mode & Attached Files (Renamed & Enhanced with Built-in Mode Options from QwenPaw API) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <div>
+                        <div className="text-xs font-semibold text-white tracking-tight">Loop mode</div>
+                        <div className="text-[10px] text-neutral-400">Choose how the agent should continue</div>
+                      </div>
+                      <SlidersHorizontal size={13} className="text-neutral-500" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsPlusMenuOpen(false);
-                        fileInputRef.current?.click();
-                      }}
-                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-neutral-200 hover:text-white bg-[#181822] hover:bg-[#20202e] border border-[#262638] hover:border-[#38384e] transition-all cursor-pointer group"
-                    >
-                      <div className="h-7 w-7 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-400 group-hover:text-white group-hover:bg-[#ff7a00]/20 transition-colors shrink-0">
-                        <Paperclip size={14} />
+
+                    <div className="space-y-1">
+                      <div className="text-[9px] font-mono uppercase tracking-wider text-neutral-500 font-bold px-1">
+                        BUILT-IN
                       </div>
-                      <div className="flex flex-col text-left truncate">
-                        <span className="font-medium text-xs">Files and folders</span>
-                        <span className="text-[10px] text-neutral-500 truncate">Attach images, data, docs</span>
+
+                      {/* 1. Default Mode */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLoopMode("default")}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
+                          activeLoopMode === "default"
+                            ? "bg-[#1f1f2e] border-[#ff7a00]/50 text-white shadow-xs"
+                            : "bg-[#181822]/80 hover:bg-[#20202e] border-transparent hover:border-[#2f2f42] text-neutral-300 hover:text-white"
+                        }`}
+                      >
+                        <div className="h-6 w-6 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-300 mt-0.5 shrink-0">
+                          <CircleDot size={13} className={activeLoopMode === "default" ? "text-[#ff7a00]" : "text-neutral-400"} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0 flex-1">
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-semibold text-xs text-white">Default</span>
+                            {activeLoopMode === "default" && (
+                              <span className="h-2 w-2 rounded-full bg-[#ff7a00] shrink-0 ml-1" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-neutral-400 leading-snug">
+                            The standard guarded agent loop.
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* 2. Goal Mode */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLoopMode("goal")}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
+                          activeLoopMode === "goal"
+                            ? "bg-[#1f1f2e] border-emerald-500/50 text-white shadow-xs"
+                            : "bg-[#181822]/80 hover:bg-[#20202e] border-transparent hover:border-[#2f2f42] text-neutral-300 hover:text-white"
+                        }`}
+                      >
+                        <div className="h-6 w-6 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-300 mt-0.5 shrink-0">
+                          <Target size={13} className={activeLoopMode === "goal" ? "text-emerald-400" : "text-neutral-400"} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0 flex-1">
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-semibold text-xs text-white">Goal</span>
+                            {activeLoopMode === "goal" && (
+                              <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0 ml-1" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-neutral-400 leading-snug">
+                            Work persistently toward a concrete, verifiable goal.
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* 3. Mission Mode */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLoopMode("mission")}
+                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
+                          activeLoopMode === "mission"
+                            ? "bg-[#1f1f2e] border-cyan-500/50 text-white shadow-xs"
+                            : "bg-[#181822]/80 hover:bg-[#20202e] border-transparent hover:border-[#2f2f42] text-neutral-300 hover:text-white"
+                        }`}
+                      >
+                        <div className="h-6 w-6 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-300 mt-0.5 shrink-0">
+                          <Rocket size={13} className={activeLoopMode === "mission" ? "text-cyan-400" : "text-neutral-400"} />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0 flex-1">
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-semibold text-xs text-white">Mission</span>
+                            {activeLoopMode === "mission" && (
+                              <span className="h-2 w-2 rounded-full bg-cyan-400 shrink-0 ml-1" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-neutral-400 leading-snug">
+                            Run a structured, persistent multi-step task.
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* 4. Files & Folders Attachment Option */}
+                      <div className="pt-1 border-t border-[#222230]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsPlusMenuOpen(false);
+                            fileInputRef.current?.click();
+                          }}
+                          className="w-full flex items-center gap-2 p-1.5 rounded-lg text-xs text-left text-neutral-300 hover:text-white bg-[#181822]/60 hover:bg-[#20202e] transition-colors cursor-pointer group"
+                        >
+                          <Paperclip size={12} className="text-neutral-400 group-hover:text-[#ff7a00]" />
+                          <span className="text-[11px] font-medium truncate">Upload files and folders</span>
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   </div>
 
                   {/* Column 2: Connected Apps (Loaded from Selected Agent's Apps tab - Full List) */}
@@ -5262,7 +5375,7 @@ export function GrokBotWorkspace() {
             )}
 
             {/* Filter Tabs for Conversations: All / Unread / Pinned */}
-            <div className="px-2 pt-2 pb-1 flex items-center gap-1 border-b border-[#1c1c24] text-[10px] font-mono select-none">
+            <div className="px-2 pt-2 pb-1 flex items-center gap-1 border-b border-[#1c1c24] text-[11px] font-mono select-none">
               <button data-ux-target-min="24"
                 type="button"
                 onClick={() => setChatFilterTab("all")}
@@ -5472,120 +5585,90 @@ export function GrokBotWorkspace() {
                               <MoreVertical size={13} />
                             </button>
 
-                            {/* Dropdown Menu - Solid elevated overlay matching CustomSelect and App standard */}
-                            {activeChatMenuId === chat.id && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1 w-56 rounded-xl bg-[var(--bg-card)] border border-slate-200 dark:border-[#262634] p-1.5 shadow-2xl shadow-black/80 z-50 text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none"
-                                style={{ backgroundColor: undefined }}
-                              >
-                                {/* Search within conversation */}
-                                <button
-                                  type="button"
+                            {/* Dropdown Menu (Standard Shared Primitive) */}
+                            <DropdownMenu
+                              isOpen={activeChatMenuId === chat.id}
+                              onClose={() => setActiveChatMenuId(null)}
+                              align="right"
+                              width="w-56"
+                            >
+                              <DropdownMenuItem
+                                icon={<Search size={13} className="text-[#ff7a00]" />}
+                                label="Tìm trong phiên này"
+                                onClick={() => {
+                                  handleSelectChat(chat);
+                                  setInSessionSearchOpen(true);
+                                  setActiveChatMenuId(null);
+                                }}
+                              />
+
+                              <DropdownMenuItem
+                                icon={<Pin size={13} className={pinnedChatIds.includes(chat.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                                label={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
+                                onClick={(e) => {
+                                  togglePinChat(chat.id, e);
+                                  setActiveChatMenuId(null);
+                                }}
+                              />
+
+                              <DropdownMenuItem
+                                icon={<Edit2 size={13} className="text-cyan-400" />}
+                                label="Đổi tên phiên"
+                                onClick={() => {
+                                  setEditingChatId(chat.id);
+                                  setEditingChatTitle(chat.title);
+                                  setActiveChatMenuId(null);
+                                }}
+                              />
+
+                              <DropdownMenuSection label="Xuất dữ liệu">
+                                <DropdownMenuItem
+                                  icon={<Download size={12} className="text-[#ff7a00]" />}
+                                  label="Báo cáo Markdown"
+                                  badge=".md"
+                                  badgeColor="text-[#ff7a00]"
                                   onClick={() => {
                                     handleSelectChat(chat);
-                                    setInSessionSearchOpen(true);
+                                    setTimeout(() => handleExportSessionMarkdown(), 50);
                                     setActiveChatMenuId(null);
                                   }}
-                                  className="w-full text-left px-2.5 py-2 rounded-lg text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center gap-2.5 cursor-pointer transition-colors font-medium"
-                                >
-                                  <Search size={13} className="text-[#ff7a00]" />
-                                  <span>Tìm trong phiên này</span>
-                                </button>
-
-                                {/* Pin / Unpin */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    togglePinChat(chat.id, e);
-                                    setActiveChatMenuId(null);
-                                  }}
-                                  className="w-full text-left px-2.5 py-2 rounded-lg text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center gap-2.5 cursor-pointer transition-colors font-medium"
-                                >
-                                  <Pin size={13} className={pinnedChatIds.includes(chat.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />
-                                  <span>{pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}</span>
-                                </button>
-
-                                {/* Rename */}
-                                <button
-                                  type="button"
+                                />
+                                <DropdownMenuItem
+                                  icon={<Download size={12} className="text-cyan-400" />}
+                                  label="Audit Trail JSON"
+                                  badge=".json"
+                                  badgeColor="text-cyan-400"
                                   onClick={() => {
-                                    setEditingChatId(chat.id);
-                                    setEditingChatTitle(chat.title);
+                                    handleSelectChat(chat);
+                                    setTimeout(() => handleExportSessionJson(), 50);
                                     setActiveChatMenuId(null);
                                   }}
-                                  className="w-full text-left px-2.5 py-2 rounded-lg text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center gap-2.5 cursor-pointer transition-colors font-medium"
-                                >
-                                  <Edit2 size={13} className="text-cyan-400" />
-                                  <span>Đổi tên phiên</span>
-                                </button>
+                                />
+                                <DropdownMenuItem
+                                  icon={<Download size={12} className="text-emerald-400" />}
+                                  label="Execution Receipt"
+                                  badge=".html"
+                                  badgeColor="text-emerald-400"
+                                  onClick={() => {
+                                    handleSelectChat(chat);
+                                    setTimeout(() => handleExportAuditCertificate(), 50);
+                                    setActiveChatMenuId(null);
+                                  }}
+                                />
+                              </DropdownMenuSection>
 
-                                <div className="border-t border-neutral-100 dark:border-[#222230] my-1 pt-1">
-                                  <div className="px-2 py-0.5 text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
-                                    Xuất dữ liệu
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleSelectChat(chat);
-                                      setTimeout(() => handleExportSessionMarkdown(), 50);
-                                      setActiveChatMenuId(null);
-                                    }}
-                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
-                                  >
-                                    <span className="flex items-center gap-1.5">
-                                      <Download size={11} className="text-[#ff7a00]" />
-                                      <span>Báo cáo Markdown</span>
-                                    </span>
-                                    <span className="text-[10px] text-[#ff7a00] font-mono">.md</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleSelectChat(chat);
-                                      setTimeout(() => handleExportSessionJson(), 50);
-                                      setActiveChatMenuId(null);
-                                    }}
-                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
-                                  >
-                                    <span className="flex items-center gap-1.5">
-                                      <Download size={11} className="text-cyan-400" />
-                                      <span>Audit Trail JSON</span>
-                                    </span>
-                                    <span className="text-[10px] text-cyan-400 font-mono">.json</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleSelectChat(chat);
-                                      setTimeout(() => handleExportAuditCertificate(), 50);
-                                      setActiveChatMenuId(null);
-                                    }}
-                                    className="w-full text-left px-2 py-1 rounded-md text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-[#20202c] flex items-center justify-between cursor-pointer transition-colors text-[11px]"
-                                  >
-                                    <span className="flex items-center gap-1.5">
-                                      <Download size={11} className="text-emerald-400" />
-                                      <span>Execution Receipt</span>
-                                    </span>
-                                    <span className="text-[10px] text-emerald-400 font-mono">.html</span>
-                                  </button>
-                                </div>
-
-                                <div className="border-t border-neutral-100 dark:border-[#222230] my-1 pt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setChatToDelete(chat);
-                                      setActiveChatMenuId(null);
-                                    }}
-                                    className="w-full text-left px-2 py-1.5 rounded-lg text-red-500 hover:bg-red-500/10 flex items-center gap-2 cursor-pointer transition-colors"
-                                  >
-                                    <Trash2 size={13} />
-                                    <span>Xóa cuộc hội thoại</span>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                              <DropdownMenuSection>
+                                <DropdownMenuItem
+                                  icon={<Trash2 size={13} />}
+                                  label="Xóa cuộc hội thoại"
+                                  variant="danger"
+                                  onClick={() => {
+                                    setChatToDelete(chat);
+                                    setActiveChatMenuId(null);
+                                  }}
+                                />
+                              </DropdownMenuSection>
+                            </DropdownMenu>
                           </div>
 
                           {(unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) && (
@@ -5668,7 +5751,7 @@ export function GrokBotWorkspace() {
           <>
             {/* Clean Header with Mobile Close Button */}
             <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-3 shrink-0 bg-[var(--bg-sidebar)]">
-              <span className="text-[11px] font-mono text-neutral-400">Agent Specification</span>
+              <span className="text-xs font-mono text-neutral-400">Agent Specification</span>
               <button aria-label="Close Agent Specification" data-ux-target-min="24"
                 onClick={() => {
                   handleToggleBotInfo(true);
@@ -6064,7 +6147,7 @@ export function GrokBotWorkspace() {
                         <span>Persona & Governance</span>
                       </span>
                       <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
-                        {selectedAgent.runtimeVersion || "ACP v2.2"}
+                        {(selectedAgent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer")}
                       </span>
                     </div>
                     <div className="text-[11px] text-neutral-400 font-mono space-y-1 bg-[#0f0f15] p-2.5 rounded-lg border border-[#1e1e28]">

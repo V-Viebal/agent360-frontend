@@ -84,16 +84,17 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <select
+            <CustomSelect
               value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value)}
-              className="bg-[#0c0a08] border border-[#2b241e] rounded-xl px-2.5 py-1.5 text-xs text-slate-700 dark:text-neutral-300 font-mono focus:outline-none"
-            >
-              <option value="all">{t("skillPool.allSources")}</option>
-              <option value="custom">{t("skillPool.customSkills")}</option>
-              <option value="customized">{t("skillPool.customized")}</option>
-              <option value="builtin">{t("skillPool.builtin")}</option>
-            </select>
+              onChange={(val) => setFilterSource(val)}
+              options={[
+                { value: "all", label: t("skillPool.allSources") },
+                { value: "custom", label: t("skillPool.customSkills") },
+                { value: "customized", label: t("skillPool.customized") },
+                { value: "builtin", label: t("skillPool.builtin") },
+              ]}
+              triggerClassName="bg-[#0c0a08] border border-[#2b241e] hover:border-[#ff7a00]/40 rounded-xl px-2.5 py-1.5 text-xs text-neutral-300 font-mono"
+            />
 
             <button
               onClick={loadSkills}

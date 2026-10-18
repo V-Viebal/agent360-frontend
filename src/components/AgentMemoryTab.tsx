@@ -160,16 +160,18 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
         <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#ff7a00]/30 space-y-2 animate-in fade-in">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300">
             <span>{t("memory.newEntry")}</span>
-            <select
+            <CustomSelect
               value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value as any)}
-              className="bg-[#121218] border border-[#2a2a3a] rounded px-2 py-0.5 text-[10px] text-white focus:outline-none"
-            >
-              <option value="fact">{t("memory.fact")}</option>
-              <option value="rule">{t("memory.ruleMandate")}</option>
-              <option value="preference">{t("memory.preference")}</option>
-              <option value="project">{t("memory.projectContext")}</option>
-            </select>
+              onChange={(val) => setNewCategory(val as any)}
+              options={[
+                { value: "fact", label: t("memory.fact") },
+                { value: "rule", label: t("memory.ruleMandate") },
+                { value: "preference", label: t("memory.preference") },
+                { value: "project", label: t("memory.projectContext") },
+              ]}
+              triggerClassName="bg-[#121218] border border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-white hover:border-[#ff7a00]/40"
+              dropdownAlign="right"
+            />
           </div>
           <textarea
             autoFocus

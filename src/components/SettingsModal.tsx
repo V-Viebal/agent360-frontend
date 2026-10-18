@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { CustomSelect } from "./ui/CustomSelect";
 import {
   X,
   Settings,
@@ -335,7 +336,7 @@ export function SettingsModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150 max-h-[85vh]"
+        className="w-full sm:w-[880px] md:w-[920px] sm:h-[620px] h-[92vh] max-h-[660px] bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
@@ -362,7 +363,7 @@ export function SettingsModal({
         {/* Modal Body: Left Tab Nav & Right Content Panel */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Navigation Tabs (Grouped into System vs Voice Recording) */}
-          <div className="w-full md:w-52 bg-[#0f0f15] border-b md:border-b-0 md:border-r border-[#20202c] p-2 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
+          <div className="w-full md:w-56 bg-[#0f0f15] border-b md:border-b-0 md:border-r border-[#20202c] p-2.5 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
             {/* GROUP 1: SYSTEM SETTINGS */}
             <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold select-none">
               {t("settings.groupSystem") || "Hệ thống"}
@@ -629,22 +630,23 @@ export function SettingsModal({
                         {systemVoices.find(v => v.voiceURI === selectedVoiceURI)?.lang || "Tự động nhận diện"}
                       </span>
                     </div>
-                    <select
+                    <CustomSelect
                       value={selectedVoiceURI}
-                      onChange={(e) => {
-                        const uri = e.target.value;
+                      onChange={(uri) => {
                         setSelectedVoiceURI(uri);
                         saveStoredSpeechSettings({ voiceURI: uri });
                       }}
-                      className="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] rounded-lg px-2.5 py-2 focus:outline-none focus:border-[#ff7a00] cursor-pointer"
-                    >
-                      <option value="">{t("settings.ttsVoiceAuto")}</option>
-                      {systemVoices.map((v) => (
-                        <option key={v.voiceURI} value={v.voiceURI}>
-                          {v.name} ({v.lang})
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: "", label: t("settings.ttsVoiceAuto") },
+                        ...systemVoices.map((v) => ({
+                          value: v.voiceURI,
+                          label: `${v.name} (${v.lang})`,
+                        })),
+                      ]}
+                      className="w-full"
+                      triggerClassName="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] hover:border-[#ff7a00] rounded-lg px-2.5 py-2"
+                      searchable={true}
+                    />
                   </div>
 
                   {/* Sliders for Rate & Pitch */}
@@ -956,18 +958,19 @@ export function SettingsModal({
                       {audioDevices.length > 0 ? `${audioDevices.length} connected` : "Default"}
                     </span>
                   </div>
-                  <select
+                  <CustomSelect
                     value={selectedMicId}
-                    onChange={(e) => handleDeviceChange(e.target.value)}
-                    className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
-                  >
-                    <option value="">Default System Microphone</option>
-                    {audioDevices.map((d) => (
-                      <option key={d.deviceId} value={d.deviceId}>
-                        {d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleDeviceChange(val)}
+                    options={[
+                      { value: "", label: "Default System Microphone" },
+                      ...audioDevices.map((d) => ({
+                        value: d.deviceId,
+                        label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`,
+                      })),
+                    ]}
+                    className="w-full"
+                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
+                  />
                 </div>
 
                 {/* 3. Voice Activity Detection (VAD) Mode & Silence Threshold */}

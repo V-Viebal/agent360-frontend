@@ -141,9 +141,14 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
       {view === "delegations" && (
         <div className="space-y-2">
           <div className="p-2.5 rounded-xl border border-[#20202c] bg-[#14141c] space-y-1.5">
-            <select aria-label="External sub-agent to delegate to" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white">
-              {bindings.map((b) => <option key={b.id} value={b.child_agent_ref}>{b.child_agent_ref}</option>)}
-            </select>
+            <CustomSelect
+              aria-label="External sub-agent to delegate to"
+              value={target}
+              onChange={(val) => setTarget(val)}
+              options={bindings.map((b) => ({ value: b.child_agent_ref, label: b.child_agent_ref }))}
+              className="w-full"
+              triggerClassName="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] hover:border-[#ff7a00]/40 rounded-lg px-2.5 py-2 text-xs text-white"
+            />
             <textarea aria-label="Delegation objective" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Objective (read-only by default)" className="w-full h-14 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <input aria-label="Acceptance criteria separated by semicolons" value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder="Acceptance criteria; separated by ;" className="w-full min-h-[44px] bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <button disabled={!target || !objective || !criteria || busy === "send"} onClick={() => run("send", () => a2aApi.delegate({ parent_agent_ref: agentId.split(":").pop(), child_agent_ref: target, objective, constraints: ["Read-only"], acceptance_criteria: criteria.split(";").map((s) => s.trim()).filter(Boolean) }), "Delegation sent via AgentTeams")} aria-label="Delegate task via AgentTeams" className="min-h-[44px] flex items-center gap-1 px-3 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50">

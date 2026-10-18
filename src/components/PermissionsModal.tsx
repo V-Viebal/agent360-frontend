@@ -1,5 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
+import { CustomSelect } from "./ui/CustomSelect";
 import {
   ShieldCheck,
   Mic,
@@ -418,18 +419,19 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                   <span>{t("permissions.inputMic")}</span>
                   <span className="text-[10px] text-neutral-500 font-sans">{audioDevices.length} available</span>
                 </div>
-                <select
+                <CustomSelect
                   value={selectedMicId}
-                  onChange={(e) => handleDeviceChange(e.target.value)}
-                  className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
-                >
-                  <option value="">{t("permissions.defaultMic")}</option>
-                  {audioDevices.map((d) => (
-                    <option key={d.deviceId} value={d.deviceId}>
-                      {d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleDeviceChange(val)}
+                  options={[
+                    { value: "", label: t("permissions.defaultMic") },
+                    ...audioDevices.map((d) => ({
+                      value: d.deviceId,
+                      label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`,
+                    })),
+                  ]}
+                  className="w-full"
+                  triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white"
+                />
 
                 {/* Audio Input Level Meter Visualizer */}
                 <div className="pt-1.5 flex items-center justify-between gap-3 bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] rounded-lg p-2 font-mono text-xs">
@@ -471,33 +473,33 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                 </span>
               </div>
               {outputDevices.length > 0 && (
-                <select
+                <CustomSelect
                   value={selectedSpeakerId}
-                  onChange={(e) => handleSpeakerChange(e.target.value)}
-                  className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
-                >
-                  <option value="">Default System Speaker</option>
-                  {outputDevices.map((d) => (
-                    <option key={d.deviceId} value={d.deviceId}>
-                      {d.label || `Speaker (${d.deviceId.slice(0, 8)}...)`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleSpeakerChange(val)}
+                  options={[
+                    { value: "", label: "Default System Speaker" },
+                    ...outputDevices.map((d) => ({
+                      value: d.deviceId,
+                      label: d.label || `Speaker (${d.deviceId.slice(0, 8)}...)`,
+                    })),
+                  ]}
+                  className="w-full"
+                  triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
+                />
               )}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] rounded-lg p-2.5 font-mono text-xs">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-500 dark:text-neutral-400 shrink-0">Chime:</span>
-                  <select
+                  <CustomSelect
                     value={testSoundPreset}
-                    onChange={(e) => setTestSoundPreset(e.target.value as SoundPreset)}
-                    className="bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] rounded px-2 py-0.5 text-xs text-[#ff7a00] font-sans focus:outline-none"
-                  >
-                    {SOUND_PRESETS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setTestSoundPreset(val as SoundPreset)}
+                    options={SOUND_PRESETS.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                    }))}
+                    className="w-32"
+                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2 py-0.5 text-xs text-[#ff7a00]"
+                  />
                 </div>
                 <div className="flex items-center gap-2 flex-1 max-w-[200px] px-1">
                   {chimeVolume === 0 ? (

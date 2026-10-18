@@ -271,18 +271,19 @@ export function VoiceRecordSettingsModal({
                 {audioDevices.length > 0 ? `${audioDevices.length} connected` : "Default"}
               </span>
             </div>
-            <select
+            <CustomSelect
               value={selectedMicId}
-              onChange={(e) => handleDeviceChange(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] focus:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none cursor-pointer"
-            >
-              <option value="">Default System Microphone</option>
-              {audioDevices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => handleDeviceChange(val)}
+              options={[
+                { value: "", label: "Default System Microphone" },
+                ...audioDevices.map((d) => ({
+                  value: d.deviceId,
+                  label: d.label || `Microphone (${d.deviceId.slice(0, 8)}...)`,
+                })),
+              ]}
+              className="w-full"
+              triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white"
+            />
           </div>
 
           {/* 3. Voice Activity Detection (VAD) Mode & Silence Threshold */}

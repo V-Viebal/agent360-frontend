@@ -1,5 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
+import { CustomSelect } from "./ui/CustomSelect";
 import { X, Clock, Calendar, Save, Trash2, Check, Radio } from "lucide-react";
 import { AgentScheduleJob, createOrUpdateSchedule, deleteSchedule } from "../services/agentApi";
 
@@ -143,17 +144,19 @@ export function ScheduleJobModal({
 
             <div className="space-y-1">
               <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("scheduleJob.targetChannel")}</label>
-              <select
+              <CustomSelect
                 value={targetChannel}
-                onChange={(e) => setTargetChannel(e.target.value)}
-                className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-[#ff7a00]/70 cursor-pointer"
-              >
-                <option value="telegram">Telegram Channel</option>
-                <option value="discord">Discord Channel</option>
-                <option value="console">Internal Console</option>
-                <option value="matrix">Matrix Room</option>
-                <option value="slack">Slack Workspace</option>
-              </select>
+                onChange={(val) => setTargetChannel(val)}
+                options={[
+                  { value: "telegram", label: "Telegram Channel" },
+                  { value: "discord", label: "Discord Channel" },
+                  { value: "console", label: "Internal Console" },
+                  { value: "matrix", label: "Matrix Room" },
+                  { value: "slack", label: "Slack Workspace" },
+                ]}
+                className="w-full"
+                triggerClassName="w-full bg-[#181824] border border-[#2a2a3c] hover:border-[#ff7a00]/70 rounded-xl px-3 py-2 text-white font-mono text-xs"
+              />
             </div>
           </div>
 
