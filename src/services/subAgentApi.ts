@@ -57,6 +57,16 @@ export interface AcceptanceResult {
   created_at: string;
 }
 
+export interface DelegationTurn {
+  seq: number;
+  from: string;
+  to: string;
+  kind: "request" | "question" | "answer" | "message" | "reply" | "final";
+  text: string;
+  at: string;
+  call_id?: string | null;
+}
+
 export interface DelegationTask {
   id: string;
   parent_run_id: string;
@@ -78,6 +88,7 @@ export interface DelegationTask {
   created_at: string;
   updated_at: string;
   completed_at?: string | null;
+  turns?: DelegationTurn[];
 }
 
 export const normalizeAgentId = (id: string) => (id.includes(":") ? id.split(":").pop()! : id);
@@ -149,4 +160,7 @@ export const subAgentApi = {
     revised?: { objective?: string; expected_output?: string; acceptance_criteria?: string[] }
   ) => call<DelegationTask>(`/delegations/${id}/retry`, { method: "POST", body: JSON.stringify({ feedback, ...(revised || {}) }) }),
   cancel: (id: string) => call<DelegationTask>(`/delegations/${id}/cancel`, { method: "POST" }),
+  /** Parent answers a sub-agent QUESTION_FOR_PARENT (awaiting_parent) or sends a follow-up in the same native session. */
+  message: (id: string, text: string, kind?: "answer" | "message") =>
+    call<DelegationTask>(`/delegations/${id}/messages`, { method: "POST", body: JSON.stringify({ text, kind }) }),
 };

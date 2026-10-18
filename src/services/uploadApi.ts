@@ -2,6 +2,7 @@ export interface UploadedFileResult {
   url: string;
   file_name: string;
   size: number;
+  mime_type?: string;
 }
 
 export async function uploadFileToGateway(file: File, agentId: string = "default"): Promise<UploadedFileResult> {

@@ -26,6 +26,7 @@ const STATUS_STYLE: Record<string, string> = {
   accepted: "text-emerald-300 bg-emerald-500/10 border-emerald-500/25",
   completed: "text-sky-300 bg-sky-500/10 border-sky-500/25",
   under_review: "text-amber-300 bg-amber-500/10 border-amber-500/25",
+  awaiting_parent: "text-violet-300 bg-violet-500/10 border-violet-500/30",
   running: "text-[#ff7a00] bg-[#ff7a00]/10 border-[#ff7a00]/25",
   queued: "text-slate-700 dark:text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
   retry_queued: "text-slate-700 dark:text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
@@ -60,6 +61,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
   const [skill, setSkill] = useState<SkillSyncStatus | null>(null);
   const [hasKey, setHasKey] = useState(!!operatorKey.get());
   const [keyInput, setKeyInput] = useState("");
+  const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
 
   const candidates = useMemo(
     () =>
@@ -181,6 +183,16 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
         reviewer === "human" ? t.acceptance_criteria.map((c) => ({ criterion: c, result: decision === "accepted" ? "pass" : "fail", evidence: "human review" })) : undefined;
       const updated = await subAgentApi.review(t.id, { decision, reviewer, checks, reason: `${reviewer} ${decision}` });
       setTasks((prev) => prev.map((x) => (x.id === t.id ? updated : x)));
+    });
+
+  const sendMessage = (task: DelegationTask) =>
+    run(`msg-${task.id}`, async () => {
+      const text = (replyDraft[task.id] || "").trim();
+      if (!text) return;
+      const updated = await subAgentApi.message(task.id, text, task.status === "awaiting_parent" ? "answer" : "message");
+      setReplyDraft((p) => ({ ...p, [task.id]: "" }));
+      setTasks((p) => p.map((x) => (x.id === task.id ? updated : x)));
+      flash(`${task.child_agent_id}: ${updated.status}`, !["failed", "timed_out"].includes(updated.status));
     });
 
   const retry = (t: DelegationTask) =>
@@ -429,7 +441,44 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
               <p className="text-slate-700 dark:text-neutral-300 line-clamp-2">{task.objective}</p>
               {expanded === task.id && (
                 <div className="space-y-1.5 pt-1 border-t border-[#20202c]">
-                  {task.output && <pre className="whitespace-pre-wrap text-[11px] text-slate-800 dark:text-neutral-200 bg-[#0f0f14] p-2 rounded-lg max-h-48 overflow-y-auto">{task.output}</pre>}
+                  {(task.turns?.length ?? 0) > 1 ? (
+                    <div className="space-y-1 max-h-64 overflow-y-auto" data-testid="delegation-turns">
+                      {task.turns!.map((turn) => {
+                        const fromParent = turn.from === task.parent_agent_id;
+                        return (
+                          <div key={turn.seq} className={`flex ${fromParent ? "justify-end" : "justify-start"}`}>
+                            <div className={`max-w-[88%] rounded-lg px-2 py-1 text-[11px] border ${
+                              turn.kind === "question" ? "bg-violet-500/10 border-violet-500/30" : fromParent ? "bg-[#ff7a00]/10 border-[#ff7a00]/25" : "bg-[#0f0f14] border-[#20202c]"}`}>
+                              <div className="text-[9px] font-mono text-neutral-500">#{turn.seq} {turn.from} · {turn.kind}</div>
+                              <div className="whitespace-pre-wrap text-slate-800 dark:text-neutral-200 line-clamp-6">{turn.text}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    task.output && <pre className="whitespace-pre-wrap text-[11px] text-slate-800 dark:text-neutral-200 bg-[#0f0f14] p-2 rounded-lg max-h-48 overflow-y-auto">{task.output}</pre>
+                  )}
+                  {task.mode === "sync" && ["awaiting_parent", "completed", "under_review"].includes(task.status) && (
+                    <div className="flex gap-1" data-testid="delegation-reply">
+                      <input
+                        value={replyDraft[task.id] || ""}
+                        onChange={(e) => setReplyDraft((p) => ({ ...p, [task.id]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") sendMessage(task); }}
+                        placeholder={task.status === "awaiting_parent" ? `Answer ${task.child_agent_id}'s question…` : `Follow-up to ${task.child_agent_id} (same session)…`}
+                        aria-label={task.status === "awaiting_parent" ? "Answer sub-agent question" : "Send follow-up to sub-agent"}
+                        className="flex-1 min-w-0 px-2 py-1 rounded-lg bg-[#0f0f14] border border-[#2b2b3d] text-[11px] text-slate-800 dark:text-neutral-200"
+                      />
+                      <button
+                        disabled={!(replyDraft[task.id] || "").trim() || busy === `msg-${task.id}`}
+                        onClick={() => sendMessage(task)}
+                        className="px-2 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 text-[#ff7a00] disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                      >
+                        {busy === `msg-${task.id}` ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
+                        {task.status === "awaiting_parent" ? "Answer" : "Send"}
+                      </button>
+                    </div>
+                  )}
                   {task.error && <div className="text-rose-300 text-[11px]">Error: {task.error}</div>}
                   {task.acceptance && (
                     <div className="space-y-0.5">

@@ -6,7 +6,7 @@ import { Tabs, Tooltip, ConfirmDialog, CodeBlock, AgentPill } from "../component
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
-import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network, Keyboard } from "lucide-react";
+import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network, Keyboard, Info } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
 import { ConnectAppsModal, APPS_CATALOG } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
@@ -114,7 +114,7 @@ import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime } from "../services/notificationService";
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
-import { CustomSelect, StatusBadge, IconButton, SearchInput } from "../components/ui";
+import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { PermissionsModal } from "../components/PermissionsModal";
@@ -1527,6 +1527,52 @@ export function GrokBotWorkspace() {
   const [isResizingLeft, setIsResizingLeft] = useState(false);
   const [isResizingRight, setIsResizingRight] = useState(false);
 
+
+  // Collapse states per user request with localStorage persistence
+  // 0. isLeftSidebarCollapsed: collapsible left sidebar showing only avatars & status
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
+    if (isInitialCompact) return false;
+    try {
+      // When computer split is open on load/reload, left sidebar should default to collapsed
+      if (localStorage.getItem("agent360_computer_split") === "true") return true;
+      const saved = localStorage.getItem("agent360_left_sidebar_collapsed");
+      return saved !== null ? saved === "true" : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleLeftSidebar = (collapse?: boolean) => {
+    setIsLeftSidebarCollapsed((prev) => {
+      const next = collapse !== undefined ? collapse : !prev;
+      try {
+        localStorage.setItem("agent360_left_sidebar_collapsed", next ? "true" : "false");
+      } catch {}
+      return next;
+    });
+  };
+
+  // 1. isChatListCollapsed: collapse bar for conversation list
+  const [isChatListCollapsed, setIsChatListCollapsed] = useState<boolean>(() => {
+    if (isInitialCompact) return true;
+    try {
+      const saved = localStorage.getItem("agent360_chat_list_collapsed");
+      return saved !== null ? saved === "true" : false;
+    } catch {
+      return false;
+    }
+  });
+  // 2. isBotInfoCollapsed: collapse bar for rightmost bot information pane
+  const [isBotInfoCollapsed, setIsBotInfoCollapsed] = useState<boolean>(() => {
+    if (isInitialCompact) return true;
+    try {
+      const saved = localStorage.getItem("agent360_bot_info_collapsed");
+      return saved !== null ? saved === "true" : false;
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingComputerSplit) {
@@ -1575,51 +1621,6 @@ export function GrokBotWorkspace() {
       document.body.style.userSelect = "";
     };
   }, [isResizingLeft, isResizingRight, isResizingComputerSplit, isResizingChatSessions, isBotInfoCollapsed, botInfoWidth]);
-
-  // Collapse states per user request with localStorage persistence
-  // 0. isLeftSidebarCollapsed: collapsible left sidebar showing only avatars & status
-  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
-    if (isInitialCompact) return false;
-    try {
-      // When computer split is open on load/reload, left sidebar should default to collapsed
-      if (localStorage.getItem("agent360_computer_split") === "true") return true;
-      const saved = localStorage.getItem("agent360_left_sidebar_collapsed");
-      return saved !== null ? saved === "true" : false;
-    } catch {
-      return false;
-    }
-  });
-
-  const handleToggleLeftSidebar = (collapse?: boolean) => {
-    setIsLeftSidebarCollapsed((prev) => {
-      const next = collapse !== undefined ? collapse : !prev;
-      try {
-        localStorage.setItem("agent360_left_sidebar_collapsed", next ? "true" : "false");
-      } catch {}
-      return next;
-    });
-  };
-
-  // 1. isChatListCollapsed: collapse bar for conversation list
-  const [isChatListCollapsed, setIsChatListCollapsed] = useState<boolean>(() => {
-    if (isInitialCompact) return true;
-    try {
-      const saved = localStorage.getItem("agent360_chat_list_collapsed");
-      return saved !== null ? saved === "true" : false;
-    } catch {
-      return false;
-    }
-  });
-  // 2. isBotInfoCollapsed: collapse bar for rightmost bot information pane
-  const [isBotInfoCollapsed, setIsBotInfoCollapsed] = useState<boolean>(() => {
-    if (isInitialCompact) return true;
-    try {
-      const saved = localStorage.getItem("agent360_bot_info_collapsed");
-      return saved !== null ? saved === "true" : false;
-    } catch {
-      return false;
-    }
-  });
 
   // Helper setters that persist to localStorage
   const handleToggleChatList = (collapse?: boolean) => {
