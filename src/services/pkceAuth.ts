@@ -49,3 +49,23 @@ export async function initiateSkyerSignIn(authConfig: {
 
   window.location.href = url.toString();
 }
+
+export function initiateSkyerSignOut(authConfig: {
+  endpoint: string;
+  postLogoutRedirectUri: string;
+}) {
+  const idToken = sessionStorage.getItem("skyer_id_token");
+  sessionStorage.removeItem("skyer_access_token");
+  sessionStorage.removeItem("skyer_id_token");
+  sessionStorage.removeItem("skyer_refresh_token");
+  sessionStorage.removeItem("skyer_user_profile");
+  sessionStorage.removeItem("skyer_last_exchanged_code");
+
+  const endSessionUrl = new URL("/oidc/session/end", authConfig.endpoint);
+  endSessionUrl.searchParams.set("post_logout_redirect_uri", authConfig.postLogoutRedirectUri);
+  if (idToken) {
+    endSessionUrl.searchParams.set("id_token_hint", idToken);
+  }
+
+  window.location.href = endSessionUrl.toString();
+}

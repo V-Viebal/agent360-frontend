@@ -118,7 +118,7 @@ export function Tooltip({
               zIndex: 99999,
               pointerEvents: "none",
             }}
-            className={`whitespace-nowrap rounded-lg bg-slate-900/95 dark:bg-[#101016]/95 border border-slate-700/60 dark:border-white/15 px-2.5 py-1 text-[11px] font-sans text-slate-100 dark:text-white shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center gap-1.5 select-none ${className}`}
+            className={`whitespace-nowrap rounded-lg bg-slate-900/95 dark:bg-[#101016]/95 border border-slate-700/60 dark:border-white/15 px-3 py-1.5 text-[11px] font-sans text-slate-100 dark:text-white shadow-lg backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 select-none min-w-max ${className}`}
           >
             <span>{content}</span>
             {shortcut && (
