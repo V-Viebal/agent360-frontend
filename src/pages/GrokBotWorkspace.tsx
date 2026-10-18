@@ -2396,8 +2396,8 @@ export function GrokBotWorkspace() {
   const plusMenuRef = useRef<HTMLDivElement>(null);
   const appsScrollRef = useRef<HTMLDivElement>(null);
   const subAgentsScrollRef = useRef<HTMLDivElement>(null);
-  const [lastAppsScrollTop, setLastAppsScrollTop] = useState(0);
-  const [lastSubAgentsScrollTop, setLastSubAgentsScrollTop] = useState(0);
+  const lastAppsScrollTopRef = useRef(0);
+  const lastSubAgentsScrollTopRef = useRef(0);
 
   // Auto-scroll highlighted popover item into view when navigating via keyboard
   useEffect(() => {
@@ -2418,18 +2418,18 @@ export function GrokBotWorkspace() {
       document.addEventListener("mousedown", handleClickOutside);
       // Restore cached scroll positions after DOM paint
       requestAnimationFrame(() => {
-        if (appsScrollRef.current && lastAppsScrollTop) {
-          appsScrollRef.current.scrollTop = lastAppsScrollTop;
+        if (appsScrollRef.current && lastAppsScrollTopRef.current) {
+          appsScrollRef.current.scrollTop = lastAppsScrollTopRef.current;
         }
-        if (subAgentsScrollRef.current && lastSubAgentsScrollTop) {
-          subAgentsScrollRef.current.scrollTop = lastSubAgentsScrollTop;
+        if (subAgentsScrollRef.current && lastSubAgentsScrollTopRef.current) {
+          subAgentsScrollRef.current.scrollTop = lastSubAgentsScrollTopRef.current;
         }
       });
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isPlusMenuOpen, lastAppsScrollTop, lastSubAgentsScrollTop]);
+  }, [isPlusMenuOpen]);
 
   // Jump immediately to bottom on open / chat switch without smooth scroll animation
   const jumpToBottom = () => {
@@ -5488,8 +5488,8 @@ export function GrokBotWorkspace() {
 
                     <div
                       ref={appsScrollRef}
-                      onScroll={(e) => setLastAppsScrollTop((e.target as HTMLElement).scrollTop)}
-                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none"
+                      onScroll={(e) => { lastAppsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
+                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu"
                     >
                       {(() => {
                         // Priority 1: All apps loaded from Agent's active MCP clients with instant search
@@ -5611,8 +5611,8 @@ export function GrokBotWorkspace() {
 
                     <div
                       ref={subAgentsScrollRef}
-                      onScroll={(e) => setLastSubAgentsScrollTop((e.target as HTMLElement).scrollTop)}
-                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none"
+                      onScroll={(e) => { lastSubAgentsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
+                      className="flex-1 max-h-[310px] overflow-y-auto space-y-1 pr-1 scrollbar-none overscroll-contain transform-gpu"
                     >
                       {(() => {
                         // All subagents configured on selected agent with instant search

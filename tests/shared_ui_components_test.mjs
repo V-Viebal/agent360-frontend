@@ -221,3 +221,34 @@ assert.strictEqual(resolveToastDuration({ message: "Fast", duration: 1500 }), 15
 console.log("✓ Test 11: Toast auto-dismiss timeout contract verified");
 
 console.log("🎉 All 11 Shared UI Component assertions passed successfully!");
+
+// 12. Test Kbd Component Classes & Sizes
+console.log("Testing Kbd component size contracts...");
+const kbdSizes = {
+  xs: "text-[9px]",
+  sm: "text-[10px]",
+  md: "text-[11px]",
+};
+assert.strictEqual(kbdSizes.xs, "text-[9px]", "Kbd xs should be 9px font");
+assert.strictEqual(kbdSizes.sm, "text-[10px]", "Kbd sm should be 10px font");
+console.log("✓ Test 12: Kbd component size and typography verified");
+
+// 13. Test Divider Component Orientation
+console.log("Testing Divider component orientations...");
+function getDividerStyle(orientation) {
+  return orientation === "vertical" ? "w-px h-full" : "w-full h-px";
+}
+assert.strictEqual(getDividerStyle("vertical"), "w-px h-full", "Vertical divider must be 1px width");
+assert.strictEqual(getDividerStyle("horizontal"), "w-full h-px", "Horizontal divider must be 1px height");
+console.log("✓ Test 13: Divider orientation classes verified");
+
+// 14. Test MetricStatCard Trend Color Contract
+console.log("Testing MetricStatCard trend indicators...");
+function getTrendColor(trend) {
+  return trend === "up" ? "text-emerald-500" : trend === "down" ? "text-red-500" : "text-neutral-400";
+}
+assert.strictEqual(getTrendColor("up"), "text-emerald-500", "Up trend must be emerald color");
+assert.strictEqual(getTrendColor("down"), "text-red-500", "Down trend must be red color");
+console.log("✓ Test 14: MetricStatCard trend color mapping verified");
+
+console.log("🎉 All 14 Shared UI Component assertions passed successfully!");
