@@ -234,7 +234,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#0c0c0e] text-neutral-200 flex overflow-hidden font-sans select-none">
+    <div className="h-screen w-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex overflow-hidden font-sans select-none transition-colors">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
@@ -245,17 +245,17 @@ export function AdminLayout() {
 
       {/* Sidebar Navigation (Collapsible: 64px vs 240px) */}
       <aside
-        className={`fixed md:static top-0 bottom-0 left-0 bg-[#111116] border-r border-[#1e1e26] z-50 flex flex-col transition-all duration-200 shrink-0 ${
+        className={`fixed md:static top-0 bottom-0 left-0 bg-[var(--bg-sidebar)] border-r border-[var(--border-card)] z-50 flex flex-col transition-all duration-200 shrink-0 ${
           isSidebarCollapsed ? "w-16" : "w-60"
         } ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         {/* Brand Header */}
-        <div className="h-14 border-b border-[#1e1e26] flex items-center justify-between px-3.5">
+        <div className="h-14 border-b border-[var(--border-card)] flex items-center justify-between px-3.5 bg-[var(--bg-sidebar)]">
           <div className="flex items-center gap-2.5 min-w-0">
             <SkyerLogo size={24} showText={false} showBotBadge={false} className="shrink-0" />
             {!isSidebarCollapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-xs tracking-tight text-white flex items-center gap-1.5 truncate">
+                <span className="font-bold text-xs tracking-tight text-[var(--text-primary)] flex items-center gap-1.5 truncate">
                   Skyer Admin
                   <span className="px-1.5 py-0.2 rounded-md bg-[#f59e0b]/20 text-[#f59e0b] text-[9px] font-mono font-semibold uppercase">
                     Root
@@ -270,7 +270,7 @@ export function AdminLayout() {
             {/* Collapse Toggle Button (Desktop) */}
             <button
               onClick={toggleSidebarCollapse}
-              className="hidden md:flex p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-[#1a1a24] transition-colors cursor-pointer"
+              className="hidden md:flex p-1 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer"
               title={isSidebarCollapsed ? "Mở rộng sidebar" : "Thu gọn sidebar (Tối đa không gian)"}
             >
               {isSidebarCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
@@ -299,8 +299,8 @@ export function AdminLayout() {
                 title={isSidebarCollapsed ? item.label : undefined}
                 className={`flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                   active
-                    ? "bg-[#f59e0b]/15 text-[#f59e0b] font-semibold"
-                    : "text-neutral-400 hover:text-neutral-200 hover:bg-[#181820]"
+                    ? "bg-[#f59e0b]/15 text-[#f59e0b] font-semibold shadow-xs"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
                 } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
               >
                 <Icon size={16} className={`shrink-0 ${active ? "text-[#f59e0b]" : "text-neutral-400"}`} />
@@ -312,15 +312,15 @@ export function AdminLayout() {
         </nav>
 
         {/* Footer Admin Status Info */}
-        <div className="p-2 border-t border-[#1e1e26] shrink-0">
-          <div className={`p-2 rounded-xl bg-[#161620] border border-[#22222e] flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"}`}>
+        <div className="p-2 border-t border-[var(--border-card)] shrink-0 bg-[var(--bg-sidebar)]">
+          <div className={`p-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xs flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"}`}>
             <div className="flex items-center gap-2 min-w-0">
               <div className="h-6 w-6 rounded-full bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/30 flex items-center justify-center text-[10px] font-bold shrink-0">
                 {profile?.displayName?.slice(0, 2).toUpperCase() || "AD"}
               </div>
               {!isSidebarCollapsed && (
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium text-white truncate">
+                  <div className="text-[11px] font-medium text-[var(--text-primary)] truncate">
                     {profile?.displayName || "Admin User"}
                   </div>
                   <div className="text-[9px] text-emerald-400 flex items-center gap-1 font-mono">
@@ -344,9 +344,9 @@ export function AdminLayout() {
       </aside>
 
       {/* Main Content Viewport (Zero-Waste Full Viewport Flex Column) */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-[#0a0a0d]">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-[var(--bg-page)]">
         {/* Top Mini Header */}
-        <header className="h-12 bg-[#111116] border-b border-[#1e1e26] px-4 sm:px-6 flex items-center justify-between shrink-0 z-10">
+        <header className="h-12 bg-[var(--bg-sidebar)] border-b border-[var(--border-card)] px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -359,7 +359,7 @@ export function AdminLayout() {
                 Workspace
               </Link>
               <span className="text-neutral-600">/</span>
-              <span className="text-neutral-200 font-semibold">Admin Control Surface</span>
+              <span className="text-[var(--text-primary)] font-semibold">Admin Control Surface</span>
             </div>
           </div>
 
@@ -383,7 +383,7 @@ export function AdminLayout() {
         </header>
 
         {/* Dynamic Nested Content */}
-        <main className="flex-1 overflow-y-auto min-h-0 bg-[#0c0c0e]">
+        <main className="flex-1 overflow-y-auto min-h-0 bg-[var(--bg-page)] p-3 sm:p-5">
           <Outlet />
         </main>
       </div>

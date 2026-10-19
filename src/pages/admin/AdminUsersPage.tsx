@@ -113,7 +113,7 @@ export function AdminUsersPage() {
               {initials}
             </div>
             <div className="min-w-0">
-              <div className="font-semibold text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+              <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
                 {u.displayName || `${u.firstName} ${u.lastName}`.trim() || "User Skyer"}
               </div>
               <div className="text-[10px] text-neutral-500 font-mono">DB #{u.id}</div>
@@ -128,7 +128,7 @@ export function AdminUsersPage() {
       sortable: true,
       width: "25%",
       cell: (u) => (
-        <span className="font-mono text-neutral-300 truncate block text-[11px]">
+        <span className="font-mono text-slate-700 dark:text-neutral-300 truncate block text-[11px]">
           {u.email || "No email bound"}
         </span>
       ),
@@ -178,7 +178,7 @@ export function AdminUsersPage() {
               type="button"
               onClick={() => handleToggleRole(u)}
               disabled={isUpdating}
-              className="px-2.5 py-1 rounded-lg border border-[#2a2a38] bg-[#1a1a24] hover:bg-[#222230] text-neutral-200 hover:text-white text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50"
+              className="px-2.5 py-1 rounded-lg border border-[#2a2a38] bg-slate-100 dark:bg-[#1a1a24] hover:bg-slate-100 dark:hover:bg-[#222230] text-slate-800 dark:text-neutral-200 hover:text-slate-900 dark:text-white text-[10px] font-semibold transition-all cursor-pointer disabled:opacity-50"
             >
               {isUpdating ? "Lưu..." : isAdmin ? "Hạ xuống Member" : "Nâng lên Admin"}
             </button>
@@ -193,13 +193,13 @@ export function AdminUsersPage() {
       {/* Top Header Row (Compact Tier) */}
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Danh Bạ & Phân Quyền Thành Viên</span>
             <span className="text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
               {users.length} Users
             </span>
           </h1>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">
             Đồng bộ từ Logto OIDC Authority. Quản trị vai trò RBAC thời gian thực trên PostgreSQL Backend.
           </p>
         </div>
@@ -207,7 +207,7 @@ export function AdminUsersPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadUsers}
-            className="p-1.5 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+            className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Tải lại danh sách"
           >
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -266,40 +266,40 @@ export function AdminUsersPage() {
         {selectedUser && (
           <div className="space-y-4">
             {/* Header Avatar Box */}
-            <div className="p-4 rounded-xl bg-[#161622] border border-[#242432] flex items-center gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-[#ff7a00]/20 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center font-bold text-base font-mono">
                 {getInitials(selectedUser.displayName, selectedUser.email)}
               </div>
               <div>
-                <div className="text-sm font-bold text-white">
+                <div className="text-sm font-bold text-slate-900 dark:text-white">
                   {selectedUser.displayName || `${selectedUser.firstName} ${selectedUser.lastName}`.trim()}
                 </div>
-                <div className="text-neutral-400 font-mono text-[11px]">{selectedUser.email || "No email"}</div>
+                <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{selectedUser.email || "No email"}</div>
                 <div className="text-[10px] text-emerald-400 font-mono mt-0.5">DB Record #{selectedUser.id}</div>
               </div>
             </div>
 
             {/* General Info Grid */}
             <div className="space-y-2">
-              <span className="text-[10px] font-mono uppercase text-neutral-400 font-semibold">Thông tin định danh</span>
-              <div className="p-3.5 rounded-xl bg-[#181824] border border-[#262636] space-y-2.5">
+              <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 font-semibold">Thông tin định danh</span>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636] space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Logto Subject (sub):</span>
-                  <span className="font-mono text-white select-all">{selectedUser.logtoUserId}</span>
+                  <span className="text-slate-500 dark:text-neutral-400">Logto Subject (sub):</span>
+                  <span className="font-mono text-slate-900 dark:text-white select-all">{selectedUser.logtoUserId}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Vai trò hiện tại:</span>
+                  <span className="text-slate-500 dark:text-neutral-400">Vai trò hiện tại:</span>
                   <span className="font-bold text-[#ff7a00] font-mono">
                     {selectedUser.roles.join(", ") || "Member"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Trạng thái:</span>
+                  <span className="text-slate-500 dark:text-neutral-400">Trạng thái:</span>
                   <span className="text-emerald-400 font-mono">Hoạt động (Active)</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Ngày tạo tài khoản:</span>
-                  <span className="font-mono text-neutral-300">
+                  <span className="text-slate-500 dark:text-neutral-400">Ngày tạo tài khoản:</span>
+                  <span className="font-mono text-slate-700 dark:text-neutral-300">
                     {new Date(selectedUser.createdAt).toLocaleString("vi-VN")}
                   </span>
                 </div>
@@ -307,9 +307,9 @@ export function AdminUsersPage() {
             </div>
 
             {/* Access Permissions Summary */}
-            <div className="p-3.5 rounded-xl bg-[#181824] border border-[#262636] space-y-2 text-[11px]">
-              <div className="font-semibold text-white">Quyền hạn truy cập platform:</div>
-              <ul className="space-y-1 text-neutral-400 list-disc list-inside">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636] space-y-2 text-[11px]">
+              <div className="font-semibold text-slate-900 dark:text-white">Quyền hạn truy cập platform:</div>
+              <ul className="space-y-1 text-slate-500 dark:text-neutral-400 list-disc list-inside">
                 <li>Truy cập Workspace và thực thi AI Agents được gán</li>
                 <li>Được cấp số dư ví Token PAYG độc lập</li>
                 {selectedUser.roles.some((r) => r.toUpperCase() === "ADMIN") && (

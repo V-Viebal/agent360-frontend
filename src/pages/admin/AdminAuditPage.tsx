@@ -58,7 +58,7 @@ export function AdminAuditPage() {
       sortable: true,
       width: "18%",
       cell: (log) => (
-        <span className="font-mono text-[11px] text-neutral-400 whitespace-nowrap">
+        <span className="font-mono text-[11px] text-slate-500 dark:text-neutral-400 whitespace-nowrap">
           {new Date(log.createdAt).toLocaleString("vi-VN")}
         </span>
       ),
@@ -92,7 +92,7 @@ export function AdminAuditPage() {
       sortable: true,
       width: "25%",
       cell: (log) => (
-        <span className="font-mono text-[11px] text-white truncate block">
+        <span className="font-mono text-[11px] text-slate-900 dark:text-white truncate block">
           {log.targetResource}
         </span>
       ),
@@ -103,7 +103,7 @@ export function AdminAuditPage() {
       sortable: true,
       width: "20%",
       cell: (log) => (
-        <span className="text-[11px] text-neutral-300 font-mono truncate block">
+        <span className="text-[11px] text-slate-700 dark:text-neutral-300 font-mono truncate block">
           {log.actorExternalId || (log.actorId ? `User #${log.actorId}` : "Root System")}
         </span>
       ),
@@ -130,13 +130,13 @@ export function AdminAuditPage() {
       {/* Header Tier */}
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Security Audit Trail & Sổ Cái An Ninh</span>
             <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
               {logs.length} Bản ghi
             </span>
           </h1>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">
             Sổ cái bất biến ghi nhận mọi đột biến quyền hạn, cấp vai trò, gán Agent và thao tác quản trị Root.
           </p>
         </div>
@@ -144,7 +144,7 @@ export function AdminAuditPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadAuditLogs}
-            className="p-1.5 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+            className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Tải lại logs"
           >
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -178,27 +178,27 @@ export function AdminAuditPage() {
         {selectedLog && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2.5 text-xs font-mono">
-              <div className="p-3 rounded-xl bg-[#181824] border border-[#262636]">
-                <div className="text-[10px] text-neutral-400">ACTION</div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636]">
+                <div className="text-[10px] text-slate-500 dark:text-neutral-400">ACTION</div>
                 <div className="font-bold text-[#ff7a00] mt-0.5">{selectedLog.action}</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#181824] border border-[#262636]">
-                <div className="text-[10px] text-neutral-400">TARGET</div>
-                <div className="font-bold text-white mt-0.5 truncate">{selectedLog.targetResource}</div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636]">
+                <div className="text-[10px] text-slate-500 dark:text-neutral-400">TARGET</div>
+                <div className="font-bold text-slate-900 dark:text-white mt-0.5 truncate">{selectedLog.targetResource}</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#181824] border border-[#262636]">
-                <div className="text-[10px] text-neutral-400">ACTOR</div>
-                <div className="font-bold text-white mt-0.5 truncate">{selectedLog.actorExternalId || `User #${selectedLog.actorId}`}</div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636]">
+                <div className="text-[10px] text-slate-500 dark:text-neutral-400">ACTOR</div>
+                <div className="font-bold text-slate-900 dark:text-white mt-0.5 truncate">{selectedLog.actorExternalId || `User #${selectedLog.actorId}`}</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#181824] border border-[#262636]">
-                <div className="text-[10px] text-neutral-400">IP ADDRESS</div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636]">
+                <div className="text-[10px] text-slate-500 dark:text-neutral-400">IP ADDRESS</div>
                 <div className="font-bold text-emerald-400 mt-0.5">{selectedLog.ipAddress || "Internal Gateway"}</div>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <span className="text-[11px] font-semibold text-neutral-300 font-mono">Payload Details (JSON Raw)</span>
-              <pre className="p-4 rounded-xl bg-[#0e0e14] text-neutral-200 font-mono text-[11px] overflow-x-auto border border-[#242434] select-all">
+              <span className="text-[11px] font-semibold text-slate-700 dark:text-neutral-300 font-mono">Payload Details (JSON Raw)</span>
+              <pre className="p-4 rounded-xl bg-slate-100/70 dark:bg-[#0e0e14] text-slate-800 dark:text-neutral-200 font-mono text-[11px] overflow-x-auto border border-slate-200 dark:border-[#242434] select-all">
                 {JSON.stringify(selectedLog.details, null, 2)}
               </pre>
             </div>

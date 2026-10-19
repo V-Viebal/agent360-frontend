@@ -90,7 +90,7 @@ export function AdminOrganizationsPage() {
             <Building2 size={15} />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
               {org.name}
             </div>
             <div className="text-[10px] text-neutral-500 font-mono">slug: {org.slug}</div>
@@ -115,7 +115,7 @@ export function AdminOrganizationsPage() {
       sortable: true,
       width: "15%",
       cell: (org) => (
-        <span className="font-mono text-neutral-300 text-[11px]">
+        <span className="font-mono text-slate-700 dark:text-neutral-300 text-[11px]">
           {org.members_count} Users
         </span>
       ),
@@ -137,7 +137,7 @@ export function AdminOrganizationsPage() {
       sortable: true,
       width: "15%",
       cell: (org) => (
-        <span className="text-[11px] font-mono text-neutral-400">
+        <span className="text-[11px] font-mono text-slate-500 dark:text-neutral-400">
           {org.plan}
         </span>
       ),
@@ -154,7 +154,7 @@ export function AdminOrganizationsPage() {
             e.stopPropagation();
             handleOpenEdit(org);
           }}
-          className="px-2.5 py-1 rounded-lg border border-[#2e2e3e] bg-[#1a1a24] hover:bg-[#ff7a00]/10 hover:border-[#ff7a00]/40 text-neutral-200 hover:text-[#ff7a00] text-[11px] font-medium transition-all cursor-pointer"
+          className="px-2.5 py-1 rounded-lg border border-[#2e2e3e] bg-slate-100 dark:bg-[#1a1a24] hover:bg-[#ff7a00]/10 hover:border-[#ff7a00]/40 text-slate-800 dark:text-neutral-200 hover:text-[#ff7a00] text-[11px] font-medium transition-all cursor-pointer"
         >
           Sửa Quota
         </button>
@@ -167,13 +167,13 @@ export function AdminOrganizationsPage() {
       {/* Header Tier */}
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Tổ Chức & Không Gian Làm Việc (Tenants)</span>
             <span className="text-[11px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
               {orgs.length} Tenants
             </span>
           </h1>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">
             Phân định ranh giới tổ chức, quản trị tài nguyên và quota agent theo từng tenant.
           </p>
         </div>
@@ -181,7 +181,7 @@ export function AdminOrganizationsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadOrgs}
-            className="p-1.5 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+            className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Tải lại danh sách"
           >
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -236,28 +236,28 @@ export function AdminOrganizationsPage() {
       >
         {selectedOrg && (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-[#161622] border border-[#242432] flex items-center gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
               <div className="h-12 w-12 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold">
                 <Building2 size={24} />
               </div>
               <div>
-                <div className="text-sm font-bold text-white">{selectedOrg.name}</div>
-                <div className="text-neutral-400 font-mono text-[11px]">slug: {selectedOrg.slug}</div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">{selectedOrg.name}</div>
+                <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">slug: {selectedOrg.slug}</div>
                 <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Trạng thái: {selectedOrg.status}</div>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#181824] border border-[#262636] space-y-2.5 font-mono text-xs">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636] space-y-2.5 font-mono text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Gói đăng ký:</span>
-                <span className="font-bold text-white">{selectedOrg.plan}</span>
+                <span className="text-slate-500 dark:text-neutral-400">Gói đăng ký:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{selectedOrg.plan}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Số lượng thành viên:</span>
+                <span className="text-slate-500 dark:text-neutral-400">Số lượng thành viên:</span>
                 <span className="text-blue-400">{selectedOrg.members_count} Users</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Hạn mức AI Agent:</span>
+                <span className="text-slate-500 dark:text-neutral-400">Hạn mức AI Agent:</span>
                 <span className="text-[#ff7a00] font-bold">{selectedOrg.agents_count} Agents tối đa</span>
               </div>
             </div>
@@ -274,25 +274,25 @@ export function AdminOrganizationsPage() {
         >
           <form onSubmit={handleSaveQuota} className="space-y-4 text-xs">
             <div className="space-y-1">
-              <label className="text-neutral-400 block">Gói dịch vụ Workspace</label>
+              <label className="text-slate-500 dark:text-neutral-400 block">Gói dịch vụ Workspace</label>
               <input
                 type="text"
                 value={quotaPlan}
                 onChange={(e) => setQuotaPlan(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-[#181822] border border-[#2a2a38] text-white focus:outline-none focus:border-[#ff7a00]"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-[#2a2a38] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-neutral-400 block">Số lượng AI Agents tối đa</label>
+              <label className="text-slate-500 dark:text-neutral-400 block">Số lượng AI Agents tối đa</label>
               <input
                 type="number"
                 min="1"
                 max="100"
                 value={quotaAgents}
                 onChange={(e) => setQuotaAgents(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl bg-[#181822] border border-[#2a2a38] text-white focus:outline-none focus:border-[#ff7a00]"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-[#2a2a38] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
                 required
               />
             </div>
@@ -301,7 +301,7 @@ export function AdminOrganizationsPage() {
               <button
                 type="button"
                 onClick={() => setEditOrg(null)}
-                className="px-3 py-1.5 rounded-xl text-neutral-400 hover:text-white cursor-pointer"
+                className="px-3 py-1.5 rounded-xl text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white cursor-pointer"
               >
                 Hủy
               </button>

@@ -160,7 +160,7 @@ export function AdminAgentsPage() {
             <Bot size={15} />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
               {agent.name}
             </div>
             <div className="text-[10px] text-neutral-500 font-mono">slug: {agent.slug}</div>
@@ -174,7 +174,7 @@ export function AdminAgentsPage() {
       sortable: true,
       width: "20%",
       cell: (agent) => (
-        <span className="font-mono text-[11px] text-neutral-300">
+        <span className="font-mono text-[11px] text-slate-700 dark:text-neutral-300">
           {agent.node || "3rd-server (Core)"}
         </span>
       ),
@@ -206,7 +206,7 @@ export function AdminAgentsPage() {
                 return (
                   <span
                     key={a.id}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-neutral-300"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-slate-700 dark:text-neutral-300"
                   >
                     <span>{u?.displayName || u?.email?.split("@")[0] || `User #${a.userId}`}</span>
                   </span>
@@ -239,13 +239,13 @@ export function AdminAgentsPage() {
       {/* Header Tier */}
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Quản Trị AI Teammates Fleet</span>
             <span className="text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
               {agents.length} Agents
             </span>
           </h1>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">
             Giám sát cụm worker runtime trên VPS fleet (3rd, 6th, 7th Server) và phân quyền agent cho thành viên.
           </p>
         </div>
@@ -253,7 +253,7 @@ export function AdminAgentsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadData}
-            className="p-1.5 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+            className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Tải lại danh sách"
           >
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -310,13 +310,13 @@ export function AdminAgentsPage() {
         {selectedAgent && (
           <div className="space-y-5">
             {/* Header Box */}
-            <div className="p-4 rounded-xl bg-[#161622] border border-[#242432] flex items-center gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
               <div className="h-12 w-12 rounded-xl bg-[#ff7a00]/20 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center font-bold">
                 <Bot size={24} />
               </div>
               <div>
-                <div className="text-sm font-bold text-white">{selectedAgent.name}</div>
-                <div className="text-neutral-400 font-mono text-[11px]">{selectedAgent.description || "Containerized Autonomous Agent"}</div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">{selectedAgent.name}</div>
+                <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{selectedAgent.description || "Containerized Autonomous Agent"}</div>
                 <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Runtime: {selectedAgent.node || "3rd-server"}</div>
               </div>
             </div>
@@ -324,7 +324,7 @@ export function AdminAgentsPage() {
             {/* Assigned Users Section */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono uppercase text-neutral-400 font-semibold">
+                <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 font-semibold">
                   Thành viên có quyền truy cập
                 </span>
                 <span className="text-[10px] font-mono text-[#ff7a00]">
@@ -332,7 +332,7 @@ export function AdminAgentsPage() {
                 </span>
               </div>
 
-              <div className="divide-y divide-[#242434] border border-[#242434] rounded-xl overflow-hidden bg-[#161622]">
+              <div className="divide-y divide-slate-200 dark:divide-[#242434] border border-slate-200 dark:border-[#242434] rounded-xl overflow-hidden bg-white dark:bg-[#161622]">
                 {assignments.filter((a) => a.agentSlug === selectedAgent.slug).length === 0 ? (
                   <div className="p-4 text-center text-neutral-500 text-xs">
                     Chưa có thành viên thông thường nào được gán. Hiện chỉ có Admin toàn quyền điều khiển.
@@ -343,12 +343,12 @@ export function AdminAgentsPage() {
                     .map((a) => {
                       const u = users.find((x) => x.id === a.userId);
                       return (
-                        <div key={a.id} className="p-3 flex items-center justify-between hover:bg-[#1a1a28] transition-colors">
+                        <div key={a.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#1a1a28] transition-colors">
                           <div>
-                            <div className="font-semibold text-white text-xs">
+                            <div className="font-semibold text-slate-900 dark:text-white text-xs">
                               {u?.displayName || u?.email || `User #${a.userId}`}
                             </div>
-                            <div className="text-[10px] text-neutral-400 font-mono">
+                            <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                               Role: {a.role} • Gán lúc: {new Date(a.assignedAt).toLocaleDateString("vi-VN")}
                             </div>
                           </div>
@@ -379,14 +379,14 @@ export function AdminAgentsPage() {
         >
           <form onSubmit={handleAssignUser} className="space-y-5 text-xs">
             <div className="space-y-1.5">
-              <label className="text-neutral-300 font-medium block">Chọn thành viên thụ hưởng</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium block">Chọn thành viên thụ hưởng</label>
               <CustomSelect
                 value={targetUserId.toString()}
                 onChange={(val) => setTargetUserId(Number(val))}
                 placeholder="Chọn người dùng từ hệ thống..."
                 searchable={true}
                 className="w-full"
-                triggerClassName="w-full p-2.5 rounded-xl bg-[#181822] border border-[#282836] text-white hover:border-[#ff7a00]/50"
+                triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#ff7a00]/50"
                 options={users.map((u) => {
                   const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
                   const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
@@ -401,12 +401,12 @@ export function AdminAgentsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-neutral-300 font-medium block">Vai trò trong Agent</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium block">Vai trò trong Agent</label>
               <CustomSelect
                 value={targetRole}
                 onChange={(val) => setTargetRole(val)}
                 className="w-full"
-                triggerClassName="w-full p-2.5 rounded-xl bg-[#181822] border border-[#282836] text-white hover:border-[#ff7a00]/50"
+                triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#ff7a00]/50"
                 options={[
                   { value: "Owner", label: "Owner (Chủ sở hữu)", badge: "Toàn quyền", description: "Toàn quyền hội thoại, kích hoạt công cụ và cấu hình Agent" },
                   { value: "Operator", label: "Operator (Vận hành)", badge: "Tác vụ", description: "Thực thi tác vụ, chạy routine automation" },
@@ -419,7 +419,7 @@ export function AdminAgentsPage() {
               <button
                 type="button"
                 onClick={() => setShowAssignModal(false)}
-                className="px-4 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
                 Hủy
               </button>

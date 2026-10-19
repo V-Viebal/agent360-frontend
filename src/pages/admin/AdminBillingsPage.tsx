@@ -245,10 +245,10 @@ export function AdminBillingsPage() {
             {getInitials(tx.tenant_name, tx.tenant_email)}
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
               {tx.tenant_name || "User Skyer"}
             </div>
-            <div className="text-[10px] text-neutral-400 font-mono truncate">{tx.tenant_email || tx.tenant_id}</div>
+            <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">{tx.tenant_email || tx.tenant_id}</div>
           </div>
         </div>
       ),
@@ -282,8 +282,8 @@ export function AdminBillingsPage() {
       width: "18%",
       cell: (tx) => (
         <div>
-          <div className="font-medium text-white text-xs">{tx.package_name || "Gói nạp"}</div>
-          <div className="text-[10px] text-neutral-400 font-mono">+{Number(tx.token_yield).toLocaleString()} Tokens</div>
+          <div className="font-medium text-slate-900 dark:text-white text-xs">{tx.package_name || "Gói nạp"}</div>
+          <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">+{Number(tx.token_yield).toLocaleString()} Tokens</div>
         </div>
       ),
     },
@@ -335,7 +335,7 @@ export function AdminBillingsPage() {
             <button
               type="button"
               onClick={() => setSelectedTx(tx)}
-              className="p-1 rounded-lg border border-[#2a2a38] bg-[#1a1a24] hover:bg-[#222230] text-neutral-300 cursor-pointer"
+              className="p-1 rounded-lg border border-[#2a2a38] bg-slate-100 dark:bg-[#1a1a24] hover:bg-slate-100 dark:hover:bg-[#222230] text-slate-700 dark:text-neutral-300 cursor-pointer"
               title="Xem chi tiết"
             >
               <ExternalLink size={12} />
@@ -359,8 +359,8 @@ export function AdminBillingsPage() {
             {getInitials(w.display_name, w.email)}
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-white truncate text-xs">{w.display_name}</div>
-            <div className="text-[10px] text-neutral-400 font-mono truncate">{w.email}</div>
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs">{w.display_name}</div>
+            <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">{w.email}</div>
           </div>
         </div>
       ),
@@ -389,7 +389,7 @@ export function AdminBillingsPage() {
       sortable: true,
       width: "15%",
       cell: (w) => (
-        <span className="font-mono text-neutral-300 text-xs">
+        <span className="font-mono text-slate-700 dark:text-neutral-300 text-xs">
           ~{w.runway_days} ngày
         </span>
       ),
@@ -405,7 +405,7 @@ export function AdminBillingsPage() {
             e.stopPropagation();
             setAdjustTarget(w);
           }}
-          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-[#ff7a00] hover:text-black text-neutral-200 text-[10px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-[#ff7a00] hover:text-black text-slate-800 dark:text-neutral-200 text-[10px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
         >
           <Gift size={11} />
           <span>Tặng / Trừ</span>
@@ -419,24 +419,24 @@ export function AdminBillingsPage() {
       {/* Header Tier */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Quản Trị Thanh Toán & Sổ Cái PAYG</span>
             <span className="text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
               VietQR PayOS
             </span>
           </h1>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">
             Theo dõi dòng tiền nạp tự động, đối soát tức thì với PayOS và cấp hạn mức token cho từng Workspace.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Navigation Tabs */}
-          <div className="flex items-center bg-[#161620] p-0.5 rounded-xl border border-[#262634]">
+          <div className="flex items-center bg-slate-50 dark:bg-[#161620] p-0.5 rounded-xl border border-slate-200 dark:border-[#262634]">
             <button
               onClick={() => setActiveTab("transactions")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "transactions" ? "bg-[#ff7a00] text-black shadow-sm" : "text-neutral-400 hover:text-white"
+                activeTab === "transactions" ? "bg-[#ff7a00] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
               }`}
             >
               Giao Dịch Toàn Sàn
@@ -444,7 +444,7 @@ export function AdminBillingsPage() {
             <button
               onClick={() => setActiveTab("wallets")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "wallets" ? "bg-[#ff7a00] text-black shadow-sm" : "text-neutral-400 hover:text-white"
+                activeTab === "wallets" ? "bg-[#ff7a00] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
               }`}
             >
               Danh Sách Ví
@@ -452,7 +452,7 @@ export function AdminBillingsPage() {
             <button
               onClick={() => setActiveTab("my_wallet")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "my_wallet" ? "bg-[#ff7a00] text-black shadow-sm" : "text-neutral-400 hover:text-white"
+                activeTab === "my_wallet" ? "bg-[#ff7a00] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
               }`}
             >
               Nạp Thêm Token
@@ -465,7 +465,7 @@ export function AdminBillingsPage() {
               else if (activeTab === "wallets") loadTenantWallets();
               else if (activeTab === "my_wallet") loadMyWallet();
             }}
-            className="p-1.5 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+            className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Làm mới"
           >
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -526,15 +526,15 @@ export function AdminBillingsPage() {
           <div className="p-6 rounded-2xl bg-gradient-to-br from-[#161a26] to-[#12141c] border border-white/10 shadow-2xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
-                <div className="text-[11px] font-mono tracking-wider uppercase text-neutral-400 font-semibold mb-1">
+                <div className="text-[11px] font-mono tracking-wider uppercase text-slate-500 dark:text-neutral-400 font-semibold mb-1">
                   Ví Token Compute (PAYG)
                 </div>
-                <div className="text-4xl font-extrabold text-white flex items-baseline gap-2">
+                <div className="text-4xl font-extrabold text-slate-900 dark:text-white flex items-baseline gap-2">
                   <span>{wallet ? Number(wallet.balance_tokens).toLocaleString() : "..."}</span>
                   <span className="text-base font-semibold text-[#ff7a00]">Tokens</span>
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-xs">
-                  <span className="text-neutral-400">⚡ Dự báo Runway:</span>
+                  <span className="text-slate-500 dark:text-neutral-400">⚡ Dự báo Runway:</span>
                   <strong className={wallet?.status === "green" ? "text-emerald-400" : "text-amber-400"}>
                     {wallet?.runway_days === 999 ? "Không giới hạn (∞)" : `${wallet?.runway_days} ngày`}
                   </strong>
@@ -565,17 +565,17 @@ export function AdminBillingsPage() {
             {wallet?.packages?.map((pkg) => (
               <div
                 key={pkg.id}
-                className="p-5 rounded-2xl bg-[#14141a] border border-[#22222c] hover:border-[#ff7a00]/40 transition-all flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] hover:border-[#ff7a00]/40 transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-neutral-200">{pkg.name}</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-neutral-200">{pkg.name}</span>
                     <Zap size={16} className="text-[#ff7a00]" />
                   </div>
-                  <div className="text-2xl font-extrabold text-white mb-1">
-                    {Number(pkg.fiat_price).toLocaleString()} <span className="text-xs font-normal text-neutral-400">VND</span>
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">
+                    {Number(pkg.fiat_price).toLocaleString()} <span className="text-xs font-normal text-slate-500 dark:text-neutral-400">VND</span>
                   </div>
-                  <p className="text-[11px] text-neutral-400 mb-4">
+                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mb-4">
                     Nạp ngay {Number(pkg.token_yield).toLocaleString()} tokens suy luận cho Agent fleet.
                   </p>
                 </div>
@@ -583,7 +583,7 @@ export function AdminBillingsPage() {
                 <button
                   onClick={() => handleBuyTopup(pkg)}
                   disabled={topupLoadingId === pkg.id}
-                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-[#ff7a00] hover:text-black text-xs font-semibold text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-[#ff7a00] hover:text-black text-xs font-semibold text-slate-900 dark:text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <span>{topupLoadingId === pkg.id ? "Đang xử lý..." : "Nạp ngay qua PayOS"}</span>
                   <ArrowRight size={13} />
@@ -616,13 +616,13 @@ export function AdminBillingsPage() {
         {selectedTx && (
           <div className="space-y-4 font-sans text-xs">
             {/* Status Card */}
-            <div className="p-4 rounded-xl bg-[#161622] border border-[#242432] flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-mono text-neutral-400 uppercase">Trạng Thái Giao Dịch</span>
-                <div className="text-base font-bold text-white uppercase mt-0.5">{selectedTx.status}</div>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 uppercase">Trạng Thái Giao Dịch</span>
+                <div className="text-base font-bold text-slate-900 dark:text-white uppercase mt-0.5">{selectedTx.status}</div>
               </div>
               <div className="text-right">
-                <span className="text-[10px] font-mono text-neutral-400 uppercase">Số Tiền Thanh Toán</span>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 uppercase">Số Tiền Thanh Toán</span>
                 <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
                   {Number(selectedTx.amount).toLocaleString("vi-VN")} ₫
                 </div>
@@ -630,30 +630,30 @@ export function AdminBillingsPage() {
             </div>
 
             {/* General Info */}
-            <div className="p-3.5 rounded-xl bg-[#181824] border border-[#262636] space-y-2.5 font-mono">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636] space-y-2.5 font-mono">
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Mã đơn PayOS (Order Code):</span>
+                <span className="text-slate-500 dark:text-neutral-400">Mã đơn PayOS (Order Code):</span>
                 <span className="font-bold text-[#ff7a00] select-all">#{selectedTx.order_code}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Payment Link ID:</span>
-                <span className="text-white select-all">{selectedTx.payment_link_id || "—"}</span>
+                <span className="text-slate-500 dark:text-neutral-400">Payment Link ID:</span>
+                <span className="text-slate-900 dark:text-white select-all">{selectedTx.payment_link_id || "—"}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Gói đăng ký:</span>
-                <span className="text-white">{selectedTx.package_name || selectedTx.package_id}</span>
+                <span className="text-slate-500 dark:text-neutral-400">Gói đăng ký:</span>
+                <span className="text-slate-900 dark:text-white">{selectedTx.package_name || selectedTx.package_id}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Số lượng Tokens nạp:</span>
+                <span className="text-slate-500 dark:text-neutral-400">Số lượng Tokens nạp:</span>
                 <span className="text-emerald-400 font-bold">+{Number(selectedTx.token_yield).toLocaleString()} Tokens</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-neutral-400">Thời gian tạo:</span>
-                <span className="text-neutral-300">{new Date(selectedTx.created_at).toLocaleString("vi-VN")}</span>
+                <span className="text-slate-500 dark:text-neutral-400">Thời gian tạo:</span>
+                <span className="text-slate-700 dark:text-neutral-300">{new Date(selectedTx.created_at).toLocaleString("vi-VN")}</span>
               </div>
               {selectedTx.completed_at && (
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-400">Thời gian hoàn tất:</span>
+                  <span className="text-slate-500 dark:text-neutral-400">Thời gian hoàn tất:</span>
                   <span className="text-emerald-400">{new Date(selectedTx.completed_at).toLocaleString("vi-VN")}</span>
                 </div>
               )}
@@ -661,8 +661,8 @@ export function AdminBillingsPage() {
 
             {/* Checkout Link */}
             {selectedTx.checkout_url && (
-              <div className="p-3 rounded-xl bg-[#181824] border border-[#262636] flex items-center justify-between">
-                <span className="text-neutral-400">Trang thanh toán PayOS:</span>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636] flex items-center justify-between">
+                <span className="text-slate-500 dark:text-neutral-400">Trang thanh toán PayOS:</span>
                 <a
                   href={selectedTx.checkout_url}
                   target="_blank"
@@ -681,44 +681,44 @@ export function AdminBillingsPage() {
       {/* Adjust Wallet Modal */}
       {adjustTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md bg-[#161620] border border-[#262634] rounded-2xl p-6 shadow-2xl space-y-4 text-xs font-sans">
-            <div className="flex items-center justify-between border-b border-[#262634] pb-3">
+          <div className="w-full max-w-md bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#262634] rounded-2xl p-6 shadow-2xl space-y-4 text-xs font-sans">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#262634] pb-3">
               <div className="flex items-center gap-2">
                 <Gift size={18} className="text-[#ff7a00]" />
-                <h3 className="text-sm font-bold text-white">Điều Chỉnh Số Dư Ví Token</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Điều Chỉnh Số Dư Ví Token</h3>
               </div>
-              <button onClick={() => setAdjustTarget(null)} className="text-neutral-400 hover:text-white cursor-pointer">Đóng</button>
+              <button onClick={() => setAdjustTarget(null)} className="text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white cursor-pointer">Đóng</button>
             </div>
 
             <form onSubmit={handleConfirmAdjust} className="space-y-3.5">
               <div>
-                <label className="text-neutral-400 block mb-1">Tài khoản thụ hưởng</label>
-                <div className="p-2.5 bg-[#0e0e14] rounded-xl border border-[#22222e] font-mono text-neutral-300">
+                <label className="text-slate-500 dark:text-neutral-400 block mb-1">Tài khoản thụ hưởng</label>
+                <div className="p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] font-mono text-slate-700 dark:text-neutral-300">
                   {adjustTarget.display_name} ({adjustTarget.email})
                 </div>
               </div>
 
               <div>
-                <label className="text-neutral-400 block mb-1">Số lượng Tokens (+ hoặc -)</label>
+                <label className="text-slate-500 dark:text-neutral-400 block mb-1">Số lượng Tokens (+ hoặc -)</label>
                 <input
                   type="number"
                   value={adjustAmount}
                   onChange={(e) => setAdjustAmount(Number(e.target.value))}
                   placeholder="100000"
-                  className="w-full p-2.5 bg-[#0e0e14] rounded-xl border border-[#22222e] text-white focus:outline-none focus:border-[#ff7a00]"
+                  className="w-full p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
                   required
                 />
                 <span className="text-[10px] text-neutral-500 mt-1 block">Nhập số dương để tặng bonus, nhập số âm để trừ phạt.</span>
               </div>
 
               <div>
-                <label className="text-neutral-400 block mb-1">Lý do điều chỉnh (ghi vào Sổ cái)</label>
+                <label className="text-slate-500 dark:text-neutral-400 block mb-1">Lý do điều chỉnh (ghi vào Sổ cái)</label>
                 <input
                   type="text"
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
                   placeholder="Khuyến mãi thành viên mới / Bồi hoàn"
-                  className="w-full p-2.5 bg-[#0e0e14] rounded-xl border border-[#22222e] text-white focus:outline-none focus:border-[#ff7a00]"
+                  className="w-full p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
                   required
                 />
               </div>
@@ -727,7 +727,7 @@ export function AdminBillingsPage() {
                 <button
                   type="button"
                   onClick={() => setAdjustTarget(null)}
-                  className="px-3.5 py-2 rounded-xl text-neutral-400 hover:text-white cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white cursor-pointer"
                 >
                   Hủy
                 </button>

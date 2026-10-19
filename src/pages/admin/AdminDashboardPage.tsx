@@ -73,20 +73,20 @@ export function AdminDashboardPage() {
       {/* Header Tier */}
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Trung Tâm Điều Hành (Root Infrastructure Overview)</span>
             <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
               CLUSTER HEALTHY
             </span>
           </h1>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-slate-500 dark:text-neutral-400">
             Giám sát tài nguyên VPS fleet, cụm worker autonomous agents và luồng giao dịch thanh toán PAYG.
           </p>
         </div>
 
         <button
           onClick={loadDashboardData}
-          className="p-1.5 rounded-xl border border-[#262634] bg-[#161620] hover:bg-[#20202c] text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
+          className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
           title="Tải lại chỉ số"
         >
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -99,10 +99,10 @@ export function AdminDashboardPage() {
         {stats.map((s, idx) => {
           const Icon = s.icon;
           return (
-            <div key={idx} className="p-4 rounded-2xl bg-[#14141a] border border-[#22222c] flex items-center justify-between">
+            <div key={idx} className="p-4 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] flex items-center justify-between">
               <div>
-                <span className="text-[11px] text-neutral-400 font-medium block mb-1">{s.label}</span>
-                <div className="text-xl font-bold text-white mb-0.5 font-mono">{s.value}</div>
+                <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-medium block mb-1">{s.label}</span>
+                <div className="text-xl font-bold text-slate-900 dark:text-white mb-0.5 font-mono">{s.value}</div>
                 <div className="text-[10px] text-neutral-500 flex items-center gap-1">
                   <span>{s.change}</span>
                 </div>
@@ -118,12 +118,12 @@ export function AdminDashboardPage() {
       {/* Cluster Health & Security Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
         {/* Nodes Grid */}
-        <div className="p-5 rounded-2xl bg-[#14141a] border border-[#22222c] flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Activity size={15} className="text-emerald-400" />
-                <h2 className="text-xs font-semibold text-white">VPS Fleet Node Status</h2>
+                <h2 className="text-xs font-semibold text-slate-900 dark:text-white">VPS Fleet Node Status</h2>
               </div>
               <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-mono">
                 5 / 5 ONLINE
@@ -138,10 +138,10 @@ export function AdminDashboardPage() {
                 { node: "6th Server (GM Enterprise)", role: "QwenPaw GM Enterprise Runtime, ERPNext", status: "Online" },
                 { node: "7th Server (Planthy Cluster)", role: "Planthy AI Agent Node, Browser CDP", status: "Online" },
               ].map((n, i) => (
-                <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-[#181822] border border-[#262634]">
+                <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
                   <div>
-                    <div className="text-xs font-semibold text-white">{n.node}</div>
-                    <div className="text-[10px] text-neutral-400 font-mono">{n.role}</div>
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white">{n.node}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">{n.role}</div>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -154,46 +154,46 @@ export function AdminDashboardPage() {
         </div>
 
         {/* Security & IAM Status */}
-        <div className="p-5 rounded-2xl bg-[#14141a] border border-[#22222c] flex flex-col justify-between">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck size={16} className="text-[#ff7a00]" />
-              <h2 className="text-xs font-semibold text-white">Identity & Access Enforcement</h2>
+              <h2 className="text-xs font-semibold text-slate-900 dark:text-white">Identity & Access Enforcement</h2>
             </div>
             <div className="space-y-2.5">
-              <div className="p-3 rounded-xl bg-[#181822] border border-[#262634]">
-                <div className="flex items-center justify-between text-xs font-medium text-white mb-1">
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-900 dark:text-white mb-1">
                   <span>Logto Dedicated IAM Engine</span>
                   <span className="text-emerald-400 font-mono text-[10px]">AUTH-SKYER.HMZ.ONE</span>
                 </div>
-                <p className="text-[10px] text-neutral-400 font-mono">
+                <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                   Argon2i, Google OAuth 2.0 & Resend SMTP verified.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#181822] border border-[#262634]">
-                <div className="flex items-center justify-between text-xs font-medium text-white mb-1">
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-900 dark:text-white mb-1">
                   <span>Infisical Vault Sync</span>
                   <span className="text-blue-400 font-mono text-[10px]">18 SECRETS LOCKED</span>
                 </div>
-                <p className="text-[10px] text-neutral-400 font-mono">
+                <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                   Environment variables managed under slug <code>agent360-x5-o0</code>.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#181822] border border-[#262634]">
-                <div className="flex items-center justify-between text-xs font-medium text-white mb-1">
+              <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-900 dark:text-white mb-1">
                   <span>RBAC Agent Scoping Policy</span>
                   <span className="text-[#ff7a00] font-mono text-[10px]">ENFORCED</span>
                 </div>
-                <p className="text-[10px] text-neutral-400 font-mono">
+                <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                   Members load only assigned agents. Admins inspect all fleet agents across cluster.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-3 pt-2.5 border-t border-[#22222e] flex items-center justify-between text-[11px] text-neutral-400 font-mono">
+          <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-[#22222e] flex items-center justify-between text-[11px] text-slate-500 dark:text-neutral-400 font-mono">
             <span>Last audit: Just now</span>
             <span className="text-emerald-400 font-medium">Compliance: 100%</span>
           </div>
