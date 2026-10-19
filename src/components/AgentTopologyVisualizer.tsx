@@ -167,7 +167,7 @@ agent team:
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[#ff7a00] animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-pulse" />
             <h4 className="text-base font-semibold text-white">{t("topoVis.title")}</h4>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
@@ -175,7 +175,7 @@ agent team:
           </p>
         </div>
         <div className="text-[11px] font-mono bg-white/5 border border-white/10 px-2.5 py-1 rounded text-neutral-300">
-          Process Mode: <span className="text-[#ff7a00] font-semibold">{t("topoVis.hierarchical")}</span>
+          Process Mode: <span className="text-[#f8a87c] font-semibold">{t("topoVis.hierarchical")}</span>
         </div>
       </div>
 
@@ -188,13 +188,13 @@ agent team:
               onClick={() => setSelectedNode(TOPOLOGY_NODES[0])}
               className={`w-full max-w-sm p-4 rounded-xl border text-left transition-all cursor-pointer ${
                 selectedNode.id === "manager"
-                  ? "bg-[#ff7a00]/15 border-[#ff7a00] shadow-[0_0_20px_rgba(255,122,0,0.2)]"
+                  ? "bg-[#f8a87c]/15 border-[#f8a87c] shadow-[0_0_20px_rgba(248,168,124,0.2)]"
                   : "bg-[#0d111a] border-white/10 hover:border-white/20 text-neutral-300"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/20 border border-[#ff7a00]/40 flex items-center justify-center text-[#ff7a00]">
+                  <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/20 border border-[#f8a87c]/40 flex items-center justify-center text-[#f8a87c]">
                     <Users size={16} />
                   </div>
                   <div>
@@ -202,7 +202,7 @@ agent team:
                     <div className="text-[10px] text-neutral-500 font-mono">Qwen 2.5 72B</div>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono uppercase bg-[#ff7a00]/20 text-[#ff7a00] px-2 py-0.5 rounded font-semibold">
+                <span className="text-[10px] font-mono uppercase bg-[#f8a87c]/20 text-[#f8a87c] px-2 py-0.5 rounded font-semibold">
                   SUPERVISOR
                 </span>
               </div>
@@ -215,7 +215,7 @@ agent team:
           {/* Flow Indicator Down Arrow */}
           <div className="flex items-center justify-center gap-2 text-neutral-500 text-xs font-mono">
             <div className="h-[1px] w-12 bg-white/10" />
-            <div className="flex items-center gap-1 text-[#ff7a00] text-[11px]">
+            <div className="flex items-center gap-1 text-[#f8a87c] text-[11px]">
               <ArrowDown size={14} className="animate-bounce" />
               <span>{t("topoVis.protocol")}</span>
             </div>
@@ -261,7 +261,7 @@ agent team:
         {/* Node Detail Inspector */}
         <div className="lg:col-span-5 rounded-xl border border-white/10 bg-[#0d111a] p-5 space-y-4">
           <div className="border-b border-white/10 pb-3">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-[#ff7a00] mb-1">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#f8a87c] mb-1">
               Inspecting Entity
             </div>
             <h5 className="text-base font-semibold text-white">{selectedNode.label}</h5>
@@ -301,7 +301,7 @@ agent team:
             <div className="pt-3 border-t border-white/10 flex items-center gap-2">
               <button
                 onClick={handleDownloadYaml}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all shadow-sm cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs transition-all shadow-sm cursor-pointer"
                 title="Download agent360-agent-workforce-config.yaml"
               >
                 <Download size={13} />

@@ -202,7 +202,7 @@ export function VoiceRecordSettingsModal({
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
+            <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/10 border border-[#f8a87c]/20 flex items-center justify-center text-[#f8a87c]">
               <Mic size={18} />
             </div>
             <div>
@@ -227,10 +227,10 @@ export function VoiceRecordSettingsModal({
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe size={15} className="text-[#ff7a00]" />
+                <Globe size={15} className="text-[#f8a87c]" />
                 <span className="text-xs font-semibold text-white">Input Language Accent (STT)</span>
               </div>
-              <span className="text-[10px] font-mono text-[#ff7a00] font-bold">
+              <span className="text-[10px] font-mono text-[#f8a87c] font-bold">
                 {sttLang === "vi-VN" ? "Tiếng Việt" : "English"}
               </span>
             </div>
@@ -243,24 +243,24 @@ export function VoiceRecordSettingsModal({
                 onClick={() => onSttLangChange("vi-VN")}
                 className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                   sttLang === "vi-VN"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold shadow-xs"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 <span>Tiếng Việt (vi-VN)</span>
-                {sttLang === "vi-VN" && <CheckCircle2 size={13} className="text-[#ff7a00]" />}
+                {sttLang === "vi-VN" && <CheckCircle2 size={13} className="text-[#f8a87c]" />}
               </button>
               <button
                 type="button"
                 onClick={() => onSttLangChange("en-US")}
                 className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                   sttLang === "en-US"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold shadow-xs"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 <span>English (en-US)</span>
-                {sttLang === "en-US" && <CheckCircle2 size={13} className="text-[#ff7a00]" />}
+                {sttLang === "en-US" && <CheckCircle2 size={13} className="text-[#f8a87c]" />}
               </button>
             </div>
           </div>
@@ -284,7 +284,7 @@ export function VoiceRecordSettingsModal({
                 })),
               ]}
               className="w-full"
-              triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white"
+              triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2.5 py-1.5 text-xs text-white"
             />
           </div>
 
@@ -303,7 +303,7 @@ export function VoiceRecordSettingsModal({
                 onClick={() => handleVadModeChange("continuous")}
                 className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "continuous"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -314,7 +314,7 @@ export function VoiceRecordSettingsModal({
                 onClick={() => handleVadModeChange("manual")}
                 className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "manual"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -325,7 +325,7 @@ export function VoiceRecordSettingsModal({
                 onClick={() => handleVadModeChange("push_to_talk")}
                 className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "push_to_talk"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -344,7 +344,7 @@ export function VoiceRecordSettingsModal({
                       onClick={() => handleSilenceChange(ms)}
                       className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
                         silenceDuration === ms
-                          ? "bg-[#ff7a00] text-black font-bold"
+                          ? "bg-[#f8a87c] text-black font-bold"
                           : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
                       }`}
                     >
@@ -447,7 +447,7 @@ export function VoiceRecordSettingsModal({
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Activity size={14} className="text-[#ff7a00]" />
+                <Activity size={14} className="text-[#f8a87c]" />
                 <span className="text-xs font-semibold text-white">Frequency Bands Equalizer</span>
               </div>
               <button
@@ -471,11 +471,11 @@ export function VoiceRecordSettingsModal({
               <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                   <span>{t("voiceSettings.bass")}</span>
-                  <span className="text-[#ff7a00] font-bold">{freqBands.bass}%</span>
+                  <span className="text-[#f8a87c] font-bold">{freqBands.bass}%</span>
                 </div>
                 <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-amber-500 to-[#ff7a00] transition-all duration-75 rounded-full"
+                    className="h-full bg-gradient-to-r from-amber-500 to-[#f8a87c] transition-all duration-75 rounded-full"
                     style={{ width: `${Math.max(4, freqBands.bass)}%` }}
                   />
                 </div>
@@ -527,7 +527,7 @@ export function VoiceRecordSettingsModal({
                 }}
                 className="hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <ShieldCheck size={13} className="text-[#ff7a00]" />
+                <ShieldCheck size={13} className="text-[#f8a87c]" />
                 <span>{t("voiceSettings.permissionsBtn")}</span>
               </button>
             )}

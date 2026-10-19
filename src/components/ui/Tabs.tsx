@@ -61,7 +61,7 @@ export function Tabs<T extends string = string>({
                 isSm ? "text-xs" : "text-sm"
               } ${
                 isActive
-                  ? "text-[#ff7a00]"
+                  ? "text-[#f8a87c]"
                   : "text-neutral-500 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -71,7 +71,7 @@ export function Tabs<T extends string = string>({
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
                     isActive
-                      ? "bg-[#ff7a00]/15 text-[#ff7a00]"
+                      ? "bg-[#f8a87c]/15 text-[#f8a87c]"
                       : "bg-neutral-200 dark:bg-white/10 text-neutral-500"
                   }`}
                 >
@@ -79,7 +79,7 @@ export function Tabs<T extends string = string>({
                 </span>
               )}
               {isActive && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ff7a00] rounded-full animate-in fade-in zoom-in-95 duration-150" />
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#f8a87c] rounded-full animate-in fade-in zoom-in-95 duration-150" />
               )}
             </button>
           );
@@ -111,7 +111,7 @@ export function Tabs<T extends string = string>({
               isSm ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
             } ${
               isActive
-                ? "bg-[#ff7a00] text-black font-semibold shadow-xs"
+                ? "bg-[#f8a87c]/20 text-[#f8a87c] dark:text-[#f8a87c] font-semibold border border-[#f8a87c]/30 shadow-xs"
                 : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
             }`}
           >
@@ -120,7 +120,7 @@ export function Tabs<T extends string = string>({
             {tab.count !== undefined && (
               <span
                 className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
-                  isActive ? "bg-black/20 text-black font-bold" : "bg-white/10 text-neutral-400"
+                  isActive ? "bg-[#f8a87c]/25 text-[#f8a87c] font-bold" : "bg-white/10 text-neutral-400"
                 }`}
               >
                 {tab.count}

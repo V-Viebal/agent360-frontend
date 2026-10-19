@@ -102,7 +102,7 @@ export function ScheduleJobModal({
         {/* Header */}
         <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-[#242432] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Clock size={15} className="text-[#ff7a00]" />
+            <Clock size={15} className="text-[#f8a87c]" />
             <span className="font-semibold text-white tracking-wide uppercase font-mono">
               {job ? "Edit Automation Schedule" : "New Automation Schedule"}
             </span>
@@ -125,7 +125,7 @@ export function ScheduleJobModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Daily Order Check, SRE Health Audit"
-              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-sans placeholder:text-neutral-600 focus:outline-none focus:border-[#ff7a00]/70"
+              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-sans placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70"
             />
           </div>
 
@@ -138,7 +138,7 @@ export function ScheduleJobModal({
                 value={cronExpr}
                 onChange={(e) => setCronExpr(e.target.value)}
                 placeholder="0 9 * * *"
-                className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-[#ff7a00] font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[#ff7a00]/70"
+                className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-[#f8a87c] font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70"
               />
             </div>
 
@@ -155,7 +155,7 @@ export function ScheduleJobModal({
                   { value: "slack", label: "Slack Workspace" },
                 ]}
                 className="w-full"
-                triggerClassName="w-full bg-[#181824] border border-[#2a2a3c] hover:border-[#ff7a00]/70 rounded-lg px-2.5 py-1.5 text-white font-mono text-[11px]"
+                triggerClassName="w-full bg-[#181824] border border-[#2a2a3c] hover:border-[#f8a87c]/70 rounded-lg px-2.5 py-1.5 text-white font-mono text-[11px]"
               />
             </div>
           </div>
@@ -169,7 +169,7 @@ export function ScheduleJobModal({
                 onClick={() => setCronExpr(p.cron)}
                 className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
                   cronExpr === p.cron
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-[#ff7a00]"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#f8a87c]"
                     : "bg-[#181824] border-[#262638] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -186,7 +186,7 @@ export function ScheduleJobModal({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="What instructions should the bot run at the scheduled time? (e.g. Check system logs, query unread orders...)"
-              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl p-2.5 text-white font-sans placeholder:text-neutral-600 focus:outline-none focus:border-[#ff7a00]/70 resize-none leading-relaxed"
+              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl p-2.5 text-white font-sans placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70 resize-none leading-relaxed"
             />
           </div>
 
@@ -235,7 +235,7 @@ export function ScheduleJobModal({
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-1.5 bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold px-4 py-1.5 rounded-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
+                className="flex items-center gap-1.5 bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold px-4 py-1.5 rounded-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
               >
                 <Save size={13} />
                 <span>{job ? "Update Schedule" : "Create Schedule"}</span>

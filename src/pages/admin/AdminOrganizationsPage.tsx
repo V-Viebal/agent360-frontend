@@ -90,7 +90,7 @@ export function AdminOrganizationsPage() {
             <Building2 size={15} />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#f8a87c] transition-colors">
               {org.name}
             </div>
             <div className="text-[10px] text-neutral-500 font-mono">slug: {org.slug}</div>
@@ -126,7 +126,7 @@ export function AdminOrganizationsPage() {
       sortable: true,
       width: "15%",
       cell: (org) => (
-        <span className="font-mono font-semibold text-[#ff7a00] text-[11px]">
+        <span className="font-mono font-semibold text-[#f8a87c] text-[11px]">
           {org.agents_count} Agents
         </span>
       ),
@@ -154,7 +154,7 @@ export function AdminOrganizationsPage() {
             e.stopPropagation();
             handleOpenEdit(org);
           }}
-          className="px-2.5 py-1 rounded-lg border border-[#2e2e3e] bg-slate-100 dark:bg-[#1a1a24] hover:bg-[#ff7a00]/10 hover:border-[#ff7a00]/40 text-slate-800 dark:text-neutral-200 hover:text-[#ff7a00] text-[11px] font-medium transition-all cursor-pointer"
+          className="px-2.5 py-1 rounded-lg border border-[#2e2e3e] bg-slate-100 dark:bg-[#1a1a24] hover:bg-[#f8a87c]/10 hover:border-[#f8a87c]/40 text-slate-800 dark:text-neutral-200 hover:text-[#f8a87c] text-[11px] font-medium transition-all cursor-pointer"
         >
           Sửa Quota
         </button>
@@ -227,7 +227,7 @@ export function AdminOrganizationsPage() {
           selectedOrg && (
             <button
               onClick={() => handleOpenEdit(selectedOrg)}
-              className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-bold text-xs cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-bold text-xs cursor-pointer"
             >
               Cập nhật Quota Hạn Mức
             </button>
@@ -258,7 +258,7 @@ export function AdminOrganizationsPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 dark:text-neutral-400">Hạn mức AI Agent:</span>
-                <span className="text-[#ff7a00] font-bold">{selectedOrg.agents_count} Agents tối đa</span>
+                <span className="text-[#f8a87c] font-bold">{selectedOrg.agents_count} Agents tối đa</span>
               </div>
             </div>
           </div>
@@ -279,7 +279,7 @@ export function AdminOrganizationsPage() {
                 type="text"
                 value={quotaPlan}
                 onChange={(e) => setQuotaPlan(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-[#2a2a38] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-[#2a2a38] text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
                 required
               />
             </div>
@@ -292,7 +292,7 @@ export function AdminOrganizationsPage() {
                 max="100"
                 value={quotaAgents}
                 onChange={(e) => setQuotaAgents(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-[#2a2a38] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-[#2a2a38] text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
                 required
               />
             </div>
@@ -307,7 +307,7 @@ export function AdminOrganizationsPage() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold cursor-pointer shadow-sm"
+                className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold cursor-pointer shadow-sm"
               >
                 Lưu Thay Đổi
               </button>

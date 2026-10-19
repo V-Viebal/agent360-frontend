@@ -45,7 +45,7 @@ export function ConfirmDialog({
     ) : variant === "warning" ? (
       <AlertTriangle size={18} className="text-amber-500" />
     ) : (
-      <HelpCircle size={18} className="text-[#ff7a00]" />
+      <HelpCircle size={18} className="text-[#f8a87c]" />
     );
 
   const confirmBtnClass =
@@ -53,7 +53,7 @@ export function ConfirmDialog({
       ? "bg-red-500 hover:bg-red-600 text-white"
       : variant === "warning"
       ? "bg-amber-500 hover:bg-amber-600 text-black font-semibold"
-      : "bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold";
+      : "bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold";
 
   return (
     <Modal

@@ -130,7 +130,7 @@ export function AudioVisualizerWaveform({
 
             // Gradient bar from neon orange to bright pink-red
             const gradient = ctx.createLinearGradient(0, y, 0, y + height);
-            gradient.addColorStop(0, percent > 0.6 ? "#ff3366" : "#ff7a00");
+            gradient.addColorStop(0, percent > 0.6 ? "#ff3366" : "#f8a87c");
             gradient.addColorStop(1, percent > 0.6 ? "#ff9900" : "#ff3366");
 
             ctx.fillStyle = gradient;

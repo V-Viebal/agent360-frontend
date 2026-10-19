@@ -13,7 +13,7 @@ export function SkyerLogo({ size = 32, className = "", showText = true, showBotB
       {/* Precision Icon Mark with Light / Dark Theme Support */}
       <div 
         style={{ width: size, height: size }}
-        className={`rounded-[8px] bg-slate-100 dark:bg-[#0A0C13] border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-xs dark:shadow-[0_0_15px_rgba(255,122,0,0.18)] transition-all duration-300 hover:border-[#ff7a00]/50 hover:shadow-[0_0_22px_rgba(255,122,0,0.25)] hover:scale-105 shrink-0 ${
+        className={`rounded-[8px] bg-slate-100 dark:bg-[#0A0C13] border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-xs dark:shadow-[0_0_15px_rgba(248,168,124,0.18)] transition-all duration-300 hover:border-[#f8a87c]/50 hover:shadow-[0_0_22px_rgba(248,168,124,0.25)] hover:scale-105 shrink-0 ${
           size <= 24 ? "p-1" : size <= 32 ? "p-1.5" : "p-2"
         }`}
       >
@@ -29,7 +29,7 @@ export function SkyerLogo({ size = 32, className = "", showText = true, showBotB
           {/* Lower Blade: Electric Grok Ember */}
           <path 
             d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5" 
-            className="stroke-[#ff7a00]" 
+            className="stroke-[#f8a87c]" 
             strokeWidth="3.6" 
             strokeLinecap="round" 
             strokeLinejoin="round"
@@ -40,11 +40,11 @@ export function SkyerLogo({ size = 32, className = "", showText = true, showBotB
       {/* Modern Wordmark with Dynamic Light / Dark Color */}
       {showText && (
         <div className="flex items-center gap-1.5">
-          <span className="font-bold text-[17px] tracking-tight text-slate-900 dark:text-white font-sans group-hover:text-[#ff7a00] dark:group-hover:text-neutral-100 transition-colors">
+          <span className="font-bold text-[17px] tracking-tight text-slate-900 dark:text-white font-sans group-hover:text-[#f8a87c] dark:group-hover:text-neutral-100 transition-colors">
             Skyer
           </span>
           {showBotBadge && (
-            <span className="text-[9px] font-mono font-bold uppercase bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 px-1.5 py-0.2 rounded-full">
+            <span className="text-[9px] font-mono font-bold uppercase bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 px-1.5 py-0.2 rounded-full">
               BOT
             </span>
           )}

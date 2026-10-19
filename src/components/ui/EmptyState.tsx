@@ -46,7 +46,7 @@ export function EmptyState({
     let btnClass = "px-4 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer select-none shadow-xs";
 
     if (isPrimary) {
-      btnClass += " bg-[#ff7a00] hover:bg-[#ff8f26] text-black shadow-md shadow-[#ff7a00]/20 hover:scale-[1.02] active:scale-[0.98]";
+      btnClass += " bg-[#f8a87c] hover:bg-[#f5935f] text-black shadow-md shadow-[#f8a87c]/20 hover:scale-[1.02] active:scale-[0.98]";
     } else if (isOutline) {
       btnClass += " bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-300 dark:border-white/15 text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white";
     } else if (isSecondary) {
@@ -87,25 +87,25 @@ export function EmptyState({
       {/* Visual Aura & Multi-layer Container */}
       <div className="relative flex items-center justify-center mb-1">
         {/* Glow halo */}
-        <div className="absolute -inset-2 rounded-full bg-[#ff7a00]/10 blur-xl pointer-events-none" />
+        <div className="absolute -inset-2 rounded-full bg-[#f8a87c]/10 blur-xl pointer-events-none" />
         
         {/* Outer Tech Circle */}
-        <div className={`relative rounded-3xl bg-slate-50 dark:bg-[#12121a] border border-[#ff7a00]/30 flex items-center justify-center shadow-xl shadow-[#ff7a00]/10 ${
+        <div className={`relative rounded-3xl bg-slate-50 dark:bg-[#12121a] border border-[#f8a87c]/30 flex items-center justify-center shadow-xl shadow-[#f8a87c]/10 ${
           isLarge ? "h-20 w-20" : isSmall ? "h-11 w-11" : "h-16 w-16"
         }`}>
           {/* Subtle inner grid aura */}
-          <div className="absolute inset-1 rounded-2xl border border-dashed border-[#ff7a00]/20 pointer-events-none" />
+          <div className="absolute inset-1 rounded-2xl border border-dashed border-[#f8a87c]/20 pointer-events-none" />
           
-          <div className="text-[#ff7a00] flex items-center justify-center">
-            {icon || <Sparkles size={isLarge ? 34 : isSmall ? 18 : 26} className="text-[#ff7a00]" />}
+          <div className="text-[#f8a87c] flex items-center justify-center">
+            {icon || <Sparkles size={isLarge ? 34 : isSmall ? 18 : 26} className="text-[#f8a87c]" />}
           </div>
         </div>
       </div>
 
       {/* Pill Badge */}
       {badge && (
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ff7a00]/10 border border-[#ff7a00]/20 text-[#ff7a00] text-[10px] font-mono uppercase tracking-wider font-semibold">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] animate-pulse" />
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f8a87c]/10 border border-[#f8a87c]/20 text-[#f8a87c] text-[10px] font-mono uppercase tracking-wider font-semibold">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] animate-pulse" />
           <span>{badge}</span>
         </div>
       )}

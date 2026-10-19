@@ -241,11 +241,11 @@ export function AdminBillingsPage() {
       width: "25%",
       cell: (tx) => (
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-7 w-7 rounded-full bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
+          <div className="h-7 w-7 rounded-full bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
             {getInitials(tx.tenant_name, tx.tenant_email)}
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#f8a87c] transition-colors">
               {tx.tenant_name || "User Skyer"}
             </div>
             <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">{tx.tenant_email || tx.tenant_id}</div>
@@ -259,7 +259,7 @@ export function AdminBillingsPage() {
       sortable: true,
       width: "18%",
       cell: (tx) => (
-        <span className="font-mono text-[11px] text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-md border border-[#ff7a00]/20 select-all">
+        <span className="font-mono text-[11px] text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-md border border-[#f8a87c]/20 select-all">
           #{tx.order_code}
         </span>
       ),
@@ -378,7 +378,7 @@ export function AdminBillingsPage() {
       sortable: true,
       width: "20%",
       cell: (w) => (
-        <span className="font-mono font-bold text-[#ff7a00] text-xs">
+        <span className="font-mono font-bold text-[#f8a87c] text-xs">
           {Number(w.balance_tokens).toLocaleString()} Tokens
         </span>
       ),
@@ -405,7 +405,7 @@ export function AdminBillingsPage() {
             e.stopPropagation();
             setAdjustTarget(w);
           }}
-          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-[#ff7a00] hover:text-black text-slate-800 dark:text-neutral-200 text-[10px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-[#f8a87c] hover:text-black text-slate-800 dark:text-neutral-200 text-[10px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
         >
           <Gift size={11} />
           <span>Tặng / Trừ</span>
@@ -421,7 +421,7 @@ export function AdminBillingsPage() {
         <div>
           <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Quản Trị Thanh Toán & Sổ Cái PAYG</span>
-            <span className="text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
+            <span className="text-[11px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-full border border-[#f8a87c]/20">
               VietQR PayOS
             </span>
           </h1>
@@ -436,7 +436,7 @@ export function AdminBillingsPage() {
             <button
               onClick={() => setActiveTab("transactions")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "transactions" ? "bg-[#ff7a00] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
+                activeTab === "transactions" ? "bg-[#f8a87c] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
               }`}
             >
               Giao Dịch Toàn Sàn
@@ -444,7 +444,7 @@ export function AdminBillingsPage() {
             <button
               onClick={() => setActiveTab("wallets")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "wallets" ? "bg-[#ff7a00] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
+                activeTab === "wallets" ? "bg-[#f8a87c] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
               }`}
             >
               Danh Sách Ví
@@ -452,7 +452,7 @@ export function AdminBillingsPage() {
             <button
               onClick={() => setActiveTab("my_wallet")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "my_wallet" ? "bg-[#ff7a00] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
+                activeTab === "my_wallet" ? "bg-[#f8a87c] text-black shadow-sm" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
               }`}
             >
               Nạp Thêm Token
@@ -531,7 +531,7 @@ export function AdminBillingsPage() {
                 </div>
                 <div className="text-4xl font-extrabold text-slate-900 dark:text-white flex items-baseline gap-2">
                   <span>{wallet ? Number(wallet.balance_tokens).toLocaleString() : "..."}</span>
-                  <span className="text-base font-semibold text-[#ff7a00]">Tokens</span>
+                  <span className="text-base font-semibold text-[#f8a87c]">Tokens</span>
                 </div>
                 <div className="mt-3 flex items-center gap-2 text-xs">
                   <span className="text-slate-500 dark:text-neutral-400">⚡ Dự báo Runway:</span>
@@ -550,7 +550,7 @@ export function AdminBillingsPage() {
                     key={pkg.id}
                     onClick={() => handleBuyTopup(pkg)}
                     disabled={topupLoadingId === pkg.id}
-                    className="px-4 py-3 rounded-xl bg-gradient-to-r from-[#ff7a00] to-[#ff9433] hover:brightness-110 text-black text-xs font-bold transition-all shadow-lg shadow-[#ff7a00]/20 flex flex-col items-center justify-center cursor-pointer disabled:opacity-50"
+                    className="px-4 py-3 rounded-xl bg-gradient-to-r from-[#f8a87c] to-[#ff9433] hover:brightness-110 text-black text-xs font-bold transition-all shadow-lg shadow-[#f8a87c]/20 flex flex-col items-center justify-center cursor-pointer disabled:opacity-50"
                   >
                     <span>+{Number(pkg.token_yield).toLocaleString()} Tokens</span>
                     <span className="text-[10px] opacity-80">{Number(pkg.fiat_price).toLocaleString()}đ</span>
@@ -565,12 +565,12 @@ export function AdminBillingsPage() {
             {wallet?.packages?.map((pkg) => (
               <div
                 key={pkg.id}
-                className="p-5 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] hover:border-[#ff7a00]/40 transition-all flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] hover:border-[#f8a87c]/40 transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-slate-800 dark:text-neutral-200">{pkg.name}</span>
-                    <Zap size={16} className="text-[#ff7a00]" />
+                    <Zap size={16} className="text-[#f8a87c]" />
                   </div>
                   <div className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">
                     {Number(pkg.fiat_price).toLocaleString()} <span className="text-xs font-normal text-slate-500 dark:text-neutral-400">VND</span>
@@ -583,7 +583,7 @@ export function AdminBillingsPage() {
                 <button
                   onClick={() => handleBuyTopup(pkg)}
                   disabled={topupLoadingId === pkg.id}
-                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-[#ff7a00] hover:text-black text-xs font-semibold text-slate-900 dark:text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-[#f8a87c] hover:text-black text-xs font-semibold text-slate-900 dark:text-white transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <span>{topupLoadingId === pkg.id ? "Đang xử lý..." : "Nạp ngay qua PayOS"}</span>
                   <ArrowRight size={13} />
@@ -633,7 +633,7 @@ export function AdminBillingsPage() {
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636] space-y-2.5 font-mono">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 dark:text-neutral-400">Mã đơn PayOS (Order Code):</span>
-                <span className="font-bold text-[#ff7a00] select-all">#{selectedTx.order_code}</span>
+                <span className="font-bold text-[#f8a87c] select-all">#{selectedTx.order_code}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 dark:text-neutral-400">Payment Link ID:</span>
@@ -667,7 +667,7 @@ export function AdminBillingsPage() {
                   href={selectedTx.checkout_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#ff7a00] hover:underline flex items-center gap-1 font-semibold"
+                  className="text-[#f8a87c] hover:underline flex items-center gap-1 font-semibold"
                 >
                   <span>Mở PayOS VietQR</span>
                   <ExternalLink size={12} />
@@ -684,7 +684,7 @@ export function AdminBillingsPage() {
           <div className="w-full max-w-md bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#262634] rounded-2xl p-6 shadow-2xl space-y-4 text-xs font-sans">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#262634] pb-3">
               <div className="flex items-center gap-2">
-                <Gift size={18} className="text-[#ff7a00]" />
+                <Gift size={18} className="text-[#f8a87c]" />
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Điều Chỉnh Số Dư Ví Token</h3>
               </div>
               <button onClick={() => setAdjustTarget(null)} className="text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white cursor-pointer">Đóng</button>
@@ -705,7 +705,7 @@ export function AdminBillingsPage() {
                   value={adjustAmount}
                   onChange={(e) => setAdjustAmount(Number(e.target.value))}
                   placeholder="100000"
-                  className="w-full p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                  className="w-full p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
                   required
                 />
                 <span className="text-[10px] text-neutral-500 mt-1 block">Nhập số dương để tặng bonus, nhập số âm để trừ phạt.</span>
@@ -718,7 +718,7 @@ export function AdminBillingsPage() {
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
                   placeholder="Khuyến mãi thành viên mới / Bồi hoàn"
-                  className="w-full p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                  className="w-full p-2.5 bg-slate-100/70 dark:bg-[#0e0e14] rounded-xl border border-slate-200 dark:border-[#22222e] text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
                   required
                 />
               </div>
@@ -734,7 +734,7 @@ export function AdminBillingsPage() {
                 <button
                   type="submit"
                   disabled={adjusting}
-                  className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span>{adjusting ? "Đang xử lý..." : "Xác nhận điều chỉnh"}</span>
                 </button>

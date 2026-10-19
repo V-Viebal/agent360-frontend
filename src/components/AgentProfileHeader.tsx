@@ -77,10 +77,10 @@ export function AgentProfileHeader({ agent, loopMode = 'default', onRefresh, onM
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                 : loopMode === 'mission'
                 ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
-                : 'bg-amber-500/10 text-[#ff7a00] border-amber-500/30'
+                : 'bg-amber-500/10 text-[#f8a87c] border-amber-500/30'
             }`}>
               <span className={`h-1.5 w-1.5 rounded-full ${
-                loopMode === 'goal' ? 'bg-emerald-400' : loopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#ff7a00]'
+                loopMode === 'goal' ? 'bg-emerald-400' : loopMode === 'mission' ? 'bg-cyan-400' : 'bg-[#f8a87c]'
               }`} />
               <span>{loopMode}</span>
             </span>

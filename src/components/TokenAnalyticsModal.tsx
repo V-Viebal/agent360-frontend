@@ -43,7 +43,7 @@ export function TokenAnalyticsModal({ onClose }: TokenAnalyticsModalProps) {
       isOpen={true}
       onClose={onClose}
       title="Token Consumption & Cost Analytics"
-      icon={<BarChart3 size={18} className="text-[#ff7a00]" />}
+      icon={<BarChart3 size={18} className="text-[#f8a87c]" />}
       maxWidth="2xl"
     >
       <div className="p-6 space-y-6 font-sans text-xs">
@@ -61,7 +61,7 @@ export function TokenAnalyticsModal({ onClose }: TokenAnalyticsModalProps) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
               <div className="bg-slate-50 dark:bg-[#17120e] border border-slate-200 dark:border-[#2b241e] p-3 rounded-xl space-y-1">
                 <span className="text-[10px] text-neutral-500 uppercase flex items-center gap-1">
-                  <TrendingUp size={11} className="text-[#ff7a00]" />
+                  <TrendingUp size={11} className="text-[#f8a87c]" />
                   Total Invocations
                 </span>
                 <div className="text-base font-semibold text-slate-800 dark:text-white">
@@ -114,7 +114,7 @@ export function TokenAnalyticsModal({ onClose }: TokenAnalyticsModalProps) {
                     >
                       <div className="space-y-0.5">
                         <div className="font-semibold text-slate-800 dark:text-white flex items-center gap-1.5">
-                          <span className="text-[#ff7a00]">●</span>
+                          <span className="text-[#f8a87c]">●</span>
                           <span>{m.model || modelKey}</span>
                         </div>
                         <div className="text-[10px] text-neutral-500">
@@ -154,7 +154,7 @@ export function TokenAnalyticsModal({ onClose }: TokenAnalyticsModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-1.5 rounded-xl bg-[#ff7a00] text-black font-semibold text-xs hover:bg-[#ff8f26] transition-all cursor-pointer"
+          className="px-4 py-1.5 rounded-xl bg-[#f8a87c] text-black font-semibold text-xs hover:bg-[#f5935f] transition-all cursor-pointer"
         >
           Close
         </button>

@@ -96,7 +96,7 @@ export function DocsPage() {
             <ChevronRight size={12} />
             <span className="text-neutral-900 dark:text-white font-medium">{t("docs.breadcrumb")}</span>
             <ChevronRight size={12} />
-            <span className="text-[#ff7a00]">{activeDoc.title}</span>
+            <span className="text-[#f8a87c]">{activeDoc.title}</span>
           </div>
 
           <div className="flex items-center gap-3 text-xs">
@@ -134,7 +134,7 @@ export function DocsPage() {
               placeholder={t("docs.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white dark:bg-[#0d111a] border border-neutral-200 dark:border-[var(--border-subtle)] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 rounded-xl pl-9 pr-3 py-2 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/50"
+              className="w-full bg-white dark:bg-[#0d111a] border border-neutral-200 dark:border-[var(--border-subtle)] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 rounded-xl pl-9 pr-3 py-2 text-xs text-neutral-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/50"
             />
           </div>
 
@@ -161,7 +161,7 @@ export function DocsPage() {
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
                             isSelected
-                              ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold border border-[#ff7a00]/30"
+                              ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold border border-[#f8a87c]/30"
                               : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.04]"
                           }`}
                         >
@@ -171,7 +171,7 @@ export function DocsPage() {
                               title={`${doc.badge} Module`}
                               className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
                                 isSelected
-                                  ? "bg-[#ff7a00] text-black font-semibold"
+                                  ? "bg-[#f8a87c] text-black font-semibold"
                                   : "bg-white/5 text-neutral-500 hover:text-neutral-300"
                               }`}
                             >
@@ -190,7 +190,7 @@ export function DocsPage() {
           {/* Quick Help Card */}
           <div className="rounded-xl border border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] p-4 text-xs space-y-2 shadow-sm dark:shadow-none">
             <div className="font-semibold text-neutral-900 dark:text-white flex items-center gap-1.5">
-              <Sparkles size={13} className="text-[#ff7a00]" />
+              <Sparkles size={13} className="text-[#f8a87c]" />
               <span>Need custom agents?</span>
             </div>
             <p className="text-neutral-400 leading-relaxed text-[11px]">
@@ -198,7 +198,7 @@ export function DocsPage() {
             </p>
             <Link
               to="/marketplace"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#ff7a00] hover:underline pt-1"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#f8a87c] hover:underline pt-1"
             >
               {t("docs.browseMarketplace")} <ArrowRight size={11} />
             </Link>
@@ -210,7 +210,7 @@ export function DocsPage() {
           {/* Header */}
           <div className="border-b border-[var(--border-subtle)] pb-6">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-[#ff7a00] bg-[#ff7a00]/10 px-2.5 py-0.5 rounded-md border border-[#ff7a00]/20">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-[#f8a87c] bg-[#f8a87c]/10 px-2.5 py-0.5 rounded-md border border-[#f8a87c]/20">
                 {activeDoc.category}
               </span>
               {activeDoc.badge && (
@@ -228,15 +228,15 @@ export function DocsPage() {
           </div>
 
           {/* Key Takeaways Box */}
-          <div className="rounded-xl border border-[#ff7a00]/25 bg-[#ff7a00]/5 p-5 space-y-2.5">
-            <div className="text-xs font-mono uppercase tracking-wider text-[#ff7a00] font-semibold flex items-center gap-1.5">
+          <div className="rounded-xl border border-[#f8a87c]/25 bg-[#f8a87c]/5 p-5 space-y-2.5">
+            <div className="text-xs font-mono uppercase tracking-wider text-[#f8a87c] font-semibold flex items-center gap-1.5">
               <CheckCircle2 size={14} />
               <span>{t("docs.keyGuarantees")}</span>
             </div>
             <ul className="space-y-1.5 text-xs text-neutral-700 dark:text-neutral-300 font-sans">
               {activeDoc.keyTakeaways.map((takeaway, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-[#ff7a00]">•</span>
+                  <span className="text-[#f8a87c]">•</span>
                   <span>{takeaway}</span>
                 </li>
               ))}
@@ -282,7 +282,7 @@ export function DocsPage() {
           {/* Topology Visualizer for Orchestration / Concepts */}
           {(activeDoc.id === "ai-teammates" || activeDoc.id === "core-concepts") && (
             <div className="space-y-3">
-              <div className="text-xs font-mono uppercase tracking-wider text-[#ff7a00] font-semibold flex items-center gap-1.5">
+              <div className="text-xs font-mono uppercase tracking-wider text-[#f8a87c] font-semibold flex items-center gap-1.5">
                 <GitBranch size={14} />
                 <span>{t("docs.supervisionTree")}</span>
               </div>
@@ -300,7 +300,7 @@ export function DocsPage() {
                     onClick={() => setActiveTab("code")}
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "code"
-                        ? "bg-[#ff7a00] text-black font-semibold shadow"
+                        ? "bg-[#f8a87c] text-black font-semibold shadow"
                         : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
@@ -313,7 +313,7 @@ export function DocsPage() {
                     onClick={() => setActiveTab("sandbox")}
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "sandbox"
-                        ? "bg-[#ff7a00] text-black font-semibold shadow"
+                        ? "bg-[#f8a87c] text-black font-semibold shadow"
                         : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
@@ -365,7 +365,7 @@ export function DocsPage() {
                     </div>
                     <Link
                       to="/app"
-                      className="text-[11px] font-sans text-[#ff7a00] hover:underline flex items-center gap-1"
+                      className="text-[11px] font-sans text-[#f8a87c] hover:underline flex items-center gap-1"
                     >
                       <span>{t("docs.openWorkspace")}</span>
                       <ExternalLink size={10} />
@@ -418,7 +418,7 @@ export function DocsPage() {
 
             <Link
               to="/app"
-              className="text-xs font-medium bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-2 rounded-full transition-all"
+              className="text-xs font-medium bg-[#f8a87c] hover:bg-[#f5935f] text-black px-4 py-2 rounded-full transition-all"
             >
               Launch Control Plane
             </Link>

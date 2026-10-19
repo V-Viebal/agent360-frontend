@@ -35,7 +35,7 @@ export function LanguageSelector({ className = "" }: { className?: string }) {
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-mono text-neutral-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer"
         title="Change Language & Regional Location"
       >
-        <Globe size={13} className="text-[#ff7a00]" />
+        <Globe size={13} className="text-[#f8a87c]" />
         <span className="font-medium uppercase tracking-wider text-[11px]">{language}</span>
         <ChevronDown size={11} className={`text-neutral-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
@@ -53,7 +53,7 @@ export function LanguageSelector({ className = "" }: { className?: string }) {
               key={opt.id}
               label={opt.label}
               badge={selection === opt.id ? "✓" : opt.sub}
-              badgeColor={selection === opt.id ? "text-[#ff7a00]" : "text-neutral-500"}
+              badgeColor={selection === opt.id ? "text-[#f8a87c]" : "text-neutral-500"}
               onClick={() => {
                 setLanguageSelection(opt.id);
                 setIsOpen(false);

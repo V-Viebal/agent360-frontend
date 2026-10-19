@@ -62,7 +62,7 @@ export function AdminDashboardPage() {
   }, []);
 
   const stats = [
-    { label: "Active Fleet Agents", value: loading ? "..." : agentsCount.toString(), change: "Ready 24/7", icon: Bot, color: "text-[#ff7a00]", bg: "bg-[#ff7a00]/10 border-[#ff7a00]/20" },
+    { label: "Active Fleet Agents", value: loading ? "..." : agentsCount.toString(), change: "Ready 24/7", icon: Bot, color: "text-[#f8a87c]", bg: "bg-[#f8a87c]/10 border-[#f8a87c]/20" },
     { label: "Registered Users", value: loading ? "..." : usersCount.toString(), change: "Logto IAM Synced", icon: Users, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
     { label: "Infra VPS Fleet", value: "5 Nodes", change: "100% Operational", icon: Server, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
     { label: "Doanh Thu PayOS", value: loading ? "..." : `${totalRevenue.toLocaleString("vi-VN")} ₫`, change: "VietQR Auto Gateway", icon: CreditCard, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20" },
@@ -157,7 +157,7 @@ export function AdminDashboardPage() {
         <div className="p-5 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck size={16} className="text-[#ff7a00]" />
+              <ShieldCheck size={16} className="text-[#f8a87c]" />
               <h2 className="text-xs font-semibold text-slate-900 dark:text-white">Identity & Access Enforcement</h2>
             </div>
             <div className="space-y-2.5">
@@ -184,7 +184,7 @@ export function AdminDashboardPage() {
               <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-900 dark:text-white mb-1">
                   <span>RBAC Agent Scoping Policy</span>
-                  <span className="text-[#ff7a00] font-mono text-[10px]">ENFORCED</span>
+                  <span className="text-[#f8a87c] font-mono text-[10px]">ENFORCED</span>
                 </div>
                 <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                   Members load only assigned agents. Admins inspect all fleet agents across cluster.

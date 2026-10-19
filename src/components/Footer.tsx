@@ -48,7 +48,7 @@ export function Footer() {
             <h4 className="text-neutral-900 dark:text-white font-medium text-xs uppercase tracking-wider font-mono">{t("footer.governance")}</h4>
             <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-2">
               <div className="flex items-center gap-1.5 text-neutral-300 font-medium">
-                <ShieldCheck size={14} className="text-[#ff7a00]" />
+                <ShieldCheck size={14} className="text-[#f8a87c]" />
                 <span>{t("footer.proofTitle")}</span>
               </div>
               <p className="text-[11px] text-neutral-500 leading-normal">

@@ -78,7 +78,7 @@ export function AdminAuditPage() {
                 ? "bg-rose-500/15 text-rose-400 border-rose-500/25"
                 : isAssign
                 ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
-                : "bg-[#ff7a00]/15 text-[#ff7a00] border-[#ff7a00]/25"
+                : "bg-[#f8a87c]/15 text-[#f8a87c] border-[#f8a87c]/25"
             }`}
           >
             {log.action}
@@ -117,7 +117,7 @@ export function AdminAuditPage() {
         <button
           type="button"
           onClick={() => setSelectedLog(log)}
-          className="text-[11px] text-[#ff7a00] hover:underline font-mono truncate max-w-[140px] inline-block cursor-pointer"
+          className="text-[11px] text-[#f8a87c] hover:underline font-mono truncate max-w-[140px] inline-block cursor-pointer"
         >
           {typeof log.details === "object" ? JSON.stringify(log.details) : String(log.details)}
         </button>
@@ -180,7 +180,7 @@ export function AdminAuditPage() {
             <div className="grid grid-cols-2 gap-2.5 text-xs font-mono">
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636]">
                 <div className="text-[10px] text-slate-500 dark:text-neutral-400">ACTION</div>
-                <div className="font-bold text-[#ff7a00] mt-0.5">{selectedLog.action}</div>
+                <div className="font-bold text-[#f8a87c] mt-0.5">{selectedLog.action}</div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#262636]">
                 <div className="text-[10px] text-slate-500 dark:text-neutral-400">TARGET</div>

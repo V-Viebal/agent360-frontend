@@ -64,7 +64,7 @@ function GeometricAvatar({
   }[size];
 
   const colorStyles = {
-    orange: "from-[#ff7a00] to-amber-300 text-black shadow-[#ff7a00]/25",
+    orange: "from-[#f8a87c] to-amber-300 text-black shadow-[#f8a87c]/25",
     blue: "from-blue-500 to-cyan-300 text-white shadow-blue-500/25",
     emerald: "from-emerald-500 to-teal-300 text-black shadow-emerald-500/25",
     purple: "from-purple-500 to-indigo-300 text-white shadow-purple-500/25",
@@ -153,7 +153,7 @@ export function MarketplacePage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-[var(--border-subtle)]">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] mb-2">
+            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#f8a87c] mb-2">
               <Sparkles size={14} />
               <span>{t("marketplace.badge")}</span>
             </div>
@@ -170,14 +170,14 @@ export function MarketplacePage() {
               to="/app"
               className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/5 px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-white/10 transition-colors"
             >
-              <Cpu size={14} className="text-[#ff7a00]" />
+              <Cpu size={14} className="text-[#f8a87c]" />
               <span>{t("marketplace.activeControlPlane")}</span>
             </Link>
             <a
               href="https://github.com/v-viebal/agent360"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#ff7a00] px-4 py-2 text-xs font-medium text-black hover:bg-[#ff8f26] transition-colors shadow-[0_0_20px_rgba(255,122,0,0.3)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#f8a87c] px-4 py-2 text-xs font-medium text-black hover:bg-[#f5935f] transition-colors shadow-[0_0_20px_rgba(248,168,124,0.3)]"
             >
               <span>{t("marketplace.buildCustomBot")}</span>
               <ArrowUpRight size={13} />
@@ -192,7 +192,7 @@ export function MarketplacePage() {
               onClick={() => setActiveView("catalog")}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
                 activeView === "catalog"
-                  ? "bg-[#ff7a00] text-black shadow-md"
+                  ? "bg-[#f8a87c] text-black shadow-md"
                   : "text-neutral-400 hover:text-white"
               }`}
             >
@@ -203,7 +203,7 @@ export function MarketplacePage() {
               onClick={() => setActiveView("orgchart")}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
                 activeView === "orgchart"
-                  ? "bg-[#ff7a00] text-black shadow-md"
+                  ? "bg-[#f8a87c] text-black shadow-md"
                   : "text-neutral-400 hover:text-white"
               }`}
             >
@@ -236,7 +236,7 @@ export function MarketplacePage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("marketplace.searchPlaceholder")}
-              className="w-full rounded-full border border-[var(--border-subtle)] bg-white/[0.04] pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:border-[#ff7a00] focus:bg-white/[0.08] focus:outline-none transition-all font-sans"
+              className="w-full rounded-full border border-[var(--border-subtle)] bg-white/[0.04] pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:border-[#f8a87c] focus:bg-white/[0.08] focus:outline-none transition-all font-sans"
             />
             {searchQuery && (
               <button
@@ -251,7 +251,7 @@ export function MarketplacePage() {
                     {/* Company Scale Selector (Startup / SME / Enterprise) */}
           <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
             <span className="text-xs font-mono text-neutral-400 mr-1 flex items-center gap-1.5">
-              <SlidersHorizontal size={13} className="text-[#ff7a00]" />
+              <SlidersHorizontal size={13} className="text-[#f8a87c]" />
               {t("marketplace.companyScale")}
             </span>
             {(["All", "Startup", "SME", "Enterprise"] as const).map((scale) => {
@@ -289,7 +289,7 @@ export function MarketplacePage() {
                   onClick={() => setSelectedCategory(cat.label)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer border ${
                     active
-                      ? "bg-[#ff7a00] text-black font-semibold border-[#ff7a00] shadow-sm shadow-[#ff7a00]/25"
+                      ? "bg-[#f8a87c] text-black font-semibold border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25"
                       : "bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08] hover:text-white border-white/[0.06]"
                   }`}
                 >
@@ -311,7 +311,7 @@ export function MarketplacePage() {
               <span>{t("marketplace.strictEvidence")}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c]" />
               <span>{t("marketplace.multiAgentReady")}</span>
             </span>
           </div>
@@ -334,12 +334,12 @@ export function MarketplacePage() {
                   <GeometricAvatar shape={agent.shape} color={agent.color} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <h3 className="font-semibold text-sm sm:text-base text-neutral-900 dark:text-white truncate group-hover:text-[#ff7a00] transition-colors">
+                      <h3 className="font-semibold text-sm sm:text-base text-neutral-900 dark:text-white truncate group-hover:text-[#f8a87c] transition-colors">
                         {agent.name}
                       </h3>
                       {agent.verified && (
                         <span title="Verified Skyer Core Template">
-                          <CheckCircle2 size={14} className="text-[#ff7a00] shrink-0" />
+                          <CheckCircle2 size={14} className="text-[#f8a87c] shrink-0" />
                         </span>
                       )}
                     </div>
@@ -361,7 +361,7 @@ export function MarketplacePage() {
                 <div className="rounded-lg bg-black/40 border border-[var(--border-subtle)] p-2.5 mb-4 space-y-1.5 font-mono text-[11px]">
                   <div className="flex items-center justify-between text-neutral-400">
                     <span className="flex items-center gap-1 text-neutral-300">
-                      <Workflow size={12} className="text-[#ff7a00]" />
+                      <Workflow size={12} className="text-[#f8a87c]" />
                       <span>{agent.teamConfig.collaborationMode}</span>
                     </span>
                     <span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.2 rounded">
@@ -403,7 +403,7 @@ export function MarketplacePage() {
 
                 <button
                   onClick={() => handleDeployAgent(agent)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-[#ff7a00] text-white hover:text-black px-3.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer active:scale-95"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-[#f8a87c] text-white hover:text-black px-3.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer active:scale-95"
                 >
                   <Play size={12} fill="currentColor" />
                   <span>{t("marketplace.deployBot")}</span>
@@ -467,7 +467,7 @@ export function MarketplacePage() {
                       {activeAgentModal.name}
                     </h2>
                     {activeAgentModal.verified && (
-                      <CheckCircle2 size={16} className="text-[#ff7a00]" />
+                      <CheckCircle2 size={16} className="text-[#f8a87c]" />
                     )}
                   </div>
                   <div className="text-sm text-neutral-400 font-medium">
@@ -476,7 +476,7 @@ export function MarketplacePage() {
                   <div className="flex items-center gap-2 mt-1 text-xs text-neutral-500 font-mono">
                     <span>Creator: {activeAgentModal.creatorName}</span>
                     <span>•</span>
-                    <span className="text-[#ff7a00]">@{activeAgentModal.handle}</span>
+                    <span className="text-[#f8a87c]">@{activeAgentModal.handle}</span>
                     <span>•</span>
                     <span>{activeAgentModal.installCount} active instances</span>
                   </div>
@@ -488,7 +488,7 @@ export function MarketplacePage() {
                 {/* Goal & Backstory */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-[var(--border-subtle)] space-y-1.5">
-                    <div className="text-[11px] font-mono text-[#ff7a00] uppercase tracking-wider">
+                    <div className="text-[11px] font-mono text-[#f8a87c] uppercase tracking-wider">
                       Role & Goal (AI Teammates Pattern)
                     </div>
                     <p className="text-neutral-200 leading-relaxed font-sans text-xs">
@@ -509,7 +509,7 @@ export function MarketplacePage() {
                 <div className="p-4 rounded-xl bg-black/40 border border-[var(--border-subtle)] space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-white font-semibold flex items-center gap-1.5">
-                      <Workflow size={14} className="text-[#ff7a00]" />
+                      <Workflow size={14} className="text-[#f8a87c]" />
                       Multi-Agent Coordination Matrix
                     </span>
                     <span className="text-[11px] font-mono text-neutral-400">
@@ -546,7 +546,7 @@ export function MarketplacePage() {
                     <ul className="space-y-1 text-neutral-300">
                       {activeAgentModal.routines.map((r, i) => (
                         <li key={i} className="flex items-start gap-1.5 text-[11px]">
-                          <span className="text-[#ff7a00]">↳</span>
+                          <span className="text-[#f8a87c]">↳</span>
                           <span>{r}</span>
                         </li>
                       ))}
@@ -558,7 +558,7 @@ export function MarketplacePage() {
                 <div>
                   <div className="flex items-center justify-between text-neutral-400 font-mono text-xs mb-2">
                     <span className="flex items-center gap-1.5">
-                      <Terminal size={13} className="text-[#ff7a00]" />
+                      <Terminal size={13} className="text-[#f8a87c]" />
                       Authoritative Terminal Log Preview
                     </span>
                     <span className="text-[11px] text-emerald-400 font-mono">
@@ -606,7 +606,7 @@ export function MarketplacePage() {
                       setActiveAgentModal(null);
                       handleDeployAgent(agentToDeploy);
                     }}
-                    className="inline-flex items-center gap-2 rounded-full bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-6 py-2 text-xs font-semibold transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#f8a87c] hover:bg-[#f5935f] text-black px-6 py-2 text-xs font-semibold transition-all shadow-[0_0_20px_rgba(248,168,124,0.3)] cursor-pointer"
                   >
                     <Play size={13} fill="currentColor" />
                     <span>{t("marketplace.deployThisTeammate")}</span>

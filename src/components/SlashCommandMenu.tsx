@@ -23,7 +23,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     label: "Inspect Git Status & Changes",
     description: "Run git status and inspect uncommitted files and diffs",
     prompt: "Execute non-mutating shell inspection: run `git status -s` and report active modified files in workspace.",
-    icon: <Terminal size={14} className="text-[#ff7a00]" />,
+    icon: <Terminal size={14} className="text-[#f8a87c]" />,
   },
   {
     command: "/compact",
@@ -69,7 +69,7 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
   return (
     <div className="absolute bottom-full left-0 mb-2 w-full max-w-md bg-[#14141c] border border-[#2a2a3c] rounded-2xl p-1.5 shadow-2xl z-40 text-neutral-200 font-sans backdrop-blur-md animate-in fade-in zoom-in-95">
       <div className="px-3 py-1.5 border-b border-[#22222e] flex items-center justify-between text-[10px] font-mono text-neutral-400 select-none">
-        <span className="flex items-center gap-1.5 text-[#ff7a00]">
+        <span className="flex items-center gap-1.5 text-[#f8a87c]">
           <Sparkles size={11} />
           <span>{t("slashMenu.title")}</span>
         </span>
@@ -88,7 +88,7 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                  <span className="font-mono text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
                     {cmd.command}
                   </span>
                   <span className="text-xs text-neutral-300 truncate">{cmd.label}</span>

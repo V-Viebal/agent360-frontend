@@ -145,7 +145,7 @@ export function OnboardingChecklistWidget({
     >
       <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#222230] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00]">
+          <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c]">
             <Sparkles size={15} />
           </div>
           <div>
@@ -179,7 +179,7 @@ export function OnboardingChecklistWidget({
 
       <div className="h-1 w-full bg-[#1e1e2c]">
         <div
-          className="h-full bg-gradient-to-r from-[#ff7a00] to-amber-400 transition-all duration-500"
+          className="h-full bg-gradient-to-r from-[#f8a87c] to-amber-400 transition-all duration-500"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
@@ -191,7 +191,7 @@ export function OnboardingChecklistWidget({
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.selectedAgent
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -222,7 +222,7 @@ export function OnboardingChecklistWidget({
                         highlightElement("#tour-agent-selector", "Danh sách đồng đội", "Bấm chọn bạn đồng đội bạn muốn giao việc ở đây nhé", "right");
                       }
                     }}
-                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
+                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
                     <span>{t("onboarding.step1Action")}</span> <ChevronRight size={11} />
                   </button>
@@ -236,7 +236,7 @@ export function OnboardingChecklistWidget({
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.sentMessage
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -255,7 +255,7 @@ export function OnboardingChecklistWidget({
                   <button
                     type="button"
                     onClick={() => onFocusComposer && onFocusComposer()}
-                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
+                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
                     Gõ lời nhắn ngay <ChevronRight size={11} />
                   </button>
@@ -272,7 +272,7 @@ export function OnboardingChecklistWidget({
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.openedSpecsOrTopology
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -294,7 +294,7 @@ export function OnboardingChecklistWidget({
                       if (onOpenTopology) onOpenTopology();
                       recordMilestone("openedSpecsOrTopology");
                     }}
-                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
+                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
                     Mở sơ đồ mạng lưới <ChevronRight size={11} />
                   </button>
@@ -311,7 +311,7 @@ export function OnboardingChecklistWidget({
             className={`p-2.5 rounded-xl border transition-all ${
               milestones.triedVoiceOrShortcuts
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#ff7a00]/40"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
             } flex items-start gap-2.5`}
           >
             <div className="mt-0.5 shrink-0">
@@ -333,7 +333,7 @@ export function OnboardingChecklistWidget({
                       if (onOpenShortcuts) onOpenShortcuts();
                       recordMilestone("triedVoiceOrShortcuts");
                     }}
-                    className="text-[10px] font-medium text-[#ff7a00] hover:underline cursor-pointer flex items-center gap-0.5"
+                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
                   >
                     Xem phím tắt (Ctrl+/) <ChevronRight size={11} />
                   </button>
@@ -350,7 +350,7 @@ export function OnboardingChecklistWidget({
             <button
               type="button"
               onClick={() => startOnboardingTour({ force: true })}
-              className="text-[11px] font-medium text-[#ff7a00] hover:text-[#ff9433] transition-colors flex items-center gap-1 cursor-pointer"
+              className="text-[11px] font-medium text-[#f8a87c] hover:text-[#ff9433] transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Sparkles size={13} />
               <span>{t("onboarding.tourBtn")}</span>

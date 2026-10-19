@@ -156,11 +156,11 @@ export function AdminAgentsPage() {
       width: "25%",
       cell: (agent) => (
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-7 w-7 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center shrink-0">
+          <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center shrink-0">
             <Bot size={15} />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+            <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#f8a87c] transition-colors">
               {agent.name}
             </div>
             <div className="text-[10px] text-neutral-500 font-mono">slug: {agent.slug}</div>
@@ -185,7 +185,7 @@ export function AdminAgentsPage() {
       sortable: true,
       width: "20%",
       cell: (agent) => (
-        <span className="font-mono text-[11px] text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-md border border-[#ff7a00]/20">
+        <span className="font-mono text-[11px] text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-md border border-[#f8a87c]/20">
           {agent.model || "Qwen 2.5 72B / Claude 3.7"}
         </span>
       ),
@@ -241,7 +241,7 @@ export function AdminAgentsPage() {
         <div>
           <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Quản Trị AI Teammates Fleet</span>
-            <span className="text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
+            <span className="text-[11px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-full border border-[#f8a87c]/20">
               {agents.length} Agents
             </span>
           </h1>
@@ -299,7 +299,7 @@ export function AdminAgentsPage() {
           selectedAgent && (
             <button
               onClick={() => setShowAssignModal(true)}
-              className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-bold text-xs cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-bold text-xs cursor-pointer flex items-center gap-1.5"
             >
               <UserCheck size={14} />
               <span>Gán Thêm Thành Viên</span>
@@ -311,7 +311,7 @@ export function AdminAgentsPage() {
           <div className="space-y-5">
             {/* Header Box */}
             <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-[#ff7a00]/20 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center font-bold">
+              <div className="h-12 w-12 rounded-xl bg-[#f8a87c]/20 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center font-bold">
                 <Bot size={24} />
               </div>
               <div>
@@ -327,7 +327,7 @@ export function AdminAgentsPage() {
                 <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 font-semibold">
                   Thành viên có quyền truy cập
                 </span>
-                <span className="text-[10px] font-mono text-[#ff7a00]">
+                <span className="text-[10px] font-mono text-[#f8a87c]">
                   {assignments.filter((a) => a.agentSlug === selectedAgent.slug).length} gán
                 </span>
               </div>
@@ -386,7 +386,7 @@ export function AdminAgentsPage() {
                 placeholder="Chọn người dùng từ hệ thống..."
                 searchable={true}
                 className="w-full"
-                triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#ff7a00]/50"
+                triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#f8a87c]/50"
                 options={users.map((u) => {
                   const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
                   const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
@@ -406,7 +406,7 @@ export function AdminAgentsPage() {
                 value={targetRole}
                 onChange={(val) => setTargetRole(val)}
                 className="w-full"
-                triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#ff7a00]/50"
+                triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#f8a87c]/50"
                 options={[
                   { value: "Owner", label: "Owner (Chủ sở hữu)", badge: "Toàn quyền", description: "Toàn quyền hội thoại, kích hoạt công cụ và cấu hình Agent" },
                   { value: "Operator", label: "Operator (Vận hành)", badge: "Tác vụ", description: "Thực thi tác vụ, chạy routine automation" },
@@ -426,7 +426,7 @@ export function AdminAgentsPage() {
               <button
                 type="submit"
                 disabled={submitting || targetUserId === 0}
-                className="px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold transition-all shadow-md cursor-pointer disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold transition-all shadow-md cursor-pointer disabled:opacity-50"
               >
                 {submitting ? "Đang gán..." : "Xác nhận gán quyền"}
               </button>

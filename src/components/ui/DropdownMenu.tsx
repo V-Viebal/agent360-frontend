@@ -145,7 +145,7 @@ export function DropdownMenuItem({
   icon,
   label,
   badge,
-  badgeColor = "text-[#ff7a00]",
+  badgeColor = "text-[#f8a87c]",
   onClick,
   variant = "default",
   disabled = false,
@@ -190,6 +190,64 @@ export function DropdownMenuSection({ label, children }: DropdownMenuSectionProp
         </div>
       )}
       {children}
+    </div>
+  );
+}
+
+export interface DropdownSubMenuProps {
+  icon?: React.ReactNode;
+  label: string;
+  badge?: string;
+  badgeColor?: string;
+  children: React.ReactNode;
+}
+
+export function DropdownSubMenu({
+  icon,
+  label,
+  badge,
+  badgeColor = "text-[#f8a87c]",
+  children,
+}: DropdownSubMenuProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setIsOpen(true)}
+      onMouseLeave={() => setIsOpen(false)}
+    >
+      <button
+        role="menuitem"
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08]"
+      >
+        <div className="flex items-center gap-2.5 min-w-0 truncate">
+          {icon && <span className="shrink-0">{icon}</span>}
+          <span className="truncate">{label}</span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {badge && (
+            <span className={`text-[10px] font-mono ${badgeColor}`}>
+              {badge}
+            </span>
+          )}
+          <span className="text-neutral-400 text-[10px]">▸</span>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute right-full top-0 mr-1 w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 z-[110] select-none"
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }

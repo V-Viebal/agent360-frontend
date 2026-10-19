@@ -104,7 +104,7 @@ export function ToolSchemaInspectorModal({
       isOpen={isOpen}
       onClose={onClose}
       title={`${appName} Functions — ${agentName}`}
-      icon={<Wrench size={16} className="text-[#ff7a00]" />}
+      icon={<Wrench size={16} className="text-[#f8a87c]" />}
       maxWidth="2xl"
     >
       <div className="p-5 space-y-4">
@@ -119,7 +119,7 @@ export function ToolSchemaInspectorModal({
               disabled={isRefreshing}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-[#1e1e28] hover:bg-slate-200 dark:hover:bg-[#282838] border border-slate-200 dark:border-[#2e2e40] text-slate-700 dark:text-neutral-300 hover:text-white transition-all cursor-pointer"
             >
-              <RefreshCw size={12} className={isRefreshing ? "animate-spin text-[#ff7a00]" : ""} />
+              <RefreshCw size={12} className={isRefreshing ? "animate-spin text-[#f8a87c]" : ""} />
               <span>{isRefreshing ? "Refreshing..." : "Re-discover"}</span>
             </button>
           )}
@@ -168,11 +168,11 @@ export function ToolSchemaInspectorModal({
                       onClick={() => setTestingToolName(testingToolName === t.name ? null : t.name)}
                       className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer border ${
                         testingToolName === t.name
-                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white"
                           : "bg-white dark:bg-[#1f1f2e] border-slate-200 dark:border-[#2c2c3e] text-slate-700 dark:text-neutral-300 hover:text-white"
                       }`}
                     >
-                      <Play size={10} className="text-[#ff7a00]" />
+                      <Play size={10} className="text-[#f8a87c]" />
                       <span>Dry Run</span>
                     </button>
                   </div>
@@ -184,7 +184,7 @@ export function ToolSchemaInspectorModal({
 
                 {testingToolName === t.name && (
                   <div className="pt-2 border-t border-slate-200 dark:border-white/5 space-y-2 animate-in fade-in duration-100">
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#ff7a00]">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#f8a87c]">
                       <Terminal size={11} />
                       <span>Sandbox Payload Simulator</span>
                     </div>
@@ -192,7 +192,7 @@ export function ToolSchemaInspectorModal({
                       value={testPayload}
                       onChange={(e) => setTestPayload(e.target.value)}
                       rows={2}
-                      className="w-full bg-slate-900 text-slate-100 font-mono text-[11px] p-2 rounded-lg border border-slate-700 focus:outline-none focus:border-[#ff7a00]"
+                      className="w-full bg-slate-900 text-slate-100 font-mono text-[11px] p-2 rounded-lg border border-slate-700 focus:outline-none focus:border-[#f8a87c]"
                       placeholder='{"key": "value"}'
                     />
                     <div className="flex items-center justify-between">
@@ -200,7 +200,7 @@ export function ToolSchemaInspectorModal({
                         type="button"
                         disabled={isRunningTest}
                         onClick={() => handleDryRun(t.name)}
-                        className="px-3 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs transition-all cursor-pointer disabled:opacity-50"
                       >
                         {isRunningTest ? "Running..." : "Execute Test"}
                       </button>

@@ -262,7 +262,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
   const getIcon = (type: PermissionType) => {
     switch (type) {
       case "microphone":
-        return <Mic size={16} className="text-[#ff7a00]" />;
+        return <Mic size={16} className="text-[#f8a87c]" />;
       case "notifications":
         return <Bell size={16} className="text-cyan-400" />;
       case "clipboard":
@@ -321,11 +321,11 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
             title="Refresh status"
             className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
           >
-            <RefreshCw size={13} className={isLoading ? "animate-spin text-[#ff7a00]" : ""} />
+            <RefreshCw size={13} className={isLoading ? "animate-spin text-[#f8a87c]" : ""} />
           </button>
         </div>
       }
-      icon={<ShieldCheck size={18} className="text-[#ff7a00]" />}
+      icon={<ShieldCheck size={18} className="text-[#f8a87c]" />}
       maxWidth="lg"
     >
         {/* Content list */}
@@ -365,7 +365,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                       type="button"
                       onClick={() => handleRequest(perm.type)}
                       disabled={isRequesting}
-                      className="px-3 py-1 rounded-lg text-xs font-medium bg-[#ff7a00] hover:bg-[#ff8f26] text-black transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                      className="px-3 py-1 rounded-lg text-xs font-medium bg-[#f8a87c] hover:bg-[#f5935f] text-black transition-all cursor-pointer shadow-sm disabled:opacity-50"
                     >
                       {isRequesting ? "Prompting..." : "Enable"}
                     </button>
@@ -388,7 +388,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                   Configure automatic silence timeout and speech submission mode
                 </p>
               </div>
-              <span className="text-[10px] font-mono bg-[#ff7a00]/10 text-[#ff7a00] border border-[#ff7a00]/20 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono bg-[#f8a87c]/10 text-[#f8a87c] border border-[#f8a87c]/20 px-2 py-0.5 rounded">
                 VAD Config
               </span>
             </div>
@@ -411,7 +411,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                     })),
                   ]}
                   className="w-full"
-                  triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white"
+                  triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2.5 py-1.5 text-xs text-white"
                 />
 
                 {/* Audio Input Level Meter Visualizer */}
@@ -421,7 +421,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                     <div className="flex-1 h-2 bg-[#1c1c26] rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all duration-75 rounded-full ${
-                          micAudioLevel > 70 ? "bg-red-500" : micAudioLevel > 35 ? "bg-[#ff7a00]" : "bg-emerald-400"
+                          micAudioLevel > 70 ? "bg-red-500" : micAudioLevel > 35 ? "bg-[#f8a87c]" : "bg-emerald-400"
                         }`}
                         style={{ width: `${Math.max(micAudioLevel, isTestingMic ? 3 : 0)}%` }}
                       />
@@ -465,7 +465,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                     })),
                   ]}
                   className="w-full"
-                  triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
+                  triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
                 />
               )}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] rounded-lg p-2.5 font-mono text-xs">
@@ -479,16 +479,16 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                       label: p.name,
                     }))}
                     className="w-32"
-                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2 py-0.5 text-xs text-[#ff7a00]"
+                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2 py-0.5 text-xs text-[#f8a87c]"
                   />
                 </div>
                 <div className="flex items-center gap-2 flex-1 max-w-[200px] px-1">
                   {chimeVolume === 0 ? (
                     <VolumeX size={14} className="text-neutral-500 shrink-0" />
                   ) : chimeVolume < 0.5 ? (
-                    <Volume1 size={14} className="text-[#ff7a00] shrink-0" />
+                    <Volume1 size={14} className="text-[#f8a87c] shrink-0" />
                   ) : (
-                    <Volume2 size={14} className="text-[#ff7a00] shrink-0" />
+                    <Volume2 size={14} className="text-[#f8a87c] shrink-0" />
                   )}
                   <input
                     type="range"
@@ -497,7 +497,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                     step="0.05"
                     value={chimeVolume}
                     onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                    className="w-full accent-[#ff7a00] h-1.5 bg-[#262638] rounded-lg cursor-pointer"
+                    className="w-full accent-[#f8a87c] h-1.5 bg-[#262638] rounded-lg cursor-pointer"
                   />
                   <span className="text-[10px] text-slate-500 dark:text-neutral-400 shrink-0 w-7 text-right">
                     {Math.round(chimeVolume * 100)}%
@@ -506,11 +506,11 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
 
                 <div className="flex items-center gap-2 shrink-0">
                   {isPlayingTestSound && (
-                    <div className="flex items-center gap-1 h-4 px-1.5 py-0.5 rounded bg-[#ff7a00]/10 border border-[#ff7a00]/30 animate-in fade-in">
-                      <span className="h-1.5 w-1 bg-[#ff7a00] rounded-full animate-bounce" style={{ animationDelay: "-0.3s" }} />
-                      <span className="h-2.5 w-1 bg-[#ff7a00] rounded-full animate-bounce" style={{ animationDelay: "-0.15s" }} />
-                      <span className="h-3 w-1 bg-[#ff7a00] rounded-full animate-bounce" />
-                      <span className="h-2 w-1 bg-[#ff7a00] rounded-full animate-bounce" style={{ animationDelay: "-0.2s" }} />
+                    <div className="flex items-center gap-1 h-4 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 border border-[#f8a87c]/30 animate-in fade-in">
+                      <span className="h-1.5 w-1 bg-[#f8a87c] rounded-full animate-bounce" style={{ animationDelay: "-0.3s" }} />
+                      <span className="h-2.5 w-1 bg-[#f8a87c] rounded-full animate-bounce" style={{ animationDelay: "-0.15s" }} />
+                      <span className="h-3 w-1 bg-[#f8a87c] rounded-full animate-bounce" />
+                      <span className="h-2 w-1 bg-[#f8a87c] rounded-full animate-bounce" style={{ animationDelay: "-0.2s" }} />
                     </div>
                   )}
 
@@ -520,7 +520,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                     disabled={isPlayingTestSound}
                     className={`px-3 py-1 rounded text-[11px] font-sans font-medium transition-all cursor-pointer ${
                       isPlayingTestSound
-                        ? "bg-[#ff7a00] text-black font-semibold shadow-sm"
+                        ? "bg-[#f8a87c] text-black font-semibold shadow-sm"
                         : "bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white border border-white/10"
                     }`}
                   >
@@ -538,7 +538,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                 onClick={() => handleVadModeChange("continuous")}
                 className={`px-2.5 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "continuous"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-semibold"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-semibold"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -549,7 +549,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                 onClick={() => handleVadModeChange("manual")}
                 className={`px-2.5 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "manual"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-semibold"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-semibold"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -560,7 +560,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                 onClick={() => handleVadModeChange("push_to_talk")}
                 className={`px-2.5 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                   vadMode === "push_to_talk"
-                    ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-semibold"
+                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-semibold"
                     : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
@@ -580,7 +580,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                       onClick={() => handleSilenceChange(ms)}
                       className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
                         silenceDuration === ms
-                          ? "bg-[#ff7a00] text-black font-bold"
+                          ? "bg-[#f8a87c] text-black font-bold"
                           : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
                       }`}
                     >
@@ -599,7 +599,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all cursor-pointer shadow-sm"
+            className="px-4 py-1.5 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs transition-all cursor-pointer shadow-sm"
           >
             Done
           </button>

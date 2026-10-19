@@ -56,7 +56,7 @@ export function ThemeSelector({ className = "" }: { className?: string }) {
             icon={opt.icon}
             label={opt.label}
             badge={themeMode === opt.id ? "✓" : undefined}
-            badgeColor="text-[#ff7a00]"
+            badgeColor="text-[#f8a87c]"
             onClick={() => {
               setThemeMode(opt.id);
               setIsOpen(false);

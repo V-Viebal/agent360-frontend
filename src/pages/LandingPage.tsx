@@ -314,14 +314,14 @@ export function LandingPage() {
   };
 
   return (
-    <div className="pt-16 overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#ff7a00]/30 selection:text-white">
+    <div className="pt-16 overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#f8a87c]/30 selection:text-white">
       <LandingCommandPalette roles={AGENT_ROLES} onSelectRole={selectRoleById} />
       {/* 1. Announcement Bar */}
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.015] backdrop-blur-md px-4 py-2 sm:py-2.5 text-center text-xs tracking-wide text-neutral-400">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0 animate-pulse" />
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0 animate-pulse" />
           <strong className="font-medium text-white flex items-center gap-1">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a00] to-amber-300 font-bold">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] to-amber-300 font-bold">
               Skyer
             </span>
             <span>{t("announcement.badge").replace("Skyer", "").trim()}</span>
@@ -330,7 +330,7 @@ export function LandingPage() {
           <span className="text-neutral-300 font-medium">{t("announcement.onPremise")}</span>
           <span className="text-neutral-600 hidden sm:inline">&</span>
           <span className="hidden md:inline text-neutral-400">{t("announcement.cloud")}</span>
-          <a href="#on-premise" className="font-medium text-[#ff7a00] hover:text-amber-400 transition-colors inline-flex items-center gap-0.5 ml-1">
+          <a href="#on-premise" className="font-medium text-[#f8a87c] hover:text-amber-400 transition-colors inline-flex items-center gap-0.5 ml-1">
             {t("announcement.exploreOnPrem")} <ArrowRight size={12} />
           </a>
         </div>
@@ -339,7 +339,7 @@ export function LandingPage() {
       {/* 2. Hero Section: Editorial Elegance matching x.ai/bot */}
       <section className="relative pt-16 pb-20 sm:pt-24 sm:pb-32 md:pt-36 md:pb-40 border-b border-[var(--border-subtle)]">
         {/* Subtle, non-slop background lighting */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] md:w-[900px] h-[350px] bg-[#ff7a00]/[0.05] blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] md:w-[900px] h-[350px] bg-[#f8a87c]/[0.05] blur-[120px] pointer-events-none -z-10" />
 
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl lg:text-[84px] font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.06] max-w-4xl mx-auto text-balance">
@@ -351,8 +351,8 @@ export function LandingPage() {
                   <>
                     {parts[0]}
                     <span className="relative inline-block font-semibold">
-                      <span className="absolute -inset-1 rounded-2xl bg-[#ff7a00]/25 blur-xl pointer-events-none -z-10" />
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a00] via-[#ffa149] to-amber-300 drop-shadow-[0_0_35px_rgba(255,122,0,0.45)]">
+                      <span className="absolute -inset-1 rounded-2xl bg-[#f8a87c]/25 blur-xl pointer-events-none -z-10" />
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 drop-shadow-[0_0_35px_rgba(248,168,124,0.45)]">
                         Skyer
                       </span>
                     </span>
@@ -407,7 +407,7 @@ export function LandingPage() {
             <div className="mt-3 mx-auto max-w-2xl rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/90 p-3 text-left font-mono text-xs shadow-xl animate-[fadeIn_.2s_ease-out]">
               <div className="flex items-center justify-between text-[11px] text-neutral-400 border-b border-[var(--border-subtle)] pb-2 mb-2">
                 <span className="flex items-center gap-1.5 text-white">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] animate-pulse" />
                   {t("plan.taskDecomp")}
                 </span>
                 <span className="text-emerald-400">{t("plan.multiAgentProto")}</span>
@@ -419,7 +419,7 @@ export function LandingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-neutral-500">{t("plan.delegate")}</span>
-                  <span className="text-[#ff7a00]">
+                  <span className="text-[#f8a87c]">
                     {heroTask.toLowerCase().includes("invoice") || heroTask.toLowerCase().includes("finance") || heroTask.toLowerCase().includes("tax") || heroTask.toLowerCase().includes("tt99")
                       ? "Financial Controller (ERPNext & Bank Feed)"
                       : heroTask.toLowerCase().includes("zendesk") || heroTask.toLowerCase().includes("support") || heroTask.toLowerCase().includes("ticket")
@@ -457,7 +457,7 @@ export function LandingPage() {
               <>
                 <Link
                   to="/app"
-                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-[#ff7a00] text-black hover:bg-[#ff8f26] px-8 text-sm font-semibold transition-all shadow-[0_0_25px_rgba(255,122,0,0.35)] active:scale-98"
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-[#f8a87c] text-black hover:bg-[#f5935f] px-8 text-sm font-semibold transition-all shadow-[0_0_25px_rgba(248,168,124,0.35)] active:scale-98"
                 >
                   {t("hero.launchApp")}
                 </Link>
@@ -474,7 +474,7 @@ export function LandingPage() {
                 <button
                   type="button"
                   onClick={handleSignUp}
-                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-[#ff7a00] text-black hover:bg-[#ff8f26] px-8 text-sm font-semibold transition-all shadow-[0_0_25px_rgba(255,122,0,0.35)] active:scale-98 cursor-pointer"
+                  className="w-full sm:w-auto inline-flex h-12 items-center justify-center rounded-full bg-[#f8a87c] text-black hover:bg-[#f5935f] px-8 text-sm font-semibold transition-all shadow-[0_0_25px_rgba(248,168,124,0.35)] active:scale-98 cursor-pointer"
                 >
                   Sign Up
                 </button>
@@ -501,8 +501,8 @@ export function LandingPage() {
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16">
-            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] bg-[#ff7a00]/10 border border-[#ff7a00]/25 px-3 py-1 rounded-full mb-3">
-              <Server size={13} className="text-[#ff7a00]" />
+            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#f8a87c] bg-[#f8a87c]/10 border border-[#f8a87c]/25 px-3 py-1 rounded-full mb-3">
+              <Server size={13} className="text-[#f8a87c]" />
               <span>{t("onPremise.badge")}</span>
             </div>
             <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal leading-tight text-balance">
@@ -516,14 +516,14 @@ export function LandingPage() {
           {/* Cloud vs On-Premise Side-by-Side Comparison Architecture Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-stretch">
             {/* 1. On-Premise Self-Hosted Enterprise Edition */}
-            <div className="rounded-2xl border border-[#ff7a00]/30 bg-[#0c1018] p-6 sm:p-8 flex flex-col justify-between relative shadow-[0_0_30px_rgba(255,122,0,0.12)]">
+            <div className="rounded-2xl border border-[#f8a87c]/30 bg-[#0c1018] p-6 sm:p-8 flex flex-col justify-between relative shadow-[0_0_30px_rgba(248,168,124,0.12)]">
               <div className="absolute top-4 right-4">
-                <span className="text-[10px] font-mono uppercase bg-[#ff7a00] text-black font-bold px-2.5 py-1 rounded-full">
+                <span className="text-[10px] font-mono uppercase bg-[#f8a87c] text-black font-bold px-2.5 py-1 rounded-full">
                   100% Data Sovereignty
                 </span>
               </div>
               <div>
-                <div className="h-10 w-10 rounded-xl bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00] mb-4">
+                <div className="h-10 w-10 rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] mb-4">
                   <Shield size={20} />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">{t("onPremise.privateClusterTitle")}</h3>
@@ -533,19 +533,19 @@ export function LandingPage() {
 
                 <div className="space-y-3 font-mono text-xs border-t border-[var(--border-subtle)] pt-5">
                   <div className="flex items-start gap-2.5 text-neutral-300">
-                    <Check size={14} className="text-[#ff7a00] shrink-0 mt-0.5" />
+                    <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureAirGap")}</span>
                   </div>
                   <div className="flex items-start gap-2.5 text-neutral-300">
-                    <Check size={14} className="text-[#ff7a00] shrink-0 mt-0.5" />
+                    <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureIntranet")}</span>
                   </div>
                   <div className="flex items-start gap-2.5 text-neutral-300">
-                    <Check size={14} className="text-[#ff7a00] shrink-0 mt-0.5" />
+                    <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureBYOK")}</span>
                   </div>
                   <div className="flex items-start gap-2.5 text-neutral-300">
-                    <Check size={14} className="text-[#ff7a00] shrink-0 mt-0.5" />
+                    <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureDeploy")}</span>
                   </div>
                 </div>
@@ -562,13 +562,13 @@ export function LandingPage() {
                     title="Download Architecture & Compliance Whitepaper"
                   >
                     <span>{t("onPremise.downloadWhitepaper")}</span>
-                    <ExternalLink size={11} className="text-[#ff7a00]" />
+                    <ExternalLink size={11} className="text-[#f8a87c]" />
                   </a>
                   <a
                     href="https://app360.space/apps/skyer"
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ff7a00] hover:text-amber-400"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#f8a87c] hover:text-amber-400"
                     title="Deploy Skyer on App360 Sovereign Platform"
                   >
                     <span>{t("onPremise.exploreRunbook")}</span>
@@ -618,7 +618,7 @@ export function LandingPage() {
                 <span className="text-xs font-mono text-neutral-500">{t("onPremise.managedCloudTier")}</span>
                 <Link
                   to="/app"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-[#ff7a00]"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-[#f8a87c]"
                 >
                   <span>{t("onPremise.launchWorkspace")}</span>
                   <ArrowRight size={12} />
@@ -694,7 +694,7 @@ export function LandingPage() {
 
                 {/* Bot Response */}
                 <div className="flex items-start gap-3 pt-2">
-                  <div className="h-7 w-7 rounded-full bg-[#ff7a00] flex items-center justify-center text-xs font-bold text-black shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-[#f8a87c] flex items-center justify-center text-xs font-bold text-black shrink-0">
                     S
                   </div>
                   <div className="flex-1 bg-[#12151d] border border-[var(--border-subtle)] rounded-xl rounded-tl-none p-4 space-y-3">
@@ -720,7 +720,7 @@ export function LandingPage() {
 
                     <div className="pt-2 flex items-center justify-between text-xs font-mono text-neutral-400 border-t border-[var(--border-subtle)]">
                       <span>{t("wb.verifObserved")}</span>
-                      <Link to="/app" className="text-[#ff7a00] hover:underline flex items-center gap-1 font-sans font-medium text-xs">
+                      <Link to="/app" className="text-[#f8a87c] hover:underline flex items-center gap-1 font-sans font-medium text-xs">
                         Review Voucher Pack <ArrowRight size={11} />
                       </Link>
                     </div>
@@ -752,7 +752,7 @@ export function LandingPage() {
             <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[var(--bg-card)] p-6 shadow-sm dark:shadow-none flex flex-col justify-between hover:border-white/20 transition-all">
               <div>
                 <div className="h-9 w-9 rounded-lg bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-[var(--border-subtle)] flex items-center justify-center text-neutral-900 dark:text-white mb-4">
-                  <Server size={18} className="text-[#ff7a00]" />
+                  <Server size={18} className="text-[#f8a87c]" />
                 </div>
                 <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-1.5">{t("parallel.bot1Title")}</h3>
                 <p className="text-xs text-neutral-400 leading-relaxed mb-6">
@@ -786,7 +786,7 @@ export function LandingPage() {
             <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[var(--bg-card)] p-6 shadow-sm dark:shadow-none flex flex-col justify-between hover:border-white/20 transition-all">
               <div>
                 <div className="h-9 w-9 rounded-lg bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-[var(--border-subtle)] flex items-center justify-center text-neutral-900 dark:text-white mb-4">
-                  <Sparkles size={18} className="text-[#ff7a00]" />
+                  <Sparkles size={18} className="text-[#f8a87c]" />
                 </div>
                 <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-1.5">{t("parallel.bot3Title")}</h3>
                 <p className="text-xs text-neutral-400 leading-relaxed mb-6">
@@ -877,7 +877,7 @@ export function LandingPage() {
               <div className="bg-[#08090d] border border-[var(--border-subtle)] rounded-lg p-4 font-mono text-xs text-neutral-300 space-y-2">
                 <div className="flex items-center justify-between text-neutral-400 border-b border-[var(--border-subtle)] pb-2 text-[11px]">
                   <span>{t("routines.demoTitle")}</span>
-                  <span className="text-[#ff7a00]">{t("routines.demoStatus")}</span>
+                  <span className="text-[#f8a87c]">{t("routines.demoStatus")}</span>
                 </div>
                 <div className="text-neutral-400 text-[11px]">{t("routines.step1")}</div>
                 <div className="text-neutral-400 text-[11px]">{t("routines.step2")}</div>
@@ -984,7 +984,7 @@ export function LandingPage() {
                     }}
                     className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-[#ff7a00] text-black font-bold shadow-md shadow-[#ff7a00]/20"
+                        ? "bg-[#f8a87c] text-black font-bold shadow-md shadow-[#f8a87c]/20"
                         : "bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10 border border-white/5"
                     }`}
                   >
@@ -1125,7 +1125,7 @@ export function LandingPage() {
                 </div>
                 <Link
                   to={appTaskUrl(activeRole.promptExample)}
-                  className="text-[#ff7a00] hover:underline flex items-center gap-1 font-sans text-xs font-medium shrink-0"
+                  className="text-[#f8a87c] hover:underline flex items-center gap-1 font-sans text-xs font-medium shrink-0"
                 >
                   {t("roles.tryTask")} <ArrowRight size={11} />
                 </Link>
@@ -1255,7 +1255,7 @@ export function LandingPage() {
                   <>
                     {parts[0]}
                     <span className="relative inline-block font-semibold">
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a00] via-[#ffa149] to-amber-300 drop-shadow-[0_0_25px_rgba(255,122,0,0.4)]">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 drop-shadow-[0_0_25px_rgba(248,168,124,0.4)]">
                         Skyer
                       </span>
                     </span>

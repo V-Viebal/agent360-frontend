@@ -213,7 +213,7 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
               setCurrentPage(1);
             }}
             placeholder={searchPlaceholder}
-            className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1a1a24] border border-slate-200 dark:border-[#282836] text-xs text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00] transition-colors font-sans"
+            className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1a1a24] border border-slate-200 dark:border-[#282836] text-xs text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c] transition-colors font-sans"
           />
           {query && (
             <button
@@ -240,7 +240,7 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
                 type="button"
                 onClick={() => setDensity(d)}
                 className={`px-2 py-1 rounded text-[10px] font-mono capitalize transition-all cursor-pointer ${
-                  density === d ? "bg-[#ff7a00] text-black font-bold" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
+                  density === d ? "bg-[#f8a87c] text-black font-bold" : "text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white"
                 }`}
                 title={`Mật độ hiển thị: ${d}`}
               >
@@ -279,7 +279,7 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
                       className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#222230] cursor-pointer text-slate-800 dark:text-neutral-200"
                     >
                       <span>{col.header}</span>
-                      <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${isChecked ? "bg-[#ff7a00] border-[#ff7a00] text-black" : "border-[#3e3e50]"}`}>
+                      <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${isChecked ? "bg-[#f8a87c] border-[#f8a87c] text-black" : "border-[#3e3e50]"}`}>
                         {isChecked && <Check size={10} strokeWidth={3} />}
                       </div>
                     </label>
@@ -333,9 +333,9 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
                       <span className="text-neutral-500">
                         {sortKey === col.accessorKey ? (
                           sortDirection === "asc" ? (
-                            <ChevronUp size={13} className="text-[#ff7a00]" />
+                            <ChevronUp size={13} className="text-[#f8a87c]" />
                           ) : (
-                            <ChevronDown size={13} className="text-[#ff7a00]" />
+                            <ChevronDown size={13} className="text-[#f8a87c]" />
                           )
                         ) : (
                           <ChevronsUpDown size={12} className="opacity-40 hover:opacity-100" />
@@ -354,7 +354,7 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
               <tr>
                 <td colSpan={activeColumns.length} className="py-20 text-center text-neutral-500">
                   <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="h-7 w-7 border-2 border-[#ff7a00] border-t-transparent rounded-full animate-spin" />
+                    <div className="h-7 w-7 border-2 border-[#f8a87c] border-t-transparent rounded-full animate-spin" />
                     <span className="text-xs font-mono">Đang tải dữ liệu platform...</span>
                   </div>
                 </td>
@@ -376,7 +376,7 @@ export function EnterpriseDataTable<T extends Record<string, any>>({
                       onRowClick ? "cursor-pointer" : ""
                     } ${
                       isSelected
-                        ? "bg-[#ff7a00]/10 border-l-2 border-l-[#ff7a00]"
+                        ? "bg-[#f8a87c]/10 border-l-2 border-l-[#f8a87c]"
                         : "hover:bg-slate-50/80 dark:bg-[#181822]/70"
                     }`}
                   >

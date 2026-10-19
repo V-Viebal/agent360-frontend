@@ -38,7 +38,7 @@ export function StarredAndShortcutsModal({
         onClick={() => setActiveTab("starred")}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
           activeTab === "starred"
-            ? "bg-[#ff7a00] text-black font-semibold shadow-xs"
+            ? "bg-[#f8a87c] text-black font-semibold shadow-xs"
             : "text-slate-500 dark:text-neutral-400 hover:text-white"
         }`}
       >
@@ -50,7 +50,7 @@ export function StarredAndShortcutsModal({
         onClick={() => setActiveTab("shortcuts")}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
           activeTab === "shortcuts"
-            ? "bg-[#ff7a00] text-black font-semibold shadow-xs"
+            ? "bg-[#f8a87c] text-black font-semibold shadow-xs"
             : "text-slate-500 dark:text-neutral-400 hover:text-white"
         }`}
       >
@@ -84,11 +84,11 @@ export function StarredAndShortcutsModal({
             starredMessages.map((msg) => (
               <div
                 key={msg.id}
-                className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] hover:border-[#ff7a00]/30 transition-all space-y-2 group"
+                className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] hover:border-[#f8a87c]/30 transition-all space-y-2 group"
               >
                 <div className="flex items-center justify-between text-[11px]">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[#ff7a00] uppercase font-mono">
+                    <span className="font-semibold text-[#f8a87c] uppercase font-mono">
                       {msg.role === "assistant" ? "🤖 Agent Response" : "👤 User Turn"}
                     </span>
                     <span className="text-neutral-500 font-mono text-[10px]">
@@ -111,7 +111,7 @@ export function StarredAndShortcutsModal({
                           onSelectMessage(msg);
                           onClose();
                         }}
-                        className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-[#20202c] text-neutral-400 hover:text-[#ff7a00] transition-colors"
+                        className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-[#20202c] text-neutral-400 hover:text-[#f8a87c] transition-colors"
                         title="Xem vị trí trong hội thoại"
                       >
                         <ArrowRight size={12} />
@@ -144,7 +144,7 @@ export function StarredAndShortcutsModal({
                     onClose();
                     onOpenShortcutsCustomizer();
                   }}
-                  className="px-3 py-1 rounded-lg bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] border border-[#ff7a00]/30 font-medium transition-all"
+                  className="px-3 py-1 rounded-lg bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 font-medium transition-all"
                 >
                   Mở Trình Tùy Biến
                 </button>
@@ -179,7 +179,7 @@ export function StarredAndShortcutsModal({
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-1.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold transition-all cursor-pointer text-xs"
+          className="px-4 py-1.5 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold transition-all cursor-pointer text-xs"
         >
           Đóng
         </button>

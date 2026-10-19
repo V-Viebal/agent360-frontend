@@ -245,7 +245,7 @@ export function A2ATopologyGraphModal({
         {/* Header (aligned with SettingsModal & Skyer Design Pattern) */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-[#ff7a00]/10 border border-[#ff7a00]/25 flex items-center justify-center text-[#ff7a00] shrink-0">
+            <div className="h-9 w-9 rounded-xl bg-[#f8a87c]/10 border border-[#f8a87c]/25 flex items-center justify-center text-[#f8a87c] shrink-0">
               <Share2 size={17} />
             </div>
             <div>
@@ -312,7 +312,7 @@ export function A2ATopologyGraphModal({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a1a24] hover:bg-[#242434] border border-[#2a2a3c] text-xs font-medium text-slate-800 dark:text-neutral-200 hover:text-white transition-colors cursor-pointer"
               title={t("topology.reprobePing")}
             >
-              <RefreshCw size={12} className={isProbing ? "animate-spin text-[#ff7a00]" : "text-[#ff7a00]"} />
+              <RefreshCw size={12} className={isProbing ? "animate-spin text-[#f8a87c]" : "text-[#f8a87c]"} />
               <span className="hidden sm:inline">{isProbing ? t("topology.probing") : t("topology.probePing")}</span>
             </button>
 
@@ -324,7 +324,7 @@ export function A2ATopologyGraphModal({
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                 title={t("topology.exportCsv")}
               >
-                <Download size={11} className="text-[#ff7a00]" />
+                <Download size={11} className="text-[#f8a87c]" />
                 <span>CSV</span>
               </button>
               <button
@@ -350,7 +350,7 @@ export function A2ATopologyGraphModal({
 
         {/* Toolbar: Search & Node Filters */}
         <div className="px-6 py-2.5 bg-white dark:bg-[#14141c] border-b border-[#20202c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs select-none">
-          <div className="flex items-center gap-2 flex-1 max-w-md bg-[#1a1a24] border border-[#2a2a3c] focus-within:border-[#ff7a00] rounded-xl px-3 py-1.5 transition-colors">
+          <div className="flex items-center gap-2 flex-1 max-w-md bg-[#1a1a24] border border-[#2a2a3c] focus-within:border-[#f8a87c] rounded-xl px-3 py-1.5 transition-colors">
             <Search size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />
             <input
               type="text"
@@ -385,7 +385,7 @@ export function A2ATopologyGraphModal({
                   onClick={() => setSelectedRegion(reg.id)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] transition-colors cursor-pointer ${
                     selectedRegion === reg.id
-                      ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold border border-[#ff7a00]/30"
+                      ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold border border-[#f8a87c]/30"
                       : "text-slate-500 dark:text-neutral-400 hover:text-white"
                   }`}
                 >
@@ -418,7 +418,7 @@ export function A2ATopologyGraphModal({
             >
               {/* Level 1: Điều phối & Trưởng nhóm */}
               <div className="space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-mono text-[#ff7a00]">
+                <div className="flex items-center gap-2 text-xs font-mono text-[#f8a87c]">
                   <Radio size={13} className="animate-pulse" />
                   <span className="font-semibold uppercase tracking-wider">
                     {t("topology.tier1")}
@@ -434,13 +434,13 @@ export function A2ATopologyGraphModal({
                         onClick={() => setSelectedNodeId(ag.id)}
                         className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all ${
                           isSel
-                            ? "bg-slate-100 dark:bg-[#1c1c28] border-[#ff7a00] shadow-lg shadow-[#ff7a00]/15"
+                            ? "bg-slate-100 dark:bg-[#1c1c28] border-[#f8a87c] shadow-lg shadow-[#f8a87c]/15"
                             : "bg-white dark:bg-[#14141c] border-[#242434] hover:border-[#38384c]"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 truncate min-w-0">
-                            <Bot size={15} className="text-[#ff7a00] shrink-0" />
+                            <Bot size={15} className="text-[#f8a87c] shrink-0" />
                             <span className="text-xs font-semibold text-white truncate">{ag.name}</span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -466,7 +466,7 @@ export function A2ATopologyGraphModal({
                 <svg className="w-full h-10 overflow-visible" viewBox="0 0 400 40" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="topoCurveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#ff7a00" stopOpacity="0.8" />
+                      <stop offset="0%" stopColor="#f8a87c" stopOpacity="0.8" />
                       <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.8" />
                     </linearGradient>
                   </defs>
@@ -582,7 +582,7 @@ export function A2ATopologyGraphModal({
             {/* Topology MiniMap Navigation HUD */}
             <div className="absolute bottom-4 right-4 z-30 p-2.5 rounded-2xl bg-[#101018]/95 border border-[#262638] shadow-2xl backdrop-blur-md hidden sm:flex flex-col gap-1.5 select-none w-40">
               <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-neutral-400 border-b border-[#20202e] pb-1">
-                <span className="flex items-center gap-1 text-[#ff7a00]">
+                <span className="flex items-center gap-1 text-[#f8a87c]">
                   <Navigation size={11} />
                   <span>{t("topology.minimap")}</span>
                 </span>
@@ -595,7 +595,7 @@ export function A2ATopologyGraphModal({
                     <div
                       key={o.id}
                       className={`h-2.5 w-6 rounded-xs transition-colors ${
-                        o.id === selectedNodeId ? "bg-[#ff7a00]" : "bg-neutral-600"
+                        o.id === selectedNodeId ? "bg-[#f8a87c]" : "bg-neutral-600"
                       }`}
                     />
                   ))}
@@ -622,7 +622,7 @@ export function A2ATopologyGraphModal({
                 </div>
 
                 <div
-                  className="absolute inset-0 border border-[#ff7a00]/40 rounded-lg pointer-events-none"
+                  className="absolute inset-0 border border-[#f8a87c]/40 rounded-lg pointer-events-none"
                   style={{
                     transform: `translate(${-panOffset.x / 20}px, ${-panOffset.y / 20}px) scale(${1 / zoomScale})`,
                     transformOrigin: "center center",
@@ -635,7 +635,7 @@ export function A2ATopologyGraphModal({
           {/* Side Panel: Selected Teammate Profile & Action (Col 9-12 / 34%) */}
           <div className="lg:col-span-4 p-5 bg-white dark:bg-[#14141c] flex flex-col justify-between space-y-4 overflow-y-auto">
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#ff7a00]">
+              <div className="flex items-center gap-2 text-xs font-mono text-[#f8a87c]">
                 <Sparkles size={14} />
                 <span className="font-semibold uppercase tracking-wider">{t("topology.teammateInfo")}</span>
               </div>
@@ -645,7 +645,7 @@ export function A2ATopologyGraphModal({
                   <h4 className="text-sm font-semibold text-white">{activeSelectedAgent.name}</h4>
                   {renderPingBadge(activeSelectedAgent.id)}
                 </div>
-                <div className="text-xs font-mono text-[#ff7a00] font-medium">
+                <div className="text-xs font-mono text-[#f8a87c] font-medium">
                   {activeSelectedAgent.roleTag || t("topology.defaultRole")}
                 </div>
                 {activeSelectedAgent.description && (
@@ -662,7 +662,7 @@ export function A2ATopologyGraphModal({
                 </div>
                 <div className="flex items-center justify-between">
                   <span>{t("topology.intelModel")}</span>
-                  <span className="text-[#ff7a00] font-medium">{activeSelectedAgent.model ? (activeSelectedAgent.model.includes("/") ? activeSelectedAgent.model.split("/").pop() : activeSelectedAgent.model) : "default"}</span>
+                  <span className="text-[#f8a87c] font-medium">{activeSelectedAgent.model ? (activeSelectedAgent.model.includes("/") ? activeSelectedAgent.model.split("/").pop() : activeSelectedAgent.model) : "default"}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>{t("topology.latency")}</span>
@@ -686,7 +686,7 @@ export function A2ATopologyGraphModal({
                   onSelectAgent(activeSelectedAgent);
                   onClose();
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-[#ff7a00]/20"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-[#f8a87c]/20"
               >
                 <span>{t("topology.switchTeammate", { name: activeSelectedAgent.name })}</span>
                 <ArrowUpRight size={15} />

@@ -338,7 +338,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
+            <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/10 border border-[#f8a87c]/20 flex items-center justify-center text-[#f8a87c]">
               <KeyboardIcon size={18} />
             </div>
             <div>
@@ -392,13 +392,13 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
                       <div
                         key={item.id}
                         className={`px-3.5 py-2.5 flex items-center justify-between gap-3 text-xs transition-colors ${
-                          isRecording ? "bg-[#ff7a00]/10 border-l-2 border-[#ff7a00]" : ""
+                          isRecording ? "bg-[#f8a87c]/10 border-l-2 border-[#f8a87c]" : ""
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-slate-700 dark:text-neutral-300 font-normal truncate">{item.description}</span>
                           {isCustomized && (
-                            <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/15 px-1.5 py-0.2 rounded shrink-0">
+                            <span className="text-[9px] font-mono text-[#f8a87c] bg-[#f8a87c]/15 px-1.5 py-0.2 rounded shrink-0">
                               custom
                             </span>
                           )}
@@ -406,7 +406,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isRecording ? (
-                            <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#ff7a00]/20 border border-[#ff7a00] text-[#ff7a00] font-mono text-[11px] animate-pulse">
+                            <div className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#f8a87c]/20 border border-[#f8a87c] text-[#f8a87c] font-mono text-[11px] animate-pulse">
                               <span>{t("shortcuts.pressKeys")}</span>
                             </div>
                           ) : (
@@ -465,7 +465,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
               type="button"
               onClick={handleCloudSync}
               disabled={isSyncingCloud}
-              className="flex items-center gap-1 text-[#ff7a00] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1 text-[#f8a87c] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
               title="Sync shortcuts to user profile"
             >
               {isSyncingCloud ? <RefreshCw size={11} className="animate-spin" /> : <Cloud size={11} />}

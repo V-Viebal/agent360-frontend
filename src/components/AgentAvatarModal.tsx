@@ -129,7 +129,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-[#20202e]">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-[#ff7a00]/10 flex items-center justify-center text-[#ff7a00]">
+            <div className="h-8 w-8 rounded-xl bg-[#f8a87c]/10 flex items-center justify-center text-[#f8a87c]">
               <Sparkles size={16} />
             </div>
             <div>
@@ -179,7 +179,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             onClick={() => setActiveTab("role")}
             className={`py-3 px-3.5 text-xs font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === "role"
-                ? "border-[#ff7a00] text-[#ff7a00]"
+                ? "border-[#f8a87c] text-[#f8a87c]"
                 : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
@@ -190,7 +190,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             onClick={() => setActiveTab("icon")}
             className={`py-3 px-3.5 text-xs font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === "icon"
-                ? "border-[#ff7a00] text-[#ff7a00]"
+                ? "border-[#f8a87c] text-[#f8a87c]"
                 : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
@@ -201,7 +201,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             onClick={() => setActiveTab("emoji")}
             className={`py-3 px-3.5 text-xs font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === "emoji"
-                ? "border-[#ff7a00] text-[#ff7a00]"
+                ? "border-[#f8a87c] text-[#f8a87c]"
                 : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
@@ -212,7 +212,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             onClick={() => setActiveTab("image")}
             className={`py-3 px-3.5 text-xs font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === "image"
-                ? "border-[#ff7a00] text-[#ff7a00]"
+                ? "border-[#f8a87c] text-[#f8a87c]"
                 : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
@@ -226,7 +226,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
           {/* TAB 1: Role Default */}
           {activeTab === "role" && (
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#272738] flex items-start gap-3">
-              <Info size={18} className="text-[#ff7a00] shrink-0 mt-0.5" />
+              <Info size={18} className="text-[#f8a87c] shrink-0 mt-0.5" />
               <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-1">
                 <p className="font-semibold text-neutral-900 dark:text-white">
                   Đang sử dụng nhận diện AI tự động
@@ -256,7 +256,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                         type="button"
                         className={`p-2 rounded-xl border flex flex-col items-center gap-1 transition-all cursor-pointer ${
                           isSelected
-                            ? "border-[#ff7a00] bg-[#ff7a00]/10 shadow-xs"
+                            ? "border-[#f8a87c] bg-[#f8a87c]/10 shadow-xs"
                             : "border-slate-200 dark:border-[#272738] hover:border-slate-300 dark:hover:border-neutral-600"
                         }`}
                       >
@@ -290,7 +290,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                         title={name}
                         className={`h-9 w-9 rounded-xl flex items-center justify-center border transition-all cursor-pointer ${
                           isSelected
-                            ? "border-[#ff7a00] bg-[#ff7a00]/15 text-[#ff7a00] scale-105 shadow-sm"
+                            ? "border-[#f8a87c] bg-[#f8a87c]/15 text-[#f8a87c] scale-105 shadow-sm"
                             : "border-slate-200 dark:border-[#272738] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1f1f2e]"
                         }`}
                       >
@@ -321,7 +321,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                         type="button"
                         className={`p-1.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           isSelected
-                            ? "border-[#ff7a00] bg-[#ff7a00]/10"
+                            ? "border-[#f8a87c] bg-[#f8a87c]/10"
                             : "border-slate-200 dark:border-[#272738] hover:border-slate-300"
                         }`}
                       >
@@ -350,7 +350,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                         type="button"
                         className={`h-10 rounded-xl flex items-center justify-center text-lg border transition-all cursor-pointer ${
                           isSelected
-                            ? "border-[#ff7a00] bg-[#ff7a00]/15 scale-110 shadow-sm"
+                            ? "border-[#f8a87c] bg-[#f8a87c]/15 scale-110 shadow-sm"
                             : "border-slate-200 dark:border-[#272738] hover:bg-slate-100 dark:hover:bg-[#1f1f2e]"
                         }`}
                       >
@@ -373,7 +373,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                     value={customEmojiInput}
                     onChange={(e) => setCustomEmojiInput(e.target.value)}
                     placeholder="VD: 🦊"
-                    className="w-24 text-center px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#2d2d3e] text-base focus:border-[#ff7a00] focus:outline-none"
+                    className="w-24 text-center px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#2d2d3e] text-base focus:border-[#f8a87c] focus:outline-none"
                   />
                   <button
                     type="button"
@@ -403,7 +403,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://example.com/avatar.png"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2d2d3e] text-xs focus:border-[#ff7a00] focus:outline-none font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2d2d3e] text-xs focus:border-[#f8a87c] focus:outline-none font-mono"
                 />
               </div>
 
@@ -415,7 +415,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
               </div>
 
               <div>
-                <label className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-[#28283a] hover:border-[#ff7a00]/50 transition-colors cursor-pointer bg-slate-50 dark:bg-[#12121a]">
+                <label className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-[#28283a] hover:border-[#f8a87c]/50 transition-colors cursor-pointer bg-slate-50 dark:bg-[#12121a]">
                   <Upload size={22} className="text-neutral-400 mb-2" />
                   <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                     Chọn tệp ảnh (PNG, JPG, SVG, WebP)
@@ -455,7 +455,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             <button
               onClick={handleSave}
               type="button"
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black shadow-[0_0_12px_rgba(255,122,0,0.3)] transition-all cursor-pointer active:scale-95"
+              className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#f8a87c] hover:bg-[#f5935f] text-black shadow-[0_0_12px_rgba(248,168,124,0.3)] transition-all cursor-pointer active:scale-95"
             >
               Lưu thay đổi
             </button>

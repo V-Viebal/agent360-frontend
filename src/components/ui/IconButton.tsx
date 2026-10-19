@@ -24,7 +24,7 @@ export function IconButton({
   const variantClasses = {
     ghost: "text-neutral-400 hover:text-white hover:bg-[#1f1f28]",
     secondary: "bg-[#181820] hover:bg-[#22222e] text-neutral-300 hover:text-white border border-[#2a2a38]",
-    primary: "bg-[#ff7a00] hover:bg-[#ff8c1a] text-black font-semibold",
+    primary: "bg-[#f8a87c] hover:bg-[#ff8c1a] text-black font-semibold",
   };
 
   return (

@@ -57,14 +57,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
           </div>
           <h2 className="text-base font-semibold text-white mb-1.5 flex items-center gap-1.5">
             <span>Agent360 Workspace</span>
-            <span className="px-1.5 py-0.2 rounded-md bg-[#ff7a00]/20 text-[#ff7a00] text-[10px] font-mono uppercase font-bold">Secure</span>
+            <span className="px-1.5 py-0.2 rounded-md bg-[#f8a87c]/20 text-[#f8a87c] text-[10px] font-mono uppercase font-bold">Secure</span>
           </h2>
           <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
             Đang xác thực phiên làm việc an toàn... Vui lòng đăng nhập để tiếp tục.
           </p>
 
-          <div className="flex items-center gap-2 text-xs text-[#ff7a00] font-medium bg-[#ff7a00]/10 px-4 py-2 rounded-xl border border-[#ff7a00]/20">
-            <Loader2 className="w-4 h-4 animate-spin text-[#ff7a00]" />
+          <div className="flex items-center gap-2 text-xs text-[#f8a87c] font-medium bg-[#f8a87c]/10 px-4 py-2 rounded-xl border border-[#f8a87c]/20">
+            <Loader2 className="w-4 h-4 animate-spin text-[#f8a87c]" />
             <span>Chuyển hướng đến Cổng đăng nhập...</span>
           </div>
 

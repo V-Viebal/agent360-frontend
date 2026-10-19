@@ -137,9 +137,9 @@ export function DataTable<T extends Record<string, any>>({
                         <span className="text-slate-400 dark:text-neutral-500">
                           {sortKey === col.accessorKey ? (
                             sortDirection === "asc" ? (
-                              <ChevronUp size={13} className="text-[#ff7a00]" />
+                              <ChevronUp size={13} className="text-[#f8a87c]" />
                             ) : (
-                              <ChevronDown size={13} className="text-[#ff7a00]" />
+                              <ChevronDown size={13} className="text-[#f8a87c]" />
                             )
                           ) : (
                             <ChevronsUpDown size={12} className="opacity-40 hover:opacity-100" />
@@ -156,7 +156,7 @@ export function DataTable<T extends Record<string, any>>({
                 <tr>
                   <td colSpan={columns.length} className="py-12 text-center text-slate-400 dark:text-neutral-500">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="h-6 w-6 border-2 border-[#ff7a00] border-t-transparent rounded-full animate-spin" />
+                      <div className="h-6 w-6 border-2 border-[#f8a87c] border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs">Loading data...</span>
                     </div>
                   </td>

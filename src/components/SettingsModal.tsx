@@ -477,7 +477,7 @@ export function SettingsModal({
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/10 border border-[#ff7a00]/20 flex items-center justify-center text-[#ff7a00]">
+            <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/10 border border-[#f8a87c]/20 flex items-center justify-center text-[#f8a87c]">
               <Settings size={18} />
             </div>
             <div>
@@ -532,11 +532,11 @@ export function SettingsModal({
               onClick={() => setActiveTab("profile")}
               className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === "profile"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
+                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
                   : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <User size={15} className={activeTab === "profile" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
+              <User size={15} className={activeTab === "profile" ? "text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
               <span>{t("settings.tabProfile") || "Hồ sơ người dùng"}</span>
             </button>
 
@@ -550,11 +550,11 @@ export function SettingsModal({
               onClick={() => setActiveTab("appearance")}
               className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                 activeTab === "appearance"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
+                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
                   : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Palette size={15} className={activeTab === "appearance" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
+              <Palette size={15} className={activeTab === "appearance" ? "text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
               <span>{t("settings.tabAppearance")}</span>
             </button>
             <button
@@ -562,7 +562,7 @@ export function SettingsModal({
               onClick={() => setActiveTab("language")}
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "language"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
+                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
                   : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -574,7 +574,7 @@ export function SettingsModal({
               onClick={() => setActiveTab("audio")}
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "audio"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
+                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
                   : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -586,7 +586,7 @@ export function SettingsModal({
               onClick={() => setActiveTab("privacy_export")}
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "privacy_export"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold"
+                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
                   : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -604,11 +604,11 @@ export function SettingsModal({
               onClick={() => setActiveTab("voice_record")}
               className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 activeTab === "voice_record"
-                  ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold shadow-xs"
+                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
                   : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Mic size={15} className={activeTab === "voice_record" ? "text-[#ff7a00]" : "text-cyan-400"} />
+              <Mic size={15} className={activeTab === "voice_record" ? "text-[#f8a87c]" : "text-cyan-400"} />
               <span>{t("settings.tabVoiceRecord") || "Cài đặt Thu âm & Micro"}</span>
             </button>
           </div>
@@ -628,7 +628,7 @@ export function SettingsModal({
                 {/* Profile Avatar Card */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] flex flex-col sm:flex-row items-center gap-4">
                   <div className="relative shrink-0">
-                    <div className="h-16 w-16 rounded-2xl bg-[#2a2a34] text-[#ff7a00] border-2 border-[#ff7a00]/40 flex items-center justify-center text-xl font-bold overflow-hidden shadow-md">
+                    <div className="h-16 w-16 rounded-2xl bg-[#2a2a34] text-[#f8a87c] border-2 border-[#f8a87c]/40 flex items-center justify-center text-xl font-bold overflow-hidden shadow-md">
                       {currentUser?.picture ? (
                         <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
                       ) : (
@@ -643,7 +643,7 @@ export function SettingsModal({
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
                         {cleanDisplayName}
                       </h4>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-[#ff7a00] font-semibold">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#f8a87c]/10 border border-[#f8a87c]/30 text-[#f8a87c] font-semibold">
                         {currentUser?.roles?.[0] || "Authorized Member"}
                       </span>
                     </div>
@@ -660,7 +660,7 @@ export function SettingsModal({
                       setEditAvatar(currentUser?.picture || "");
                       setIsEditingProfile(!isEditingProfile);
                     }}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a2a38] bg-white dark:bg-[#1c1c26] hover:border-[#ff7a00]/50 text-xs font-semibold text-slate-700 dark:text-neutral-300 hover:text-[#ff7a00] transition-all flex items-center gap-1.5 cursor-pointer shadow-xs self-center sm:self-start"
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-[#2a2a38] bg-white dark:bg-[#1c1c26] hover:border-[#f8a87c]/50 text-xs font-semibold text-slate-700 dark:text-neutral-300 hover:text-[#f8a87c] transition-all flex items-center gap-1.5 cursor-pointer shadow-xs self-center sm:self-start"
                   >
                     <Edit3 size={13} />
                     <span>{isEditingProfile ? t("settings.profileEditCancel") : t("settings.profileEditBtn")}</span>
@@ -669,9 +669,9 @@ export function SettingsModal({
 
                 {/* Profile Edit Inline Form */}
                 {isEditingProfile && (
-                  <form onSubmit={handleSaveProfile} className="p-4 rounded-2xl bg-[#ff7a00]/5 border border-[#ff7a00]/30 space-y-3 animate-in fade-in duration-150">
+                  <form onSubmit={handleSaveProfile} className="p-4 rounded-2xl bg-[#f8a87c]/5 border border-[#f8a87c]/30 space-y-3 animate-in fade-in duration-150">
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
-                      <Edit3 size={14} className="text-[#ff7a00]" />
+                      <Edit3 size={14} className="text-[#f8a87c]" />
                       <span>{t("settings.profileEditTitle")}</span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -682,7 +682,7 @@ export function SettingsModal({
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
                           placeholder="Nguyen Van A"
-                          className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                          className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
                         />
                       </div>
                       <div className="space-y-1">
@@ -692,7 +692,7 @@ export function SettingsModal({
                           value={editAvatar}
                           onChange={(e) => setEditAvatar(e.target.value)}
                           placeholder="https://..."
-                          className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ff7a00]"
+                          className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
                         />
                       </div>
                     </div>
@@ -706,7 +706,7 @@ export function SettingsModal({
                       </button>
                       <button
                         type="submit"
-                        className="px-3.5 py-1.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                        className="px-3.5 py-1.5 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                       >
                         <Save size={13} />
                         <span>{t("settings.profileEditSave")}</span>
@@ -726,7 +726,7 @@ export function SettingsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
                     <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
-                      <User size={12} className="text-[#ff7a00]" />
+                      <User size={12} className="text-[#f8a87c]" />
                       {t("settings.profileFullName")}
                     </span>
                     <div className="text-xs font-semibold text-slate-800 dark:text-white">
@@ -949,7 +949,7 @@ export function SettingsModal({
                     {t("settings.themeHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                    {t("settings.themeCurrent")} <span className="text-[#ff7a00] font-semibold capitalize">{themeMode === "system" ? t("settings.themeSystemName") : themeMode === "dark" ? t("settings.themeDarkName") : t("settings.themeLightName")}</span>
+                    {t("settings.themeCurrent")} <span className="text-[#f8a87c] font-semibold capitalize">{themeMode === "system" ? t("settings.themeSystemName") : themeMode === "dark" ? t("settings.themeDarkName") : t("settings.themeLightName")}</span>
                   </p>
                 </div>
 
@@ -962,12 +962,12 @@ export function SettingsModal({
                         onClick={() => setThemeMode(opt.id)}
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                            : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#ff7a00]/40"
+                            ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-sm"
+                            : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-neutral-400"}`}>
+                          <div className={`p-2 rounded-lg ${isSelected ? "bg-[#f8a87c]/20 text-[#f8a87c]" : "bg-[#20202c] text-neutral-400"}`}>
                             {opt.icon}
                           </div>
                           <div>
@@ -976,7 +976,7 @@ export function SettingsModal({
                           </div>
                         </div>
                         {isSelected && (
-                          <div className="h-6 w-6 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
+                          <div className="h-6 w-6 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shrink-0">
                             <Check size={14} className="stroke-[3]" />
                           </div>
                         )}
@@ -1007,14 +1007,14 @@ export function SettingsModal({
                           onClick={() => handleDensityChange(d.id as any)}
                           className={`p-3 rounded-xl border flex flex-col justify-between cursor-pointer transition-all ${
                             isSel
-                              ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                              : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#ff7a00]/40"
+                              ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-sm"
+                              : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold">{d.label}</span>
                             {isSel && (
-                              <div className="h-4 w-4 rounded-full bg-[#ff7a00] text-black flex items-center justify-center">
+                              <div className="h-4 w-4 rounded-full bg-[#f8a87c] text-black flex items-center justify-center">
                                 <Check size={10} className="stroke-[3]" />
                               </div>
                             )}
@@ -1049,8 +1049,8 @@ export function SettingsModal({
                         onClick={() => setLanguageSelection(opt.id)}
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-sm"
-                            : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#ff7a00]/40"
+                            ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-sm"
+                            : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -1061,7 +1061,7 @@ export function SettingsModal({
                           </div>
                         </div>
                         {isSelected && (
-                          <div className="h-6 w-6 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
+                          <div className="h-6 w-6 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shrink-0">
                             <Check size={14} className="stroke-[3]" />
                           </div>
                         )}
@@ -1080,7 +1080,7 @@ export function SettingsModal({
                   <div className="flex items-center justify-between pb-2 border-b border-[#222230]">
                     <div>
                       <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
-                        <Bell size={14} className="text-[#ff7a00]" />
+                        <Bell size={14} className="text-[#f8a87c]" />
                         <span>{t("settings.audioChimeTitle")}</span>
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -1115,12 +1115,12 @@ export function SettingsModal({
                           onClick={() => handleSelectPreset(preset.id as SoundPreset)}
                           className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                             isSelected
-                              ? "bg-[#ff7a00]/10 border-[#ff7a00] text-white shadow-xs"
-                              : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#ff7a00]/40"
+                              ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-xs"
+                              : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 pr-1">
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#ff7a00]/20 text-[#ff7a00]" : "bg-[#20202c] text-slate-500 dark:text-neutral-400"}`}>
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#f8a87c]/20 text-[#f8a87c]" : "bg-[#20202c] text-slate-500 dark:text-neutral-400"}`}>
                               <Volume2 size={14} />
                             </div>
                             <div className="min-w-0 truncate">
@@ -1142,7 +1142,7 @@ export function SettingsModal({
                               {t("settings.audioTestBtn")}
                             </button>
                             {isSelected && (
-                              <div className="h-4 w-4 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shrink-0">
+                              <div className="h-4 w-4 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shrink-0">
                                 <Check size={10} className="stroke-[3]" />
                               </div>
                             )}
@@ -1169,7 +1169,7 @@ export function SettingsModal({
                   <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634]">
                     <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                       <span className="font-medium">{t("settings.ttsVoiceLabel")}</span>
-                      <span className="font-mono text-[#ff7a00] text-[11px]">
+                      <span className="font-mono text-[#f8a87c] text-[11px]">
                         {systemVoices.find(v => v.voiceURI === selectedVoiceURI)?.lang || "Tự động nhận diện"}
                       </span>
                     </div>
@@ -1187,7 +1187,7 @@ export function SettingsModal({
                         })),
                       ]}
                       className="w-full"
-                      triggerClassName="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] hover:border-[#ff7a00] rounded-lg px-2.5 py-2"
+                      triggerClassName="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] hover:border-[#f8a87c] rounded-lg px-2.5 py-2"
                       searchable={true}
                     />
                   </div>
@@ -1198,7 +1198,7 @@ export function SettingsModal({
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                         <span className="font-medium">{t("settings.ttsSpeedLabel")}</span>
-                        <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechRate.toFixed(2)}x</span>
+                        <span className="font-mono text-[#f8a87c] font-semibold text-xs">{speechRate.toFixed(2)}x</span>
                       </div>
                       <input
                         type="range"
@@ -1211,7 +1211,7 @@ export function SettingsModal({
                           setSpeechRate(val);
                           saveStoredSpeechSettings({ rate: val });
                         }}
-                        className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
+                        className="w-full accent-[#f8a87c] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] font-mono text-neutral-500">
                         <span>{t("settings.ttsSpeedSlow")}</span>
@@ -1224,7 +1224,7 @@ export function SettingsModal({
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-700 dark:text-neutral-300">
                         <span className="font-medium">{t("settings.ttsPitchLabel")}</span>
-                        <span className="font-mono text-[#ff7a00] font-semibold text-xs">{speechPitch.toFixed(2)}</span>
+                        <span className="font-mono text-[#f8a87c] font-semibold text-xs">{speechPitch.toFixed(2)}</span>
                       </div>
                       <input
                         type="range"
@@ -1237,7 +1237,7 @@ export function SettingsModal({
                           setSpeechPitch(val);
                           saveStoredSpeechSettings({ pitch: val });
                         }}
-                        className="w-full accent-[#ff7a00] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
+                        className="w-full accent-[#f8a87c] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] font-mono text-neutral-500">
                         <span>{t("settings.ttsPitchLow")}</span>
@@ -1269,7 +1269,7 @@ export function SettingsModal({
                       className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                         isTestingSpeech
                           ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-sm"
-                          : "bg-[#1e1e2c] hover:bg-[#28283a] border-slate-200 dark:border-[#2e2e42] text-white hover:border-[#ff7a00]/40"
+                          : "bg-[#1e1e2c] hover:bg-[#28283a] border-slate-200 dark:border-[#2e2e42] text-white hover:border-[#f8a87c]/40"
                       }`}
                     >
                       {isTestingSpeech ? (
@@ -1279,7 +1279,7 @@ export function SettingsModal({
                         </>
                       ) : (
                         <>
-                          <Play size={13} className="text-[#ff7a00] fill-[#ff7a00]" />
+                          <Play size={13} className="text-[#f8a87c] fill-[#f8a87c]" />
                           <span>{t("settings.ttsAuditionStart")}</span>
                         </>
                       )}
@@ -1322,9 +1322,9 @@ export function SettingsModal({
                         onClose();
                         onOpenPermissions();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
-                      <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
+                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c]">
                         <ShieldCheck size={16} />
                       </div>
                       <div>
@@ -1341,9 +1341,9 @@ export function SettingsModal({
                         onClose();
                         onStartTour();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
-                      <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
+                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c]">
                         <Sparkles size={16} />
                       </div>
                       <div>
@@ -1378,9 +1378,9 @@ export function SettingsModal({
                         onClose();
                         onInstallPwa();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
                     >
-                      <div className="p-2 rounded-lg bg-[#ff7a00]/15 text-[#ff7a00]">
+                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c]">
                         <Smartphone size={16} />
                       </div>
                       <div>
@@ -1402,7 +1402,7 @@ export function SettingsModal({
                         onClick={onExportMarkdown}
                         className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
                       >
-                        <Download size={14} className="text-[#ff7a00] shrink-0" />
+                        <Download size={14} className="text-[#f8a87c] shrink-0" />
                         <span className="truncate">Tệp văn bản (.md)</span>
                       </button>
                     )}
@@ -1437,7 +1437,7 @@ export function SettingsModal({
                 <div className="flex items-center justify-between pb-2 border-b border-[#222230]">
                   <div>
                     <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
-                      <Mic size={14} className="text-[#ff7a00]" />
+                      <Mic size={14} className="text-[#f8a87c]" />
                       <span>{t("settings.tabVoiceRecord") || "Cài đặt Thu âm & Micro"}</span>
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -1445,7 +1445,7 @@ export function SettingsModal({
                     </p>
                   </div>
                   {agentName && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#ff7a00]/10 text-[#ff7a00] border border-[#ff7a00]/30 shrink-0">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#f8a87c] border border-[#f8a87c]/30 shrink-0">
                       Agent: {agentName}
                     </span>
                   )}
@@ -1455,10 +1455,10 @@ export function SettingsModal({
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Globe size={15} className="text-[#ff7a00]" />
+                      <Globe size={15} className="text-[#f8a87c]" />
                       <span className="text-xs font-semibold text-white">Input Language Accent (STT)</span>
                     </div>
-                    <span className="text-[10px] font-mono text-[#ff7a00] font-bold">
+                    <span className="text-[10px] font-mono text-[#f8a87c] font-bold">
                       {sttLang === "vi-VN" ? "Tiếng Việt" : "English"}
                     </span>
                   </div>
@@ -1471,24 +1471,24 @@ export function SettingsModal({
                       onClick={() => onSttLangChange?.("vi-VN")}
                       className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                         sttLang === "vi-VN"
-                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold shadow-xs"
                           : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                       }`}
                     >
                       <span>Tiếng Việt (vi-VN)</span>
-                      {sttLang === "vi-VN" && <CheckCircle2 size={13} className="text-[#ff7a00]" />}
+                      {sttLang === "vi-VN" && <CheckCircle2 size={13} className="text-[#f8a87c]" />}
                     </button>
                     <button
                       type="button"
                       onClick={() => onSttLangChange?.("en-US")}
                       className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                         sttLang === "en-US"
-                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold shadow-xs"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold shadow-xs"
                           : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                       }`}
                     >
                       <span>English (en-US)</span>
-                      {sttLang === "en-US" && <CheckCircle2 size={13} className="text-[#ff7a00]" />}
+                      {sttLang === "en-US" && <CheckCircle2 size={13} className="text-[#f8a87c]" />}
                     </button>
                   </div>
                 </div>
@@ -1512,7 +1512,7 @@ export function SettingsModal({
                       })),
                     ]}
                     className="w-full"
-                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#ff7a00] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
+                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
                   />
                 </div>
 
@@ -1531,7 +1531,7 @@ export function SettingsModal({
                       onClick={() => handleVadModeChange("continuous")}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                         vadMode === "continuous"
-                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
                           : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                       }`}
                     >
@@ -1542,7 +1542,7 @@ export function SettingsModal({
                       onClick={() => handleVadModeChange("manual")}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                         vadMode === "manual"
-                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
                           : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                       }`}
                     >
@@ -1553,7 +1553,7 @@ export function SettingsModal({
                       onClick={() => handleVadModeChange("push_to_talk")}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                         vadMode === "push_to_talk"
-                          ? "bg-[#ff7a00]/20 border-[#ff7a00] text-white font-bold"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
                           : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
                       }`}
                     >
@@ -1572,7 +1572,7 @@ export function SettingsModal({
                             onClick={() => handleSilenceChange(ms)}
                             className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
                               silenceDuration === ms
-                                ? "bg-[#ff7a00] text-black font-bold"
+                                ? "bg-[#f8a87c] text-black font-bold"
                                 : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
                             }`}
                           >
@@ -1672,7 +1672,7 @@ export function SettingsModal({
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Activity size={14} className="text-[#ff7a00]" />
+                      <Activity size={14} className="text-[#f8a87c]" />
                       <span className="text-xs font-semibold text-white">Frequency Bands Equalizer</span>
                     </div>
                     <button
@@ -1696,11 +1696,11 @@ export function SettingsModal({
                     <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                       <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                         <span>Bass</span>
-                        <span className="text-[#ff7a00] font-bold">{freqBands.bass}%</span>
+                        <span className="text-[#f8a87c] font-bold">{freqBands.bass}%</span>
                       </div>
                       <div className="w-full h-1.5 bg-[#20202e] rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-amber-500 to-[#ff7a00] transition-all duration-75 rounded-full"
+                          className="h-full bg-gradient-to-r from-amber-500 to-[#f8a87c] transition-all duration-75 rounded-full"
                           style={{ width: `${Math.max(4, freqBands.bass)}%` }}
                         />
                       </div>

@@ -52,9 +52,9 @@ export function ToggleSwitch({
           e.stopPropagation();
           handleToggle();
         }}
-        className={`relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff7a00] focus-visible:ring-opacity-75 ${
+        className={`relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f8a87c] focus-visible:ring-opacity-75 ${
           isSm ? "h-4 w-7" : "h-5 w-9"
-        } ${checked ? "bg-[#ff7a00]" : "bg-neutral-300 dark:bg-[#282836]"}`}
+        } ${checked ? "bg-[#f8a87c]" : "bg-neutral-300 dark:bg-[#282836]"}`}
       >
         <span
           className={`pointer-events-none inline-block rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${

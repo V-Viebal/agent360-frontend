@@ -37,7 +37,7 @@ export function CodeBlock({
       {/* Code Block Header */}
       <div className="flex items-center justify-between px-3.5 py-2 bg-slate-800/80 dark:bg-[#14141c] border-b border-slate-700/60 dark:border-[#1e1e28] text-[11px] text-neutral-400 select-none">
         <div className="flex items-center gap-2 min-w-0">
-          <Terminal size={12} className="text-[#ff7a00] shrink-0" />
+          <Terminal size={12} className="text-[#f8a87c] shrink-0" />
           <span className="font-semibold text-slate-200 truncate">{title || language}</span>
           <span className="text-[10px] text-neutral-500 font-mono">({lines.length} lines)</span>
         </div>

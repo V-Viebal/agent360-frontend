@@ -29,7 +29,7 @@ export function DesignTokensSandboxPage() {
         {/* Header & Theme Switcher Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border-subtle)]">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 mb-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 mb-2">
               <Sparkles size={13} />
               <span>UI DESIGN TOKENS & OVERLAY SANDBOX</span>
             </div>
@@ -68,7 +68,7 @@ export function DesignTokensSandboxPage() {
               onClick={() => setThemeMode("system")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer transition-all ${
                 themeMode === "system"
-                  ? "bg-[#ff7a00] text-black shadow-xs font-semibold"
+                  ? "bg-[#f8a87c] text-black shadow-xs font-semibold"
                   : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
@@ -81,7 +81,7 @@ export function DesignTokensSandboxPage() {
         {/* Section 1: Semantic Design Tokens Palette */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
-            <Box size={18} className="text-[#ff7a00]" />
+            <Box size={18} className="text-[#f8a87c]" />
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">Semantic Tokens Palette</h2>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -119,7 +119,7 @@ export function DesignTokensSandboxPage() {
             </button>
             <button
               onClick={() => setActiveModal("command")}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black shadow-xs cursor-pointer transition-all"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#f8a87c] hover:bg-[#f5935f] text-black shadow-xs cursor-pointer transition-all"
             >
               Test Palette Overlay (Mock Ctrl+K)
             </button>
@@ -192,7 +192,7 @@ export function DesignTokensSandboxPage() {
               </button>
               <button
                 onClick={() => setActiveModal(null)}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black cursor-pointer transition-colors"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#f8a87c] hover:bg-[#f5935f] text-black cursor-pointer transition-colors"
               >
                 Đồng ý
               </button>

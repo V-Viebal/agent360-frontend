@@ -221,7 +221,7 @@ export function CustomSelect({
           title={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder}
           className={
             iconOnly
-              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#ff7a00]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
+              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#f8a87c]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
               : triggerClassName
               ? `flex items-center justify-between gap-1.5 transition-all cursor-pointer min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
               : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-lg px-2 py-1 text-[11px] font-sans transition-all cursor-pointer shadow-xs min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed`
@@ -231,7 +231,7 @@ export function CustomSelect({
             <ChevronDown
               size={12}
               className={`transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                isOpen ? "rotate-180 text-[#ff7a00]" : "text-neutral-400 hover:text-white"
+                isOpen ? "rotate-180 text-[#f8a87c]" : "text-neutral-400 hover:text-white"
               }`}
             />
           ) : (
@@ -244,7 +244,7 @@ export function CustomSelect({
               <ChevronDown
                 size={13}
                 className={`transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 ${
-                  isOpen ? "rotate-180 text-[#ff7a00]" : "text-neutral-400 group-hover/select-trigger:text-neutral-200"
+                  isOpen ? "rotate-180 text-[#f8a87c]" : "text-neutral-400 group-hover/select-trigger:text-neutral-200"
                 }`}
               />
             </>
@@ -255,7 +255,7 @@ export function CustomSelect({
         {showTooltip && (
           <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[100] hidden group-hover/select-trigger:block whitespace-nowrap rounded-lg bg-white dark:bg-[#0e1017] border border-slate-200 dark:border-white/15 px-3.5 py-2 text-[11px] font-sans text-slate-900 dark:text-white shadow-lg backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 min-w-[200px]">
             <div className="flex items-center gap-1.5">
-              <span className="font-medium text-[#ff7a00]">{selectedOption ? selectedOption.label : placeholder}</span>
+              <span className="font-medium text-[#f8a87c]">{selectedOption ? selectedOption.label : placeholder}</span>
               {selectedOption?.badge && (
                 <span className="text-[9px] font-mono text-neutral-400 bg-white/10 px-1 py-0.2 rounded">
                   {selectedOption.badge}
@@ -327,7 +327,7 @@ export function CustomSelect({
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       className={`flex items-center justify-between px-2 py-1 rounded-md text-[11px] cursor-pointer transition-colors ${
                         isSelected
-                          ? "bg-amber-500/10 dark:bg-[#222230] text-[#ff7a00] font-semibold"
+                          ? "bg-amber-500/10 dark:bg-[#222230] text-[#f8a87c] font-semibold"
                           : isHighlighted
                           ? "bg-slate-100 dark:bg-[#1c1c28] text-slate-900 dark:text-white"
                           : "text-slate-800 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#1a1a24] hover:text-slate-900 dark:hover:text-white"
@@ -342,11 +342,11 @@ export function CustomSelect({
                         )}
                       </div>
                       {opt.badge && (
-                        <span className="text-[9px] font-mono font-medium text-[#ea580c] dark:text-[#ff7a00] bg-orange-500/10 dark:bg-[#ff7a00]/10 px-1.5 py-0.2 rounded ml-1 shrink-0 border border-orange-500/20 dark:border-[#ff7a00]/20">
+                        <span className="text-[9px] font-mono font-medium text-[#ea580c] dark:text-[#f8a87c] bg-orange-500/10 dark:bg-[#f8a87c]/10 px-1.5 py-0.2 rounded ml-1 shrink-0 border border-orange-500/20 dark:border-[#f8a87c]/20">
                           {opt.badge}
                         </span>
                       )}
-                      {isSelected && <Check size={12} className="text-[#ff7a00] ml-1 shrink-0 stroke-[2.5]" />}
+                      {isSelected && <Check size={12} className="text-[#f8a87c] ml-1 shrink-0 stroke-[2.5]" />}
                     </div>
                   );
                 })

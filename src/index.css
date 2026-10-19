@@ -57,7 +57,7 @@
   --bg-surface-elevated: #ffffff;
   --bg-input: #ffffff;
   --bg-pill: #f1f5f9;
-  --bg-bubble-user: #ff7a00;
+  --bg-bubble-user: #f8a87c;
   --bg-bubble-assistant: #ffffff;
   --bg-active-tab: #f1f5f9;
   
@@ -67,7 +67,7 @@
   
   --border-subtle: rgba(15, 23, 42, 0.08);
   --border-card: #e2e8f0;
-  --border-focus: rgba(255, 122, 0, 0.4);
+  --border-focus: rgba(248, 168, 124, 0.4);
   
   --shadow-card: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
   --scrollbar-track: #f8fafc;
@@ -132,7 +132,7 @@ body {
   will-change: scroll-position;
   transform: translateZ(0);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 122, 0, 0.25) transparent;
+  scrollbar-color: rgba(248, 168, 124, 0.25) transparent;
 }
 
 .smooth-scroll-container::-webkit-scrollbar {
@@ -151,11 +151,11 @@ body {
 }
 
 .smooth-scroll-container:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 122, 0, 0.4);
+  background: rgba(248, 168, 124, 0.4);
 }
 
 .smooth-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 122, 0, 0.8);
+  background: rgba(248, 168, 124, 0.8);
 }
 
 @keyframes fadeIn {
@@ -177,7 +177,7 @@ body {
     105deg,
     rgba(255, 255, 255, 0.02) 20%,
     rgba(255, 255, 255, 0.07) 35%,
-    rgba(255, 122, 0, 0.04) 45%,
+    rgba(248, 168, 124, 0.04) 45%,
     rgba(255, 255, 255, 0.07) 55%,
     rgba(255, 255, 255, 0.02) 70%
   );
@@ -191,7 +191,7 @@ body {
     105deg,
     rgba(0, 0, 0, 0.03) 20%,
     rgba(0, 0, 0, 0.08) 35%,
-    rgba(255, 122, 0, 0.05) 45%,
+    rgba(248, 168, 124, 0.05) 45%,
     rgba(0, 0, 0, 0.08) 55%,
     rgba(0, 0, 0, 0.03) 70%
   );
@@ -558,9 +558,9 @@ html.light,
   }
 
   /* Keep pure white text on solid colored accents/CTAs */
-  .bg-\[\#ff7a00\],
-  button.bg-\[\#ff7a00\],
-  a.bg-\[\#ff7a00\],
+  .bg-\[\#f8a87c\],
+  button.bg-\[\#f8a87c\],
+  a.bg-\[\#f8a87c\],
   .bg-amber-500,
   .bg-red-500,
   .bg-emerald-500,
@@ -577,9 +577,9 @@ html.light,
   background-color: #14141c !important;
   color: #f3f4f6 !important;
   border-radius: 16px !important;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 122, 0, 0.2) !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 25px rgba(248, 168, 124, 0.2) !important;
   padding: 18px 20px !important;
-  border: 1px solid rgba(255, 122, 0, 0.3) !important;
+  border: 1px solid rgba(248, 168, 124, 0.3) !important;
   max-width: 380px !important;
   font-family: var(--font-sans, system-ui, sans-serif) !important;
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -629,17 +629,17 @@ html.light,
 
 .driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn,
 .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn {
-  background: #ff7a00 !important;
+  background: #f8a87c !important;
   color: #000000 !important;
-  border-color: #ff7a00 !important;
+  border-color: #f8a87c !important;
   font-weight: 700 !important;
 }
 
 .driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn:hover,
 .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn:hover {
-  background: #ff8f26 !important;
-  border-color: #ff8f26 !important;
-  box-shadow: 0 0 15px rgba(255, 122, 0, 0.4) !important;
+  background: #f5935f !important;
+  border-color: #f5935f !important;
+  box-shadow: 0 0 15px rgba(248, 168, 124, 0.4) !important;
 }
 
 .driverjs-skyer-theme .driver-popover-progress-text {
@@ -654,16 +654,16 @@ html.light,
 }
 
 .driverjs-skyer-theme .driver-popover-arrow-side-left.driver-popover-arrow {
-  border-left-color: #ff7a00 !important;
+  border-left-color: #f8a87c !important;
 }
 .driverjs-skyer-theme .driver-popover-arrow-side-right.driver-popover-arrow {
-  border-right-color: #ff7a00 !important;
+  border-right-color: #f8a87c !important;
 }
 .driverjs-skyer-theme .driver-popover-arrow-side-top.driver-popover-arrow {
-  border-top-color: #ff7a00 !important;
+  border-top-color: #f8a87c !important;
 }
 .driverjs-skyer-theme .driver-popover-arrow-side-bottom.driver-popover-arrow {
-  border-bottom-color: #ff7a00 !important;
+  border-bottom-color: #f8a87c !important;
 }
 
 /* Global Typographic Balance & Anti-Orphan Guards */
@@ -688,8 +688,8 @@ html.light .driverjs-skyer-theme,
   z-index: 100002 !important;
   background-color: #ffffff !important;
   color: #0f172a !important;
-  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15), 0 0 25px rgba(255, 122, 0, 0.12) !important;
-  border: 1px solid rgba(255, 122, 0, 0.35) !important;
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15), 0 0 25px rgba(248, 168, 124, 0.12) !important;
+  border: 1px solid rgba(248, 168, 124, 0.35) !important;
 }
 
 html.light .driverjs-skyer-theme .driver-popover-title,
@@ -719,9 +719,9 @@ html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn
 html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn,
 [data-theme="light"] .driverjs-skyer-theme .driver-popover-footer .driver-popover-next-btn,
 [data-theme="light"] .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-btn {
-  background: #ff7a00 !important;
+  background: #f8a87c !important;
   color: #ffffff !important;
-  border-color: #ff7a00 !important;
+  border-color: #f8a87c !important;
 }
 
 .driver-overlay {
@@ -818,11 +818,11 @@ button:not(:disabled):active,
 /* Micro smooth shimmer for badges & alerts */
 @keyframes badgeGlow {
   0%, 100% {
-    border-color: rgba(255, 122, 0, 0.25);
+    border-color: rgba(248, 168, 124, 0.25);
   }
   50% {
-    border-color: rgba(255, 122, 0, 0.6);
-    box-shadow: 0 0 10px rgba(255, 122, 0, 0.15);
+    border-color: rgba(248, 168, 124, 0.6);
+    box-shadow: 0 0 10px rgba(248, 168, 124, 0.15);
   }
 }
 

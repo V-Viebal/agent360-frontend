@@ -64,7 +64,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string;
   }
 
   // 5. Default Console Web Workspace
-  return <MessageSquare size={size} className={isSelected ? "text-[#ff7a00]" : "text-neutral-400"} />;
+  return <MessageSquare size={size} className={isSelected ? "text-[#f8a87c]" : "text-neutral-400"} />;
 }
 
 import { getCurrentUserProfile, UserProfile } from "../services/userService";
@@ -73,7 +73,7 @@ import { authConfig } from "../config/authConfig";
 
 // Haptic feedback helper for mobile touch gestures
 
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSection } from "../components/ui/DropdownMenu";
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSection, DropdownSubMenu } from "../components/ui/DropdownMenu";
 import { Tabs, Tooltip, ConfirmDialog, CodeBlock, AgentPill } from "../components/ui";
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
@@ -151,6 +151,7 @@ import {
   CircleDot,
   Target,
   Rocket,
+  ArrowUp,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
 
@@ -277,7 +278,7 @@ function TurnExecutionAccordion({
                 open={!isTurnDone}
               >
                 <summary className="flex items-center gap-2 px-3.5 py-2 cursor-pointer hover:bg-white/[0.03] text-neutral-400 hover:text-neutral-200 list-none">
-                  <Sparkles size={13} className="text-[#ff7a00] shrink-0" />
+                  <Sparkles size={13} className="text-[#f8a87c] shrink-0" />
                   <span className="font-mono text-[11px] font-medium text-neutral-300">
                     Thought for ~{estimatedSec}s
                   </span>
@@ -389,7 +390,7 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
       >
         <div className="flex items-center gap-2 min-w-0">
           {isCalling ? (
-            <Loader2 size={13} className="text-[#ff7a00] animate-spin shrink-0" />
+            <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
           ) : isError ? (
             <span className="h-4 w-4 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
               <AlertCircle size={10} />
@@ -405,7 +406,7 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
           <span
             className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
               isCalling
-                ? "bg-[#ff7a00]/10 text-[#ff7a00]"
+                ? "bg-[#f8a87c]/10 text-[#f8a87c]"
                 : isError
                 ? "bg-red-500/10 text-red-400 border border-red-500/20"
                 : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
@@ -647,14 +648,14 @@ function renderInlineMarkdown(rawText: string) {
   return parts.map((part, pIdx) => {
     if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
       return (
-        <strong key={pIdx} className="font-semibold text-white">
+        <strong key={pIdx} className="font-semibold text-slate-900 dark:text-white">
           {part.slice(2, -2)}
         </strong>
       );
     }
     if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
       return (
-        <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-[#181822] border border-[#262634] font-mono text-[11px] text-[#ff7a00] mx-0.5">
+        <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] font-mono text-[11px] text-[#f8a87c] mx-0.5">
           {part.slice(1, -1)}
         </code>
       );
@@ -676,7 +677,7 @@ function renderSearchMatchHighlight(text: string, query: string) {
     part.toLowerCase() === trimmed.toLowerCase() ? (
       <mark
         key={i}
-        className="bg-[#ff7a00]/30 text-[#ff7a00] font-semibold px-0.5 rounded transition-colors"
+        className="bg-[#f8a87c]/30 text-[#f8a87c] font-semibold px-0.5 rounded transition-colors"
       >
         {part}
       </mark>
@@ -732,12 +733,12 @@ function FormattedMessageContent({
             <div
               key={idx}
               className={`my-2 rounded-xl overflow-hidden border border-[#262634] bg-[#0a0a0f] font-mono text-xs shadow-md transition-all ${
-                expandedBlock === idx ? "fixed inset-4 z-50 flex flex-col bg-[#0a0a0f]/95 backdrop-blur-xl border-[#ff7a00]/40 shadow-2xl p-2" : ""
+                expandedBlock === idx ? "fixed inset-4 z-50 flex flex-col bg-[#0a0a0f]/95 backdrop-blur-xl border-[#f8a87c]/40 shadow-2xl p-2" : ""
               }`}
             >
               <div className="px-3 py-1.5 bg-[#14141c] border-b border-[#262634] flex items-center justify-between text-[11px] text-neutral-400 select-none">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center gap-1.5 text-[#ff7a00] font-mono">
+                  <span className="flex items-center gap-1.5 text-[#f8a87c] font-mono">
                     <Terminal size={12} />
                     {lang}
                   </span>
@@ -771,7 +772,7 @@ function FormattedMessageContent({
                           setRunningBlock(null);
                         }, 700);
                       }}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] border border-[#ff7a00]/30 transition-colors cursor-pointer"
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 transition-colors cursor-pointer"
                       title="Execute code directly on Agent workspace node"
                     >
                       <Play size={10} fill="currentColor" />
@@ -864,8 +865,8 @@ function FormattedMessageContent({
               if (trimmed.startsWith("### ")) {
                 return (
                   <div key={lineIdx} className="pt-2 pb-0.5">
-                    <h4 className="text-xs font-bold text-neutral-200 tracking-wide font-mono flex items-center gap-2">
-                      <span className="h-1 w-1 rounded-full bg-[#ff7a00]/70" />
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-200 tracking-wide font-mono flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-[#f8a87c]/70" />
                       {trimmed.slice(4)}
                     </h4>
                   </div>
@@ -873,9 +874,9 @@ function FormattedMessageContent({
               }
               if (trimmed.startsWith("## ")) {
                 return (
-                  <div key={lineIdx} className="pt-3 pb-1 border-b border-dashed border-[#232330]">
-                    <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-2">
-                      <span className="text-[#ff7a00] text-xs">§</span>
+                  <div key={lineIdx} className="pt-3 pb-1 border-b border-dashed border-slate-200 dark:border-[#232330]">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                      <span className="text-[#f8a87c] text-xs">§</span>
                       {trimmed.slice(3)}
                     </h3>
                   </div>
@@ -883,8 +884,8 @@ function FormattedMessageContent({
               }
               if (trimmed.startsWith("# ")) {
                 return (
-                  <div key={lineIdx} className="pt-3 pb-1.5 border-b border-dashed border-[#2b2b3a]">
-                    <h2 className="text-base font-bold text-[#ff7a00] tracking-tight">
+                  <div key={lineIdx} className="pt-3 pb-1.5 border-b border-dashed border-slate-200 dark:border-[#2b2b3a]">
+                    <h2 className="text-base font-bold text-[#f8a87c] tracking-tight">
                       {trimmed.slice(2)}
                     </h2>
                   </div>
@@ -892,8 +893,8 @@ function FormattedMessageContent({
               }
               if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
                 return (
-                  <div key={lineIdx} className="flex items-start gap-2.5 pl-2 py-0.5 text-neutral-300">
-                    <span className="text-[#ff7a00]/80 shrink-0 text-[11px] font-mono select-none mt-0.5">↳</span>
+                  <div key={lineIdx} className="flex items-start gap-2.5 pl-2 py-0.5 text-slate-700 dark:text-neutral-300">
+                    <span className="text-[#f8a87c]/80 shrink-0 text-[11px] font-mono select-none mt-0.5">↳</span>
                     <span className="flex-1">{renderInlineMarkdown(trimmed.slice(2))}</span>
                   </div>
                 );
@@ -903,8 +904,8 @@ function FormattedMessageContent({
               const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
               if (numMatch) {
                 return (
-                  <div key={lineIdx} className="flex items-start gap-2.5 pl-2 py-0.5 text-neutral-300">
-                    <span className="text-[#ff7a00]/70 font-mono text-[11px] shrink-0 select-none mt-0.5">
+                  <div key={lineIdx} className="flex items-start gap-2.5 pl-2 py-0.5 text-slate-700 dark:text-neutral-300">
+                    <span className="text-[#f8a87c]/70 font-mono text-[11px] shrink-0 select-none mt-0.5">
                       {numMatch[1]}.
                     </span>
                     <span className="flex-1">{renderInlineMarkdown(numMatch[2])}</span>
@@ -917,7 +918,7 @@ function FormattedMessageContent({
                   key={lineIdx}
                   onDoubleClick={() => onSpeakSentence?.(trimmed)}
                   title="Double click to read this sentence aloud"
-                  className="text-neutral-300 leading-relaxed break-words hover:text-white transition-colors cursor-text"
+                  className="text-slate-800 dark:text-neutral-200 leading-relaxed break-words hover:text-slate-900 dark:hover:text-white transition-colors cursor-text"
                 >
                   {renderInlineMarkdown(line)}
                 </p>
@@ -1013,7 +1014,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
                 >
                   <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
                     className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
-                  <button type="submit" className="h-6 px-2 rounded bg-[#ff7a00] text-black! text-[11px] font-semibold">Mở desktop</button>
+                  <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
                 </form>
               </>
             ) : `Desktop unavailable (${error}) · showing preview`}
@@ -2427,7 +2428,7 @@ export function GrokBotWorkspace() {
   }, [activeChatMenuId, activeAgentMenuId]);
 
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned" | "archived">("all");
-  const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [channelFilter, setChannelFilter] = useState<string>("console");
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
   // Mobile Hold-Touch / Long-Press Action Sheet state
@@ -2694,6 +2695,7 @@ export function GrokBotWorkspace() {
   const [plusMenuSearch, setPlusMenuSearch] = useState("");
   const [plusMenuSelectedIndex, setPlusMenuSelectedIndex] = useState<number>(-1);
   const plusMenuRef = useRef<HTMLDivElement>(null);
+  const plusMenuSearchInputRef = useRef<HTMLInputElement>(null);
   const [plusMenuDragY, setPlusMenuDragY] = useState<number>(0);
   const [isPlusMenuDragging, setIsPlusMenuDragging] = useState<boolean>(false);
   const plusMenuTouchStartYRef = useRef<number | null>(null);
@@ -3007,6 +3009,14 @@ export function GrokBotWorkspace() {
       if (loadedMsgs.length > 0) {
         setMessages(loadedMsgs);
         setShowPollCard(false);
+        // Live update the last message snippet in chats list for active session
+        const lastTurn = loadedMsgs[loadedMsgs.length - 1];
+        if (lastTurn && lastTurn.content) {
+          const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
+          setChats((prev) =>
+            prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
+          );
+        }
       } else if (!cachedTurns || cachedTurns.length === 0) {
         // Empty new or clean session: keep messages empty to display quick prompt suggestions immediately
         setMessages([]);
@@ -3154,6 +3164,8 @@ export function GrokBotWorkspace() {
     setSelectedAgentId(agent.id);
     recordMilestone("selectedAgent");
     setMobileAgentsOpen(false);
+    // Bring the target agent's Chromium profile window to the top immediately on selection
+    focusAgentBrowser(agent.slug || agent.id).catch(() => {});
     try {
       localStorage.setItem("agent360_last_agent_id", agent.id);
     } catch {}
@@ -3212,10 +3224,10 @@ export function GrokBotWorkspace() {
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: #07090e; color: #f0f2f5; padding: 40px; margin: 0; line-height: 1.6; }
     .card { background: #121218; border: 1px solid #262634; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
-    .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: bold; background: rgba(255, 122, 0, 0.15); color: #ff7a00; border: 1px solid rgba(255, 122, 0, 0.3); }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: bold; background: rgba(248, 168, 124, 0.15); color: #f8a87c; border: 1px solid rgba(248, 168, 124, 0.3); }
     .receipt { background: #0a0a0f; border: 1px solid #20202a; border-radius: 10px; padding: 12px; margin-top: 10px; font-family: monospace; font-size: 12px; color: #34d399; }
     h1 { color: #fff; margin-bottom: 8px; font-size: 22px; }
-    h2 { font-size: 16px; color: #ff7a00; border-bottom: 1px solid #20202a; padding-bottom: 6px; }
+    h2 { font-size: 16px; color: #f8a87c; border-bottom: 1px solid #20202a; padding-bottom: 6px; }
     .user { background: #1a1a24; border-color: #2c2c3e; margin-left: 40px; }
     .bot { background: #121218; border-color: #262634; }
   </style>
@@ -3234,7 +3246,7 @@ export function GrokBotWorkspace() {
       <div style="white-space: pre-wrap;">${m.content}</div>
       ${m.steps && m.steps.length > 0 ? `
         <div style="margin-top: 16px;">
-          <strong style="font-size: 12px; color: #ff7a00;">Verified Tool Execution Receipts:</strong>
+          <strong style="font-size: 12px; color: #f8a87c;">Verified Tool Execution Receipts:</strong>
           ${m.steps.filter((s) => s.kind === "tool_call").map((s) => `
             <div class="receipt">
               <div><strong>Tool:</strong> ${s.tool} (${s.state})</div>
@@ -3269,10 +3281,10 @@ export function GrokBotWorkspace() {
         <title>${title}</title>
         <style>
           body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #111; }
-          h1 { color: #ff7a00; font-size: 18pt; border-bottom: 2px solid #ff7a00; padding-bottom: 6px; }
+          h1 { color: #f8a87c; font-size: 18pt; border-bottom: 2px solid #f8a87c; padding-bottom: 6px; }
           .meta { font-size: 9.5pt; color: #555; margin-bottom: 20px; }
           .turn { margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
-          .user { background: #fdf6ee; border-left: 4px solid #ff7a00; }
+          .user { background: #fdf6ee; border-left: 4px solid #f8a87c; }
           .bot { background: #f9f9fb; border-left: 4px solid #0284c7; }
           .role { font-weight: bold; font-size: 11pt; margin-bottom: 6px; }
           .time { font-size: 8.5pt; color: #888; font-weight: normal; }
@@ -4175,7 +4187,7 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       {/* BACKDROP OVERLAY FOR MOBILE DRAWERS */}
       {/* ========================================================= */}
-      {(mobileAgentsOpen || mobileChatsOpen || (!isBotInfoCollapsed && mobileBotInfoOpen)) && (
+      {(mobileAgentsOpen || mobileChatsOpen) && (
         <div
           onClick={() => {
             setMobileAgentsOpen(false);
@@ -4183,7 +4195,7 @@ export function GrokBotWorkspace() {
             setMobileBotInfoOpen(false);
             handleToggleBotInfo(true);
           }}
-          className="fixed inset-0 bg-black/70 z-40 xl:hidden backdrop-blur-xs transition-opacity"
+          className="fixed inset-0 bg-black/40 z-40 xl:hidden transition-opacity"
         />
       )}
 
@@ -4228,7 +4240,7 @@ export function GrokBotWorkspace() {
                   <SkyerLogo size={24} showText={false} showBotBadge={false} />
                 </div>
                 {/* PanelLeftOpen icon revealed on hover */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 text-[#ff7a00]">
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 text-[#f8a87c]">
                   <PanelLeftOpen size={18} />
                 </div>
               </button>
@@ -4240,10 +4252,10 @@ export function GrokBotWorkspace() {
                 <a
                   href="/admin"
                   title="Bảng điều khiển Quản trị (Admin Portal)"
-                  className="relative h-10 w-10 rounded-xl flex items-center justify-center bg-[#ff7a00]/15 border border-[#ff7a00]/40 text-[#ff7a00] hover:bg-[#ff7a00]/25 hover:border-[#ff7a00] transition-all cursor-pointer shrink-0 shadow-sm shadow-[#ff7a00]/20 group"
+                  className="relative h-10 w-10 rounded-xl flex items-center justify-center bg-[#f8a87c]/15 border border-[#f8a87c]/40 text-[#f8a87c] hover:bg-[#f8a87c]/25 hover:border-[#f8a87c] transition-all cursor-pointer shrink-0 shadow-sm shadow-[#f8a87c]/20 group"
                 >
                   <Shield size={18} className="group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#ff7a00] ring-1 ring-black" />
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#f8a87c] ring-1 ring-black" />
                 </a>
               )}
               {isLoadingAgents ? (
@@ -4268,7 +4280,7 @@ export function GrokBotWorkspace() {
                         onClick={() => handleSelectAgent(ag)}
                         className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer border group shrink-0 ${
                           isSelected
-                            ? "bg-[#1c1c26] border-[#ff7a00] shadow-sm shadow-[#ff7a00]/25"
+                            ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25"
                             : "border-transparent hover:bg-[#161620] hover:border-[#2a2a38]"
                         }`}
                                                 title={`${ag.name}\n${ag.roleTag || "Agent"} • ${ag.status || "active"}\n${ag.node} • ${ag.model}${hasUnreadCompleted ? ` (Có ${unreadList.length} session chưa xem)` : ""}${hasError ? " (Degraded)" : ""}`}
@@ -4290,13 +4302,13 @@ export function GrokBotWorkspace() {
                               title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
                             />
                           )}
-                          {/* Online status beacon at bottom-right consistent across all sidebars */}
-                          <span
-                            className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] ${
-                              hasError ? "bg-red-500 animate-pulse" : "bg-emerald-400"
-                            }`}
-                            title={hasError ? "Sự cố hạ tầng" : "Đang hoạt động (Online)"}
-                          />
+                          {/* Chỉ hiển thị beacon khi có sự cố hạ tầng */}
+                          {hasError && (
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500 animate-pulse"
+                              title="Sự cố hạ tầng"
+                            />
+                          )}
                         </div>
                       </button>
                     );
@@ -4309,7 +4321,7 @@ export function GrokBotWorkspace() {
             <div ref={userMenuRef} className="p-2 border-t border-[#1c1c22] flex flex-col items-center relative select-none shrink-0">
               <div
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] hover:border-[#ff7a00] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative overflow-hidden"
+                className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#f8a87c] border border-[#3a3a4c] hover:border-[#f8a87c] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative overflow-hidden"
                 title={`${currentUser?.name || "User"} (${currentUser?.roles?.[0] || "Operator"}) - Cài đặt`}
               >
                 {currentUser?.picture ? (
@@ -4334,7 +4346,7 @@ export function GrokBotWorkspace() {
                   <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
-                  icon={<Settings size={14} className="text-[#ff7a00]" />}
+                  icon={<Settings size={14} className="text-[#f8a87c]" />}
                   label="Cài đặt (Settings)"
                   badge="Mở"
                   onClick={() => {
@@ -4344,7 +4356,7 @@ export function GrokBotWorkspace() {
                   }}
                 />
                 <DropdownMenuItem
-                  icon={<Command size={13} className="text-[#ff7a00]" />}
+                  icon={<Command size={13} className="text-[#f8a87c]" />}
                   label="Command Palette"
                   badge="Ctrl+K"
                   badgeColor="text-neutral-400"
@@ -4473,7 +4485,7 @@ export function GrokBotWorkspace() {
                 title={t("sidebar.teamOverviewTitle", { count: agents.length })}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <Network size={14} className="text-neutral-400 group-hover:text-[#ff7a00] transition-colors shrink-0" />
+                  <Network size={14} className="text-neutral-400 group-hover:text-[#f8a87c] transition-colors shrink-0" />
                   <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors truncate">
                     {t("sidebar.teamOverview")}
                   </span>
@@ -4494,22 +4506,22 @@ export function GrokBotWorkspace() {
               <div className="p-2 border-b border-[#1c1c22]">
                 <a
                   href="/admin"
-                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[#ff7a00]/20 via-[#ff7a00]/10 to-transparent border border-[#ff7a00]/40 hover:border-[#ff7a00] hover:bg-[#ff7a00]/25 text-[#ff7a00] transition-all group shadow-sm shadow-[#ff7a00]/10 select-none cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[#f8a87c]/20 via-[#f8a87c]/10 to-transparent border border-[#f8a87c]/40 hover:border-[#f8a87c] hover:bg-[#f8a87c]/25 text-[#f8a87c] transition-all group shadow-sm shadow-[#f8a87c]/10 select-none cursor-pointer"
                   title="Truy cập Bảng điều khiển Quản trị, phân quyền Member và quản lý Fleet"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="h-7 w-7 rounded-lg bg-[#ff7a00]/20 border border-[#ff7a00]/40 flex items-center justify-center text-[#ff7a00] shrink-0">
+                    <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/20 border border-[#f8a87c]/40 flex items-center justify-center text-[#f8a87c] shrink-0">
                       <Shield size={14} className="group-hover:scale-110 transition-transform" />
                     </div>
                     <div className="flex flex-col truncate text-left">
-                      <span className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors flex items-center gap-1.5">
                         Quản trị Hệ thống
-                        <span className="px-1.5 py-0.2 rounded-full bg-[#ff7a00]/30 text-[#ff7a00] text-[9px] font-mono font-bold uppercase">Admin</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#f8a87c]/30 text-[#f8a87c] text-[9px] font-mono font-bold uppercase">Admin</span>
                       </span>
                       <span className="text-[10px] text-neutral-400 font-mono truncate">Phân quyền Agent & User Directory</span>
                     </div>
                   </div>
-                  <ChevronRight size={14} className="text-[#ff7a00]/70 group-hover:translate-x-0.5 group-hover:text-[#ff7a00] transition-all shrink-0 ml-1" />
+                  <ChevronRight size={14} className="text-[#f8a87c]/70 group-hover:translate-x-0.5 group-hover:text-[#f8a87c] transition-all shrink-0 ml-1" />
                 </a>
               </div>
             )}
@@ -4524,7 +4536,7 @@ export function GrokBotWorkspace() {
             </div>
 
             {/* Agents List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto px-1.5 py-1 space-y-0.5 scrollbar-thin">
               {isLoadingAgents ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -4562,15 +4574,21 @@ export function GrokBotWorkspace() {
                             : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
                         }`}
                       >
-                        {/* Dedicated Agent Identity Avatar with consistent health beacon */}
+                        {/* Dedicated Agent Identity Avatar: Không hiện live state cố định, chỉ hiện badge khi có message done hoặc lỗi */}
                         <div className="relative shrink-0">
                           <AgentAvatar agent={ag} size="md" />
-                          <span
-                            className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] ${
-                              ag.status === "degraded" ? "bg-red-500 animate-pulse" : "bg-emerald-400"
-                            }`}
-                            title={ag.status === "degraded" ? "Sự cố hạ tầng" : "Đang hoạt động (Online)"}
-                          />
+                          {ag.status === "degraded" && (
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500 animate-pulse"
+                              title="Sự cố hạ tầng"
+                            />
+                          )}
+                          {(unreadCompletedSessions[ag.id] || []).length > 0 && (
+                            <span
+                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#0c0c0e] animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                              title={`Có ${(unreadCompletedSessions[ag.id] || []).length} session hoàn thành chưa đọc`}
+                            />
+                          )}
                         </div>
 
                         {/* Agent Details: Lean typography with rich status tooltip */}
@@ -4622,8 +4640,8 @@ export function GrokBotWorkspace() {
                                   }}
                                   className={`p-1 rounded-lg transition-all cursor-pointer ${
                                     activeAgentMenuId === ag.id
-                                      ? "text-[#ff7a00] bg-neutral-200 dark:bg-white/10 opacity-100"
-                                      : "text-neutral-400 hover:text-[#ff7a00] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                                   }`}
                                   title="Tùy chọn mở rộng cho Agent (Ghim, Chi tiết, Chat mới)"
                                 >
@@ -4646,7 +4664,7 @@ export function GrokBotWorkspace() {
                                     }}
                                   />
                                   <DropdownMenuItem
-                                    icon={<Plus size={13} className="text-[#ff7a00]" />}
+                                    icon={<Plus size={13} className="text-[#f8a87c]" />}
                                     label="Tạo Chat mới với Agent"
                                     onClick={() => {
                                       handleSelectAgent(ag);
@@ -4691,7 +4709,7 @@ export function GrokBotWorkspace() {
                 className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#ff7a00] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0 overflow-hidden">
+                  <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#f8a87c] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0 overflow-hidden">
                     {currentUser?.picture ? (
                       <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -4714,12 +4732,9 @@ export function GrokBotWorkspace() {
                     className="flex items-center gap-1 p-1 rounded-lg hover:bg-[#20202c] text-neutral-400 hover:text-white transition-colors cursor-pointer"
                     title="Browser Hardware & Sandbox Permissions (Click to manage)"
                   >
-                    <ShieldCheck size={13} className="text-[#ff7a00]" />
+                    <ShieldCheck size={13} className="text-[#f8a87c]" />
                   </button>
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>Online</span>
-                  </div>
+                  {/* User status */}
                   <ChevronDown
                     size={12}
                     className={`text-neutral-400 transition-transform duration-200 ${isUserMenuOpen ? "rotate-180" : ""}`}
@@ -4741,7 +4756,7 @@ export function GrokBotWorkspace() {
                   <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
-                  icon={<Settings size={14} className="text-[#ff7a00]" />}
+                  icon={<Settings size={14} className="text-[#f8a87c]" />}
                   label="Cài đặt (Settings)"
                   badge="Mở"
                   onClick={() => {
@@ -4751,7 +4766,7 @@ export function GrokBotWorkspace() {
                   }}
                 />
                 <DropdownMenuItem
-                  icon={<Command size={13} className="text-[#ff7a00]" />}
+                  icon={<Command size={13} className="text-[#f8a87c]" />}
                   label="Command Palette"
                   badge="Ctrl+K"
                   badgeColor="text-neutral-400"
@@ -4803,7 +4818,7 @@ export function GrokBotWorkspace() {
         {!isLeftSidebarCollapsed && (
           <div
             onMouseDown={() => setIsResizingLeft(true)}
-            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 -mr-0.5"
+            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/50 transition-colors z-30 -mr-0.5"
             title="Drag to resize agents sidebar"
           />
         )}
@@ -4894,13 +4909,14 @@ export function GrokBotWorkspace() {
               >
                 {hasNoAgents ? (
                   <>
-                    <Shield size={14} className="text-[#ff7a00]" />
+                    <Shield size={14} className="text-[#f8a87c]" />
                     <span className="truncate max-w-[160px] sm:max-w-[220px] text-xs text-neutral-900 dark:text-white font-mono">Chưa có Agent</span>
                   </>
                 ) : (
                   <>
                     <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
+                    <ChevronRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all shrink-0 -mr-0.5 group-hover:translate-x-0.5" />
                   </>
                 )}
                 {activeLoopMode !== "default" && (
@@ -4919,7 +4935,7 @@ export function GrokBotWorkspace() {
               {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
               <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex flex-col gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-[#161622] border border-neutral-200 dark:border-[#2a2a3c] text-[11px] font-mono shadow-lg z-[100] whitespace-nowrap min-w-[260px] sm:min-w-[280px] animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between gap-3 text-neutral-800 dark:text-neutral-200 border-b border-neutral-100 dark:border-[#242436] pb-1.5">
-                  <span className="text-[#ff7a00] font-semibold">{selectedAgent.roleTag || "AI Teammate"}</span>
+                  <span className="text-[#f8a87c] font-semibold">{selectedAgent.roleTag || "AI Teammate"}</span>
                   {nodePingMs !== null && (
                     <span
                       className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono border ${
@@ -4943,7 +4959,7 @@ export function GrokBotWorkspace() {
                   <span>Mô hình AI:</span>
                   <span className="text-neutral-700 dark:text-neutral-300">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
                 </div>
-                <div className="pt-0.5 text-[9px] text-[#ff7a00] flex items-center justify-center">
+                <div className="pt-0.5 text-[9px] text-[#f8a87c] flex items-center justify-center">
                   <span>Bấm để {isBotInfoCollapsed ? "mở" : "đóng"} Specification</span>
                 </div>
               </div>
@@ -5029,7 +5045,7 @@ export function GrokBotWorkspace() {
               </button>
 
               {inSessionSearchQuery && inSessionSearchQuery !== "__STARRED__" && (
-                <span className="text-[11px] text-[#ff7a00]">
+                <span className="text-[11px] text-[#f8a87c]">
                   {messages.filter((m) => m.content.toLowerCase().includes(inSessionSearchQuery.toLowerCase())).length} matches
                 </span>
               )}
@@ -5050,14 +5066,14 @@ export function GrokBotWorkspace() {
         {/* Messages Stream Area (Responsive & Lean for Compact/Minimize) */}
         <div
           ref={messagesContainerRef}
-          className={`flex-1 overflow-y-auto ${isCompactMode ? "px-3 py-3 space-y-3.5" : "px-4 md:px-8 py-5 space-y-5"} max-w-3xl mx-auto w-full`}
+          className={`flex-1 overflow-y-auto ${isCompactMode ? "px-3 py-2 space-y-2.5" : "px-4 md:px-8 py-3.5 space-y-3"} max-w-3xl mx-auto w-full`}
         >
           {hasNoAgents ? (
             <div className="h-full min-h-[460px] flex items-center justify-center p-4">
               <EmptyState
                 size="lg"
                 badge="Skyer Autonomous Fleet • Standby"
-                icon={<Bot size={36} className="text-[#ff7a00] animate-pulse" />}
+                icon={<Bot size={36} className="text-[#f8a87c] animate-pulse" />}
                 title="Đang chờ phân công Agent"
                 description="Tài khoản của bạn đang được kết nối với Skyer. Vui lòng đợi Quản trị viên phân quyền hoặc làm mới để kiểm tra trạng thái."
                 action={{
@@ -5128,7 +5144,7 @@ export function GrokBotWorkspace() {
             <div className="py-8 px-2 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-xl mx-auto w-full">
               <div className="w-full flex items-center justify-between mb-3 px-1 text-xs text-neutral-400 font-mono">
                 <span className="flex items-center gap-1.5 text-neutral-300 font-medium">
-                  <Sparkles size={13} className="text-[#ff7a00]" />
+                  <Sparkles size={13} className="text-[#f8a87c]" />
                   <span>Suggested Prompts</span>
                 </span>
                 <span className="text-[10px] text-neutral-500">Click to send immediately</span>
@@ -5143,21 +5159,21 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       executeTurnStream(item.prompt);
                     }}
-                    className="p-2.5 sm:p-3 md:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2 w-full min-w-0 overflow-hidden"
+                    className="p-2.5 sm:p-3 md:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2 w-full min-w-0 overflow-hidden"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0" />
                       <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate whitespace-nowrap min-w-0 block">
                         {item.title}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                       {item.badge && (
-                        <span className="hidden @[260px]:inline-block text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
+                        <span className="hidden @[260px]:inline-block text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#f8a87c] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
                           {item.badge}
                         </span>
                       )}
-                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0 hidden @[320px]:block" />
+                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#f8a87c] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0 hidden @[320px]:block" />
                     </div>
                   </button>
                 ))}
@@ -5178,7 +5194,7 @@ export function GrokBotWorkspace() {
               return (
                 <div
                   key={msg.id}
-                  className={`flex flex-col space-y-2 w-full ${isUser ? "items-end" : "items-start"}`}
+                  className={`flex flex-col space-y-1.5 w-full group/msg ${isUser ? "items-end" : "items-start"}`}
                 >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
@@ -5225,61 +5241,66 @@ export function GrokBotWorkspace() {
                       {/* Smooth Bullet Typing Animation while streaming with no text yet */}
                       {isStreaming && isLastTurn && !msg.content && (
                         <div className="flex items-center gap-1.5 py-2 px-1 select-none">
-                          <span className="h-2 w-2 rounded-full bg-[#ff7a00] typing-dot-1" />
-                          <span className="h-2 w-2 rounded-full bg-[#ff7a00] typing-dot-2" />
-                          <span className="h-2 w-2 rounded-full bg-[#ff7a00] typing-dot-3" />
+                          <span className="h-2 w-2 rounded-full bg-[#f8a87c] typing-dot-1" />
+                          <span className="h-2 w-2 rounded-full bg-[#f8a87c] typing-dot-2" />
+                          <span className="h-2 w-2 rounded-full bg-[#f8a87c] typing-dot-3" />
                         </div>
                       )}
 
                       {msg.content && (
                         <>
-                          <div className="text-[13px] leading-relaxed text-neutral-800 dark:text-neutral-200 py-1 px-0.5 divide-y divide-dashed divide-neutral-200 dark:divide-[#22222c]/50">
-                            <FormattedMessageContent
-                            content={msg.content}
-                            agentNode={selectedAgent.node}
-                            onRunCode={(codeSnippet) => {
-                              sendConsoleChatMessageStream(
-                                selectedChatId || "default",
-                                "Execute shell verification:\n```bash\n" + codeSnippet + "\n```",
-                                selectedAgent.slug
-                              );
-                            }}
-                            onSpeakSentence={(sentence) => {
-                              setSpeakingMsgId(msg.id);
-                              speakText(sentence, {
-                                onSegmentChange: (seg) => setSpeakingSentence(seg),
-                                onEnd: () => {
-                                  setSpeakingMsgId(null);
-                                  setSpeakingSentence(null);
-                                },
-                                onError: () => {
-                                  setSpeakingMsgId(null);
-                                  setSpeakingSentence(null);
-                                },
-                              });
-                            }}
-                          />
-                            {/* Inline pulsing bullet cursor if currently streaming active tokens */}
-                            {isStreaming && isLastTurn && (
-                              <span className="inline-flex items-center gap-1 ml-1.5 align-middle select-none">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] typing-dot-1" />
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] typing-dot-2" />
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] typing-dot-3" />
-                              </span>
-                            )}
+                          {/* Assistant Response Bubble: Bọc trong background clean card cho cả light và dark mode */}
+                          <div className="w-full max-w-full rounded-2xl p-3 sm:p-4 bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs transition-colors">
+                            <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
+                              <FormattedMessageContent
+                              content={msg.content}
+                              agentNode={selectedAgent.node}
+                              onRunCode={(codeSnippet) => {
+                                sendConsoleChatMessageStream(
+                                  selectedChatId || "default",
+                                  "Execute shell verification:\n```bash\n" + codeSnippet + "\n```",
+                                  selectedAgent.slug
+                                );
+                              }}
+                              onSpeakSentence={(sentence) => {
+                                setSpeakingMsgId(msg.id);
+                                speakText(sentence, {
+                                  onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                  onEnd: () => {
+                                    setSpeakingMsgId(null);
+                                    setSpeakingSentence(null);
+                                  },
+                                  onError: () => {
+                                    setSpeakingMsgId(null);
+                                    setSpeakingSentence(null);
+                                  },
+                                });
+                              }}
+                            />
+                              {/* Inline pulsing bullet cursor if currently streaming active tokens */}
+                              {isStreaming && isLastTurn && (
+                                <span className="inline-flex items-center gap-1 ml-1.5 align-middle select-none">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {/* Visual Karaoke sentence pill indicator during TTS readout */}
                           {speakingMsgId === msg.id && speakingSentence && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 my-1 rounded-xl bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-xs font-mono text-[#ff7a00] animate-in fade-in select-none">
+                            <div className="flex items-center gap-2 px-3 py-1.5 my-1 rounded-xl bg-[#f8a87c]/10 border border-[#f8a87c]/30 text-xs font-mono text-[#f8a87c] animate-in fade-in select-none">
                               <Volume2 size={13} className="animate-pulse shrink-0" />
                               <span className="text-neutral-400 text-[10px] uppercase font-bold shrink-0">Reading:</span>
                               <span className="text-white italic truncate max-w-lg">"{speakingSentence}"</span>
                             </div>
                           )}
 
-                          {/* Message Turn Action CTAs: ONLY rendered after turn completion, strictly hidden while streaming */}
+                          {/* Message Turn Action CTAs: Hidden by default, only shown on hover */}
                           {!(isStreaming && isLastTurn) && (
-                          <div className="flex items-center gap-1 pt-1 mt-1 select-none">
+                          <div className={`flex items-center gap-1 pt-1 mt-1 select-none transition-opacity duration-150 ${
+                            speakingMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"
+                          }`}>
                             {/* 0. Star / Bookmark Turn CTA */}
                             <div className="relative group">
                               <button data-ux-target-min="24"
@@ -5362,7 +5383,7 @@ export function GrokBotWorkspace() {
                                 className="h-7 w-7 rounded-lg hover:bg-[#181822] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#282836]"
                                 aria-label={speakingMsgId === msg.id ? "Stop voice playback" : "Read aloud with Text-to-Speech"}
                               >
-                                <Volume2 size={13} className={speakingMsgId === msg.id ? "text-[#ff7a00] animate-pulse" : ""} />
+                                <Volume2 size={13} className={speakingMsgId === msg.id ? "text-[#f8a87c] animate-pulse" : ""} />
                               </button>
                               <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center px-2 py-0.5 rounded-md bg-[#161620] border border-[#262634] text-[10px] font-mono text-neutral-300 whitespace-nowrap shadow-lg z-20">
                                 {speakingMsgId === msg.id ? "Stop reading" : "Read aloud (TTS)"}
@@ -5411,24 +5432,24 @@ export function GrokBotWorkspace() {
               }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#181824]/95 border font-mono text-[11px] shadow-xl transition-all cursor-pointer backdrop-blur-md ${
                 isStreaming
-                  ? "border-[#ff7a00] text-white bg-[#221812]/95 shadow-[0_0_20px_rgba(255,122,0,0.5)] ring-1 ring-[#ff7a00]/60 animate-bounce"
-                  : "border-[#ff7a00]/40 text-[#ff7a00] hover:bg-[#ff7a00] hover:text-black hover:shadow-[0_0_15px_rgba(255,122,0,0.4)]"
+                  ? "border-[#f8a87c] text-white bg-[#221812]/95 shadow-[0_0_20px_rgba(248,168,124,0.5)] ring-1 ring-[#f8a87c]/60 animate-bounce"
+                  : "border-[#f8a87c]/40 text-[#f8a87c] hover:bg-[#f8a87c] hover:text-black hover:shadow-[0_0_15px_rgba(248,168,124,0.4)]"
               }`}
               title="Jump to latest turn"
             >
               {isStreaming ? (
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff7a00] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff7a00]" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f8a87c] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#f8a87c]" />
                   </span>
                   <span>Generating response</span>
                   {turnTelemetry?.tokensPerSec ? (
-                    <span className="px-1.5 py-0.2 rounded bg-[#ff7a00]/20 text-[#ff7a00] font-bold text-[10px]">
+                    <span className="px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#f8a87c] font-bold text-[10px]">
                       {turnTelemetry.tokensPerSec.toFixed(0)} t/s
                     </span>
                   ) : (
-                    <span className="px-1.5 py-0.2 rounded bg-[#ff7a00]/20 text-[#ff7a00] font-bold text-[10px]">
+                    <span className="px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#f8a87c] font-bold text-[10px]">
                       Live
                     </span>
                   )}
@@ -5436,7 +5457,7 @@ export function GrokBotWorkspace() {
               ) : (
                 <span>Scroll to latest</span>
               )}
-              <ChevronDown size={14} className={isStreaming ? "animate-pulse text-[#ff7a00]" : ""} />
+              <ChevronDown size={14} className={isStreaming ? "animate-pulse text-[#f8a87c]" : ""} />
             </button>
           </div>
         )}
@@ -5452,7 +5473,7 @@ export function GrokBotWorkspace() {
               ? "bg-emerald-950/90 dark:bg-emerald-950/90 border-emerald-500/40 text-emerald-200 shadow-emerald-500/10"
               : loopModeToast.mode === "mission"
               ? "bg-cyan-950/90 dark:bg-cyan-950/90 border-cyan-500/40 text-cyan-200 shadow-cyan-500/10"
-              : "bg-slate-900/90 dark:bg-[#14141c]/95 border-[#ff7a00]/40 text-neutral-100 shadow-[#ff7a00]/10"
+              : "bg-slate-900/90 dark:bg-[#14141c]/95 border-[#f8a87c]/40 text-neutral-100 shadow-[#f8a87c]/10"
           }`}
         >
           <div
@@ -5461,7 +5482,7 @@ export function GrokBotWorkspace() {
                 ? "bg-emerald-500/20 text-emerald-400"
                 : loopModeToast.mode === "mission"
                 ? "bg-cyan-500/20 text-cyan-400"
-                : "bg-amber-500/20 text-[#ff7a00]"
+                : "bg-amber-500/20 text-[#f8a87c]"
             }`}
           >
             {loopModeToast.mode === "goal" ? (
@@ -5497,8 +5518,8 @@ export function GrokBotWorkspace() {
           {requestQueue.length > 0 && (
             <div className="flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-[#14141c]/95 border border-[#2a2a38] text-[11px] font-mono text-neutral-300 shadow-md animate-in fade-in duration-100">
               <div className="flex items-center gap-2 truncate">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] animate-pulse" />
-                <span className="text-[#ff7a00] font-semibold">Queue:</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] animate-pulse" />
+                <span className="text-[#f8a87c] font-semibold">Queue:</span>
                 <span className="truncate text-neutral-300">
                   {requestQueue.length} upcoming request{requestQueue.length > 1 ? "s" : ""} (Next: "{requestQueue[0]}")
                 </span>
@@ -5536,7 +5557,7 @@ export function GrokBotWorkspace() {
                           setShowLightboxMeta(false);
                           setLightboxImageUrl({ url: f.url, name: f.file_name });
                         }}
-                        className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#ff7a00]/50 transition-all"
+                        className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#f8a87c]/50 transition-all"
                         title="Click to view full image preview"
                       >
                         <img
@@ -5549,7 +5570,7 @@ export function GrokBotWorkspace() {
                         />
                       </button>
                     ) : (
-                      <Paperclip size={13} className="text-[#ff7a00] shrink-0" />
+                      <Paperclip size={13} className="text-[#f8a87c] shrink-0" />
                     )}
                     <span className="max-w-[160px] truncate text-[11px] font-medium">{f.file_name}</span>
                     <span className="text-[9px] text-slate-500 dark:text-neutral-500 font-mono">({Math.round(f.size / 1024) || 1} KB)</span>
@@ -5779,7 +5800,7 @@ export function GrokBotWorkspace() {
                   transform: plusMenuDragY > 0 ? "translateY(" + plusMenuDragY + "px)" : undefined,
                   transition: isPlusMenuDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
-                className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-0 md:mb-3 max-h-[82vh] md:max-h-none flex flex-col rounded-2xl md:rounded-xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-2xl backdrop-blur-xl p-3 sm:p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left "
+                className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-0 max-h-[85vh] md:max-h-[520px] flex flex-col rounded-2xl md:rounded-b-none md:rounded-t-2xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-white/[0.08] md:border-b-0 shadow-none backdrop-blur-none p-3 sm:p-4 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left overflow-hidden ring-0"
               >
                 {/* Mobile iOS-style Swipe-down Handle (Kéo để đóng) */}
                 <div
@@ -5820,172 +5841,465 @@ export function GrokBotWorkspace() {
                   className="md:hidden flex flex-col items-center justify-center pt-1 pb-2.5 -mt-1 cursor-grab active:cursor-grabbing shrink-0 touch-none select-none active:opacity-75 transition-opacity"
                   aria-label="Kéo để đóng"
                 >
-                  <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full hover:bg-[#ff7a00] transition-colors" />
+                  <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full hover:bg-[#f8a87c] transition-colors" />
                   <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 mt-1 select-none flex items-center gap-1 opacity-75">
                     <span>Kéo để đóng</span>
                   </span>
                 </div>
 
-                <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
-                      Add to prompt
-                    </span>
-                  </div>
+                {/* Header: Simple contextual label or filter hint */}
+                {(() => {
+                  const m = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                  const trigger = m ? m[1] : null;
+                  const query = m ? m[2] : "";
 
-                  {/* Instant Filter Search inside Popover */}
-                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#262638] focus-within:border-[#ff7a00]/50 rounded-lg px-2 py-1 text-xs sm:w-56 transition-colors">
-                    <Search size={12} className="text-neutral-400 shrink-0" />
-                    <input
-                      type="text"
-                      autoFocus
-                      value={plusMenuSearch}
-                      onChange={(e) => {
-                        setPlusMenuSearch(e.target.value);
-                        setPlusMenuSelectedIndex(-1);
-                      }}
-                      onKeyDown={(e) => {
-                        // Gather navigable items across loop modes, apps, and subagents
-                        const q = plusMenuSearch.trim().toLowerCase();
-                        let agentApps = currentAgentMcpClients.length > 0
-                          ? currentAgentMcpClients.map((c) => {
-                              const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
-                              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase())));
-                              return { type: "app" as const, id: matched?.id || rawKey, name: matched?.name || c.name || c.key };
-                            })
-                          : APPS_CATALOG.map((a) => ({ type: "app" as const, id: a.id, name: a.name }));
-                        if (q) agentApps = agentApps.filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q));
+                  if (trigger === "/") {
+                    return null; // Image 1 shows clean list directly under top rounded border
+                  }
 
-                        const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
-                        const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
-                        let displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
-                        if (q) displayAgents = displayAgents.filter((ag) => ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q) || ag.id.toLowerCase().includes(q));
-                        const agentItems = displayAgents.map((ag) => ({ type: "subagent" as const, id: ag.id, name: ag.name }));
+                  if (trigger === "@") {
+                    return null; // Image 2 shows clean list starting with 'Add' group directly
+                  }
 
-                        const allNavItems = [...agentApps, ...agentItems];
-                        if (allNavItems.length === 0) return;
+                  return (
+                    <div className="px-1 pb-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
+                      <span className="text-xs font-mono text-slate-800 dark:text-neutral-200 font-semibold tracking-wide">
+                        Add to prompt
+                      </span>
+                      <span className="text-neutral-400 dark:text-neutral-500 text-[11px] font-mono select-none">
+                        Gõ <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 font-bold text-[#f8a87c]">@</kbd> tìm kiếm hoặc <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 font-bold text-cyan-400">/</kbd> session commands
+                      </span>
+                    </div>
+                  );
+                })()}
 
-                        if (e.key === "ArrowDown") {
-                          e.preventDefault();
-                          setPlusMenuSelectedIndex((prev) => (prev + 1 >= allNavItems.length ? 0 : prev + 1));
-                        } else if (e.key === "ArrowUp") {
-                          e.preventDefault();
-                          setPlusMenuSelectedIndex((prev) => (prev <= 0 ? allNavItems.length - 1 : prev - 1));
-                        } else if (e.key === "PageDown") {
-                          e.preventDefault();
-                          // Jump 5 items forward or scroll container down
-                          setPlusMenuSelectedIndex((prev) => Math.min(allNavItems.length - 1, (prev < 0 ? 0 : prev) + 5));
-                          if (appsScrollRef.current) {
-                            appsScrollRef.current.scrollTop += 160;
-                          }
-                          if (subAgentsScrollRef.current) {
-                            subAgentsScrollRef.current.scrollTop += 160;
-                          }
-                        } else if (e.key === "PageUp") {
-                          e.preventDefault();
-                          // Jump 5 items backward or scroll container up
-                          setPlusMenuSelectedIndex((prev) => Math.max(0, (prev < 0 ? 0 : prev) - 5));
-                          if (appsScrollRef.current) {
-                            appsScrollRef.current.scrollTop -= 160;
-                          }
-                          if (subAgentsScrollRef.current) {
-                            subAgentsScrollRef.current.scrollTop -= 160;
-                          }
-                        } else if (e.key === "Home" && !plusMenuSearch) {
-                          e.preventDefault();
-                          // Jump immediately to the first item and scroll to top
-                          setPlusMenuSelectedIndex(0);
-                          if (appsScrollRef.current) {
-                            appsScrollRef.current.scrollTop = 0;
-                          }
-                          if (subAgentsScrollRef.current) {
-                            subAgentsScrollRef.current.scrollTop = 0;
-                          }
-                        } else if (e.key === "End" && !plusMenuSearch) {
-                          e.preventDefault();
-                          // Jump immediately to the last item and scroll to bottom
-                          setPlusMenuSelectedIndex(allNavItems.length - 1);
-                          if (appsScrollRef.current) {
-                            appsScrollRef.current.scrollTop = appsScrollRef.current.scrollHeight;
-                          }
-                          if (subAgentsScrollRef.current) {
-                            subAgentsScrollRef.current.scrollTop = subAgentsScrollRef.current.scrollHeight;
-                          }
-                        } else if (!plusMenuSearch && (e.key === "0" || e.key === "1" || e.key === "2" || e.key === "3")) {
-                          e.preventDefault();
-                          if (e.key === "0") {
+                {(() => {
+                  const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                  const activeTrigger = triggerMatch ? triggerMatch[1] : null;
+                  const activeQuery = triggerMatch ? triggerMatch[2].toLowerCase() : "";
+
+                  // If user is searching specifically via '@', display dedicated Column View of Agents/Subagents
+                  // =========================================================================
+                  // DEDICATED POPUP FOR '/' (Chat Session & Tools Actions) & '@' (Add, Plugins, Agents)
+                  // =========================================================================
+                  if (activeTrigger === "/" || activeTrigger === "@") {
+                    if (activeTrigger === "/") {
+                      // -------------------------------------------------------------
+                      // MENU FOR '/': Session actions & agent control (Image 1 reference)
+                      // -------------------------------------------------------------
+                      const isPinned = selectedChatId ? pinnedChatIds.includes(selectedChatId) : false;
+                      const currentTokens = turnTelemetry?.tokenCount || 0;
+                      const maxContext = 128000;
+                      const usagePercent = Math.round((currentTokens / maxContext) * 100);
+
+                      const sessionCommands = [
+                        {
+                          id: "cmd-goal",
+                          title: "Goal",
+                          description: "Set a goal to keep pursuing",
+                          icon: <Target size={14} className="text-emerald-400" />,
+                          action: () => {
                             setIsPlusMenuOpen(false);
-                            fileInputRef.current?.click();
-                          }
-                          if (e.key === "1") handleSelectLoopMode("default");
-                          if (e.key === "2") handleSelectLoopMode("goal");
-                          if (e.key === "3") handleSelectLoopMode("mission");
-                        } else if (e.key === "Tab") {
-                          e.preventDefault();
-                          // Cycle focus/selection between Apps column and Subagents column
-                          const appsLength = agentApps.length;
-                          const totalLength = allNavItems.length;
-                          if (totalLength === 0) return;
-
-                          if (e.shiftKey) {
-                            // Shift+Tab: backward column switch
-                            if (plusMenuSelectedIndex >= appsLength) {
-                              setPlusMenuSelectedIndex(0);
-                            } else if (plusMenuSelectedIndex >= 0) {
-                              setPlusMenuSelectedIndex(-1);
-                            } else {
-                              setPlusMenuSelectedIndex(appsLength > 0 ? appsLength : 0);
-                            }
-                          } else {
-                            // Tab: forward column switch (Search -> Apps -> Subagents -> Search)
-                            if (plusMenuSelectedIndex < 0) {
-                              setPlusMenuSelectedIndex(0);
-                            } else if (plusMenuSelectedIndex < appsLength && appsLength < totalLength) {
-                              setPlusMenuSelectedIndex(appsLength);
-                            } else {
-                              setPlusMenuSelectedIndex(-1);
-                            }
-                          }
-                        } else if (e.key === "Enter") {
-                          if (plusMenuSelectedIndex >= 0 && plusMenuSelectedIndex < allNavItems.length) {
-                            e.preventDefault();
-                            const selected = allNavItems[plusMenuSelectedIndex];
+                            setInputText("");
+                            handleSelectLoopMode("goal");
+                            setForkToast("Đã kích hoạt Goal mode (Bám sát mục tiêu)");
+                            setTimeout(() => setForkToast(null), 3000);
+                          },
+                        },
+                        {
+                          id: "cmd-mcp",
+                          title: "MCP",
+                          description: "Show MCP server status",
+                          hasChevron: true,
+                          icon: <Activity size={14} className="text-neutral-400" />,
+                          action: () => {
                             setIsPlusMenuOpen(false);
-                            setInputText((prev) => {
-                              if (selected.type === "app") {
-                                const exists = prev.includes(`/${selected.id} `) || prev.endsWith(`/${selected.id}`);
-                                if (exists) {
-                                  return prev.replace(new RegExp(`/${selected.id}\\s*`, "g"), "").trimStart();
-                                }
-                                return prev ? `${prev} /${selected.id} ` : `/${selected.id} `;
-                              } else {
-                                const exists = prev.includes(`@${selected.name}`);
-                                if (exists) {
-                                  return prev.replace(new RegExp(`@${selected.name}\\s*`, "g"), "").trimStart();
-                                }
-                                return prev ? `${prev} @${selected.name} ` : `@${selected.name} `;
-                              }
-                            });
-                            textareaRef.current?.focus();
-                          }
-                        }
-                      }}
-                      placeholder="Search files, apps, agents..."
-                      className="w-full bg-transparent border-0 text-[11px] text-slate-900 dark:text-white placeholder:text-neutral-500 focus:outline-none"
-                    />
-                    {plusMenuSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setPlusMenuSearch("")}
-                        className="text-neutral-400 hover:text-white cursor-pointer"
-                      >
-                        <X size={11} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+                            setInputText("");
+                            handleToggleBotInfo(false);
+                            setRightTab("Apps");
+                          },
+                        },
+                        {
+                          id: "cmd-memories",
+                          title: "Memories",
+                          description: "Xem và quản lý bộ nhớ của agent",
+                          icon: <Layers size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            handleToggleBotInfo(false);
+                            setRightTab("Details");
+                            setDetailSubTab("Memory");
+                          },
+                        },
+                        {
+                          id: "cmd-new-chat",
+                          title: "New chat",
+                          description: "Start a blank chat in the same agent",
+                          icon: <Plus size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            handleNewChat();
+                          },
+                        },
+                        {
+                          id: "cmd-pet",
+                          title: "Pet",
+                          description: "Wake or tuck away the desktop pet",
+                          icon: <Sparkles size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            setForkToast("Desktop Pet is ready in fleet");
+                            setTimeout(() => setForkToast(null), 2500);
+                          },
+                        },
+                        {
+                          id: "cmd-pin-chat",
+                          title: isPinned ? "Unpin chat" : "Pin chat",
+                          description: isPinned ? "Bỏ ghim phiên hội thoại này" : "Keep this chat in the sidebar",
+                          icon: isPinned ? <PinOff size={14} className="text-amber-400" /> : <Pin size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            if (selectedChatId) {
+                              togglePinChat(selectedChatId);
+                            }
+                          },
+                        },
+                        {
+                          id: "cmd-plan-mode",
+                          title: "Plan mode",
+                          description: "Turn plan mode on",
+                          icon: <Star size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            handleSelectLoopMode("goal");
+                            setForkToast("Plan mode enabled");
+                            setTimeout(() => setForkToast(null), 2500);
+                          },
+                        },
+                        {
+                          id: "cmd-rename",
+                          title: "Rename",
+                          description: "Rename the current chat",
+                          icon: <Edit2 size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            if (selectedChatId) {
+                              setEditingChatId(selectedChatId);
+                              setEditingChatTitle(selectedChat?.title || "");
+                            }
+                          },
+                        },
+                        {
+                          id: "cmd-side",
+                          title: "Side",
+                          description: "Start a temporary side chat",
+                          icon: <MessageSquare size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            handleForkSession(messages.length > 0 ? messages.length - 1 : 0);
+                            setForkToast("Đã mở temporary side chat");
+                            setTimeout(() => setForkToast(null), 3000);
+                          },
+                        },
+                        {
+                          id: "cmd-sketch",
+                          title: "Sketch",
+                          description: "Draw a sketch",
+                          icon: <Layers size={14} className="text-teal-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            handleToggleBotInfo(false);
+                            setRightTab("Computer");
+                          },
+                        },
+                        {
+                          id: "cmd-status",
+                          title: "Status",
+                          description: `Show chat ID, context usage (${usagePercent}% used)`,
+                          icon: <Activity size={14} className="text-neutral-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            setForkToast(`Session: ${selectedChatId || "default"} | Context: ${usagePercent}%`);
+                            setTimeout(() => setForkToast(null), 4000);
+                          },
+                        },
+                      ];
 
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 pt-2.5 items-stretch overflow-y-auto md:overflow-visible pr-1 sm:pr-0.5 overscroll-contain">
+                      const filteredCommands = activeQuery
+                        ? sessionCommands.filter((c) =>
+                            c.title.toLowerCase().includes(activeQuery) ||
+                            c.description.toLowerCase().includes(activeQuery) ||
+                            c.id.toLowerCase().includes(activeQuery)
+                          )
+                        : sessionCommands;
+
+                      return (
+                        <div className="flex-1 flex flex-col pt-1 max-h-[60vh] md:max-h-[460px] overflow-hidden">
+                          <div className="flex-1 overflow-y-auto space-y-0.5 pr-1 transform-gpu overscroll-contain">
+                            {filteredCommands.length === 0 ? (
+                              <div className="py-8 text-center text-xs text-neutral-500 font-mono">
+                                Không tìm thấy lệnh nào khớp với "/{activeQuery}"
+                              </div>
+                            ) : (
+                              filteredCommands.map((cmd, idx) => {
+                                const isHighlighted = plusMenuSelectedIndex === idx;
+                                return (
+                                  <button
+                                    key={cmd.id}
+                                    type="button"
+                                    data-popover-nav-idx={idx}
+                                    onClick={cmd.action}
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors cursor-pointer group border ${
+                                      isHighlighted
+                                        ? "bg-slate-200 dark:bg-[#252530] text-slate-900 dark:text-white border-transparent shadow-xs"
+                                        : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-transparent hover:bg-slate-100 dark:hover:bg-[#1e1e28] border-transparent"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                      <div className="shrink-0 flex items-center justify-center opacity-85 group-hover:opacity-100">
+                                        {cmd.icon}
+                                      </div>
+                                      <div className="flex items-baseline gap-2.5 min-w-0 flex-1">
+                                        <span className="font-semibold text-xs text-slate-900 dark:text-white shrink-0">
+                                          {cmd.title}
+                                        </span>
+                                        <span className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
+                                          {cmd.description}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {cmd.hasChevron ? (
+                                      <ChevronRight size={13} className="text-neutral-500 shrink-0 ml-2 opacity-60 group-hover:opacity-100" />
+                                    ) : (
+                                      <span className="text-[10px] font-mono text-neutral-500 opacity-0 group-hover:opacity-100 shrink-0 ml-2">
+                                        ↵
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // -------------------------------------------------------------
+                    // MENU FOR '@': Add (Files, Browser, Modes), Plugins & Agents (Image 2 reference)
+                    // -------------------------------------------------------------
+                    // Group 1: Add
+                    const addActions = [
+                      {
+                        id: "action-files-folders",
+                        title: "Files and folders",
+                        description: "Tải lên tệp hoặc thư mục mã nguồn từ máy",
+                        icon: <Paperclip size={14} className="text-[#f8a87c]" />,
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                          fileInputRef.current?.click();
+                        },
+                      },
+                      {
+                        id: "action-attach-browser",
+                        title: "Attach Microsoft Edge",
+                        description: `Live browser của ${selectedAgent.name}`,
+                        icon: <Globe size={14} className="text-cyan-400" />,
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                          handleSetBrowserModalOpen(true);
+                        },
+                      },
+                      {
+                        id: "mode-goal",
+                        title: "Goal",
+                        description: "Set a goal to keep pursuing",
+                        icon: <Target size={14} className="text-emerald-400" />,
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                          handleSelectLoopMode("goal");
+                        },
+                      },
+                      {
+                        id: "mode-plan",
+                        title: "Plan mode",
+                        description: "Turn plan mode on",
+                        icon: <Star size={14} className="text-amber-400" />,
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                          handleSelectLoopMode("goal");
+                        },
+                      },
+                      {
+                        id: "mode-sketch",
+                        title: "Sketch",
+                        description: "Draw a sketch",
+                        icon: <Layers size={14} className="text-teal-400" />,
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                          handleToggleBotInfo(false);
+                          setRightTab("Computer");
+                        },
+                      },
+                    ];
+
+                    // Group 2: Plugins (MCP Tools / Connected Apps)
+                    const rawApps = currentAgentMcpClients.length > 0
+                      ? currentAgentMcpClients.map((c) => {
+                          const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
+                          const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase())));
+                          return {
+                            id: matched?.id || rawKey,
+                            name: matched?.name || c.name || c.key,
+                            logoUrl: matched?.logoUrl || `https://logos.composio.dev/api/${rawKey}`,
+                            description: matched?.description || "MCP tool integration",
+                          };
+                        })
+                      : APPS_CATALOG.map((a) => ({ id: a.id, name: a.name, logoUrl: a.logoUrl, description: a.description }));
+
+                    const pluginActions = rawApps.map((app) => ({
+                      id: `plugin-${app.id}`,
+                      title: app.name,
+                      description: app.description,
+                      icon: (
+                        <div className="h-5 w-5 rounded bg-slate-100 dark:bg-white/10 flex items-center justify-center p-0.5 shrink-0 overflow-hidden">
+                          <img
+                            src={app.logoUrl}
+                            alt={app.name}
+                            className="h-3.5 w-3.5 object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
+                          />
+                        </div>
+                      ),
+                      action: () => {
+                        setIsPlusMenuOpen(false);
+                        setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `/${app.id} `));
+                        textareaRef.current?.focus();
+                      },
+                    }));
+
+                    // Group 3: Agents (Subagents & Team Agents)
+                    const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
+                    const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
+                    const displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+
+                    const agentActions = displayAgents.map((ag) => ({
+                      id: `agent-${ag.id}`,
+                      title: ag.name,
+                      description: ag.roleTag || ag.description || "Fast helper subagent running in fleet",
+                      icon: (
+                        <div className="h-5 w-5 rounded-full bg-gradient-to-br from-amber-400 to-[#f8a87c] flex items-center justify-center text-black font-bold text-[10px] shrink-0 shadow-2xs">
+                          {ag.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      ),
+                      action: () => {
+                        setIsPlusMenuOpen(false);
+                        setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${ag.name} `));
+                        textareaRef.current?.focus();
+                      },
+                    }));
+
+                    const filterItems = <T extends { title: string; description: string; id: string }>(items: T[]) => {
+                      if (!activeQuery) return items;
+                      return items.filter((it) =>
+                        it.title.toLowerCase().includes(activeQuery) ||
+                        it.description.toLowerCase().includes(activeQuery) ||
+                        it.id.toLowerCase().includes(activeQuery)
+                      );
+                    };
+
+                    const filteredAdd = filterItems(addActions);
+                    const filteredPlugins = filterItems(pluginActions);
+                    const filteredAgents = filterItems(agentActions);
+
+                    const allAtItems = [
+                      ...filteredAdd,
+                      ...filteredPlugins,
+                      ...filteredAgents,
+                    ];
+
+                    const groups = [
+                      { name: "Add", items: filteredAdd },
+                      { name: "Plugins", items: filteredPlugins },
+                      { name: "Agents", items: filteredAgents },
+                    ].filter((g) => g.items.length > 0);
+
+                    return (
+                      <div className="flex-1 flex flex-col pt-1.5 max-h-[60vh] md:max-h-[460px] overflow-hidden">
+                        <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 transform-gpu overscroll-contain">
+                          {allAtItems.length === 0 ? (
+                            <div className="py-8 text-center text-xs text-neutral-500 font-mono">
+                              Không tìm thấy kết quả khớp với "@{activeQuery}"
+                            </div>
+                          ) : (
+                            groups.map((group) => (
+                              <div key={group.name} className="space-y-1">
+                                <div className="px-2 pt-1 text-[11px] font-medium text-neutral-400 select-none">
+                                  {group.name}
+                                </div>
+                                <div className="space-y-0.5">
+                                  {group.items.map((item) => {
+                                    const globalIdx = allAtItems.findIndex((it) => it.id === item.id);
+                                    const isHighlighted = plusMenuSelectedIndex === globalIdx;
+
+                                    return (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        data-popover-nav-idx={globalIdx}
+                                        onClick={item.action}
+                                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer group border ${
+                                          isHighlighted
+                                            ? "bg-slate-200 dark:bg-[#252530] text-slate-900 dark:text-white border-transparent shadow-xs"
+                                            : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-transparent hover:bg-slate-100 dark:hover:bg-[#1e1e28] border-transparent"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                          <div className="shrink-0 flex items-center justify-center">
+                                            {item.icon}
+                                          </div>
+                                          <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                                            <span className="font-semibold text-xs text-slate-900 dark:text-white shrink-0">
+                                              {item.title}
+                                            </span>
+                                            <span className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
+                                              {item.description}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <span className="text-[10px] font-mono text-neutral-500 opacity-0 group-hover:opacity-100 shrink-0 ml-2">
+                                          ↵
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Default 3-column view when opened without typing @ or / (via '+' button)
+                  return (
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2.5 items-stretch overflow-y-auto md:overflow-y-auto max-h-[60vh] md:max-h-[460px] pr-1 sm:pr-1.5 overscroll-contain">
                   {/* Column 1: Add Files & Work Mode (Add files at the top, followed by clear work modes) */}
                   <div className="flex flex-col justify-between space-y-2 h-full">
                     {/* 1. Add Files Option (Placed at the very top as requested) */}
@@ -5995,7 +6309,7 @@ export function GrokBotWorkspace() {
                           <div className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">Tệp đính kèm</div>
                           <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Tải lên tệp hoặc thư mục</div>
                         </div>
-                        <Paperclip size={13} className="text-[#ff7a00]" />
+                        <Paperclip size={13} className="text-[#f8a87c]" />
                       </div>
 
                       <button
@@ -6004,14 +6318,14 @@ export function GrokBotWorkspace() {
                           setIsPlusMenuOpen(false);
                           fileInputRef.current?.click();
                         }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border border-[#ff7a00]/30 bg-[#ff7a00]/10 hover:bg-[#ff7a00]/20 text-slate-900 dark:text-white group shadow-xs"
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border border-[#f8a87c]/30 bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 text-slate-900 dark:text-white group shadow-xs"
                       >
-                        <div className="h-7 w-7 rounded-lg bg-[#ff7a00] flex items-center justify-center text-black shrink-0 shadow-xs transition-transform group-hover:scale-105">
+                        <div className="h-7 w-7 rounded-lg bg-[#f8a87c] flex items-center justify-center text-black shrink-0 shadow-xs transition-transform group-hover:scale-105">
                           <Paperclip size={14} className="stroke-[2.5]" />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-[#ff7a00] transition-colors">
+                            <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-[#f8a87c] transition-colors">
                               Add Files
                             </span>
                             <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-neutral-400">0</span>
@@ -6039,12 +6353,12 @@ export function GrokBotWorkspace() {
                         onClick={() => handleSelectLoopMode("default")}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "default"
-                            ? "bg-amber-500/10 dark:bg-[#1f1f2e] border-[#ff7a00] text-slate-900 dark:text-white shadow-xs"
+                            ? "bg-amber-500/10 dark:bg-[#1f1f2e] border-[#f8a87c] text-slate-900 dark:text-white shadow-xs"
                             : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
                         }`}
                       >
                         <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-transparent shadow-2xs flex items-center justify-center text-neutral-600 dark:text-neutral-300 mt-0.5 shrink-0 transition-colors">
-                          <CircleDot size={13} className={activeLoopMode === "default" ? "text-[#ff7a00]" : "text-slate-500 dark:text-neutral-400"} />
+                          <CircleDot size={13} className={activeLoopMode === "default" ? "text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400"} />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
@@ -6053,7 +6367,7 @@ export function GrokBotWorkspace() {
                               <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-neutral-400">1</span>
                             </div>
                             {activeLoopMode === "default" && (
-                              <span className="h-2 w-2 rounded-full bg-[#ff7a00] shrink-0 ml-1" />
+                              <span className="h-2 w-2 rounded-full bg-[#f8a87c] shrink-0 ml-1" />
                             )}
                           </div>
                           <span className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug">
@@ -6129,7 +6443,8 @@ export function GrokBotWorkspace() {
                         <span>Connected Apps</span>
                         <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-white/10 text-[9px] font-mono text-slate-700 dark:text-neutral-300">
                           {(() => {
-                            const q = plusMenuSearch.trim().toLowerCase();
+                            const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
                             let arr = currentAgentMcpClients.length > 0
                               ? currentAgentMcpClients.map((c) => {
                                   const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
@@ -6150,7 +6465,7 @@ export function GrokBotWorkspace() {
                             handleToggleBotInfo(false);
                             setRightTab("Apps");
                           }}
-                          className="p-1 rounded-md text-neutral-400 hover:text-[#ff7a00] hover:bg-white/5 transition-colors cursor-pointer"
+                          className="p-1 rounded-md text-neutral-400 hover:text-[#f8a87c] hover:bg-white/5 transition-colors cursor-pointer"
                           aria-label="View Apps in sidebar"
                         >
                           <ExternalLink size={12} />
@@ -6164,11 +6479,12 @@ export function GrokBotWorkspace() {
                     <div
                       ref={appsScrollRef}
                       onScroll={(e) => { lastAppsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
-                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1.5 overscroll-contain transform-gpu smooth-scroll-container"
+                      className="flex-1 max-h-[36vh] sm:max-h-[360px] overflow-y-auto space-y-1.5 pr-1.5 overscroll-contain transform-gpu smooth-scroll-container"
                     >
                       {(() => {
                         // Priority 1: All apps loaded from Agent's active MCP clients with instant search
-                        const q = plusMenuSearch.trim().toLowerCase();
+                        const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
                         let agentApps = currentAgentMcpClients.length > 0
                           ? currentAgentMcpClients.map((c) => {
                               const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
@@ -6217,7 +6533,7 @@ export function GrokBotWorkspace() {
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
-                                ? "bg-[#ff7a00]/15 dark:bg-[#ff7a00]/20 border-[#ff7a00] text-slate-900 dark:text-white shadow-xs"
+                                ? "bg-[#f8a87c]/15 dark:bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white shadow-xs"
                                 : isAlreadyAdded
                                 ? "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/40 text-slate-900 dark:text-white"
                                 : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
@@ -6238,7 +6554,7 @@ export function GrokBotWorkspace() {
                               <span className="truncate text-[11px]">{app.name}</span>
                             </div>
                             <span className={`text-[9px] font-mono shrink-0 ${
-                              isAlreadyAdded ? "text-amber-400 font-semibold" : "text-neutral-500 group-hover:text-[#ff7a00]"
+                              isAlreadyAdded ? "text-amber-400 font-semibold" : "text-neutral-500 group-hover:text-[#f8a87c]"
                             }`}>
                               {isAlreadyAdded ? "Added" : "+Tool"}
                             </span>
@@ -6256,7 +6572,8 @@ export function GrokBotWorkspace() {
                         <span>Subagents</span>
                         <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-white/10 text-[9px] font-mono text-slate-700 dark:text-neutral-300">
                           {(() => {
-                            const q = plusMenuSearch.trim().toLowerCase();
+                            const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
                             const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
                             const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
                             let arr = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
@@ -6273,7 +6590,7 @@ export function GrokBotWorkspace() {
                             handleToggleBotInfo(false);
                             setRightTab("Agents");
                           }}
-                          className="p-1 rounded-md text-neutral-400 hover:text-[#ff7a00] hover:bg-white/5 transition-colors cursor-pointer"
+                          className="p-1 rounded-md text-neutral-400 hover:text-[#f8a87c] hover:bg-white/5 transition-colors cursor-pointer"
                           aria-label="View Subagents in sidebar"
                         >
                           <ExternalLink size={12} />
@@ -6287,11 +6604,12 @@ export function GrokBotWorkspace() {
                     <div
                       ref={subAgentsScrollRef}
                       onScroll={(e) => { lastSubAgentsScrollTopRef.current = (e.target as HTMLElement).scrollTop; }}
-                      className="flex-1 max-h-[42vh] sm:max-h-[310px] overflow-y-auto space-y-1 pr-1.5 overscroll-contain transform-gpu smooth-scroll-container"
+                      className="flex-1 max-h-[36vh] sm:max-h-[360px] overflow-y-auto space-y-1.5 pr-1.5 overscroll-contain transform-gpu smooth-scroll-container"
                     >
                       {(() => {
                         // All subagents configured on selected agent with instant search
-                        const q = plusMenuSearch.trim().toLowerCase();
+                        const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
                         const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
                         const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
                         // If no direct subagents configured yet, show all team members across fleet
@@ -6311,11 +6629,12 @@ export function GrokBotWorkspace() {
 
                         // Calculate offset for subagents keyboard index
                         const appsCount = (() => {
-                          const qApp = plusMenuSearch.trim().toLowerCase();
+                          const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
                           let arr = currentAgentMcpClients.length > 0
                             ? currentAgentMcpClients.map((c) => c.key.toLowerCase().replace(/^composio_/, ""))
                             : APPS_CATALOG.map((a) => a.id);
-                          if (qApp) arr = arr.filter((id) => id.includes(qApp));
+                          if (q) arr = arr.filter((id) => id.includes(q));
                           return arr.length;
                         })();
 
@@ -6352,7 +6671,7 @@ export function GrokBotWorkspace() {
                               <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
                                 isAlreadyMentioned
                                   ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-                                  : "bg-amber-500/15 dark:bg-[#ff7a00]/20 border-amber-500/40 dark:border-[#ff7a00]/30 text-[#ff7a00]"
+                                  : "bg-amber-500/15 dark:bg-[#f8a87c]/20 border-amber-500/40 dark:border-[#f8a87c]/30 text-[#f8a87c]"
                               }`}>
                                 {isAlreadyMentioned ? <Check size={11} className="stroke-[2.5]" /> : ag.name.slice(0, 1)}
                               </div>
@@ -6370,9 +6689,11 @@ export function GrokBotWorkspace() {
                     </div>
                   </div>
                 </div>
+                  );
+                })()}
 
                 {/* Popover Keyboard Shortcuts Footer Hint Bar */}
-                <div className="mt-3 pt-2 border-t border-slate-200 dark:border-[#222230] flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-500">
+                <div className={`mt-3 pt-2 border-t border-slate-200 dark:border-[#222230] flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-500 ${inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/) ? "hidden" : ""}`}>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
                       <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">↑/↓</span>
@@ -6397,7 +6718,7 @@ export function GrokBotWorkspace() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1">
-                      <span className="px-1.5 py-0.2 rounded bg-[#ff7a00]/20 text-[#ff7a00] font-bold border border-[#ff7a00]/30">↵ Enter</span>
+                      <span className="px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#f8a87c] font-bold border border-[#f8a87c]/30">↵ Enter</span>
                       <span>Chọn</span>
                     </span>
                     <span className="flex items-center gap-1">
@@ -6505,69 +6826,11 @@ export function GrokBotWorkspace() {
               );
             })()}
 
-            <form
-              id="tour-prompt-composer"
-              ref={composerFormRef}
-              onSubmit={handleSendMessage}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dragCounterRef.current += 1;
-                if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-                  setIsDraggingFiles(true);
-                }
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dragCounterRef.current -= 1;
-                if (dragCounterRef.current <= 0) {
-                  setIsDraggingFiles(false);
-                  dragCounterRef.current = 0;
-                }
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDraggingFiles(false);
-                dragCounterRef.current = 0;
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                  handleDropFiles(e.dataTransfer.files);
-                }
-              }}
-              className={`relative flex items-center gap-2 bg-white dark:bg-[#14141c] border ${
-                isDraggingFiles
-                  ? "border-[#ff7a00] ring-2 ring-[#ff7a00]/30 bg-amber-500/5 dark:bg-[#ff7a00]/10"
-                  : isRecording
-                  ? "border-red-500/60 ring-2 ring-red-500/20"
-                  : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[#ff7a00]/50 dark:focus-within:border-[#ff7a00]/50 focus-within:ring-1 focus-within:ring-[#ff7a00]/20"
-              } rounded-2xl px-4 py-2.5 shadow-xs transition-all overflow-hidden`}
-            >
-              {/* Drag-and-Drop Active Overlay */}
-              {isDraggingFiles && (
-                <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#ff7a00] rounded-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
-                  <Paperclip size={15} className="text-[#ff7a00] animate-bounce" />
-                  <span className="text-xs font-mono font-semibold text-white tracking-wide">
-                    Drop files here to attach to {selectedAgent.name}
-                  </span>
-                </div>
-              )}
-              {/* Hidden native file input */}
-              <input data-ux-target-min="16"
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              {/* Plus / Add Files, Apps & Agents Trigger */}
-              {(() => {
-                // Count active tools and mentions in prompt
+            {(() => {
+              const isMultiline = inputText.includes("\n");
+              
+              // Common Plus Button Trigger
+              const renderPlusButton = () => {
                 const activeMentionsCount = (inputText.match(/@[a-zA-Z0-9_-]+/g) || []).length;
                 const activeToolsCount = (inputText.match(/\/[a-zA-Z0-9_-]+/g) || []).length;
                 const totalActiveItems = activeMentionsCount + activeToolsCount;
@@ -6587,224 +6850,480 @@ export function GrokBotWorkspace() {
                         });
                       }}
                       disabled={isUploadingFile}
-                      className={`text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer p-1 rounded-full flex items-center justify-center shrink-0 ${
-                        isPlusMenuOpen ? "text-[#ff7a00] dark:text-[#ff7a00] rotate-45 scale-110" : ""
+                      className={`text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer p-1.5 rounded-full flex items-center justify-center shrink-0 ${
+                        isPlusMenuOpen ? "text-[#f8a87c] dark:text-[#f8a87c] rotate-45 scale-110" : "bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/[0.12]"
                       }`}
                       title="Add files, apps, or mention agents"
                     >
                       {isUploadingFile ? (
-                        <Loader2 size={16} className="animate-spin text-[#ff7a00]" />
+                        <Loader2 size={16} className="animate-spin text-[#f8a87c]" />
                       ) : (
                         <Plus size={16} className="transition-transform duration-200" />
                       )}
                     </button>
                     {totalActiveItems > 0 && !isPlusMenuOpen && (
-                      <span className="absolute -top-1 -right-1 h-3.5 min-w-[14px] px-1 rounded-full bg-[#ff7a00] text-black font-mono font-bold text-[8px] flex items-center justify-center shadow-xs pointer-events-none">
+                      <span className="absolute -top-1 -right-1 h-3.5 min-w-[14px] px-1 rounded-full bg-[#f8a87c] text-black font-mono font-bold text-[8px] flex items-center justify-center shadow-xs pointer-events-none">
                         {totalActiveItems}
                       </span>
                     )}
                   </div>
                 );
-              })()}
+              };
 
-            {/* Prompt Recipes & Templates Popover Trigger */}
-            <button
-              type="button"
-              onClick={() => setIsRecipesModalOpen(true)}
-              className="text-neutral-400 hover:text-[#ff7a00] transition-colors cursor-pointer p-0.5 shrink-0 flex items-center justify-center translate-y-[1px]"
-              title="Open Prompt Recipes & Templates"
-            >
-              <Sparkles size={15} />
-            </button>
+              // Common Command / Starred & Shortcuts Trigger (Prompt Assistant & Recipes)
+              const renderRecipesButton = () => (
+                <button
+                  type="button"
+                  onClick={() => setIsStarredShortcutsOpen(true)}
+                  className="text-neutral-400 hover:text-[#f8a87c] transition-colors cursor-pointer p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/[0.06] shrink-0 flex items-center justify-center relative"
+                  title="Đã đánh dấu sao & Phím tắt hệ thống (Ctrl+/)"
+                >
+                  <Command size={14} />
+                  {starredMsgIds.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-amber-400 ring-1 ring-[#0c0c0e]" />
+                  )}
+                </button>
+              );
 
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={inputText}
-              onChange={(e) => {
-                setInputText(e.target.value);
-                // Auto-expand height smoothly up to 130px
-                e.target.style.height = "auto";
-                e.target.style.height = Math.min(e.target.scrollHeight, 130) + "px";
-              }}
-              onKeyDown={(e) => {
-                // Fast Backspace LIFO tag deletion when cursor is at the very beginning of user-written text or prompt is composed only of tags
-                if (e.key === "Backspace") {
-                  const target = e.currentTarget;
-                  const start = target.selectionStart;
-                  const end = target.selectionEnd;
-                  // Only trigger tag deletion if there is no active text selection
-                  if (start === end) {
-                    const textBefore = target.value.substring(0, start);
-                    // Match trailing mention or tool right before cursor
-                    const trailingTagMatch = textBefore.match(/(@[a-zA-Z0-9_-]+|\/[a-zA-Z0-9_-]+)\s*$/);
-                    if (trailingTagMatch) {
+              // Common Textarea Element
+              const renderTextarea = () => (
+                <textarea
+                  ref={textareaRef}
+                  rows={isMultiline ? 2 : 1}
+                  value={inputText}
+                  onChange={(e) => {
+                    const newVal = e.target.value;
+                    setInputText(newVal);
+                    e.target.style.height = "auto";
+                    e.target.style.height = Math.min(e.target.scrollHeight, 220) + "px";
+
+                    const cursorPos = e.target.selectionStart || newVal.length;
+                    const textUpToCursor = newVal.slice(0, cursorPos);
+                    const triggerMatch = textUpToCursor.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+
+                    if (triggerMatch) {
+                      setPlusMenuSearch(triggerMatch[2]);
+                      if (!isPlusMenuOpen) {
+                        setIsPlusMenuOpen(true);
+                        setPlusMenuSelectedIndex(0);
+                      }
+                    } else if (isPlusMenuOpen) {
+                      // Automatically close popover when '@' or '/' was removed or cursor moved away
+                      setIsPlusMenuOpen(false);
+                      setPlusMenuSearch("");
+                      setPlusMenuSelectedIndex(-1);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (isPlusMenuOpen) {
+                      const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                      if (triggerMatch) {
+                        const q = triggerMatch[2].toLowerCase();
+                        const trigger = triggerMatch[1];
+
+                        if (trigger === "/") {
+                          // Session actions list for '/'
+                          const slashNavList = [
+                            { id: "cmd-goal", type: "action" },
+                            { id: "cmd-mcp", type: "action" },
+                            { id: "cmd-memories", type: "action" },
+                            { id: "cmd-new-chat", type: "action" },
+                            { id: "cmd-pet", type: "action" },
+                            { id: "cmd-pin-chat", type: "action" },
+                            { id: "cmd-plan-mode", type: "action" },
+                            { id: "cmd-rename", type: "action" },
+                            { id: "cmd-side", type: "action" },
+                            { id: "cmd-sketch", type: "action" },
+                            { id: "cmd-status", type: "action" },
+                          ];
+
+                          const slashTitles: Record<string, { title: string; desc: string }> = {
+                            "cmd-goal": { title: "Goal", desc: "Set a goal to keep pursuing" },
+                            "cmd-mcp": { title: "MCP", desc: "Show MCP server status" },
+                            "cmd-memories": { title: "Memories", desc: "Xem và quản lý bộ nhớ của agent" },
+                            "cmd-new-chat": { title: "New chat", desc: "Start a blank chat in the same agent" },
+                            "cmd-pet": { title: "Pet", desc: "Wake or tuck away the desktop pet" },
+                            "cmd-pin-chat": { title: "Pin chat", desc: "Keep this chat in the sidebar" },
+                            "cmd-plan-mode": { title: "Plan mode", desc: "Turn plan mode on" },
+                            "cmd-rename": { title: "Rename", desc: "Rename the current chat" },
+                            "cmd-side": { title: "Side", desc: "Start a temporary side chat" },
+                            "cmd-sketch": { title: "Sketch", desc: "Draw a sketch" },
+                            "cmd-status": { title: "Status", desc: "Show chat ID, context usage" },
+                          };
+
+                          const filteredSlash = q
+                            ? slashNavList.filter((it) => {
+                                const meta = slashTitles[it.id];
+                                return meta && (meta.title.toLowerCase().includes(q) || meta.desc.toLowerCase().includes(q));
+                              })
+                            : slashNavList;
+
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            if (filteredSlash.length > 0) setPlusMenuSelectedIndex((prev) => (prev + 1) % filteredSlash.length);
+                            return;
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            if (filteredSlash.length > 0) setPlusMenuSelectedIndex((prev) => (prev - 1 + filteredSlash.length) % filteredSlash.length);
+                            return;
+                          } else if (e.key === "Enter" || e.key === "Tab") {
+                            if (filteredSlash.length > 0 && plusMenuSelectedIndex >= 0 && plusMenuSelectedIndex < filteredSlash.length) {
+                              e.preventDefault();
+                              const selected = filteredSlash[plusMenuSelectedIndex];
+                              setIsPlusMenuOpen(false);
+                              setInputText("");
+
+                              if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
+                                handleSelectLoopMode("goal");
+                              } else if (selected.id === "cmd-mcp") {
+                                handleToggleBotInfo(false);
+                                setRightTab("Apps");
+                              } else if (selected.id === "cmd-memories") {
+                                handleToggleBotInfo(false);
+                                setRightTab("Details");
+                                setDetailSubTab("Memory");
+                              } else if (selected.id === "cmd-new-chat") {
+                                handleNewChat();
+                              } else if (selected.id === "cmd-pin-chat" && selectedChatId) {
+                                togglePinChat(selectedChatId);
+                              } else if (selected.id === "cmd-rename" && selectedChatId) {
+                                setEditingChatId(selectedChatId);
+                                setEditingChatTitle(selectedChat?.title || "");
+                              } else if (selected.id === "cmd-side") {
+                                handleForkSession(messages.length > 0 ? messages.length - 1 : 0);
+                              } else if (selected.id === "cmd-sketch") {
+                                handleToggleBotInfo(false);
+                                setRightTab("Computer");
+                              } else if (selected.id === "cmd-status") {
+                                setForkToast(`Session: ${selectedChatId || "default"}`);
+                                setTimeout(() => setForkToast(null), 3000);
+                              }
+                              return;
+                            }
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            setIsPlusMenuOpen(false);
+                            return;
+                          }
+                        } else if (trigger === "@") {
+                          // All Add, Plugins, and Agents list for '@'
+                          const rawApps = currentAgentMcpClients.length > 0
+                            ? currentAgentMcpClients.map((c) => {
+                                const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
+                                const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === rawKey || (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase())));
+                                return { id: matched?.id || rawKey, title: matched?.name || c.name || c.key, description: matched?.description || "" };
+                              })
+                            : APPS_CATALOG.map((a) => ({ id: a.id, title: a.name, description: a.description }));
+
+                          const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
+                          const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
+                          const displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+
+                          const allAtNav: Array<{ id: string; type: "file" | "browser" | "mode" | "app" | "agent"; title: string; description: string }> = [
+                            { id: "action-files-folders", type: "file", title: "Files and folders", description: "Tải lên tệp hoặc thư mục mã nguồn từ máy" },
+                            { id: "action-attach-browser", type: "browser", title: "Attach Microsoft Edge", description: "Live browser sandbox" },
+                            { id: "mode-goal", type: "mode", title: "Goal", description: "Set a goal to keep pursuing" },
+                            { id: "mode-plan", type: "mode", title: "Plan mode", description: "Turn plan mode on" },
+                            { id: "mode-sketch", type: "mode", title: "Sketch", description: "Draw a sketch" },
+                          ];
+
+                          rawApps.forEach((a) => allAtNav.push({ id: a.id, type: "app", title: a.title, description: a.description }));
+                          displayAgents.forEach((ag) => allAtNav.push({ id: ag.id, type: "agent", title: ag.name, description: ag.roleTag || ag.description || "" }));
+
+                          const filteredAt = q
+                            ? allAtNav.filter((it) => it.title.toLowerCase().includes(q) || it.description.toLowerCase().includes(q) || it.id.toLowerCase().includes(q))
+                            : allAtNav;
+
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            if (filteredAt.length > 0) setPlusMenuSelectedIndex((prev) => (prev + 1) % filteredAt.length);
+                            return;
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            if (filteredAt.length > 0) setPlusMenuSelectedIndex((prev) => (prev - 1 + filteredAt.length) % filteredAt.length);
+                            return;
+                          } else if (e.key === "Enter" || e.key === "Tab") {
+                            if (filteredAt.length > 0 && plusMenuSelectedIndex >= 0 && plusMenuSelectedIndex < filteredAt.length) {
+                              e.preventDefault();
+                              const selected = filteredAt[plusMenuSelectedIndex];
+                              setIsPlusMenuOpen(false);
+
+                              if (selected.type === "file") {
+                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                                fileInputRef.current?.click();
+                              } else if (selected.type === "browser") {
+                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                                handleSetBrowserModalOpen(true);
+                              } else if (selected.type === "mode") {
+                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
+                                handleSelectLoopMode("goal");
+                              } else if (selected.type === "app") {
+                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `/${selected.id} `));
+                              } else if (selected.type === "agent") {
+                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${selected.title} `));
+                              }
+                              return;
+                            }
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            setIsPlusMenuOpen(false);
+                            return;
+                          }
+                        }
+                      }
+                    }
+
+                    if (e.key === "Backspace") {
+                      const target = e.currentTarget;
+                      const start = target.selectionStart;
+                      const end = target.selectionEnd;
+                      if (start === end) {
+                        const textBefore = target.value.substring(0, start);
+                        const trailingTagMatch = textBefore.match(/(@[a-zA-Z0-9_-]+|\/[a-zA-Z0-9_-]+)\s*$/);
+                        if (trailingTagMatch) {
+                          e.preventDefault();
+                          const tagToRemove = trailingTagMatch[0];
+                          const newTextBefore = textBefore.substring(0, textBefore.length - tagToRemove.length);
+                          const textAfter = target.value.substring(end);
+                          const nextInput = (newTextBefore + textAfter).trimStart();
+                          setInputText(nextInput);
+                          setTimeout(() => {
+                            const newCursorPos = Math.max(0, start - tagToRemove.length);
+                            target.selectionStart = target.selectionEnd = newCursorPos;
+                            target.style.height = "auto";
+                            target.style.height = Math.min(target.scrollHeight, 220) + "px";
+                          }, 0);
+                          return;
+                        }
+                      }
+                    }
+
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault();
-                      const tagToRemove = trailingTagMatch[0];
-                      const newTextBefore = textBefore.substring(0, textBefore.length - tagToRemove.length);
-                      const textAfter = target.value.substring(end);
-                      const nextInput = (newTextBefore + textAfter).trimStart();
-                      setInputText(nextInput);
+                      const target = e.currentTarget;
+                      const start = target.selectionStart;
+                      const end = target.selectionEnd;
+                      const val = target.value;
+                      const nextVal = val.substring(0, start) + "\n" + val.substring(end);
+                      setInputText(nextVal);
                       setTimeout(() => {
-                        const newCursorPos = Math.max(0, start - tagToRemove.length);
-                        target.selectionStart = target.selectionEnd = newCursorPos;
+                        target.selectionStart = target.selectionEnd = start + 1;
                         target.style.height = "auto";
-                        target.style.height = Math.min(target.scrollHeight, 130) + "px";
+                        target.style.height = Math.min(target.scrollHeight, 220) + "px";
                       }, 0);
                       return;
                     }
+
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      composerFormRef.current?.requestSubmit();
+                      if (textareaRef.current) {
+                        textareaRef.current.style.height = "auto";
+                      }
+                    }
+                  }}
+                  disabled={hasNoAgents}
+                  placeholder={
+                    hasNoAgents
+                      ? "Chưa có Agent được gán cho tài khoản của bạn (Tính năng tạo Agent đang Incoming)..."
+                      : isRecording
+                      ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
+                      : isStreaming
+                      ? "Agent is responding • Enter to queue next request..."
+                      : "Work with Skyer"
                   }
-                }
+                  aria-label={`Message ${selectedAgent.name}`}
+                  className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed scrollbar-none ${
+                    isMultiline ? "min-h-[52px] max-h-56 py-1 px-0.5" : "flex-1 max-h-32 py-1"
+                  }`}
+                />
+              );
 
-                // If Ctrl+Enter or Cmd+Enter is pressed, insert a clean newline without sending
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  const target = e.currentTarget;
-                  const start = target.selectionStart;
-                  const end = target.selectionEnd;
-                  const val = target.value;
-                  const nextVal = val.substring(0, start) + "\n" + val.substring(end);
-                  setInputText(nextVal);
-                  setTimeout(() => {
-                    target.selectionStart = target.selectionEnd = start + 1;
-                    target.style.height = "auto";
-                    target.style.height = Math.min(target.scrollHeight, 130) + "px";
-                  }, 0);
-                  return;
-                }
+              // Common Right Controls
+              const renderRightControls = () => (
+                <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
+                  {renderRecipesButton()}
 
-                // Ordinary Enter sends the message immediately unless Shift is held
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  composerFormRef.current?.requestSubmit();
-                  if (textareaRef.current) {
-                    textareaRef.current.style.height = "auto";
-                  }
-                }
-              }}
-              disabled={hasNoAgents}
-              placeholder={
-                hasNoAgents
-                  ? "Chưa có Agent được gán cho tài khoản của bạn (Tính năng tạo Agent đang Incoming)..."
-                  : isRecording
-                  ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
-                  : isStreaming
-                  ? `Agent is responding • Enter to queue next request, or click Stop...`
-                  : `Message ${selectedAgent?.name || "Agent"}... (Enter to send, Shift+Enter for new line)`
-              }
-              aria-label={`Message ${selectedAgent.name}`}
-              className="flex-1 bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none max-h-32 py-1 leading-relaxed scrollbar-none"
-            />
+                  <AudioVisualizerWaveform
+                    isRecording={isRecording}
+                    agentId={selectedAgent?.id}
+                    onAudioLevel={(lvl) => {
+                      audioEnergyLevelRef.current = lvl;
+                      setLiveVoiceEnergy(lvl);
+                    }}
+                  />
 
-            <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
-              {/* Context Token Usage Circular Ring Trigger (Hover for detail) */}
-              <ContextUsageBar
-                agentId={selectedAgent.id}
-                sessionId={selectedChat?.id}
-                estimatedTokens={selectedChat?.messageCount ? selectedChat.messageCount * 380 : 1200}
-                maxTokens={128000}
-                className="compact-trigger text-neutral-400 hover:text-white"
-              />
+{/* Command button moved to left tools next to [+] as requested */}
 
-              {/* Live WebRTC Audio Visualizer */}
-              <AudioVisualizerWaveform
-                isRecording={isRecording}
-                agentId={selectedAgent?.id}
-                onAudioLevel={(lvl) => {
-                  audioEnergyLevelRef.current = lvl;
-                  setLiveVoiceEnergy(lvl);
-                }}
-              />
-
-              {/* Starred Messages & Keyboard Shortcuts Quick Hub */}
-              <button
-                type="button"
-                onClick={() => setIsStarredShortcutsOpen(true)}
-                className="hidden sm:flex p-1 rounded-full hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 cursor-pointer transition-colors relative"
-                title="Đã đánh dấu sao & Phím tắt hệ thống (Ctrl+/)"
-              >
-                <Command size={15} />
-                {starredMsgIds.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-400 ring-1 ring-[#0c0c0e]" />
-                )}
-              </button>
-
-              {/* Voice to text recording button (Supports Click Toggle, Push-to-Talk & Right-Click for Voice Settings) */}
-              <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
-                type="button"
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setSettingsModalTab("voice_record");
-                  setIsSettingsModalOpen(true);
-                }}
-                onClick={() => {
-                  if (vadModeRef.current !== "push_to_talk") {
-                    if (isRecording) stopVoiceRecording(true);
-                    else startVoiceRecording();
-                  }
-                }}
-                onPointerDown={() => {
-                  if (vadModeRef.current === "push_to_talk" && !isRecording) {
-                    startVoiceRecording();
-                  }
-                }}
-                onPointerUp={() => {
-                  if (vadModeRef.current === "push_to_talk" && isRecording) {
-                    stopVoiceRecording();
-                    setTimeout(() => {
-                      composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                    }, 200);
-                  }
-                }}
-                style={{
-                  boxShadow: isRecording
-                    ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
-                      (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : "rgba(255, 122, 0, 0.65)")
-                    : undefined,
-                }}
-                className={`p-1 rounded-full cursor-pointer transition-all ${
-                  isRecording
-                    ? liveVoiceEnergy > 45
-                      ? "bg-gradient-to-r from-[#ff3366] to-[#ff7a00] text-white"
-                      : "bg-[#ff7a00] text-black"
-                    : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
-                }`}
-                title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
-              >
-                {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={15} />}
-              </button>
-
-              {isStreaming && (
-                <div className="flex items-center gap-1.5">
-                  <button
+                  <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
                     type="button"
-                    onClick={handleStopStreaming}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 text-[11px] font-mono transition-colors cursor-pointer select-none"
-                    title="Stop generation"
-                    aria-label="Stop response stream"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setSettingsModalTab("voice_record");
+                      setIsSettingsModalOpen(true);
+                    }}
+                    onClick={() => {
+                      if (vadModeRef.current !== "push_to_talk") {
+                        if (isRecording) stopVoiceRecording(true);
+                        else startVoiceRecording();
+                      }
+                    }}
+                    onPointerDown={() => {
+                      if (vadModeRef.current === "push_to_talk" && !isRecording) {
+                        startVoiceRecording();
+                      }
+                    }}
+                    onPointerUp={() => {
+                      if (vadModeRef.current === "push_to_talk" && isRecording) {
+                        stopVoiceRecording();
+                        setTimeout(() => {
+                          composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                        }, 200);
+                      }
+                    }}
+                    style={{
+                      boxShadow: isRecording
+                        ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
+                          (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : "rgba(248, 168, 124, 0.65)")
+                        : undefined,
+                    }}
+                    className={`p-1.5 rounded-full cursor-pointer transition-all ${
+                      isRecording
+                        ? liveVoiceEnergy > 45
+                          ? "bg-gradient-to-r from-[#ff3366] to-[#f8a87c] text-white"
+                          : "bg-[#f8a87c] text-black"
+                        : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
+                    }`}
+                    title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
                   >
-                    <Square size={10} className="fill-current" />
-                    <span>Stop</span>
+                    {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={15} />}
                   </button>
-                  {requestQueue.length > 0 && (
-                    <span className="text-[10px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
-                      Queued: {requestQueue.length}
-                    </span>
+
+                  {isStreaming && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleStopStreaming}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 text-[11px] font-mono transition-colors cursor-pointer select-none"
+                        title="Stop generation"
+                        aria-label="Stop response stream"
+                      >
+                        <Square size={10} className="fill-current" />
+                        <span>Stop</span>
+                      </button>
+                      {requestQueue.length > 0 && (
+                        <span className="text-[10px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-full border border-[#f8a87c]/20">
+                          Queued: {requestQueue.length}
+                        </span>
+                      )}
+                    </div>
                   )}
+
+                  {/* Circular Send Button (Grok/ChatGPT Style) */}
+                  <button
+                    type="submit"
+                    disabled={!inputText.trim() && attachedFiles.length === 0}
+                    className={`transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                      inputText.trim() || attachedFiles.length > 0
+                        ? "h-7 w-7 rounded-full bg-[#f8a87c] text-black hover:bg-[#ffb48a] shadow-xs active:scale-95"
+                        : "h-7 w-7 rounded-full bg-black/5 dark:bg-white/[0.06] text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
+                    }`}
+                    title={isStreaming ? "Add to request queue" : "Send Message"}
+                    aria-label={isStreaming ? "Add to request queue" : "Send Message"}
+                  >
+                    <ArrowUp size={15} className="stroke-[2.5]" />
+                  </button>
                 </div>
-              )}
-              <button
-                type="submit"
-                disabled={!inputText.trim() && attachedFiles.length === 0}
-                className="hover:text-neutral-900 dark:hover:text-white disabled:opacity-30 transition-colors cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400"
-                title={isStreaming ? "Add to request queue" : "Send Message"}
-                aria-label={isStreaming ? "Add to request queue" : "Send Message"}
-              >
-                <Send size={15} />
-              </button>
-            </div>
-          </form>
-          </div>
+              );
+
+              return (
+                <form
+                  id="tour-prompt-composer"
+                  ref={composerFormRef}
+                  onSubmit={handleSendMessage}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragCounterRef.current += 1;
+                    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+                      setIsDraggingFiles(true);
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragCounterRef.current -= 1;
+                    if (dragCounterRef.current <= 0) {
+                      setIsDraggingFiles(false);
+                      dragCounterRef.current = 0;
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDraggingFiles(false);
+                    dragCounterRef.current = 0;
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      handleDropFiles(e.dataTransfer.files);
+                    }
+                  }}
+                  className={`relative ${
+                    isMultiline
+                      ? "flex flex-col gap-2 p-3 sm:p-3.5"
+                      : "flex items-center gap-2 px-4 py-2.5"
+                  } bg-white dark:bg-[#14141c] border ${
+                    isDraggingFiles
+                      ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
+                      : isRecording
+                      ? "border-red-500/60 ring-2 ring-red-500/20"
+                      : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[#f8a87c]/50 dark:focus-within:border-[#f8a87c]/50 focus-within:ring-1 focus-within:ring-[#f8a87c]/20"
+                  } rounded-2xl shadow-xs transition-all overflow-hidden`}
+                >
+                  {isDraggingFiles && (
+                    <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                      <Paperclip size={15} className="text-[#f8a87c] animate-bounce" />
+                      <span className="text-xs font-mono font-semibold text-white tracking-wide">
+                        Drop files here to attach to {selectedAgent.name}
+                      </span>
+                    </div>
+                  )}
+
+                  <input data-ux-target-min="16"
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+
+                  {isMultiline ? (
+                    <>
+                      {/* Multiline Layout (Grok / ChatGPT style) */}
+                      <div className="w-full">
+                        {renderTextarea()}
+                      </div>
+                      <div className="flex items-center justify-between w-full pt-1.5 border-t border-slate-100 dark:border-white/[0.06]">
+                        <div className="flex items-center gap-1">
+                          {renderPlusButton()}
+                        </div>
+                        {renderRightControls()}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Single-line Compact Inline Layout */}
+                      {renderPlusButton()}
+                      {renderTextarea()}
+                      {renderRightControls()}
+                    </>
+                  )}
+                </form>
+              );
+            })()}          </div>
         </div>
       </main>
 
@@ -6818,10 +7337,10 @@ export function GrokBotWorkspace() {
             {/* Minimalist Resizer Splitter between Chat and Computer */}
             <div
               onMouseDown={() => setIsResizingComputerSplit(true)}
-              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[#ff7a00]/60 active:bg-[#ff7a00] transition-colors shrink-0 z-30 select-none group"
+              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/60 active:bg-[#f8a87c] transition-colors shrink-0 z-30 select-none group"
               title={t("computer.dragSplitterTitle") || "Kéo để thay đổi tỷ lệ"}
             >
-              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[#ff7a00] group-hover:h-9 transition-all" />
+              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[#f8a87c] group-hover:h-9 transition-all" />
             </div>
 
             <section
@@ -6879,7 +7398,7 @@ export function GrokBotWorkspace() {
                   className="h-8 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
                   title={t("computer.reloadProfileBtn")}
                 >
-                  <RefreshCw size={12} className={isReloadingBrowser ? "animate-spin text-[#ff7a00]" : ""} />
+                  <RefreshCw size={12} className={isReloadingBrowser ? "animate-spin text-[#f8a87c]" : ""} />
                 </button>
 
                 <button
@@ -6948,15 +7467,15 @@ export function GrokBotWorkspace() {
           width:
             typeof window !== "undefined" && window.innerWidth >= 1024
               ? isChatListCollapsed
-                ? "56px"
+                ? "0px"
                 : `${chatSessionsWidth}px`
               : undefined,
         }}
-        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok relative ${
+        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok relative ${
           mobileChatsOpen
             ? "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
             : isChatListCollapsed
-            ? "hidden lg:flex lg:w-[56px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
+            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0"
             : "hidden lg:flex lg:w-[320px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
         }`}
       >
@@ -6964,10 +7483,10 @@ export function GrokBotWorkspace() {
         {!isChatListCollapsed && (
           <div
             onMouseDown={() => setIsResizingChatSessions(true)}
-            className="hidden lg:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-[#ff7a00]/40 active:bg-[#ff7a00] transition-colors z-30 -ml-1 group"
+            className="hidden lg:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-[#f8a87c]/40 active:bg-[#f8a87c] transition-colors z-30 -ml-1 group"
             title="Kéo để chỉnh độ rộng danh sách chat"
           >
-            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[#ff7a00] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
+            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[#f8a87c] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
           </div>
         )}
         {/* Header & Collapse Toggle */}
@@ -6989,7 +7508,7 @@ export function GrokBotWorkspace() {
         ) : (
           <div className="h-12 px-3 border-b border-[#1c1c22] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2 min-w-0">
-              <MessageSquare size={15} className="text-[#ff7a00] shrink-0" />
+              <MessageSquare size={15} className="text-[#f8a87c] shrink-0" />
               <span className="text-xs font-mono text-white font-semibold tracking-tight truncate">
                 Chats ({chats.length})
               </span>
@@ -7026,14 +7545,7 @@ export function GrokBotWorkspace() {
                 <Plus size={15} />
               </button>
 
-              {/* Collapse bar trigger for conversations on desktop */}
-              <button aria-label="Collapse Conversations list" data-ux-target-min="24"
-                onClick={() => handleToggleChatList(true)}
-                className="hidden lg:flex h-7 w-7 rounded-lg hover:bg-[#1f1f26] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                title="Collapse Conversations list"
-              >
-                <ChevronRight size={16} />
-              </button>
+
 
               {/* Close button for conversations on mobile */}
               <button aria-label="Close drawer" data-ux-target-min="24"
@@ -7052,7 +7564,7 @@ export function GrokBotWorkspace() {
           <div className="flex-1 flex flex-col items-center py-3 space-y-2.5 overflow-hidden w-full">
             <button aria-label="New Chat" data-ux-target-min="24"
               onClick={handleNewChat}
-              className="h-8 w-8 rounded-xl bg-[#1c1c24] hover:bg-[#ff7a00] hover:text-white text-neutral-300 flex items-center justify-center transition-colors cursor-pointer border border-[#262632] shadow-sm"
+              className="h-8 w-8 rounded-xl bg-[#1c1c24] hover:bg-[#f8a87c] hover:text-white text-neutral-300 flex items-center justify-center transition-colors cursor-pointer border border-[#262632] shadow-sm"
               title="New Chat"
             >
               <Plus size={16} />
@@ -7078,7 +7590,7 @@ export function GrokBotWorkspace() {
                     }}
                     className={`h-7 w-7 rounded-xl flex items-center justify-center text-[10px] font-mono cursor-pointer transition-all border relative ${
                       isSelected
-                        ? "bg-[#ff7a00] border-[#ff7a00] text-black font-bold shadow-md shadow-[#ff7a00]/25"
+                        ? "bg-[#f8a87c] border-[#f8a87c] text-black font-bold shadow-md shadow-[#f8a87c]/25"
                         : "bg-[#16161e] border-[#22222d] text-neutral-400 hover:text-white hover:bg-[#20202c] hover:border-[#303042]"
                     }`}
                     title={`${c.title} (${c.channel || "console"})`}
@@ -7125,11 +7637,11 @@ export function GrokBotWorkspace() {
               {/* Sub-Channel Filter Bar (All / Console / Telegram / Zalo / Khác) */}
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 text-[10px] font-mono select-none">
                 {[
-                  { id: "all", label: "Tất cả kênh" },
                   { id: "console", label: "Console" },
                   { id: "telegram", label: "Telegram", badgeColor: "text-sky-400" },
                   { id: "zalo", label: "Zalo", badgeColor: "text-blue-500" },
                   { id: "other", label: "Khác" },
+                  { id: "all", label: "Tất cả kênh" },
                 ].map((ch) => {
                   const isActive = channelFilter === ch.id;
                   const channelCount = ch.id === "all"
@@ -7147,7 +7659,7 @@ export function GrokBotWorkspace() {
                       onClick={() => setChannelFilter(ch.id)}
                       className={`px-2 py-0.5 rounded-full shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
                         isActive
-                          ? "bg-[#ff7a00]/15 border-[#ff7a00]/40 text-[#ff7a00] font-semibold shadow-xs"
+                          ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c] font-semibold shadow-xs"
                           : "border-transparent text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                       }`}
                     >
@@ -7170,16 +7682,16 @@ export function GrokBotWorkspace() {
                   <div
                     className={`h-4 w-4 rounded-md border flex items-center justify-center transition-all ${
                       filteredChats.every((c) => selectedChatIds.includes(c.id))
-                        ? "bg-[#ff7a00] border-[#ff7a00] text-black shadow-xs"
+                        ? "bg-[#f8a87c] border-[#f8a87c] text-black shadow-xs"
                         : filteredChats.some((c) => selectedChatIds.includes(c.id))
-                        ? "bg-[#ff7a00]/30 border-[#ff7a00] text-[#ff7a00]"
-                        : "border-[#303042] bg-[#161622] group-hover:border-[#ff7a00]/60"
+                        ? "bg-[#f8a87c]/30 border-[#f8a87c] text-[#f8a87c]"
+                        : "border-[#303042] bg-[#161622] group-hover:border-[#f8a87c]/60"
                     }`}
                   >
                     {filteredChats.every((c) => selectedChatIds.includes(c.id)) ? (
                       <Check size={11} className="stroke-[3]" />
                     ) : filteredChats.some((c) => selectedChatIds.includes(c.id)) ? (
-                      <div className="h-1.5 w-1.5 rounded-xs bg-[#ff7a00]" />
+                      <div className="h-1.5 w-1.5 rounded-xs bg-[#f8a87c]" />
                     ) : null}
                   </div>
                   <span className="font-sans font-medium text-xs text-neutral-300 group-hover:text-white">
@@ -7190,7 +7702,7 @@ export function GrokBotWorkspace() {
                 </div>
 
                 {selectedChatIds.length > 0 && (
-                  <span className="text-[10px] text-[#ff7a00] font-semibold bg-[#ff7a00]/10 px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] text-[#f8a87c] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.5 rounded">
                     Đã chọn {selectedChatIds.length}/{filteredChats.length}
                   </span>
                 )}
@@ -7237,50 +7749,50 @@ export function GrokBotWorkspace() {
                       }
                       handleSelectChat(chat);
                     }}
-                    className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
+                    className={`w-full rounded-lg text-left flex items-center transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
                       layoutDensity === "compact"
-                        ? "p-1.5 gap-2"
+                        ? "px-2 py-1 gap-1.5 min-h-[30px]"
                         : layoutDensity === "comfortable"
-                        ? "p-3 gap-3"
-                        : "p-2.5 gap-2.5"
+                        ? "px-2.5 py-2 gap-2.5 min-h-[42px]"
+                        : "px-2 py-1.5 gap-2 min-h-[34px]"
                     } ${
                       activeChatMenuId === chat.id ? "z-40" : "z-auto"
                     } ${
                       isSelected
-                        ? "bg-[#22222c] text-white shadow-sm"
-                        : "hover:bg-[#181820] text-neutral-400 hover:text-neutral-200"
+                        ? "bg-slate-200/80 dark:bg-[#22222c] text-slate-900 dark:text-white shadow-xs font-medium"
+                        : "hover:bg-slate-100 dark:hover:bg-[#181820] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-neutral-200"
                     }`}
                   >
-                    {/* Interactive Icon Box: Shows Checkbox on hover or when selected, otherwise MessageSquare */}
+                    {/* Interactive Icon Box: Ultra-compact & aligned */}
                     <div
                       onClick={(e) => handleToggleSelectChat(chat.id, e)}
-                      className={`h-7 w-7 rounded-lg border flex items-center justify-center shrink-0 relative transition-all cursor-pointer ${
+                      className={`h-5 w-5 rounded-md border flex items-center justify-center shrink-0 relative transition-all cursor-pointer ${
                         selectedChatIds.includes(chat.id)
-                          ? "bg-[#ff7a00] border-[#ff7a00] text-black shadow-xs shadow-[#ff7a00]/30"
-                          : "bg-[#181822] border-[#2a2a3a] text-neutral-400 group-hover:border-[#ff7a00]/50"
+                          ? "bg-[#f8a87c] border-[#f8a87c] text-black shadow-xs"
+                          : "bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 group-hover:border-[#f8a87c]/50"
                       }`}
                       title={selectedChatIds.includes(chat.id) ? "Bỏ chọn phiên này" : "Chọn phiên này để xóa hàng loạt"}
                     >
                       {/* Checkbox Icon (always shown if checked, or shown on desktop hover) */}
                       <span className={selectedChatIds.includes(chat.id) ? "block" : "hidden group-hover:block"}>
-                        <Check size={13} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#ff7a00]"} />
+                        <Check size={11} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#f8a87c]"} />
                       </span>
 
-                      {/* Default MessageSquare icon (hidden when checked or when hovering on desktop) */}
-                      <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden"}>
-                        <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={13} />
+                      {/* Default Channel icon */}
+                      <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden flex items-center justify-center"}>
+                        <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
                         {(() => {
                           const isUnreadCompleted = (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id);
                           if (isUnreadCompleted) {
                             return (
                               <span
-                                className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-[#0f0f14] shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse"
-                                title="Công việc đã hoàn thành và sẵn sàng nghiệm thu"
+                                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 border-2 border-[#0f0f14] shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse"
+                                title="Công việc đã hoàn thành"
                               />
                             );
                           }
                           if (isSelected) {
-                            return <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full bg-[#ff7a00] border border-black" />;
+                            return <span className="absolute bottom-0 right-0 h-1 w-1 rounded-full bg-[#f8a87c] border border-black" />;
                           }
                           return null;
                         })()}
@@ -7301,52 +7813,63 @@ export function GrokBotWorkspace() {
                               if (e.key === "Escape") setEditingChatId(null);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-[#121218] border border-[#ff7a00] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
+                            className="bg-[#121218] border border-[#f8a87c] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
                           />
                         ) : (
                           <div className="flex items-center gap-1.5 min-w-0">
-                            {(() => {
-                              const ch = (chat.channel || "console").toLowerCase();
-                              if (ch === "telegram") {
-                                return (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-500/15 border border-sky-500/30 text-sky-400 text-[9px] font-mono shrink-0 select-none" title="Kênh Telegram">
-                                    <Send size={9} className="rotate-45" />
-                                    <span>TG</span>
-                                  </span>
-                                );
-                              }
-                              if (ch === "zalo") {
-                                return (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-blue-600/15 border border-blue-500/30 text-blue-400 text-[9px] font-mono shrink-0 select-none font-bold" title="Kênh Zalo">
-                                    <span className="text-[9px]">💬</span>
-                                    <span>Zalo</span>
-                                  </span>
-                                );
-                              }
-                              if (ch !== "console") {
-                                return (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 text-[9px] font-mono shrink-0 select-none uppercase" title={`Kênh: ${chat.channel}`}>
-                                    <Radio size={9} />
-                                    <span>{chat.channel}</span>
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
+{/* Clean minimal title without redundant channel badge (already shown in left icon box) */}
                             <span className={`text-xs font-medium truncate block ${
                               (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) ? "text-emerald-300 font-semibold" : "text-white"
                             }`}>
-                              {renderSearchMatchHighlight(chat.title, chatSearchQuery)}
+                              {(() => {
+                                let t = chat.title || "";
+                                if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(t) || /^[0-9a-f]{16,}/i.test(t) || t.toLowerCase().startsWith('chat ') || t.toLowerCase().startsWith('session ')) {
+                                  t = "Cuộc hội thoại";
+                                }
+                                return renderSearchMatchHighlight(t, chatSearchQuery);
+                              })()}
                             </span>
                           </div>
                         )}
 
-                        <div className="flex items-center gap-1 shrink-0 relative">
-                          {pinnedChatIds.includes(chat.id) && (
-                            <span className="text-amber-400 p-0.5" title="Đã ghim">
-                              <Pin size={11} className="fill-amber-400" />
-                            </span>
-                          )}
+                        <div className="flex items-center gap-0.5 shrink-0 relative">
+                          {/* Quick Pin Toggle Button (Visible on hover or when pinned) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePinChat(chat.id, e);
+                            }}
+                            className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
+                              pinnedChatIds.includes(chat.id)
+                                ? "text-amber-400 opacity-100"
+                                : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-400"
+                            }`}
+                            title={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
+                          >
+                            <Pin size={12} className={pinnedChatIds.includes(chat.id) ? "fill-amber-400" : ""} />
+                          </button>
+
+                          {/* Quick Archive Toggle Button (Visible on hover or when archived) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleArchiveChat(chat.id, e);
+                            }}
+                            className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
+                              archivedChatIds.includes(chat.id)
+                                ? "text-cyan-400 opacity-100"
+                                : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-cyan-400"
+                            }`}
+                            title={archivedChatIds.includes(chat.id) ? "Bỏ lưu trữ (Khôi phục)" : "Lưu trữ phiên này"}
+                          >
+                            {archivedChatIds.includes(chat.id) ? (
+                              <ArchiveRestore size={12} />
+                            ) : (
+                              <Archive size={12} />
+                            )}
+                          </button>
 
                           {/* 3-Dots More Options Menu */}
                           <div className="relative" data-chat-menu-container="true">
@@ -7359,7 +7882,7 @@ export function GrokBotWorkspace() {
                               }}
                               className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
                                 activeChatMenuId === chat.id
-                                  ? "text-[#ff7a00] bg-white/10 opacity-100"
+                                  ? "text-[#f8a87c] bg-white/10 opacity-100"
                                   : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-white"
                               }`}
                               title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
@@ -7372,10 +7895,57 @@ export function GrokBotWorkspace() {
                               isOpen={activeChatMenuId === chat.id}
                               onClose={() => setActiveChatMenuId(null)}
                               align="right"
-                              width="w-56"
+                              width="w-60"
                             >
+                              {/* Session Header: Channel Info, Context Status & Click to copy ID */}
+                              <div className="p-2 mb-1.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] space-y-2 select-none">
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                                      navigator.clipboard.writeText(chat.id);
+                                      playMicroClick();
+                                      alert(`Đã sao chép ID phiên:
+${chat.id}`);
+                                    }
+                                  }}
+                                  className="flex items-center justify-between gap-2 cursor-pointer group/chatinfo"
+                                  title="Nhấp để sao chép ID phiên này"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-medium uppercase tracking-wider">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                      <span>Kênh: <strong className="text-slate-800 dark:text-neutral-200 capitalize font-mono">{chat.channel || "Console"}</strong></span>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                                      ID: {chat.id}
+                                    </div>
+                                  </div>
+                                  <span className="p-1 rounded text-neutral-400 group-hover/chatinfo:text-[#f8a87c] transition-colors shrink-0">
+                                    <Copy size={12} />
+                                  </span>
+                                </div>
+
+                                {/* Context Token Gauge inside Chat Session Detail Item */}
+                                <div className="pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[10px] font-mono">
+                                  <span className="text-neutral-500">Context:</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <ContextUsageBar
+                                      agentId={selectedAgent.id}
+                                      sessionId={chat.id}
+                                      estimatedTokens={chat.messageCount ? chat.messageCount * 380 : 1200}
+                                      maxTokens={128000}
+                                      className="compact-trigger text-neutral-400 hover:text-white"
+                                    />
+                                    <span className="text-slate-700 dark:text-neutral-300 font-semibold">
+                                      {Math.round(((chat.messageCount ? chat.messageCount * 380 : 1200) / 128000) * 100)}%
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
                               <DropdownMenuItem
-                                icon={<Search size={13} className="text-[#ff7a00]" />}
+                                icon={<Search size={13} className="text-[#f8a87c]" />}
                                 label="Tìm trong phiên này"
                                 onClick={() => {
                                   handleSelectChat(chat);
@@ -7412,51 +7982,56 @@ export function GrokBotWorkspace() {
                                 }}
                               />
 
-                              <DropdownMenuSection label="Xuất dữ liệu">
-                                <DropdownMenuItem
+                              <DropdownMenuSection>
+                                <DropdownSubMenu
                                   icon={<Download size={12} className="text-blue-400" />}
-                                  label="Word Document"
-                                  badge=".doc"
-                                  badgeColor="text-blue-400"
-                                  onClick={() => {
-                                    handleSelectChat(chat);
-                                    setTimeout(() => handleExportSessionDocx(), 50);
-                                    setActiveChatMenuId(null);
-                                  }}
-                                />
-                                <DropdownMenuItem
-                                  icon={<Download size={12} className="text-[#ff7a00]" />}
-                                  label="Báo cáo Markdown"
-                                  badge=".md"
-                                  badgeColor="text-[#ff7a00]"
-                                  onClick={() => {
-                                    handleSelectChat(chat);
-                                    setTimeout(() => handleExportSessionMarkdown(), 50);
-                                    setActiveChatMenuId(null);
-                                  }}
-                                />
-                                <DropdownMenuItem
-                                  icon={<Download size={12} className="text-cyan-400" />}
-                                  label="Audit Trail JSON"
-                                  badge=".json"
-                                  badgeColor="text-cyan-400"
-                                  onClick={() => {
-                                    handleSelectChat(chat);
-                                    setTimeout(() => handleExportSessionJson(), 50);
-                                    setActiveChatMenuId(null);
-                                  }}
-                                />
-                                <DropdownMenuItem
-                                  icon={<Download size={12} className="text-emerald-400" />}
-                                  label="Execution Receipt"
-                                  badge=".html"
-                                  badgeColor="text-emerald-400"
-                                  onClick={() => {
-                                    handleSelectChat(chat);
-                                    setTimeout(() => handleExportAuditCertificate(), 50);
-                                    setActiveChatMenuId(null);
-                                  }}
-                                />
+                                  label="Xuất dữ liệu"
+                                >
+                                  <DropdownMenuItem
+                                    icon={<Download size={12} className="text-blue-400" />}
+                                    label="Word Document"
+                                    badge=".doc"
+                                    badgeColor="text-blue-400"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportSessionDocx(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Download size={12} className="text-[#f8a87c]" />}
+                                    label="Báo cáo Markdown"
+                                    badge=".md"
+                                    badgeColor="text-[#f8a87c]"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportSessionMarkdown(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Download size={12} className="text-cyan-400" />}
+                                    label="Audit Trail JSON"
+                                    badge=".json"
+                                    badgeColor="text-cyan-400"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportSessionJson(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Download size={12} className="text-emerald-400" />}
+                                    label="Execution Receipt"
+                                    badge=".html"
+                                    badgeColor="text-emerald-400"
+                                    onClick={() => {
+                                      handleSelectChat(chat);
+                                      setTimeout(() => handleExportAuditCertificate(), 50);
+                                      setActiveChatMenuId(null);
+                                    }}
+                                  />
+                                </DropdownSubMenu>
                               </DropdownMenuSection>
 
                               <DropdownMenuSection>
@@ -7480,9 +8055,7 @@ export function GrokBotWorkspace() {
                           )}
                         </div>
                       </div>
-                      <span className="text-[11px] text-neutral-500 truncate block mt-0.5">
-                        {renderSearchMatchHighlight(chat.lastMessageSnippet, chatSearchQuery)}
-                      </span>
+{/* Subtitle snippet removed as requested for lean single-line chat header */}
                     </div>
                   </div>
                 );
@@ -7515,7 +8088,7 @@ export function GrokBotWorkspace() {
                           <button
                             type="button"
                             onClick={handleNewChat}
-                            className="px-3 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8a1a] text-black font-semibold text-[11px] transition-colors cursor-pointer shadow-xs"
+                            className="px-3 py-1 rounded-lg bg-[#f8a87c] hover:bg-[#ff8a1a] text-black font-semibold text-[11px] transition-colors cursor-pointer shadow-xs"
                           >
                             + New Chat
                           </button>
@@ -7545,7 +8118,7 @@ export function GrokBotWorkspace() {
         {!isBotInfoCollapsed && (
           <div
             onMouseDown={() => setIsResizingRight(true)}
-            className="hidden xl:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-[#ff7a00]/50 transition-colors z-30 -ml-0.5"
+            className="hidden xl:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/50 transition-colors z-30 -ml-0.5"
             title="Drag to resize agent specification pane"
           />
         )}
@@ -7568,7 +8141,7 @@ export function GrokBotWorkspace() {
 
             {hasNoAgents || !selectedAgent.id ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none space-y-3 font-sans">
-                <div className="w-12 h-12 rounded-2xl bg-[#ff7a00]/10 border border-[#ff7a00]/25 flex items-center justify-center text-[#ff7a00]">
+                <div className="w-12 h-12 rounded-2xl bg-[#f8a87c]/10 border border-[#f8a87c]/25 flex items-center justify-center text-[#f8a87c]">
                   <Bot size={24} />
                 </div>
                 <h3 className="text-xs font-semibold text-white">Chưa chọn Agent</h3>
@@ -7624,7 +8197,7 @@ export function GrokBotWorkspace() {
                   type="button"
                   onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
                   disabled={isChangingModel}
-                  className="flex items-center gap-1.5 text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 hover:bg-[#ff7a00]/20 border border-[#ff7a00]/30 px-2.5 py-1 rounded-full cursor-pointer transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 text-[11px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 px-2.5 py-1 rounded-full cursor-pointer transition-all disabled:opacity-50"
                   title="Click to change active model"
                 >
                   <span className="truncate max-w-[150px]">
@@ -7676,11 +8249,11 @@ export function GrokBotWorkspace() {
                   <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-64 rounded-xl bg-[#14141c] border border-[#2a2a38] p-1.5 shadow-lg backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-1.5 pb-1.5 text-[10px] font-mono text-neutral-400 border-b border-[#22222e] flex items-center justify-between">
                       <span className="font-semibold text-white">Mô hình trí tuệ</span>
-                      <span className="text-[9px] text-[#ff7a00] font-mono">{uniqueModelsList.length} models</span>
+                      <span className="text-[9px] text-[#f8a87c] font-mono">{uniqueModelsList.length} models</span>
                     </div>
 
                     {/* Instant Model Search */}
-                    <div className="my-1.5 flex items-center gap-1.5 bg-[#1a1a24] border border-[#28283a] focus-within:border-[#ff7a00] rounded-lg px-2 py-1 text-xs">
+                    <div className="my-1.5 flex items-center gap-1.5 bg-[#1a1a24] border border-[#28283a] focus-within:border-[#f8a87c] rounded-lg px-2 py-1 text-xs">
                       <Search size={12} className="text-neutral-400 shrink-0" />
                       <input
                         type="text"
@@ -7710,12 +8283,12 @@ export function GrokBotWorkspace() {
                             onClick={() => handleSelectModel(m.model)}
                             className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
                               isCurrent
-                                ? "bg-[#ff7a00]/15 text-[#ff7a00] font-semibold border border-[#ff7a00]/30"
+                                ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold border border-[#f8a87c]/30"
                                 : "text-neutral-300 hover:bg-[#1a1a24] hover:text-white"
                             }`}
                           >
                             <span className="truncate text-[11px] font-mono">{m.model}</span>
-                            {isCurrent && <Check size={12} className="text-[#ff7a00] shrink-0" />}
+                            {isCurrent && <Check size={12} className="text-[#f8a87c] shrink-0" />}
                           </div>
                         );
                       })}
@@ -7734,7 +8307,7 @@ export function GrokBotWorkspace() {
                   onClick={() => setRightTab(tab)}
                   className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-mono ${
                     rightTab === tab
-                      ? "text-neutral-900 dark:text-white border-[#ff7a00] font-semibold"
+                      ? "text-neutral-900 dark:text-white border-[#f8a87c] font-semibold"
                       : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
                   }`}
                 >
@@ -7763,7 +8336,7 @@ export function GrokBotWorkspace() {
                           <button aria-label="Mở Computer Workspace" data-ux-target-min="24"
                             type="button"
                             onClick={() => handleToggleComputerSplit(true)}
-                            className="p-1 text-neutral-400 hover:text-[#ff7a00] hover:bg-[#232330] rounded transition-colors cursor-pointer"
+                            className="p-1 text-neutral-400 hover:text-[#f8a87c] hover:bg-[#232330] rounded transition-colors cursor-pointer"
                             title="Mở Computer Workspace (Tỉ lệ 3:7)"
                           >
                             <Maximize2 size={13} />
@@ -7804,7 +8377,7 @@ export function GrokBotWorkspace() {
 
                         {/* Hover Overlay: Chế độ mặc định khi người dùng hover vào preview computer */}
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-10 select-none">
-                          <div className="h-9 w-9 rounded-full bg-[#ff7a00] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
+                          <div className="h-9 w-9 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                             <Maximize2 size={16} className="stroke-[2.5]" />
                           </div>
                           <span className="text-[11px] font-mono font-semibold text-white! keep-white bg-slate-900/90 dark:bg-black/90 px-3 py-1 rounded-full border border-white/20 shadow-lg tracking-wide backdrop-blur-md">
@@ -7851,7 +8424,7 @@ export function GrokBotWorkspace() {
                         }}
                         className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer font-medium ${
                           detailSubTab === st
-                            ? "bg-[#222230] text-[#ff7a00] font-semibold shadow-xs border border-[#ff7a00]/30"
+                            ? "bg-[#222230] text-[#f8a87c] font-semibold shadow-xs border border-[#f8a87c]/30"
                             : "text-neutral-400 hover:text-white hover:bg-white/5 border border-transparent"
                         }`}
                       >
@@ -7894,7 +8467,7 @@ export function GrokBotWorkspace() {
                         >
                           <RefreshCw
                             size={12}
-                            className={isLoadingTree ? "animate-spin text-[#ff7a00]" : ""}
+                            className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
                           />
                         </button>
                       </div>
@@ -7941,7 +8514,7 @@ export function GrokBotWorkspace() {
                                 onClick={() => handleSelectFile(node)}
                                 className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
                                   isSelected
-                                    ? "bg-[#22222e] text-[#ff7a00] font-medium"
+                                    ? "bg-[#22222e] text-[#f8a87c] font-medium"
                                     : "text-neutral-300 hover:bg-[#1c1c24]"
                                 }`}
                               >
@@ -7981,11 +8554,48 @@ export function GrokBotWorkspace() {
                   {/* Sub-tab 3: Overview */}
                   {detailSubTab === "Overview" && (
                     <div className="space-y-4">
+                  {/* Active Chat Session Context & Token Lifecycle */}
+                  {selectedChat && (
+                    <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2.5 animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-semibold">
+                          <MessageSquare size={13} className="text-[#f8a87c]" />
+                          <span className="truncate max-w-[150px]">{selectedChat.title || "Phiên hội thoại"}</span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 capitalize">
+                          {selectedChat.channel || "Console"}
+                        </span>
+                      </div>
+
+                      {/* Integrated Context Usage & Compaction Component */}
+                      <div className="pt-1">
+                        <ContextUsageBar
+                          agentId={selectedAgent.id}
+                          sessionId={selectedChat.id}
+                          estimatedTokens={selectedChat.messageCount ? selectedChat.messageCount * 380 : 1200}
+                          maxTokens={128000}
+                          className="w-full justify-between"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[10px] font-mono pt-0.5">
+                        <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200 dark:border-[#1e1e28] flex flex-col gap-0.5">
+                          <span className="text-neutral-500">Tin nhắn trong phiên</span>
+                          <span className="text-slate-800 dark:text-neutral-200 font-bold">{selectedChat.messageCount || messages.length || 1} turns</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200 dark:border-[#1e1e28] flex flex-col gap-0.5">
+                          <span className="text-neutral-500">Auto Context GC</span>
+                          <span className="text-emerald-500 dark:text-emerald-400 font-bold">Enabled</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Real-time Turn Telemetry & Performance Metrics (Moved to Detail Tab per request) */}
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
                     <div className="flex items-center justify-between text-white font-semibold">
                       <span className="flex items-center gap-1.5">
-                        <Activity size={13} className="text-[#ff7a00]" />
+                        <Activity size={13} className="text-[#f8a87c]" />
                         <span>Hiệu năng & Telemetry</span>
                       </span>
                       {turnTelemetry?.estimatedCostUsd !== undefined && (
@@ -8010,7 +8620,7 @@ export function GrokBotWorkspace() {
                       </div>
                       <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
                         <span className="text-[10px] text-neutral-500">Model hoạt động</span>
-                        <span className="text-[#ff7a00] font-bold truncate" title={turnTelemetry?.model || selectedAgent.model}>
+                        <span className="text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || selectedAgent.model}>
                           {(turnTelemetry?.model || selectedAgent.model).split("/").pop()}
                         </span>
                       </div>
@@ -8020,7 +8630,7 @@ export function GrokBotWorkspace() {
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
                     <div className="flex items-center justify-between text-white font-semibold">
                       <span className="flex items-center gap-1.5">
-                        <Bot size={13} className="text-[#ff7a00]" />
+                        <Bot size={13} className="text-[#f8a87c]" />
                         <span>Persona & Governance</span>
                       </span>
                       <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
@@ -8038,7 +8648,7 @@ export function GrokBotWorkspace() {
                       </div>
                       <div className="flex items-center justify-between text-neutral-400">
                         <span>Skills Bound:</span>
-                        <span className="text-[#ff7a00]">{skills.length} available</span>
+                        <span className="text-[#f8a87c]">{skills.length} available</span>
                       </div>
                     </div>
                   </div>
@@ -8058,7 +8668,7 @@ export function GrokBotWorkspace() {
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-white flex items-center gap-1.5">
-                        <Radio size={13} className="text-[#ff7a00]" />
+                        <Radio size={13} className="text-[#f8a87c]" />
                         <span>Integrated Channels</span>
                       </span>
                       <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
@@ -8123,7 +8733,7 @@ export function GrokBotWorkspace() {
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-white flex items-center gap-1.5">
-                        <Clock size={13} className="text-[#ff7a00]" />
+                        <Clock size={13} className="text-[#f8a87c]" />
                         <span>Schedules & Automations</span>
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -8133,7 +8743,7 @@ export function GrokBotWorkspace() {
                             setSelectedJobForConfig(null);
                             setIsScheduleModalOpen(true);
                           }}
-                          className="flex items-center gap-1 bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] border border-[#ff7a00]/30 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all cursor-pointer"
+                          className="flex items-center gap-1 bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all cursor-pointer"
                           title="Add automated cron schedule"
                         >
                           <Plus size={11} />
@@ -8190,7 +8800,7 @@ export function GrokBotWorkspace() {
                   <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
                     <div className="font-semibold text-white flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Sparkles size={13} className="text-[#ff7a00]" />
+                        <Sparkles size={13} className="text-[#f8a87c]" />
                         <span>Live Skills</span>
                       </span>
                       <span className="text-[10px] font-mono text-neutral-400">({skills.length})</span>
@@ -8202,7 +8812,7 @@ export function GrokBotWorkspace() {
                           className="px-2 py-1 rounded bg-[#16161e] border border-[#20202a] text-neutral-300 flex items-center justify-between"
                         >
                           <span className="truncate">{s}</span>
-                          <span className="text-[9px] text-[#ff7a00] font-sans">Ready</span>
+                          <span className="text-[9px] text-[#f8a87c] font-sans">Ready</span>
                         </div>
                       ))}
                     </div>
@@ -8500,7 +9110,7 @@ export function GrokBotWorkspace() {
                 >
                   <RotateCw size={13} />
                   {lightboxRotation !== 0 && (
-                    <span className="text-[9px] text-[#ff7a00] font-bold">{lightboxRotation}°</span>
+                    <span className="text-[9px] text-[#f8a87c] font-bold">{lightboxRotation}°</span>
                   )}
                 </button>
 
@@ -8584,7 +9194,7 @@ export function GrokBotWorkspace() {
                 >
                   <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between gap-4">
                     <span>Image Metadata</span>
-                    <span className="text-[#ff7a00]">EXIF / Info</span>
+                    <span className="text-[#f8a87c]">EXIF / Info</span>
                   </div>
                   <div className="flex items-center justify-between gap-6 text-neutral-300">
                     <span className="text-neutral-500">Dimensions:</span>
@@ -8713,7 +9323,7 @@ export function GrokBotWorkspace() {
                     <span className="text-xs font-medium text-white">{ag.name}</span>
                     <span className="text-[10px] text-neutral-500">{ag.node}</span>
                   </div>
-                  <ArrowRight size={13} className="text-[#ff7a00]" />
+                  <ArrowRight size={13} className="text-[#f8a87c]" />
                 </div>
               ))}
             </div>
@@ -8738,7 +9348,7 @@ export function GrokBotWorkspace() {
               <div>
                 <h4 className="text-sm font-semibold text-white">Xóa các phiên đã chọn?</h4>
                 <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
-                  Bạn có chắc muốn xóa <span className="text-[#ff7a00] font-semibold">{selectedChatIds.length}</span> phiên hội thoại đã đánh dấu chọn không? Thao tác này không thể hoàn tác.
+                  Bạn có chắc muốn xóa <span className="text-[#f8a87c] font-semibold">{selectedChatIds.length}</span> phiên hội thoại đã đánh dấu chọn không? Thao tác này không thể hoàn tác.
                 </p>
               </div>
             </div>
@@ -8863,7 +9473,7 @@ export function GrokBotWorkspace() {
             {/* Header / Session Title */}
             <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
               <div className="min-w-0 flex-1 pr-2">
-                <span className="text-[10px] font-mono text-[#ff7a00] uppercase font-bold block">Session Actions</span>
+                <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Session Actions</span>
                 <h4 className="text-sm font-semibold text-white truncate">{mobileActionChat.title}</h4>
               </div>
               <button
@@ -8950,7 +9560,7 @@ export function GrokBotWorkspace() {
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
               <div className="min-w-0 flex-1 pr-2">
-                <span className="text-[10px] font-mono text-[#ff7a00] uppercase font-bold block">Message Turn Actions</span>
+                <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Message Turn Actions</span>
                 <p className="text-xs text-neutral-400 truncate max-w-xs italic">
                   "{mobileActionMsg.content.slice(0, 60)}..."
                 </p>
@@ -9021,7 +9631,7 @@ export function GrokBotWorkspace() {
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
               >
-                <Volume2 size={15} className="text-[#ff7a00]" />
+                <Volume2 size={15} className="text-[#f8a87c]" />
                 <span>Đọc to phản hồi bằng giọng nói (TTS)</span>
               </button>
 

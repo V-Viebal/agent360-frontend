@@ -117,7 +117,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
       <div className="p-3 rounded-xl bg-[#14141c] border border-slate-200 dark:border-[#22222e] space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-white flex items-center gap-1.5">
-            <Brain size={13} className="text-[#ff7a00]" />
+            <Brain size={13} className="text-[#f8a87c]" />
             <span>{t("memory.tabTitle")}</span>
           </span>
           <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
@@ -138,7 +138,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
               type="button"
               onClick={() => setFilterCategory(cat)}
               className={`px-2 py-0.5 rounded capitalize transition-colors cursor-pointer ${
-                filterCategory === cat ? "bg-[#ff7a00] text-black font-semibold" : "text-slate-500 dark:text-neutral-400 hover:text-white"
+                filterCategory === cat ? "bg-[#f8a87c] text-black font-semibold" : "text-slate-500 dark:text-neutral-400 hover:text-white"
               }`}
             >
               {cat}
@@ -149,7 +149,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
         <button
           type="button"
           onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 text-[#ff7a00] border border-[#ff7a00]/30 text-[10px] font-mono cursor-pointer transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 text-[10px] font-mono cursor-pointer transition-colors"
         >
           <Plus size={11} />
           <span>{t("memory.add")}</span>
@@ -158,7 +158,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
 
       {/* Add New Memory Drawer */}
       {isAdding && (
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#ff7a00]/30 space-y-2 animate-in fade-in">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#f8a87c]/30 space-y-2 animate-in fade-in">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300">
             <span>{t("memory.newEntry")}</span>
             <CustomSelect
@@ -170,7 +170,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                 { value: "preference", label: t("memory.preference") },
                 { value: "project", label: t("memory.projectContext") },
               ]}
-              triggerClassName="bg-[#121218] border border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-white hover:border-[#ff7a00]/40"
+              triggerClassName="bg-[#121218] border border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-white hover:border-[#f8a87c]/40"
               dropdownAlign="right"
             />
           </div>
@@ -194,7 +194,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
               type="button"
               onClick={handleAddMemory}
               disabled={!newContent.trim()}
-              className="px-3 py-1 rounded bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-[10px] cursor-pointer disabled:opacity-40 transition-colors"
+              className="px-3 py-1 rounded bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-[10px] cursor-pointer disabled:opacity-40 transition-colors"
             >
               Save Memory
             </button>
@@ -241,7 +241,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                   rows={2}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full bg-[#181822] border border-[#ff7a00] rounded-lg p-2 text-xs text-white focus:outline-none resize-none font-sans"
+                  className="w-full bg-[#181822] border border-[#f8a87c] rounded-lg p-2 text-xs text-white focus:outline-none resize-none font-sans"
                 />
                 <div className="flex items-center justify-end gap-1.5">
                   <button

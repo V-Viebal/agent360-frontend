@@ -57,7 +57,7 @@ function DelegationThread({ task, onChanged }: { task: Delegation; onChanged: ()
             onKeyDown={(e) => { if (e.key === "Enter") send(pending ? (pending.kind === "approval_request" ? "approval" : "answer") : "followup"); }}
             placeholder={pending ? "Answer as operator…" : "Ask a follow-up…"} className="flex-1 h-7 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 text-slate-900 dark:text-white" />
           <button disabled={sending || (!text.trim() && pending?.kind !== "approval_request")} onClick={() => send(pending ? (pending.kind === "approval_request" ? "approval" : "answer") : "followup")}
-            aria-label={pending ? "Send answer" : "Send follow-up"} className="h-7 px-3 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50">{sending ? "…" : pending ? (pending.kind === "approval_request" ? "Approve" : "Answer") : "Follow up"}</button>
+            aria-label={pending ? "Send answer" : "Send follow-up"} className="h-7 px-3 rounded-lg bg-[#f8a87c] text-black font-semibold disabled:opacity-50">{sending ? "…" : pending ? (pending.kind === "approval_request" ? "Approve" : "Answer") : "Follow up"}</button>
         </div>
       )}
       {err && <div className="text-[10px] text-red-300">{err}</div>}
@@ -130,12 +130,12 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
   return (
     <div className="space-y-3 text-xs font-sans">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5"><Network size={13} className="text-[#ff7a00]" />External Sub-Agents</span>
+        <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5"><Network size={13} className="text-[#f8a87c]" />External Sub-Agents</span>
         <div className="flex gap-1">
           <button aria-label="Discover external agents from AgentTeams" onClick={() => run("discover", a2aApi.discover, "Directory synced from AgentTeams")} className="h-7 w-7 flex items-center justify-center p-1.5 rounded-lg bg-[#16161f] border border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white" title="Discover from AgentTeams">
             <RefreshCw size={12} className={busy === "discover" ? "animate-spin" : ""} />
           </button>
-          <button onClick={() => run("skill", () => a2aApi.syncSkill(agentId), `Skill synced to ${agentName}`)} aria-label="Sync external sub-agents skill to the parent agent" className="h-7 px-3 rounded-lg bg-[#ff7a00] text-black font-semibold text-[11px]">Sync Skill</button>
+          <button onClick={() => run("skill", () => a2aApi.syncSkill(agentId), `Skill synced to ${agentName}`)} aria-label="Sync external sub-agents skill to the parent agent" className="h-7 px-3 rounded-lg bg-[#f8a87c] text-black font-semibold text-[11px]">Sync Skill</button>
         </div>
       </div>
       {msg && <div className="p-2 rounded-lg bg-[#14141d] border border-[#222232] text-slate-700 dark:text-neutral-300">{msg}</div>}
@@ -162,7 +162,7 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
         <div className="flex items-center gap-1 text-slate-900 dark:text-white"><GitBranch size={11} />{parentRef}</div>
         {bindings.length === 0 && <div className="pl-3 text-neutral-500">└── (no external sub-agents)</div>}
         {bindings.map((b, i) => (
-          <div key={b.id} className="pl-3">{i === bindings.length - 1 ? "└──" : "├──"} external via AgentTeams: <span className="text-[#ff7a00]">{b.child_agent_ref}</span></div>
+          <div key={b.id} className="pl-3">{i === bindings.length - 1 ? "└──" : "├──"} external via AgentTeams: <span className="text-[#f8a87c]">{b.child_agent_ref}</span></div>
         ))}
       </div>
 
@@ -211,11 +211,11 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
               onChange={(val) => setTarget(val)}
               options={bindings.map((b) => ({ value: b.child_agent_ref, label: b.child_agent_ref }))}
               className="w-full"
-              triggerClassName="w-full h-7 bg-[#1b1b24] border border-[#282836] hover:border-[#ff7a00]/40 rounded-lg px-2.5 py-2 text-xs text-white"
+              triggerClassName="w-full h-7 bg-[#1b1b24] border border-[#282836] hover:border-[#f8a87c]/40 rounded-lg px-2.5 py-2 text-xs text-white"
             />
             <textarea aria-label="Delegation objective" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="Objective (read-only by default)" className="w-full h-14 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
             <input aria-label="Acceptance criteria separated by semicolons" value={criteria} onChange={(e) => setCriteria(e.target.value)} placeholder="Acceptance criteria; separated by ;" className="w-full h-7 bg-[#1b1b24] border border-[#282836] rounded-lg px-2 py-1 text-slate-900 dark:text-white" />
-            <button disabled={!target || !objective || !criteria || busy === "send"} onClick={() => run("send", () => a2aApi.delegate({ parent_agent_ref: agentId.split(":").pop(), child_agent_ref: target, objective, constraints: ["Read-only"], acceptance_criteria: criteria.split(";").map((s) => s.trim()).filter(Boolean) }), "Delegation sent via AgentTeams")} aria-label="Delegate task via AgentTeams" className="h-7 flex items-center gap-1 px-3 rounded-lg bg-[#ff7a00] text-black font-semibold disabled:opacity-50">
+            <button disabled={!target || !objective || !criteria || busy === "send"} onClick={() => run("send", () => a2aApi.delegate({ parent_agent_ref: agentId.split(":").pop(), child_agent_ref: target, objective, constraints: ["Read-only"], acceptance_criteria: criteria.split(";").map((s) => s.trim()).filter(Boolean) }), "Delegation sent via AgentTeams")} aria-label="Delegate task via AgentTeams" className="h-7 flex items-center gap-1 px-3 rounded-lg bg-[#f8a87c] text-black font-semibold disabled:opacity-50">
               {busy === "send" ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}Delegate
             </button>
           </div>

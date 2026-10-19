@@ -60,9 +60,9 @@ const ORG_STRUCTURE: OrgNode[] = [
     mandate: "Coordinates strategic planning, allocates token budgets across corporate divisions, resolves cross-department blockers, and prepares board decision packs.",
     tools: ["Plan Ledger Engine", "Slack/Telegram Bridge", "Google Workspace", "Logto RBAC"],
     icon: Sparkles,
-    color: "text-[#ff7a00]",
-    bg: "bg-[#ff7a00]/15",
-    border: "border-[#ff7a00]/40",
+    color: "text-[#f8a87c]",
+    bg: "bg-[#f8a87c]/15",
+    border: "border-[#f8a87c]/40",
     directReports: ["fin-director", "sales-director", "cx-director", "hr-director"],
   },
 
@@ -213,9 +213,9 @@ const ORG_STRUCTURE: OrgNode[] = [
     mandate: "Sets up Google Workspace, Logto SSO credentials, VPN keys, and monitors internal tool uptime 24/7.",
     tools: ["Logto SSO", "Google Admin CLI", "Docker Engine", "Gatus Status"],
     icon: Server,
-    color: "text-[#ff7a00]",
-    bg: "bg-[#ff7a00]/5",
-    border: "border-[#ff7a00]/20",
+    color: "text-[#f8a87c]",
+    bg: "bg-[#f8a87c]/5",
+    border: "border-[#f8a87c]/20",
   },
 ];
 
@@ -407,8 +407,8 @@ export function AIOrgChart() {
     <div className="space-y-8">
       {/* Intro Header */}
       <div className="rounded-2xl border border-white/10 bg-[#0c1018] p-6 text-center max-w-4xl mx-auto">
-        <div className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-[#ff7a00] bg-[#ff7a00]/10 border border-[#ff7a00]/20 px-3 py-1 rounded-full mb-3">
-          <GitBranch size={13} className="text-[#ff7a00]" />
+        <div className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-[#f8a87c] bg-[#f8a87c]/10 border border-[#f8a87c]/20 px-3 py-1 rounded-full mb-3">
+          <GitBranch size={13} className="text-[#f8a87c]" />
           <span>{t("orgChart.badge")}</span>
         </div>
         <h2 className="font-newsreader text-2xl sm:text-4xl font-semibold text-white">
@@ -421,7 +421,7 @@ export function AIOrgChart() {
         <div className="mt-5 flex items-center justify-center gap-3">
           <button
             onClick={handleStartBatchDeploy}
-            className="inline-flex items-center gap-2 rounded-full bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold px-5 py-2 text-xs transition-all shadow-[0_0_20px_rgba(255,122,0,0.35)] cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-2 rounded-full bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold px-5 py-2 text-xs transition-all shadow-[0_0_20px_rgba(248,168,124,0.35)] cursor-pointer active:scale-95"
           >
             <Rocket size={14} />
             <span>{t("orgChart.deployAll")}</span>
@@ -434,7 +434,7 @@ export function AIOrgChart() {
         {/* Interactive Diagram Canvas */}
         <div className="lg:col-span-8 space-y-8 bg-black/40 p-6 sm:p-8 rounded-2xl border border-white/[0.08] relative overflow-hidden">
           {/* Subtle Ambient Background */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#ff7a00]/5 blur-3xl pointer-events-none -z-10" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#f8a87c]/5 blur-3xl pointer-events-none -z-10" />
 
           {/* Level 1: C-Level Executive */}
           <div className="flex flex-col items-center">
@@ -445,7 +445,7 @@ export function AIOrgChart() {
               onClick={() => setSelectedNodeId(executive.id)}
               className={`w-full max-w-md p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between gap-4 ${
                 selectedNodeId === executive.id
-                  ? "bg-[#ff7a00]/20 border-[#ff7a00] shadow-[0_0_25px_rgba(255,122,0,0.3)] scale-102"
+                  ? "bg-[#f8a87c]/20 border-[#f8a87c] shadow-[0_0_25px_rgba(248,168,124,0.3)] scale-102"
                   : "bg-[#0d111a] border-white/10 hover:border-white/20 text-neutral-300"
               }`}
             >
@@ -456,7 +456,7 @@ export function AIOrgChart() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-white">{executive.name}</span>
-                    <span className="text-[9px] font-mono uppercase bg-[#ff7a00] text-black px-1.5 py-0.2 rounded font-bold">
+                    <span className="text-[9px] font-mono uppercase bg-[#f8a87c] text-black px-1.5 py-0.2 rounded font-bold">
                       CHIEF ORCHESTRATOR
                     </span>
                   </div>
@@ -464,14 +464,14 @@ export function AIOrgChart() {
                   <div className="text-[10px] text-neutral-500 font-mono mt-0.5">{executive.model}</div>
                 </div>
               </div>
-              <ChevronRight size={16} className={`text-neutral-500 transition-transform ${selectedNodeId === executive.id ? "rotate-90 text-[#ff7a00]" : ""}`} />
+              <ChevronRight size={16} className={`text-neutral-500 transition-transform ${selectedNodeId === executive.id ? "rotate-90 text-[#f8a87c]" : ""}`} />
             </button>
           </div>
 
           {/* Flow Connector */}
           <div className="flex flex-col items-center justify-center text-neutral-500 text-xs font-mono">
-            <div className="h-6 w-[2px] bg-gradient-to-b from-[#ff7a00] to-white/20" />
-            <div className="text-[10px] font-mono uppercase text-[#ff7a00] px-3 py-0.5 bg-white/5 rounded-full border border-white/5 my-1">
+            <div className="h-6 w-[2px] bg-gradient-to-b from-[#f8a87c] to-white/20" />
+            <div className="text-[10px] font-mono uppercase text-[#f8a87c] px-3 py-0.5 bg-white/5 rounded-full border border-white/5 my-1">
               {t("orgChart.delegationFlow")}
             </div>
             <div className="h-6 w-[2px] bg-white/20" />
@@ -558,7 +558,7 @@ export function AIOrgChart() {
           <div className="pt-6 border-t border-white/10 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Radio size={14} className="text-[#ff7a00] animate-pulse" />
+                <Radio size={14} className="text-[#f8a87c] animate-pulse" />
                 <span className="text-xs font-mono font-semibold text-white">
                   {t("orgChart.interDeptComm")}
                 </span>
@@ -576,7 +576,7 @@ export function AIOrgChart() {
                     }}
                     className={`px-2.5 py-1 rounded text-[11px] font-mono transition-all cursor-pointer ${
                       scenarioFilter === key
-                        ? "bg-[#ff7a00] text-black font-semibold shadow"
+                        ? "bg-[#f8a87c] text-black font-semibold shadow"
                         : "text-neutral-400 hover:text-white"
                     }`}
                   >
@@ -596,7 +596,7 @@ export function AIOrgChart() {
                 </button>
                 <button
                   onClick={handleStartSimulation}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ff7a00]/15 hover:bg-[#ff7a00]/25 border border-[#ff7a00]/30 text-[#ff7a00] text-xs font-mono transition-all cursor-pointer active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 border border-[#f8a87c]/30 text-[#f8a87c] text-xs font-mono transition-all cursor-pointer active:scale-95"
                 >
                   <MessageSquare size={12} />
                   <span>{isSimulating ? t("orgChart.restartScenario") : t("orgChart.runScenario")}</span>
@@ -605,7 +605,7 @@ export function AIOrgChart() {
             </div>
 
             <div className="text-[11px] font-mono text-neutral-400">
-              {t("orgChart.activeScenario")} <span className="text-[#ff7a00] font-semibold">{activeScenario.name}</span>
+              {t("orgChart.activeScenario")} <span className="text-[#f8a87c] font-semibold">{activeScenario.name}</span>
             </div>
 
             {isSimulating ? (
@@ -615,7 +615,7 @@ export function AIOrgChart() {
                     key={i}
                     className={`p-3 rounded-lg border transition-all ${
                       msg.type === "approval"
-                        ? "bg-[#ff7a00]/10 border-[#ff7a00]/30 text-neutral-200"
+                        ? "bg-[#f8a87c]/10 border-[#f8a87c]/30 text-neutral-200"
                         : msg.type === "verification"
                         ? "bg-purple-500/10 border-purple-500/30 text-neutral-200"
                         : msg.type === "final"
@@ -625,7 +625,7 @@ export function AIOrgChart() {
                   >
                     <div className="flex items-center justify-between text-[11px] mb-1">
                       <span className="font-semibold text-white flex items-center gap-1.5">
-                        <span className="text-[#ff7a00]">{msg.from}</span>
+                        <span className="text-[#f8a87c]">{msg.from}</span>
                         <span className="text-neutral-500">➔</span>
                         <span>{msg.to}</span>
                       </span>
@@ -652,7 +652,7 @@ export function AIOrgChart() {
         <aside className="lg:col-span-4 rounded-2xl border border-white/10 bg-[#0d111a] p-6 space-y-6 sticky top-24">
           <div className="border-b border-white/10 pb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded">
                 {selectedNode.department}
               </span>
               <span className="text-[10px] font-mono text-neutral-400 capitalize">
@@ -698,7 +698,7 @@ export function AIOrgChart() {
                         className="text-[11px] font-mono bg-white/5 hover:bg-white/10 border border-white/10 px-2.5 py-1 rounded text-neutral-300 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
                       >
                         <span>{subordinate.name}</span>
-                        <ArrowRight size={10} className="text-[#ff7a00]" />
+                        <ArrowRight size={10} className="text-[#f8a87c]" />
                       </button>
                     );
                   })}
@@ -723,7 +723,7 @@ export function AIOrgChart() {
             <div className="pt-4 border-t border-white/10">
               <Link
                 to="/app"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold py-2.5 text-xs transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] active:scale-98"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold py-2.5 text-xs transition-all shadow-[0_0_20px_rgba(248,168,124,0.3)] active:scale-98"
               >
                 <Play size={12} fill="currentColor" />
                 <span>Assign Task to {selectedNode.name}</span>
@@ -739,7 +739,7 @@ export function AIOrgChart() {
           <div className="relative w-full max-w-2xl rounded-2xl border border-white/15 bg-[#0d111a] p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00]">
+                <div className="h-9 w-9 rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c]">
                   <Rocket size={18} />
                 </div>
                 <div>
@@ -761,11 +761,11 @@ export function AIOrgChart() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-neutral-400">{t("orgChart.deployProgress")}</span>
-                <span className="text-[#ff7a00] font-bold">{batchProgress} / {ORG_STRUCTURE.length} Nodes</span>
+                <span className="text-[#f8a87c] font-bold">{batchProgress} / {ORG_STRUCTURE.length} Nodes</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#ff7a00] to-emerald-400 transition-all duration-300 rounded-full"
+                  className="h-full bg-gradient-to-r from-[#f8a87c] to-emerald-400 transition-all duration-300 rounded-full"
                   style={{ width: `${(batchProgress / ORG_STRUCTURE.length) * 100}%` }}
                 />
               </div>
@@ -806,7 +806,7 @@ export function AIOrgChart() {
                 {batchComplete && (
                   <Link
                     to="/app"
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all shadow-md"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs transition-all shadow-md"
                   >
                     <Play size={12} fill="currentColor" />
                     <span>{t("orgChart.enterControl")}</span>

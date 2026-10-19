@@ -28,7 +28,7 @@ export function AgentPill({
     status === "online"
       ? "bg-emerald-400"
       : status === "busy"
-      ? "bg-[#ff7a00]"
+      ? "bg-[#f8a87c]"
       : status === "idle"
       ? "bg-amber-400"
       : "bg-neutral-500";
@@ -37,12 +37,12 @@ export function AgentPill({
     <div
       onClick={onClick}
       className={`inline-flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#222230] select-none ${
-        onClick ? "cursor-pointer hover:border-[#ff7a00]/40 transition-colors" : ""
+        onClick ? "cursor-pointer hover:border-[#f8a87c]/40 transition-colors" : ""
       } ${isSm ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-xs"} ${className}`}
     >
       {/* Avatar Icon */}
       <div className="relative shrink-0 flex items-center justify-center">
-        <div className={`rounded-md bg-[#ff7a00]/15 border border-[#ff7a00]/30 text-[#ff7a00] flex items-center justify-center ${isSm ? "h-5 w-5" : "h-6 w-6"}`}>
+        <div className={`rounded-md bg-[#f8a87c]/15 border border-[#f8a87c]/30 text-[#f8a87c] flex items-center justify-center ${isSm ? "h-5 w-5" : "h-6 w-6"}`}>
           <Cpu size={isSm ? 12 : 14} />
         </div>
         <span

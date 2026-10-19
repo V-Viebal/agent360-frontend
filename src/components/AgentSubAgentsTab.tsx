@@ -27,7 +27,7 @@ const STATUS_STYLE: Record<string, string> = {
   completed: "text-sky-300 bg-sky-500/10 border-sky-500/25",
   under_review: "text-amber-300 bg-amber-500/10 border-amber-500/25",
   awaiting_parent: "text-violet-300 bg-violet-500/10 border-violet-500/30",
-  running: "text-[#ff7a00] bg-[#ff7a00]/10 border-[#ff7a00]/25",
+  running: "text-[#f8a87c] bg-[#f8a87c]/10 border-[#f8a87c]/25",
   queued: "text-slate-700 dark:text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
   retry_queued: "text-slate-700 dark:text-neutral-300 bg-neutral-500/10 border-neutral-500/25",
   rejected: "text-rose-300 bg-rose-500/10 border-rose-500/25",
@@ -285,14 +285,14 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
           </button>
         ))}
         <button onClick={load} className="p-1.5 text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white cursor-pointer" title="Refresh">
-          <RefreshCw size={12} className={loading ? "animate-spin text-[#ff7a00]" : ""} />
+          <RefreshCw size={12} className={loading ? "animate-spin text-[#f8a87c]" : ""} />
         </button>
       </div>
 
       {/* Topology */}
       <div className="p-2.5 rounded-xl bg-[#14141c] border border-slate-200 dark:border-slate-200 dark:border-[#22222e] font-mono text-[11px] text-slate-700 dark:text-neutral-300">
         <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-semibold mb-1">
-          <Network size={12} className="text-[#ff7a00]" /> {parent}
+          <Network size={12} className="text-[#f8a87c]" /> {parent}
         </div>
         {bindings.length === 0 && <div className="text-neutral-500 pl-3">{t("subagents.noSubagents")}</div>}
         {bindings.map((b, i) => {
@@ -372,9 +372,9 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
               options={candidates.map((c) => ({ value: c, label: c }))}
               className="w-full"
             />
-            <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
-            <input value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} placeholder="Capabilities, comma separated" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
-            <button disabled={!form.child || busy === "bind"} onClick={addBinding} className="w-full py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
+            <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/40" />
+            <input value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} placeholder="Capabilities, comma separated" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/40" />
+            <button disabled={!form.child || busy === "bind"} onClick={addBinding} className="w-full py-1 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
               {busy === "bind" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Bind & sync skill
             </button>
           </div>
@@ -405,10 +405,10 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                 />
               </div>
             </div>
-            <textarea value={dlg.objective} onChange={(e) => setDlg({ ...dlg, objective: e.target.value })} rows={2} placeholder="Objective" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
-            <textarea value={dlg.criteria} onChange={(e) => setDlg({ ...dlg, criteria: e.target.value })} rows={2} placeholder="Acceptance criteria, one per line (e.g. Output contains 'DONE')" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a00]/40" />
+            <textarea value={dlg.objective} onChange={(e) => setDlg({ ...dlg, objective: e.target.value })} rows={2} placeholder="Objective" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/40" />
+            <textarea value={dlg.criteria} onChange={(e) => setDlg({ ...dlg, criteria: e.target.value })} rows={2} placeholder="Acceptance criteria, one per line (e.g. Output contains 'DONE')" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/40" />
             <div className="flex gap-1">
-              <button disabled={!dlg.child || !dlg.objective || busy === "dlg"} onClick={createDelegation} className="flex-1 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
+              <button disabled={!dlg.child || !dlg.objective || busy === "dlg"} onClick={createDelegation} className="flex-1 py-1 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
                 {busy === "dlg" ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Delegate
               </button>
               <button
@@ -448,7 +448,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                         return (
                           <div key={turn.seq} className={`flex ${fromParent ? "justify-end" : "justify-start"}`}>
                             <div className={`max-w-[88%] rounded-lg px-2 py-1 text-[11px] border ${
-                              turn.kind === "question" ? "bg-violet-500/10 border-violet-500/30" : fromParent ? "bg-[#ff7a00]/10 border-[#ff7a00]/25" : "bg-[#0f0f14] border-[#20202c]"}`}>
+                              turn.kind === "question" ? "bg-violet-500/10 border-violet-500/30" : fromParent ? "bg-[#f8a87c]/10 border-[#f8a87c]/25" : "bg-[#0f0f14] border-[#20202c]"}`}>
                               <div className="text-[9px] font-mono text-neutral-500">#{turn.seq} {turn.from} · {turn.kind}</div>
                               <div className="whitespace-pre-wrap text-slate-800 dark:text-neutral-200 line-clamp-6">{turn.text}</div>
                             </div>
@@ -472,7 +472,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                       <button
                         disabled={!(replyDraft[task.id] || "").trim() || busy === `msg-${task.id}`}
                         onClick={() => sendMessage(task)}
-                        className="px-2 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 text-[#ff7a00] disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                        className="px-2 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 text-[#f8a87c] disabled:opacity-50 cursor-pointer flex items-center gap-1"
                       >
                         {busy === `msg-${task.id}` ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
                         {task.status === "awaiting_parent" ? "Answer" : "Send"}
@@ -505,7 +505,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                       </>
                     )}
                     {task.status === "rejected" && task.attempt < task.max_attempts && (
-                      <button onClick={() => retry(task)} className="px-2 py-0.5 rounded-md bg-[#ff7a00]/15 border border-[#ff7a00]/30 text-[#ff7a00] cursor-pointer flex items-center gap-1"><RotateCcw size={11} /> Retry</button>
+                      <button onClick={() => retry(task)} className="px-2 py-0.5 rounded-md bg-[#f8a87c]/15 border border-[#f8a87c]/30 text-[#f8a87c] cursor-pointer flex items-center gap-1"><RotateCcw size={11} /> Retry</button>
                     )}
                     {["running", "queued", "retry_queued"].includes(task.status) && (
                       <>
@@ -533,7 +533,7 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
                     onClick={() => setPageSize(sz)}
                     className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-colors ${
                       pageSize === sz
-                        ? "bg-[#ff7a00] text-black font-bold"
+                        ? "bg-[#f8a87c] text-black font-bold"
                         : "bg-neutral-500/10 hover:bg-neutral-500/20 text-neutral-300"
                     }`}
                   >

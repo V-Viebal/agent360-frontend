@@ -126,7 +126,7 @@ export function CallbackPage() {
       <div className="max-w-md w-full p-8 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl flex flex-col items-center text-center">
         {status === "processing" && (
           <>
-            <Loader2 className="w-12 h-12 text-[#ff7a00] animate-spin mb-4" />
+            <Loader2 className="w-12 h-12 text-[#f8a87c] animate-spin mb-4" />
             <h2 className="text-lg font-semibold mb-2">Authenticating with Logto OIDC</h2>
             <p className="text-xs text-neutral-400">Exchanging credentials and initializing your authenticated session...</p>
           </>

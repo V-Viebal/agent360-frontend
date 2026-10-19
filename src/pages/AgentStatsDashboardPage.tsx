@@ -337,7 +337,7 @@ export function AgentStatsDashboardPage() {
         {/* Header Banner */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[var(--border-subtle)]">
           <div>
-            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#ff7a00] mb-2">
+            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#f8a87c] mb-2">
               <Activity size={14} className="animate-pulse" />
               <span>{t("analytics.headerSubtitle")}</span>
             </div>
@@ -362,7 +362,7 @@ export function AgentStatsDashboardPage() {
             {/* Auto-Refresh Polling Toggle Pills */}
             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-full border border-neutral-200 dark:border-[var(--border-subtle)] font-mono text-xs">
               <span className="text-[10px] text-neutral-500 pl-2 pr-1 flex items-center gap-1">
-                <Clock size={11} className={autoRefreshInterval > 0 ? "text-[#ff7a00]" : ""} />
+                <Clock size={11} className={autoRefreshInterval > 0 ? "text-[#f8a87c]" : ""} />
                 <span className="hidden sm:inline">{t("analytics.auto")}</span>
               </span>
               {[0, 5, 15, 30].map((sec) => (
@@ -371,7 +371,7 @@ export function AgentStatsDashboardPage() {
                   onClick={() => setAutoRefreshInterval(sec)}
                   className={`px-2.5 py-1 rounded-full text-[11px] transition-all cursor-pointer ${
                     autoRefreshInterval === sec
-                      ? "bg-[#ff7a00] text-black font-bold shadow-sm"
+                      ? "bg-[#f8a87c] text-black font-bold shadow-sm"
                       : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                   }`}
                 >
@@ -418,7 +418,7 @@ export function AgentStatsDashboardPage() {
           <div className="p-5 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 space-y-2">
             <div className="flex items-center justify-between text-neutral-400 text-xs font-mono">
               <span>{t("analytics.activeSessions")}</span>
-              <Users size={16} className="text-[#ff7a00]" />
+              <Users size={16} className="text-[#f8a87c]" />
             </div>
             <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
               {stats.total_active_sessions.toLocaleString()}
@@ -476,7 +476,7 @@ export function AgentStatsDashboardPage() {
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
               <div>
                 <h3 className="text-base font-semibold text-neutral-900 dark:text-white flex flex-wrap items-center gap-2">
-                  <BarChart3 size={16} className="text-[#ff7a00]" />
+                  <BarChart3 size={16} className="text-[#f8a87c]" />
                   <span>{t("analytics.volumeTrend")}</span>
                 </h3>
                 <p className="text-xs text-neutral-400 mt-0.5">
@@ -490,7 +490,7 @@ export function AgentStatsDashboardPage() {
                   <span className="text-neutral-300">{t("analytics.llmCalls")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded bg-[#ff7a00]" />
+                  <span className="h-2.5 w-2.5 rounded bg-[#f8a87c]" />
                   <span className="text-neutral-300">{t("analytics.toolCalls")}</span>
                 </div>
               </div>
@@ -518,7 +518,7 @@ export function AgentStatsDashboardPage() {
                         {/* Tool Bar */}
                         <div
                           style={{ height: `${toolHeight}%` }}
-                          className="w-1/2 max-w-[18px] bg-[#ff7a00]/80 hover:bg-[#ff7a00] rounded-t-sm transition-all relative group/bar"
+                          className="w-1/2 max-w-[18px] bg-[#f8a87c]/80 hover:bg-[#f8a87c] rounded-t-sm transition-all relative group/bar"
                         >
                           <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/90 text-neutral-900 dark:text-white font-mono text-[9px] px-1.5 py-0.5 rounded opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-white/20">
                             {d.tool_calls} Tools
@@ -544,7 +544,7 @@ export function AgentStatsDashboardPage() {
           <div className="lg:col-span-4 rounded-2xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#0d111a] shadow-sm dark:shadow-none text-neutral-900 dark:text-neutral-100 p-6 space-y-6">
             <div className="border-b border-[var(--border-subtle)] pb-4">
               <h3 className="text-base font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
-                <MessageSquare size={16} className="text-[#ff7a00]" />
+                <MessageSquare size={16} className="text-[#f8a87c]" />
                 <span>{t("analytics.channelTraffic")}</span>
               </h3>
               <p className="text-xs text-neutral-400 mt-0.5">
@@ -563,7 +563,7 @@ export function AgentStatsDashboardPage() {
                     </div>
                     <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-[#ff7a00] to-amber-300 rounded-full"
+                        className="h-full bg-gradient-to-r from-[#f8a87c] to-amber-300 rounded-full"
                         style={{ width: `${percent}%` }}
                       />
                     </div>
@@ -617,7 +617,7 @@ export function AgentStatsDashboardPage() {
                     onClick={() => setPricingProvider(prov)}
                     className={`px-3 py-1 rounded text-[11px] capitalize transition-all cursor-pointer ${
                       pricingProvider === prov
-                        ? "bg-[#ff7a00] text-black font-semibold shadow"
+                        ? "bg-[#f8a87c] text-black font-semibold shadow"
                         : "text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
@@ -735,7 +735,7 @@ export function AgentStatsDashboardPage() {
           <div className="pt-6 border-t border-[var(--border-subtle)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-start gap-2">
-                <ShieldAlert size={16} className={`shrink-0 ${isBudgetExceeded ? "text-red-400" : "text-[#ff7a00]"}`} />
+                <ShieldAlert size={16} className={`shrink-0 ${isBudgetExceeded ? "text-red-400" : "text-[#f8a87c]"}`} />
                 <span className="text-xs font-mono font-semibold text-neutral-900 dark:text-white">
                   Monthly Budget Guard & Telegram Alert Webhook
                 </span>
@@ -748,7 +748,7 @@ export function AgentStatsDashboardPage() {
                     onClick={() => setBudgetLimitUSD(limit)}
                     className={`px-2 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
                       budgetLimitUSD === limit
-                        ? "bg-[#ff7a00] text-black font-bold shadow"
+                        ? "bg-[#f8a87c] text-black font-bold shadow"
                         : "bg-white/5 text-neutral-400 hover:text-neutral-900 dark:text-white"
                     }`}
                   >
@@ -779,7 +779,7 @@ export function AgentStatsDashboardPage() {
               >
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${
-                    isBudgetExceeded ? "bg-red-500" : budgetUsagePercent > 80 ? "bg-amber-400" : "bg-gradient-to-r from-emerald-500 to-[#ff7a00]"
+                    isBudgetExceeded ? "bg-red-500" : budgetUsagePercent > 80 ? "bg-amber-400" : "bg-gradient-to-r from-emerald-500 to-[#f8a87c]"
                   }`}
                   style={{ width: `${budgetProgressPercent}%` }}
                 />
@@ -814,7 +814,7 @@ export function AgentStatsDashboardPage() {
 
               {autoThrottleEnabled && (
                 <div className="text-[11px] text-neutral-400 flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
-                  <span className="text-[#ff7a00]">Example Fallback Policy:</span>
+                  <span className="text-[#f8a87c]">Example Fallback Policy:</span>
                   <span className="bg-black/40 px-2 py-0.5 rounded text-neutral-300">
                     SWE & SRE: Qwen 2.5 14B Local (0 API Cost)
                   </span>
@@ -833,7 +833,7 @@ export function AgentStatsDashboardPage() {
             {/* Telegram Webhook Endpoint Input */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 font-mono text-xs">
               <div className="min-w-0 flex-1 flex items-center gap-2 bg-black/40 border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl px-3 py-2 text-neutral-300">
-                <Bell size={13} className="text-[#ff7a00] shrink-0" />
+                <Bell size={13} className="text-[#f8a87c] shrink-0" />
                 <input
                   type="text"
                   aria-label="Telegram webhook URL (demo only)"
@@ -856,7 +856,7 @@ export function AgentStatsDashboardPage() {
                 </button>
                 <button
                   onClick={handleSaveWebhook}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   {webhookSaved ? <Check size={13} /> : null}
                   <span>{webhookSaved ? "Preview Saved" : "Save Demo Policy"}</span>

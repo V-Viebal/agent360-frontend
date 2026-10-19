@@ -181,12 +181,12 @@ export function AgentConnectedAppsTab({
             className="p-1.5 rounded-lg text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#16161f] hover:bg-slate-200 dark:hover:bg-[#20202c] border border-slate-200 dark:border-[#242432] transition-colors cursor-pointer"
             title="Refresh connected tools"
           >
-            <RefreshCw size={12} className={loading ? "animate-spin text-[#ff7a00]" : ""} />
+            <RefreshCw size={12} className={loading ? "animate-spin text-[#f8a87c]" : ""} />
           </button>
 
           <button
             onClick={onOpenConnectModal}
-            className="flex items-center gap-1 bg-[#ff7a00] hover:bg-[#ff8c1a] text-black font-semibold px-2.5 py-1 rounded-lg text-[11px] shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-1 bg-[#f8a87c] hover:bg-[#ff8c1a] text-black font-semibold px-2.5 py-1 rounded-lg text-[11px] shadow-sm transition-all cursor-pointer"
           >
             <Plus size={12} className="stroke-[2.5]" />
             <span>{t("connectedApps.addApp")}</span>
@@ -210,7 +210,7 @@ export function AgentConnectedAppsTab({
           onClick={() => setFilter("composio")}
           className={`flex-1 py-1 rounded-lg font-medium transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
             filter === "composio"
-              ? "bg-white dark:bg-[#242432] text-[#ff7a00] shadow-xs"
+              ? "bg-white dark:bg-[#242432] text-[#f8a87c] shadow-xs"
               : "text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
           }`}
         >
@@ -241,7 +241,7 @@ export function AgentConnectedAppsTab({
       <div className="flex-1 overflow-y-auto space-y-2 pr-0.5">
         {loading && clients.length === 0 ? (
           <div className="py-12 flex flex-col items-center justify-center text-center text-xs text-neutral-500 font-mono space-y-2">
-            <Loader2 size={18} className="animate-spin text-[#ff7a00]" />
+            <Loader2 size={18} className="animate-spin text-[#f8a87c]" />
             <span>Loading {agentName}'s integrations...</span>
           </div>
         ) : displayedClients.length === 0 ? (
@@ -250,7 +250,7 @@ export function AgentConnectedAppsTab({
             <div>{t("connectedApps.empty")}</div>
             <button
               onClick={onOpenConnectModal}
-              className="text-[#ff7a00] hover:underline cursor-pointer font-sans text-xs font-medium"
+              className="text-[#f8a87c] hover:underline cursor-pointer font-sans text-xs font-medium"
             >
               + Connect an application
             </button>
@@ -264,7 +264,7 @@ export function AgentConnectedAppsTab({
               <div
                 key={client.key}
                 onClick={(e) => meta.isComposio && handleInspectSchema(client, e)}
-                className={`group p-2.5 rounded-xl border border-slate-200 dark:border-[#20202c] bg-white dark:bg-[#14141c] hover:border-[#ff7a00]/40 dark:hover:border-[#2f2f42] hover:bg-slate-50 dark:hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
+                className={`group p-2.5 rounded-xl border border-slate-200 dark:border-[#20202c] bg-white dark:bg-[#14141c] hover:border-[#f8a87c]/40 dark:hover:border-[#2f2f42] hover:bg-slate-50 dark:hover:bg-[#181822] transition-all flex items-center justify-between gap-3 shadow-xs ${meta.isComposio ? 'cursor-pointer' : ''}`}
                 title={meta.isComposio ? "Click to inspect tool functions" : ""}
               >
                 {/* Logo + Names */}
@@ -293,7 +293,7 @@ export function AgentConnectedAppsTab({
                         {meta.name}
                       </span>
                       {meta.isComposio ? (
-                        <span className="text-[9px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-1.5 py-0.2 rounded border border-[#ff7a00]/20 shrink-0 font-medium">
+                        <span className="text-[9px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 px-1.5 py-0.2 rounded border border-[#f8a87c]/20 shrink-0 font-medium">
                           Composio
                         </span>
                       ) : (
@@ -313,7 +313,7 @@ export function AgentConnectedAppsTab({
                             <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/transport:flex flex-col gap-1 p-2 rounded-xl bg-slate-900/95 dark:bg-[#181824]/95 border border-slate-700/60 dark:border-[#2f2f44] text-[10px] font-mono text-slate-100 dark:text-neutral-200 shadow-xl backdrop-blur-md z-40 max-w-xs whitespace-normal break-all animate-in fade-in zoom-in-95 duration-150">
                               <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-neutral-400 border-b border-white/10 pb-0.5">
                                 <span>Driver / Transport</span>
-                                <span className="text-[#ff7a00] font-bold">{client.transport}</span>
+                                <span className="text-[#f8a87c] font-bold">{client.transport}</span>
                               </div>
                               <div className="text-[10px] leading-tight text-neutral-300">
                                 {client.command ? (
@@ -350,11 +350,11 @@ export function AgentConnectedAppsTab({
                     <button
                       disabled={refreshingKey === client.key}
                       onClick={(e) => handleRefreshSchema(client, e)}
-                      className="p-1 rounded-md text-slate-500 dark:text-neutral-400 hover:text-[#ff7a00] hover:bg-[#ff7a00]/10 transition-all cursor-pointer"
+                      className="p-1 rounded-md text-slate-500 dark:text-neutral-400 hover:text-[#f8a87c] hover:bg-[#f8a87c]/10 transition-all cursor-pointer"
                       title={`Re-discover and update ${meta.name} schema in SKILL.md`}
                     >
                       {refreshingKey === client.key ? (
-                        <Loader2 size={12} className="animate-spin text-[#ff7a00]" />
+                        <Loader2 size={12} className="animate-spin text-[#f8a87c]" />
                       ) : (
                         <RefreshCw size={12} />
                       )}

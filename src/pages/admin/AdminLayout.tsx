@@ -197,7 +197,7 @@ export function AdminLayout() {
     return (
       <div className="h-screen w-screen bg-[#0c0c0e] text-white flex items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#f59e0b] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#f8a87c] border-t-transparent rounded-full animate-spin" />
           <span className="text-xs font-mono text-neutral-400">Verifying Admin Authorization...</span>
         </div>
       </div>
@@ -217,7 +217,7 @@ export function AdminLayout() {
           <div className="flex gap-3">
             <button
               onClick={() => navigate("/app", { replace: true })}
-              className="px-5 py-2 rounded-xl bg-[#f59e0b] hover:bg-[#ff8a1a] text-xs font-semibold text-black transition-all cursor-pointer"
+              className="px-5 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#ff8a1a] text-xs font-semibold text-black transition-all cursor-pointer"
             >
               Back to Workspace
             </button>
@@ -257,7 +257,7 @@ export function AdminLayout() {
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-xs tracking-tight text-[var(--text-primary)] flex items-center gap-1.5 truncate">
                   Skyer Admin
-                  <span className="px-1.5 py-0.2 rounded-md bg-[#f59e0b]/20 text-[#f59e0b] text-[9px] font-mono font-semibold uppercase">
+                  <span className="px-1.5 py-0.2 rounded-md bg-[#f8a87c]/20 text-[#f8a87c] text-[9px] font-mono font-semibold uppercase">
                     Root
                   </span>
                 </span>
@@ -299,11 +299,11 @@ export function AdminLayout() {
                 title={isSidebarCollapsed ? item.label : undefined}
                 className={`flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all ${
                   active
-                    ? "bg-[#f59e0b]/15 text-[#f59e0b] font-semibold shadow-xs"
+                    ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card-hover)]"
                 } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
               >
-                <Icon size={16} className={`shrink-0 ${active ? "text-[#f59e0b]" : "text-neutral-400"}`} />
+                <Icon size={16} className={`shrink-0 ${active ? "text-[#f8a87c]" : "text-neutral-400"}`} />
                 {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
                 {!isSidebarCollapsed && active && <ChevronRight size={13} className="ml-auto opacity-70" />}
               </Link>
@@ -315,7 +315,7 @@ export function AdminLayout() {
         <div className="p-2 border-t border-[var(--border-card)] shrink-0 bg-[var(--bg-sidebar)]">
           <div className={`p-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border-card)] shadow-xs flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"}`}>
             <div className="flex items-center gap-2 min-w-0">
-              <div className="h-6 w-6 rounded-full bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/30 flex items-center justify-center text-[10px] font-bold shrink-0">
+              <div className="h-6 w-6 rounded-full bg-[#f8a87c]/20 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center text-[10px] font-bold shrink-0">
                 {profile?.displayName?.slice(0, 2).toUpperCase() || "AD"}
               </div>
               {!isSidebarCollapsed && (

@@ -86,7 +86,7 @@ export function AdminSettingsPage() {
       sortable: true,
       width: "15%",
       cell: (item) => (
-        <span className="px-2 py-0.5 rounded-md font-mono text-[10px] uppercase font-bold bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30">
+        <span className="px-2 py-0.5 rounded-md font-mono text-[10px] uppercase font-bold bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30">
           {item.category}
         </span>
       ),
@@ -98,7 +98,7 @@ export function AdminSettingsPage() {
       width: "35%",
       cell: (item) => (
         <div className="min-w-0">
-          <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+          <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#f8a87c] transition-colors">
             {item.name}
           </div>
           <div className="text-[10px] text-slate-500 dark:text-neutral-400 mt-0.5 truncate font-mono">{item.details}</div>
@@ -140,7 +140,7 @@ export function AdminSettingsPage() {
             e.stopPropagation();
             handleOpenEdit(item);
           }}
-          className="px-2.5 py-1 rounded-lg border border-[#2e2e3e] bg-slate-100 dark:bg-[#1a1a24] hover:bg-[#ff7a00]/10 hover:border-[#ff7a00]/40 text-slate-800 dark:text-neutral-200 hover:text-[#ff7a00] text-[10px] font-semibold transition-all cursor-pointer"
+          className="px-2.5 py-1 rounded-lg border border-[#2e2e3e] bg-slate-100 dark:bg-[#1a1a24] hover:bg-[#f8a87c]/10 hover:border-[#f8a87c]/40 text-slate-800 dark:text-neutral-200 hover:text-[#f8a87c] text-[10px] font-semibold transition-all cursor-pointer"
         >
           Cấu hình
         </button>
@@ -180,7 +180,7 @@ export function AdminSettingsPage() {
       {/* Overview Cards (App360 Exact Stat-Card Pattern) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
         <div className="p-4 rounded-2xl bg-white dark:bg-[#14141a] border border-slate-200 dark:border-[#22222c] flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-[#ff7a00]/10 text-[#ff7a00] border border-[#ff7a00]/20 shrink-0">
+          <div className="p-3 rounded-xl bg-[#f8a87c]/10 text-[#f8a87c] border border-[#f8a87c]/20 shrink-0">
             <Shield size={20} />
           </div>
           <div className="min-w-0">
@@ -233,7 +233,7 @@ export function AdminSettingsPage() {
           selectedConfig && (
             <button
               onClick={() => handleOpenEdit(selectedConfig)}
-              className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-bold text-xs cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-bold text-xs cursor-pointer"
             >
               Chỉnh Sửa Endpoint
             </button>
@@ -281,7 +281,7 @@ export function AdminSettingsPage() {
                 type="text"
                 value={editEndpoint}
                 onChange={(e) => setEditEndpoint(e.target.value)}
-                className="w-full bg-slate-50/80 dark:bg-[#181822] border border-[#2e2e3e] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-[#ff7a00]"
+                className="w-full bg-slate-50/80 dark:bg-[#181822] border border-[#2e2e3e] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-[#f8a87c]"
                 required
               />
             </div>
@@ -300,7 +300,7 @@ export function AdminSettingsPage() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
               >
                 <Save size={13} />
                 <span>Lưu Cấu Hình</span>

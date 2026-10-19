@@ -23,8 +23,8 @@ export function TelemetryHud({ telemetry, isStreaming }: TelemetryHudProps) {
   return (
     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#14141c]/90 border border-[#22222e] text-[10px] font-mono text-neutral-400 select-none shadow-xs animate-in fade-in">
       {isStreaming ? (
-        <div className="flex items-center gap-1.5 text-[#ff7a00]">
-          <Activity size={11} className="animate-spin text-[#ff7a00]" />
+        <div className="flex items-center gap-1.5 text-[#f8a87c]">
+          <Activity size={11} className="animate-spin text-[#f8a87c]" />
           <span>Generating turn...</span>
         </div>
       ) : (
@@ -59,7 +59,7 @@ export function TelemetryHud({ telemetry, isStreaming }: TelemetryHudProps) {
             <>
               <span className="text-neutral-600">•</span>
               <div className="flex items-center gap-1 text-neutral-300" title="Active Model">
-                <Cpu size={10} className="text-[#ff7a00]" />
+                <Cpu size={10} className="text-[#f8a87c]" />
                 <span className="truncate max-w-[120px]">{telemetry.model.split("/").pop()}</span>
               </div>
             </>

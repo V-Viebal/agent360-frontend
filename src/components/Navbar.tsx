@@ -105,7 +105,7 @@ export function Navbar() {
               <span>{t("nav.product")}</span>
               <ChevronDown
                 size={12}
-                className={`transition-transform duration-200 ${openDropdown === "product" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
+                className={`transition-transform duration-200 ${openDropdown === "product" ? "rotate-180 text-[#f8a87c]" : "text-neutral-500"}`}
               />
             </button>
 
@@ -115,11 +115,11 @@ export function Navbar() {
                   href="/#bots"
                   className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
                 >
-                  <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00] shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] shrink-0 mt-0.5">
                     <Sparkles size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                    <div className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
                       AI Employees
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
@@ -179,7 +179,7 @@ export function Navbar() {
               <span>{t("nav.solutions")}</span>
               <ChevronDown
                 size={12}
-                className={`transition-transform duration-200 ${openDropdown === "solutions" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
+                className={`transition-transform duration-200 ${openDropdown === "solutions" ? "rotate-180 text-[#f8a87c]" : "text-neutral-500"}`}
               />
             </button>
 
@@ -207,11 +207,11 @@ export function Navbar() {
                   to="/marketplace"
                   className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
                 >
-                  <div className="h-8 w-8 rounded-lg bg-[#ff7a00]/15 border border-[#ff7a00]/30 flex items-center justify-center text-[#ff7a00] shrink-0 mt-0.5">
+                  <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] shrink-0 mt-0.5">
                     <Layers size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                    <div className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
                       {t("nav.solRoleCatalogTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
@@ -225,7 +225,7 @@ export function Navbar() {
                   <a
                     href="/skyer-enterprise-whitepaper.md"
                     target="_blank"
-                    className="text-[#ff7a00] hover:underline flex items-center gap-1 font-sans text-xs"
+                    className="text-[#f8a87c] hover:underline flex items-center gap-1 font-sans text-xs"
                   >
                     {t("nav.whitepaper")} <ExternalLink size={10} />
                   </a>
@@ -248,7 +248,7 @@ export function Navbar() {
               <span>{t("nav.resources")}</span>
               <ChevronDown
                 size={12}
-                className={`transition-transform duration-200 ${openDropdown === "resources" ? "rotate-180 text-[#ff7a00]" : "text-neutral-500"}`}
+                className={`transition-transform duration-200 ${openDropdown === "resources" ? "rotate-180 text-[#f8a87c]" : "text-neutral-500"}`}
               />
             </button>
 
@@ -262,7 +262,7 @@ export function Navbar() {
                     <BookOpen size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-[#ff7a00] transition-colors">
+                    <div className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
                       {t("nav.resDocsTitle")}
                     </div>
                     <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
@@ -339,7 +339,7 @@ export function Navbar() {
                 onClick={handleSignIn}
                 className="text-xs font-medium text-neutral-200 hover:text-white px-3.5 py-1.5 rounded-full border border-white/10 hover:border-white/20 bg-white/5 transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <LogIn size={13} className="text-[#ff7a00]" />
+                <LogIn size={13} className="text-[#f8a87c]" />
                 <span>{t("nav.signIn")}</span>
               </button>
 
@@ -347,7 +347,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={handleSignUp}
-                className="text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95 cursor-pointer"
+                className="text-xs font-semibold bg-[#f8a87c] hover:bg-[#f5935f] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(248,168,124,0.3)] hover:shadow-[0_0_25px_rgba(248,168,124,0.5)] active:scale-95 cursor-pointer"
               >
                 Sign Up
               </button>
@@ -357,7 +357,7 @@ export function Navbar() {
               {/* Launch Workspace CTA (When authenticated) */}
               <Link
                 to="/app"
-                className="text-xs font-semibold bg-[#ff7a00] hover:bg-[#ff8f26] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(255,122,0,0.3)] hover:shadow-[0_0_25px_rgba(255,122,0,0.5)] active:scale-95 cursor-pointer"
+                className="text-xs font-semibold bg-[#f8a87c] hover:bg-[#f5935f] text-black px-4 py-1.5 rounded-full transition-all shadow-[0_0_20px_rgba(248,168,124,0.3)] hover:shadow-[0_0_25px_rgba(248,168,124,0.5)] active:scale-95 cursor-pointer"
               >
                 Launch App
               </Link>
@@ -399,7 +399,7 @@ export function Navbar() {
             <a
               href="/#hierarchy"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-[#ff7a00] font-medium py-2 px-1"
+              className="block text-sm text-[#f8a87c] font-medium py-2 px-1"
             >
               {t("nav.productMultiAgentTitle")}
             </a>
@@ -473,9 +473,9 @@ export function Navbar() {
                       setMobileMenuOpen(false);
                       handleSignIn(e);
                     }}
-                    className="text-center text-sm font-medium border border-[#ff7a00]/40 bg-[#ff7a00]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2 cursor-pointer"
+                    className="text-center text-sm font-medium border border-[#f8a87c]/40 bg-[#f8a87c]/10 text-white py-2.5 rounded-full flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <LogIn size={14} className="text-[#ff7a00]" />
+                    <LogIn size={14} className="text-[#f8a87c]" />
                     <span>{t("nav.signInSkyer")}</span>
                   </button>
                   <button
@@ -484,7 +484,7 @@ export function Navbar() {
                       setMobileMenuOpen(false);
                       handleSignUp(e);
                     }}
-                    className="text-center text-sm font-semibold bg-[#ff7a00] text-black py-2.5 rounded-full shadow-md cursor-pointer"
+                    className="text-center text-sm font-semibold bg-[#f8a87c] text-black py-2.5 rounded-full shadow-md cursor-pointer"
                   >
                     Sign Up
                   </button>
@@ -493,7 +493,7 @@ export function Navbar() {
                 <Link
                   to="/app"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-center text-sm font-semibold bg-[#ff7a00] text-black py-2.5 rounded-full shadow-md"
+                  className="text-center text-sm font-semibold bg-[#f8a87c] text-black py-2.5 rounded-full shadow-md"
                 >
                   Launch App
                 </Link>

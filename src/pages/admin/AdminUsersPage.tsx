@@ -109,11 +109,11 @@ export function AdminUsersPage() {
         const initials = getInitials(u.displayName, u.email);
         return (
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-7 w-7 rounded-full bg-[#ff7a00]/15 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
+            <div className="h-7 w-7 rounded-full bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
               {initials}
             </div>
             <div className="min-w-0">
-              <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#ff7a00] transition-colors">
+              <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#f8a87c] transition-colors">
                 {u.displayName || `${u.firstName} ${u.lastName}`.trim() || "User Skyer"}
               </div>
               <div className="text-[10px] text-neutral-500 font-mono">DB #{u.id}</div>
@@ -154,11 +154,11 @@ export function AdminUsersPage() {
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10px] font-semibold uppercase ${
               isAdmin
-                ? "bg-[#ff7a00]/20 text-[#ff7a00] border border-[#ff7a00]/30"
+                ? "bg-[#f8a87c]/20 text-[#f8a87c] border border-[#f8a87c]/30"
                 : "bg-blue-500/15 text-blue-400 border border-blue-500/25"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? "bg-[#ff7a00] animate-pulse" : "bg-blue-400"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? "bg-[#f8a87c] animate-pulse" : "bg-blue-400"}`} />
             {isAdmin ? "Admin (Root)" : "Member"}
           </span>
         );
@@ -195,7 +195,7 @@ export function AdminUsersPage() {
         <div>
           <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
             <span>Danh Bạ & Phân Quyền Thành Viên</span>
-            <span className="text-[11px] font-mono text-[#ff7a00] bg-[#ff7a00]/10 px-2 py-0.5 rounded-full border border-[#ff7a00]/20">
+            <span className="text-[11px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-full border border-[#f8a87c]/20">
               {users.length} Users
             </span>
           </h1>
@@ -254,7 +254,7 @@ export function AdminUsersPage() {
             <button
               onClick={() => handleToggleRole(selectedUser)}
               disabled={updatingId === selectedUser.id}
-              className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-bold text-xs cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-bold text-xs cursor-pointer disabled:opacity-50"
             >
               {selectedUser.roles.some((r) => r.toUpperCase() === "ADMIN")
                 ? "Hạ xuống Member"
@@ -267,7 +267,7 @@ export function AdminUsersPage() {
           <div className="space-y-4">
             {/* Header Avatar Box */}
             <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-[#ff7a00]/20 text-[#ff7a00] border border-[#ff7a00]/30 flex items-center justify-center font-bold text-base font-mono">
+              <div className="h-12 w-12 rounded-full bg-[#f8a87c]/20 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center font-bold text-base font-mono">
                 {getInitials(selectedUser.displayName, selectedUser.email)}
               </div>
               <div>
@@ -289,7 +289,7 @@ export function AdminUsersPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500 dark:text-neutral-400">Vai trò hiện tại:</span>
-                  <span className="font-bold text-[#ff7a00] font-mono">
+                  <span className="font-bold text-[#f8a87c] font-mono">
                     {selectedUser.roles.join(", ") || "Member"}
                   </span>
                 </div>
@@ -313,7 +313,7 @@ export function AdminUsersPage() {
                 <li>Truy cập Workspace và thực thi AI Agents được gán</li>
                 <li>Được cấp số dư ví Token PAYG độc lập</li>
                 {selectedUser.roles.some((r) => r.toUpperCase() === "ADMIN") && (
-                  <li className="text-[#ff7a00] font-semibold">
+                  <li className="text-[#f8a87c] font-semibold">
                     Toàn quyền truy cập Root Admin Control-Plane, quản lý hạ tầng & thanh toán
                   </li>
                 )}

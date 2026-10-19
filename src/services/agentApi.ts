@@ -134,8 +134,39 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
     });
 
     return sortedRaw.map((c: any) => {
-      const displayTitle = c.name || c.title || c.topic || (c.session_id ? `Session ${c.session_id}` : `Chat ${c.id.slice(0, 8)}`);
-      const snippet = c.last_message?.content || c.lastMessageSnippet || c.snippet || c.session_id || c.channel || "active dialogue";
+      let cleanTitle = (c.name || c.title || c.topic || '').trim();
+      // Never expose raw technical UUID or session hashes to the UI
+      if (!cleanTitle || /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleanTitle) || /^[0-9a-f]{16,}/i.test(cleanTitle) || cleanTitle.toLowerCase().startsWith('chat ') || cleanTitle.toLowerCase().startsWith('session ')) {
+        const sid = c.session_id || '';
+        if (sid && !/^[0-9a-f-]{16,}/i.test(sid) && sid.length <= 14) {
+          cleanTitle = `Hội thoại #${sid}`;
+        } else {
+          cleanTitle = "Cuộc hội thoại";
+        }
+      }
+      const displayTitle = cleanTitle;
+
+      let rawSnippet = c.last_message?.content || c.lastMessageSnippet || c.snippet || '';
+      // If rawSnippet is missing, check client-side cached messages for this session
+      if (!rawSnippet || rawSnippet === 'Chưa có tin nhắn mới' || /^[0-9a-f-]{16,}/i.test(rawSnippet)) {
+        try {
+          const key = `${cleanAgentId || 'default'}:${c.id}`;
+          const rawCache = sessionStorage.getItem(`agent360_msgcache_${key}`);
+          if (rawCache) {
+            const parsedMsgs = JSON.parse(rawCache);
+            if (Array.isArray(parsedMsgs) && parsedMsgs.length > 0) {
+              const lastMsg = parsedMsgs[parsedMsgs.length - 1];
+              if (lastMsg && lastMsg.content) {
+                rawSnippet = lastMsg.content.trim().replace(/\s+/g, ' ').slice(0, 100);
+              }
+            }
+          }
+        } catch {}
+      }
+      if (!rawSnippet || /^[0-9a-f-]{16,}/i.test(rawSnippet)) {
+        rawSnippet = c.title || (c.channel && c.channel !== 'console' ? `Kênh ${c.channel}` : 'Chưa có tin nhắn mới');
+      }
+      const snippet = rawSnippet;
       const updatedStr = c.updated_at
         ? new Date(c.updated_at).toLocaleDateString([], { month: "short", day: "numeric" })
         : "Recently";

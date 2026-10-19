@@ -54,7 +54,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
       isOpen={true}
       onClose={onClose}
       title="Skill Pool & Capabilities Catalog"
-      icon={<Puzzle size={18} className="text-[#ff7a00]" />}
+      icon={<Puzzle size={18} className="text-[#f8a87c]" />}
       maxWidth="2xl"
     >
       {/* Toolbar */}
@@ -107,15 +107,15 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
           filtered.map((skill) => (
             <div
               key={skill.name}
-              className="p-4 rounded-xl bg-slate-50 dark:bg-[#161310] border border-slate-200 dark:border-[#2b241e] hover:border-[#ff7a00]/40 transition-all flex flex-col gap-2 group"
+              className="p-4 rounded-xl bg-slate-50 dark:bg-[#161310] border border-slate-200 dark:border-[#2b241e] hover:border-[#f8a87c]/40 transition-all flex flex-col gap-2 group"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-xs text-slate-800 dark:text-neutral-200 group-hover:text-[#ff7a00] transition-colors">
+                  <span className="font-semibold text-xs text-slate-800 dark:text-neutral-200 group-hover:text-[#f8a87c] transition-colors">
                     {skill.name}
                   </span>
                   {skill.source && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#ff7a00]/10 border border-[#ff7a00]/25 text-[#ff7a00] flex items-center gap-1">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 border border-[#f8a87c]/25 text-[#f8a87c] flex items-center gap-1">
                       <Tag size={10} />
                       {skill.source}
                     </span>
@@ -130,7 +130,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
               {skill.channels && skill.channels.length > 0 && (
                 <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-1.5 items-center">
                   <span className="text-[10px] font-mono text-neutral-500 mr-1 flex items-center gap-1">
-                    <Sparkles size={10} className="text-[#ff7a00]" />
+                    <Sparkles size={10} className="text-[#f8a87c]" />
                     Channels:
                   </span>
                   {skill.channels.map((t: string) => (
@@ -156,7 +156,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-1.5 rounded-xl bg-[#ff7a00] text-black font-semibold text-xs hover:bg-[#ff8f26] transition-all cursor-pointer"
+          className="px-4 py-1.5 rounded-xl bg-[#f8a87c] text-black font-semibold text-xs hover:bg-[#f5935f] transition-all cursor-pointer"
         >
           Done
         </button>

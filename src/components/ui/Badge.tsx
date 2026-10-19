@@ -1,7 +1,7 @@
 import React from "react";
 
 export type BadgeVariant = "outline" | "subtle" | "solid";
-export type BadgeColor = "brand" | "cyan" | "emerald" | "amber" | "red" | "neutral";
+export type BadgeColor = "brand" | "mint" | "sky" | "lavender" | "rose" | "apricot" | "neutral" | "emerald" | "amber" | "cyan" | "red";
 
 export interface BadgeProps {
   children: React.ReactNode;
@@ -24,49 +24,80 @@ export function Badge({
 }: BadgeProps) {
   const isSm = size === "sm";
 
-  const colorStyles: Record<BadgeColor, Record<BadgeVariant, string>> = {
+  const colorStyles: Record<string, Record<BadgeVariant, string>> = {
     brand: {
-      subtle: "bg-[#ff7a00]/10 text-[#ff7a00] border-[#ff7a00]/25",
-      outline: "bg-transparent text-[#ff7a00] border-[#ff7a00]/50",
-      solid: "bg-[#ff7a00] text-black font-semibold border-transparent",
+      subtle: "bg-[#f8a87c]/15 text-[#f8a87c] border-[#f8a87c]/30",
+      outline: "bg-transparent text-[#f8a87c] border-[#f8a87c]/40",
+      solid: "bg-[#f8a87c] text-black font-semibold border-transparent",
     },
-    cyan: {
-      subtle: "bg-cyan-500/10 text-cyan-400 border-cyan-500/25",
-      outline: "bg-transparent text-cyan-400 border-cyan-500/50",
-      solid: "bg-cyan-500 text-black font-semibold border-transparent",
+    mint: {
+      subtle: "bg-[#86efac]/15 text-[#86efac] border-[#86efac]/30",
+      outline: "bg-transparent text-[#86efac] border-[#86efac]/40",
+      solid: "bg-[#86efac] text-black font-semibold border-transparent",
     },
-    emerald: {
-      subtle: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
-      outline: "bg-transparent text-emerald-400 border-emerald-500/50",
-      solid: "bg-emerald-500 text-black font-semibold border-transparent",
+    sky: {
+      subtle: "bg-[#7dd3fc]/15 text-[#7dd3fc] border-[#7dd3fc]/30",
+      outline: "bg-transparent text-[#7dd3fc] border-[#7dd3fc]/40",
+      solid: "bg-[#7dd3fc] text-black font-semibold border-transparent",
     },
-    amber: {
-      subtle: "bg-amber-500/10 text-amber-400 border-amber-500/25",
-      outline: "bg-transparent text-amber-400 border-amber-500/50",
-      solid: "bg-amber-500 text-black font-semibold border-transparent",
+    lavender: {
+      subtle: "bg-[#c4b5fd]/15 text-[#c4b5fd] border-[#c4b5fd]/30",
+      outline: "bg-transparent text-[#c4b5fd] border-[#c4b5fd]/40",
+      solid: "bg-[#c4b5fd] text-black font-semibold border-transparent",
     },
-    red: {
-      subtle: "bg-red-500/10 text-red-400 border-red-500/25",
-      outline: "bg-transparent text-red-400 border-red-500/50",
-      solid: "bg-red-500 text-white font-semibold border-transparent",
+    rose: {
+      subtle: "bg-[#fda4af]/15 text-[#fda4af] border-[#fda4af]/30",
+      outline: "bg-transparent text-[#fda4af] border-[#fda4af]/40",
+      solid: "bg-[#fda4af] text-black font-semibold border-transparent",
+    },
+    apricot: {
+      subtle: "bg-[#fde047]/15 text-[#fde047] border-[#fde047]/30",
+      outline: "bg-transparent text-[#fde047] border-[#fde047]/40",
+      solid: "bg-[#fde047] text-black font-semibold border-transparent",
     },
     neutral: {
-      subtle: "bg-slate-200 dark:bg-white/5 text-slate-700 dark:text-neutral-400 border-slate-300 dark:border-white/10",
-      outline: "bg-transparent text-slate-700 dark:text-neutral-400 border-slate-300 dark:border-white/20",
+      subtle: "bg-slate-200/80 dark:bg-white/8 text-slate-700 dark:text-neutral-300 border-slate-300 dark:border-white/12",
+      outline: "bg-transparent text-slate-700 dark:text-neutral-300 border-slate-300 dark:border-white/20",
       solid: "bg-slate-700 dark:bg-white/20 text-white border-transparent",
+    },
+    // Aliases mapped cleanly to pastel palette
+    emerald: {
+      subtle: "bg-[#86efac]/15 text-[#86efac] border-[#86efac]/30",
+      outline: "bg-transparent text-[#86efac] border-[#86efac]/40",
+      solid: "bg-[#86efac] text-black font-semibold border-transparent",
+    },
+    cyan: {
+      subtle: "bg-[#7dd3fc]/15 text-[#7dd3fc] border-[#7dd3fc]/30",
+      outline: "bg-transparent text-[#7dd3fc] border-[#7dd3fc]/40",
+      solid: "bg-[#7dd3fc] text-black font-semibold border-transparent",
+    },
+    amber: {
+      subtle: "bg-[#fde047]/15 text-[#fde047] border-[#fde047]/30",
+      outline: "bg-transparent text-[#fde047] border-[#fde047]/40",
+      solid: "bg-[#fde047] text-black font-semibold border-transparent",
+    },
+    red: {
+      subtle: "bg-[#fda4af]/15 text-[#fda4af] border-[#fda4af]/30",
+      outline: "bg-transparent text-[#fda4af] border-[#fda4af]/40",
+      solid: "bg-[#fda4af] text-black font-semibold border-transparent",
     },
   };
 
-  const dotColors: Record<BadgeColor, string> = {
-    brand: "bg-[#ff7a00]",
-    cyan: "bg-cyan-400",
-    emerald: "bg-emerald-400",
-    amber: "bg-amber-400",
-    red: "bg-red-400",
+  const dotColors: Record<string, string> = {
+    brand: "bg-[#f8a87c]",
+    mint: "bg-[#86efac]",
+    sky: "bg-[#7dd3fc]",
+    lavender: "bg-[#c4b5fd]",
+    rose: "bg-[#fda4af]",
+    apricot: "bg-[#fde047]",
     neutral: "bg-neutral-400",
+    emerald: "bg-[#86efac]",
+    cyan: "bg-[#7dd3fc]",
+    amber: "bg-[#fde047]",
+    red: "bg-[#fda4af]",
   };
 
-  const currentStyle = colorStyles[color][variant];
+  const currentStyle = colorStyles[color] ? colorStyles[color][variant] : colorStyles.neutral[variant];
 
   return (
     <span
@@ -79,8 +110,8 @@ export function Badge({
     >
       {dot && (
         <span
-          className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotColors[color]} ${
-            color === "emerald" || color === "brand" ? "animate-pulse" : ""
+          className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotColors[color] || "bg-neutral-400"} ${
+            color === "emerald" || color === "brand" || color === "mint" ? "animate-pulse" : ""
           }`}
         />
       )}
