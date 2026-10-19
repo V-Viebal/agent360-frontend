@@ -17,6 +17,7 @@ import {
 import { EnterpriseDataTable, Column } from "../../components/ui/EnterpriseDataTable";
 import { SlideOverDrawer } from "../../components/ui/SlideOverDrawer";
 import { Modal } from "../../components/ui/Modal";
+import { CustomSelect, SelectOption } from "../../components/ui/CustomSelect";
 
 interface AgentItem {
   id: string;
@@ -65,19 +66,19 @@ export function AdminAgentsPage() {
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
-      const resAgents = await fetch("/api/v1/agents", { headers });
+      const resAgents = await fetch("/api/agents", { headers });
       if (resAgents.ok) {
         const data = await resAgents.json();
         setAgents(Array.isArray(data) ? data : []);
       }
 
-      const resAssign = await fetch("/api/v1/admin/agents/assignments", { headers });
+      const resAssign = await fetch("/api/admin/agents/assignments", { headers });
       if (resAssign.ok) {
         const data = await resAssign.json();
         setAssignments(Array.isArray(data) ? data : []);
       }
 
-      const resUsers = await fetch("/api/v1/admin/users", { headers });
+      const resUsers = await fetch("/api/admin/users", { headers });
       if (resUsers.ok) {
         const data = await resUsers.json();
         setUsers(Array.isArray(data) ? data : []);
@@ -103,7 +104,7 @@ export function AdminAgentsPage() {
 
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/admin/agents/assign", {
+      const res = await fetch("/api/admin/agents/assign", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -133,7 +134,7 @@ export function AdminAgentsPage() {
     if (!confirm("Bạn có chắc chắn muốn thu hồi quyền truy cập của thành viên này khỏi Agent?")) return;
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch(`/api/v1/admin/agents/assignments/${id}`, {
+      const res = await fetch(`/api/admin/agents/assignments/${id}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -374,49 +375,58 @@ export function AdminAgentsPage() {
           isOpen={showAssignModal}
           onClose={() => setShowAssignModal(false)}
           title={`Gán Quyền: ${selectedAgent.name}`}
+          bodyClassName="p-6 overflow-visible"
         >
-          <form onSubmit={handleAssignUser} className="space-y-4 text-xs">
-            <div className="space-y-1">
-              <label className="text-neutral-400 block">Chọn thành viên thụ hưởng</label>
-              <select
-                value={targetUserId}
-                onChange={(e) => setTargetUserId(Number(e.target.value))}
-                className="w-full p-2.5 rounded-xl bg-[#181822] border border-[#282836] text-white focus:outline-none focus:border-[#ff7a00]"
-                required
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.displayName || u.email || `User #${u.id}`} ({u.roles.join(", ") || "Member"})
-                  </option>
-                ))}
-              </select>
+          <form onSubmit={handleAssignUser} className="space-y-5 text-xs">
+            <div className="space-y-1.5">
+              <label className="text-neutral-300 font-medium block">Chọn thành viên thụ hưởng</label>
+              <CustomSelect
+                value={targetUserId.toString()}
+                onChange={(val) => setTargetUserId(Number(val))}
+                placeholder="Chọn người dùng từ hệ thống..."
+                searchable={true}
+                className="w-full"
+                triggerClassName="w-full p-2.5 rounded-xl bg-[#181822] border border-[#282836] text-white hover:border-[#ff7a00]/50"
+                options={users.map((u) => {
+                  const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
+                  const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
+                  return {
+                    value: u.id.toString(),
+                    label: cleanName,
+                    badge: isAdminRole ? "Admin" : "Member",
+                    description: u.email ? `${u.email} (DB #${u.id})` : `DB #${u.id} • ${u.logtoUserId}`,
+                  };
+                })}
+              />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-neutral-400 block">Vai trò trong Agent</label>
-              <select
+            <div className="space-y-1.5">
+              <label className="text-neutral-300 font-medium block">Vai trò trong Agent</label>
+              <CustomSelect
                 value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-[#181822] border border-[#282836] text-white focus:outline-none focus:border-[#ff7a00]"
-              >
-                <option value="Owner">Owner (Toàn quyền chat & công cụ)</option>
-                <option value="Operator">Operator (Thực thi tác vụ)</option>
-                <option value="Viewer">Viewer (Chỉ xem log)</option>
-              </select>
+                onChange={(val) => setTargetRole(val)}
+                className="w-full"
+                triggerClassName="w-full p-2.5 rounded-xl bg-[#181822] border border-[#282836] text-white hover:border-[#ff7a00]/50"
+                options={[
+                  { value: "Owner", label: "Owner (Chủ sở hữu)", badge: "Toàn quyền", description: "Toàn quyền hội thoại, kích hoạt công cụ và cấu hình Agent" },
+                  { value: "Operator", label: "Operator (Vận hành)", badge: "Tác vụ", description: "Thực thi tác vụ, chạy routine automation" },
+                  { value: "Viewer", label: "Viewer (Quan sát)", badge: "Chỉ đọc", description: "Chỉ xem lịch sử và nhật ký hoạt động của Agent" },
+                ]}
+              />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#20202c]">
               <button
                 type="button"
                 onClick={() => setShowAssignModal(false)}
-                className="px-3 py-1.5 rounded-xl text-neutral-400 hover:text-white cursor-pointer"
+                className="px-4 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="px-4 py-2 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-bold cursor-pointer disabled:opacity-50"
+                disabled={submitting || targetUserId === 0}
+                className="px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold transition-all shadow-md cursor-pointer disabled:opacity-50"
               >
                 {submitting ? "Đang gán..." : "Xác nhận gán quyền"}
               </button>

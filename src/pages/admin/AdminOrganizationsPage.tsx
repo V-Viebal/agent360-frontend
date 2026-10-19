@@ -38,7 +38,7 @@ export function AdminOrganizationsPage() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/admin/metrics/organizations", {
+      const res = await fetch("/api/admin/metrics/organizations", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {

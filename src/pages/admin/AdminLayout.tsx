@@ -59,7 +59,7 @@ export function AdminLayout() {
       }
 
       try {
-        const res = await fetch("/api/v1/users/me", {
+        const res = await fetch("/api/users/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

@@ -26,9 +26,9 @@ export function AdminDashboardPage() {
 
     try {
       const [resAgents, resUsers, resTxs] = await Promise.allSettled([
-        fetch("/api/v1/agents", { headers }),
-        fetch("/api/v1/admin/users", { headers }),
-        fetch("/api/v1/admin/billings/transactions", { headers })
+        fetch("/api/agents", { headers }),
+        fetch("/api/admin/users", { headers }),
+        fetch("/api/admin/billings/transactions", { headers })
       ]);
 
       if (resAgents.status === "fulfilled" && resAgents.value.ok) {

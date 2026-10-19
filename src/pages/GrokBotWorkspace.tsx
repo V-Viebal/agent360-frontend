@@ -190,7 +190,7 @@ import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
-import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast } from "../components/ui";
+import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { PermissionsModal } from "../components/PermissionsModal";
@@ -2694,6 +2694,9 @@ export function GrokBotWorkspace() {
   const [plusMenuSearch, setPlusMenuSearch] = useState("");
   const [plusMenuSelectedIndex, setPlusMenuSelectedIndex] = useState<number>(-1);
   const plusMenuRef = useRef<HTMLDivElement>(null);
+  const [plusMenuDragY, setPlusMenuDragY] = useState<number>(0);
+  const [isPlusMenuDragging, setIsPlusMenuDragging] = useState<boolean>(false);
+  const plusMenuTouchStartYRef = useRef<number | null>(null);
   const appsScrollRef = useRef<HTMLDivElement>(null);
   const subAgentsScrollRef = useRef<HTMLDivElement>(null);
   const lastAppsScrollTopRef = useRef(0);
@@ -2818,11 +2821,9 @@ export function GrokBotWorkspace() {
           fetchInfraAgents(),
           fetchSkills(undefined),
         ]);
-        if (loadedAgents.length === 0) {
-          setBackendError("No active agents returned from cluster. Running in Standby mode.");
-        } else {
-          setBackendError(null);
-        }
+        // When 0 agents are returned, user either has no assigned agents or is a new member.
+        // Don't show technical 'cluster standby / reconnect' error banner in this legitimate case.
+        setBackendError(null);
       } catch (err: any) {
         setBackendError(err?.name === "AgentListAuthError" || err instanceof AgentListAuthError
           ? err.message
@@ -3107,23 +3108,23 @@ export function GrokBotWorkspace() {
     await toggleAgentChannel(selectedAgentId, channelType, nextState);
   };
 
+  const hasNoAgents = !isLoadingAgents && agents.length === 0;
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0] || {
-    id: "mons",
-    name: "Mons",
-    slug: "mons",
-    roleTag: "Engineering",
-    node: "3rd (ai.hmz.one)",
+    id: "",
+    name: "",
+    slug: "",
+    roleTag: "",
+    node: "",
     status: "active",
-    model: "grok-4.7",
-    uptime: "Online",
-    memoryUsageMb: 256,
-    description: "Core Development Agent for Core CoPaw AI",
+    model: "",
+    uptime: "",
+    memoryUsageMb: 0,
+    description: "",
     tools: [],
     sessions: [],
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
-  const hasNoAgents = !isLoadingAgents && agents.length === 0;
 
   // The selected agent's own browser (service + Chromium profile); refreshed while the Computer surface is visible.
   const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
@@ -5052,36 +5053,45 @@ export function GrokBotWorkspace() {
           className={`flex-1 overflow-y-auto ${isCompactMode ? "px-3 py-3 space-y-3.5" : "px-4 md:px-8 py-5 space-y-5"} max-w-3xl mx-auto w-full`}
         >
           {hasNoAgents ? (
-            <div className="h-full min-h-[420px] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300 select-none">
-              <div className="w-16 h-16 rounded-3xl bg-[#ff7a00]/10 border border-[#ff7a00]/25 flex items-center justify-center mb-5 shadow-lg shadow-[#ff7a00]/5">
-                <Bot size={32} className="text-[#ff7a00]" />
-              </div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 tracking-tight">
-                Bạn chưa được phân quyền quản lý Agent nào
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-md mb-6 leading-relaxed">
-                Tài khoản của bạn hiện chưa được phân công Agent trên hạ tầng Skyer. Hãy liên hệ Quản trị viên (Admin) để được gán quyền sử dụng hoặc cấp quyền vận hành.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => alert("Tính năng tự tạo Agent riêng trên hạ tầng VPS đang được phát triển và sẽ sớm ra mắt!")}
-                  className="px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ff8f26] text-black font-semibold text-xs transition-all cursor-pointer shadow-md flex items-center gap-2 group"
-                >
-                  <Plus size={15} className="group-hover:rotate-90 transition-transform" />
-                  <span>Tạo Agent mới</span>
-                  <span className="ml-1 px-1.5 py-0.5 rounded-md bg-black/20 text-black text-[9px] font-mono uppercase tracking-wider font-bold">
-                    Incoming
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-[#181824] hover:bg-slate-200 dark:hover:bg-[#20202e] border border-slate-200 dark:border-[#2a2a3c] text-slate-700 dark:text-neutral-300 text-xs font-medium transition-colors cursor-pointer"
-                >
-                  Kiểm tra lại quyền
-                </button>
-              </div>
+            <div className="h-full min-h-[460px] flex items-center justify-center p-4">
+              <EmptyState
+                size="lg"
+                badge="Skyer Autonomous Fleet • Standby"
+                icon={<Bot size={36} className="text-[#ff7a00] animate-pulse" />}
+                title="Đang chờ phân công Agent"
+                description="Tài khoản của bạn đang được kết nối với Skyer. Vui lòng đợi Quản trị viên phân quyền hoặc làm mới để kiểm tra trạng thái."
+                action={{
+                  label: "Làm mới",
+                  icon: <RefreshCw size={13} />,
+                  variant: "primary",
+                  onClick: () => {
+                    playMicroClick();
+                    window.location.reload();
+                  },
+                }}
+                secondaryAction={{
+                  label: "Marketplace",
+                  icon: <Sparkles size={13} />,
+                  variant: "secondary",
+                  onClick: () => {
+                    playMicroClick();
+                    window.location.href = "/marketplace";
+                  },
+                }}
+                extraAction={
+                  isAdmin
+                    ? {
+                        label: "Phân quyền",
+                        icon: <Shield size={13} />,
+                        variant: "outline",
+                        onClick: () => {
+                          playMicroClick();
+                          window.location.href = "/admin/agents";
+                        },
+                      }
+                    : undefined
+                }
+              />
             </div>
           ) : (
           <>
@@ -5124,8 +5134,8 @@ export function GrokBotWorkspace() {
                 <span className="text-[10px] text-neutral-500">Click to send immediately</span>
               </div>
 
-              {/* Grid of 4 dynamic, agent-specific quick prompt suggestion cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2.5 w-full text-left font-sans">
+              {/* Grid of 4 dynamic, agent-specific quick prompt suggestion cards with responsive container-based wrapping */}
+              <div className="grid grid-cols-1 [container-type:inline-size] @[520px]:grid-cols-2 gap-2 sm:gap-2.5 w-full text-left font-sans">
                 {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
                   <button
                     key={qIdx}
@@ -5133,21 +5143,21 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       executeTurnStream(item.prompt);
                     }}
-                    className="p-2.5 sm:p-3 md:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2 w-full min-w-0"
+                    className="p-2.5 sm:p-3 md:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#ff7a00]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2 w-full min-w-0 overflow-hidden"
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#ff7a00] shrink-0" />
-                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate min-w-0 block">
+                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate whitespace-nowrap min-w-0 block">
                         {item.title}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                       {item.badge && (
-                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
+                        <span className="hidden @[260px]:inline-block text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#ff7a00] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
                           {item.badge}
                         </span>
                       )}
-                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0 hidden sm:block" />
+                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#ff7a00] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0 hidden @[320px]:block" />
                     </div>
                   </button>
                 ))}
@@ -5610,7 +5620,7 @@ export function GrokBotWorkspace() {
           )}
 
           {/* Cluster Standby / Local Sandbox Alert */}
-          {backendError && (
+          {backendError && !hasNoAgents && (
             <div
               role="alert"
               data-testid="backend-standby-banner"
@@ -5764,7 +5774,58 @@ export function GrokBotWorkspace() {
           {/* Plus Add Popover Menu (Spans 100% full width of chat input and sits directly on top) */}
           <div ref={plusMenuRef} className="relative w-full">
             {isPlusMenuOpen && (
-              <div className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-0 md:mb-3 max-h-[82vh] md:max-h-none flex flex-col rounded-2xl md:rounded-xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-2xl backdrop-blur-xl p-3 sm:p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left">
+              <div
+                style={{
+                  transform: plusMenuDragY > 0 ? "translateY(" + plusMenuDragY + "px)" : undefined,
+                  transition: isPlusMenuDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+                className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-0 md:mb-3 max-h-[82vh] md:max-h-none flex flex-col rounded-2xl md:rounded-xl bg-white/95 dark:bg-[#121218]/95 border border-slate-200 dark:border-[#262634] shadow-2xl backdrop-blur-xl p-3 sm:p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left "
+              >
+                {/* Mobile iOS-style Swipe-down Handle (Kéo để đóng) */}
+                <div
+                  onTouchStart={(e) => {
+                    if (e.touches.length === 1) {
+                      plusMenuTouchStartYRef.current = e.touches[0].clientY;
+                      setIsPlusMenuDragging(true);
+                    }
+                  }}
+                  onTouchMove={(e) => {
+                    if (plusMenuTouchStartYRef.current !== null && e.touches.length === 1) {
+                      const deltaY = e.touches[0].clientY - plusMenuTouchStartYRef.current;
+                      if (deltaY > 0) {
+                        setPlusMenuDragY(deltaY);
+                      }
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (plusMenuTouchStartYRef.current !== null && e.changedTouches.length === 1) {
+                      const deltaY = e.changedTouches[0].clientY - plusMenuTouchStartYRef.current;
+                      if (deltaY > 60) {
+                        if (typeof window !== "undefined" && "vibrate" in navigator) {
+                          try { navigator.vibrate(10); } catch {}
+                        }
+                        setIsPlusMenuOpen(false);
+                      }
+                    }
+                    setPlusMenuDragY(0);
+                    setIsPlusMenuDragging(false);
+                    plusMenuTouchStartYRef.current = null;
+                  }}
+                  onTouchCancel={() => {
+                    setPlusMenuDragY(0);
+                    setIsPlusMenuDragging(false);
+                    plusMenuTouchStartYRef.current = null;
+                  }}
+                  onClick={() => setIsPlusMenuOpen(false)}
+                  className="md:hidden flex flex-col items-center justify-center pt-1 pb-2.5 -mt-1 cursor-grab active:cursor-grabbing shrink-0 touch-none select-none active:opacity-75 transition-opacity"
+                  aria-label="Kéo để đóng"
+                >
+                  <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full hover:bg-[#ff7a00] transition-colors" />
+                  <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 mt-1 select-none flex items-center gap-1 opacity-75">
+                    <span>Kéo để đóng</span>
+                  </span>
+                </div>
+
                 <div className="px-1 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-neutral-300 font-semibold tracking-wide">
@@ -7438,10 +7499,10 @@ export function GrokBotWorkspace() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-neutral-300">
-                          {chatSearchQuery ? `No matches for "${chatSearchQuery}"` : "No dialogues found"}
+                          {hasNoAgents ? "Chưa có hội thoại" : chatSearchQuery ? `No matches for "${chatSearchQuery}"` : "No dialogues found"}
                         </p>
                         <p className="text-[11px] text-neutral-500">
-                          {chatSearchQuery ? "Try a different search keyword or clear filter." : "Start a fresh session with this agent."}
+                          {hasNoAgents ? "Bạn cần được cấp quyền Agent để bắt đầu trò chuyện." : chatSearchQuery ? "Try a different search keyword or clear filter." : "Start a fresh session with this agent."}
                         </p>
                       </div>
                       <div className="flex items-center justify-center gap-2 pt-1">
@@ -7454,13 +7515,15 @@ export function GrokBotWorkspace() {
                             Clear search
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={handleNewChat}
-                          className="px-3 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8a1a] text-black font-semibold text-[11px] transition-colors cursor-pointer shadow-xs"
-                        >
-                          + New Chat
-                        </button>
+                        {!hasNoAgents && (
+                          <button
+                            type="button"
+                            onClick={handleNewChat}
+                            className="px-3 py-1 rounded-lg bg-[#ff7a00] hover:bg-[#ff8a1a] text-black font-semibold text-[11px] transition-colors cursor-pointer shadow-xs"
+                          >
+                            + New Chat
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -7507,6 +7570,18 @@ export function GrokBotWorkspace() {
               </button>
             </div>
 
+            {hasNoAgents || !selectedAgent.id ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none space-y-3 font-sans">
+                <div className="w-12 h-12 rounded-2xl bg-[#ff7a00]/10 border border-[#ff7a00]/25 flex items-center justify-center text-[#ff7a00]">
+                  <Bot size={24} />
+                </div>
+                <h3 className="text-xs font-semibold text-white">Chưa chọn Agent</h3>
+                <p className="text-[11px] text-neutral-400 max-w-[220px] leading-relaxed">
+                  Tài khoản của bạn chưa có Agent nào được gán để hiển thị thông số kỹ thuật.
+                </p>
+              </div>
+            ) : (
+            <>
             {/* Dedicated Agent Identity Avatar matching Left Sidebar & Interactive Model Switcher */}
             <div className="p-5 flex flex-col items-center text-center border-b border-[#1c1c22]">
               {/* Agent Avatar matching left sidebar */}
@@ -8143,6 +8218,8 @@ export function GrokBotWorkspace() {
 
               
             </div>
+            </>
+            )}
           </>
         )}
       </aside>

@@ -38,7 +38,7 @@ export function AdminUsersPage() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/admin/users", {
+      const res = await fetch("/api/admin/users", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -63,7 +63,7 @@ export function AdminUsersPage() {
 
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch(`/api/v1/admin/users/${u.id}/role`, {
+      const res = await fetch(`/api/admin/users/${u.id}/role`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

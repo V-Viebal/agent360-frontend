@@ -76,7 +76,7 @@ export function AdminBillingsPage() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/admin/billings/transactions", {
+      const res = await fetch("/api/admin/billings/transactions", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -94,7 +94,7 @@ export function AdminBillingsPage() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/admin/billings/wallets", {
+      const res = await fetch("/api/admin/billings/wallets", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -112,7 +112,7 @@ export function AdminBillingsPage() {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/billing/wallet", {
+      const res = await fetch("/api/billing/wallet", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -137,7 +137,7 @@ export function AdminBillingsPage() {
     setSyncingOrderCode(orderCode);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch(`/api/v1/admin/billings/transactions/${orderCode}/sync`, {
+      const res = await fetch(`/api/admin/billings/transactions/${orderCode}/sync`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -164,7 +164,7 @@ export function AdminBillingsPage() {
     setTopupLoadingId(pkg.id);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/billing/topup", {
+      const res = await fetch("/api/billing/topup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -198,7 +198,7 @@ export function AdminBillingsPage() {
     setAdjusting(true);
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-      const res = await fetch("/api/v1/admin/billings/wallets/adjust", {
+      const res = await fetch("/api/admin/billings/wallets/adjust", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
