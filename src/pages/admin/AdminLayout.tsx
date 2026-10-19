@@ -350,7 +350,7 @@ export function AdminLayout() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden text-neutral-400 hover:text-white p-1.5 rounded-lg border border-[#242432]"
+              className="md:hidden text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1.5 rounded-lg border border-[var(--border-card)] hover:bg-[var(--bg-card-hover)] transition-colors cursor-pointer shrink-0"
             >
               <Menu size={16} />
             </button>
@@ -359,12 +359,12 @@ export function AdminLayout() {
                 Workspace
               </Link>
               <span className="text-neutral-600">/</span>
-              <span className="text-[var(--text-primary)] font-semibold">Admin Control Surface</span>
+              <span className="text-[var(--text-primary)] font-semibold truncate max-w-[140px] sm:max-w-none">Admin Control Surface</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+            <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Production Fleet Online</span>
             </span>

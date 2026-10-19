@@ -64,7 +64,11 @@ export default defineConfig({
     host: "0.0.0.0",
     watch: {
       usePolling: true,
-      interval: 800,
+      interval: 300,
+      binaryInterval: 600,
+    },
+    hmr: {
+      overlay: true,
     },
     // Local dev: AGENT360_API_TARGET=http://127.0.0.1:5290 runs against a local backend (paths are mapped to
     // /api/v1 like the production nginx). Without it the dev server proxies to the production frontend origin.
