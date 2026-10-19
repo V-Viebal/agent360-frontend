@@ -1641,7 +1641,7 @@ export function GrokBotWorkspace() {
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
     try {
-      const saved = localStorage.getItem(`skyer_loop_mode_${selectedAgentId || "mons"}`);
+      const saved = selectedAgentId ? localStorage.getItem(`skyer_loop_mode_${selectedAgentId}`) : null;
       if (saved === "default" || saved === "goal" || saved === "mission") return saved;
     } catch {}
     return "default";
@@ -3027,7 +3027,7 @@ export function GrokBotWorkspace() {
   const loadWorkspaceTree = async () => {
     setIsLoadingTree(true);
     try {
-      const entries = await fetchWorkspaceTree(selectedAgent?.id || "mons");
+      if (!selectedAgent?.id) return; const entries = await fetchWorkspaceTree(selectedAgent.id);
       setWorkspaceFiles(entries);
     } finally {
       setIsLoadingTree(false);
@@ -3039,7 +3039,7 @@ export function GrokBotWorkspace() {
     setSelectedFilePath(node.path);
     setIsLoadingFile(true);
     try {
-      const content = await fetchWorkspaceFileContent(selectedAgent?.id || "mons", node.path);
+      if (!selectedAgent?.id) return; const content = await fetchWorkspaceFileContent(selectedAgent.id, node.path);
       setFileContent(content);
     } finally {
       setIsLoadingFile(false);
@@ -4900,7 +4900,7 @@ export function GrokBotWorkspace() {
                 ) : (
                   <>
                     <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
-                    <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Mons"}</span>
+                    <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                   </>
                 )}
                 {activeLoopMode !== "default" && (
