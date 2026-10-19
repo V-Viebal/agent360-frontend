@@ -7,45 +7,56 @@ import {
   Users,
   CreditCard,
   Building2,
-  Settings,
-  ChevronRight,
   ShieldAlert,
-  Menu,
-  X,
+  Settings,
+  LogOut,
+  ChevronRight,
   ExternalLink,
   ShieldCheck,
-  Server,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Menu,
+  X,
+  Sparkles,
 } from "lucide-react";
 import { SkyerLogo } from "../../components/SkyerLogo";
+import { authConfig } from "../../config/authConfig";
+import { initiateSkyerSignOut } from "../../services/pkceAuth";
 
 interface UserProfile {
   id: number;
   externalUserId: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  displayName?: string;
-  roles?: Array<{ id: number; code: string; name: string }>;
-  permissions?: string[];
+  email: string;
+  displayName: string;
+  roles: { id: number; code: string; name: string }[];
+  permissions: string[];
 }
 
 export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    return localStorage.getItem("skyer_admin_sidebar_collapsed") === "true";
-  });
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  // Desktop collapsible sidebar state (saved in localStorage for workflow persistence)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("agent360_admin_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  // Mobile drawer toggle
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const toggleSidebarCollapse = () => {
     setIsSidebarCollapsed((prev) => {
       const next = !prev;
-      localStorage.setItem("skyer_admin_sidebar_collapsed", String(next));
+      try {
+        localStorage.setItem("agent360_admin_sidebar_collapsed", String(next));
+      } catch {}
       return next;
     });
   };
@@ -233,7 +244,7 @@ export function AdminLayout() {
         {/* Brand Header */}
         <div className="h-14 border-b border-[#1e1e26] flex items-center justify-between px-3.5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <SkyerLogo className="w-6 h-6 shrink-0" />
+            <SkyerLogo size={24} showText={false} showBotBadge={false} className="shrink-0" />
             {!isSidebarCollapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-xs tracking-tight text-white flex items-center gap-1.5 truncate">
@@ -345,22 +356,24 @@ export function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Fleet: 5 Nodes Online</span>
-            </div>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Production Fleet Online</span>
+            </span>
+
             <button
-              onClick={() => navigate("/app")}
-              className="px-3 py-1 rounded-lg border border-[#2e2e3e] bg-[#1a1a24] hover:bg-[#222230] text-xs font-medium text-neutral-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              onClick={() => initiateSkyerSignOut(authConfig)}
+              className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-rose-400 transition-colors cursor-pointer px-2.5 py-1 rounded-lg hover:bg-[#1a1a24]"
+              title="Đăng xuất khỏi hệ thống"
             >
-              <span>User App</span>
-              <ExternalLink size={11} />
+              <LogOut size={13} />
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
         </header>
 
-        {/* Page Content: Full-Height Flex-1, Zero External Scroll */}
-        <main className="flex-1 overflow-hidden p-3 sm:p-5 flex flex-col min-h-0">
+        {/* Dynamic Nested Content */}
+        <main className="flex-1 overflow-y-auto min-h-0 bg-[#0c0c0e]">
           <Outlet />
         </main>
       </div>
