@@ -26,10 +26,22 @@ export default defineConfig({
     emptyOutDir: false,
     chunkSizeWarningLimit: 900,
     rollupOptions: {
+      onwarn(warning, defaultHandler) {
+        if (warning.code === "CIRCULAR_DEPENDENCY" || warning.message?.includes("Circular chunk")) {
+          throw new Error(`[Vite Build Guard] Circular chunk dependency detected: ${warning.message}`);
+        }
+        defaultHandler(warning);
+      },
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("react-router-dom") || id.includes("react-dom") || id.includes("/react/")) {
+            if (
+              id.includes("react-router") ||
+              id.includes("@remix-run") ||
+              id.includes("react-dom") ||
+              id.includes("/react/") ||
+              id.includes("scheduler")
+            ) {
               return "vendor-react";
             }
             if (id.includes("lucide-react")) {

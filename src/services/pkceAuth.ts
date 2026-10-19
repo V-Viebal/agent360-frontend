@@ -1,5 +1,5 @@
 // Standard browser PKCE (Proof Key for Code Exchange) implementation for SPA OIDC
-import { clearAllSessionState, getStoredToken } from "./authFetch";
+import { clearAllSessionState, getStoredToken } from "./sessionStorageHelpers";
 
 export function generateRandomString(length = 64): string {
   const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';

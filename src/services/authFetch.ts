@@ -6,7 +6,7 @@ import { initiateSkyerSignIn } from "./pkceAuth";
  * - SessionSecurityStorage across tabs (dual sessionStorage + localStorage sync).
  * - Automatic background token refresh (silent renew) when token approaches expiry (renewTimeBeforeTokenExpiresInSeconds: 60).
  * - Single-flight refresh mutex lock (useRefreshTokenLock) to prevent race conditions during concurrent API calls.
- * - On 401: transparent retry with fresh token. If refresh token fails/revoked: graceful session cleanup and sign-in re-auth.
+ * - On 401: transparent retry with fresh token. If refresh token fails/revoked: graceful session cleanup and auto redirect to sign-in re-auth.
  */
 const ACCESS = "skyer_access_token";
 const REFRESH = "skyer_refresh_token";
@@ -64,7 +64,7 @@ export async function requestTokenRefresh(originalFetch: typeof fetch = window.f
   const rt = getStoredToken(REFRESH);
   if (!rt) return null;
 
-  const isLocal = typeof window !== "undefined" && window.location.origin.includes("localhost");
+  const isLocal = typeof window !== "undefined" && (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1") || window.location.origin.includes("192.168."));
   const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
 
   try {
@@ -134,6 +134,25 @@ export function startSilentRenewLoop(): void {
   }, 30_000);
 }
 
+let redirectingToSignIn = false;
+
+export function redirectToSignIn(): void {
+  if (typeof window === "undefined" || redirectingToSignIn) return;
+  if (window.location.pathname === "/callback" || window.location.pathname === "/") return;
+
+  redirectingToSignIn = true;
+  try {
+    sessionStorage.setItem(RETURN_URL, window.location.pathname + window.location.search);
+  } catch {}
+
+  console.warn("[Auth] 401 Unauthorized encountered & refresh failed. Redirecting to sign in...");
+  clearAllSessionState();
+  initiateSkyerSignIn(authConfig).catch((err) => {
+    console.error("[Auth] Redirect to sign in failed:", err);
+    redirectingToSignIn = false;
+  });
+}
+
 export function installAuthFetch(): void {
   if (typeof window === "undefined" || (window.fetch as any).__agent360Auth) return;
   const original = window.fetch.bind(window);
@@ -186,11 +205,9 @@ export function installAuthFetch(): void {
         }
       })();
 
-      // Do not redirect if user is in callback or has explicit operator key
+      // If user has no operator key and isn't on public landing or callback: auto eject to Logto sign-in
       if (!hasOperatorKey && window.location.pathname !== "/callback" && window.location.pathname !== "/") {
-        try {
-          sessionStorage.setItem(RETURN_URL, window.location.pathname + window.location.search);
-        } catch {}
+        redirectToSignIn();
       }
     }
 

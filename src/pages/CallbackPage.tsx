@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { authConfig } from "../config/authConfig";
 import { getCurrentUserProfile } from "../services/userService";
-import { setStoredToken } from "../services/authFetch";
+import { setStoredToken } from "../services/sessionStorageHelpers";
 
 export function CallbackPage() {
   const navigate = useNavigate();
