@@ -1036,11 +1036,11 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
           profile: {profile}
         </div>
       )}
-      <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
         <button
           type="button"
           onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
-          className="px-2.5 py-1 rounded-lg bg-[#1c1c26]/90 border border-[#2c2c3e] text-[11px] font-mono text-neutral-300 hover:text-white"
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm backdrop-blur-md transition-colors cursor-pointer"
           title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
         >
           {mode === "shared" ? "Control" : "Watch only"}
@@ -1048,7 +1048,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
         <button
           type="button"
           onClick={() => setAttempt((a) => a + 1)}
-          className="px-2.5 py-1 rounded-lg bg-[#1c1c26]/90 border border-[#2c2c3e] text-[11px] font-mono text-neutral-300 hover:text-white"
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm backdrop-blur-md transition-colors cursor-pointer"
           title="Reconnect stream"
         >
           Reconnect
@@ -6832,11 +6832,7 @@ export function GrokBotWorkspace() {
             {/* Top Control Bar */}
             <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="text-xs font-mono font-semibold text-white tracking-wide truncate">
-                  {selectedAgent.name} Computer
-                </span>
-
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
               </div>
 
               {/* Action Buttons: Screenshot, Reload, Fullscreen modal, Open in new tab, and Close Split */}
@@ -6863,7 +6859,7 @@ export function GrokBotWorkspace() {
                     setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
                     textareaRef.current?.focus();
                   }}
-                  className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-cyan-400 flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
+                  className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-cyan-600 dark:hover:text-cyan-400 flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
                   title={t("computer.screenshotBtn")}
                 >
                   <Camera size={13} className="text-cyan-400" />
@@ -6880,7 +6876,7 @@ export function GrokBotWorkspace() {
                     setBrowserIframeKey((k) => k + 1);
                     setTimeout(() => setIsReloadingBrowser(false), 900);
                   }}
-                  className="h-8 px-2 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
+                  className="h-8 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
                   title={t("computer.reloadProfileBtn")}
                 >
                   <RefreshCw size={12} className={isReloadingBrowser ? "animate-spin text-[#ff7a00]" : ""} />
@@ -6889,7 +6885,7 @@ export function GrokBotWorkspace() {
                 <button
                   type="button"
                   onClick={() => handleSetBrowserModalOpen(true)}
-                  className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
+                  className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
                   title={t("computer.zenMode")}
                   aria-label="Expand full screen modal"
                 >
@@ -6902,7 +6898,7 @@ export function GrokBotWorkspace() {
                   onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
                   target="_blank"
                   rel="noreferrer"
-                  className="h-8 px-2.5 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] text-neutral-300 hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
+                  className="h-8 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 text-xs font-mono transition-colors cursor-pointer"
                   title={t("computer.openExternal")}
                   aria-label="Open external window"
                 >
@@ -6913,7 +6909,7 @@ export function GrokBotWorkspace() {
                 <button
                   type="button"
                   onClick={() => handleToggleComputerSplit(false)}
-                  className="h-8 w-8 rounded-lg bg-[#22222e] hover:bg-red-500/20 hover:text-red-400 border border-[#303042] hover:border-red-500/30 text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                  className="h-8 w-8 rounded-lg bg-slate-200/80 hover:bg-red-500/10 hover:text-red-500 dark:bg-[#22222e] dark:hover:bg-red-500/20 dark:hover:text-red-400 border border-slate-300 dark:border-[#303042] hover:border-red-500/30 text-slate-700 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
                   title={t("computer.closeComputer")}
                   aria-label="Close Virtual Computer"
                 >
@@ -8235,13 +8231,7 @@ export function GrokBotWorkspace() {
             {/* Top Navigation Bar with Controls & Close Button */}
             <header className="h-12 border-b border-[#252532] bg-[#121218] px-4 flex items-center justify-between shrink-0 select-none">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="text-xs font-mono font-semibold text-white tracking-wide truncate">
-                  {browserTarget.label}
-                </span>
-                <span className="text-[11px] font-mono text-neutral-400 hidden sm:inline px-2 py-0.5 rounded bg-white/5 border border-white/10">
-                  {selectedAgent.name} ({selectedAgent.node})
-                </span>
+                <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
               </div>
 
               {/* Action buttons */}

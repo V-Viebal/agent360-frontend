@@ -829,3 +829,110 @@ button:not(:disabled):active,
 .glow-active-badge {
   animation: badgeGlow 3s ease-in-out infinite;
 }
+
+
+/* Admin Dashboard, Data Tables & Layout Light Mode */
+html.light aside,
+[data-theme="light"] aside {
+  background-color: var(--bg-sidebar) !important;
+  border-color: var(--border-card) !important;
+}
+
+html.light header,
+[data-theme="light"] header {
+  background-color: var(--bg-nav) !important;
+  border-color: var(--border-card) !important;
+}
+
+html.light .bg-\[\#0a0a0d\],
+html.light .bg-\[\#0c0c0e\],
+[data-theme="light"] .bg-\[\#0a0a0d\],
+[data-theme="light"] .bg-\[\#0c0c0e\] {
+  background-color: var(--bg-page) !important;
+}
+
+html.light .bg-\[\#111116\],
+[data-theme="light"] .bg-\[\#111116\] {
+  background-color: var(--bg-sidebar) !important;
+}
+
+html.light .bg-\[\#121217\],
+html.light .bg-\[\#121218\],
+html.light .bg-\[\#14141c\],
+html.light .bg-\[\#14141a\],
+html.light .bg-\[\#161620\],
+html.light .bg-\[\#161622\],
+html.light .bg-\[\#181822\],
+html.light .bg-\[\#181824\],
+[data-theme="light"] .bg-\[\#121217\],
+[data-theme="light"] .bg-\[\#121218\],
+[data-theme="light"] .bg-\[\#14141c\],
+[data-theme="light"] .bg-\[\#14141a\],
+[data-theme="light"] .bg-\[\#161620\],
+[data-theme="light"] .bg-\[\#161622\],
+[data-theme="light"] .bg-\[\#181822\],
+[data-theme="light"] .bg-\[\#181824\] {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-card) !important;
+}
+
+html.light .bg-\[\#1a1a24\],
+html.light .bg-\[\#181820\],
+html.light .bg-\[\#20202c\],
+html.light .bg-\[\#222230\],
+[data-theme="light"] .bg-\[\#1a1a24\],
+[data-theme="light"] .bg-\[\#181820\],
+[data-theme="light"] .bg-\[\#20202c\],
+[data-theme="light"] .bg-\[\#222230\] {
+  background-color: var(--bg-card-hover) !important;
+}
+
+html.light .bg-\[\#0e0e14\],
+[data-theme="light"] .bg-\[\#0e0e14\] {
+  background-color: var(--bg-card-subtle) !important;
+}
+
+html.light .text-white,
+[data-theme="light"] .text-white {
+  color: var(--text-primary) !important;
+}
+
+html.light .text-neutral-200,
+html.light .text-neutral-300,
+[data-theme="light"] .text-neutral-200,
+[data-theme="light"] .text-neutral-300 {
+  color: var(--text-primary) !important;
+}
+
+html.light .text-neutral-400,
+[data-theme="light"] .text-neutral-400 {
+  color: var(--text-secondary) !important;
+}
+
+html.light .text-neutral-500,
+[data-theme="light"] .text-neutral-500 {
+  color: var(--text-muted) !important;
+}
+
+html.light .border-\[\#1e1e26\],
+html.light .border-\[\#22222c\],
+html.light .border-\[\#22222e\],
+html.light .border-\[\#262634\],
+html.light .border-\[\#262636\],
+html.light .border-\[\#282836\],
+html.light .border-\[\#242432\],
+html.light .border-\[\#242434\],
+html.light .border-\[\#2c2c3c\],
+html.light .border-\[\#2e2e3e\],
+[data-theme="light"] .border-\[\#1e1e26\],
+[data-theme="light"] .border-\[\#22222c\],
+[data-theme="light"] .border-\[\#22222e\],
+[data-theme="light"] .border-\[\#262634\],
+[data-theme="light"] .border-\[\#262636\],
+[data-theme="light"] .border-\[\#282836\],
+[data-theme="light"] .border-\[\#242432\],
+[data-theme="light"] .border-\[\#242434\],
+[data-theme="light"] .border-\[\#2c2c3c\],
+[data-theme="light"] .border-\[\#2e2e3e\] {
+  border-color: var(--border-card) !important;
+}

@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SkyerLogo } from "../../components/SkyerLogo";
+import { ThemeSelector } from "../../components/ThemeSelector";
 import { authConfig } from "../../config/authConfig";
 import { initiateSkyerSignOut } from "../../services/pkceAuth";
 
@@ -81,14 +82,21 @@ export function AdminLayout() {
 
       let data: any = null;
 
-      // 1. Try to fetch profile from backend
+      // 1. Try to fetch profile from backend (/api/users/me or /api/v1/users/me)
       if (token) {
         try {
-          const res = await fetch("/api/users/me", {
+          let res = await fetch("/api/users/me", {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           });
+          if (!res.ok && res.status === 404) {
+            res = await fetch("/api/v1/users/me", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+          }
           if (res.ok) {
             data = await res.json();
             setProfile(data);
@@ -360,6 +368,8 @@ export function AdminLayout() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Production Fleet Online</span>
             </span>
+
+            <ThemeSelector />
 
             <button
               onClick={() => initiateSkyerSignOut(authConfig)}

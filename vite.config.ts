@@ -74,14 +74,14 @@ export default defineConfig({
             target: process.env.AGENT360_API_TARGET,
             changeOrigin: true,
             ws: true,
-            rewrite: (p) => p.replace(/^\/api\//, "/api/v1/"),
+            rewrite: (p) => p.replace(/^\/api\/(v\d+\/)?/, "/api/v1/"),
           }
         : {
             target: "https://agent360.antares.vn",
             changeOrigin: true,
             ws: true,
             secure: false,
-            rewrite: (p) => p,
+            rewrite: (p) => p.replace(/^\/api\/v1\//, "/api/"),
           },
     },
   },
