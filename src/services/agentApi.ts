@@ -266,7 +266,7 @@ export interface WorkspaceTreeNode {
 }
 
 export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTreeNode[]> {
-  if (!agentId) return []; const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {
     const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/tree`, {
       headers: { Accept: "application/json" }
@@ -289,7 +289,7 @@ export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTre
 }
 
 export async function fetchWorkspaceFileContent(agentId: string, filePath: string): Promise<string> {
-  if (!agentId) return []; const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {
     const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
       headers: { Accept: "application/json" }
