@@ -143,6 +143,7 @@ import {
   Check,
   Terminal,
   ChevronDown,
+  ChevronUp,
   Shield,
   Star,
   Settings,
@@ -3034,6 +3035,46 @@ export function GrokBotWorkspace() {
     };
   }, [selectedChatId, selectedAgentId, selectedChatKnown]);
 
+  // Real-time bidirectional Telegram & external turn sync listener
+  useEffect(() => {
+    if (!selectedChatId || !selectedAgentId || !selectedChatKnown) return;
+    if (selectedChatId.startsWith("session-")) return;
+
+    let sse: EventSource | null = null;
+    try {
+      const sseUrl = `/api/v1/agents/${encodeURIComponent(selectedAgentId)}/chats/${encodeURIComponent(selectedChatId)}/stream`;
+      sse = new EventSource(sseUrl);
+
+      sse.addEventListener("session_update", (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.chat_id === selectedChatId && Array.isArray(payload.messages)) {
+            fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
+              if (reloadedMsgs && reloadedMsgs.length > 0) {
+                setMessages(reloadedMsgs);
+                setShowPollCard(false);
+                const lastTurn = reloadedMsgs[reloadedMsgs.length - 1];
+                if (lastTurn?.content) {
+                  const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
+                  setChats((prev) =>
+                    prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
+                  );
+                }
+                if (!isUserScrolledUpRef.current) {
+                  jumpToBottom();
+                }
+              }
+            });
+          }
+        } catch {}
+      });
+    } catch {}
+
+    return () => {
+      if (sse) sse.close();
+    };
+  }, [selectedChatId, selectedAgentId, selectedChatKnown]);
+
   const loadWorkspaceTree = async () => {
     setIsLoadingTree(true);
     try {
@@ -4706,7 +4747,7 @@ export function GrokBotWorkspace() {
             <div ref={userMenuRef} className="p-3 border-t border-[#1c1c22] relative select-none">
               <div
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors"
+                className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors group/user"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#f8a87c] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0 overflow-hidden">
@@ -4734,10 +4775,12 @@ export function GrokBotWorkspace() {
                   >
                     <ShieldCheck size={13} className="text-[#f8a87c]" />
                   </button>
-                  {/* User status */}
-                  <ChevronDown
-                    size={12}
-                    className={`text-neutral-400 transition-transform duration-200 ${isUserMenuOpen ? "rotate-180" : ""}`}
+                  {/* User dropdown chevron indicator: Ẩn mặc định, hover hiện ChevronUp */}
+                  <ChevronUp
+                    size={13}
+                    className={`text-neutral-400 transition-all duration-150 ${
+                      isUserMenuOpen ? "opacity-100" : "opacity-0 group-hover/user:opacity-100"
+                    }`}
                   />
                 </div>
               </div>
@@ -5847,32 +5890,6 @@ export function GrokBotWorkspace() {
                   </span>
                 </div>
 
-                {/* Header: Simple contextual label or filter hint */}
-                {(() => {
-                  const m = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
-                  const trigger = m ? m[1] : null;
-                  const query = m ? m[2] : "";
-
-                  if (trigger === "/") {
-                    return null; // Image 1 shows clean list directly under top rounded border
-                  }
-
-                  if (trigger === "@") {
-                    return null; // Image 2 shows clean list starting with 'Add' group directly
-                  }
-
-                  return (
-                    <div className="px-1 pb-2 flex items-center justify-between gap-2 border-b border-slate-200 dark:border-[#222230]">
-                      <span className="text-xs font-mono text-slate-800 dark:text-neutral-200 font-semibold tracking-wide">
-                        Add to prompt
-                      </span>
-                      <span className="text-neutral-400 dark:text-neutral-500 text-[11px] font-mono select-none">
-                        Gõ <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 font-bold text-[#f8a87c]">@</kbd> tìm kiếm hoặc <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 font-bold text-cyan-400">/</kbd> session commands
-                      </span>
-                    </div>
-                  );
-                })()}
-
                 {(() => {
                   const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
                   const activeTrigger = triggerMatch ? triggerMatch[1] : null;
@@ -6692,42 +6709,7 @@ export function GrokBotWorkspace() {
                   );
                 })()}
 
-                {/* Popover Keyboard Shortcuts Footer Hint Bar */}
-                <div className={`mt-3 pt-2 border-t border-slate-200 dark:border-[#222230] flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-neutral-500 ${inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/) ? "hidden" : ""}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">↑/↓</span>
-                      <span>Di chuyển</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">PgUp/PgDn</span>
-                      <span>Nhảy trang</span>
-                    </span>
-                    <span className="flex items-center gap-1 hidden sm:inline-flex">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">Home/End</span>
-                      <span>Đầu/Cuối</span>
-                    </span>
-                    <span className="flex items-center gap-1 hidden sm:inline-flex">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">0-3</span>
-                      <span>Tệp / Chế độ</span>
-                    </span>
-                    <span className="flex items-center gap-1 hidden sm:inline-flex">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">Tab</span>
-                      <span>Chuyển cột</span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <span className="px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#f8a87c] font-bold border border-[#f8a87c]/30">↵ Enter</span>
-                      <span>Chọn</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-neutral-300 font-bold border border-slate-200 dark:border-white/5">Esc</span>
-                      <span>Đóng</span>
-                    </span>
-                  </div>
                 </div>
-              </div>
             )}
 
             {/* Micro-chips preview for active @mentions and /tools in prompt input with Clear All */}
@@ -7508,7 +7490,6 @@ export function GrokBotWorkspace() {
         ) : (
           <div className="h-12 px-3 border-b border-[#1c1c22] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2 min-w-0">
-              <MessageSquare size={15} className="text-[#f8a87c] shrink-0" />
               <span className="text-xs font-mono text-white font-semibold tracking-tight truncate">
                 Chats ({chats.length})
               </span>
@@ -7710,7 +7691,7 @@ export function GrokBotWorkspace() {
             )}
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
               {isLoadingChats ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -7751,10 +7732,10 @@ export function GrokBotWorkspace() {
                     }}
                     className={`w-full rounded-lg text-left flex items-center transition-colors cursor-pointer group animate-fade-in-stagger relative select-none ${
                       layoutDensity === "compact"
-                        ? "px-2 py-1 gap-1.5 min-h-[30px]"
+                        ? "px-1.5 py-0.5 gap-1.5 min-h-[26px]"
                         : layoutDensity === "comfortable"
-                        ? "px-2.5 py-2 gap-2.5 min-h-[42px]"
-                        : "px-2 py-1.5 gap-2 min-h-[34px]"
+                        ? "px-2 py-1.5 gap-2 min-h-[36px]"
+                        : "px-1.5 py-1 gap-1.5 min-h-[30px]"
                     } ${
                       activeChatMenuId === chat.id ? "z-40" : "z-auto"
                     } ${

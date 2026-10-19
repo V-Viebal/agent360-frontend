@@ -213,7 +213,7 @@ export function DropdownSubMenu({
 
   return (
     <div
-      className="relative"
+      className={`relative ${isOpen ? "z-[99999]" : ""}`}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
@@ -243,7 +243,8 @@ export function DropdownSubMenu({
 
       {isOpen && (
         <div
-          className="absolute right-full top-0 mr-1 w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 z-[110] select-none"
+          style={{ zIndex: 999999 }}
+          className="absolute right-full top-0 mr-1 w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none pointer-events-auto"
         >
           {children}
         </div>
