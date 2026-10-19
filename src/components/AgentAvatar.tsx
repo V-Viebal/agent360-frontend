@@ -76,75 +76,125 @@ export const AVATAR_COLOR_PRESETS: Record<
     darkIconColor: string;
   }
 > = {
-  blue: {
-    name: "Cyber Blue",
-    lightBg: "bg-blue-50 hover:bg-blue-100/80 border-blue-200 hover:border-blue-300 shadow-blue-500/10",
-    lightIconColor: "text-blue-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-blue-600 dark:via-indigo-600 dark:to-cyan-400 dark:border-blue-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-blue-100",
+  peach: {
+    name: "Pastel Peach",
+    lightBg: "bg-[#FFF5EE] hover:bg-[#FFE8DC] border-[#FED7AA] hover:border-[#FDBA74] shadow-amber-500/5",
+    lightIconColor: "text-[#EA580C]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#38261F] dark:via-[#2A1E1A] dark:to-[#1E1715] dark:border-[#F8A87C]/30 dark:hover:border-[#F8A87C]/50",
+    darkIconColor: "dark:text-[#FDBA74]",
   },
-  emerald: {
-    name: "Emerald Ops",
-    lightBg: "bg-emerald-50 hover:bg-emerald-100/80 border-emerald-200 hover:border-emerald-300 shadow-emerald-500/10",
-    lightIconColor: "text-emerald-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-emerald-600 dark:via-teal-600 dark:to-emerald-400 dark:border-emerald-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-emerald-100",
-  },
-  amber: {
-    name: "Amber Vision",
-    lightBg: "bg-amber-50 hover:bg-amber-100/80 border-amber-200 hover:border-amber-300 shadow-amber-500/10",
-    lightIconColor: "text-amber-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-amber-600 dark:via-orange-500 dark:to-yellow-300 dark:border-amber-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-amber-100",
-  },
-  purple: {
-    name: "Purple Scholar",
-    lightBg: "bg-purple-50 hover:bg-purple-100/80 border-purple-200 hover:border-purple-300 shadow-purple-500/10",
-    lightIconColor: "text-purple-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-purple-600 dark:via-violet-600 dark:to-pink-400 dark:border-purple-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-purple-100",
+  mint: {
+    name: "Pastel Mint",
+    lightBg: "bg-[#F0FDF4] hover:bg-[#DCFCE7] border-[#BBF7D0] hover:border-[#86EFAC] shadow-emerald-500/5",
+    lightIconColor: "text-[#16A34A]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#173326] dark:via-[#13281E] dark:to-[#0F1E17] dark:border-[#86EFAC]/30 dark:hover:border-[#86EFAC]/50",
+    darkIconColor: "dark:text-[#86EFAC]",
   },
   sky: {
-    name: "Sky Beacon",
-    lightBg: "bg-sky-50 hover:bg-sky-100/80 border-sky-200 hover:border-sky-300 shadow-sky-500/10",
-    lightIconColor: "text-sky-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-cyan-600 dark:via-blue-500 dark:to-sky-300 dark:border-cyan-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-cyan-100",
+    name: "Pastel Sky",
+    lightBg: "bg-[#F0F9FF] hover:bg-[#E0F2FE] border-[#BAE6FD] hover:border-[#7DD3FC] shadow-sky-500/5",
+    lightIconColor: "text-[#0284C7]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#14293D] dark:via-[#102030] dark:to-[#0C1824] dark:border-[#7DD3FC]/30 dark:hover:border-[#7DD3FC]/50",
+    darkIconColor: "dark:text-[#7DD3FC]",
+  },
+  lavender: {
+    name: "Pastel Lavender",
+    lightBg: "bg-[#F5F3FF] hover:bg-[#EDE9FE] border-[#DDD6FE] hover:border-[#C4B5FD] shadow-indigo-500/5",
+    lightIconColor: "text-[#7C3AED]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#271E3D] dark:via-[#1F1830] dark:to-[#171224] dark:border-[#C4B5FD]/30 dark:hover:border-[#C4B5FD]/50",
+    darkIconColor: "dark:text-[#C4B5FD]",
   },
   rose: {
-    name: "Rose Ledger",
-    lightBg: "bg-rose-50 hover:bg-rose-100/80 border-rose-200 hover:border-rose-300 shadow-rose-500/10",
-    lightIconColor: "text-rose-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-rose-600 dark:via-red-500 dark:to-amber-400 dark:border-rose-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-rose-100",
+    name: "Pastel Rose",
+    lightBg: "bg-[#FFF1F2] hover:bg-[#FFE4E6] border-[#FECDD3] hover:border-[#FDA4AF] shadow-rose-500/5",
+    lightIconColor: "text-[#E11D48]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#3A1B24] dark:via-[#2D161D] dark:to-[#211116] dark:border-[#FDA4AF]/30 dark:hover:border-[#FDA4AF]/50",
+    darkIconColor: "dark:text-[#FDA4AF]",
   },
-  orange: {
-    name: "Solar Orange",
-    lightBg: "bg-orange-50 hover:bg-orange-100/80 border-orange-200 hover:border-orange-300 shadow-orange-500/10",
-    lightIconColor: "text-orange-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-orange-600 dark:via-amber-500 dark:to-yellow-400 dark:border-orange-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-orange-100",
+  apricot: {
+    name: "Pastel Apricot",
+    lightBg: "bg-[#FEFCE8] hover:bg-[#FEF9C3] border-[#FEF08A] hover:border-[#FDE047] shadow-yellow-500/5",
+    lightIconColor: "text-[#CA8A04]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#352D18] dark:via-[#292314] dark:to-[#1E1A0F] dark:border-[#FDE047]/30 dark:hover:border-[#FDE047]/50",
+    darkIconColor: "dark:text-[#FDE047]",
   },
-  red: {
-    name: "Crimson Guard",
-    lightBg: "bg-red-50 hover:bg-red-100/80 border-red-200 hover:border-red-300 shadow-red-500/10",
-    lightIconColor: "text-red-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-red-600 dark:via-rose-600 dark:to-orange-400 dark:border-red-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-red-100",
+  sage: {
+    name: "Pastel Sage",
+    lightBg: "bg-[#F7FEE7] hover:bg-[#ECFCCB] border-[#D9F99D] hover:border-[#BEF264] shadow-lime-500/5",
+    lightIconColor: "text-[#65A30D]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#233314] dark:via-[#1C2810] dark:to-[#151E0D] dark:border-[#BEF264]/30 dark:hover:border-[#BEF264]/50",
+    darkIconColor: "dark:text-[#BEF264]",
   },
-  fuchsia: {
-    name: "Fuchsia Swarm",
-    lightBg: "bg-fuchsia-50 hover:bg-fuchsia-100/80 border-fuchsia-200 hover:border-fuchsia-300 shadow-fuchsia-500/10",
-    lightIconColor: "text-fuchsia-600",
-    darkBg: "dark:bg-gradient-to-tr dark:from-fuchsia-600 dark:via-purple-600 dark:to-indigo-400 dark:border-fuchsia-400/30 dark:hover:border-white/40",
-    darkIconColor: "dark:text-fuchsia-100",
+  lilac: {
+    name: "Pastel Lilac",
+    lightBg: "bg-[#FAF5FF] hover:bg-[#F3E8FF] border-[#E9D5FF] hover:border-[#D8B4FE] shadow-purple-500/5",
+    lightIconColor: "text-[#9333EA]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#301B3E] dark:via-[#261631] dark:to-[#1D1125] dark:border-[#D8B4FE]/30 dark:hover:border-[#D8B4FE]/50",
+    darkIconColor: "dark:text-[#D8B4FE]",
+  },
+  teal: {
+    name: "Pastel Teal",
+    lightBg: "bg-[#F0FDFA] hover:bg-[#CCFBF1] border-[#99F6E4] hover:border-[#5EEAD4] shadow-teal-500/5",
+    lightIconColor: "text-[#0D9488]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#133230] dark:via-[#102726] dark:to-[#0D1D1C] dark:border-[#5EEAD4]/30 dark:hover:border-[#5EEAD4]/50",
+    darkIconColor: "dark:text-[#5EEAD4]",
   },
   slate: {
-    name: "Monochrome Stealth",
-    lightBg: "bg-slate-100 hover:bg-slate-200/80 border-slate-300 hover:border-slate-400 shadow-slate-500/10",
-    lightIconColor: "text-slate-700",
-    darkBg: "dark:bg-gradient-to-tr dark:from-neutral-700 dark:via-neutral-600 dark:to-neutral-400 dark:border-white/20 dark:hover:border-white/40",
-    darkIconColor: "dark:text-neutral-200",
+    name: "Pastel Slate",
+    lightBg: "bg-[#F8FAFC] hover:bg-[#F1F5F9] border-[#CBD5E1] hover:border-[#94A3B8] shadow-slate-500/5",
+    lightIconColor: "text-[#475569]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#1E2530] dark:via-[#171D26] dark:to-[#12161E] dark:border-white/15 dark:hover:border-white/30",
+    darkIconColor: "dark:text-[#94A3B8]",
+  },
+  // Compatibility fallbacks for legacy saved configs
+  blue: {
+    name: "Pastel Sky",
+    lightBg: "bg-[#F0F9FF] hover:bg-[#E0F2FE] border-[#BAE6FD] hover:border-[#7DD3FC] shadow-sky-500/5",
+    lightIconColor: "text-[#0284C7]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#14293D] dark:via-[#102030] dark:to-[#0C1824] dark:border-[#7DD3FC]/30 dark:hover:border-[#7DD3FC]/50",
+    darkIconColor: "dark:text-[#7DD3FC]",
+  },
+  emerald: {
+    name: "Pastel Mint",
+    lightBg: "bg-[#F0FDF4] hover:bg-[#DCFCE7] border-[#BBF7D0] hover:border-[#86EFAC] shadow-emerald-500/5",
+    lightIconColor: "text-[#16A34A]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#173326] dark:via-[#13281E] dark:to-[#0F1E17] dark:border-[#86EFAC]/30 dark:hover:border-[#86EFAC]/50",
+    darkIconColor: "dark:text-[#86EFAC]",
+  },
+  amber: {
+    name: "Pastel Peach",
+    lightBg: "bg-[#FFF5EE] hover:bg-[#FFE8DC] border-[#FED7AA] hover:border-[#FDBA74] shadow-amber-500/5",
+    lightIconColor: "text-[#EA580C]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#38261F] dark:via-[#2A1E1A] dark:to-[#1E1715] dark:border-[#F8A87C]/30 dark:hover:border-[#F8A87C]/50",
+    darkIconColor: "dark:text-[#FDBA74]",
+  },
+  purple: {
+    name: "Pastel Lavender",
+    lightBg: "bg-[#F5F3FF] hover:bg-[#EDE9FE] border-[#DDD6FE] hover:border-[#C4B5FD] shadow-indigo-500/5",
+    lightIconColor: "text-[#7C3AED]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#271E3D] dark:via-[#1F1830] dark:to-[#171224] dark:border-[#C4B5FD]/30 dark:hover:border-[#C4B5FD]/50",
+    darkIconColor: "dark:text-[#C4B5FD]",
+  },
+  orange: {
+    name: "Pastel Apricot",
+    lightBg: "bg-[#FEFCE8] hover:bg-[#FEF9C3] border-[#FEF08A] hover:border-[#FDE047] shadow-yellow-500/5",
+    lightIconColor: "text-[#CA8A04]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#352D18] dark:via-[#292314] dark:to-[#1E1A0F] dark:border-[#FDE047]/30 dark:hover:border-[#FDE047]/50",
+    darkIconColor: "dark:text-[#FDE047]",
+  },
+  red: {
+    name: "Pastel Rose",
+    lightBg: "bg-[#FFF1F2] hover:bg-[#FFE4E6] border-[#FECDD3] hover:border-[#FDA4AF] shadow-rose-500/5",
+    lightIconColor: "text-[#E11D48]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#3A1B24] dark:via-[#2D161D] dark:to-[#211116] dark:border-[#FDA4AF]/30 dark:hover:border-[#FDA4AF]/50",
+    darkIconColor: "dark:text-[#FDA4AF]",
+  },
+  fuchsia: {
+    name: "Pastel Lilac",
+    lightBg: "bg-[#FAF5FF] hover:bg-[#F3E8FF] border-[#E9D5FF] hover:border-[#D8B4FE] shadow-purple-500/5",
+    lightIconColor: "text-[#9333EA]",
+    darkBg: "dark:bg-gradient-to-tr dark:from-[#301B3E] dark:via-[#261631] dark:to-[#1D1125] dark:border-[#D8B4FE]/30 dark:hover:border-[#D8B4FE]/50",
+    darkIconColor: "dark:text-[#D8B4FE]",
   },
 };
 
@@ -153,31 +203,31 @@ export function getAgentVisualProfile(roleTag?: string, nameOrId: string = "") {
 
   if (norm.includes("fullstack") || norm.includes("swe") || norm.includes("code") || norm.includes("dev")) {
     return {
-      ...AVATAR_COLOR_PRESETS.blue,
+      ...AVATAR_COLOR_PRESETS.sky,
       icon: Code,
     };
   }
   if (norm.includes("sre") || norm.includes("fleet") || norm.includes("ops") || norm.includes("sentinel")) {
     return {
-      ...AVATAR_COLOR_PRESETS.emerald,
+      ...AVATAR_COLOR_PRESETS.mint,
       icon: Activity,
     };
   }
   if (norm.includes("qa") || norm.includes("vision") || norm.includes("test")) {
     return {
-      ...AVATAR_COLOR_PRESETS.amber,
+      ...AVATAR_COLOR_PRESETS.peach,
       icon: Eye,
     };
   }
   if (norm.includes("kb") || norm.includes("knowledge") || norm.includes("docs")) {
     return {
-      ...AVATAR_COLOR_PRESETS.purple,
+      ...AVATAR_COLOR_PRESETS.lavender,
       icon: BookOpen,
     };
   }
   if (norm.includes("telegram") || norm.includes("chat") || norm.includes("social") || norm.includes("marketing")) {
     return {
-      ...AVATAR_COLOR_PRESETS.sky,
+      ...AVATAR_COLOR_PRESETS.teal,
       icon: Send,
     };
   }
@@ -189,19 +239,19 @@ export function getAgentVisualProfile(roleTag?: string, nameOrId: string = "") {
   }
   if (norm.includes("gateway") || norm.includes("router") || norm.includes("proxy")) {
     return {
-      ...AVATAR_COLOR_PRESETS.orange,
+      ...AVATAR_COLOR_PRESETS.apricot,
       icon: Radio,
     };
   }
   if (norm.includes("security") || norm.includes("guard") || norm.includes("constitution")) {
     return {
-      ...AVATAR_COLOR_PRESETS.red,
+      ...AVATAR_COLOR_PRESETS.rose,
       icon: Shield,
     };
   }
   if (norm.includes("agentteams") || norm.includes("manager") || norm.includes("swarm")) {
     return {
-      ...AVATAR_COLOR_PRESETS.fuchsia,
+      ...AVATAR_COLOR_PRESETS.lilac,
       icon: Layers,
     };
   }
