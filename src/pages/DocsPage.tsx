@@ -26,6 +26,135 @@ import {
 import { DOCS_SECTIONS, DocSection } from "../data/docsContent";
 import { AgentTopologyVisualizer } from "../components/AgentTopologyVisualizer";
 
+
+// Robust Markdown Block & Inline Formatter for Docs
+function renderInlineMarkdown(rawText: string) {
+  if (!rawText) return "";
+  const parts = rawText.split(/(\b|\B)(?=\*\*|`|\*)/g);
+  // Simpler and safer regex for inline markdown
+  const tokenRegex = /(\*\*.*?\*\*|`.*?`|\*[^*]+?\*)/g;
+  const tokens = rawText.split(tokenRegex);
+  if (tokens.length === 1) return rawText;
+
+  return tokens.map((part, pIdx) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+      return (
+        <strong key={pIdx} className="font-semibold text-neutral-900 dark:text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+      return (
+        <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-[#181822] border border-neutral-200 dark:border-[#262634] font-mono text-[12px] text-[#f8a87c] mx-0.5 font-medium">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length >= 2 && !part.startsWith("**")) {
+      return (
+        <em key={pIdx} className="italic text-neutral-800 dark:text-neutral-200">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    return part;
+  });
+}
+
+interface ParsedBlock {
+  type: "h1" | "h2" | "h3" | "h4" | "ul" | "ol" | "p" | "code";
+  lang?: string;
+  body?: string;
+  items?: string[];
+  text?: string;
+}
+
+function parseMarkdownBlocks(raw: string): ParsedBlock[] {
+  const parts = raw.split(/(```[\s\S]*?```)/g);
+  const blocks: ParsedBlock[] = [];
+
+  for (const part of parts) {
+    if (part.startsWith("```") && part.endsWith("```")) {
+      const lines = part.split("\n");
+      const lang = lines[0].replace(/^```/, "").trim();
+      const body = lines.slice(1, -1).join("\n");
+      blocks.push({ type: "code", lang, body });
+    } else {
+      const lines = part.split("\n");
+      let currList: string[] = [];
+      let currListType: "ul" | "ol" | null = null;
+      let currP: string[] = [];
+
+      const flushP = () => {
+        if (currP.length > 0) {
+          const t = currP.join(" ").trim();
+          if (t) blocks.push({ type: "p", text: t });
+          currP = [];
+        }
+      };
+
+      const flushList = () => {
+        if (currList.length > 0 && currListType) {
+          blocks.push({ type: currListType, items: [...currList] });
+          currList = [];
+          currListType = null;
+        }
+      };
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          flushP();
+          flushList();
+          continue;
+        }
+
+        if (trimmed.startsWith("#### ")) {
+          flushP();
+          flushList();
+          blocks.push({ type: "h4", text: trimmed.slice(5).trim() });
+        } else if (trimmed.startsWith("### ")) {
+          flushP();
+          flushList();
+          blocks.push({ type: "h3", text: trimmed.slice(4).trim() });
+        } else if (trimmed.startsWith("## ")) {
+          flushP();
+          flushList();
+          blocks.push({ type: "h2", text: trimmed.slice(3).trim() });
+        } else if (trimmed.startsWith("# ")) {
+          flushP();
+          flushList();
+          blocks.push({ type: "h1", text: trimmed.slice(2).trim() });
+        } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          flushP();
+          if (currListType !== "ul") {
+            flushList();
+            currListType = "ul";
+          }
+          currList.push(trimmed.slice(2).trim());
+        } else if (/^\d+\.\s+/.test(trimmed)) {
+          flushP();
+          if (currListType !== "ol") {
+            flushList();
+            currListType = "ol";
+          }
+          currList.push(trimmed.replace(/^\d+\.\s+/, "").trim());
+        } else {
+          if (currListType) {
+            flushList();
+          }
+          currP.push(trimmed);
+        }
+      }
+      flushP();
+      flushList();
+    }
+  }
+
+  return blocks;
+}
+
 export function DocsPage() {
   const { t } = useTranslation();
   const [selectedDocId, setSelectedDocId] = useState<string>("quickstart");
@@ -244,38 +373,78 @@ export function DocsPage() {
           </div>
 
           {/* Markdown-style Prose Content */}
-          <div className="prose prose-neutral dark:prose-invert max-w-none text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed space-y-4">
-            {activeDoc.content.split("\n\n").map((paragraph, idx) => {
-              if (paragraph.startsWith("### ")) {
+          <div className="space-y-4 text-neutral-700 dark:text-neutral-300 text-sm leading-relaxed">
+            {parseMarkdownBlocks(activeDoc.content).map((block, bIdx) => {
+              if (block.type === "h1") {
                 return (
-                  <h3 key={idx} className="text-xl font-semibold text-neutral-900 dark:text-white mt-6 mb-2 border-b border-white/5 pb-2">
-                    {paragraph.replace("### ", "")}
+                  <h1 key={bIdx} className="text-2xl font-bold text-neutral-900 dark:text-white mt-8 mb-3 pb-2 border-b border-neutral-200 dark:border-white/10 tracking-tight">
+                    {block.text}
+                  </h1>
+                );
+              }
+              if (block.type === "h2") {
+                return (
+                  <h2 key={bIdx} className="text-xl font-bold text-neutral-900 dark:text-white mt-7 mb-2.5 pb-1.5 border-b border-neutral-200 dark:border-white/10 tracking-tight">
+                    {block.text}
+                  </h2>
+                );
+              }
+              if (block.type === "h3") {
+                return (
+                  <h3 key={bIdx} className="text-lg font-bold text-neutral-900 dark:text-white mt-6 mb-2 flex items-center gap-2 tracking-tight">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c]" />
+                    <span>{block.text}</span>
                   </h3>
                 );
               }
-              if (paragraph.startsWith("#### ")) {
+              if (block.type === "h4") {
                 return (
-                  <h4 key={idx} className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mt-4 mb-2">
-                    {paragraph.replace("#### ", "")}
+                  <h4 key={bIdx} className="text-sm font-bold text-neutral-900 dark:text-neutral-100 mt-5 mb-1.5 uppercase font-mono tracking-wider">
+                    {block.text}
                   </h4>
                 );
               }
-              if (paragraph.startsWith("- ")) {
+              if (block.type === "ul" && block.items) {
                 return (
-                  <ul key={idx} className="space-y-2 my-3 pl-4 list-disc text-neutral-700 dark:text-neutral-300">
-                    {paragraph.split("\n").map((item, itemIdx) => (
-                      <li key={itemIdx} className="leading-relaxed">
-                        {item.replace("- ", "")}
+                  <ul key={bIdx} className="space-y-2.5 my-3 pl-1 text-neutral-700 dark:text-neutral-300">
+                    {block.items.map((item, itemIdx) => (
+                      <li key={itemIdx} className="flex items-start gap-2.5 leading-relaxed font-sans">
+                        <span className="text-[#f8a87c] shrink-0 text-xs mt-1 select-none font-bold">↳</span>
+                        <div className="flex-1">{renderInlineMarkdown(item)}</div>
                       </li>
                     ))}
                   </ul>
                 );
               }
-              return (
-                <p key={idx} className="text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans">
-                  {paragraph}
-                </p>
-              );
+              if (block.type === "ol" && block.items) {
+                return (
+                  <ol key={bIdx} className="space-y-2.5 my-3 pl-1 text-neutral-700 dark:text-neutral-300">
+                    {block.items.map((item, itemIdx) => (
+                      <li key={itemIdx} className="flex items-start gap-2.5 leading-relaxed font-sans">
+                        <span className="h-5 w-5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[11px] font-mono font-semibold text-[#f8a87c] flex items-center justify-center shrink-0 mt-0.5 select-none shadow-2xs">
+                          {itemIdx + 1}
+                        </span>
+                        <div className="flex-1 pt-0.5">{renderInlineMarkdown(item)}</div>
+                      </li>
+                    ))}
+                  </ol>
+                );
+              }
+              if (block.type === "code" && block.body) {
+                return (
+                  <div key={bIdx} className="my-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#07090e] p-4 font-mono text-xs overflow-x-auto shadow-xs">
+                    <pre className="text-neutral-800 dark:text-neutral-200 whitespace-pre leading-relaxed">{block.body}</pre>
+                  </div>
+                );
+              }
+              if (block.type === "p" && block.text) {
+                return (
+                  <p key={bIdx} className="text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans text-sm">
+                    {renderInlineMarkdown(block.text)}
+                  </p>
+                );
+              }
+              return null;
             })}
           </div>
 
@@ -291,17 +460,17 @@ export function DocsPage() {
           )}
 
           {/* Interactive Code & Live Sandbox Execution Area */}
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[#04060a] overflow-hidden">
+          <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-slate-50 dark:bg-[#04060a] overflow-hidden shadow-xs">
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2.5 text-xs font-mono">
               {/* Tab Switcher */}
-              <div className="flex items-center gap-1 bg-white/5 p-0.5 rounded-lg border border-white/5">
+              <div className="flex items-center gap-1 bg-neutral-200/60 dark:bg-white/5 p-0.5 rounded-lg border border-neutral-300/50 dark:border-white/5">
                 {activeDoc.codeSnippet && (
                   <button
                     onClick={() => setActiveTab("code")}
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "code"
                         ? "bg-[#f8a87c] text-black font-semibold shadow"
-                        : "text-neutral-400 hover:text-neutral-900 dark:text-white"
+                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
                     }`}
                   >
                     <Code2 size={12} />
@@ -314,7 +483,7 @@ export function DocsPage() {
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "sandbox"
                         ? "bg-[#f8a87c] text-black font-semibold shadow"
-                        : "text-neutral-400 hover:text-neutral-900 dark:text-white"
+                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
                     }`}
                   >
                     <Terminal size={12} />
@@ -349,7 +518,7 @@ export function DocsPage() {
 
             {/* Code Tab View */}
             {activeTab === "code" && activeDoc.codeSnippet && (
-              <pre className="p-4 text-xs font-mono text-neutral-200 overflow-x-auto leading-relaxed">
+              <pre className="p-4 text-xs font-mono text-neutral-800 dark:text-neutral-200 overflow-x-auto leading-relaxed bg-white/60 dark:bg-transparent">
                 <code>{activeDoc.codeSnippet.code}</code>
               </pre>
             )}
@@ -358,7 +527,7 @@ export function DocsPage() {
             {activeTab === "sandbox" && (
               <div className="p-4 space-y-3 font-mono text-xs">
                 {activeDoc.sandboxPrompt && (
-                  <div className="bg-white/[0.03] border border-white/5 p-2.5 rounded-lg text-neutral-300 flex items-center justify-between">
+                  <div className="bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5 p-2.5 rounded-lg text-neutral-800 dark:text-neutral-300 flex items-center justify-between shadow-xs">
                     <div>
                       <span className="text-neutral-500 text-[11px] block uppercase">Command</span>
                       <span className="text-emerald-400 font-medium">$ {activeDoc.sandboxPrompt}</span>
@@ -373,8 +542,8 @@ export function DocsPage() {
                   </div>
                 )}
 
-                <div className="space-y-1.5 min-h-[140px] bg-black/40 p-3 rounded-lg border border-white/5">
-                  <div className="text-neutral-500 text-[11px] flex items-center justify-between border-b border-white/5 pb-1 mb-2">
+                <div className="space-y-1.5 min-h-[140px] bg-white dark:bg-black/40 p-3 rounded-lg border border-neutral-200 dark:border-white/5 shadow-xs">
+                  <div className="text-neutral-500 dark:text-neutral-400 text-[11px] flex items-center justify-between border-b border-neutral-200 dark:border-white/5 pb-1 mb-2">
                     <span>{t("docs.sandboxedTrace")}</span>
                     <span className="text-emerald-400 flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />

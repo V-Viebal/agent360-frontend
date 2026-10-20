@@ -132,11 +132,11 @@ export function Tooltip({
               minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
               maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
             }}
-            className={`whitespace-nowrap text-nowrap [text-wrap:nowrap] rounded-lg bg-slate-900/95 dark:bg-[#101016]/95 border border-slate-700/60 dark:border-white/15 px-3.5 py-1.5 text-[11px] font-sans text-slate-100 dark:text-white shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-2 select-none w-max min-w-[130px] sm:min-w-[150px] max-w-sm ${className}`}
+            className={`whitespace-nowrap text-nowrap [text-wrap:nowrap] rounded-lg bg-white/95 dark:bg-[#101016]/95 border border-slate-200 dark:border-white/15 px-3.5 py-1.5 text-[11px] font-sans text-slate-800 dark:text-white shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-2 select-none w-max min-w-[130px] sm:min-w-[150px] max-w-sm ${className}`}
           >
             <span>{content}</span>
             {shortcut && (
-              <kbd className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-white/70">
+              <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-transparent">
                 {shortcut}
               </kbd>
             )}

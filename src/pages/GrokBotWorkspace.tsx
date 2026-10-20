@@ -3151,14 +3151,11 @@ export function GrokBotWorkspace() {
         }
       if (loadedChats.length > 0) {
         const savedChatKey = `agent360_last_chat_${selectedAgentId}`;
-        // Preference: chatParam from route URL -> savedChatKey for this specific agent -> global last chat -> first chat in list
+        // Preference: chatParam from route URL (if matching this agent) -> savedChatKey for this specific agent -> first chat in list
         const urlChatFound = chatParam && loadedChats.find((c) => c.id === chatParam || c.session_id === chatParam);
-        if (chatParam && !urlChatFound && !chatParam.startsWith("session-")) {
-          setForkToast("Phiên chat không còn tồn tại, đã chuyển về phiên gần nhất");
-          setTimeout(() => setForkToast(null), 3000);
-        }
-        const savedChatId = localStorage.getItem(savedChatKey) || localStorage.getItem("agent360_last_chat_id");
+        const savedChatId = localStorage.getItem(savedChatKey);
         const foundSaved = savedChatId && loadedChats.find((c) => c.id === savedChatId || c.session_id === savedChatId);
+        // Only adopt chatParam if it actually belongs to this agent's chat list; otherwise cleanly fallback to saved chat or top chat without toast spam
         const targetChatId = urlChatFound ? (urlChatFound.id || chatParam) : foundSaved ? (foundSaved.id || savedChatId) : loadedChats[0].id;
         setSelectedChatId(targetChatId);
         try {
@@ -8250,11 +8247,11 @@ export function GrokBotWorkspace() {
                             className="bg-[#121218] border border-[#f8a87c] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
                           />
                         ) : (
-                          <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-0.5">
+                          <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
                               className={`text-xs chat-title-marquee inline-block whitespace-nowrap ${
-                                (chat.title && chat.title.length > 18) ? "chat-title-marquee-scroll" : ""
+                                (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
                               } ${
                                 isSelected
                                   ? "text-slate-900 dark:text-white font-medium"
@@ -8280,7 +8277,16 @@ export function GrokBotWorkspace() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-0.5 shrink-0 relative">
+                        {/* Action buttons on the right: floating pill visible on hover or when menu/pin/archive is active */}
+                        <div
+                          className={`absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 z-20 transition-all duration-150 rounded-lg px-1 py-0.5 shadow-sm border ${
+                            activeChatMenuId === chat.id
+                              ? "opacity-100 pointer-events-auto bg-slate-100 dark:bg-[#181822] border-slate-300 dark:border-white/15"
+                              : pinnedChatIds.includes(chat.id) || archivedChatIds.includes(chat.id)
+                              ? "opacity-100 pointer-events-auto bg-slate-100/90 dark:bg-[#181822]/95 border-slate-200 dark:border-white/10"
+                              : "opacity-0 pointer-events-none group-hover/chatitem:opacity-100 group-hover/chatitem:pointer-events-auto bg-slate-100/95 dark:bg-[#14141c]/95 backdrop-blur-xs border-slate-200 dark:border-white/10"
+                          }`}
+                        >
                           {/* Quick Pin Toggle Button (Visible on hover or when pinned) */}
                           <button
                             type="button"
@@ -8291,7 +8297,7 @@ export function GrokBotWorkspace() {
                             className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
                               pinnedChatIds.includes(chat.id)
                                 ? "text-amber-400 opacity-100"
-                                : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-400"
+                                : "text-neutral-400 hover:text-amber-400"
                             }`}
                             title={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
                           >
@@ -8308,7 +8314,7 @@ export function GrokBotWorkspace() {
                             className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
                               archivedChatIds.includes(chat.id)
                                 ? "text-cyan-400 opacity-100"
-                                : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-cyan-400"
+                                : "text-neutral-400 hover:text-cyan-400"
                             }`}
                             title={archivedChatIds.includes(chat.id) ? "Bỏ lưu trữ (Khôi phục)" : "Lưu trữ phiên này"}
                           >
@@ -8331,7 +8337,7 @@ export function GrokBotWorkspace() {
                               className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
                                 activeChatMenuId === chat.id
                                   ? "text-[#f8a87c] bg-white/10 opacity-100"
-                                  : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-white"
+                                  : "text-neutral-400 hover:text-white"
                               }`}
                               title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
                             >

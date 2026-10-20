@@ -957,28 +957,29 @@ html.light .border-\[\#2e2e3e\],
 /* Marquee Auto-Scroll on Hover for Long Chat Session Titles */
 .chat-title-marquee {
   display: inline-block;
-  white-space: nowrap;
+  white-space: nowrap !important;
+  text-wrap: nowrap !important;
   will-change: transform;
   transform: translateX(0);
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.4s ease-out;
 }
 
 .group\/chatitem:hover .chat-title-marquee-scroll {
-  /* Scroll gradually to the left so overflowing end of title is revealed smoothly */
-  /* Slow start, accelerate in middle, gently slow down at the end (ease-in-out / bezier) */
-  transform: translateX(calc(-100% + 130px));
-  transition: transform 5s cubic-bezier(0.65, 0.05, 0.36, 1);
+  /* Scroll smoothly and gradually to the left so overflowing end of title is revealed completely */
+  /* Takes 6 seconds with a natural ease-in-out curve */
+  transform: translateX(calc(-100% + 110px));
+  transition: transform 6s cubic-bezier(0.25, 0.1, 0.25, 1) 0.2s;
 }
 
-/* Edge Masking: Smooth fade-out on the right edge */
+/* Edge Masking: Smooth fade-out blur on the right edge */
 .chat-title-mask {
-  mask-image: linear-gradient(to right, black 0%, black calc(100% - 22px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%);
 }
 
 .group\/chatitem:hover .chat-title-mask {
-  mask-image: none;
-  -webkit-mask-image: none;
+  mask-image: linear-gradient(to right, transparent 0%, black 18px, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18px, black calc(100% - 28px), transparent 100%);
 }
 
 /* Mobile Touch & Long-Press Accessibility Rules */
@@ -1005,11 +1006,33 @@ html.light .border-\[\#2e2e3e\],
   }
 }
 
-/* Tooltip Typography Guard: prevent text-wrap:pretty or intrinsic flex shrinking from breaking tooltips */
+/* Tooltip Typography Guard & Theme System */
 [role="tooltip"],
 .tooltip,
 [class*="group-hover"]:is(span, div) {
   text-wrap: nowrap;
+}
+
+html.light [role="tooltip"],
+[data-theme="light"] [role="tooltip"] {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light [role="tooltip"] span,
+html.light [role="tooltip"] div,
+[data-theme="light"] [role="tooltip"] span,
+[data-theme="light"] [role="tooltip"] div {
+  text-shadow: none !important;
+}
+
+html.light [role="tooltip"] kbd,
+[data-theme="light"] [role="tooltip"] kbd {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
 }
 
 
