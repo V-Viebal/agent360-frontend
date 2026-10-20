@@ -320,7 +320,7 @@ export function LandingPage() {
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.015] backdrop-blur-md px-4 py-2 sm:py-2.5 text-center text-xs tracking-wide text-neutral-400">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0 animate-pulse" />
-          <strong className="font-medium text-white flex items-center gap-1">
+          <strong className="font-medium text-neutral-900 dark:text-white flex items-center gap-1">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] to-amber-300 font-bold">
               Skyer
             </span>
@@ -406,7 +406,7 @@ export function LandingPage() {
           {heroTask.trim().length > 3 && (
             <div className="mt-3 mx-auto max-w-2xl rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)]/90 p-3 text-left font-mono text-xs shadow-xl animate-[fadeIn_.2s_ease-out]">
               <div className="flex items-center justify-between text-[11px] text-neutral-400 border-b border-[var(--border-subtle)] pb-2 mb-2">
-                <span className="flex items-center gap-1.5 text-white">
+                <span className="flex items-center gap-1.5 text-neutral-900 dark:text-white">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] animate-pulse" />
                   {t("plan.taskDecomp")}
                 </span>
@@ -495,9 +495,9 @@ export function LandingPage() {
       {/* 3. Message Bots like teammates - Authentic Desktop Window Chrome */}
       
       {/* 2.5. Dedicated Hybrid Architecture: On-Premise Private Air-Gap + Managed Cloud */}
-      <section id="on-premise" className="py-20 sm:py-24 border-b border-[var(--border-subtle)] bg-gradient-to-b from-[#05070a] via-[#090c13] to-[#05070a] relative overflow-hidden">
+      <section id="on-premise" className="py-20 sm:py-24 border-b border-[var(--border-subtle)] bg-gradient-to-b from-slate-100/60 via-slate-50 to-slate-100/60 dark:from-[#05070a] dark:via-[#090c13] dark:to-[#05070a] relative overflow-hidden">
         {/* Subtle grid lines background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.04)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16">
@@ -516,7 +516,7 @@ export function LandingPage() {
           {/* Cloud vs On-Premise Side-by-Side Comparison Architecture Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-stretch">
             {/* 1. On-Premise Self-Hosted Enterprise Edition */}
-            <div className="rounded-2xl border border-[#f8a87c]/30 bg-[#0c1018] p-6 sm:p-8 flex flex-col justify-between relative shadow-[0_0_30px_rgba(248,168,124,0.12)]">
+            <div className="rounded-2xl border border-[#f8a87c]/40 bg-white dark:bg-[#0c1018] p-6 sm:p-8 flex flex-col justify-between relative shadow-sm dark:shadow-[0_0_30px_rgba(248,168,124,0.12)]">
               <div className="absolute top-4 right-4">
                 <span className="text-[10px] font-mono uppercase bg-[#f8a87c] text-black font-bold px-2.5 py-1 rounded-full">
                   100% Data Sovereignty
@@ -526,25 +526,25 @@ export function LandingPage() {
                 <div className="h-10 w-10 rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] mb-4">
                   <Shield size={20} />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">{t("onPremise.privateClusterTitle")}</h3>
-                <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t("onPremise.privateClusterTitle")}</h3>
+                <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
                   {t("onPremise.privateClusterDesc")}
                 </p>
 
                 <div className="space-y-3 font-mono text-xs border-t border-[var(--border-subtle)] pt-5">
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureAirGap")}</span>
                   </div>
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureIntranet")}</span>
                   </div>
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureBYOK")}</span>
                   </div>
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-[#f8a87c] shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureDeploy")}</span>
                   </div>
@@ -558,7 +558,7 @@ export function LandingPage() {
                     href="/skyer-enterprise-whitepaper.md"
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/10 px-3 py-1.5 rounded-lg transition-colors"
                     title="Download Architecture & Compliance Whitepaper"
                   >
                     <span>{t("onPremise.downloadWhitepaper")}</span>
@@ -579,9 +579,9 @@ export function LandingPage() {
             </div>
 
             {/* 2. Skyer Managed Cloud Platform */}
-            <div className="rounded-2xl border border-white/10 bg-[#080a0f] p-6 sm:p-8 flex flex-col justify-between relative hover:border-white/20 transition-colors">
+            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#080a0f] p-6 sm:p-8 flex flex-col justify-between relative shadow-sm hover:border-neutral-300 dark:hover:border-white/20 transition-colors">
               <div className="absolute top-4 right-4">
-                <span className="text-[10px] font-mono uppercase bg-white/10 text-neutral-300 font-medium px-2.5 py-1 rounded-full">
+                <span className="text-[10px] font-mono uppercase bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 font-medium px-2.5 py-1 rounded-full">
                   Instant Turnkey
                 </span>
               </div>
@@ -589,25 +589,25 @@ export function LandingPage() {
                 <div className="h-10 w-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4">
                   <Cpu size={20} />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">{t("onPremise.managedCloudTitle")}</h3>
-                <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t("onPremise.managedCloudTitle")}</h3>
+                <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
                   {t("onPremise.managedCloudDesc")}
                 </p>
 
                 <div className="space-y-3 font-mono text-xs border-t border-[var(--border-subtle)] pt-5">
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureZeroSetup")}</span>
                   </div>
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureModels")}</span>
                   </div>
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureSandbox")}</span>
                   </div>
-                  <div className="flex items-start gap-2.5 text-neutral-300">
+                  <div className="flex items-start gap-2.5 text-neutral-700 dark:text-neutral-300">
                     <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                     <span>{t("onPremise.featureSLA")}</span>
                   </div>
@@ -618,7 +618,7 @@ export function LandingPage() {
                 <span className="text-xs font-mono text-neutral-500">{t("onPremise.managedCloudTier")}</span>
                 <Link
                   to="/app"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white hover:text-[#f8a87c]"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-900 dark:text-white hover:text-[#f8a87c]"
                 >
                   <span>{t("onPremise.launchWorkspace")}</span>
                   <ArrowRight size={12} />
@@ -666,16 +666,16 @@ export function LandingPage() {
             </div>
 
             {/* Authentic Desktop Window Canvas (No fake neon glow) */}
-            <div className="lg:col-span-7 rounded-xl border border-white/[0.1] bg-[#090b10] shadow-2xl overflow-hidden font-sans">
+            <div className="lg:col-span-7 rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-xl dark:shadow-2xl overflow-hidden font-sans">
               {/* Window Header */}
-              <div className="h-10 bg-[#0e1117] border-b border-[var(--border-subtle)] px-4 flex items-center justify-between select-none">
+              <div className="h-10 bg-slate-50 dark:bg-[#0e1117] border-b border-neutral-200 dark:border-[var(--border-subtle)] px-4 flex items-center justify-between select-none">
                 <div className="flex items-center gap-2">
                   <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
                   <span className="ml-2 text-xs font-mono text-neutral-400">{t("wb.taskHeader")}</span>
                 </div>
-                <span className="text-[10px] font-mono text-neutral-400 bg-white/[0.06] px-2 py-0.5 rounded">
+                <span className="text-[10px] font-mono text-neutral-600 dark:text-neutral-400 bg-neutral-200/60 dark:bg-white/[0.06] px-2 py-0.5 rounded">
                   Active
                 </span>
               </div>
@@ -684,26 +684,26 @@ export function LandingPage() {
               <div className="p-5 sm:p-7 space-y-4">
                 {/* User Prompt */}
                 <div className="flex items-start gap-3">
-                  <div className="h-7 w-7 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300 shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-[#F8FAFC] dark:bg-neutral-800 border border-[#CBD5E1] dark:border-neutral-700 flex items-center justify-center text-xs font-semibold text-[#475569] dark:text-neutral-200 shrink-0 shadow-xs">
                     You
                   </div>
-                  <div className="bg-[#12151d] border border-[var(--border-subtle)] rounded-xl rounded-tl-none p-3.5 text-xs sm:text-sm text-neutral-200 leading-relaxed max-w-xl">
+                  <div className="bg-slate-50 dark:bg-[#12151d] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl rounded-tl-none p-3.5 text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed max-w-xl shadow-xs">
                     Reconcile this week's 48 supplier invoices against PO records and bank payouts, flag any variance over $100, and generate the TT99 tax voucher for CFO sign-off.
                   </div>
                 </div>
 
                 {/* Bot Response */}
                 <div className="flex items-start gap-3 pt-2">
-                  <div className="h-7 w-7 rounded-full bg-[#f8a87c] flex items-center justify-center text-xs font-bold text-black shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-[#FFF5EE] dark:bg-[#f8a87c] border border-[#FED7AA] dark:border-transparent flex items-center justify-center text-xs font-bold text-[#EA580C] dark:text-black shrink-0 shadow-xs">
                     S
                   </div>
-                  <div className="flex-1 bg-[#12151d] border border-[var(--border-subtle)] rounded-xl rounded-tl-none p-4 space-y-3">
-                    <div className="text-xs sm:text-sm text-neutral-200 leading-relaxed">
+                  <div className="flex-1 bg-slate-50 dark:bg-[#12151d] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl rounded-tl-none p-4 space-y-3 shadow-xs">
+                    <div className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed">
                       I have initiated the financial workflow and delegated execution across specialized department bots:
                     </div>
 
                     {/* Execution Steps */}
-                    <div className="bg-[#090b10] border border-[var(--border-subtle)] rounded-lg p-3 space-y-2 font-mono text-[11px] text-neutral-300">
+                    <div className="bg-white dark:bg-[#090b10] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-lg p-3 space-y-2 font-mono text-[11px] text-neutral-700 dark:text-neutral-300 shadow-xs">
                       <div className="flex items-center justify-between">
                         <span className="text-neutral-400">{t("wb.bot1Name")}</span>
                         <span className="text-emerald-400">{t("wb.bot1Status")}</span>
@@ -714,7 +714,7 @@ export function LandingPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-neutral-400">{t("wb.bot3Name")}</span>
-                        <span className="text-neutral-300">{t("wb.bot3Status")}</span>
+                        <span className="text-neutral-600 dark:text-neutral-300">{t("wb.bot3Status")}</span>
                       </div>
                     </div>
 
@@ -807,25 +807,25 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             {/* Virtual Browser Window */}
-            <div className="lg:col-span-7 rounded-xl border border-white/[0.1] bg-[#090b10] shadow-2xl overflow-hidden font-mono text-xs order-2 lg:order-1">
-              <div className="h-10 bg-[#0e1117] border-b border-[var(--border-subtle)] px-4 flex items-center justify-between text-neutral-400">
+            <div className="lg:col-span-7 rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-xl dark:shadow-2xl overflow-hidden font-mono text-xs order-2 lg:order-1">
+              <div className="h-10 bg-slate-50 dark:bg-[#0e1117] border-b border-neutral-200 dark:border-[var(--border-subtle)] px-4 flex items-center justify-between text-neutral-500 dark:text-neutral-400">
                 <div className="flex items-center gap-2">
                   <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
-                  <span className="ml-2 text-[11px] truncate text-neutral-300">https://support.zendesk.com/agent/tickets</span>
+                  <span className="ml-2 text-[11px] truncate text-neutral-700 dark:text-neutral-300">https://support.zendesk.com/agent/tickets</span>
                 </div>
-                <span className="text-[10px] bg-white/[0.06] text-neutral-300 px-2 py-0.5 rounded">
+                <span className="text-[10px] bg-neutral-200/60 dark:bg-white/[0.06] text-neutral-700 dark:text-neutral-300 px-2 py-0.5 rounded font-mono">
                   Browser CDP
                 </span>
               </div>
 
-              <div className="p-5 space-y-3 text-[11px] text-neutral-300">
+              <div className="p-5 space-y-3 text-[11px] text-neutral-700 dark:text-neutral-300">
                 <div className="text-neutral-500">{t("vb.comment")}</div>
                 <div className="text-emerald-400">{t("vb.auth")}</div>
                 <div className="text-neutral-300">{t("vb.scan")}</div>
                 <div className="text-neutral-300">{t("vb.analyze")}</div>
-                <div className="p-3 bg-white/[0.03] border border-[var(--border-subtle)] rounded-lg text-neutral-200 font-sans text-xs">
+                <div className="p-3 bg-slate-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-lg text-neutral-800 dark:text-neutral-200 font-sans text-xs">
                   {t("vb.summary")}
                 </div>
                 <div className="text-neutral-500 text-[10px] pt-1">
@@ -846,7 +846,7 @@ export function LandingPage() {
               </p>
               <div className="pt-2 flex flex-wrap gap-2">
                 {["Zendesk", "GitHub", "Linear", "Jira", "Notion", "PostgreSQL", "Telegram", "Figma"].map((tool) => (
-                  <span key={tool} className="text-xs font-mono bg-white/[0.03] border border-[var(--border-subtle)] px-3 py-1.5 rounded-lg text-neutral-300">
+                  <span key={tool} className="text-xs font-mono bg-neutral-100 dark:bg-white/[0.03] border border-neutral-200 dark:border-[var(--border-subtle)] px-3 py-1.5 rounded-lg text-neutral-700 dark:text-neutral-300">
                     {tool}
                   </span>
                 ))}
@@ -866,7 +866,7 @@ export function LandingPage() {
                 <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider font-medium">
                   {t("routines.badge")}
                 </span>
-                <h3 className="font-newsreader text-2xl sm:text-3xl text-white font-normal mt-2 mb-3 text-balance">
+                <h3 className="font-newsreader text-2xl sm:text-3xl text-neutral-900 dark:text-white font-normal mt-2 mb-3 text-balance">
                   {t("routines.title")}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
@@ -874,7 +874,7 @@ export function LandingPage() {
                 </p>
               </div>
 
-              <div className="bg-[#08090d] border border-[var(--border-subtle)] rounded-lg p-4 font-mono text-xs text-neutral-300 space-y-2">
+              <div className="bg-white dark:bg-[#08090d] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-lg p-4 font-mono text-xs text-neutral-700 dark:text-neutral-300 space-y-2 shadow-xs">
                 <div className="flex items-center justify-between text-neutral-400 border-b border-[var(--border-subtle)] pb-2 text-[11px]">
                   <span>{t("routines.demoTitle")}</span>
                   <span className="text-[#f8a87c]">{t("routines.demoStatus")}</span>
@@ -891,7 +891,7 @@ export function LandingPage() {
                 <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider font-medium">
                   {t("memory.badge")}
                 </span>
-                <h3 className="font-newsreader text-2xl sm:text-3xl text-white font-normal mt-2 mb-3 text-balance">
+                <h3 className="font-newsreader text-2xl sm:text-3xl text-neutral-900 dark:text-white font-normal mt-2 mb-3 text-balance">
                   {t("memory.title")}
                 </h3>
                 <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed mb-6">
@@ -899,7 +899,7 @@ export function LandingPage() {
                 </p>
               </div>
 
-              <div className="bg-[#08090d] border border-[var(--border-subtle)] rounded-lg p-4 font-mono text-xs text-neutral-300 space-y-2">
+              <div className="bg-white dark:bg-[#08090d] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-lg p-4 font-mono text-xs text-neutral-700 dark:text-neutral-300 space-y-2 shadow-xs">
                 <div className="text-neutral-300 leading-relaxed text-[11px]">
                   "Acme replied on pricing, same thread as last quarter. I already had the context, so I answered without waiting on you."
                 </div>
@@ -927,22 +927,22 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-[#090b10] border border-[var(--border-subtle)] rounded-xl p-5 sm:p-8 max-w-3xl mx-auto space-y-3 font-mono text-xs shadow-2xl">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] text-neutral-300">
+          <div className="bg-white dark:bg-[#090b10] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl p-5 sm:p-8 max-w-3xl mx-auto space-y-3 font-mono text-xs shadow-sm dark:shadow-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-[var(--border-subtle)] text-neutral-700 dark:text-neutral-300">
               <span className="text-neutral-500 font-bold">01</span>
-              <strong className="text-white shrink-0">{t("collab.salesBot")}</strong>
+              <strong className="text-neutral-900 dark:text-white shrink-0">{t("collab.salesBot")}</strong>
               <span className="text-neutral-400 truncate">{t("collab.salesMsg")}</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] text-neutral-300">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-[var(--border-subtle)] text-neutral-700 dark:text-neutral-300">
               <span className="text-neutral-500 font-bold">02</span>
-              <strong className="text-white shrink-0">{t("collab.finBot")}</strong>
+              <strong className="text-neutral-900 dark:text-white shrink-0">{t("collab.finBot")}</strong>
               <span className="text-neutral-400 truncate">{t("collab.finMsg")}</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] text-neutral-300">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3.5 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-[var(--border-subtle)] text-neutral-700 dark:text-neutral-300">
               <span className="text-neutral-500 font-bold">03</span>
-              <strong className="text-white shrink-0">{t("collab.chiefBot")}</strong>
+              <strong className="text-neutral-900 dark:text-white shrink-0">{t("collab.chiefBot")}</strong>
               <span className="text-neutral-400 truncate">{t("collab.chiefMsg")}</span>
             </div>
           </div>
@@ -985,7 +985,7 @@ export function LandingPage() {
                     className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
                       isSelected
                         ? "bg-[#f8a87c] text-black font-bold shadow-md shadow-[#f8a87c]/20"
-                        : "bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10 border border-white/5"
+                        : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5"
                     }`}
                   >
                     {grp}
@@ -1011,8 +1011,8 @@ export function LandingPage() {
                     }}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap border ${
                       active
-                        ? "bg-white text-black font-semibold border-white shadow-sm"
-                        : "bg-[#0b0e14] text-neutral-400 hover:bg-white/[0.08] hover:text-white border-[var(--border-subtle)]"
+                        ? "bg-neutral-900 text-white dark:bg-white dark:text-black font-semibold border-neutral-900 dark:border-white shadow-sm"
+                        : "bg-white dark:bg-[#0b0e14] text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/[0.08] hover:text-neutral-900 dark:hover:text-white border-neutral-200 dark:border-[var(--border-subtle)] shadow-2xs"
                     }`}
                   >
                     <Icon size={13} className="shrink-0" />
@@ -1034,16 +1034,16 @@ export function LandingPage() {
               <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 font-medium leading-relaxed">{activeRole.headline}</p>
               <p className="text-xs text-neutral-400 leading-relaxed">{activeRole.description}</p>
 
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-black/30 p-3">
+              <div className="rounded-lg border border-neutral-200 dark:border-[var(--border-subtle)] bg-neutral-100/80 dark:bg-black/30 p-3">
                 <div className="text-[11px] font-mono text-neutral-500 mb-1">{t("roles.exampleTask")}</div>
-                <p className="text-xs text-neutral-200 leading-relaxed">“{activeRole.promptExample}”</p>
+                <p className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">“{activeRole.promptExample}”</p>
               </div>
 
               <div className="pt-2">
                 <div className="text-[11px] font-mono text-neutral-500 mb-2">{t("roles.authorizedToolchain")}</div>
                 <div className="flex flex-wrap gap-1.5">
                   {activeRole.tools.map((t) => (
-                    <span key={t} className="text-[11px] font-mono bg-white/[0.03] border border-[var(--border-subtle)] px-2.5 py-1 rounded text-neutral-300">
+                    <span key={t} className="text-[11px] font-mono bg-neutral-100 dark:bg-white/[0.03] border border-neutral-200 dark:border-[var(--border-subtle)] px-2.5 py-1 rounded text-neutral-700 dark:text-neutral-300">
                       {t}
                     </span>
                   ))}
@@ -1051,7 +1051,7 @@ export function LandingPage() {
               </div>
 
               <div className="pt-2">
-                <div className="text-[11px] font-mono text-neutral-400 bg-white/[0.02] border border-[var(--border-subtle)] rounded-lg p-2.5 flex items-center gap-2">
+                <div className="text-[11px] font-mono text-neutral-600 dark:text-neutral-400 bg-neutral-100/60 dark:bg-white/[0.02] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-lg p-2.5 flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
                   <span className="truncate">{activeRole.status}</span>
                 </div>
@@ -1059,20 +1059,20 @@ export function LandingPage() {
             </div>
 
             {/* Right: Realistic Application Window Frame */}
-            <div className="lg:col-span-7 rounded-xl border border-white/[0.1] bg-[#090b10] shadow-2xl overflow-hidden font-mono text-xs">
+            <div className="lg:col-span-7 rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-xl dark:shadow-2xl overflow-hidden font-mono text-xs">
               {/* Window Bar */}
-              <div className="h-10 bg-[#0e1117] border-b border-[var(--border-subtle)] px-4 flex items-center justify-between text-neutral-400 select-none">
+              <div className="h-10 bg-slate-50 dark:bg-[#0e1117] border-b border-neutral-200 dark:border-[var(--border-subtle)] px-4 flex items-center justify-between text-neutral-500 dark:text-neutral-400 select-none">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="flex items-center gap-1.5 shrink-0">
                     <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
                     <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
                     <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
                   </div>
-                  <span className="ml-1.5 text-[11px] text-neutral-300 truncate font-mono">{activeRole.previewData.file}</span>
+                  <span className="ml-1.5 text-[11px] text-neutral-700 dark:text-neutral-300 truncate font-mono">{activeRole.previewData.file}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse hidden sm:inline-block" />
-                  <span className="text-[10px] text-neutral-400 bg-white/[0.06] border border-white/[0.08] px-2 py-0.5 rounded shrink-0 font-mono">
+                  <span className="text-[10px] text-neutral-600 dark:text-neutral-400 bg-neutral-200/60 dark:bg-white/[0.06] border border-neutral-300/60 dark:border-white/[0.08] px-2 py-0.5 rounded shrink-0 font-mono">
                     {activeRole.previewData.action}
                   </span>
                 </div>
@@ -1083,7 +1083,7 @@ export function LandingPage() {
                 {activeRole.previewData.logs.slice(0, visibleLogs).map((log, idx) => (
                   <div key={`${activeRole.id}-${replayKey}-${idx}`} className="flex items-start gap-2.5 leading-relaxed animate-[fadeIn_.25s_ease-out]">
                     <span className="text-neutral-600 select-none shrink-0">{log.time}</span>
-                    <span className={log.ok ? "text-neutral-200" : "text-amber-400"}>
+                    <span className={log.ok ? "text-neutral-800 dark:text-neutral-200" : "text-amber-600 dark:text-amber-400"}>
                       {log.text}
                     </span>
                   </div>
@@ -1114,12 +1114,12 @@ export function LandingPage() {
               </div>
 
               {/* Verified Metrics Footer */}
-              <div className="h-11 bg-[#0b0e14] border-t border-[var(--border-subtle)] px-5 flex items-center justify-between text-[11px] text-neutral-400">
+              <div className="h-11 bg-slate-50 dark:bg-[#0b0e14] border-t border-neutral-200 dark:border-[var(--border-subtle)] px-5 flex items-center justify-between text-[11px] text-neutral-600 dark:text-neutral-400">
                 <div className="flex items-center gap-4">
                   {Object.entries(activeRole.previewData.metrics).map(([k, v]) => (
                     <div key={k} className="flex items-center gap-1.5">
                       <span className="text-neutral-500 capitalize">{k}:</span>
-                      <span className="text-white font-medium">{v}</span>
+                      <span className="text-neutral-900 dark:text-white font-medium">{v}</span>
                     </div>
                   ))}
                 </div>
@@ -1156,13 +1156,13 @@ export function LandingPage() {
                 key={plan.name}
                 className={`rounded-xl p-7 flex flex-col justify-between border transition-all ${
                   plan.name === "Super"
-                    ? "bg-[var(--bg-card)] border-white/20 shadow-xl relative"
-                    : "bg-[#080a0f] border-[var(--border-subtle)]"
+                    ? "bg-white dark:bg-[var(--bg-card)] border-neutral-300 dark:border-white/20 shadow-xl relative"
+                    : "bg-slate-50/70 dark:bg-[#080a0f] border-neutral-200 dark:border-[var(--border-subtle)]"
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-base font-semibold text-white">{plan.name}</h3>
+                    <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{plan.name}</h3>
                     {plan.name === "Super" && (
                       <span className="text-[9px] font-mono font-bold uppercase bg-white text-black px-2 py-0.5 rounded-full">
                         Recommended
@@ -1190,7 +1190,7 @@ export function LandingPage() {
                   className={`w-full py-2.5 rounded-full text-xs font-semibold text-center transition-all ${
                     plan.name === "Super"
                       ? "bg-white text-black hover:bg-neutral-200"
-                      : "bg-white/[0.06] text-white hover:bg-white/[0.12] border border-[var(--border-subtle)]"
+                      : "bg-neutral-100 dark:bg-white/[0.06] text-neutral-900 dark:text-white hover:bg-neutral-200 dark:hover:bg-white/[0.12] border border-neutral-200 dark:border-[var(--border-subtle)]"
                   }`}
                 >
                   Get {plan.name}
@@ -1246,7 +1246,7 @@ export function LandingPage() {
       {/* 11. Final CTA: Meet your first Bot */}
       <section id="deploy" className="py-24 sm:py-32 text-center relative overflow-hidden">
         <div className="mx-auto max-w-4xl px-4 relative z-10">
-          <h2 className="font-newsreader text-3xl sm:text-5xl md:text-6xl text-white font-normal text-balance">
+          <h2 className="font-newsreader text-3xl sm:text-5xl md:text-6xl text-neutral-900 dark:text-white font-normal text-balance">
             {(() => {
               const ctaText = t("cta.title") || "Start with your first Skyer AI teammate.";
               if (ctaText.includes("Skyer")) {

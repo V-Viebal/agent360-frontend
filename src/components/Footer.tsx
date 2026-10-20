@@ -11,7 +11,7 @@ export function Footer() {
           {/* Brand Info */}
           <div className="md:col-span-1 space-y-3">
             <SkyerLogo size={28} />
-            <p className="text-neutral-400 text-xs leading-relaxed">
+            <p className="text-neutral-600 dark:text-neutral-400 text-xs leading-relaxed">
               {t("footer.tagline")}
             </p>
             <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-mono">
@@ -46,8 +46,8 @@ export function Footer() {
           {/* Compliance & Security */}
           <div className="space-y-2.5">
             <h4 className="text-neutral-900 dark:text-white font-medium text-xs uppercase tracking-wider font-mono">{t("footer.governance")}</h4>
-            <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5 space-y-2">
-              <div className="flex items-center gap-1.5 text-neutral-300 font-medium">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/5 space-y-2">
+              <div className="flex items-center gap-1.5 text-neutral-800 dark:text-neutral-300 font-medium">
                 <ShieldCheck size={14} className="text-[#f8a87c]" />
                 <span>{t("footer.proofTitle")}</span>
               </div>

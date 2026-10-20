@@ -704,7 +704,7 @@ export function AgentStatsDashboardPage() {
               : "Preview is off. Cost estimates use the current telemetry data."}
           </p>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 font-mono text-[11px]">
-            <div className="flex items-start gap-2 text-amber-100/80">
+            <div className="flex items-start gap-2 text-amber-900/90 dark:text-amber-100/80">
               <Zap size={14} className="mt-0.5 shrink-0 text-amber-300" />
               <span>
                 Preview-only control: injects synthetic tokens in this browser session. It does not write telemetry,
@@ -815,10 +815,10 @@ export function AgentStatsDashboardPage() {
               {autoThrottleEnabled && (
                 <div className="text-[11px] text-neutral-400 flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
                   <span className="text-[#f8a87c]">Example Fallback Policy:</span>
-                  <span className="bg-black/40 px-2 py-0.5 rounded text-neutral-300">
+                  <span className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 px-2 py-0.5 rounded text-slate-700 dark:text-neutral-300">
                     SWE & SRE: Qwen 2.5 14B Local (0 API Cost)
                   </span>
-                  <span className="bg-black/40 px-2 py-0.5 rounded text-neutral-300">
+                  <span className="bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/5 px-2 py-0.5 rounded text-slate-700 dark:text-neutral-300">
                     Social & DB: Qwen 2.5 7B Local
                   </span>
                   {isBudgetExceeded && (
@@ -832,7 +832,7 @@ export function AgentStatsDashboardPage() {
 
             {/* Telegram Webhook Endpoint Input */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 font-mono text-xs">
-              <div className="min-w-0 flex-1 flex items-center gap-2 bg-black/40 border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl px-3 py-2 text-neutral-300">
+              <div className="min-w-0 flex-1 flex items-center gap-2 bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-[var(--border-subtle)] rounded-xl px-3 py-2 text-slate-800 dark:text-neutral-300">
                 <Bell size={13} className="text-[#f8a87c] shrink-0" />
                 <input
                   type="text"

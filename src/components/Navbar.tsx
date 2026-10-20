@@ -89,7 +89,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation Links: 3 Lean Dropdown Overlays + Direct Pricing */}
-        <nav ref={dropdownRef} className="hidden md:flex items-center gap-1.5 text-xs font-medium text-neutral-300">
+        <nav ref={dropdownRef} className="hidden md:flex items-center gap-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-300">
           
           {/* 1. PRODUCT OVERLAY */}
           <div className="relative">
@@ -98,8 +98,8 @@ export function Navbar() {
               onClick={() => setOpenDropdown(openDropdown === "product" ? null : "product")}
               className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
                 openDropdown === "product"
-                  ? "bg-white/10 text-white font-semibold"
-                  : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
+                  ? "bg-neutral-200/70 dark:bg-white/10 text-neutral-900 dark:text-white font-semibold"
+                  : "hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.06] text-neutral-700 dark:text-neutral-300"
               }`}
             >
               <span>{t("nav.product")}</span>
@@ -110,19 +110,19 @@ export function Navbar() {
             </button>
 
             {openDropdown === "product" && (
-              <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-[#0c0e15]/95 border border-white/15 p-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
+              <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-white/95 dark:bg-[#0c0e15]/95 border border-neutral-200 dark:border-white/15 p-2 shadow-xl dark:shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
                 <a
                   href="/#bots"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] shrink-0 mt-0.5">
                     <Sparkles size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-[#f8a87c] transition-colors">
                       AI Employees
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.productAiEmployeesDesc")}
                     </div>
                   </div>
@@ -130,16 +130,16 @@ export function Navbar() {
 
                 <a
                   href="/#hierarchy"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
                     <Workflow size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-blue-400 transition-colors">
                       {t("nav.productMultiAgentTitle")}
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.productMultiAgentDesc")}
                     </div>
                   </div>
@@ -147,16 +147,16 @@ export function Navbar() {
 
                 <Link
                   to="/app"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 mt-0.5">
                     <Cpu size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-purple-400 transition-colors">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-purple-400 transition-colors">
                       {t("nav.productWorkspaceTitle")}
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.productWorkspaceDesc")}
                     </div>
                   </div>
@@ -172,8 +172,8 @@ export function Navbar() {
               onClick={() => setOpenDropdown(openDropdown === "solutions" ? null : "solutions")}
               className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
                 openDropdown === "solutions"
-                  ? "bg-white/10 text-white font-semibold"
-                  : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
+                  ? "bg-neutral-200/70 dark:bg-white/10 text-neutral-900 dark:text-white font-semibold"
+                  : "hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.06] text-neutral-700 dark:text-neutral-300"
               }`}
             >
               <span>{t("nav.solutions")}</span>
@@ -184,20 +184,20 @@ export function Navbar() {
             </button>
 
             {openDropdown === "solutions" && (
-              <div className="absolute left-0 mt-2 w-80 rounded-2xl bg-[#0c0e15]/95 border border-white/15 p-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
+              <div className="absolute left-0 mt-2 w-80 rounded-2xl bg-white/95 dark:bg-[#0c0e15]/95 border border-neutral-200 dark:border-white/15 p-2 shadow-xl dark:shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
                 <a
                   href="/#on-premise"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
                     <Shield size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
                       <span>{t("nav.solOnPremTitle")}</span>
                       <span className="text-[9px] font-mono bg-emerald-400/15 text-emerald-400 px-1.5 py-0.2 rounded">{t("nav.solOnPremBadge")}</span>
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.solOnPremDesc")}
                     </div>
                   </div>
@@ -205,22 +205,22 @@ export function Navbar() {
 
                 <Link
                   to="/marketplace"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] shrink-0 mt-0.5">
                     <Layers size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-[#f8a87c] transition-colors">
                       {t("nav.solRoleCatalogTitle")}
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.solRoleCatalogDesc")}
                     </div>
                   </div>
                 </Link>
 
-                <div className="pt-2 mt-1 border-t border-white/[0.06] px-2.5 pb-1 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                <div className="pt-2 mt-1 border-t border-neutral-200 dark:border-white/[0.06] px-2.5 pb-1 flex items-center justify-between text-[11px] font-mono text-neutral-400">
                   <span>{t("nav.solArchSecurity")}</span>
                   <a
                     href="/skyer-enterprise-whitepaper.md"
@@ -241,8 +241,8 @@ export function Navbar() {
               onClick={() => setOpenDropdown(openDropdown === "resources" ? null : "resources")}
               className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
                 openDropdown === "resources"
-                  ? "bg-white/10 text-white font-semibold"
-                  : "hover:text-white hover:bg-white/[0.06] text-neutral-300"
+                  ? "bg-neutral-200/70 dark:bg-white/10 text-neutral-900 dark:text-white font-semibold"
+                  : "hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.06] text-neutral-700 dark:text-neutral-300"
               }`}
             >
               <span>{t("nav.resources")}</span>
@@ -253,19 +253,19 @@ export function Navbar() {
             </button>
 
             {openDropdown === "resources" && (
-              <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-[#0c0e15]/95 border border-white/15 p-2 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
+              <div className="absolute left-0 mt-2 w-72 rounded-2xl bg-white/95 dark:bg-[#0c0e15]/95 border border-neutral-200 dark:border-white/15 p-2 shadow-xl dark:shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50">
                 <Link
                   to="/docs"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0 mt-0.5">
                     <BookOpen size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-[#f8a87c] transition-colors">
                       {t("nav.resDocsTitle")}
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.resDocsDesc")}
                     </div>
                   </div>
@@ -273,16 +273,16 @@ export function Navbar() {
 
                 <Link
                   to="/analytics"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
                     <BarChart3 size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-emerald-400 transition-colors">
                       {t("nav.resTelemetryTitle")}
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.resTelemetryDesc")}
                     </div>
                   </div>
@@ -292,17 +292,17 @@ export function Navbar() {
                   href="https://community-agent360.antares.vn"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.06] transition-colors group"
+                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/[0.06] transition-colors group"
                 >
                   <div className="h-8 w-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
                     <Users size={16} />
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-white group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
                       <span>{t("nav.resCommunityTitle")}</span>
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     </div>
-                    <div className="text-[11px] text-neutral-400 font-normal leading-relaxed mt-0.5">
+                    <div className="text-[11px] text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed mt-0.5">
                       {t("nav.resCommunityDesc")}
                     </div>
                   </div>
@@ -377,14 +377,14 @@ export function Navbar() {
 
       {/* Mobile Menu Slide-down Sheet */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#0c0e15] border-b border-white/10 px-4 py-6 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div className="md:hidden bg-white dark:bg-[#0c0e15] border-b border-neutral-200 dark:border-white/10 px-4 py-6 space-y-4 max-h-[85vh] overflow-y-auto shadow-xl">
           {/* Section 1: Core Navigation */}
           <div className="space-y-1">
             <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">{t("nav.mobilePlatform")}</span>
             <a
               href="/#bots"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-neutral-200 hover:text-white py-2 px-1"
+              className="block text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white py-2 px-1"
             >
               AI Employees & Roles
             </a>
@@ -406,14 +406,14 @@ export function Navbar() {
             <Link
               to="/marketplace"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-neutral-200 hover:text-white py-2 px-1"
+              className="block text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white py-2 px-1"
             >
               Marketplace Catalog
             </Link>
             <a
               href="/#pricing"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm text-neutral-200 hover:text-white py-2 px-1"
+              className="block text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white py-2 px-1"
             >
               Pricing Tiers
             </a>

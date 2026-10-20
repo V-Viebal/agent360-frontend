@@ -92,7 +92,7 @@ export function Tabs<T extends string = string>({
   return (
     <div
       role="tablist"
-      className={`inline-flex items-center p-1 rounded-lg bg-slate-100 dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] select-none ${className}`}
+      className={`inline-flex items-center p-1 rounded-lg bg-slate-100 dark:bg-[#121218] border border-slate-200 dark:border-[#22222e] select-none overflow-x-auto scrollbar-none max-w-full ${className}`}
     >
       {tabs.map((tab, idx) => {
         const isActive = activeTab === tab.id;
@@ -107,8 +107,8 @@ export function Tabs<T extends string = string>({
               onChange(tab.id);
             }}
             onKeyDown={(e) => handleKeyDown(e, idx)}
-            className={`flex items-center justify-center gap-1.5 rounded-md transition-all cursor-pointer font-medium ${
-              isSm ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
+            className={`flex items-center justify-center gap-1.5 rounded-md transition-all cursor-pointer font-medium shrink-0 whitespace-nowrap text-nowrap [text-wrap:nowrap] ${
+              isSm ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-xs"
             } ${
               isActive
                 ? "bg-[#f8a87c]/20 text-[#f8a87c] dark:text-[#f8a87c] font-semibold border border-[#f8a87c]/30 shadow-xs"

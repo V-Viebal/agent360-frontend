@@ -358,7 +358,7 @@ export function MarketplacePage() {
                 </p>
 
                 {/* AI Teammates Orchestration Info */}
-                <div className="rounded-lg bg-black/40 border border-[var(--border-subtle)] p-2.5 mb-4 space-y-1.5 font-mono text-[11px]">
+                <div className="rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-[var(--border-subtle)] p-2.5 mb-4 space-y-1.5 font-mono text-[11px]">
                   <div className="flex items-center justify-between text-neutral-400">
                     <span className="flex items-center gap-1 text-neutral-300">
                       <Workflow size={12} className="text-[#f8a87c]" />
@@ -506,7 +506,7 @@ export function MarketplacePage() {
                 </div>
 
                 {/* Multi-Agent AI Team Pipeline */}
-                <div className="p-4 rounded-xl bg-black/40 border border-[var(--border-subtle)] space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-[var(--border-subtle)] space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-white font-semibold flex items-center gap-1.5">
                       <Workflow size={14} className="text-[#f8a87c]" />

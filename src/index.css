@@ -444,6 +444,12 @@ html.light,
   .hover\:bg-white\/10:hover {
     background-color: var(--bg-card-hover);
   }
+  /* Safety net for hardcoded dark overlay containers in light mode */
+  .bg-black\/40 {
+    background-color: rgba(241, 245, 249, 0.75);
+    border-color: rgba(226, 232, 240, 0.9);
+  }
+
 
   /* Borders in light mode */
   .border-\[\#0c0c0e\],
@@ -1004,4 +1010,11 @@ html.light .border-\[\#2e2e3e\],
 .tooltip,
 [class*="group-hover"]:is(span, div) {
   text-wrap: nowrap;
+}
+
+
+/* Horizontal Scroll Mask Fade: soft fade-out on right edge */
+.scroll-mask-horizontal {
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
 }

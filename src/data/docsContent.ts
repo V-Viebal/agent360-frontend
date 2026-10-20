@@ -22,41 +22,41 @@ export const DOCS_SECTIONS: DocSection[] = [
     category: "Getting Started",
     badge: "Core",
     summary:
-      "Get up and running with Skyer: an enterprise AI agent workstation that combines Skyer's sandboxed runtime with Enterprise-grade multi-agent orchestration.",
+      "Khởi chạy Skyer Agent Workstation: nền tảng vận hành Nhân viên AI độc lập trên hạ tầng QwenPaw kết hợp điều phối đa tác nhân tự hành.",
     content: `
-### What is Skyer?
-Skyer is an enterprise-grade autonomous AI workstation designed to build and operate long-lived AI Teammates. 
-Unlike chat-only LLM wrappers, Skyer agents possess persistent Linux working environments, continuous file storage, tool permission guards, and multi-channel communication (Telegram, DingTalk, Feishu, Discord, Web).
+### Tổng quan về Skyer (QwenPaw Kernel)
+Skyer là nền tảng máy trạm nhân viên AI doanh nghiệp được xây dựng trên hạt nhân **QwenPaw Agent Kernel**. 
+Không giống như các ứng dụng wrapper LLM thông thường chỉ đơn thuần phản hồi văn bản, mỗi nhân viên AI trong Skyer sở hữu một không gian làm việc máy trạm Linux hoàn chỉnh (\`/app/working\`), lưu trữ dữ liệu bền vững, trình điều khiển công cụ MCP và khả năng kết nối đa kênh tức thì.
 
-### Key Architectural Pillars
-- **Agent OS Environment:** Built on Skyer's kernel sandbox. Agents read/write real files, clone git repositories, run test suites, and inspect browser DOMs.
-- **Hierarchical AI Workforce (Enterprise-grade):** High-level goals are assigned to Lead Manager Agents who plan sub-tasks, delegate work to specialized Worker Agents (SWE, QA, SRE), and enforce verification before human review.
-- **No Fake Done (Integrity Contracts):** Agents are structurally blocked from claiming task completion without authoritative exit codes, pixel settlements, and SHA256 receipts.
-- **Multi-Harness Execution:** Seamlessly select between Skyer native agents, OpenAI Codex sessions, or Qoder runners under a single unified governance plane.
+### Các trụ cột kiến trúc cốt lõi
+- **Không gian làm việc máy tính độc lập (Agent OS Container):** Mỗi nhân viên AI sở hữu một máy trạm Linux riêng biệt, có khả năng đọc ghi file, chạy lệnh shell, gọi API, thao tác trình duyệt Chromium CDP và lưu trữ tiến độ.
+- **Tổ chức nhân sự AI đa tầng (Autonomous Hierarchy):** Phân chia rõ ràng giữa Agent Quản lý (Manager Lead) và các Agent Chuyên môn (Tài chính, Bán hàng, Kỹ thuật, Vận hành) phối hợp nhịp nhàng.
+- **Cam kết không báo cáo ảo (Strict Verification Receipts):** Tác nhân bị chặn hoàn toàn khả năng tự nhận "hoàn thành" nếu không có bằng chứng thực thi: exit code lệnh thật, mã giao dịch, ảnh chụp màn hình kiểm chứng kết quả.
+- **Cơ chế lưu trữ tri thức bền vững (ReMe Memory & Markdown):** Bộ nhớ dài hạn lưu trữ qua cấu trúc file chuẩn và hệ thống vector Wikilinks, không lo mất ngữ cảnh sau mỗi phiên làm việc.
     `,
     codeSnippet: {
       language: "bash",
-      code: `# 1. Clone your project repository with Skyer overlay
+      code: `# 1. Khởi động môi trường Skyer Core với QwenPaw Kernel
 git clone https://github.com/V-Viebal/agent360.git
 cd agent360
 
-# 2. Start Skyer API and Web Control Plane
+# 2. Khởi chạy cụm dịch vụ qua Docker Compose
 docker compose up -d
 
-# 3. Verify agent status via CLI
-curl http://localhost:5000/api/agents/skills`,
+# 3. Kiểm tra danh sách kỹ năng và công cụ của nhân viên AI
+curl -s http://localhost:5290/api/v1/agents/skills | jq .`,
     },
     keyTakeaways: [
-      "Operates persistent Linux sandboxes per agent",
-      "Hierarchical delegation inspired by AI Teammates",
-      "Strict epistemic verification preventing fake completions",
+      "Vận hành môi trường Linux cô lập cho từng nhân viên AI",
+      "Điều phối công việc theo vai trò phòng ban chuyên biệt",
+      "Kiểm chứng kết quả bằng biên nhận thực tế, loại bỏ hoàn toàn hoàn thành ảo",
     ],
-    sandboxPrompt: "curl -s http://localhost:5000/api/agents/skills | jq .",
+    sandboxPrompt: "curl -s http://localhost:5290/api/v1/agents/skills | jq .",
     sandboxOutput: [
-      "[sandbox.connect] Connecting to Skyer kernel @ localhost:5000...",
-      "[sandbox.skills] 14 verified skills registered in runtime",
-      "[sandbox.check] Kernel status: Up (healthy) - 0 memory leaks detected",
-      "[sandbox.receipt] Healthcheck response: HTTP 200 OK (latency 12ms)",
+      "[sandbox.connect] Đang kết nối QwenPaw kernel @ localhost:5290...",
+      "[sandbox.skills] Đã kích hoạt 18 kỹ năng nghiệp vụ doanh nghiệp",
+      "[sandbox.check] Trạng thái Kernel: Up (healthy) - Phân vùng /app/working đã gắn kết",
+      "[sandbox.receipt] Phản hồi kiểm tra: HTTP 200 OK (độ trễ 12ms)",
     ],
   },
   {
@@ -65,83 +65,85 @@ curl http://localhost:5000/api/agents/skills`,
     category: "Getting Started",
     badge: "Architecture",
     summary:
-      "Understand the primary entities: Agents, AI Workforce, Tasks, Tools, ReMe Memory, and Evidence Receipts.",
+      "Tìm hiểu 6 thực thể cốt lõi trong Skyer: Nhân viên AI, Nhóm làm việc, Nhiệm vụ, Công cụ MCP, Bộ nhớ ReMe và Bằng chứng thực thi.",
     content: `
-### The 6 Core Entities of Skyer
+### 6 Thực thể kiến trúc cốt lõi trong Skyer
 
-1. **AI Agent (Teammate):** An autonomous entity with an explicit persona, role, provisioned tools, and personal memory. Each agent owns an isolated working volume (\`/app/working\`).
-2. **AI Team (Multi-Agent Team):** A collaborative collective of agents configured with a process mode:
-   - *Sequential Process:* Workflows pass linearly from Agent A to Agent B to Agent C.
-   - *Hierarchical Process:* A Manager Agent oversees workers, delegates tasks, and validates pull requests.
-3. **Task & Mandate:** A concrete unit of work with clear inputs, expected deliverables, and strict acceptance criteria.
-4. **Tool & MCP Gateway:** Safe bridges to filesystem, shell, databases, Chromium CDP, and Model Context Protocol (MCP) servers.
-5. **Memory System (ReMe + Files):** Dual-tier memory. Core Markdown files (\`MEMORY.md\`, \`AGENTS.md\`, \`SOUL.md\`) provide prompt context; ReMe provides vector and Wikilink indexing.
-6. **Integrity Receipt:** Cryptographic or empirical proof of completion (e.g. \`14/14 tests PASS\`, \`HTTP 200 OK\`, \`DOM screenshot hash\`).
+1. **Nhân viên AI (AI Teammate):** Một thực thể tự hành hoàn chỉnh với hồ sơ chức danh, vai trò phòng ban, hệ thống kỹ năng, bộ công cụ được cấp phép và không gian lưu trữ dữ liệu riêng biệt.
+2. **Nhóm làm việc đa tác nhân (Multi-Agent Team):** Sự kết hợp giữa các nhân viên AI theo mô hình quy trình:
+   - *Quy trình tuần tự (Sequential):* Luồng nghiệp vụ chuyển giao lần lượt từ chuyên viên này sang chuyên viên kế tiếp.
+   - *Quy trình phân cấp (Hierarchical):* Tác nhân Trưởng phòng giám sát, phân bổ chỉ tiêu công việc, thẩm định biên bản và yêu cầu làm lại nếu chưa đạt.
+3. **Nhiệm vụ & Mục tiêu (Task & Objective):** Đơn vị công việc cụ thể bao gồm dữ liệu đầu vào, tiêu chí nghiệm thu định lượng và tài liệu bàn giao bắt buộc.
+4. **Cổng công cụ MCP (Model Context Protocol Gateway):** Cầu nối an toàn kết nối nhân viên AI với hệ điều hành Linux, cơ sở dữ liệu nội bộ, Google Workspace, ERPNext và trình duyệt headless.
+5. **Hệ thống bộ nhớ ReMe (Dual-tier Memory):** Kết hợp các tệp chỉ dẫn chuẩn (\`MEMORY.md\`, \`AGENTS.md\`, \`SOUL.md\`) cho ngữ cảnh tức thời với cơ chế vector ReMe cho truy xuất dài hạn.
+6. **Biên nhận nghiệm thu (Execution Receipt):** Bằng chứng thực nghiệm chứng minh tác vụ đã được hoàn thành (Exit code 0, HTTP 200 OK, mã hóa đơn ERP, ảnh chụp đối soát).
     `,
     keyTakeaways: [
-      "Explicit separation of Identity, Authority, and Execution Sandbox",
-      "Process modes: Sequential vs Hierarchical",
-      "Dual-layer memory combining local Markdown with ReMe indexing",
+      "Tách bạch rõ ràng giữa Danh tính, Quyền hạn và Môi trường thực thi",
+      "Hỗ trợ cả quy trình tuần tự lẫn quy trình phân cấp có giám sát",
+      "Bộ nhớ kết hợp hai tầng: Markdown tức thời và Vector ReMe dài hạn",
     ],
   },
 
-  // 2. Core Components (AI Teammates Style)
+  // 2. Core Components
   {
     id: "agents",
     title: "Agents & Roles",
     category: "Core Components",
     badge: "Specialization",
     summary:
-      "How to configure specialized AI Teammates: system prompts, capabilities, backends, and permission models.",
+      "Thiết lập nhân viên AI chuyên trách: vai trò phòng ban, mục tiêu công việc, mô hình suy luận và phân quyền công cụ.",
     content: `
-### Give Each Bot a Job
-Rather than using a single mega-prompt for all company operations, Skyer enforces domain specialization.
+### Giao việc đúng người, đúng chức danh
+Thay vì dồn toàn bộ nghiệp vụ công ty vào một câu lệnh chat chung chung, Skyer yêu cầu định hình từng vị trí nhân sự AI rõ ràng.
 
-#### Agent Definition Schema
+#### Cấu trúc định nghĩa Nhân viên AI
 \`\`\`yaml
-agent_id: swe-lead
-name: "Alex - Senior Fullstack Bot"
-role: "Software Engineering & Architecture"
-goal: "Autonomously implement clean code diffs, pass local test suites, and generate verifiable PRs."
-backstory: "Senior architect with 10 years of experience in .NET, React, and PostgreSQL. Strict adherence to TDD and zero fake completions."
+agent_id: chief-of-staff
+name: "Alex - Chánh Văn Phòng Điều Hành"
+role: "Executive Operations & OKR Synthesis"
+goal: "Tổng hợp chỉ số KPI các phòng ban, theo dõi điểm nghẽn và soạn thảo báo cáo ban điều hành."
+backstory: "Trợ lý điều hành cấp cao với chuyên môn phân tích dữ liệu, quản trị tiến độ dự án và phối hợp liên phòng ban."
 backend:
-  runtime: "skyer-native" # or "codex", "qoder"
+  runtime: "qwenpaw-native"
   model: "qwen-2.5-72b-instruct"
   temperature: 0.1
 tools:
-  - "shell_execution"
-  - "git_cli"
-  - "chrome_devtools_cdp"
-  - "postgres_mcp"
+  - "google_workspace_mcp"
+  - "erpnext_operations"
+  - "plan_ledger_engine"
+  - "slack_telegram_bridge"
 memory:
   enabled: true
-  persistence_path: "/app/working/swe-lead"
+  persistence_path: "/app/working/workspaces/chief-of-staff"
 \`\`\`
     `,
     codeSnippet: {
       language: "typescript",
       code: `import { Agent } from "@agent360/core";
 
-export const sweAgent = new Agent({
-  role: "Fullstack Engineer",
-  goal: "Implement features with verifiable Playwright E2E tests",
-  tools: ["git", "docker", "cdp"],
-  allowDelegation: false,
+export const chiefOfStaffAgent = new Agent({
+  id: "chief-of-staff",
+  name: "Alex - Chánh Văn Phòng",
+  role: "Executive Operations",
+  goal: "Tổng hợp báo cáo tuần từ Tài chính, Bán hàng và Vận hành",
+  tools: ["erpnext", "google_workspace", "telegram"],
+  allowDelegation: true,
   verbose: true,
 });`,
     },
     keyTakeaways: [
-      "Role, Goal, and Backstory structure matching AI Teammates",
-      "Bound to dedicated kernel sandboxes to protect host integrity",
-      "Configurable backend execution adapters (Skyer, Codex, Qoder)",
+      "Mỗi nhân viên AI có Persona, Mục tiêu và Không gian làm việc riêng biệt",
+      "Giới hạn quyền công cụ theo đúng ma trận chức năng của phòng ban",
+      "Hỗ trợ cấu hình linh hoạt mô hình ngôn ngữ cho từng vai trò",
     ],
-    sandboxPrompt: "agent360 agent run swe-lead --prompt 'Verify Google OAuth with Logto'",
+    sandboxPrompt: "agent360 agent run chief-of-staff --prompt 'Tổng hợp báo cáo tuần 42'",
     sandboxOutput: [
-      "[swe-lead] Loaded agent identity: Alex (Senior Fullstack Bot)",
-      "[swe-lead] Launching Playwright CDP container @ :9222",
-      "[swe-lead] Executing auth flow tests against local Logto provider...",
-      "[swe-lead] Results: 14/14 tests PASS (0 regressions)",
-      "[swe-lead] Screenshot artifact generated: .tmp/auth-verified.png (SHA256 verified)",
+      "[chief-of-staff] Đã nạp danh tính: Alex (Chánh Văn Phòng Điều Hành)",
+      "[chief-of-staff] Đang đọc chỉ số từ phân hệ ERPNext và Google Sheets...",
+      "[chief-of-staff] Phát hiện 2 nút thắt công nợ quá hạn từ phòng Kinh doanh",
+      "[chief-of-staff] Đã tạo bản thảo báo cáo tóm tắt: .tmp/executive-sync-w42.pdf",
+      "[chief-of-staff] Biên nhận hoàn tất: Báo cáo đã gửi vào kênh kiểm duyệt nội bộ",
     ],
   },
   {
@@ -150,56 +152,55 @@ export const sweAgent = new Agent({
     category: "Core Components",
     badge: "Collaboration",
     summary:
-      "Orchestrate multi-agent teams with Sequential or Hierarchical processes, manager delegation, and feedback loops.",
+      "Tổ chức đội ngũ nhân viên AI phối hợp làm việc: bàn giao công việc tự động, phản hồi thẩm định và kiểm soát chất lượng.",
     content: `
-### Hierarchical Process Engine
-In Hierarchical mode, a **Lead Manager Agent** automatically abstracts high-level requests into manageable task graphs:
+### Động cơ điều phối phân cấp (Supervision Engine)
+Trong mô hình phân cấp, **Nhân viên Quản lý (Lead Manager)** nhận chỉ đạo tổng quan từ người dùng, tự động phân tích và giao việc cho các nhân viên chuyên trách:
 
 \`\`\`
-[ User Request ]
-       ↓
-[ Manager Agent (Qwen 72B) ]
-       ├── [ Task 1: DDL & Migration ] → SWE Worker
-       ├── [ Task 2: UI Implementation ] → Frontend Worker
-       └── [ Task 3: Security & E2E ] → QA Sentinel Worker
-       ↓ (Aggregate Receipts)
-[ Sign-off & Human Review Gate ]
+[ Chỉ đạo của Ban Giám Đốc ]
+             ↓
+[ Manager Lead (Chánh Văn Phòng) ]
+             ├── [ Tác vụ 1: Đối soát 48 hóa đơn ] → Nhân viên Kế toán (ERPNext)
+             ├── [ Tác vụ 2: Kiểm tra điều khoản pháp lý ] → Nhân viên Pháp chế
+             └── [ Tác vụ 3: Đóng gói hồ sơ chi ] → Nhân viên Thanh toán
+             ↓ (Tổng hợp biên nhận thực thi)
+[ Cổng phê duyệt chữ ký số của CFO ]
 \`\`\`
 
-#### Key Benefits
-- **Autonomous Delegation:** Manager dynamically assigns tasks based on worker skill tags.
-- **Iterative Review:** If QA Worker rejects a PR, the Manager re-opens the task and sends debug traces back to SWE Worker.
-- **Fail-Closed Security:** Unverified claims fail closed before reaching production.
+#### Lợi ích vượt trội
+- **Phân công tự động:** Quản lý tự động chọn nhân viên có kỹ năng phù hợp nhất trong danh bạ.
+- **Vòng lặp kiểm tra chất lượng:** Nếu nhân viên Pháp chế phát hiện hóa đơn thiếu phụ lục, nhiệm vụ sẽ bị trả về cho Kế toán kèm lưu ý điều chỉnh.
+- **Fail-Closed An toàn tuyệt đối:** Mọi hành động nhạy cảm (thanh toán ngân hàng, sửa đổi hợp đồng) bắt buộc dừng lại tại cổng phê duyệt của con người.
     `,
     codeSnippet: {
       language: "python",
-      code: `from agent360 import AI Team, Process
-from my_agents import manager, swe_agent, qa_agent
+      code: `from agent360 import AITeam, Process
+from my_agents import manager_agent, accountant_agent, legal_agent
 
-agent team = AI Team(
-    agents=[swe_agent, qa_agent],
-    manager_agent=manager,
+financial_team = AITeam(
+    agents=[accountant_agent, legal_agent],
+    manager_agent=manager_agent,
     process=Process.hierarchical,
     memory=True,
     verbose=True
 )
 
-result = agent team.kickoff(inputs={
-    "objective": "Deploy OAuth Google authentication with Logto and verify E2E flow"
+result = financial_team.kickoff(inputs={
+    "objective": "Đối soát 48 hóa đơn nhà cung cấp tuần 42 và lập tờ trình duyệt chi CFO"
 })`,
     },
     keyTakeaways: [
-      "Manager-worker hierarchy mirrors real enterprise engineering teams",
-      "Automated task re-opening on failed QA verification",
-      "Human-in-the-loop sign-off gate before production mutation",
+      "Mô hình Trưởng phòng - Chuyên viên phản ánh cấu trúc thực tế của doanh nghiệp",
+      "Cơ chế trả lại tác vụ tự động khi không đáp ứng tiêu chuẩn nghiệm thu",
+      "Cổng phê duyệt của người quản lý trước khi thực thi các quyết định kinh doanh quan trọng",
     ],
-    sandboxPrompt: "agent360 agent team kickoff --agent team hierarchical-swe --task 'Postgres RLS'",
+    sandboxPrompt: "agent360 team kickoff --team financial-audit --task 'Duyệt chi hóa đơn T10'",
     sandboxOutput: [
-      "[manager] Goal registered: 'Implement Multi-Tenant Row-Level Security'",
-      "[manager] Decomposed into 3 tasks: DDL Migration, API Unit Tests, Penetration QA",
-      "[swe-worker] Applied PostgreSQL migration scripts & EF Core filters",
-      "[qa-worker] Simulated unauthorized cross-tenant query: HTTP 403 Forbidden verified",
-      "[manager] Signed off delivery bundle: PR #42 ready for human approval",
+      "[manager] Tiếp nhận mục tiêu: 'Đối soát 48 hóa đơn và lập hồ sơ duyệt chi'",
+      "[accountant] Đã đối soát 48/48 hóa đơn trên ERPNext: 0 sai lệch",
+      "[legal] Thẩm định điều khoản hợp đồng TT99: Hợp lệ 100%",
+      "[manager] Đóng gói biên bản nghiệm thu: Hồ sơ số #402 sẵn sàng cho CFO",
     ],
   },
   {
@@ -208,89 +209,89 @@ result = agent team.kickoff(inputs={
     category: "Core Components",
     badge: "No Fake Done",
     summary:
-      "Design rigorous tasks with strict input/output specifications and verifiable cryptographic receipts.",
+      "Thiết lập hợp đồng giao việc minh bạch với yêu cầu đầu ra định lượng và biên nhận kiểm chứng rõ ràng.",
     content: `
-### The Task Specification
-Tasks are the execution contracts between agents. A task must define:
-1. **Description:** Exactly what needs to be completed.
-2. **Expected Output:** The exact format and structure of the artifact.
-3. **Required Receipts:** Empirical evidence needed before the task can be marked Done.
+### Đặc tả hợp đồng giao việc (Task Specification)
+Mỗi nhiệm vụ trong Skyer là một cam kết thực thi có cấu trúc rõ ràng:
+1. **Mô tả công việc (Description):** Định nghĩa cụ thể phạm vi và việc cần làm.
+2. **Kết quả kỳ vọng (Expected Output):** Định dạng, cấu trúc và nội dung tài liệu bàn giao.
+3. **Biên nhận nghiệm thu bắt buộc (Verification Requirements):** Tiêu chí kiểm chứng độc lập mà nhân viên AI phải cung cấp trước khi đánh dấu Đã xong.
 
-#### Example Task Contract
+#### Mẫu hợp đồng tác vụ chuẩn
 \`\`\`yaml
-task_id: "task-402-auth"
-assigned_to: "swe-agent"
-description: "Configure Logto OAuth provider in Skyer.API and frontend SPA."
-expected_output: "Clean git diff with passing contract tests and Playwright video capture."
+task_id: "task-fin-402"
+assigned_to: "accountant-bot"
+description: "Đối soát danh sách 48 hóa đơn đầu vào tuần 42 so với đơn mua hàng PO trên ERPNext."
+expected_output: "Bảng cân đối thanh toán đối soát và biên bản TT99 sẵn sàng trình duyệt."
 verification_requirements:
-  - "Exit code 0 from: dotnet test Skyer.API.ContractTests"
-  - "Exit code 0 from: pnpm test:e2e"
-  - "Non-empty screenshot at .tmp/auth-verified.png"
+  - "Exit code 0 từ kiểm tra đối soát ERPNext API"
+  - "Tổng chênh lệch công nợ bằng $0.00"
+  - "File biên nhận đối soát hợp lệ tại: .tmp/reconciliation-w42.json"
 \`\`\`
     `,
     keyTakeaways: [
-      "Every task mandates explicit verification receipts",
-      "Guarantees absence of 'Fake Done' common in naive LLMs",
-      "Audit trail preserved in append-only harness ledger",
+      "Mọi nhiệm vụ đều có điều kiện nghiệm thu định lượng cụ thể",
+      "Ngăn chặn triệt để tình trạng nhân viên AI báo cáo ảo hoặc làm dở dang",
+      "Nhật ký thực thi được ghi nhận bất biến vào sổ cái hệ thống",
     ],
   },
 
-  // 3. Skyer capabilities
+  // 3. QwenPaw Runtime Architecture
   {
-    id: "Skyer-sandbox",
+    id: "qwenpaw-sandbox",
     title: "Kernel Sandbox & Security",
-    category: "Skyer Runtime",
-    badge: "Skyer",
+    category: "QwenPaw Runtime",
+    badge: "Security",
     summary:
-      "Deep dive into Skyer's rootless container sandboxing, File Guards, and Tool Permission escalation.",
+      "Cơ chế bảo mật sâu của QwenPaw: Container không quyền root, phân vùng làm việc độc lập và bộ lọc lệnh an toàn.",
     content: `
-### Sandboxing & Host Isolation
-Skyer inherits Skyer's containerized execution model:
+### Kiến trúc bảo mật & Cách ly máy trạm
+Skyer kế thừa mô hình bảo vệ tài nguyên đa lớp của QwenPaw:
 
-- **Isolated Working Volumes:** Agents only have write permissions within their scoped \`/app/working\` directory.
-- **Tool Guard Interceptors:** Commands like \`rm -rf /\`, \`drop database\`, or reading sensitive keys trigger human approval gates.
-- **Read-Only System Root:** The host operating system and sensitive SSH bridges remain strictly read-only or air-gapped.
-- **Rate-Limited Sub-processes:** Background tasks are guarded against CPU hogging and infinite loop executions.
+- **Phân vùng làm việc cô lập (\`/app/working\`):** Nhân viên AI chỉ có toàn quyền đọc ghi trong thư mục phân bổ riêng, không can thiệp vào máy chủ chủ quản.
+- **Bộ lọc kiểm soát thao tác phá hủy (Tool Guards):** Các câu lệnh có nguy cơ cao (xóa dữ liệu, sửa đổi cấu hình hệ thống, tải file lạ) tự động kích hoạt cảnh báo phê duyệt.
+- **Quyền rootless an toàn:** Tiến trình container chạy không quyền root, loại bỏ nguy cơ leo thang đặc quyền hệ thống.
+- **Giám sát tải và giới hạn luồng:** Ngăn chặn tình trạng treo vô tận hoặc ngốn CPU khi xử lý các tác vụ phân tích lớn.
     `,
     codeSnippet: {
       language: "bash",
-      code: `# Skyer Docker Sandbox specification
+      code: `# Cấu hình Container bảo mật cho Nhân viên AI Skyer
 docker run -d \\
-  --name agent360-sandbox-worker \\
+  --name skyer-agent-accountant \\
   --security-opt=no-new-privileges:true \\
   --cap-drop=ALL \\
   --pids-limit=100 \\
-  -v /var/run/agent360/worker-1:/app/working \\
-  agent360/worker-runtime:v2.2.1`,
+  -v /var/run/skyer/workspaces/accountant:/app/working \\
+  skyer/agent-runtime:v2.2.1`,
     },
     keyTakeaways: [
-      "Rootless container architecture with zero privilege escalation",
-      "Proactive command filtering blocks destructive mutations",
-      "Dedicated working volume isolation per worker agent",
+      "Kiến trúc rootless container đảm bảo an toàn tuyệt đối cho hệ thống máy chủ",
+      "Bộ chặn câu lệnh nguy hại bảo vệ dữ liệu doanh nghiệp",
+      "Mỗi nhân viên AI được gắn với một phân vùng lưu trữ riêng biệt",
     ],
   },
   {
-    id: "Skyer-memory",
+    id: "qwenpaw-memory",
     title: "ReMe & Long-Term Memory",
-    category: "Skyer Runtime",
-    badge: "Skyer",
+    category: "QwenPaw Runtime",
+    badge: "Memory",
     summary:
-      "How Skyer's ReMe engine turns conversations, diffs, and documents into permanent, reusable knowledge.",
+      "Quy trình 6 bước nạp và duy trì ký ức doanh nghiệp của công nghệ ReMe, biến tương tác thành tri thức vĩnh viễn.",
     content: `
-### The 6-Stage Memory Lifecycle
-Skyer does not rely on transient chat logs. Instead, it follows Skyer's proven memory architecture:
+### Vòng đời 6 giai đoạn của bộ nhớ ReMe
+Skyer không phụ thuộc vào lịch sử chat tạm bợ. Hệ thống xây dựng tri thức theo kiến trúc ReMe của QwenPaw:
 
-1. **Record:** Captures operational preferences, architecture rules, and verified facts.
-2. **Ingest:** Parses upstream pull requests, commit messages, and API schemas.
-3. **Organize:** Distills daily interactions into structured Markdown files (\`MEMORY.md\`).
-4. **Connect:** Establishes semantic links between files using Wikilinks (\`[[Architecture]]\`).
-5. **Retrieve:** Dual-mode recall using keyword search + semantic vector embeddings.
-6. **Expand:** Contextually hydrates agent prompts only with relevant memory fragments.
+1. **Ghi nhận (Record):** Lắng nghe và ghi lại quy chuẩn công việc, chính sách công ty và kết quả đã được xác nhận.
+2. **Tiếp nhận (Ingest):** Đọc và phân tích tài liệu nội bộ, thông báo chính sách và báo cáo tài chính.
+3. **Sắp xếp (Organize):** Chắt lọc tri thức vào các tệp Markdown cấu trúc (\`MEMORY.md\`, \`AGENTS.md\`).
+4. **Liên kết (Connect):** Thiết lập mạng lưới liên kết ngữ nghĩa giữa các văn bản bằng chuẩn Wikilinks (\`[[ChínhSáchChiTieu]]\`).
+5. **Truy xuất (Retrieve):** Cơ chế tìm kiếm kép kết hợp từ khóa chính xác và vector ngữ nghĩa.
+6. **Mở rộng (Expand):** Tự động nạp các mảnh ký ức liên quan vào ngữ cảnh khi nhân viên AI nhận nhiệm vụ mới.
     `,
     keyTakeaways: [
-      "Prevents agents from repeating mistakes or forgetting architecture rules",
-      "Human-auditable plain Markdown storage format",
-      "Vector search combined with semantic graph Wikilinks",
+      "Ngăn nhân viên AI lặp lại sai lầm cũ hoặc quên chính sách của công ty",
+      "Dữ liệu ký ức lưu trữ bằng định dạng Markdown minh bạch, dễ dàng kiểm toán",
+      "Kết hợp tìm kiếm từ khóa với mạng lưới liên kết ngữ nghĩa chuyên sâu",
     ],
   },
   {
@@ -299,23 +300,23 @@ Skyer does not rely on transient chat logs. Instead, it follows Skyer's proven m
     category: "Enterprise Integration",
     badge: "Channels",
     summary:
-      "Connect Skyer teammates to 10+ enterprise channels: Telegram, Element, Discord, DingTalk, Feishu, and Web.",
+      "Tích hợp nhân viên AI vào các kênh liên lạc doanh nghiệp: Telegram, Element/Matrix, Discord, Slack và Giao diện Web.",
     content: `
-### Seamless Teammate Communication
-Interact with your AI agent team on the tools your team already uses every day:
+### Giao việc mọi lúc mọi nơi trên ứng dụng quen thuộc
+Lãnh đạo và nhân viên có thể tương tác trực tiếp với các trợ lý AI trên các nền tảng chat phổ biến:
 
-- **Telegram:** Interactive bot chats, group topic routing, confirmation action buttons.
-- **Matrix / Element:** End-to-end encrypted chat for confidential infrastructure operations.
-- **Discord & Slack:** Webhook notifications and command dispatching.
-- **Web Console:** Real-time terminal streaming and interactive desktop workspace.
+- **Telegram:** Trò chuyện trực tiếp, chia chủ đề trong Topic nhóm và hỗ trợ các nút bấm xác nhận lệnh tức thì.
+- **Matrix / Element:** Mã hóa đầu cuối (E2EE) chuẩn quân đội dành cho các chỉ đạo cơ mật của ban lãnh đạo.
+- **Discord & Slack:** Thông báo trạng thái tác vụ, theo dõi tiến độ và giao nhiệm vụ qua bot lệnh.
+- **Web Console (/app):** Không gian làm việc đồ họa trực quan với đầy đủ công cụ quản trị và theo dõi thời gian thực.
 
-#### Topic-Aware Routing
-In group chats with forum topics enabled, Skyer preserves separate thread contexts, ensuring tasks don't cross-contaminate.
+#### Phân luồng thông minh theo Topic
+Trong các nhóm chat có nhiều chủ đề (Forum Topics), Skyer tự động giữ vững ngữ cảnh độc lập theo từng chủ đề, không để lẫn lộn giữa các dự án.
     `,
     keyTakeaways: [
-      "Communicate with agents directly from existing chat apps",
-      "Preserves topic and sender boundaries for security",
-      "Native support for mobile notifications and approvals",
+      "Nhân viên AI giao tiếp mượt mà ngay trên các ứng dụng chat hàng ngày của công ty",
+      "Bảo toàn ngữ cảnh riêng biệt cho từng chủ đề và người phụ trách",
+      "Hỗ trợ phê duyệt công việc nhanh qua nút bấm tương tác trên thiết bị di động",
     ],
   },
 ];

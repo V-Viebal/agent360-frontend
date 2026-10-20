@@ -12,7 +12,7 @@ import { operatorKey } from "./a2aApi";
 import { initiateSkyerSignIn } from "./pkceAuth";
 import { authConfig } from "../config/authConfig";
 
-const API_BASE_URL = "/api";
+export const API_BASE_URL = "/api";
 
 /** Thrown when the fleet list needs a (different) sign-in; callers show it instead of fake agents. */
 export class AgentListAuthError extends Error {

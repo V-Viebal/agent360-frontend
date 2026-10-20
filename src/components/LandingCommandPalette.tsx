@@ -119,14 +119,14 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 pt-[12vh]"
+      className="fixed inset-0 z-[60] flex items-start justify-center bg-neutral-950/40 dark:bg-black/75 backdrop-blur-md px-4 pt-[12vh]"
       onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}
       role="dialog"
       aria-modal="true"
       aria-label="Skyer command menu"
     >
-      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-white/[0.1] bg-[#0b0d12] shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 h-12">
+      <div className="w-full max-w-xl overflow-hidden rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#0b0d12] shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-white/[0.06] px-4 h-12">
           <Search size={15} className="text-neutral-500 shrink-0" />
           <input
             ref={inputRef}
@@ -134,10 +134,10 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onListKey}
             placeholder="Describe a task, or jump to a Bot…"
-            className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 outline-none"
+            className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none"
             aria-activedescendant={items[cursor]?.id}
           />
-          <kbd className="text-[10px] font-mono text-neutral-500 border border-white/10 rounded px-1.5 py-0.5">ESC</kbd>
+          <kbd className="text-[10px] font-mono text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/10 rounded px-1.5 py-0.5 bg-neutral-100 dark:bg-white/[0.04]">ESC</kbd>
         </div>
         <ul className="max-h-[50vh] overflow-y-auto py-2" role="listbox">
           {items.map((item, idx) => (
@@ -149,20 +149,20 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
               onMouseEnter={() => setCursor(idx)}
               onClick={item.run}
               className={`mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 ${
-                idx === cursor ? "bg-white/[0.06]" : ""
+                idx === cursor ? "bg-neutral-100 dark:bg-white/[0.06]" : ""
               }`}
             >
               <span className="w-16 shrink-0 text-[10px] font-mono uppercase tracking-wider text-neutral-500">{item.group}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm text-white">{item.label}</span>
-                <span className="block truncate text-xs text-neutral-500">{item.hint}</span>
+                <span className="block truncate text-sm text-neutral-900 dark:text-white">{item.label}</span>
+                <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{item.hint}</span>
               </span>
               {idx === cursor && <CornerDownLeft size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />}
             </li>
           ))}
           {items.length === 0 && <li className="px-5 py-6 text-sm text-neutral-500">{t("cmdPalette.noMatches")}</li>}
         </ul>
-        <div className="flex items-center justify-between border-t border-white/[0.06] px-4 h-9 text-[11px] text-neutral-500">
+        <div className="flex items-center justify-between border-t border-neutral-200 dark:border-white/[0.06] px-4 h-9 text-[11px] text-neutral-500 dark:text-neutral-400 bg-slate-50/50 dark:bg-transparent">
           <span className="flex items-center gap-1.5"><Command size={11} />{t("cmdPalette.toggleHelp")}</span>
           <span className="flex items-center gap-1">Enter <ArrowRight size={11} /></span>
         </div>

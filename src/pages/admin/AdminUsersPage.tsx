@@ -58,6 +58,33 @@ export function AdminUsersPage() {
     }
   }
 
+  async function handleSyncAllFromLogto() {
+    setSyncing(true);
+    try {
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const res = await fetch("/api/admin/users/sync-from-logto", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFeedback(`Đã đồng bộ thành công ${data.synced || 0} tài khoản từ Logto!`);
+        setTimeout(() => setFeedback(null), 3500);
+        await loadUsers();
+      } else {
+        // Fallback open manual modal
+        setShowSyncModal(true);
+      }
+    } catch (e) {
+      setShowSyncModal(true);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   async function handleManualSync(e: React.FormEvent) {
     e.preventDefault();
     if (!syncSub.trim()) return;
@@ -250,12 +277,12 @@ export function AdminUsersPage() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowSyncModal(true)}
+            onClick={handleSyncAllFromLogto}
             className="p-1.5 px-3 rounded-xl border border-[#f8a87c]/30 bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 text-[#f8a87c] transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
             title="Đồng bộ thủ công từ Logto Identity"
           >
             <UserCheck size={13} />
-            <span className="text-[11px]">Đồng bộ User</span>
+            <span className="text-[11px]">{syncing ? "Đang đồng bộ..." : "Đồng bộ từ Logto"}</span>
           </button>
           <button
             onClick={loadUsers}

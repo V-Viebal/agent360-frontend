@@ -1,3 +1,4 @@
+import { connectSessionMultiplexer, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate } from "../services/sessionMultiplexer";
 function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string; isSelected?: boolean; size?: number }) {
   const ch = (channel || "console").toLowerCase();
   
@@ -1026,16 +1027,20 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
           </div>
         </>
       )}
+      {/* Background preview placeholder while waiting for stream or connecting */}
+      <AgentBrowserPreview agentId={agentId} enabled={!error} />
       {src && (
-        <iframe
-          key={`${src}#${attempt}`}
-          src={src}
-          title={title}
-          className="w-full h-full border-0 bg-black"
-          allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
-          allowFullScreen
-          style={{ touchAction: "none" }}
-        />
+        <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-black">
+          <iframe
+            key={`${src}#${attempt}`}
+            src={src}
+            title={title}
+            className="w-full h-full border-0 bg-black z-10 transition-opacity duration-300"
+            allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
+            allowFullScreen
+            style={{ touchAction: "none", aspectRatio: "16/10", maxWidth: "100%", maxHeight: "100%" }}
+          />
+        </div>
       )}
       {profile && (
         <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
@@ -1988,28 +1993,53 @@ export function GrokBotWorkspace() {
   const [isStreaming, setIsStreaming] = useState(false);
   // Set of session IDs actively running / streaming turns
   const [runningChatIds, setRunningChatIds] = useState<string[]>([]);
-  // Periodic poll of active running session turns across all channels
+  // Real-time Session Multiplexer: WebSocket with SSE fallback
+  // Receives turn start/stop & unread state instantly across all channels without periodic HTTP polling
   useEffect(() => {
-    let mounted = true;
-    const checkActive = async () => {
-      try {
-        const activeIds = await fetchActiveChats();
-        if (mounted && Array.isArray(activeIds)) {
+    const disconnect = connectSessionMultiplexer({
+      onSnapshot: (snapshot: ActiveSessionsSnapshot) => {
+        if (Array.isArray(snapshot.active_session_ids)) {
           setRunningChatIds((prev) => {
             const preserved = prev.filter((id) => (selectedChatId === id && isStreaming));
-            return Array.from(new Set([...preserved, ...activeIds]));
+            return Array.from(new Set([...preserved, ...snapshot.active_session_ids]));
           });
         }
-      } catch {}
-    };
+        if (Array.isArray(snapshot.unread_session_ids) && snapshot.unread_session_ids.length > 0) {
+          setUnreadCompletedSessions((prev) => ({
+            ...prev,
+            [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), ...snapshot.unread_session_ids]))
+          }));
+        }
+      },
+      onTurnUpdate: (update: SessionTurnUpdate) => {
+        if (update.is_running) {
+          setRunningChatIds((prev) => Array.from(new Set([...prev, update.session_id])));
+        } else {
+          setRunningChatIds((prev) => prev.filter((id) => id !== update.session_id && id !== selectedChatId));
+          if (update.session_id && update.session_id !== selectedChatId) {
+            setUnreadCompletedSessions((prev) => ({
+              ...prev,
+              [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), update.session_id]))
+            }));
+            setChats((prev) => prev.map((c) => (c.id === update.session_id || c.session_id === update.session_id ? { ...c, unread: true } : c)));
+          }
+        }
+      },
+      onUnreadUpdate: (update: SessionUnreadUpdate) => {
+        if (!update.is_unread) {
+          setUnreadCompletedSessions((prev) => ({
+            ...prev,
+            [selectedAgentId]: (prev[selectedAgentId] || []).filter((id) => id !== update.session_id)
+          }));
+          setChats((prev) => prev.map((c) => (c.id === update.session_id || c.session_id === update.session_id ? { ...c, unread: false } : c)));
+        }
+      }
+    });
 
-    checkActive();
-    const timer = setInterval(checkActive, 4000);
     return () => {
-      mounted = false;
-      clearInterval(timer);
+      disconnect();
     };
-  }, [selectedChatId, isStreaming]);
+  }, [selectedAgentId, selectedChatId, isStreaming]);
   // Request Queue: Allows users to enter new requests while agent is in progress
   const [requestQueue, setRequestQueue] = useState<string[]>([]);
   const requestQueueRef = useRef<string[]>([]);
@@ -3123,6 +3153,10 @@ export function GrokBotWorkspace() {
         const savedChatKey = `agent360_last_chat_${selectedAgentId}`;
         // Preference: chatParam from route URL -> savedChatKey for this specific agent -> global last chat -> first chat in list
         const urlChatFound = chatParam && loadedChats.find((c) => c.id === chatParam || c.session_id === chatParam);
+        if (chatParam && !urlChatFound && !chatParam.startsWith("session-")) {
+          setForkToast("Phiên chat không còn tồn tại, đã chuyển về phiên gần nhất");
+          setTimeout(() => setForkToast(null), 3000);
+        }
         const savedChatId = localStorage.getItem(savedChatKey) || localStorage.getItem("agent360_last_chat_id");
         const foundSaved = savedChatId && loadedChats.find((c) => c.id === savedChatId || c.session_id === savedChatId);
         const targetChatId = urlChatFound ? (urlChatFound.id || chatParam) : foundSaved ? (foundSaved.id || savedChatId) : loadedChats[0].id;
@@ -3390,6 +3424,16 @@ export function GrokBotWorkspace() {
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
+
+  // Dynamic Document Title based on active session and agent
+  useEffect(() => {
+    const agName = selectedAgent?.name || "Workspace";
+    if (selectedChat?.title && selectedChat.title !== "New Chat") {
+      document.title = `${selectedChat.title} • ${agName} | Skyer`;
+    } else {
+      document.title = `${agName} | Skyer`;
+    }
+  }, [selectedChat?.title, selectedAgent?.name]);
 
   // The selected agent's own browser (service + Chromium profile); refreshed while the Computer surface is visible.
   const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
@@ -4784,32 +4828,7 @@ export function GrokBotWorkspace() {
             )}
             </div>
 
-            {/* Team Network Overview Button (Admin only) */}
-            {isAdmin && (
-            <div className="px-2 pt-1 pb-1.5 border-b border-neutral-200 dark:border-[#1c1c22]">
-              <button
-                type="button"
-                onClick={() => setIsTopologyModalOpen(true)}
-                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border border-transparent hover:border-neutral-300 dark:hover:border-[#28283a] hover:bg-neutral-100 dark:hover:bg-[#161622] text-left transition-colors cursor-pointer group select-none"
-                title={t("sidebar.teamOverviewTitle", { count: agents.length })}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Network size={14} className="text-neutral-400 group-hover:text-[#f8a87c] transition-colors shrink-0" />
-                  <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors truncate">
-                    {t("sidebar.teamOverview")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-[10px] font-mono text-neutral-400">
-                    {t("sidebar.friendsCount", { count: agents.length })}
-                  </span>
-                  <span className="text-[10px] font-mono text-neutral-500">
-                    Ctrl+G
-                  </span>
-                </div>
-              </button>
-            </div>
-            )}
+            
 
             {/* Admin Management Navigation for Admin Role */}
             {isAdmin && (
@@ -5222,9 +5241,46 @@ export function GrokBotWorkspace() {
             <Menu size={16} />
           </button>
 
-          {/* Middle Group: Capsule Info + Telemetry HUD */}
+          {/* Middle Group: Capsule Info + Telemetry HUD with Shared Tooltip */}
           <div className="flex items-center gap-2 mx-auto">
-            <div className="relative group">
+            <Tooltip
+              placement="bottom"
+              minWidth={260}
+              maxWidth={320}
+              className="flex-col !items-stretch gap-1.5 p-3 text-left !whitespace-normal"
+              content={
+                <div className="space-y-1.5 w-full text-left font-mono">
+                  <div className="flex items-center justify-between gap-3 text-neutral-800 dark:text-neutral-200 border-b border-neutral-100 dark:border-white/10 pb-1.5">
+                    <span className="text-[#f8a87c] font-semibold">{selectedAgent.roleTag || "AI Teammate"}</span>
+                    {nodePingMs !== null && (
+                      <span
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono border ${
+                          nodePingMs < 80
+                            ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/30"
+                            : nodePingMs < 200
+                            ? "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/30"
+                            : "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30"
+                        }`}
+                      >
+                        <Wifi size={10} />
+                        <span>{nodePingMs}ms</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
+                    <span>Hạ tầng node:</span>
+                    <span className="text-neutral-900 dark:text-neutral-200 font-semibold">{selectedAgent.node}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
+                    <span>Mô hình AI:</span>
+                    <span className="text-neutral-700 dark:text-neutral-300">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
+                  </div>
+                  <div className="pt-0.5 text-[9px] text-[#f8a87c] flex items-center justify-center font-sans">
+                    <span>Bấm để {isBotInfoCollapsed ? "mở" : "đóng"} thông số kỹ thuật</span>
+                  </div>
+                </div>
+              }
+            >
               <div
                 id="tour-bot-spec-trigger"
                 onClick={() => {
@@ -5233,7 +5289,7 @@ export function GrokBotWorkspace() {
                     setMobileBotInfoOpen((prev) => !prev);
                   }
                 }}
-                className="flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none"
+                className="group flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none"
               >
                 {hasNoAgents ? (
                   <>
@@ -5264,40 +5320,7 @@ export function GrokBotWorkspace() {
                   </span>
                 )}
               </div>
-              {/* Rich Hover Tooltip for Capsule: Ping, Latency Telemetry, Specification & Status */}
-              <div className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex flex-col gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-[#161622] border border-neutral-200 dark:border-[#2a2a3c] text-[11px] font-mono shadow-lg z-[100] whitespace-nowrap min-w-[260px] sm:min-w-[280px] animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between gap-3 text-neutral-800 dark:text-neutral-200 border-b border-neutral-100 dark:border-[#242436] pb-1.5">
-                  <span className="text-[#f8a87c] font-semibold">{selectedAgent.roleTag || "AI Teammate"}</span>
-                  {nodePingMs !== null && (
-                    <span
-                      className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono border ${
-                        nodePingMs < 80
-                          ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/30"
-                          : nodePingMs < 200
-                          ? "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/30"
-                          : "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30"
-                      }`}
-                    >
-                      <Wifi size={10} />
-                      <span>{nodePingMs}ms</span>
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
-                  <span>Hạ tầng node:</span>
-                  <span className="text-neutral-900 dark:text-neutral-200 font-semibold">{selectedAgent.node}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
-                  <span>Mô hình AI:</span>
-                  <span className="text-neutral-700 dark:text-neutral-300">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
-                </div>
-                <div className="pt-0.5 text-[9px] text-[#f8a87c] flex items-center justify-center">
-                  <span>Bấm để {isBotInfoCollapsed ? "mở" : "đóng"} Specification</span>
-                </div>
-              </div>
-            </div>
-
-
+            </Tooltip>
           </div>
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
@@ -7998,23 +8021,25 @@ export function GrokBotWorkspace() {
               </div>
             )}
 
-            {/* Filter Tabs for Conversations: All / Unread / Pinned (Shared Tabs Primitive) */}
+            {/* Filter Tabs for Conversations: All / Unread / Pinned (Shared Tabs Primitive, scrollable horizontally on 1 single line) */}
             <div className="px-2 pt-2 pb-1 border-b border-slate-200 dark:border-[#1c1c24] space-y-1.5">
-              <Tabs
-                size="sm"
-                className="w-full justify-between"
-                activeTab={chatFilterTab}
-                onChange={(tabId) => setChatFilterTab(tabId as any)}
-                tabs={[
-                  { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
-                  { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).filter(id => !archivedChatIds.includes(id)).length || undefined },
-                  { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
-                  { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
-                ]}
-              />
+              <div className="w-full overflow-x-auto scrollbar-none flex items-center">
+                <Tabs
+                  size="sm"
+                  className="w-full justify-between min-w-max flex items-center gap-1"
+                  activeTab={chatFilterTab}
+                  onChange={(tabId) => setChatFilterTab(tabId as any)}
+                  tabs={[
+                    { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
+                    { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).filter(id => !archivedChatIds.includes(id)).length || undefined },
+                    { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
+                    { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
+                  ]}
+                />
+              </div>
 
               {/* Sub-Channel Filter Bar (All / Console / Telegram / Zalo / Khác) */}
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 text-[10px] font-mono select-none">
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 text-[10px] font-mono select-none scroll-mask-horizontal">
                 {[
                   { id: "console", label: "Console" },
                   { id: "telegram", label: "Telegram", badgeColor: "text-sky-400" },
@@ -8366,6 +8391,19 @@ ${chat.id}`);
                                   </div>
                                 </div>
                               </div>
+
+                              <DropdownMenuItem
+                                icon={<Share2 size={13} className="text-cyan-400" />}
+                                label="Sao chép liên kết phiên"
+                                onClick={() => {
+                                  const agSegment = selectedAgent.slug || selectedAgent.id || selectedAgentId;
+                                  const shareUrl = `${window.location.origin}/app/${agSegment}/${chat.id}`;
+                                  navigator.clipboard.writeText(shareUrl);
+                                  setForkToast("Đã sao chép liên kết phiên chat!");
+                                  setTimeout(() => setForkToast(null), 2500);
+                                  setActiveChatMenuId(null);
+                                }}
+                              />
 
                               <DropdownMenuItem
                                 icon={<Search size={13} className="text-[#f8a87c]" />}

@@ -35,5 +35,7 @@ export function clearAllSessionState(): void {
     sessionStorage.removeItem("skyer_last_exchanged_code");
     sessionStorage.removeItem("skyer_oidc_verifier");
     sessionStorage.removeItem("skyer_oidc_state");
+    localStorage.removeItem("agent360.a2a.operatorKey");
+    localStorage.removeItem("operator_token");
   } catch {}
 }
