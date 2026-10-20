@@ -33,6 +33,12 @@ export function AdminUsersPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncSub, setSyncSub] = useState("");
+  const [syncEmail, setSyncEmail] = useState("");
+  const [syncName, setSyncName] = useState("");
+  const [syncRole, setSyncRole] = useState("MEMBER");
+  const [syncing, setSyncing] = useState(false);
 
   async function loadUsers() {
     setLoading(true);
@@ -49,6 +55,44 @@ export function AdminUsersPage() {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleManualSync(e: React.FormEvent) {
+    e.preventDefault();
+    if (!syncSub.trim()) return;
+    setSyncing(true);
+    try {
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const res = await fetch("/api/admin/users/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          logtoUserId: syncSub.trim(),
+          email: syncEmail.trim() || undefined,
+          displayName: syncName.trim() || undefined,
+          role: syncRole,
+        }),
+      });
+      if (res.ok) {
+        setFeedback("Đã đồng bộ thông tin tài khoản thành công!");
+        setShowSyncModal(false);
+        setSyncSub("");
+        setSyncEmail("");
+        setSyncName("");
+        setTimeout(() => setFeedback(null), 3500);
+        await loadUsers();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "Đồng bộ thất bại");
+      }
+    } catch (e: any) {
+      alert(e.message || "Lỗi kết nối");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -206,6 +250,14 @@ export function AdminUsersPage() {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowSyncModal(true)}
+            className="p-1.5 px-3 rounded-xl border border-[#f8a87c]/30 bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 text-[#f8a87c] transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+            title="Đồng bộ thủ công từ Logto Identity"
+          >
+            <UserCheck size={13} />
+            <span className="text-[11px]">Đồng bộ User</span>
+          </button>
+          <button
             onClick={loadUsers}
             className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Tải lại danh sách"
@@ -322,6 +374,94 @@ export function AdminUsersPage() {
           </div>
         )}
       </SlideOverDrawer>
+      {/* Modal Đồng bộ tài khoản */}
+      {showSyncModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-[#14141c] border border-[#262636] p-6 shadow-2xl text-white space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#22222e]">
+              <div className="flex items-center gap-2">
+                <UserCheck size={18} className="text-[#f8a87c]" />
+                <h3 className="text-sm font-semibold">Đồng bộ / Thêm Thành viên</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSyncModal(false)}
+                className="text-neutral-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleManualSync} className="space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="text-neutral-300 font-medium block">
+                  Logto User ID (Sub / Identifier) <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={syncSub}
+                  onChange={(e) => setSyncSub(e.target.value)}
+                  placeholder="Ví dụ: 8vwbxev4ev4z hoặc email"
+                  className="w-full p-2.5 rounded-xl bg-[#1c1c28] border border-[#2a2a3a] text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-neutral-300 font-medium block">Email tài khoản</label>
+                <input
+                  type="email"
+                  value={syncEmail}
+                  onChange={(e) => setSyncEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  className="w-full p-2.5 rounded-xl bg-[#1c1c28] border border-[#2a2a3a] text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-neutral-300 font-medium block">Tên hiển thị</label>
+                <input
+                  type="text"
+                  value={syncName}
+                  onChange={(e) => setSyncName(e.target.value)}
+                  placeholder="Nguyễn Văn A"
+                  className="w-full p-2.5 rounded-xl bg-[#1c1c28] border border-[#2a2a3a] text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-neutral-300 font-medium block">Vai trò khởi tạo</label>
+                <select
+                  value={syncRole}
+                  onChange={(e) => setSyncRole(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-[#1c1c28] border border-[#2a2a3a] text-white focus:outline-none focus:border-[#f8a87c]"
+                >
+                  <option value="MEMBER">Member (Người dùng thông thường)</option>
+                  <option value="ADMIN">Admin (Quản trị viên Hệ thống)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#22222e]">
+                <button
+                  type="button"
+                  onClick={() => setShowSyncModal(false)}
+                  className="px-3.5 py-2 rounded-xl text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={syncing}
+                  className="px-4 py-2 rounded-xl bg-[#f8a87c] text-neutral-950 font-semibold hover:bg-[#f8a87c]/90 transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {syncing ? <RefreshCw size={13} className="animate-spin" /> : <UserCheck size={13} />}
+                  <span>{syncing ? "Đang đồng bộ..." : "Đồng bộ ngay"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

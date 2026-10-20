@@ -112,6 +112,22 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
   }
 }
 
+export async function markChatAsRead(chatId: string, agentId?: string): Promise<boolean> {
+  try {
+    const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
+    const endpoint = cleanAgentId
+      ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanAgentId)}/chats/${encodeURIComponent(chatId)}/read`
+      : `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/read`;
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]> {
   try {
     const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
@@ -200,7 +216,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         updatedAt: updatedStr,
         messageCount: c.message_count || c.messagesCount || 1,
         lastMessageSnippet: snippet,
-        unread: false,
+        unread: Boolean(c.unread ?? c.is_unread ?? false),
         name: displayTitle,
         session_id: c.session_id,
         agentId: cleanAgentId || c.agent_id || "default",
@@ -213,6 +229,20 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
     });
   } catch (err) {
     console.warn("fetchAgentChats error, returning empty list instead of stale mocks", err);
+    return [];
+  }
+}
+
+
+export async function fetchActiveChats(): Promise<string[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/chats/active`, {
+      headers: { Accept: "application/json" }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
     return [];
   }
 }

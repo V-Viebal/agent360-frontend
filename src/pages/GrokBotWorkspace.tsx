@@ -167,6 +167,7 @@ import {
   AgentListAuthError,
   updateAgentActiveModel,
   fetchAgentChats,
+  fetchActiveChats,
   fetchChatMessages,
   getCachedChatMessages,
   setCachedChatMessages,
@@ -1980,6 +1981,28 @@ export function GrokBotWorkspace() {
   const [isStreaming, setIsStreaming] = useState(false);
   // Set of session IDs actively running / streaming turns
   const [runningChatIds, setRunningChatIds] = useState<string[]>([]);
+  // Periodic poll of active running session turns across all channels
+  useEffect(() => {
+    let mounted = true;
+    const checkActive = async () => {
+      try {
+        const activeIds = await fetchActiveChats();
+        if (mounted && Array.isArray(activeIds)) {
+          setRunningChatIds((prev) => {
+            const preserved = prev.filter((id) => (selectedChatId === id && isStreaming));
+            return Array.from(new Set([...preserved, ...activeIds]));
+          });
+        }
+      } catch {}
+    };
+
+    checkActive();
+    const timer = setInterval(checkActive, 4000);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [selectedChatId, isStreaming]);
   // Request Queue: Allows users to enter new requests while agent is in progress
   const [requestQueue, setRequestQueue] = useState<string[]>([]);
   const requestQueueRef = useRef<string[]>([]);
@@ -2360,19 +2383,19 @@ export function GrokBotWorkspace() {
   });
 
   // Seamless focus & cursor retention when transitioning between single-line and multiline layout
-  // Khi switch sang dạng multiple line, luôn đảm bảo focus và đặt con trỏ ở cuối
+  // Khi switch giữa multiple line và single line, luôn đảm bảo giữ focus và đặt con trỏ ở cuối
   const prevIsMultilineRef = useRef<boolean>(false);
   useLayoutEffect(() => {
     const isMultiline = inputText.includes("\n");
-    const didSwitchToMultiline = isMultiline && !prevIsMultilineRef.current;
+    const didChangeLayoutMode = isMultiline !== prevIsMultilineRef.current;
     prevIsMultilineRef.current = isMultiline;
 
     if (textareaRef.current) {
-      if (didSwitchToMultiline || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
+      if (didChangeLayoutMode || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
         textareaRef.current.focus({ preventScroll: true });
         isTextareaFocusedRef.current = true;
         try {
-          if (didSwitchToMultiline) {
+          if (didChangeLayoutMode) {
             const endPos = textareaRef.current.value.length;
             textareaRef.current.setSelectionRange(endPos, endPos);
             textareaCursorPosRef.current = { start: endPos, end: endPos };
