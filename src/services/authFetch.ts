@@ -64,7 +64,7 @@ export async function requestTokenRefresh(originalFetch: typeof fetch = window.f
   const rt = getStoredToken(REFRESH);
   if (!rt) return null;
 
-  const isLocal = typeof window !== "undefined" && (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1") || window.location.origin.includes("192.168."));
+  const isLocal = typeof window !== "undefined" && ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') || window.location.origin.includes("127.0.0.1") || window.location.origin.includes("192.168."));
   const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
 
   try {

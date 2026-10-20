@@ -1,4 +1,5 @@
 import { useTranslation } from "../i18n/LanguageContext";
+import { Tooltip } from "./ui/Tooltip";
 import { ToolSchemaInspectorModal, DiscoveredToolItem } from "./ToolSchemaInspectorModal";
 import { useState, useEffect } from "react";
 import {
@@ -297,38 +298,57 @@ export function AgentConnectedAppsTab({
                           Composio
                         </span>
                       ) : (
-                        <div className="relative group/transport shrink-0">
-                          <span
-                            className="text-[9px] font-mono text-slate-700 dark:text-neutral-200 bg-slate-200 dark:bg-neutral-800 hover:bg-slate-300 dark:hover:bg-neutral-700 px-1.5 py-0.5 rounded border border-slate-300 dark:border-neutral-700 shrink-0 font-medium cursor-help transition-colors inline-block shadow-2xs"
-                            style={{
-                              backgroundColor: "var(--transport-badge-bg, var(--bg-pill, #e2e8f0))",
-                              color: "var(--transport-badge-text, var(--text-primary, #334155))",
-                              borderColor: "var(--border-subtle, #cbd5e1)",
-                            }}
-                            title={client.command || client.url || `Transport: ${client.transport}`}
-                          >
-                            {client.transport}
-                          </span>
-                          {(client.command || client.url) && (
-                            <div className="pointer-events-none absolute bottom-full left-0 mb-1.5 hidden group-hover/transport:flex flex-col gap-1 p-2 rounded-xl bg-slate-900/95 dark:bg-[#181824]/95 border border-slate-700/60 dark:border-[#2f2f44] text-[10px] font-mono text-slate-100 dark:text-neutral-200 shadow-xl backdrop-blur-md z-40 max-w-xs whitespace-normal break-all animate-in fade-in zoom-in-95 duration-150">
-                              <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-neutral-400 border-b border-white/10 pb-0.5">
-                                <span>Driver / Transport</span>
-                                <span className="text-[#f8a87c] font-bold">{client.transport}</span>
-                              </div>
-                              <div className="text-[10px] leading-tight text-neutral-300">
-                                {client.command ? (
-                                  <>
-                                    <span className="text-neutral-500">cmd: </span>
-                                    <span className="text-emerald-400 font-semibold">{client.command}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="text-neutral-500">url: </span>
-                                    <span className="text-cyan-400 font-semibold">{client.url}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
+                        <div className="shrink-0">
+                          {client.command || client.url ? (
+                            <Tooltip
+                              placement="top"
+                              minWidth={220}
+                              maxWidth={360}
+                              className="flex-col !items-start gap-1 p-2.5 !whitespace-normal break-words text-left"
+                              content={
+                                <div className="space-y-1 w-full text-left font-mono">
+                                  <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-neutral-400 border-b border-white/10 pb-1">
+                                    <span>Driver / Transport</span>
+                                    <span className="text-[#f8a87c] font-bold">{client.transport}</span>
+                                  </div>
+                                  <div className="text-[10px] leading-tight text-neutral-300 break-all">
+                                    {client.command ? (
+                                      <>
+                                        <span className="text-neutral-500">cmd: </span>
+                                        <span className="text-emerald-400 font-semibold">{client.command}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-neutral-500">url: </span>
+                                        <span className="text-cyan-400 font-semibold">{client.url}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              }
+                            >
+                              <span
+                                className="text-[9px] font-mono text-slate-700 dark:text-neutral-200 bg-slate-200 dark:bg-neutral-800 hover:bg-slate-300 dark:hover:bg-neutral-700 px-1.5 py-0.5 rounded border border-slate-300 dark:border-neutral-700 shrink-0 font-medium cursor-help transition-colors inline-block shadow-2xs"
+                                style={{
+                                  backgroundColor: "var(--transport-badge-bg, var(--bg-pill, #e2e8f0))",
+                                  color: "var(--transport-badge-text, var(--text-primary, #334155))",
+                                  borderColor: "var(--border-subtle, #cbd5e1)",
+                                }}
+                              >
+                                {client.transport}
+                              </span>
+                            </Tooltip>
+                          ) : (
+                            <span
+                              className="text-[9px] font-mono text-slate-700 dark:text-neutral-200 bg-slate-200 dark:bg-neutral-800 hover:bg-slate-300 dark:hover:bg-neutral-700 px-1.5 py-0.5 rounded border border-slate-300 dark:border-neutral-700 shrink-0 font-medium inline-block shadow-2xs"
+                              style={{
+                                backgroundColor: "var(--transport-badge-bg, var(--bg-pill, #e2e8f0))",
+                                color: "var(--transport-badge-text, var(--text-primary, #334155))",
+                                borderColor: "var(--border-subtle, #cbd5e1)",
+                              }}
+                            >
+                              {client.transport}
+                            </span>
                           )}
                         </div>
                       )}

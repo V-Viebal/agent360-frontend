@@ -64,7 +64,7 @@ export function AdminLayout() {
 
   useEffect(() => {
     async function loadUser() {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const idToken = sessionStorage.getItem("skyer_id_token") || localStorage.getItem("skyer_id_token");
       const hasOperatorKey = (() => {
         try {

@@ -1,10 +1,10 @@
 import { useTranslation } from "../i18n/LanguageContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { InfraAgent } from "../types/agent";
 import { SkillPoolModal } from "./SkillPoolModal";
 import { TokenAnalyticsModal } from "./TokenAnalyticsModal";
 import { BrowserCdpViewerModal } from "./BrowserCdpViewerModal";
-import { updateAgentActiveModel } from "../services/agentApi";
+import { updateAgentActiveModel, fetchAvailableModels, ModelOption } from "../services/agentApi";
 import {
   Server,
   Cpu,
@@ -41,6 +41,15 @@ export function AgentProfileHeader({ agent, loopMode = 'default', onRefresh, onM
   const [showBrowserModal, setShowBrowserModal] = useState<boolean>(false);
   const [showModelDropdown, setShowModelDropdown] = useState<boolean>(false);
   const [switchingModel, setSwitchingModel] = useState<boolean>(false);
+  const [modelsList, setModelsList] = useState<{ providerId: string; model: string; label: string }[]>(AVAILABLE_MODELS);
+
+  useEffect(() => {
+    fetchAvailableModels().then((models) => {
+      if (models && models.length > 0) {
+        setModelsList(models.map((m) => ({ providerId: m.providerId, model: m.model, label: m.name || m.model })));
+      }
+    });
+  }, []);
 
   const handleSelectModel = async (providerId: string, model: string) => {
     setShowModelDropdown(false);
@@ -119,7 +128,7 @@ export function AgentProfileHeader({ agent, loopMode = 'default', onRefresh, onM
                   <div className="px-2.5 py-1 text-[10px] text-neutral-500 uppercase tracking-wider font-semibold border-b border-white/5 mb-1">
                     Select Active Model Slot
                   </div>
-                  {AVAILABLE_MODELS.map((m) => {
+                  {modelsList.map((m) => {
                     const isSelected = agent.model.includes(m.model);
                     return (
                       <button data-ux-target-min="24"

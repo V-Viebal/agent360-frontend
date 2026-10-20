@@ -21,7 +21,7 @@ export function AdminDashboardPage() {
 
   async function loadDashboardData() {
     setLoading(true);
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {

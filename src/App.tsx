@@ -51,9 +51,13 @@ export default function App() {
       {/* Logto OIDC Auth Callback */}
       <Route path="/callback" element={<CallbackPage />} />
 
-      {/* 2. Authenticated Agent Workspace at "/app" (and alias "/workspace") */}
+      {/* 2. Authenticated Agent Workspace at "/app", "/app/:agentParam", and "/app/:agentParam/:chatParam" */}
       <Route path="/app" element={<AuthGuard><GrokBotWorkspace /></AuthGuard>} />
+      <Route path="/app/:agentParam" element={<AuthGuard><GrokBotWorkspace /></AuthGuard>} />
+      <Route path="/app/:agentParam/:chatParam" element={<AuthGuard><GrokBotWorkspace /></AuthGuard>} />
       <Route path="/workspace" element={<Navigate to="/app" replace />} />
+      <Route path="/workspace/:agentParam" element={<AuthGuard><GrokBotWorkspace /></AuthGuard>} />
+      <Route path="/workspace/:agentParam/:chatParam" element={<AuthGuard><GrokBotWorkspace /></AuthGuard>} />
 
       {/* 3. Marketplace Catalog */}
       <Route

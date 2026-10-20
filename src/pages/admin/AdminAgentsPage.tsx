@@ -62,7 +62,7 @@ export function AdminAgentsPage() {
 
   async function loadData() {
     setLoading(true);
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
@@ -103,7 +103,7 @@ export function AdminAgentsPage() {
     setSubmitting(true);
 
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/agents/assign", {
         method: "POST",
         headers: {
@@ -133,7 +133,7 @@ export function AdminAgentsPage() {
   async function handleRevokeAssignment(id: number) {
     if (!confirm("Bạn có chắc chắn muốn thu hồi quyền truy cập của thành viên này khỏi Agent?")) return;
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch(`/api/admin/agents/assignments/${id}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},

@@ -188,6 +188,12 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         }
       }
 
+      const isRunning = Boolean(
+        c.is_running ||
+        c.status === "running" ||
+        c.status === "in_progress"
+      );
+
       return {
         id: c.id,
         title: displayTitle,
@@ -199,6 +205,9 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         session_id: c.session_id,
         agentId: cleanAgentId || c.agent_id || "default",
         channel: rawChannel,
+        status: isRunning ? "running" : (c.status || "idle"),
+        is_running: isRunning,
+        isRunning: isRunning,
         _rawUpdatedAt: c.updated_at || c.last_finished_at || c.created_at || ""
       };
     });

@@ -8,6 +8,8 @@ export interface TooltipProps {
   children: React.ReactElement;
   delay?: number;
   className?: string;
+  minWidth?: number | string;
+  maxWidth?: number | string;
 }
 
 export function Tooltip({
@@ -17,6 +19,8 @@ export function Tooltip({
   children,
   delay = 180,
   className = "",
+  minWidth,
+  maxWidth,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
@@ -28,13 +32,21 @@ export function Tooltip({
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const tooltipEl = tooltipRef.current;
-    const ttWidth = tooltipEl ? tooltipEl.offsetWidth : 120;
-    const ttHeight = tooltipEl ? tooltipEl.offsetHeight : 28;
+    const ttWidth = tooltipEl ? tooltipEl.offsetWidth : 160;
+    const ttHeight = tooltipEl ? tooltipEl.offsetHeight : 30;
+
+    let actualPlacement = placement;
+    // Auto-flip: If placement is top but element is too close to top edge, flip to bottom
+    if (actualPlacement === "top" && rect.top - ttHeight - 8 < 0) {
+      actualPlacement = "bottom";
+    } else if (actualPlacement === "bottom" && rect.bottom + ttHeight + 8 > window.innerHeight) {
+      actualPlacement = "top";
+    }
 
     let top = 0;
     let left = 0;
 
-    switch (placement) {
+    switch (actualPlacement) {
       case "top":
         top = rect.top - ttHeight - 6;
         left = rect.left + rect.width / 2 - ttWidth / 2;
@@ -117,8 +129,10 @@ export function Tooltip({
               left: coords ? `${coords.left}px` : "-9999px",
               zIndex: 99999,
               pointerEvents: "none",
+              minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
+              maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
             }}
-            className={`whitespace-nowrap rounded-lg bg-slate-900/95 dark:bg-[#101016]/95 border border-slate-700/60 dark:border-white/15 px-3 py-1.5 text-[11px] font-sans text-slate-100 dark:text-white shadow-lg backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 select-none min-w-max ${className}`}
+            className={`whitespace-nowrap text-nowrap [text-wrap:nowrap] rounded-lg bg-slate-900/95 dark:bg-[#101016]/95 border border-slate-700/60 dark:border-white/15 px-3.5 py-1.5 text-[11px] font-sans text-slate-100 dark:text-white shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-2 select-none w-max min-w-[130px] sm:min-w-[150px] max-w-sm ${className}`}
           >
             <span>{content}</span>
             {shortcut && (

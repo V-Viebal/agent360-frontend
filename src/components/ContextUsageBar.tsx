@@ -1,5 +1,5 @@
 import { useTranslation } from "../i18n/LanguageContext";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Zap, Sparkles, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { compactAgentContext, CompactContextResponse } from "../services/agentApi";
 
@@ -95,6 +95,9 @@ export function ContextUsageBar({
 
   const isCompactTrigger = className.includes("compact-trigger");
 
+  const [showMobileTooltip, setShowMobileTooltip] = useState(false);
+  const touchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   if (isCompactTrigger) {
     const usedK = (currentTokens / 1000).toFixed(currentTokens >= 10000 ? 0 : 1);
     const maxK = (safeMax / 1000).toFixed(0);
@@ -109,7 +112,34 @@ export function ContextUsageBar({
       <div className="relative inline-flex items-center group/ctx">
         <button
           type="button"
-          onClick={handleCompact}
+          onClick={() => {
+            if (showMobileTooltip) {
+              setShowMobileTooltip(false);
+            } else {
+              handleCompact();
+            }
+          }}
+          onTouchStart={() => {
+            if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
+            touchTimerRef.current = setTimeout(() => {
+              if (typeof window !== "undefined" && "vibrate" in navigator) {
+                try { navigator.vibrate(20); } catch {}
+              }
+              setShowMobileTooltip(true);
+            }, 350);
+          }}
+          onTouchEnd={() => {
+            if (touchTimerRef.current) {
+              clearTimeout(touchTimerRef.current);
+              touchTimerRef.current = null;
+            }
+          }}
+          onTouchCancel={() => {
+            if (touchTimerRef.current) {
+              clearTimeout(touchTimerRef.current);
+              touchTimerRef.current = null;
+            }
+          }}
           disabled={isCompacting}
           aria-label={`Context window: ${ratio}% used`}
           className={`relative p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center shrink-0 ${className}`}
@@ -145,8 +175,13 @@ export function ContextUsageBar({
           )}
         </button>
 
-        {/* Hovering Context Detail Tooltip matching user screenshot */}
-        <div className="pointer-events-none absolute bottom-full right-0 mb-2.5 hidden group-hover/ctx:flex flex-col gap-1.5 p-3 rounded-2xl bg-white/95 dark:bg-[#181820]/95 border border-slate-200 dark:border-white/10 shadow-2xl backdrop-blur-xl z-[9999] min-w-[190px] text-left animate-in fade-in zoom-in-95 duration-150 select-none">
+        {/* Hovering Context Detail Tooltip matching user screenshot, also toggleable via mobile hold-touch */}
+        <div
+          onClick={() => setShowMobileTooltip(false)}
+          className={`absolute bottom-full right-0 mb-2.5 flex-col gap-1.5 p-3 rounded-2xl bg-white/95 dark:bg-[#181820]/95 border border-slate-200 dark:border-white/10 shadow-2xl backdrop-blur-xl z-[9999] min-w-[190px] text-left animate-in fade-in zoom-in-95 duration-150 select-none ${
+            showMobileTooltip ? "flex pointer-events-auto" : "pointer-events-none hidden group-hover/ctx:flex"
+          }`}
+        >
           <div className="text-[11px] font-sans text-slate-500 dark:text-neutral-400">{t("contextBar.window")}</div>
           <div className="text-xs font-semibold text-slate-900 dark:text-white">
             {ratio}% used ({leftPercent}% left)

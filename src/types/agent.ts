@@ -14,6 +14,9 @@ export interface AgentSession {
   session_id?: string;
   agentId?: string;
   channel?: string;
+  status?: string;
+  is_running?: boolean;
+  isRunning?: boolean;
 }
 
 export interface ToolCallItem {

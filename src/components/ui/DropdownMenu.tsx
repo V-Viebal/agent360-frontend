@@ -30,6 +30,8 @@ interface DropdownMenuProps {
 /**
  * Standard Skyer Dropdown Container (Single Source of Truth for Menu Aesthetics)
  * Guarantees 100% solid, non-translucent card surface matching DESIGN.md and CustomSelect
+ * Renders via React Portal to document.body with consistent ultra-high z-index (z-[999999])
+ * preventing stacking context collisions, overflow clipping or bleed-through across the whole app.
  */
 export function DropdownMenu({
   isOpen,
@@ -42,22 +44,33 @@ export function DropdownMenu({
   placement = "bottom",
 }: DropdownMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
 
   const updatePosition = () => {
-    if (!anchorRef?.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
+    // 1. Determine target anchor element (either provided anchorRef or parent of container)
+    const targetElement = anchorRef?.current || containerRef.current?.parentElement;
+    if (!targetElement) return;
+
+    const rect = targetElement.getBoundingClientRect();
     const menuEl = menuRef.current;
-    const menuWidth = menuEl ? menuEl.offsetWidth : 240;
+    const menuWidth = menuEl ? menuEl.offsetWidth : (parseInt(width.replace(/[^0-9]/g, ""), 10) * 4 || 240);
     const menuHeight = menuEl ? menuEl.offsetHeight : 220;
 
     let top = placement === "top" ? rect.top - menuHeight - 6 : rect.bottom + 6;
     let left = align === "left" ? rect.left : rect.right - menuWidth;
 
-    // Viewport bounds correction
+    // Viewport bounds correction to prevent clipping off screen
     if (left < 8) left = 8;
     if (left + menuWidth > window.innerWidth - 8) {
       left = Math.max(8, window.innerWidth - menuWidth - 8);
+    }
+    // Flip to top if bottom overflows viewport
+    if (placement === "bottom" && top + menuHeight > window.innerHeight - 8) {
+      const flippedTop = rect.top - menuHeight - 6;
+      if (flippedTop >= 8) {
+        top = flippedTop;
+      }
     }
     if (top < 8) top = 8;
 
@@ -68,8 +81,13 @@ export function DropdownMenu({
   };
 
   useLayoutEffect(() => {
-    if (isOpen && anchorRef?.current) {
+    if (isOpen) {
       updatePosition();
+      // Second pass once dimensions are fully rendered in DOM
+      const timer = requestAnimationFrame(() => {
+        updatePosition();
+      });
+      return () => cancelAnimationFrame(timer);
     }
   }, [isOpen, align, placement]);
 
@@ -78,10 +96,11 @@ export function DropdownMenu({
 
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as Node;
+      const targetElement = anchorRef?.current || containerRef.current?.parentElement;
       if (
         menuRef.current &&
         !menuRef.current.contains(target) &&
-        (!anchorRef?.current || !anchorRef.current.contains(target))
+        (!targetElement || !targetElement.contains(target))
       ) {
         onClose();
       }
@@ -109,7 +128,9 @@ export function DropdownMenu({
     };
   }, [isOpen, onClose, anchorRef]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return <div ref={containerRef} className="hidden" aria-hidden="true" />;
+  }
 
   const content = (
     <div
@@ -119,26 +140,33 @@ export function DropdownMenu({
       style={
         coords
           ? {
-              position: "absolute",
-              top: `${coords.top}px`,
-              left: `${coords.left}px`,
-              zIndex: 99999,
+              position: "fixed",
+              top: `${coords.top - window.scrollY}px`,
+              left: `${coords.left - window.scrollX}px`,
+              zIndex: 999999,
             }
-          : undefined
+          : {
+              zIndex: 999999,
+            }
       }
       className={`${
         coords
           ? ""
           : `absolute ${align === "left" ? "left-0" : "right-0"} ${
               placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
-            } z-[100]`
-      } ${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
+            }`
+      } ${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
     >
       {children}
     </div>
   );
 
-  return anchorRef ? createPortal(content, document.body) : content;
+  return (
+    <>
+      <div ref={containerRef} className="hidden" aria-hidden="true" />
+      {typeof document !== "undefined" ? createPortal(content, document.body) : content}
+    </>
+  );
 }
 
 export function DropdownMenuItem({
@@ -210,14 +238,33 @@ export function DropdownSubMenu({
   children,
 }: DropdownSubMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const subMenuRef = useRef<HTMLDivElement>(null);
+  const [subCoords, setSubCoords] = useState<{ top: number; left: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const subWidth = subMenuRef.current ? subMenuRef.current.offsetWidth : 192;
+      let left = rect.left - subWidth - 4;
+      if (left < 8) {
+        left = rect.right + 4;
+      }
+      setSubCoords({
+        top: Math.max(8, rect.top),
+        left: Math.max(8, left),
+      });
+    }
+  }, [isOpen]);
 
   return (
     <div
-      className={`relative ${isOpen ? "z-[99999]" : ""}`}
+      className="relative"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
       <button
+        ref={triggerRef}
         role="menuitem"
         type="button"
         onClick={(e) => {
@@ -243,8 +290,20 @@ export function DropdownSubMenu({
 
       {isOpen && (
         <div
-          style={{ zIndex: 999999 }}
-          className="absolute right-full top-0 mr-1 w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none pointer-events-auto"
+          ref={subMenuRef}
+          style={
+            subCoords
+              ? {
+                  position: "fixed",
+                  top: `${subCoords.top}px`,
+                  left: `${subCoords.left}px`,
+                  zIndex: 9999999,
+                }
+              : {
+                  zIndex: 9999999,
+                }
+          }
+          className="w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none pointer-events-auto"
         >
           {children}
         </div>

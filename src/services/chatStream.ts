@@ -85,13 +85,25 @@ export async function sendConsoleChatMessageStream(
         }
       }
 
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Agent-Id": targetAgent,
+        Accept: "text/event-stream"
+      };
+      try {
+        const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+        if (token) {
+          authHeaders["Authorization"] = "Bearer " + token;
+        }
+        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token");
+        if (opKey) {
+          authHeaders["X-Agent360-Operator-Token"] = opKey;
+        }
+      } catch {}
+
       let response = await fetch("/api/agents/console/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Agent-Id": targetAgent,
-          Accept: "text/event-stream"
-        },
+        headers: authHeaders,
         body: JSON.stringify(payload),
         signal: options.signal
       }).catch(() => null);
@@ -100,11 +112,7 @@ export async function sendConsoleChatMessageStream(
         // Fallback to /api/console/chat
         response = await fetch("/api/console/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Agent-Id": targetAgent,
-            Accept: "text/event-stream"
-          },
+          headers: authHeaders,
           body: JSON.stringify(payload),
           signal: options.signal
         });

@@ -50,9 +50,9 @@ export function CallbackPage() {
 
         // Verify PKCE verifier
         const codeVerifier = sessionStorage.getItem("skyer_oidc_verifier");
-        const isLocal = typeof window !== "undefined" && window.location.origin.includes("localhost");
+        const isLocal = typeof window !== "undefined" && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
-        const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
+        const redirect = isLocal ? 'http://localhost:3000/callback' : authConfig.redirectUri;
 
         // Clean query parameters from URL immediately to prevent re-execution on hot reload
         window.history.replaceState({}, document.title, window.location.pathname);

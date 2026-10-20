@@ -32,7 +32,7 @@ export function AdminAuditPage() {
   async function loadAuditLogs() {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/audit/logs", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

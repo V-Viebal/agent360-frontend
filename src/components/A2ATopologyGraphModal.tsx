@@ -104,9 +104,10 @@ export function A2ATopologyGraphModal({
 
   useEffect(() => {
     if (isOpen) {
+      setSelectedNodeId(currentAgent.id);
       runPingProbing();
     }
-  }, [isOpen, allAgents.length]);
+  }, [isOpen, currentAgent.id, allAgents.length]);
 
   const exportLatencyData = (format: "json" | "csv") => {
     const targetAgents = allAgents.filter((ag: InfraAgent) => {

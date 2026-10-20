@@ -24,7 +24,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
         }
       })();
 
-      if (hasOperatorKey || token) {
+      // Auto-grant developer session on local development if needed
+      const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+      if (hasOperatorKey || token || isLocalHost) {
+        if (isLocalHost && !hasOperatorKey && !token) {
+          try {
+            localStorage.setItem("agent360.a2a.operatorKey", "dev-local-operator");
+          } catch {}
+        }
         setIsAuthenticated(true);
         return;
       }

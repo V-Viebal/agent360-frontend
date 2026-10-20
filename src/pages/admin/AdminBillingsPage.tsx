@@ -75,7 +75,7 @@ export function AdminBillingsPage() {
   async function loadTransactions() {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/billings/transactions", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -93,7 +93,7 @@ export function AdminBillingsPage() {
   async function loadTenantWallets() {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/billings/wallets", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -111,7 +111,7 @@ export function AdminBillingsPage() {
   async function loadMyWallet() {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/billing/wallet", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -136,7 +136,7 @@ export function AdminBillingsPage() {
     if (e) e.stopPropagation();
     setSyncingOrderCode(orderCode);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch(`/api/admin/billings/transactions/${orderCode}/sync`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -163,7 +163,7 @@ export function AdminBillingsPage() {
   async function handleBuyTopup(pkg: TopupPackage, forceMock: boolean = false) {
     setTopupLoadingId(pkg.id);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/billing/topup", {
         method: "POST",
         headers: {
@@ -197,7 +197,7 @@ export function AdminBillingsPage() {
     if (!adjustTarget) return;
     setAdjusting(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/billings/wallets/adjust", {
         method: "POST",
         headers: {

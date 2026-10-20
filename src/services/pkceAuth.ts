@@ -30,9 +30,9 @@ export async function initiateSkyerSignIn(
   },
   mode: 'signIn' | 'signUp' = 'signIn'
 ) {
-  const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
-  const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
+  const redirect = isLocal ? 'http://localhost:3000/callback' : authConfig.redirectUri;
 
   const codeVerifier = generateRandomString(64);
   const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -82,9 +82,9 @@ export async function initiatePasswordReset(authConfig: {
   apiScopes?: string[];
   redirectUri: string;
 }) {
-  const isLocal = typeof window !== 'undefined' && window.location.origin.includes('localhost');
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
-  const redirect = isLocal ? `${window.location.origin}/callback` : authConfig.redirectUri;
+  const redirect = isLocal ? 'http://localhost:3000/callback' : authConfig.redirectUri;
 
   const codeVerifier = generateRandomString(64);
   const codeChallenge = await generateCodeChallenge(codeVerifier);

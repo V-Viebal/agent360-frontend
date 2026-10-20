@@ -936,3 +936,61 @@ html.light .border-\[\#2e2e3e\],
 [data-theme="light"] .border-\[\#2e2e3e\] {
   border-color: var(--border-card) !important;
 }
+
+/* Marquee Auto-Scroll on Hover for Long Chat Session Titles */
+.chat-title-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+  transform: translateX(0);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.group\/chatitem:hover .chat-title-marquee-scroll {
+  /* Scroll gradually to the left so overflowing end of title is revealed smoothly */
+  /* Slow start, accelerate in middle, gently slow down at the end (ease-in-out / bezier) */
+  transform: translateX(calc(-100% + 130px));
+  transition: transform 5s cubic-bezier(0.65, 0.05, 0.36, 1);
+}
+
+/* Edge Masking: Smooth fade-out on the right edge */
+.chat-title-mask {
+  mask-image: linear-gradient(to right, black 0%, black calc(100% - 22px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 22px), transparent 100%);
+}
+
+.group\/chatitem:hover .chat-title-mask {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* Mobile Touch & Long-Press Accessibility Rules */
+@media (hover: none) and (pointer: coarse) {
+  /* Ensure actions normally hidden behind desktop hover remain accessible or visible upon tap */
+  .group:active .opacity-0,
+  .group\/msg:active .opacity-0,
+  .group\/chatitem:active .opacity-0 {
+    opacity: 1 !important;
+  }
+
+  /* Make sure more-options buttons and action icons on mobile are always accessible */
+  [data-agent-menu-container="true"] button,
+  [data-chat-item-id] button[aria-label="Tùy chọn phiên"],
+  [data-chat-item-id] button[aria-label="Đổi tên phiên"],
+  [data-chat-item-id] button[aria-label="Ghim phiên lên đầu"] {
+    opacity: 0.9 !important;
+  }
+
+  /* Chat memory & Connected Apps mobile actions */
+  .group:hover .opacity-0,
+  .group:focus-within .opacity-0 {
+    opacity: 1 !important;
+  }
+}
+
+/* Tooltip Typography Guard: prevent text-wrap:pretty or intrinsic flex shrinking from breaking tooltips */
+[role="tooltip"],
+.tooltip,
+[class*="group-hover"]:is(span, div) {
+  text-wrap: nowrap;
+}
