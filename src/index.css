@@ -671,9 +671,20 @@ h1, h2, h3, h4, h5, h6 {
   text-wrap: balance;
 }
 
-p, li, span, blockquote {
+p, li, span:not(.truncate):not(.whitespace-nowrap):not(.text-nowrap), blockquote {
   text-wrap: pretty;
 }
+/* Strict Single-line Truncate & Whitespace Guards */
+.truncate,
+.whitespace-nowrap,
+.text-nowrap,
+[class*="truncate"],
+[class*="whitespace-nowrap"],
+[class*="text-nowrap"] {
+  text-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+
 
 /* Fallback for browsers that don't support text-wrap yet */
 @supports not (text-wrap: balance) {

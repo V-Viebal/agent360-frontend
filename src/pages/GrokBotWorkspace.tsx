@@ -167,6 +167,7 @@ import {
   AgentListAuthError,
   updateAgentActiveModel,
   fetchAgentChats,
+  markChatAsRead,
   fetchActiveChats,
   fetchChatMessages,
   getCachedChatMessages,
@@ -1500,21 +1501,27 @@ export function GrokBotWorkspace() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const isAdmin = !!(
-    currentUser?.roles?.some(r => ["ADMIN", "SYSTEM", "ROOT"].includes(r.toUpperCase())) ||
-    currentUser?.permissions?.some(p => p.toUpperCase().includes("ADMIN")) ||
-    currentUser?.sub === "qtgkbfovj5md" ||
-    currentUser?.email === "admin@skyer.hmz.one" ||
-    currentUser?.sub === "1my9xeouvb48" ||
-    currentUser?.email === "1my9xeouvb48@skyer.hmz.one" ||
-    (() => {
-      try {
-        return !!localStorage.getItem("agent360.a2a.operatorKey");
-      } catch {
-        return false;
-      }
-    })()
-  );
+  // Strictly check if current logged in user has ADMIN role.
+  // When an authenticated user session exists, their role MUST reflect their real account role.
+  // Leftover operatorKey in localStorage must NEVER elevate a regular MEMBER / CUSTOMER session to admin!
+  const hasUserSession = !!(sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || currentUser);
+  const isAdmin = hasUserSession
+    ? !!(
+        currentUser?.roles?.some(r => ["ADMIN", "SYSTEM", "ROOT"].includes(r.toUpperCase())) ||
+        currentUser?.permissions?.some(p => p.toUpperCase().includes("ADMIN")) ||
+        currentUser?.sub === "qtgkbfovj5md" ||
+        currentUser?.email === "admin@skyer.hmz.one" ||
+        currentUser?.sub === "1my9xeouvb48" ||
+        currentUser?.email === "1my9xeouvb48@skyer.hmz.one"
+      )
+    : (() => {
+        try {
+          const k = localStorage.getItem("agent360.a2a.operatorKey");
+          return !!k && k !== "dev-local-operator";
+        } catch {
+          return false;
+        }
+      })();
 
   useEffect(() => {
     getCurrentUserProfile().then((u) => {
@@ -3095,6 +3102,15 @@ export function GrokBotWorkspace() {
         if (activeIds.length > 0) {
           setRunningChatIds((prev) => Array.from(new Set([...prev, ...activeIds])));
         }
+        const unreadIds = loadedChats
+          .filter((c) => Boolean(c.unread))
+          .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
+        if (unreadIds.length > 0) {
+          setUnreadCompletedSessions((prev) => ({
+            ...prev,
+            [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), ...unreadIds]))
+          }));
+        }
         setChatsAgentId(selectedAgentId);
         if (loadedChats.length > 0 && loadedChats[0]?.title) {
           setAgentRecentSessions((prev) => {
@@ -3232,6 +3248,19 @@ export function GrokBotWorkspace() {
             setRunningChatIds((prev) => Array.from(new Set([...prev, ...ids, selectedChatId])));
           } else if (payload.last_message && payload.last_message.status === "completed") {
             setRunningChatIds((prev) => prev.filter((id) => !ids.includes(id) && id !== selectedChatId));
+            const targetChatId = payload.chat_id || payload.session_id;
+            if (targetChatId && (targetChatId !== selectedChatId || document.hidden)) {
+              setUnreadCompletedSessions((prev) => {
+                const list = prev[selectedAgentId] || [];
+                if (list.includes(targetChatId)) return prev;
+                const updated = { ...prev, [selectedAgentId]: [...list, targetChatId] };
+                try {
+                  localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+              setChats((prev) => prev.map((c) => (c.id === targetChatId || c.session_id === targetChatId ? { ...c, unread: true } : c)));
+            }
           }
           if ((payload.chat_id === selectedChatId || payload.session_id === selectedChatId) && Array.isArray(payload.messages)) {
             fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
@@ -3413,11 +3442,19 @@ export function GrokBotWorkspace() {
   const handleSelectChat = (chat: AgentSession) => {
     setSelectedChatId(chat.id);
     setMobileChatsOpen(false);
+    // Call backend to mark read
+    markChatAsRead(chat.id, selectedAgent.id);
+    if (chat.session_id) {
+      markChatAsRead(chat.session_id, selectedAgent.id);
+    }
+    // Update local chat session state
+    setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, unread: false } : c)));
     // Clear unread mark for this session
     setUnreadCompletedSessions((prev) => {
       const list = prev[selectedAgent.id] || [];
-      if (!list.includes(chat.id)) return prev;
-      const updated = { ...prev, [selectedAgent.id]: list.filter((id) => id !== chat.id) };
+      const sessionIds = [chat.id, chat.session_id].filter(Boolean) as string[];
+      const updatedList = list.filter((id) => !sessionIds.includes(id));
+      const updated = { ...prev, [selectedAgent.id]: updatedList };
       try {
         localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
       } catch {}
@@ -4455,17 +4492,16 @@ export function GrokBotWorkspace() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors">
       {/* ========================================================= */}
-      {/* BACKDROP OVERLAY FOR MOBILE DRAWERS */}
+      {/* BACKDROP OVERLAY FOR MOBILE DRAWERS (Click-outside catcher: transparent, no backdrop dimming or blur filter) */}
       {/* ========================================================= */}
-      {(mobileAgentsOpen || mobileChatsOpen) && (
+      {mobileAgentsOpen && (
         <div
           onClick={() => {
             setMobileAgentsOpen(false);
-            setMobileChatsOpen(false);
             setMobileBotInfoOpen(false);
             handleToggleBotInfo(true);
           }}
-          className="fixed inset-0 bg-black/40 z-40 xl:hidden transition-opacity"
+          className="fixed inset-0 bg-transparent z-40 xl:hidden"
         />
       )}
 
@@ -7802,11 +7838,11 @@ export function GrokBotWorkspace() {
           </div>
         ) : (
           <div className="h-12 px-3 border-b border-[#1c1c22] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden" title={selectedAgent.name ? `Chats của ${selectedAgent.name} (${chats.length})` : `Chats (${chats.length})`}>
-              <span className="text-xs font-mono text-white font-semibold tracking-tight truncate block max-w-full">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden whitespace-nowrap" title={selectedAgent.name ? `Chats của ${selectedAgent.name} (${chats.length})` : `Chats (${chats.length})`}>
+              <span className="text-xs font-mono text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}
               </span>
-              <span className="text-xs font-mono text-neutral-400 font-normal shrink-0">
+              <span className="text-xs font-mono text-neutral-400 font-normal shrink-0" style={{ whiteSpace: "nowrap", textWrap: "nowrap" }}>
                 ({chats.length})
               </span>
             </div>
@@ -7912,13 +7948,35 @@ export function GrokBotWorkspace() {
                         (c.session_id ? runningChatIds.includes(c.session_id) : false) ||
                         (isSelected && isStreaming)
                       );
-                      if (isCRunning) {
-                        return <Loader2 size={13} className="text-[#f8a87c] animate-spin" />;
-                      }
-                      return c.channel && c.channel.toLowerCase() !== "console" ? (
-                        <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
-                      ) : (
-                        displayLetter
+                      const isCUnread = !isCRunning && (
+                        Boolean(c.unread) ||
+                        (unreadCompletedSessions[selectedAgent.id] || []).includes(c.id) ||
+                        (c.session_id ? (unreadCompletedSessions[selectedAgent.id] || []).includes(c.session_id) : false)
+                      );
+
+                      return (
+                        <>
+                          {isCRunning ? (
+                            <Loader2 size={13} className="text-blue-400 animate-spin" />
+                          ) : c.channel && c.channel.toLowerCase() !== "console" ? (
+                            <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
+                          ) : (
+                            displayLetter
+                          )}
+                          {/* Simple clean fixed dot at corner without extra pulse/glow */}
+                          {isCRunning && (
+                            <span
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border border-white dark:border-[#16161e] z-10"
+                              title="Phiên đang chạy"
+                            />
+                          )}
+                          {!isCRunning && isCUnread && !isSelected && (
+                            <span
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white dark:border-[#16161e] z-10"
+                              title="Hoàn thành chưa đọc"
+                            />
+                          )}
+                        </>
                       );
                     })()}
                   </button>
@@ -8057,6 +8115,11 @@ export function GrokBotWorkspace() {
                   (chat.session_id ? runningChatIds.includes(chat.session_id) : false) ||
                   (isSelected && isStreaming)
                 );
+                const isUnreadCompleted = !isChatRunning && (
+                  Boolean(chat.unread) ||
+                  (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) ||
+                  (chat.session_id ? (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.session_id) : false)
+                );
                 return (
                   <div
                     key={chat.id}
@@ -8110,43 +8173,39 @@ export function GrokBotWorkspace() {
 
                       {/* Default Channel icon or Live Running Spinner */}
                       {(() => {
-                        const isChatRunning = runningChatIds.includes(chat.id) || (chat.session_id ? runningChatIds.includes(chat.session_id) : false) || (isSelected && isStreaming);
                         return (
                           <span className={selectedChatIds.includes(chat.id) ? "hidden" : isChatRunning ? "flex items-center justify-center" : "block group-hover:hidden flex items-center justify-center"}>
                             {isChatRunning ? (
-                              <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+                              <Loader2 size={11} className="text-blue-400 animate-spin shrink-0" />
                             ) : (
                               <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
                             )}
                           </span>
                         );
                       })()}
-                      <span className="hidden">
-                        {(() => {
-                          const isChatRunning = runningChatIds.includes(chat.id) || (isSelected && isStreaming);
-                          if (isChatRunning) {
-                            return (
-                              <span
-                                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#f8a87c] border-2 border-[#0f0f14] shadow-[0_0_6px_rgba(248,168,124,0.9)] animate-ping"
-                                title="Đang xử lý / running"
-                              />
-                            );
-                          }
-                          const isUnreadCompleted = (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id);
-                          if (isUnreadCompleted) {
-                            return (
-                              <span
-                                className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 border-2 border-[#0f0f14] shadow-[0_0_6px_rgba(52,211,153,0.9)] animate-pulse"
-                                title="Công việc đã hoàn thành"
-                              />
-                            );
-                          }
-                          if (isSelected) {
-                            return <span className="absolute bottom-0 right-0 h-1 w-1 rounded-full bg-[#f8a87c] border border-black" />;
-                          }
-                          return null;
-                        })()}
-                      </span>
+
+                      {/* Status Indicator Dot: Simple fixed corner dot without shadow/glow/pulse */}
+                      {(() => {
+                        if (selectedChatIds.includes(chat.id)) return null;
+
+                        if (isChatRunning) {
+                          return (
+                            <span
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border border-white dark:border-[#181822] z-10"
+                              title="Phiên đang chạy"
+                            />
+                          );
+                        }
+                        if (isUnreadCompleted && !isSelected) {
+                          return (
+                            <span
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white dark:border-[#181822] z-10"
+                              title="Chưa đọc"
+                            />
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -8169,26 +8228,25 @@ export function GrokBotWorkspace() {
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-0.5">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
-                              className={`text-xs font-medium chat-title-marquee inline-block ${
+                              className={`text-xs chat-title-marquee inline-block whitespace-nowrap ${
                                 (chat.title && chat.title.length > 18) ? "chat-title-marquee-scroll" : ""
                               } ${
-                                (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id)
-                                  ? "text-emerald-300 font-semibold"
-                                  : "text-slate-800 dark:text-neutral-100"
+                                isSelected
+                                  ? "text-slate-900 dark:text-white font-medium"
+                                  : "text-slate-700 dark:text-neutral-200"
                               }`}
                               title={chat.title}
                             >
                               {(() => {
-                                const isChatRunning = runningChatIds.includes(chat.id) || (chat.session_id ? runningChatIds.includes(chat.session_id) : false) || (isSelected && isStreaming);
                                 let t = chat.title || "";
                                 if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(t) || /^[0-9a-f]{16,}/i.test(t) || t.toLowerCase().startsWith('chat ') || t.toLowerCase().startsWith('session ')) {
                                   t = "Cuộc hội thoại";
                                 }
                                 return (
-                                  <span className="inline-flex items-center gap-1 min-w-0 max-w-full">
-                                    <span className="truncate">{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
+                                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                    <span>{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
                                     {isChatRunning && (
-                                      <Loader2 size={10} className="text-[#f8a87c] animate-spin shrink-0 inline-block" />
+                                      <Loader2 size={10} className="text-blue-400 animate-spin shrink-0 inline-block" />
                                     )}
                                   </span>
                                 );
@@ -8413,17 +8471,7 @@ ${chat.id}`);
                             </DropdownMenu>
                           </div>
 
-                          {isChatRunning && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 shrink-0 flex items-center gap-1">
-                              <Loader2 size={8} className="animate-spin text-[#f8a87c]" />
-                              Run
-                            </span>
-                          )}
-                          {!isChatRunning && (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                              Done
-                            </span>
-                          )}
+
                         </div>
                       </div>
 {/* Subtitle snippet removed as requested for lean single-line chat header */}

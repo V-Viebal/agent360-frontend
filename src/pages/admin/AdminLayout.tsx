@@ -155,16 +155,19 @@ export function AdminLayout() {
         : [];
 
       // Strictly derive Admin clearance from DB roles / Logto tokens, NOT hardcoded emails
-      let isAdmin =
-        hasOperatorKey ||
-        rolesList.some((r: string) => r.includes("ADMIN") || r.includes("SYSTEM")) ||
-        data?.permissions?.some((p: string) => p.toUpperCase().includes("ADMIN")) ||
-        ["qtgkbfovj5md", "1my9xeouvb48", "2sau26kmqvi9", "skyer-m2m-backend"].includes(sub) ||
-        [
-          "admin@skyer.hmz.one",
-          "hmzonehub@gmail.com",
-          "sales@nexisinterior.com",
-        ].includes(email);
+      // If a logged in session (token) exists, it MUST have admin role. operatorKey only applies when no user session exists.
+      let isAdmin = token
+        ? (
+            rolesList.some((r: string) => r.includes("ADMIN") || r.includes("SYSTEM")) ||
+            data?.permissions?.some((p: string) => p.toUpperCase().includes("ADMIN")) ||
+            ["qtgkbfovj5md", "1my9xeouvb48", "2sau26kmqvi9", "skyer-m2m-backend"].includes(sub) ||
+            [
+              "admin@skyer.hmz.one",
+              "hmzonehub@gmail.com",
+              "sales@nexisinterior.com",
+            ].includes(email)
+          )
+        : (hasOperatorKey && localStorage.getItem("agent360.a2a.operatorKey") !== "dev-local-operator");
 
       // 4. Double check from ID token directly if still false
       if (!isAdmin && idToken) {
