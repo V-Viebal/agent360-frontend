@@ -699,11 +699,13 @@ function FormattedMessageContent({
   onRunCode,
   agentNode,
   onSpeakSentence,
+  onImageClick,
 }: {
   content: string;
   onRunCode?: (code: string, lang: string) => void;
   agentNode?: string;
   onSpeakSentence?: (sentence: string) => void;
+  onImageClick?: (url: string, name: string) => void;
 }) {
   const [runningBlock, setRunningBlock] = useState<number | null>(null);
   const [runOutputs, setRunOutputs] = useState<Record<number, { output: string; exitCode: number }>>({});
@@ -915,6 +917,37 @@ function FormattedMessageContent({
                       {numMatch[1]}.
                     </span>
                     <span className="flex-1">{renderInlineMarkdown(numMatch[2])}</span>
+                  </div>
+                );
+              }
+
+              // Markdown image detection (![alt](url/base64))
+              const imgMatch = trimmed.match(/^!\[([^\]]*)\]\((data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\)]+|\/[^\s\)]+)\)$/);
+              if (imgMatch) {
+                const alt = imgMatch[1] || "Browser Screenshot Preview";
+                const src = imgMatch[2];
+                return (
+                  <div key={lineIdx} className="my-2.5 max-w-full">
+                    <div
+                      onClick={() => onImageClick?.(src, alt)}
+                      className="group relative inline-block max-w-full rounded-xl overflow-hidden border border-slate-200 dark:border-[#2b2b3c] bg-white dark:bg-[#0c0c12] shadow-sm hover:border-[#f8a87c]/50 transition-all cursor-zoom-in"
+                    >
+                      <img
+                        src={src}
+                        alt={alt}
+                        className="max-h-[360px] w-auto max-w-full object-contain block rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white font-mono text-[11px] select-none pointer-events-none">
+                        <Maximize2 size={13} />
+                        <span>Xem ảnh toàn màn hình</span>
+                      </div>
+                      {alt && (
+                        <div className="px-3 py-1 bg-slate-50 dark:bg-[#14141c] border-t border-slate-200 dark:border-[#22222e] text-[11px] font-mono text-slate-600 dark:text-neutral-400 truncate">
+                          {alt}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               }
@@ -5694,6 +5727,13 @@ export function GrokBotWorkspace() {
                               <FormattedMessageContent
                               content={msg.content}
                               agentNode={selectedAgent.node}
+                              onImageClick={(url, name) => {
+                                setLightboxRotation(0);
+                                setLightboxZoom(1);
+                                setLightboxMeta(null);
+                                setShowLightboxMeta(false);
+                                setLightboxImageUrl({ url, name });
+                              }}
                               onRunCode={(codeSnippet) => {
                                 sendConsoleChatMessageStream(
                                   selectedChatId || "default",
