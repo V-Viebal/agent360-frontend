@@ -226,10 +226,14 @@ import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBro
 // Collapsible Accordion wrapper for tool calls & execution trace
 function TurnExecutionAccordion({
   msg,
-  isStreamingThisTurn
+  isStreamingThisTurn,
+  isExpanded,
+  onToggle
 }: {
   msg: ChatMessage;
   isStreamingThisTurn: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }) {
   const steps = msg.steps || [];
   const toolCalls = msg.toolCalls || [];
@@ -241,9 +245,19 @@ function TurnExecutionAccordion({
   const totalToolCount = allToolItems.length;
   const isTurnDone = Boolean(msg.content && !isStreamingThisTurn);
 
-  // User explicit toggle state. If user has not toggled yet, default to collapsed once turn is done.
-  const [userToggledExpanded, setUserToggledExpanded] = useState<boolean | null>(null);
-  const isExpanded = userToggledExpanded !== null ? userToggledExpanded : !isTurnDone;
+  // Fallback local toggle if not controlled by parent
+  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null);
+  const effectiveExpanded = typeof isExpanded === "boolean"
+    ? isExpanded
+    : (localExpanded !== null ? localExpanded : !isTurnDone);
+
+  const handleToggle = () => {
+    if (onToggle) {
+      onToggle();
+    } else {
+      setLocalExpanded(!effectiveExpanded);
+    }
+  };
 
   // If there are only tool calls / reasoning without final text yet, or user expanded it
   return (
@@ -252,7 +266,7 @@ function TurnExecutionAccordion({
       {isTurnDone && totalToolCount > 0 && (
         <button data-ux-target-min="24"
           type="button"
-          onClick={() => setUserToggledExpanded(!isExpanded)}
+          onClick={handleToggle}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-neutral-300 dark:hover:border-[#303040] text-xs font-mono text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -260,17 +274,17 @@ function TurnExecutionAccordion({
             {totalToolCount} {totalToolCount === 1 ? "tool call" : "tool calls"} executed
           </span>
           <span className="text-[10px] text-neutral-500 font-sans">
-            {isExpanded ? "(click to collapse)" : "(click to view trace)"}
+            {effectiveExpanded ? "(click to collapse)" : "(click to view trace)"}
           </span>
           <ChevronDown
             size={13}
-            className={`ml-auto transition-transform duration-200 ${isExpanded ? "rotate-180 text-white" : ""}`}
+            className={`ml-auto transition-transform duration-200 ${effectiveExpanded ? "rotate-180 text-white" : ""}`}
           />
         </button>
       )}
 
       {/* Accordion Body: reasoning + tool cards */}
-      {(!isTurnDone || isExpanded) && (
+      {(!isTurnDone || effectiveExpanded) && (
         <div className="space-y-1.5 w-full animate-in fade-in duration-150">
           {reasoningItems.map((r, rIdx) => {
             const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
@@ -2024,6 +2038,8 @@ export function GrokBotWorkspace() {
   const [isStreaming, setIsStreaming] = useState(false);
   // Set of session IDs actively running / streaming turns
   const [runningChatIds, setRunningChatIds] = useState<string[]>([]);
+  // Persistent tracking of expanded execution trace accordions across turns and re-renders
+  const [expandedTraceKeys, setExpandedTraceKeys] = useState<Record<string, boolean>>({});
   // Map of agentId -> number of actively running chats
   const [runningAgentIds, setRunningAgentIds] = useState<Record<string, number>>({});
   // Real-time Session Multiplexer: WebSocket with SSE fallback
@@ -2727,7 +2743,14 @@ export function GrokBotWorkspace() {
       return next;
     });
   };
-  const [disabledAgentsExpanded, setDisabledAgentsExpanded] = useState<boolean>(false);
+  const [disabledAgentsExpanded, setDisabledAgentsExpanded] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem("agent360_disabled_agents_expanded");
+      return v === "true";
+    } catch {
+      return false;
+    }
+  });
   const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>(() => {
     try {
       const v = localStorage.getItem("agent360_pinned_agents");
@@ -5262,7 +5285,13 @@ export function GrokBotWorkspace() {
                         aria-label="Thu gọn hoặc mở rộng nhóm Agent đã tắt"
                         onClick={() => {
                           triggerHaptic(10);
-                          setDisabledAgentsExpanded(!disabledAgentsExpanded);
+                          setDisabledAgentsExpanded((prev) => {
+                            const next = !prev;
+                            try {
+                              localStorage.setItem("agent360_disabled_agents_expanded", String(next));
+                            } catch {}
+                            return next;
+                          });
                         }}
                         className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-neutral-200/50 dark:hover:bg-white/[0.04] text-[11px] font-mono text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors cursor-pointer select-none group/dis"
                         title={disabledAgentsExpanded ? "Thu gọn danh sách agent đã tắt" : "Mở rộng danh sách agent đã tắt"}
@@ -6108,12 +6137,28 @@ export function GrokBotWorkspace() {
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
                       {/* 1. Intermediate Steps (Reasoning & Tool Calls): Collapsible summary when turn is completed */}
-                      {(hasSteps || hasTools) && (
-                        <TurnExecutionAccordion
-                          msg={msg}
-                          isStreamingThisTurn={isStreaming && isLastTurn}
-                        />
-                      )}
+                      {(() => {
+                        if (!hasSteps && !hasTools) return null;
+                        const traceKey = `${selectedChatId || "chat"}-turn-${mIdx}`;
+                        const isTurnDone = Boolean(msg.content && !(isStreaming && isLastTurn));
+                        const isTraceExpanded = expandedTraceKeys[traceKey] !== undefined
+                          ? expandedTraceKeys[traceKey]
+                          : !isTurnDone;
+
+                        return (
+                          <TurnExecutionAccordion
+                            msg={msg}
+                            isStreamingThisTurn={isStreaming && isLastTurn}
+                            isExpanded={isTraceExpanded}
+                            onToggle={() => {
+                              setExpandedTraceKeys((prev) => ({
+                                ...prev,
+                                [traceKey]: !isTraceExpanded,
+                              }));
+                            }}
+                          />
+                        );
+                      })()}
 
                       {/* Subtle split dash divider between execution steps and final synthesis */}
                       {hasSteps && msg.content && (
