@@ -61,7 +61,7 @@ export interface InfraAgent {
   roleTag: "Engineering" | "Operations" | "Quality" | "Research" | "Security";
   node: string;
   instanceId?: string;
-  status: "active" | "idle" | "evaluating" | "degraded";
+  status: "active" | "idle" | "evaluating" | "degraded" | "disabled";
   model: string;
   runtimeVersion: string;
   uptime: string;

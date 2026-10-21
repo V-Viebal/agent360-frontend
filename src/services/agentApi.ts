@@ -66,8 +66,9 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.agents || []);
     // Filter to load only enabled agents (handling both backend DTO and direct Skyer schema)
-    const enabledOnly = rawList.filter((a: any) => a.enabled !== false && a.startup_status !== 'disabled' && a.id !== 'default');
-    return enabledOnly.map((a: any) => {
+    // Exclude root default template, keep all infra agents (enabled and disabled)
+    const validAgents = rawList.filter((a: any) => a.id !== 'default');
+    return validAgents.map((a: any) => {
       const idStr = (a.id || "").toLowerCase();
       const slugStr = (a.slug || "").toLowerCase();
       let nodeStr = a.node || "";
@@ -99,7 +100,8 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         roleTag: a.roleTag || (a.pinned ? "Core" : "Operations"),
         node: displayNode,
         instanceId: instanceKey,
-        status: a.status || (a.startup_status === "running" ? "active" : "idle"),
+        enabled: a.enabled ?? (a.status !== "disabled" && a.startup_status !== "disabled"),
+        status: (a.enabled === false || a.status === "disabled" || a.startup_status === "disabled") ? "disabled" : (a.status || (a.startup_status === "running" ? "active" : "idle")),
         model: cleanModelDisplayName((typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna"),
         runtimeVersion: (a.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer"),
         uptime: a.uptime || "Online (Private)",
@@ -1194,4 +1196,39 @@ export async function updateAgentLoopMode(agentId: string, mode: "default" | "go
   } catch {}
 
   return config;
+}
+
+export async function toggleAgentEnabled(agentId: string, enabled: boolean): Promise<boolean> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    let token = "";
+    let opToken = "";
+    try {
+      token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || "";
+    } catch {}
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Agent-Id": cleanId,
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (opToken) headers["X-Agent360-Operator-Token"] = opToken;
+
+    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/toggle`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ enabled }),
+    });
+
+    if (res.ok) {
+      return true;
+    }
+    console.warn(`toggleAgentEnabled failed: HTTP ${res.status}`);
+    return false;
+  } catch (err) {
+    console.warn("toggleAgentEnabled error:", err);
+    return false;
+  }
 }

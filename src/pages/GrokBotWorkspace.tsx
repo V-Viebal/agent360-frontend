@@ -3363,7 +3363,13 @@ export function GrokBotWorkspace() {
               setChats((prev) => prev.map((c) => (c.id === targetChatId || c.session_id === targetChatId ? { ...c, unread: true } : c)));
             }
           }
-          if ((payload.chat_id === selectedChatId || payload.session_id === selectedChatId) && Array.isArray(payload.messages)) {
+          const activeChatRef = chats.find((c) => c.id === selectedChatId || c.session_id === selectedChatId);
+          const isTargetSession =
+            payload.chat_id === selectedChatId ||
+            payload.session_id === selectedChatId ||
+            (activeChatRef && (payload.chat_id === activeChatRef.id || payload.chat_id === activeChatRef.session_id || payload.session_id === activeChatRef.session_id));
+
+          if (isTargetSession) {
             fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
               if (reloadedMsgs && reloadedMsgs.length > 0) {
                 setMessages(reloadedMsgs);
@@ -4261,6 +4267,9 @@ export function GrokBotWorkspace() {
           setMessages((prev) =>
             prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: chunkText } : m))
           );
+          if (!isUserScrolledUpRef.current) {
+            jumpToBottom();
+          }
         },
         undefined,
         (toolName, args, result, state) => {
@@ -8074,18 +8083,14 @@ export function GrokBotWorkspace() {
 
                       return (
                         <>
-                          {c.channel && c.channel.toLowerCase() !== "console" ? (
+                          {isCRunning ? (
+                            <Loader2 size={13} className="text-blue-400 animate-spin shrink-0" />
+                          ) : c.channel && c.channel.toLowerCase() !== "console" ? (
                             <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
                           ) : (
                             displayLetter
                           )}
-                          {/* Loading state: subtle gently blinking dot */}
-                          {isCRunning && (
-                            <span
-                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#16161e] z-10"
-                              title="Phiên đang chạy"
-                            />
-                          )}
+                          {/* Only show green dot for unread completed; no blue dot when running */}
                           {!isCRunning && isCUnread && !isSelected && (
                             <span
                               className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white dark:border-[#16161e] z-10"
@@ -8289,28 +8294,23 @@ export function GrokBotWorkspace() {
                         <Check size={11} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#f8a87c]"} />
                       </span>
 
-                      {/* Default Channel icon */}
+                      {/* Channel icon OR Running Spin inside icon box */}
                       <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden flex items-center justify-center"}>
-                        <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
+                        {isChatRunning ? (
+                          <Loader2 size={12} className="text-blue-400 animate-spin shrink-0" />
+                        ) : (
+                          <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
+                        )}
                       </span>
 
-                      {/* Status Indicator Dot: Simple fixed corner dot without shadow/glow/pulse */}
+                      {/* Status Indicator Dot: ONLY show green dot when completed; no blue dot when running */}
                       {(() => {
                         if (selectedChatIds.includes(chat.id)) return null;
-
-                        if (isChatRunning) {
-                          return (
-                            <span
-                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#181822] z-10"
-                              title="Phiên đang chạy"
-                            />
-                          );
-                        }
-                        if (isUnreadCompleted && !isSelected) {
+                        if (!isChatRunning && isUnreadCompleted && !isSelected) {
                           return (
                             <span
                               className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white dark:border-[#181822] z-10"
-                              title="Chưa đọc"
+                              title="Hoàn thành chưa đọc"
                             />
                           );
                         }

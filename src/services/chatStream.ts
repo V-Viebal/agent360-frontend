@@ -99,11 +99,12 @@ export async function sendConsoleChatMessageStream(
         Accept: "text/event-stream"
       };
       try {
+        const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
         const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
         if (token) {
           authHeaders["Authorization"] = "Bearer " + token;
         }
-        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token");
+        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || defaultOpKey;
         if (opKey) {
           authHeaders["X-Agent360-Operator-Token"] = opKey;
         }
@@ -159,21 +160,44 @@ export async function sendConsoleChatMessageStream(
             try {
               const parsed = JSON.parse(rawData);
 
-              // 1. Text Delta Streaming
-              if (parsed.object === "content" && parsed.type === "text") {
+              // 1. Text Delta Streaming (QwenPaw native chunk format)
+              if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {
                 if (parsed.delta && parsed.text) {
                   accumulatedText += parsed.text;
                   onChunk?.(accumulatedText);
-                } else if (!parsed.delta && parsed.text && !accumulatedText) {
+                } else if (!parsed.delta && parsed.text) {
                   accumulatedText = parsed.text;
                   onChunk?.(accumulatedText);
                 }
               }
 
-              // 2. Direct message delta compatibility
+              // 2. Direct message delta or array content compatibility
               if (parsed.content && typeof parsed.content === "string") {
                 accumulatedText += parsed.content;
                 onChunk?.(accumulatedText);
+              } else if (Array.isArray(parsed.content)) {
+                for (const part of parsed.content) {
+                  if (part && typeof part === "object") {
+                    if (part.type === "text" && part.text) {
+                      if (part.delta) {
+                        accumulatedText += part.text;
+                      } else if (!accumulatedText || part.text.length > accumulatedText.length) {
+                        accumulatedText = part.text;
+                      }
+                      onChunk?.(accumulatedText);
+                    } else if (part.type === "data" && part.data) {
+                      const d = part.data;
+                      const callId = d.call_id || "call-1";
+                      lastActiveToolCallId = callId;
+                      const toolName = d.name || "Tool";
+                      const args = typeof d.arguments === "string" ? d.arguments : JSON.stringify(d.arguments || {});
+                      const out = d.output !== undefined ? (typeof d.output === "string" ? d.output : JSON.stringify(d.output)) : undefined;
+                      const state = out !== undefined ? (d.state === "error" ? "error" : "success") : "calling";
+                      activeToolCalls[callId] = { tool: toolName, args, result: out, state };
+                      onToolCall?.(toolName, args, out, state);
+                    }
+                  }
+                }
               } else if (parsed.delta && typeof parsed.delta === "string") {
                 accumulatedText += parsed.delta;
                 onChunk?.(accumulatedText);

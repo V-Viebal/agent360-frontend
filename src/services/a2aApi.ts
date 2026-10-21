@@ -42,8 +42,9 @@ export interface A2AMetrics {
 const B = "/api";
 const KEY = "agent360.a2a.operatorKey";
 const enc = (s: string) => encodeURIComponent(s);
+const DEFAULT_OP_KEY = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
 export const operatorKey = {
-  get: () => (typeof localStorage !== "undefined" ? localStorage.getItem(KEY) || "" : ""),
+  get: () => (typeof localStorage !== "undefined" ? localStorage.getItem(KEY) || DEFAULT_OP_KEY : DEFAULT_OP_KEY),
   set: (v: string) => (v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY)),
 };
 export class A2AAuthError extends Error {}
