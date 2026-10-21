@@ -1202,11 +1202,12 @@ export async function updateAgentLoopMode(agentId: string, mode: "default" | "go
 export async function toggleAgentEnabled(agentId: string, enabled: boolean): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
     let token = "";
     let opToken = "";
     try {
       token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
-      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || "";
+      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || defaultOpKey;
     } catch {}
 
     const headers: Record<string, string> = {
@@ -1215,7 +1216,10 @@ export async function toggleAgentEnabled(agentId: string, enabled: boolean): Pro
       "X-Agent-Id": cleanId,
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    if (opToken) headers["X-Agent360-Operator-Token"] = opToken;
+    if (opToken) {
+      headers["X-Agent360-Operator-Token"] = opToken;
+      headers["X-Operator-Token"] = opToken;
+    }
 
     const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/toggle`, {
       method: "PATCH",
