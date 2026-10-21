@@ -2050,7 +2050,13 @@ export function GrokBotWorkspace() {
   // Chat messages state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
+  // Console turns are tracked per chat: switching chats must never carry another chat's loading/queue state.
+  const [streamingChatIds, setStreamingChatIds] = useState<string[]>([]);
+  const isStreaming = Boolean(selectedChatId && streamingChatIds.includes(selectedChatId));
+  const streamingChatIdsRef = useRef<string[]>([]);
+  // Latest on-screen transcript of each chat with an in-flight console turn (survives chat switches and history reloads).
+  const inflightMessagesRef = useRef<Record<string, ChatMessage[]>>({});
+  streamingChatIdsRef.current = streamingChatIds;
   // Set of session IDs actively running / streaming turns
   const [runningChatIds, setRunningChatIds] = useState<string[]>([]);
   // Persistent tracking of expanded execution trace accordions across turns and re-renders
@@ -2146,23 +2152,25 @@ export function GrokBotWorkspace() {
     };
   }, [selectedAgentId, selectedChatId, isStreaming]);
   // Request Queue: Allows users to enter new requests while agent is in progress
-  const [requestQueue, setRequestQueue] = useState<string[]>([]);
-  const requestQueueRef = useRef<string[]>([]);
-  const isProcessingQueueRef = useRef<boolean>(false);
-  const streamAbortControllerRef = useRef<AbortController | null>(null);
+  const [requestQueues, setRequestQueues] = useState<Record<string, string[]>>({});
+  const requestQueuesRef = useRef<Record<string, string[]>>({});
+  const processingChatsRef = useRef<Set<string>>(new Set());
+  const streamAbortControllersRef = useRef<Record<string, AbortController>>({});
+  const requestQueue = (selectedChatId && requestQueues[selectedChatId]) || [];
+  const setChatQueue = (chatId: string, queue: string[]) => {
+    requestQueuesRef.current = { ...requestQueuesRef.current, [chatId]: queue };
+    setRequestQueues(requestQueuesRef.current);
+  };
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isTextareaFocusedRef = useRef<boolean>(false);
   const textareaCursorPosRef = useRef<{ start: number; end: number } | null>(null);
 
   const handleStopStreaming = () => {
-    if (streamAbortControllerRef.current) {
-      streamAbortControllerRef.current.abort();
-      streamAbortControllerRef.current = null;
-    }
-    setIsStreaming(false);
-    if (selectedChatId) {
-      setRunningChatIds((prev) => prev.filter((id) => id !== selectedChatId));
-    }
+    if (!selectedChatId) return;
+    streamAbortControllersRef.current[selectedChatId]?.abort();
+    delete streamAbortControllersRef.current[selectedChatId];
+    setStreamingChatIds((prev) => prev.filter((id) => id !== selectedChatId));
+    setRunningChatIds((prev) => prev.filter((id) => id !== selectedChatId));
   };
 
   // Choice poll card state ("What would you like to call me?")
@@ -3416,11 +3424,14 @@ const handleBatchDeleteSelectedChats = () => {
       if (loadedChats.length > 0) {
         const savedChatKey = `agent360_last_chat_${selectedAgentId}`;
         // Preference: chatParam from route URL (if matching this agent) -> savedChatKey for this specific agent -> first chat in list
-        const urlChatFound = chatParam && loadedChats.find((c) => c.id === chatParam || c.session_id === chatParam);
+        // Exact chat id wins; a channel session id is only a fallback (old chats can reuse another chat's id as session_id).
+        const findChat = (key: string | null | undefined) =>
+          key ? loadedChats.find((c) => c.id === key) || loadedChats.find((c) => c.session_id === key) : undefined;
+        const urlChatFound = findChat(chatParam);
         const savedChatId = localStorage.getItem(savedChatKey);
-        const foundSaved = savedChatId && loadedChats.find((c) => c.id === savedChatId || c.session_id === savedChatId);
+        const foundSaved = findChat(savedChatId);
         // Only adopt chatParam if it actually belongs to this agent's chat list; otherwise cleanly fallback to saved chat or top chat without toast spam
-        const targetChatId = urlChatFound ? (urlChatFound.id || chatParam) : foundSaved ? (foundSaved.id || savedChatId) : loadedChats[0].id;
+        const targetChatId: string = (urlChatFound ?? foundSaved ?? loadedChats[0]).id;
         setSelectedChatId(targetChatId);
         try {
           localStorage.setItem("agent360_last_chat_id", targetChatId);
@@ -3459,7 +3470,8 @@ const handleBatchDeleteSelectedChats = () => {
     let mounted = true;
 
     // 1. Instant Cache Hit: render cached turns immediately without spinner
-    const cachedTurns = getCachedChatMessages(selectedChatId, selectedAgentId);
+    const cachedTurns = (streamingChatIdsRef.current.includes(selectedChatId) && inflightMessagesRef.current[selectedChatId])
+      || getCachedChatMessages(selectedChatId, selectedAgentId);
     if (cachedTurns !== null) {
       setMessages(cachedTurns);
       setShowPollCard(false);
@@ -3477,7 +3489,7 @@ const handleBatchDeleteSelectedChats = () => {
     }
 
     // Clear unread indicator and mark read both locally and in backend when active chat is viewed
-    const currentChat = chats.find((c) => c.id === selectedChatId || c.session_id === selectedChatId);
+    const currentChat = (chats.find((c) => c.id === selectedChatId) || chats.find((c) => c.session_id === selectedChatId));
     const sessionIdsToClear = [selectedChatId, currentChat?.session_id].filter(Boolean) as string[];
 
     markChatAsRead(selectedChatId, selectedAgentId);
@@ -3501,6 +3513,13 @@ const handleBatchDeleteSelectedChats = () => {
     // 2. Background Revalidation from API
     fetchChatMessages(selectedChatId, selectedAgentId).then((loadedMsgs) => {
       if (!mounted) return;
+      // A console turn of this chat is still streaming: keep the in-flight turn instead of the persisted history.
+      if (streamingChatIdsRef.current.includes(selectedChatId)) {
+        const live = inflightMessagesRef.current[selectedChatId];
+        if (live) setMessages(live);
+        setIsLoadingMessages(false);
+        return;
+      }
       if (loadedMsgs.length > 0) {
         setMessages(loadedMsgs);
         setShowPollCard(false);
@@ -3598,13 +3617,13 @@ const handleBatchDeleteSelectedChats = () => {
               setChats((prev) => prev.map((c) => (c.id === targetChatId || c.session_id === targetChatId ? { ...c, unread: true } : c)));
             }
           }
-          const activeChatRef = chats.find((c) => c.id === selectedChatId || c.session_id === selectedChatId);
+          const activeChatRef = (chats.find((c) => c.id === selectedChatId) || chats.find((c) => c.session_id === selectedChatId));
           const isTargetSession =
             payload.chat_id === selectedChatId ||
             payload.session_id === selectedChatId ||
             (activeChatRef && (payload.chat_id === activeChatRef.id || payload.chat_id === activeChatRef.session_id || payload.session_id === activeChatRef.session_id));
 
-          if (isTargetSession) {
+          if (isTargetSession && !streamingChatIdsRef.current.includes(selectedChatId)) {
             if (Array.isArray(payload.messages) && payload.messages.length > 0) {
               const parsedTurns = parseRawChatMessages(payload.messages, selectedChatId, isTurnRunning);
               if (parsedTurns && parsedTurns.length > 0) {
@@ -4501,8 +4520,22 @@ const handleBatchDeleteSelectedChats = () => {
   }, [isComputerSplitOpen, selectedChatId, activeLoopMode]);
 
   // Core function to execute a single prompt stream
-  const executeTurnStream = async (userText: string) => {
+  const executeTurnStream = async (userText: string, originChatId: string = selectedChatId) => {
     recordMilestone("sentMessage");
+    const originAgentId = selectedAgentId;
+    // Updates the origin chat: live on screen if it is still selected, otherwise in its message cache.
+    const updateTurnMessages = (fn: (prev: ChatMessage[]) => ChatMessage[]) => {
+      if (selectedChatIdRef.current === originChatId) {
+        setMessages((prev) => {
+          const next = fn(prev);
+          inflightMessagesRef.current[originChatId] = next;
+          return next;
+        });
+      } else {
+        const base = inflightMessagesRef.current[originChatId] || getCachedChatMessages(originChatId, originAgentId) || [];
+        inflightMessagesRef.current[originChatId] = fn(base);
+      }
+    };
     const tempBotMsgId = `bot-${Date.now() + 1}`;
     const initialBotMsg: ChatMessage = {
       id: tempBotMsgId,
@@ -4512,7 +4545,7 @@ const handleBatchDeleteSelectedChats = () => {
       evidenceStatus: "observed",
     };
 
-    setMessages((prev) => {
+    updateTurnMessages((prev) => {
       // If user message is already shown at the end (queued or instant echo), just append bot placeholder
       const lastMsg = prev[prev.length - 1];
       if (lastMsg && lastMsg.role === "user" && lastMsg.content === userText) {
@@ -4526,23 +4559,21 @@ const handleBatchDeleteSelectedChats = () => {
       };
       return [...prev, userMsg, initialBotMsg];
     });
-    setIsStreaming(true);
-    if (selectedChatId) {
-      setRunningChatIds((prev) => (prev.includes(selectedChatId) ? prev : [...prev, selectedChatId]));
-    }
+    setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
+    setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
 
     // Instantiate active AbortController for this stream turn
     const abortController = new AbortController();
-    streamAbortControllerRef.current = abortController;
+    streamAbortControllersRef.current[originChatId] = abortController;
 
     const streamStart = performance.now();
     let firstTokenTime: number | null = null;
 
     try {
       let accumulated = "";
-      const currentActiveChat = chats.find((c) => c.id === selectedChatId || c.session_id === selectedChatId);
+      const currentActiveChat = (chats.find((c) => c.id === originChatId) || chats.find((c) => c.session_id === originChatId));
       const activeTargetChannel = currentActiveChat?.channel;
-      const targetSessionId = currentActiveChat?.session_id || selectedChatId || "default";
+      const targetSessionId = currentActiveChat?.session_id || originChatId || "default";
 
       const turnAcc = new TurnAccumulator(tempBotMsgId);
       let lastPaint = 0;
@@ -4551,10 +4582,10 @@ const handleBatchDeleteSelectedChats = () => {
         if (!force && now - lastPaint < 60) return;
         lastPaint = now;
         const snap = turnAcc.snapshot();
-        setMessages((prev) =>
+        updateTurnMessages((prev) =>
           prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: snap.content, reasoning: snap.reasoning, steps: snap.steps, toolCalls: snap.toolCalls } : m))
         );
-        if (!isUserScrolledUpRef.current) {
+        if (selectedChatIdRef.current === originChatId && !isUserScrolledUpRef.current) {
           jumpToBottom();
         }
       };
@@ -4569,7 +4600,7 @@ const handleBatchDeleteSelectedChats = () => {
           }
           if (!turnAcc.text) {
             accumulated = chunkText;
-            setMessages((prev) => prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: chunkText } : m)));
+            updateTurnMessages((prev) => prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: chunkText } : m)));
           }
         },
         undefined,
@@ -4586,7 +4617,7 @@ const handleBatchDeleteSelectedChats = () => {
       turnAcc.done = true;
       if (turnAcc.text) accumulated = turnAcc.text;
       const finalSnap = turnAcc.snapshot();
-      setMessages((prev) =>
+      updateTurnMessages((prev) =>
         prev.map((m) => {
           if (m.id !== tempBotMsgId) return m;
           const hasAccTrace = finalSnap.steps && finalSnap.steps.length > 0;
@@ -4619,7 +4650,7 @@ const handleBatchDeleteSelectedChats = () => {
       // Ingest real-time turn telemetry beacon into Prometheus/Beszel backend metrics
       sendTurnTelemetryBeacon({
         agentId: selectedAgent.id,
-        sessionId: selectedChatId || "default",
+        sessionId: originChatId || "default",
         model: selectedAgent.model,
         ttftMs: ttft,
         totalDurationMs: Math.round(totalDur),
@@ -4633,17 +4664,18 @@ const handleBatchDeleteSelectedChats = () => {
       notifyTaskComplete({
         agentName: selectedAgent.name,
         taskSnippet: accumulated || "Finished autonomous task execution.",
-        sessionId: selectedChatId || "default",
+        sessionId: originChatId || "default",
         soundEnabled: isSoundEnabled,
         soundPreset: soundPreset
       });
 
       // Lean State: Mark session completed unread if document is hidden or user switched away
-      if (document.hidden && selectedChatId) {
+      if (originChatId && (document.hidden || selectedChatIdRef.current !== originChatId)) {
+        setChats((prev) => prev.map((c) => (c.id === originChatId ? { ...c, unread: true } : c)));
         setUnreadCompletedSessions((prev) => {
-          const list = prev[selectedAgent.id] || [];
-          if (list.includes(selectedChatId)) return prev;
-          const updated = { ...prev, [selectedAgent.id]: [...list, selectedChatId] };
+          const list = prev[originAgentId] || [];
+          if (list.includes(originChatId)) return prev;
+          const updated = { ...prev, [originAgentId]: [...list, originChatId] };
           try {
             localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
           } catch {}
@@ -4674,27 +4706,33 @@ const handleBatchDeleteSelectedChats = () => {
         throw err;
       }
     } finally {
-      streamAbortControllerRef.current = null;
-      setIsStreaming(false);
-      if (selectedChatId) {
-        setRunningChatIds((prev) => prev.filter((id) => id !== selectedChatId));
+      if (streamAbortControllersRef.current[originChatId] === abortController) {
+        delete streamAbortControllersRef.current[originChatId];
       }
-      // Process next item in queue if present
-      processNextInQueue();
+      const finalTranscript = inflightMessagesRef.current[originChatId];
+      if (finalTranscript && !(requestQueuesRef.current[originChatId] || []).length) {
+        setCachedChatMessages(originChatId, finalTranscript, originAgentId);
+        delete inflightMessagesRef.current[originChatId];
+      }
+      setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
+      setRunningChatIds((prev) => prev.filter((id) => id !== originChatId));
+      // Process next item in this chat's queue if present
+      processNextInQueue(originChatId);
     }
   };
 
   executeTurnStreamRef.current = (prompt: string) => { executeTurnStream(prompt); };
 
-  const processNextInQueue = () => {
-    if (requestQueueRef.current.length > 0) {
-      const nextPrompt = requestQueueRef.current.shift()!;
-      setRequestQueue([...requestQueueRef.current]);
+  const processNextInQueue = (chatId: string) => {
+    const queue = requestQueuesRef.current[chatId] || [];
+    if (queue.length > 0) {
+      const [nextPrompt, ...rest] = queue;
+      setChatQueue(chatId, rest);
       setTimeout(() => {
-        executeTurnStream(nextPrompt);
+        executeTurnStream(nextPrompt, chatId);
       }, 50);
     } else {
-      isProcessingQueueRef.current = false;
+      processingChatsRef.current.delete(chatId);
     }
   };
 
@@ -4755,7 +4793,8 @@ const handleBatchDeleteSelectedChats = () => {
     }
 
     // Instant Local Message Echo: append to messages immediately so user gets 0ms visual confirmation
-    if (isStreaming || isProcessingQueueRef.current) {
+    const sendChatId = selectedChatId;
+    if (isStreaming || processingChatsRef.current.has(sendChatId)) {
       // Agent is busy: show optimistic user message with Queued indicator
       const queuedUserMsg: ChatMessage = {
         id: `usr-queued-${Date.now()}`,
@@ -4763,17 +4802,20 @@ const handleBatchDeleteSelectedChats = () => {
         content: userText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
-      setMessages((prev) => [...prev, queuedUserMsg]);
+      setMessages((prev) => {
+        const next = [...prev, queuedUserMsg];
+        inflightMessagesRef.current[sendChatId] = next;
+        return next;
+      });
 
       // Enqueue prompt for execution
-      requestQueueRef.current.push(userText);
-      setRequestQueue([...requestQueueRef.current]);
+      setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), userText]);
 
       // Smooth scroll anchor on instant echo
       requestAnimationFrame(() => smoothScrollToBottom());
     } else {
-      isProcessingQueueRef.current = true;
-      executeTurnStream(userText);
+      processingChatsRef.current.add(sendChatId);
+      executeTurnStream(userText, sendChatId);
       requestAnimationFrame(() => smoothScrollToBottom());
     }
   };
@@ -6705,8 +6747,7 @@ const handleBatchDeleteSelectedChats = () => {
               <button
                 type="button"
                 onClick={() => {
-                  requestQueueRef.current = [];
-                  setRequestQueue([]);
+                  if (selectedChatId) setChatQueue(selectedChatId, []);
                 }}
                 className="text-neutral-500 hover:text-white text-[10px] cursor-pointer ml-2 shrink-0"
               >
@@ -8712,7 +8753,7 @@ const handleBatchDeleteSelectedChats = () => {
                       const isCRunning = Boolean(
                         runningChatIds.includes(c.id) ||
                         (c.session_id ? runningChatIds.includes(c.session_id) : false) ||
-                        (isSelected && isStreaming)
+                        streamingChatIds.includes(c.id)
                       );
                       const isCUnread = !isCRunning && (
                         Boolean(c.unread) ||
@@ -8883,7 +8924,7 @@ const handleBatchDeleteSelectedChats = () => {
                 const isChatRunning = Boolean(
                   runningChatIds.includes(chat.id) ||
                   (chat.session_id ? runningChatIds.includes(chat.session_id) : false) ||
-                  (isSelected && isStreaming)
+                  streamingChatIds.includes(chat.id)
                 );
                 const isUnreadCompleted = !isChatRunning && (
                   Boolean(chat.unread) ||
