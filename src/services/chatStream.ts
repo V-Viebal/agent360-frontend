@@ -13,6 +13,8 @@ export interface StreamRetryOptions {
   onRetryAttempt?: (attempt: number, error: Error) => void;
   signal?: AbortSignal;
   channel?: string;
+  /** Receives every parsed upstream event so callers can fold the turn with TurnAccumulator. */
+  onEvent?: (event: any) => void;
 }
 
 export async function sendConsoleChatMessageStream(
@@ -159,6 +161,7 @@ export async function sendConsoleChatMessageStream(
 
             try {
               const parsed = JSON.parse(rawData);
+              options.onEvent?.(parsed);
 
               // 1. Text Delta Streaming (QwenPaw native chunk format)
               if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {

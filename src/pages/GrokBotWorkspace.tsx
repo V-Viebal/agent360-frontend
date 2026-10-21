@@ -197,6 +197,7 @@ import {
   toggleAgentEnabled,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
+import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
@@ -2058,6 +2059,13 @@ export function GrokBotWorkspace() {
   const [runningAgentIds, setRunningAgentIds] = useState<Record<string, number>>({});
   // Real-time Session Multiplexer: WebSocket with SSE fallback
   // Receives turn start/stop & unread state instantly across all channels without periodic HTTP polling
+  // Ids (chat UUID + channel session id) of the chat currently on screen; a finished turn there is already read.
+  const viewedChatIdsRef = useRef<string[]>([]);
+  const agentRunningSessionsRef = useRef<Record<string, Set<string>>>({});
+  const isViewedChat = (id?: string | null) => Boolean(id && !document.hidden && viewedChatIdsRef.current.includes(id));
+  const markViewedChatRead = (id: string) => {
+    markChatAsRead(id, selectedAgentId).catch?.(() => {});
+  };
   useEffect(() => {
     const disconnect = connectSessionMultiplexer({
       onSnapshot: (snapshot: ActiveSessionsSnapshot) => {
@@ -2066,7 +2074,6 @@ export function GrokBotWorkspace() {
           const preserved = prev.filter((id) => (selectedChatId === id && isStreaming));
           return Array.from(new Set([...preserved, ...activeIds]));
         });
-        // Sync chats array so non-active chats are guaranteed idle
         setChats((prev) =>
           prev.map((c) => {
             const running = activeIds.includes(c.id) || (c.session_id ? activeIds.includes(c.session_id) : false);
@@ -2078,66 +2085,59 @@ export function GrokBotWorkspace() {
             };
           })
         );
-        if (Array.isArray(snapshot.unread_session_ids) && snapshot.unread_session_ids.length > 0) {
-          // Never mark currently viewed active chat as unread
-          const unreadFiltered = snapshot.unread_session_ids.filter(
-            (id) => id !== selectedChatId && (!selectedChat?.session_id || id !== selectedChat.session_id)
-          );
-          setUnreadCompletedSessions((prev) => ({
-            ...prev,
-            [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), ...unreadFiltered]))
-          }));
-        }
       },
       onTurnUpdate: (update: SessionTurnUpdate) => {
+        const sid = update.session_id;
+        if (!sid) return;
         const agId = update.agent_id || selectedAgentId;
+        const agentSet = (agentRunningSessionsRef.current[agId] ||= new Set<string>());
         if (update.is_running) {
-          setRunningChatIds((prev) => Array.from(new Set([...prev, update.session_id])));
-          if (agId) {
-            setRunningAgentIds((prev) => ({ ...prev, [agId]: (prev[agId] || 0) + 1 }));
-          }
+          agentSet.add(sid);
+          setRunningChatIds((prev) => (prev.includes(sid) ? prev : [...prev, sid]));
         } else {
-          setRunningChatIds((prev) => prev.filter((id) => id !== update.session_id && (id !== selectedChatId || !isStreaming)));
-          if (agId) {
-            setRunningAgentIds((prev) => ({ ...prev, [agId]: Math.max(0, (prev[agId] || 1) - 1) }));
-          }
-          // Mark chat as idle and stopped in chats array
+          agentSet.delete(sid);
+          setRunningChatIds((prev) => prev.filter((id) => id !== sid || (isStreaming && id === selectedChatId)));
+          const viewed = isViewedChat(sid);
+          if (viewed) markViewedChatRead(sid);
           setChats((prev) =>
-            prev.map((c) => {
-              if (c.id === update.session_id || c.session_id === update.session_id) {
-                return {
-                  ...c,
-                  is_running: false,
-                  isRunning: false,
-                  status: "idle",
-                  unread: update.session_id !== selectedChatId ? true : c.unread
-                };
-              }
-              return c;
-            })
+            prev.map((c) =>
+              c.id === sid || c.session_id === sid
+                ? { ...c, is_running: false, isRunning: false, status: "idle", unread: viewed ? false : true }
+                : c
+            )
           );
-          if (update.session_id && update.session_id !== selectedChatId) {
-            setUnreadCompletedSessions((prev) => ({
-              ...prev,
-              [agId]: Array.from(new Set([...(prev[agId] || []), update.session_id]))
-            }));
+          if (!viewed) {
+            setUnreadCompletedSessions((prev) => {
+              const list = prev[agId] || [];
+              if (list.includes(sid)) return prev;
+              const next = { ...prev, [agId]: [...list, sid] };
+              try {
+                localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
+              } catch {}
+              return next;
+            });
           }
         }
+        setRunningAgentIds((prev) => ({ ...prev, [agId]: agentSet.size }));
       },
       onUnreadUpdate: (update: SessionUnreadUpdate) => {
-        if (!update.is_unread) {
-          setUnreadCompletedSessions((prev) => {
-            const next = { ...prev };
-            for (const key of Object.keys(next)) {
-              next[key] = next[key].filter((id) => id !== update.session_id);
-            }
-            try {
-              localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
-            } catch {}
-            return next;
-          });
-          setChats((prev) => prev.map((c) => (c.id === update.session_id || c.session_id === update.session_id ? { ...c, unread: false } : c)));
+        const sid = update.session_id;
+        if (update.is_unread && isViewedChat(sid)) {
+          markViewedChatRead(sid);
+          return;
         }
+        if (update.is_unread) return;
+        setUnreadCompletedSessions((prev) => {
+          const next = { ...prev };
+          for (const key of Object.keys(next)) {
+            next[key] = next[key].filter((id) => id !== sid);
+          }
+          try {
+            localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        setChats((prev) => prev.map((c) => (c.id === sid || c.session_id === sid ? { ...c, unread: false } : c)));
       }
     });
 
@@ -3397,7 +3397,7 @@ const handleBatchDeleteSelectedChats = () => {
         });
         setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: activeIds.length }));
         const unreadIds = loadedChats
-          .filter((c) => Boolean(c.unread))
+          .filter((c) => Boolean(c.unread) && !isViewedChat(c.id) && !isViewedChat(c.session_id))
           .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
         if (unreadIds.length > 0) {
           setUnreadCompletedSessions((prev) => ({
@@ -3755,6 +3755,53 @@ const handleBatchDeleteSelectedChats = () => {
     (selectedChatId && runningChatIds.includes(selectedChatId)) ||
     (selectedChat?.session_id && runningChatIds.includes(selectedChat.session_id))
   );
+
+  // Live turn of the open chat when it runs on another channel (Telegram, Zalo, cron, other console tab).
+  // Uses the same QwenPaw event stream as a console send, so reasoning and every executed tool render identically.
+  const [liveTurn, setLiveTurn] = useState<{ chatId: string; userText: string | null; msg: ChatMessage } | null>(null);
+  useEffect(() => {
+    viewedChatIdsRef.current = [selectedChatId, selectedChat?.session_id].filter(Boolean) as string[];
+  }, [selectedChatId, selectedChat?.session_id]);
+  useEffect(() => {
+    setLiveTurn(null);
+    if (!selectedChatId || !selectedAgentId || isStreaming || !isCurrentSessionRunning || selectedChatId.startsWith("session-")) return;
+    const chatId = selectedChatId;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const streamed = await attachLiveTurn(selectedAgentId, chatId, (msg, userText) => {
+          if (controller.signal.aborted) return;
+          setLiveTurn({ chatId, userText, msg });
+          if (!isUserScrolledUpRef.current) jumpToBottom();
+        }, controller.signal);
+        if (controller.signal.aborted) return;
+        // Turn finished (or session was idle): reload the persisted history, which now contains this turn.
+        const reloaded = await fetchChatMessages(chatId, selectedAgentId).catch(() => null);
+        if (controller.signal.aborted) return;
+        if (reloaded && reloaded.length > 0) setMessages(reloaded);
+        setLiveTurn(null);
+        if (streamed) {
+          setRunningChatIds((prev) => prev.filter((id) => id !== chatId && id !== selectedChat?.session_id));
+          markChatAsRead(chatId, selectedAgentId);
+        }
+      } catch {
+        if (!controller.signal.aborted) setLiveTurn(null);
+      }
+    })();
+    return () => controller.abort();
+  }, [selectedChatId, selectedAgentId, isStreaming, isCurrentSessionRunning]);
+  const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
+  const displayMessages: ChatMessage[] = (() => {
+    if (!liveTurnForView) return messages;
+    const base = [...messages];
+    const lastUser = [...base].reverse().find((m) => m.role === "user");
+    const userText = liveTurnForView.userText?.trim();
+    if (userText && (!lastUser || lastUser.content.trim() !== userText)) {
+      base.push({ id: `live-user-${selectedChatId}`, role: "user", content: userText, timestamp: new Date().toISOString() });
+    }
+    base.push(liveTurnForView.msg);
+    return base;
+  })();
 
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
@@ -4497,6 +4544,21 @@ const handleBatchDeleteSelectedChats = () => {
       const activeTargetChannel = currentActiveChat?.channel;
       const targetSessionId = currentActiveChat?.session_id || selectedChatId || "default";
 
+      const turnAcc = new TurnAccumulator(tempBotMsgId);
+      let lastPaint = 0;
+      const paintTurn = (force = false) => {
+        const now = performance.now();
+        if (!force && now - lastPaint < 60) return;
+        lastPaint = now;
+        const snap = turnAcc.snapshot();
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: snap.content, reasoning: snap.reasoning, steps: snap.steps, toolCalls: snap.toolCalls } : m))
+        );
+        if (!isUserScrolledUpRef.current) {
+          jumpToBottom();
+        }
+      };
+
       await sendConsoleChatMessageStream(
         targetSessionId,
         userText,
@@ -4505,97 +4567,36 @@ const handleBatchDeleteSelectedChats = () => {
           if (firstTokenTime === null) {
             firstTokenTime = performance.now();
           }
-          accumulated = chunkText;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: chunkText } : m))
-          );
-          if (!isUserScrolledUpRef.current) {
-            jumpToBottom();
+          if (!turnAcc.text) {
+            accumulated = chunkText;
+            setMessages((prev) => prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: chunkText } : m)));
           }
         },
-        (reasoningText) => {
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== tempBotMsgId) return m;
-              const currentSteps = m.steps || [];
-              const existingRIdx = currentSteps.findIndex((s) => s.kind === "reasoning");
-              let updatedSteps;
-              if (existingRIdx !== -1) {
-                updatedSteps = [...currentSteps];
-                updatedSteps[existingRIdx] = { kind: "reasoning", text: reasoningText };
-              } else {
-                updatedSteps = [{ kind: "reasoning" as const, text: reasoningText }, ...currentSteps];
-              }
-              return { ...m, reasoning: reasoningText, steps: updatedSteps };
-            })
-          );
-          if (!isUserScrolledUpRef.current) {
-            jumpToBottom();
-          }
-        },
-        (toolName, args, result, state) => {
-          setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== tempBotMsgId) return m;
-              const currentTools = m.toolCalls || [];
-              const currentSteps = m.steps || [];
-              const existingIdx = currentTools.findIndex((t) => t.tool === toolName && (!args || t.args === args));
-              let updatedTools;
-              if (existingIdx !== -1) {
-                updatedTools = [...currentTools];
-                updatedTools[existingIdx] = {
-                  ...updatedTools[existingIdx],
-                  result: result !== undefined ? result : updatedTools[existingIdx].result,
-                  state: state || updatedTools[existingIdx].state || 'success',
-                  exitCode: state === 'error' ? 1 : 0
-                };
-              } else {
-                updatedTools = [
-                  ...currentTools,
-                  { tool: toolName, args: args, result: result, state: state || 'calling', exitCode: state === 'error' ? 1 : 0 }
-                ];
-              }
-
-              const stepIdx = currentSteps.findIndex((s) => s.kind === "tool_call" && s.tool === toolName && (!args || s.args === args));
-              let updatedSteps;
-              if (stepIdx !== -1) {
-                updatedSteps = [...currentSteps];
-                updatedSteps[stepIdx] = {
-                  ...updatedSteps[stepIdx],
-                  result: result !== undefined ? result : updatedSteps[stepIdx].result,
-                  state: state || updatedSteps[stepIdx].state || 'success',
-                };
-              } else {
-                updatedSteps = [
-                  ...currentSteps,
-                  { kind: "tool_call" as const, tool: toolName, args: args, result: result, state: state || 'calling' }
-                ];
-              }
-              return { ...m, toolCalls: updatedTools, steps: updatedSteps };
-            })
-          );
-        },
-        { signal: abortController.signal, channel: activeTargetChannel }
+        undefined,
+        undefined,
+        {
+          signal: abortController.signal,
+          channel: activeTargetChannel,
+          onEvent: (ev) => {
+            if (turnAcc.ingest(ev)) paintTurn(turnAcc.done);
+          },
+        }
       );
 
-      // Finalize: Reconcile any lingering "calling" tool states to "success" upon response completion
+      turnAcc.done = true;
+      if (turnAcc.text) accumulated = turnAcc.text;
+      const finalSnap = turnAcc.snapshot();
       setMessages((prev) =>
         prev.map((m) => {
           if (m.id !== tempBotMsgId) return m;
-          const reconciledTools = (m.toolCalls || []).map((tc) => ({
-            ...tc,
-            state: tc.state === "calling" ? ("success" as const) : tc.state,
-          }));
-          const reconciledSteps = (m.steps || []).map((s) => ({
-            ...s,
-            state: s.state === "calling" ? ("success" as const) : s.state,
-          }));
+          const hasAccTrace = finalSnap.steps && finalSnap.steps.length > 0;
           return {
             ...m,
-            content: accumulated || "Agent finished without a text response.",
+            content: accumulated || m.content || "Agent finished without a text response.",
             evidenceStatus: accumulated ? "observed" : "unknown",
-            toolCalls: reconciledTools,
-            steps: reconciledSteps,
+            reasoning: hasAccTrace ? finalSnap.reasoning : m.reasoning,
+            steps: hasAccTrace ? finalSnap.steps : m.steps,
+            toolCalls: hasAccTrace ? finalSnap.toolCalls : m.toolCalls,
           };
         })
       );
@@ -6194,7 +6195,7 @@ const handleBatchDeleteSelectedChats = () => {
                 </div>
               </div>
             </div>
-          ) : messages.length === 0 ? (
+          ) : displayMessages.length === 0 ? (
             /* Quick Suggestions for fresh New Chat session: Lean, no greeting text or descriptions */
             <div className="py-8 px-2 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-xl mx-auto w-full">
               <div className="w-full flex items-center justify-between mb-3 px-1 text-xs text-neutral-400 font-mono">
@@ -6235,13 +6236,13 @@ const handleBatchDeleteSelectedChats = () => {
               </div>
             </div>
           ) : (
-            messages
+            displayMessages
             .filter((msg) => {
               if (inSessionSearchQuery === "__STARRED__") return starredMsgIds.includes(msg.id);
               return !inSessionSearchQuery || msg.content.toLowerCase().includes(inSessionSearchQuery.toLowerCase());
             })
             .map((msg, mIdx) => {
-              const isLastTurn = mIdx === messages.length - 1;
+              const isLastTurn = mIdx === displayMessages.length - 1;
               const isUser = msg.role === "user";
               const hasSteps = msg.steps && msg.steps.length > 0;
               const hasTools = msg.toolCalls && msg.toolCalls.length > 0;
@@ -6400,11 +6401,11 @@ const handleBatchDeleteSelectedChats = () => {
 
                       {/* 2. Formatted Main Response Content: left-aligned, transparent, no background, no border */}
                       {/* Loading & Responding Indicator when assistant message has not produced text content yet */}
-                      {!msg.content && (
+                      {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
                         <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150">
                           <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
                           <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 font-medium">
-                            {selectedAgent.name} đang suy nghĩ và phản hồi...
+                            {msg.steps && msg.steps.some((st) => st.kind === "tool_call" && st.state === "calling") ? `${selectedAgent.name} đang chạy công cụ...` : `${selectedAgent.name} đang suy nghĩ và phản hồi...`}
                           </span>
                           <span className="inline-flex items-center gap-1 ml-0.5 select-none">
                             <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
@@ -6578,7 +6579,7 @@ const handleBatchDeleteSelectedChats = () => {
           )}
 
           {/* Active Session Responding Indicator during ongoing agent turn */}
-          {isCurrentSessionRunning && !isStreaming && (
+          {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1.5 animate-in fade-in duration-200 my-2">
               <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none">
                 <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
