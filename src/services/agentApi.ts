@@ -456,7 +456,8 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
     const turns: ChatMessage[] = [];
     let currentAsst: ChatMessage | null = null;
 
-    for (const m of rawList) {
+    for (let mIdx = 0; mIdx < rawList.length; mIdx++) {
+      const m = rawList[mIdx];
       const role = m.role || "user";
       const mtype = m.type || m.message_type || "";
       const ts = m.metadata?.timestamp || m.created_at || (m.timestamp ? new Date(m.timestamp * 1000).toISOString() : new Date().toISOString());
@@ -473,7 +474,7 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
             .join("\n");
         }
         turns.push({
-          id: m.id || `msg-${Date.now()}-${Math.random()}`,
+          id: m.id || `${chatId}-${mIdx}-user`,
           role: "user",
           content: userContent || "(Empty user message)",
           timestamp: ts
@@ -481,7 +482,7 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
       } else if (role === "assistant") {
         if (!currentAsst) {
           currentAsst = {
-            id: m.id || `asst-${Date.now()}-${Math.random()}`,
+            id: m.id || `${chatId}-${mIdx}-asst`,
             role: "assistant",
             content: "",
             timestamp: ts,

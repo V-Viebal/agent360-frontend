@@ -148,6 +148,8 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
+  Power,
+  PowerOff,
   Star,
   Settings,
   PanelLeftClose,
@@ -191,6 +193,7 @@ import {
   fetchAgentLoopMode,
   updateAgentLoopMode,
   AgentLoopModeConfig,
+  toggleAgentEnabled,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
@@ -238,14 +241,9 @@ function TurnExecutionAccordion({
   const totalToolCount = allToolItems.length;
   const isTurnDone = Boolean(msg.content && !isStreamingThisTurn);
 
-  // Auto-collapse when turn finishes responding; expand while actively calling or streaming
-  const [isExpanded, setIsExpanded] = useState<boolean>(!isTurnDone);
-
-  useEffect(() => {
-    if (isTurnDone) {
-      setIsExpanded(false);
-    }
-  }, [isTurnDone]);
+  // User explicit toggle state. If user has not toggled yet, default to collapsed once turn is done.
+  const [userToggledExpanded, setUserToggledExpanded] = useState<boolean | null>(null);
+  const isExpanded = userToggledExpanded !== null ? userToggledExpanded : !isTurnDone;
 
   // If there are only tool calls / reasoning without final text yet, or user expanded it
   return (
@@ -254,7 +252,7 @@ function TurnExecutionAccordion({
       {isTurnDone && totalToolCount > 0 && (
         <button data-ux-target-min="24"
           type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => setUserToggledExpanded(!isExpanded)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-neutral-300 dark:hover:border-[#303040] text-xs font-mono text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -2729,6 +2727,7 @@ export function GrokBotWorkspace() {
       return next;
     });
   };
+  const [disabledAgentsExpanded, setDisabledAgentsExpanded] = useState<boolean>(false);
   const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>(() => {
     try {
       const v = localStorage.getItem("agent360_pinned_agents");
@@ -2752,6 +2751,76 @@ export function GrokBotWorkspace() {
       } catch {}
       return next;
     });
+  };
+
+  const [togglingAgentId, setTogglingAgentId] = useState<string | null>(null);
+
+  const handleToggleAgentEnabled = async (agent: InfraAgent, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    triggerHaptic(20);
+    const targetId = agent.id;
+    const isCurrentlyEnabled = agent.enabled !== false && agent.status !== "disabled";
+    const nextEnabled = !isCurrentlyEnabled;
+
+    setTogglingAgentId(targetId);
+    setActiveAgentMenuId(null);
+
+    setAgents((prev) =>
+      prev.map((a) =>
+        a.id === targetId
+          ? {
+              ...a,
+              enabled: nextEnabled,
+              status: nextEnabled ? "idle" : "disabled",
+            }
+          : a
+      )
+    );
+
+    setForkToast(nextEnabled ? `Đang kích hoạt Agent ${agent.name}...` : `Đang vô hiệu hóa Agent ${agent.name}...`);
+
+    try {
+      const ok = await toggleAgentEnabled(targetId, nextEnabled);
+      if (ok) {
+        setForkToast(nextEnabled ? `Đã kích hoạt Agent ${agent.name}` : `Đã vô hiệu hóa Agent ${agent.name}`);
+        try {
+          const fresh = await fetchInfraAgents();
+          if (fresh && fresh.length > 0) setAgents(fresh);
+        } catch {}
+      } else {
+        setAgents((prev) =>
+          prev.map((a) =>
+            a.id === targetId
+              ? {
+                  ...a,
+                  enabled: isCurrentlyEnabled,
+                  status: isCurrentlyEnabled ? "active" : "disabled",
+                }
+              : a
+          )
+        );
+        setForkToast(`Không thể thay đổi trạng thái của ${agent.name}`);
+      }
+    } catch {
+      setAgents((prev) =>
+        prev.map((a) =>
+          a.id === targetId
+            ? {
+                ...a,
+                enabled: isCurrentlyEnabled,
+                status: isCurrentlyEnabled ? "active" : "disabled",
+              }
+            : a
+        )
+      );
+      setForkToast(`Lỗi khi chuyển trạng thái ${agent.name}`);
+    } finally {
+      setTogglingAgentId(null);
+      setTimeout(() => setForkToast(null), 3000);
+    }
   };
 
 
@@ -4560,6 +4629,9 @@ export function GrokBotWorkspace() {
     return 0;
   });
 
+  const activeFilteredAgents = filteredAgents.filter((a) => a.enabled !== false && a.status !== "disabled");
+  const disabledFilteredAgents = filteredAgents.filter((a) => a.enabled === false || a.status === "disabled");
+
   const filteredChats = chats
     .filter((c) => {
       const matchesSearch =
@@ -4707,16 +4779,26 @@ export function GrokBotWorkspace() {
                         key={ag.id}
                         aria-label={ag.name}
                         data-ux-target-min="24"
-                        onClick={() => handleSelectAgent(ag)}
-                        className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer border group shrink-0 ${
-                          isSelected
-                            ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25"
-                            : "border-transparent hover:bg-[#161620] hover:border-[#2a2a38]"
+                        disabled={ag.enabled === false || ag.status === "disabled"}
+                        onClick={() => {
+                          if (ag.enabled === false || ag.status === "disabled") return;
+                          handleSelectAgent(ag);
+                        }}
+                        className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
+                          ag.enabled === false || ag.status === "disabled"
+                            ? "border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none"
+                            : isSelected
+                            ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25 cursor-pointer"
+                            : "border-transparent hover:bg-[#161620] hover:border-[#2a2a38] cursor-pointer"
                         }`}
                                                 title={`${ag.name}\n${ag.roleTag || "Agent"} • ${ag.status || "active"}\n${ag.node} • ${ag.model}${hasUnreadCompleted ? ` (Có ${unreadList.length} session chưa xem)` : ""}${hasError ? " (Degraded)" : ""}`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
-                        <div className="relative shrink-0">
+                        <div className={`relative shrink-0 transition-all ${
+                          ag.enabled === false || ag.status === "disabled"
+                            ? "opacity-40 grayscale blur-[0.6px]"
+                            : ""
+                        }`}>
                           <AgentAvatar agent={ag} size="md" />
                           {pinnedAgentIds.includes(ag.id) && (
                             <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30" title="Đã ghim agent">
@@ -4977,7 +5059,7 @@ export function GrokBotWorkspace() {
                 </div>
               ) : (
                 <>
-                  {filteredAgents.map((ag, index) => {
+                  {activeFilteredAgents.map((ag, index) => {
                     const isSelected = ag.id === selectedAgentId;
                     return (
                       <div
@@ -4999,18 +5081,23 @@ export function GrokBotWorkspace() {
                             longPressPreventClickRef.current = false;
                             return;
                           }
+                          if (ag.enabled === false || ag.status === "disabled") {
+                            return;
+                          }
                           handleSelectAgent(ag);
                         }}
-                        className={`w-full rounded-xl text-left flex items-center transition-colors cursor-pointer border animate-fade-in-stagger group ${
+                        className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
                             ? "px-2 py-1 gap-2"
                             : layoutDensity === "comfortable"
                             ? "px-2.5 py-2 gap-2.5"
                             : "px-2 py-1.5 gap-2.5"
                         } ${
-                          isSelected
-                            ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs"
-                            : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
+                          ag.enabled === false || ag.status === "disabled"
+                            ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
+                            : isSelected
+                            ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs cursor-pointer"
+                            : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
@@ -5027,7 +5114,11 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs font-medium text-neutral-900 dark:text-white truncate block">
+                            <span className={`text-xs font-medium truncate block transition-all ${
+                              ag.enabled === false || ag.status === "disabled"
+                                ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
+                                : "text-neutral-900 dark:text-white"
+                            }`}>
                               {ag.name}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
@@ -5071,21 +5162,24 @@ export function GrokBotWorkspace() {
                               })()}
 
                               {/* 3-Dots More Options Menu for Agent */}
-                              <div className="relative" data-agent-menu-container="true">
+                              <div className="relative z-10 pointer-events-auto" data-agent-menu-container="true">
                                 <button
                                   aria-label="Tùy chọn agent"
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    e.preventDefault();
                                     triggerHaptic(15);
                                     setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
                                   }}
                                   className={`p-1 rounded-lg transition-all cursor-pointer ${
                                     activeAgentMenuId === ag.id
                                       ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      : ag.enabled === false || ag.status === "disabled"
+                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
                                       : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                                   }`}
-                                  title="Tùy chọn mở rộng cho Agent (Ghim, Chi tiết, Chat mới)"
+                                  title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
                                 >
                                   <MoreVertical size={13} />
                                 </button>
@@ -5123,17 +5217,269 @@ export function GrokBotWorkspace() {
                                       setActiveAgentMenuId(null);
                                     }}
                                   />
+                                  <DropdownMenuItem
+                                    icon={
+                                      togglingAgentId === ag.id ? (
+                                        <Loader2 size={13} className="animate-spin text-neutral-400" />
+                                      ) : ag.enabled === false || ag.status === "disabled" ? (
+                                        <Power size={13} className="text-emerald-400" />
+                                      ) : (
+                                        <PowerOff size={13} className="text-rose-400" />
+                                      )
+                                    }
+                                    label={
+                                      togglingAgentId === ag.id
+                                        ? "Đang cập nhật..."
+                                        : ag.enabled === false || ag.status === "disabled"
+                                        ? "Kích hoạt Agent (Bật)"
+                                        : "Vô hiệu hóa Agent (Tắt)"
+                                    }
+                                    onClick={(e) => {
+                                      handleToggleAgentEnabled(ag, e);
+                                    }}
+                                  />
                                 </DropdownMenu>
                               </div>
                             </div>
                           </div>
-                          <span className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 truncate block mt-0.5" title={agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model}>
-                            {agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model}
+                          <span className={`text-[11px] font-sans truncate block mt-0.5 transition-all ${
+                            ag.enabled === false || ag.status === "disabled"
+                              ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
+                              : "text-neutral-500 dark:text-neutral-400"
+                          }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}>
+                            {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}
                           </span>
                         </div>
                       </div>
                     );
                   })}
+
+                  {/* Disabled Agents Group at the bottom (default closed, shown when at least 1 disabled agent exists) */}
+                  {disabledFilteredAgents.length > 0 && (
+                    <div className="pt-2 mt-2 border-t border-neutral-200/80 dark:border-[#1c1c24]">
+                      <button
+                        type="button"
+                        aria-label="Thu gọn hoặc mở rộng nhóm Agent đã tắt"
+                        onClick={() => {
+                          triggerHaptic(10);
+                          setDisabledAgentsExpanded(!disabledAgentsExpanded);
+                        }}
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-neutral-200/50 dark:hover:bg-white/[0.04] text-[11px] font-mono text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors cursor-pointer select-none group/dis"
+                        title={disabledAgentsExpanded ? "Thu gọn danh sách agent đã tắt" : "Mở rộng danh sách agent đã tắt"}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {disabledAgentsExpanded ? (
+                            <ChevronDown size={13} className="text-neutral-400 group-hover/dis:text-neutral-200 transition-transform" />
+                          ) : (
+                            <ChevronRight size={13} className="text-neutral-400 group-hover/dis:text-neutral-200 transition-transform" />
+                          )}
+                          <span className="font-medium">Vô hiệu hóa ({disabledFilteredAgents.length})</span>
+                        </div>
+                        <span className="text-[10px] text-neutral-400 dark:text-neutral-600 font-mono">
+                          {disabledAgentsExpanded ? "Đang mở" : "Đã tắt"}
+                        </span>
+                      </button>
+
+                      {disabledAgentsExpanded && (
+                        <div className="mt-1 space-y-0.5 animate-in fade-in duration-150">
+                          {disabledFilteredAgents.map((ag, index) => {
+                            const isSelected = ag.id === selectedAgentId;
+                            return (
+                      <div
+                        key={ag.id}
+                        data-agent-item-id={ag.id}
+                        style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
+                        onTouchStart={() => handleTouchStartAgent(ag)}
+                        onTouchEnd={handleTouchEndAgent}
+                        onTouchMove={handleTouchEndAgent}
+                        onTouchCancel={handleTouchEndAgent}
+                        onContextMenu={(e) => {
+                          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                            e.preventDefault();
+                            setMobileActionAgent(ag);
+                          }
+                        }}
+                        onClick={() => {
+                          if (longPressPreventClickRef.current) {
+                            longPressPreventClickRef.current = false;
+                            return;
+                          }
+                          if (ag.enabled === false || ag.status === "disabled") {
+                            return;
+                          }
+                          handleSelectAgent(ag);
+                        }}
+                        className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
+                          layoutDensity === "compact"
+                            ? "px-2 py-1 gap-2"
+                            : layoutDensity === "comfortable"
+                            ? "px-2.5 py-2 gap-2.5"
+                            : "px-2 py-1.5 gap-2.5"
+                        } ${
+                          ag.enabled === false || ag.status === "disabled"
+                            ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
+                            : isSelected
+                            ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs cursor-pointer"
+                            : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
+                        }`}
+                      >
+                        {/* Dedicated Agent Identity Avatar */}
+                        <div className="relative shrink-0">
+                          <AgentAvatar agent={ag} size="md" />
+                          {ag.status === "degraded" && (
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
+                              title="Sự cố hạ tầng"
+                            />
+                          )}
+                        </div>
+
+                        {/* Agent Details: Lean typography with rich status tooltip */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className={`text-xs font-medium truncate block transition-all ${
+                              ag.enabled === false || ag.status === "disabled"
+                                ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
+                                : "text-neutral-900 dark:text-white"
+                            }`}>
+                              {ag.name}
+                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {pinnedAgentIds.includes(ag.id) && (
+                                <span className="text-amber-400 p-0.5" title="Đã ghim agent">
+                                  <Pin size={11} className="fill-amber-400" />
+                                </span>
+                              )}
+
+                              {(() => {
+                                const hasError = ag.status === "degraded";
+                                const unreadList = unreadCompletedSessions[ag.id] || [];
+                                const hasUnreadCompleted = unreadList.length > 0;
+                                const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
+
+                                if (isAgentBusy) {
+                                  return (
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse mr-0.5"
+                                      title="Agent đang thực hiện phiên chat"
+                                    />
+                                  );
+                                }
+                                if (hasUnreadCompleted) {
+                                  return (
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-0.5"
+                                      title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                    />
+                                  );
+                                }
+                                if (hasError) {
+                                  return (
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full bg-red-500 mr-0.5"
+                                      title="Agent gặp sự cố hạ tầng"
+                                    />
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {/* 3-Dots More Options Menu for Agent */}
+                              <div className="relative z-10 pointer-events-auto" data-agent-menu-container="true">
+                                <button
+                                  aria-label="Tùy chọn agent"
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    triggerHaptic(15);
+                                    setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
+                                  }}
+                                  className={`p-1 rounded-lg transition-all cursor-pointer ${
+                                    activeAgentMenuId === ag.id
+                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      : ag.enabled === false || ag.status === "disabled"
+                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
+                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                  }`}
+                                  title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
+                                >
+                                  <MoreVertical size={13} />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                <DropdownMenu
+                                  isOpen={activeAgentMenuId === ag.id}
+                                  onClose={() => setActiveAgentMenuId(null)}
+                                  align="right"
+                                  width="w-52"
+                                >
+                                  <DropdownMenuItem
+                                    icon={<Pin size={13} className={pinnedAgentIds.includes(ag.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                                    label={pinnedAgentIds.includes(ag.id) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
+                                    onClick={(e) => {
+                                      togglePinAgent(ag.id, e);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Plus size={13} className="text-[#f8a87c]" />}
+                                    label="Tạo Chat mới với Agent"
+                                    onClick={() => {
+                                      handleSelectAgent(ag);
+                                      setTimeout(() => handleNewChat(), 50);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Bot size={13} className="text-cyan-400" />}
+                                    label="Xem thông số kỹ thuật"
+                                    onClick={() => {
+                                      handleSelectAgent(ag);
+                                      handleToggleBotInfo(false);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={
+                                      togglingAgentId === ag.id ? (
+                                        <Loader2 size={13} className="animate-spin text-neutral-400" />
+                                      ) : ag.enabled === false || ag.status === "disabled" ? (
+                                        <Power size={13} className="text-emerald-400" />
+                                      ) : (
+                                        <PowerOff size={13} className="text-rose-400" />
+                                      )
+                                    }
+                                    label={
+                                      togglingAgentId === ag.id
+                                        ? "Đang cập nhật..."
+                                        : ag.enabled === false || ag.status === "disabled"
+                                        ? "Kích hoạt Agent (Bật)"
+                                        : "Vô hiệu hóa Agent (Tắt)"
+                                    }
+                                    onClick={(e) => {
+                                      handleToggleAgentEnabled(ag, e);
+                                    }}
+                                  />
+                                </DropdownMenu>
+                              </div>
+                            </div>
+                          </div>
+                          <span className={`text-[11px] font-sans truncate block mt-0.5 transition-all ${
+                            ag.enabled === false || ag.status === "disabled"
+                              ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
+                              : "text-neutral-500 dark:text-neutral-400"
+                          }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}>
+                            {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {filteredAgents.length === 0 && (
                     <div className="p-6 text-center text-xs text-neutral-500 font-mono">
