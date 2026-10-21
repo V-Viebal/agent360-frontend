@@ -955,10 +955,16 @@ html.light .border-\[\#2e2e3e\],
 }
 
 /* Marquee Auto-Scroll on Hover for Long Chat Session Titles */
-.chat-title-marquee {
-  display: inline-block;
+.chat-title-marquee,
+.chat-title-marquee * {
   white-space: nowrap !important;
   text-wrap: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+.chat-title-marquee {
+  display: inline-block;
   will-change: transform;
   transform: translateX(0);
   transition: transform 0.4s ease-out;

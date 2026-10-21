@@ -8324,8 +8324,8 @@ export function GrokBotWorkspace() {
                                   t = "Cuộc hội thoại";
                                 }
                                 return (
-                                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                                    <span>{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
+                                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-nowrap [text-wrap:nowrap]">
+                                    <span className="whitespace-nowrap text-nowrap [text-wrap:nowrap]">{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
                                   </span>
                                 );
                               })()}
