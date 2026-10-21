@@ -36,6 +36,39 @@ async function waitForCredential(maxMs: number): Promise<void> {
   }
 }
 
+export function getAuthHeaders(agentId?: string): Record<string, string> {
+  const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
+  let token = "";
+  let opToken = "";
+  try {
+    token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+    opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || defaultOpKey;
+  } catch {}
+
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (opToken) {
+    headers["X-Agent360-Operator-Token"] = opToken;
+    headers["X-Operator-Token"] = opToken;
+  }
+  if (agentId) {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    headers["X-Agent-Id"] = cleanId;
+  }
+  return headers;
+}
+
+export async function authorizedFetch(url: string, init?: RequestInit, agentId?: string): Promise<Response> {
+  const authHeaders = getAuthHeaders(agentId);
+  const headers = new Headers(init?.headers || {});
+  for (const [key, value] of Object.entries(authHeaders)) {
+    if (!headers.has(key)) {
+      headers.set(key, value);
+    }
+  }
+  return fetch(url, { ...init, headers });
+}
+
 export async function fetchInfraAgents(): Promise<InfraAgent[]> {
   // Real data only: a failed fleet load must never be replaced by mock agents (their ids such as `swe-lead`
   // do not exist on any runtime and every follow-up call 404s). Transient 401s right after sign-in are retried.
@@ -108,7 +141,9 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         memoryUsageMb: a.memoryUsageMb || 256,
         description: a.description || "Active autonomous infrastructure agent",
         tools: a.tools || [],
-        sessions: a.sessions || []
+        sessions: a.sessions || [],
+        canToggle: a.can_toggle ?? a.canToggle ?? true,
+        isRootAgent: a.is_root_agent ?? a.isRootAgent ?? false
       };
     });
   }
@@ -252,30 +287,14 @@ export async function fetchActiveChats(): Promise<string[]> {
 export async function updateAgentActiveModel(agentId: string, providerId: string, model: string): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
-    let token = "";
-    let opToken = "";
-    try {
-      token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
-      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || defaultOpKey;
-    } catch {}
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-Agent-Id": cleanId,
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    if (opToken) {
-      headers["X-Agent360-Operator-Token"] = opToken;
-      headers["X-Operator-Token"] = opToken;
-    }
-
-    const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
+    const putRes = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
       method: "PUT",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({ scope: "agent", agent_id: cleanId, provider_id: providerId, model }),
-    });
+    }, cleanId);
     if (!putRes.ok) {
       console.warn(`updateAgentActiveModel failed: HTTP ${putRes.status}`);
       return false;
@@ -1221,30 +1240,14 @@ export async function updateAgentLoopMode(agentId: string, mode: "default" | "go
 export async function toggleAgentEnabled(agentId: string, enabled: boolean): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
-    let token = "";
-    let opToken = "";
-    try {
-      token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
-      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || defaultOpKey;
-    } catch {}
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "X-Agent-Id": cleanId,
-    };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    if (opToken) {
-      headers["X-Agent360-Operator-Token"] = opToken;
-      headers["X-Operator-Token"] = opToken;
-    }
-
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/toggle`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/toggle`, {
       method: "PATCH",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({ enabled }),
-    });
+    }, cleanId);
 
     if (res.ok) {
       return true;

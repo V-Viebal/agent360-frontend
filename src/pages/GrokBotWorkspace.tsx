@@ -2868,14 +2868,16 @@ export function GrokBotWorkspace() {
     triggerHaptic(20);
     const targetId = agent.id;
     const rawSlug = agent.slug || agent.id.replace(/^bot:agent360:/, "");
-    const isRootDefault = ["default-core", "gm-boc", "climax-default", "its-default", "gl-default", "planthy-pm"].includes(rawSlug) ||
-                          rawSlug.endsWith("-default") || rawSlug === "default";
+    const isRootDefault = agent.isRootAgent ?? (agent.canToggle === false) ?? (
+      ["default-core", "gm-boc", "climax-default", "its-default", "gl-default", "planthy-pm"].includes(rawSlug) ||
+      rawSlug.endsWith("-default") || rawSlug === "default"
+    );
 
     const isCurrentlyEnabled = agent.enabled !== false && agent.status !== "disabled";
     const nextEnabled = !isCurrentlyEnabled;
 
     // Prevent disabling core node root agents which cannot be disabled on QwenPaw runtime
-    if (!nextEnabled && isRootDefault) {
+    if (!nextEnabled && (isRootDefault || agent.canToggle === false)) {
       setActiveAgentMenuId(null);
       setForkToast(`Agent ${agent.name} là Core Root Agent của cụm hạ tầng, không thể vô hiệu hóa.`);
       setTimeout(() => setForkToast(null), 3500);

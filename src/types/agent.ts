@@ -70,4 +70,6 @@ export interface InfraAgent {
   description: string;
   tools: AgentTool[];
   sessions: AgentSession[];
+  canToggle?: boolean;
+  isRootAgent?: boolean;
 }
