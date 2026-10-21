@@ -2026,6 +2026,8 @@ export function GrokBotWorkspace() {
   const [isStreaming, setIsStreaming] = useState(false);
   // Set of session IDs actively running / streaming turns
   const [runningChatIds, setRunningChatIds] = useState<string[]>([]);
+  // Map of agentId -> number of actively running chats
+  const [runningAgentIds, setRunningAgentIds] = useState<Record<string, number>>({});
   // Real-time Session Multiplexer: WebSocket with SSE fallback
   // Receives turn start/stop & unread state instantly across all channels without periodic HTTP polling
   useEffect(() => {
@@ -2045,14 +2047,21 @@ export function GrokBotWorkspace() {
         }
       },
       onTurnUpdate: (update: SessionTurnUpdate) => {
+        const agId = update.agent_id || selectedAgentId;
         if (update.is_running) {
           setRunningChatIds((prev) => Array.from(new Set([...prev, update.session_id])));
+          if (agId) {
+            setRunningAgentIds((prev) => ({ ...prev, [agId]: (prev[agId] || 0) + 1 }));
+          }
         } else {
           setRunningChatIds((prev) => prev.filter((id) => id !== update.session_id && id !== selectedChatId));
+          if (agId) {
+            setRunningAgentIds((prev) => ({ ...prev, [agId]: Math.max(0, (prev[agId] || 1) - 1) }));
+          }
           if (update.session_id && update.session_id !== selectedChatId) {
             setUnreadCompletedSessions((prev) => ({
               ...prev,
-              [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), update.session_id]))
+              [agId]: Array.from(new Set([...(prev[agId] || []), update.session_id]))
             }));
             setChats((prev) => prev.map((c) => (c.id === update.session_id || c.session_id === update.session_id ? { ...c, unread: true } : c)));
           }
@@ -3164,6 +3173,9 @@ export function GrokBotWorkspace() {
           .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
         if (activeIds.length > 0) {
           setRunningChatIds((prev) => Array.from(new Set([...prev, ...activeIds])));
+          setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: activeIds.length }));
+        } else {
+          setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: 0 }));
         }
         const unreadIds = loadedChats
           .filter((c) => Boolean(c.unread))
@@ -4703,21 +4715,35 @@ export function GrokBotWorkspace() {
                             </span>
                           )}
 
-                          {/* Lean State: ĐỎ khi sự cố, XANH khi xong việc chưa đọc, CAM khi selected */}
-                          {/* Unread notification badge at top-right */}
-                          {hasUnreadCompleted && (
-                            <span
-                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#0c0c0e] animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                              title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
-                            />
-                          )}
-                          {/* Chỉ hiển thị beacon khi có sự cố hạ tầng */}
-                          {hasError && (
-                            <span
-                              className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500 animate-pulse"
-                              title="Sự cố hạ tầng"
-                            />
-                          )}
+                          {/* Single Clean Dot: Xanh dương nhấp nháy khi đang làm, Xanh lá khi có phiên hoàn thành, Đỏ khi lỗi */}
+                          {(() => {
+                            const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
+                            if (isAgentBusy) {
+                              return (
+                                <span
+                                  className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#0c0c0e]"
+                                  title="Agent đang làm"
+                                />
+                              );
+                            }
+                            if (hasUnreadCompleted) {
+                              return (
+                                <span
+                                  className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 border border-white dark:border-[#0c0c0e]"
+                                  title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                />
+                              );
+                            }
+                            if (hasError) {
+                              return (
+                                <span
+                                  className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500 border border-white dark:border-[#0c0c0e]"
+                                  title="Sự cố hạ tầng"
+                                />
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </button>
                     );
@@ -4978,19 +5004,13 @@ export function GrokBotWorkspace() {
                             : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
                         }`}
                       >
-                        {/* Dedicated Agent Identity Avatar: Không hiện live state cố định, chỉ hiện badge khi có message done hoặc lỗi */}
+                        {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0">
                           <AgentAvatar agent={ag} size="md" />
                           {ag.status === "degraded" && (
                             <span
-                              className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500 animate-pulse"
+                              className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
                               title="Sự cố hạ tầng"
-                            />
-                          )}
-                          {(unreadCompletedSessions[ag.id] || []).length > 0 && (
-                            <span
-                              className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#0c0c0e] animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                              title={`Có ${(unreadCompletedSessions[ag.id] || []).length} session hoàn thành chưa đọc`}
                             />
                           )}
                         </div>
@@ -5012,20 +5032,29 @@ export function GrokBotWorkspace() {
                                 const hasError = ag.status === "degraded";
                                 const unreadList = unreadCompletedSessions[ag.id] || [];
                                 const hasUnreadCompleted = unreadList.length > 0;
+                                const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
 
-                                if (hasError) {
+                                if (isAgentBusy) {
                                   return (
                                     <span
-                                      className="h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] mr-0.5"
-                                      title="Agent gặp sự cố hạ tầng hoặc cần can thiệp"
+                                      className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse mr-0.5"
+                                      title="Agent đang thực hiện phiên chat"
                                     />
                                   );
                                 }
                                 if (hasUnreadCompleted) {
                                   return (
                                     <span
-                                      className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce shadow-[0_0_8px_rgba(52,211,153,0.8)] mr-0.5"
-                                      title={`Có ${unreadList.length} session hoàn thành chưa đọc`}
+                                      className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-0.5"
+                                      title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                    />
+                                  );
+                                }
+                                if (hasError) {
+                                  return (
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full bg-red-500 mr-0.5"
+                                      title="Agent gặp sự cố hạ tầng"
                                     />
                                   );
                                 }
