@@ -173,6 +173,7 @@ import {
   markChatAsRead,
   fetchActiveChats,
   fetchChatMessages,
+  parseRawChatMessages,
   getCachedChatMessages,
   setCachedChatMessages,
   fetchSkills,
@@ -2787,7 +2788,34 @@ export function GrokBotWorkspace() {
     }
   };
 
-  const handleBatchDeleteSelectedChats = () => {
+    const handleMarkAllAsRead = async () => {
+    if (!selectedAgent?.id) return;
+    const agId = selectedAgent.id;
+    const currentUnreadIds = unreadCompletedSessions[agId] || [];
+    if (currentUnreadIds.length === 0 && !chats.some((c) => c.unread)) {
+      triggerHaptic(10);
+      return;
+    }
+    triggerHaptic(20);
+    // 1. Clear unread from local state
+    setUnreadCompletedSessions((prev) => {
+      const next = { ...prev, [agId]: [] };
+      try {
+        localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setChats((prev) => prev.map((c) => ({ ...c, unread: false })));
+
+    // 2. Call backend for each unread session in background
+    for (const sid of currentUnreadIds) {
+      markChatAsRead(sid, agId).catch(() => {});
+    }
+    setForkToast("Đã đánh dấu đã đọc tất cả");
+    setTimeout(() => setForkToast(null), 2500);
+  };
+
+const handleBatchDeleteSelectedChats = () => {
     if (selectedChatIds.length === 0) return;
     setChats((prev) => prev.filter((c) => !selectedChatIds.includes(c.id)));
     setPinnedChatIds((prev) => prev.filter((id) => !selectedChatIds.includes(id)));
@@ -3361,12 +3389,13 @@ export function GrokBotWorkspace() {
         const activeIds = loadedChats
           .filter((c) => Boolean(c.isRunning || c.status === "running" || c.status === "in_progress"))
           .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
-        if (activeIds.length > 0) {
-          setRunningChatIds((prev) => Array.from(new Set([...prev, ...activeIds])));
-          setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: activeIds.length }));
-        } else {
-          setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: 0 }));
-        }
+        const agentChatIds = loadedChats.flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
+        setRunningChatIds((prev) => {
+          const nonAgentIds = prev.filter((id) => !agentChatIds.includes(id));
+          const currentPreserved = (isStreaming && selectedChatId) ? [selectedChatId] : [];
+          return Array.from(new Set([...nonAgentIds, ...activeIds, ...currentPreserved]));
+        });
+        setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: activeIds.length }));
         const unreadIds = loadedChats
           .filter((c) => Boolean(c.unread))
           .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
@@ -3574,6 +3603,23 @@ export function GrokBotWorkspace() {
             (activeChatRef && (payload.chat_id === activeChatRef.id || payload.chat_id === activeChatRef.session_id || payload.session_id === activeChatRef.session_id));
 
           if (isTargetSession) {
+            if (Array.isArray(payload.messages) && payload.messages.length > 0) {
+              const parsedTurns = parseRawChatMessages(payload.messages, selectedChatId, isTurnRunning);
+              if (parsedTurns && parsedTurns.length > 0) {
+                setMessages(parsedTurns);
+                setShowPollCard(false);
+                const lastTurn = parsedTurns[parsedTurns.length - 1];
+                if (lastTurn?.content) {
+                  const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
+                  setChats((prev) =>
+                    prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
+                  );
+                }
+                if (!isUserScrolledUpRef.current) {
+                  jumpToBottom();
+                }
+              }
+            } else {
             fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
               if (reloadedMsgs && reloadedMsgs.length > 0) {
                 setMessages(reloadedMsgs);
@@ -3590,6 +3636,7 @@ export function GrokBotWorkspace() {
                 }
               }
             });
+            }
           }
         } catch {}
       });
@@ -3768,38 +3815,6 @@ export function GrokBotWorkspace() {
   const handleSelectChat = (chat: AgentSession) => {
     setSelectedChatId(chat.id);
     setMobileChatsOpen(false);
-    // Call backend to mark read
-    markChatAsRead(chat.id, selectedAgent.id);
-    if (chat.session_id) {
-      markChatAsRead(chat.session_id, selectedAgent.id);
-    }
-    const idsToClear = [chat.id, chat.session_id].filter(Boolean) as string[];
-    setUnreadCompletedSessions((prev) => {
-      const next = { ...prev };
-      for (const key of Object.keys(next)) {
-        next[key] = next[key].filter((id) => !idsToClear.includes(id));
-      }
-      try {
-        localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-    setChats((prev) =>
-      prev.map((c) => (idsToClear.includes(c.id) || (c.session_id && idsToClear.includes(c.session_id)) ? { ...c, unread: false } : c))
-    );
-    // Update local chat session state
-    setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, unread: false } : c)));
-    // Clear unread mark for this session
-    setUnreadCompletedSessions((prev) => {
-      const list = prev[selectedAgent.id] || [];
-      const sessionIds = [chat.id, chat.session_id].filter(Boolean) as string[];
-      const updatedList = list.filter((id) => !sessionIds.includes(id));
-      const updated = { ...prev, [selectedAgent.id]: updatedList };
-      try {
-        localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
     try {
       localStorage.setItem("agent360_last_chat_id", chat.id);
       localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chat.id);
@@ -3811,6 +3826,41 @@ export function GrokBotWorkspace() {
       navigate(`/app/${agentSegment}/${chat.id}`);
     }
   };
+
+  // Auto-mark active session as read and clear unread completed dot whenever selectedChatId changes
+  useEffect(() => {
+    if (!selectedChatId) return;
+    const agId = selectedAgent.id || selectedAgentId;
+    markChatAsRead(selectedChatId, agId);
+    const curChat = chats.find((c) => c.id === selectedChatId);
+    if (curChat?.session_id) {
+      markChatAsRead(curChat.session_id, agId);
+    }
+    const idsToClear = [selectedChatId, curChat?.session_id].filter(Boolean) as string[];
+
+    setUnreadCompletedSessions((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const k of Object.keys(next)) {
+        const beforeLen = next[k].length;
+        next[k] = next[k].filter((id) => !idsToClear.includes(id));
+        if (next[k].length !== beforeLen) changed = true;
+      }
+      if (!changed) return prev;
+      try {
+        localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    setChats((prev) =>
+      prev.map((c) =>
+        idsToClear.includes(c.id) || (c.session_id && idsToClear.includes(c.session_id))
+          ? { ...c, unread: false }
+          : c
+      )
+    );
+  }, [selectedChatId, selectedAgentId]);
 
   const togglePinChat = (chatId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -4494,12 +4544,32 @@ export function GrokBotWorkspace() {
             jumpToBottom();
           }
         },
-        undefined,
+        (reasoningText) => {
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id !== tempBotMsgId) return m;
+              const currentSteps = m.steps || [];
+              const existingRIdx = currentSteps.findIndex((s) => s.kind === "reasoning");
+              let updatedSteps;
+              if (existingRIdx !== -1) {
+                updatedSteps = [...currentSteps];
+                updatedSteps[existingRIdx] = { kind: "reasoning", text: reasoningText };
+              } else {
+                updatedSteps = [{ kind: "reasoning" as const, text: reasoningText }, ...currentSteps];
+              }
+              return { ...m, reasoning: reasoningText, steps: updatedSteps };
+            })
+          );
+          if (!isUserScrolledUpRef.current) {
+            jumpToBottom();
+          }
+        },
         (toolName, args, result, state) => {
           setMessages((prev) =>
             prev.map((m) => {
               if (m.id !== tempBotMsgId) return m;
               const currentTools = m.toolCalls || [];
+              const currentSteps = m.steps || [];
               const existingIdx = currentTools.findIndex((t) => t.tool === toolName && (!args || t.args === args));
               let updatedTools;
               if (existingIdx !== -1) {
@@ -4516,7 +4586,23 @@ export function GrokBotWorkspace() {
                   { tool: toolName, args: args, result: result, state: state || 'calling', exitCode: state === 'error' ? 1 : 0 }
                 ];
               }
-              return { ...m, toolCalls: updatedTools };
+
+              const stepIdx = currentSteps.findIndex((s) => s.kind === "tool_call" && s.tool === toolName && (!args || s.args === args));
+              let updatedSteps;
+              if (stepIdx !== -1) {
+                updatedSteps = [...currentSteps];
+                updatedSteps[stepIdx] = {
+                  ...updatedSteps[stepIdx],
+                  result: result !== undefined ? result : updatedSteps[stepIdx].result,
+                  state: state || updatedSteps[stepIdx].state || 'success',
+                };
+              } else {
+                updatedSteps = [
+                  ...currentSteps,
+                  { kind: "tool_call" as const, tool: toolName, args: args, result: result, state: state || 'calling' }
+                ];
+              }
+              return { ...m, toolCalls: updatedTools, steps: updatedSteps };
             })
           );
         },
@@ -6019,7 +6105,7 @@ export function GrokBotWorkspace() {
         {/* Messages Stream Area (Responsive & Lean for Compact/Minimize) */}
         <div
           ref={messagesContainerRef}
-          className={`flex-1 overflow-y-auto ${isCompactMode ? "px-3 py-2 space-y-3" : "px-4 md:px-8 py-3 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
+          className={`flex-1 overflow-y-auto scrollbar-hover ${isCompactMode ? "px-3 py-2 space-y-3" : "px-4 md:px-8 py-3 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
         >
           {hasNoAgents ? (
             <div className="h-full min-h-[460px] flex items-center justify-center p-4">
@@ -8507,12 +8593,12 @@ export function GrokBotWorkspace() {
             </button>
           </div>
         ) : (
-          <div className="h-12 px-3 border-b border-[#1c1c22] flex items-center justify-between shrink-0">
+          <div className="h-12 px-3 border-b border-slate-200 dark:border-[#1c1c22] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
             <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden whitespace-nowrap" title={selectedAgent.name ? `Chats của ${selectedAgent.name} (${chats.length})` : `Chats (${chats.length})`}>
-              <span className="text-xs font-mono text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span className="text-xs font-mono text-slate-800 dark:text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}
               </span>
-              <span className="text-xs font-mono text-neutral-400 font-normal shrink-0" style={{ whiteSpace: "nowrap", textWrap: "nowrap" }}>
+              <span className="text-xs font-mono text-slate-500 dark:text-neutral-400 font-normal shrink-0" style={{ whiteSpace: "nowrap", textWrap: "nowrap" }}>
                 ({chats.length})
               </span>
             </div>
@@ -8522,32 +8608,29 @@ export function GrokBotWorkspace() {
               <Tooltip content="Tìm kiếm cuộc hội thoại" placement="bottom" minWidth={140}>
                 <button aria-label="Search chats" data-ux-target-min="24"
                   onClick={() => setChatSearchOpen(!chatSearchOpen)}
-                  className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <Search size={14} />
                 </button>
               </Tooltip>
 
-              {/* Delete Selected Sessions Button: ONLY visible when 1 or more sessions are checked */}
-              {selectedChatIds.length > 0 && (
-                <Tooltip content={`Xóa ${selectedChatIds.length} phiên hội thoại`} placement="bottom" minWidth={150}>
-                  <button
-                    aria-label={`Delete ${selectedChatIds.length} selected conversations`}
-                    data-ux-target-min="24"
-                    type="button"
-                    onClick={() => setIsBatchClearModalOpen(true)}
-                    className="h-7 px-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 flex items-center gap-1.5 text-[11px] font-mono transition-all cursor-pointer animate-in fade-in"
-                  >
-                    <Trash2 size={12} />
-                    <span>Xóa ({selectedChatIds.length})</span>
-                  </button>
-                </Tooltip>
-              )}
+              {/* Mark All As Read Button: icon-only */}
+              <Tooltip content="Đánh dấu đã đọc tất cả" placement="bottom" minWidth={150}>
+                <button
+                  aria-label="Đánh dấu đã đọc tất cả"
+                  data-ux-target-min="24"
+                  type="button"
+                  onClick={handleMarkAllAsRead}
+                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-[#f8a87c] dark:hover:text-[#f8a87c] transition-colors cursor-pointer"
+                >
+                  <CheckCheck size={15} />
+                </button>
+              </Tooltip>
 
               <Tooltip content="Tạo cuộc hội thoại mới" placement="bottom" shortcut="Ctrl+Shift+O" minWidth={160}>
                 <button aria-label="New Chat Session" data-ux-target-min="24"
                   onClick={handleNewChat}
-                  className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <Plus size={15} />
                 </button>
@@ -8563,7 +8646,7 @@ export function GrokBotWorkspace() {
                       setMobileChatsOpen(false);
                     }
                   }}
-                  className="h-7 w-7 rounded-lg hover:bg-[#1f1f26] flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <X size={15} />
                 </button>
@@ -8714,7 +8797,7 @@ export function GrokBotWorkspace() {
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
             {filteredChats.length > 0 && selectedChatIds.length > 0 && (
-              <div className="px-2.5 py-1 flex items-center justify-between border-b border-[#1c1c24] text-[10px] font-mono select-none bg-[#101017]/90 animate-in fade-in duration-150 whitespace-nowrap">
+              <div className="px-2.5 py-1 flex items-center justify-between border-b border-slate-200 dark:border-[#1c1c24] text-[10px] font-mono select-none bg-slate-100/95 dark:bg-[#101017]/90 animate-in fade-in duration-150 whitespace-nowrap">
                 <div
                   onClick={() => handleToggleSelectAll(filteredChats)}
                   className="flex items-center gap-1.5 cursor-pointer group text-neutral-400 hover:text-white transition-colors"
@@ -8726,7 +8809,7 @@ export function GrokBotWorkspace() {
                         ? "bg-[#f8a87c] border-[#f8a87c] text-black shadow-xs"
                         : filteredChats.some((c) => selectedChatIds.includes(c.id))
                         ? "bg-[#f8a87c]/30 border-[#f8a87c] text-[#f8a87c]"
-                        : "border-[#303042] bg-[#161622] group-hover:border-[#f8a87c]/60"
+                        : "border-slate-300 dark:border-[#303042] bg-white dark:bg-[#161622] group-hover:border-[#f8a87c]/60"
                     }`}
                   >
                     {filteredChats.every((c) => selectedChatIds.includes(c.id)) ? (
@@ -8735,7 +8818,7 @@ export function GrokBotWorkspace() {
                       <div className="h-1 w-1 rounded-xs bg-[#f8a87c]" />
                     ) : null}
                   </div>
-                  <span className="font-sans text-[11px] text-neutral-400 group-hover:text-neutral-200">
+                  <span className="font-sans text-[11px] text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-neutral-200">
                     {filteredChats.every((c) => selectedChatIds.includes(c.id))
                       ? "Bỏ chọn"
                       : "Chọn tất cả"}
@@ -8743,9 +8826,21 @@ export function GrokBotWorkspace() {
                 </div>
 
                 {selectedChatIds.length > 0 && (
-                  <span className="text-[9px] font-mono text-[#f8a87c] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.2 rounded border border-[#f8a87c]/20 shrink-0">
-                    {selectedChatIds.length}/{filteredChats.length}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[9px] font-mono text-[#f8a87c] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.5 rounded border border-[#f8a87c]/20">
+                      {selectedChatIds.length}/{filteredChats.length}
+                    </span>
+                    <Tooltip content={`Xóa ${selectedChatIds.length} phiên đã chọn`} placement="bottom" minWidth={140}>
+                      <button
+                        type="button"
+                        aria-label={`Xóa ${selectedChatIds.length} phiên đã chọn`}
+                        onClick={() => setIsBatchClearModalOpen(true)}
+                        className="h-6 w-6 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/25 flex items-center justify-center transition-all cursor-pointer"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </Tooltip>
+                  </div>
                 )}
               </div>
             )}
@@ -10414,15 +10509,15 @@ ${chat.id}`);
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm rounded-xl bg-[#121218] border border-[#242432] p-5 shadow-2xl text-neutral-200 font-sans"
+            className="w-full max-w-sm rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] p-5 shadow-2xl text-slate-800 dark:text-neutral-200 font-sans"
           >
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
                 <Trash2 size={16} />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Xóa các phiên đã chọn?</h4>
-                <p className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Xóa các phiên đã chọn?</h4>
+                <p className="text-xs text-slate-600 dark:text-neutral-400 mt-0.5 leading-relaxed">
                   Bạn có chắc muốn xóa <span className="text-[#f8a87c] font-semibold">{selectedChatIds.length}</span> phiên hội thoại đã đánh dấu chọn không? Thao tác này không thể hoàn tác.
                 </p>
               </div>
@@ -10431,7 +10526,7 @@ ${chat.id}`);
               <button
                 type="button"
                 onClick={() => setIsBatchClearModalOpen(false)}
-                className="px-3 py-1.5 rounded-lg bg-[#1a1a24] hover:bg-[#222230] text-neutral-300 font-medium transition-colors cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#1a1a24] dark:hover:bg-[#222230] text-slate-700 dark:text-neutral-300 font-medium transition-colors cursor-pointer"
               >
                 Hủy bỏ
               </button>

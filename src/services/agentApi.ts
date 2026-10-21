@@ -447,6 +447,307 @@ export function setCachedChatMessages(chatId: string, messages: ChatMessage[], a
   } catch {}
 }
 
+export function parseRawChatMessages(rawList: any[], chatId: string, isSessionActive: boolean = false): ChatMessage[] {
+  const turns: ChatMessage[] = [];
+  let currentAsst: ChatMessage | null = null;
+
+  for (let mIdx = 0; mIdx < rawList.length; mIdx++) {
+    const m = rawList[mIdx];
+    const role = m.role || "user";
+    const mtype = m.type || m.message_type || "";
+    const ts = m.metadata?.timestamp || m.created_at || (m.timestamp ? new Date(m.timestamp * 1000).toISOString() : new Date().toISOString());
+
+    if (role === "user") {
+      currentAsst = null;
+      let userContent = "";
+      if (typeof m.content === "string") {
+        userContent = m.content;
+      } else if (Array.isArray(m.content)) {
+        userContent = m.content
+          .filter((c: any) => c.type === "text" || !c.type)
+          .map((c: any) => c.text || "")
+          .join("\n");
+      }
+      turns.push({
+        id: m.id || `${chatId}-${mIdx}-user`,
+        role: "user",
+        content: userContent || "(Empty user message)",
+        timestamp: ts
+      });
+    } else if (role === "assistant") {
+      if (!currentAsst) {
+        currentAsst = {
+          id: m.id || `${chatId}-${mIdx}-asst`,
+          role: "assistant",
+          content: "",
+          timestamp: ts,
+          steps: [],
+          toolCalls: [],
+          reasoning: ""
+        };
+        turns.push(currentAsst);
+      }
+
+      let textContent = "";
+      const callDatas: any[] = [];
+      if (typeof m.content === "string") {
+        textContent = m.content;
+      } else if (Array.isArray(m.content)) {
+        for (const item of m.content) {
+          if (item && typeof item === "object") {
+            if (item.type === "text" && item.text) {
+              textContent += item.text + "\n";
+            } else if (item.type === "data" && item.data) {
+              callDatas.push(item.data);
+            }
+          }
+        }
+      }
+
+      if (mtype === "reasoning" || mtype === "thinking") {
+        const r = textContent.trim();
+        if (r) {
+          currentAsst.reasoning = currentAsst.reasoning ? currentAsst.reasoning + "\n" + r : r;
+          currentAsst.steps!.push({
+            kind: "reasoning",
+            text: r
+          });
+        }
+      } else if (mtype === "plugin_call" || mtype === "tool" || mtype === "tool_call" || mtype === "function_call") {
+        const payload = m.payload || m.data || {};
+        const toolCalls = payload.tool_calls || (payload.name ? [payload] : callDatas);
+        for (const tc of toolCalls) {
+          const stepItem = {
+            kind: "tool_call" as const,
+            id: tc.id || tc.call_id || m.id,
+            call_id: tc.call_id || tc.id,
+            tool: tc.function?.name || tc.name || "Tool Call",
+            args: typeof tc.arguments === "string" ? tc.arguments : (typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments || tc.args || {})),
+            state: "calling" as const
+          };
+          currentAsst.steps!.push(stepItem);
+          currentAsst.toolCalls!.push({
+            id: stepItem.id,
+            call_id: stepItem.call_id,
+            tool: stepItem.tool,
+            args: stepItem.args,
+            state: "calling"
+          });
+        }
+      } else if (mtype === "plugin_call_output" || mtype === "tool_result" || mtype === "function_result") {
+        const payload = m.payload || m.data || {};
+        const results = Array.isArray(payload) ? payload : (callDatas.length > 0 ? callDatas : [payload]);
+        for (const d of results) {
+          const cid = d.call_id || d.tool_call_id || d.id;
+          const strOut = typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result || d));
+          const toolState = d.state === "success" || d.status === "completed" || (!d.error && d.status !== "error") ? "success" as const : "error" as const;
+          
+          if (currentAsst.steps) {
+            let matched = false;
+            for (const s of currentAsst.steps) {
+              if (s.call_id && s.call_id === cid) {
+                s.result = strOut;
+                s.state = toolState;
+                matched = true;
+                break;
+              }
+            }
+            if (!matched) {
+              currentAsst.steps.push({
+                kind: "tool_call",
+                id: cid || m.id,
+                call_id: cid,
+                tool: d.name || "Tool Output",
+                args: "",
+                result: strOut,
+                state: toolState
+              });
+            }
+          }
+
+          if (currentAsst.toolCalls) {
+            let matched = false;
+            for (const tc of currentAsst.toolCalls) {
+              if (tc.call_id && tc.call_id === cid) {
+                tc.result = strOut;
+                tc.state = toolState;
+                matched = true;
+                break;
+              }
+            }
+            if (!matched) {
+              currentAsst.toolCalls.push({
+                id: cid || m.id,
+                call_id: cid,
+                tool: d.name || "Tool Output",
+                args: "",
+                result: strOut,
+                state: toolState
+              });
+            }
+          }
+        }
+      } else if (mtype === "message" || !mtype) {
+        if (callDatas.length > 0) {
+          for (const d of callDatas) {
+            const cid = d.call_id || d.tool_call_id || d.id;
+            const toolName = d.name || "Tool";
+            const rawArgs = d.arguments !== undefined
+              ? (typeof d.arguments === "string" ? d.arguments : JSON.stringify(d.arguments))
+              : (d.args !== undefined ? (typeof d.args === "string" ? d.args : JSON.stringify(d.args)) : "");
+            const hasOutput = d.output !== undefined || d.result !== undefined;
+            const strOut = hasOutput
+              ? (typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result)))
+              : undefined;
+            const toolState = hasOutput
+              ? ((d.state === "error" || d.status === "error" || d.error) ? "error" : "success")
+              : "calling";
+
+            if (currentAsst.steps) {
+              let matched = false;
+              if (cid) {
+                for (const s of currentAsst.steps) {
+                  if (s.call_id === cid || s.id === cid) {
+                    if (hasOutput) {
+                      s.result = strOut;
+                      s.state = toolState;
+                    }
+                    if (rawArgs && !s.args) s.args = rawArgs;
+                    matched = true;
+                    break;
+                  }
+                }
+              }
+              if (!matched) {
+                currentAsst.steps.push({
+                  kind: "tool_call",
+                  id: cid || `step-${Date.now()}-${Math.random()}`,
+                  call_id: cid,
+                  tool: toolName,
+                  args: rawArgs,
+                  result: strOut,
+                  state: toolState
+                });
+              }
+            }
+
+            if (currentAsst.toolCalls) {
+              let matched = false;
+              if (cid) {
+                for (const tc of currentAsst.toolCalls) {
+                  if (tc.call_id === cid || tc.id === cid) {
+                    if (hasOutput) {
+                      tc.result = strOut;
+                      tc.state = toolState;
+                    }
+                    if (rawArgs && !tc.args) tc.args = rawArgs;
+                    matched = true;
+                    break;
+                  }
+                }
+              }
+              if (!matched) {
+                currentAsst.toolCalls.push({
+                  id: cid || `call-${Date.now()}-${Math.random()}`,
+                  call_id: cid,
+                  tool: toolName,
+                  args: rawArgs,
+                  result: strOut,
+                  state: toolState
+                });
+              }
+            }
+          }
+        }
+
+        if (Array.isArray(m.steps) && m.steps.length > 0) {
+          for (const s of m.steps) {
+            const sid = s.id || s.call_id;
+            const sTool = s.name || s.tool || "Tool";
+            const sArgs = s.arguments || s.args || "";
+            const sOut = s.output || s.result || "";
+            const sState = s.status === "completed" || s.status === "succeeded" ? "success" : (s.status === "failed" || s.status === "error" ? "error" : "calling");
+
+            if (currentAsst.steps && !currentAsst.steps.some(existing => existing.call_id === sid || existing.id === sid)) {
+              currentAsst.steps.push({
+                kind: "tool_call",
+                id: sid || `step-${Date.now()}`,
+                call_id: sid,
+                tool: sTool,
+                args: typeof sArgs === "string" ? sArgs : JSON.stringify(sArgs),
+                result: typeof sOut === "string" ? sOut : JSON.stringify(sOut),
+                state: sState
+              });
+            }
+          }
+        }
+
+        const t = textContent.trim();
+        if (t) {
+          if (t.startsWith("The user said ") || t.startsWith("According to my activation instructions")) {
+            currentAsst.reasoning = currentAsst.reasoning ? currentAsst.reasoning + "\n" + t : t;
+            currentAsst.steps!.push({
+              kind: "reasoning",
+              text: t
+            });
+          } else {
+            if (currentAsst.content) {
+              currentAsst.content += "\n\n" + t;
+            } else {
+              currentAsst.content = t;
+            }
+          }
+        }
+        if (ts) {
+          currentAsst.timestamp = ts;
+        }
+      }
+    }
+  }
+
+  const filteredTurns: ChatMessage[] = [];
+  for (let idx = 0; idx < turns.length; idx++) {
+    const t = turns[idx];
+    const isLatestTurn = idx === turns.length - 1;
+
+    if (t.role === "user") {
+      if (t.content.includes("# 引导模式") || t.content.includes("BOOTSTRAP.md")) {
+        continue;
+      }
+      const last = filteredTurns[filteredTurns.length - 1];
+      if (last && last.role === "user" && last.content.trim() === t.content.trim()) {
+        continue;
+      }
+    }
+
+    if (t.role === "assistant") {
+      const shouldReconcile = !isSessionActive || !isLatestTurn;
+      if (shouldReconcile) {
+        if (t.steps) {
+          for (const s of t.steps) {
+            if (s.kind === "tool_call" && s.state === "calling") {
+              s.state = "success";
+            }
+          }
+        }
+        if (t.toolCalls) {
+          for (const tc of t.toolCalls) {
+            if (tc.state === "calling") {
+              tc.state = "success";
+            }
+          }
+        }
+      }
+    }
+
+    if (t.content || (t.steps && t.steps.length > 0) || (t.toolCalls && t.toolCalls.length > 0) || t.reasoning) {
+      filteredTurns.push(t);
+    }
+  }
+
+  return filteredTurns;
+}
+
 export async function fetchChatMessages(chatId: string, agentId?: string): Promise<ChatMessage[]> {
   // If this is a fresh client-generated session (e.g. session-xxxxxx), return immediately without network latency
   if (chatId.startsWith("session-")) {
@@ -490,302 +791,7 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
     }
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.messages || []);
-    
-    const turns: ChatMessage[] = [];
-    let currentAsst: ChatMessage | null = null;
-
-    for (let mIdx = 0; mIdx < rawList.length; mIdx++) {
-      const m = rawList[mIdx];
-      const role = m.role || "user";
-      const mtype = m.type || m.message_type || "";
-      const ts = m.metadata?.timestamp || m.created_at || (m.timestamp ? new Date(m.timestamp * 1000).toISOString() : new Date().toISOString());
-
-      if (role === "user") {
-        currentAsst = null;
-        let userContent = "";
-        if (typeof m.content === "string") {
-          userContent = m.content;
-        } else if (Array.isArray(m.content)) {
-          userContent = m.content
-            .filter((c: any) => c.type === "text" || !c.type)
-            .map((c: any) => c.text || "")
-            .join("\n");
-        }
-        turns.push({
-          id: m.id || `${chatId}-${mIdx}-user`,
-          role: "user",
-          content: userContent || "(Empty user message)",
-          timestamp: ts
-        });
-      } else if (role === "assistant") {
-        if (!currentAsst) {
-          currentAsst = {
-            id: m.id || `${chatId}-${mIdx}-asst`,
-            role: "assistant",
-            content: "",
-            timestamp: ts,
-            steps: [],
-            toolCalls: [],
-            reasoning: ""
-          };
-          turns.push(currentAsst);
-        }
-
-        let textContent = "";
-        const callDatas: any[] = [];
-        if (typeof m.content === "string") {
-          textContent = m.content;
-        } else if (Array.isArray(m.content)) {
-          for (const item of m.content) {
-            if (item && typeof item === "object") {
-              if (item.type === "text" && item.text) {
-                textContent += item.text + "\n";
-              } else if (item.type === "data" && item.data) {
-                callDatas.push(item.data);
-              }
-            }
-          }
-        }
-
-        if (mtype === "reasoning" || mtype === "thinking") {
-          const r = textContent.trim();
-          if (r) {
-            currentAsst.reasoning = currentAsst.reasoning ? currentAsst.reasoning + "\n" + r : r;
-            currentAsst.steps!.push({
-              kind: "reasoning",
-              text: r
-            });
-          }
-        } else if (mtype === "plugin_call" || mtype === "tool" || mtype === "tool_call" || mtype === "function_call") {
-          const payload = m.payload || m.data || {};
-          const toolCalls = payload.tool_calls || (payload.name ? [payload] : callDatas);
-          for (const tc of toolCalls) {
-            const stepItem = {
-              kind: "tool_call" as const,
-              id: tc.id || tc.call_id || m.id,
-              call_id: tc.call_id || tc.id,
-              tool: tc.function?.name || tc.name || "Tool Call",
-              args: typeof tc.arguments === "string" ? tc.arguments : (typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments || tc.args || {})),
-              state: "calling" as const
-            };
-            currentAsst.steps!.push(stepItem);
-            currentAsst.toolCalls!.push({
-              id: stepItem.id,
-              call_id: stepItem.call_id,
-              tool: stepItem.tool,
-              args: stepItem.args,
-              state: "calling"
-            });
-          }
-        } else if (mtype === "plugin_call_output" || mtype === "tool_result" || mtype === "function_result") {
-          const payload = m.payload || m.data || {};
-          const results = Array.isArray(payload) ? payload : (callDatas.length > 0 ? callDatas : [payload]);
-          for (const d of results) {
-            const cid = d.call_id || d.tool_call_id || d.id;
-            const strOut = typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result || d));
-            const toolState = d.state === "success" || d.status === "completed" || (!d.error && d.status !== "error") ? "success" as const : "error" as const;
-            
-            if (currentAsst.steps) {
-              let matched = false;
-              for (const s of currentAsst.steps) {
-                if (s.call_id && s.call_id === cid) {
-                  s.result = strOut;
-                  s.state = toolState;
-                  matched = true;
-                  break;
-                }
-              }
-              if (!matched) {
-                currentAsst.steps.push({
-                  kind: "tool_call",
-                  id: cid || m.id,
-                  call_id: cid,
-                  tool: d.name || "Tool Output",
-                  args: "",
-                  result: strOut,
-                  state: toolState
-                });
-              }
-            }
-
-            if (currentAsst.toolCalls) {
-              let matched = false;
-              for (const tc of currentAsst.toolCalls) {
-                if (tc.call_id && tc.call_id === cid) {
-                  tc.result = strOut;
-                  tc.state = toolState;
-                  matched = true;
-                  break;
-                }
-              }
-              if (!matched) {
-                currentAsst.toolCalls.push({
-                  id: cid || m.id,
-                  call_id: cid,
-                  tool: d.name || "Tool Output",
-                  args: "",
-                  result: strOut,
-                  state: toolState
-                });
-              }
-            }
-          }
-        } else if (mtype === "message" || !mtype) {
-          // Process any tool executions embedded inside message data contents (QwenPaw native format)
-          if (callDatas.length > 0) {
-            for (const d of callDatas) {
-              const cid = d.call_id || d.tool_call_id || d.id;
-              const toolName = d.name || "Tool";
-              const rawArgs = d.arguments !== undefined
-                ? (typeof d.arguments === "string" ? d.arguments : JSON.stringify(d.arguments))
-                : (d.args !== undefined ? (typeof d.args === "string" ? d.args : JSON.stringify(d.args)) : "");
-              const hasOutput = d.output !== undefined || d.result !== undefined;
-              const strOut = hasOutput
-                ? (typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result)))
-                : undefined;
-              const toolState = hasOutput
-                ? ((d.state === "error" || d.status === "error" || d.error) ? "error" : "success")
-                : "calling";
-
-              if (currentAsst.steps) {
-                let matched = false;
-                if (cid) {
-                  for (const s of currentAsst.steps) {
-                    if (s.call_id === cid || s.id === cid) {
-                      if (hasOutput) {
-                        s.result = strOut;
-                        s.state = toolState;
-                      }
-                      if (rawArgs && !s.args) s.args = rawArgs;
-                      matched = true;
-                      break;
-                    }
-                  }
-                }
-                if (!matched) {
-                  currentAsst.steps.push({
-                    kind: "tool_call",
-                    id: cid || `step-${Date.now()}-${Math.random()}`,
-                    call_id: cid,
-                    tool: toolName,
-                    args: rawArgs,
-                    result: strOut,
-                    state: toolState
-                  });
-                }
-              }
-
-              if (currentAsst.toolCalls) {
-                let matched = false;
-                if (cid) {
-                  for (const tc of currentAsst.toolCalls) {
-                    if (tc.call_id === cid || tc.id === cid) {
-                      if (hasOutput) {
-                        tc.result = strOut;
-                        tc.state = toolState;
-                      }
-                      if (rawArgs && !tc.args) tc.args = rawArgs;
-                      matched = true;
-                      break;
-                    }
-                  }
-                }
-                if (!matched) {
-                  currentAsst.toolCalls.push({
-                    id: cid || `call-${Date.now()}-${Math.random()}`,
-                    call_id: cid,
-                    tool: toolName,
-                    args: rawArgs,
-                    result: strOut,
-                    state: toolState
-                  });
-                }
-              }
-            }
-          }
-
-          // Also process direct steps array on message if present
-          if (Array.isArray(m.steps) && m.steps.length > 0) {
-            for (const s of m.steps) {
-              const sid = s.id || s.call_id;
-              const sTool = s.name || s.tool || "Tool";
-              const sArgs = s.arguments || s.args || "";
-              const sOut = s.output || s.result || "";
-              const sState = s.status === "completed" || s.status === "succeeded" ? "success" : (s.status === "failed" || s.status === "error" ? "error" : "calling");
-
-              if (currentAsst.steps && !currentAsst.steps.some(existing => existing.call_id === sid || existing.id === sid)) {
-                currentAsst.steps.push({
-                  kind: "tool_call",
-                  id: sid || `step-${Date.now()}`,
-                  call_id: sid,
-                  tool: sTool,
-                  args: typeof sArgs === "string" ? sArgs : JSON.stringify(sArgs),
-                  result: typeof sOut === "string" ? sOut : JSON.stringify(sOut),
-                  state: sState
-                });
-              }
-            }
-          }
-
-          const t = textContent.trim();
-          if (t) {
-            if (t.startsWith("The user said ") || t.startsWith("According to my activation instructions")) {
-              currentAsst.reasoning = currentAsst.reasoning ? currentAsst.reasoning + "\n" + t : t;
-              currentAsst.steps!.push({
-                kind: "reasoning",
-                text: t
-              });
-            } else {
-              if (currentAsst.content) {
-                currentAsst.content += "\n\n" + t;
-              } else {
-                currentAsst.content = t;
-              }
-            }
-          }
-          if (ts) {
-            currentAsst.timestamp = ts;
-          }
-        }
-      }
-    }
-
-    const filteredTurns: ChatMessage[] = [];
-    for (const t of turns) {
-      if (t.role === "user") {
-        if (t.content.includes("# 引导模式") || t.content.includes("BOOTSTRAP.md")) {
-          continue;
-        }
-        const last = filteredTurns[filteredTurns.length - 1];
-        if (last && last.role === "user" && last.content.trim() === t.content.trim()) {
-          continue;
-        }
-      }
-      // If assistant message already responded (has content or reasoning) or is historical turn,
-      // reconcile any lingering "calling" tool states to "success" so it doesn't stay stuck on "calling..."
-      if (t.role === "assistant") {
-        if (t.content || t.reasoning || t.steps?.some(s => s.kind === "tool_call" && s.result)) {
-          if (t.steps) {
-            for (const s of t.steps) {
-              if (s.kind === "tool_call" && s.state === "calling") {
-                s.state = "success";
-              }
-            }
-          }
-          if (t.toolCalls) {
-            for (const tc of t.toolCalls) {
-              if (tc.state === "calling") {
-                tc.state = "success";
-              }
-            }
-          }
-        }
-      }
-
-      if (t.content || (t.steps && t.steps.length > 0) || (t.toolCalls && t.toolCalls.length > 0) || t.reasoning) {
-        filteredTurns.push(t);
-      }
-    }
+    const filteredTurns = parseRawChatMessages(rawList, chatId, false);
     setCachedChatMessages(chatId, filteredTurns, agentId);
     return filteredTurns;
   } catch (err) {
