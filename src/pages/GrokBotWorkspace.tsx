@@ -3245,6 +3245,27 @@ export function GrokBotWorkspace() {
       setIsLoadingMessages(true);
     }
 
+    // Clear unread indicator and mark read both locally and in backend when active chat is viewed
+    const currentChat = chats.find((c) => c.id === selectedChatId || c.session_id === selectedChatId);
+    const sessionIdsToClear = [selectedChatId, currentChat?.session_id].filter(Boolean) as string[];
+
+    markChatAsRead(selectedChatId, selectedAgentId);
+    if (currentChat?.session_id) {
+      markChatAsRead(currentChat.session_id, selectedAgentId);
+    }
+    setChats((prev) =>
+      prev.map((c) => (c.id === selectedChatId || (currentChat?.session_id && c.session_id === currentChat.session_id) ? { ...c, unread: false } : c))
+    );
+    setUnreadCompletedSessions((prev) => {
+      const list = prev[selectedAgentId] || [];
+      const updatedList = list.filter((id) => !sessionIdsToClear.includes(id));
+      const updated = { ...prev, [selectedAgentId]: updatedList };
+      try {
+        localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     // 2. Background Revalidation from API
     fetchChatMessages(selectedChatId, selectedAgentId).then((loadedMsgs) => {
       if (!mounted) return;
