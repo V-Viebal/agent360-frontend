@@ -11,6 +11,11 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // If running on localhost / 127.0.0.1, do not cache assets to prevent stale chunk errors during local development
+  if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
+    self.skipWaiting();
+    return;
+  }
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(STATIC_ASSETS);

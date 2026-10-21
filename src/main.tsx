@@ -21,7 +21,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 declare const __APP_BUILD__: string;
 
 // Register Progressive Web App Service Worker for offline resilience
-if ("serviceWorker" in navigator && !window.location.host.includes("localhost") && !window.location.host.includes("127.0.0.1") && !window.location.host.startsWith("172.")) {
+if ("serviceWorker" in navigator) {
+  // If running on local development host (localhost or 127.0.0.1), unregister any active service worker and clear caches to prevent stale chunks
+  if (window.location.host.includes("localhost") || window.location.host.includes("127.0.0.1") || window.location.host.startsWith("172.")) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const reg of registrations) {
+        reg.unregister();
+      }
+    });
+    if (typeof caches !== "undefined" && caches.keys) {
+      caches.keys().then((keys) => {
+        for (const k of keys) {
+          if (k.startsWith("skyer-")) caches.delete(k);
+        }
+      });
+    }
+  } else {
   window.addEventListener("load", () => {
     // Versioned URL + updateViaCache:none: a new build always installs a new SW even if a CDN or the
     // browser still holds an old /sw.js; reload once when the new SW takes control.
@@ -41,4 +56,5 @@ if ("serviceWorker" in navigator && !window.location.host.includes("localhost") 
         console.warn("SW registration failed: ", err);
       });
   });
+}
 }

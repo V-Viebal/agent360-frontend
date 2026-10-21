@@ -1623,21 +1623,34 @@ export function GrokBotWorkspace() {
 
   const handleSelectModel = async (newModelId: string) => {
     if (!selectedAgent) return;
+    const targetAgentId = selectedAgent.id;
+    const agentName = selectedAgent.name;
     const found = availableModels.find((m) => m.model === newModelId);
     const providerId = found ? found.providerId : "llm360coding";
     setIsChangingModel(true);
     setIsModelDropdownOpen(false);
+    triggerHaptic(15);
+    setForkToast(`Đang chuyển mô hình ${newModelId} cho ${agentName}...`);
     try {
-      const ok = await updateAgentActiveModel(selectedAgent.id, providerId, newModelId);
+      const ok = await updateAgentActiveModel(targetAgentId, providerId, newModelId);
       if (ok) {
-        // Update local agent model
-        selectedAgent.model = newModelId;
+        setForkToast(`Đã đổi mô hình sang ${newModelId} cho ${agentName}`);
         setAgents((prev) =>
-          prev.map((a) => (a.id === selectedAgent.id ? { ...a, model: newModelId } : a))
+          prev.map((a) => (a.id === targetAgentId ? { ...a, model: newModelId } : a))
         );
+        try {
+          const fresh = await fetchInfraAgents();
+          if (fresh && fresh.length > 0) setAgents(fresh);
+        } catch {}
+      } else {
+        setForkToast(`Không thể cập nhật mô hình cho ${agentName}`);
       }
+    } catch (err) {
+      console.error("handleSelectModel error:", err);
+      setForkToast(`Lỗi khi chuyển mô hình cho ${agentName}`);
     } finally {
       setIsChangingModel(false);
+      setTimeout(() => setForkToast(null), 3000);
     }
   };
   const [selectedAgentId, setSelectedAgentId] = useState<string>(() => {
