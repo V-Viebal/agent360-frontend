@@ -158,9 +158,22 @@ jobs:
       - name: Render smoke (no runtime ReferenceError on boot)
         run: |
           # tsc catches most missing identifiers, but a bundle built from a different tree must still boot.
+          # Cloudflare WAN edges occasionally return transient 525/timeout during live deploy, so retry up to 5 times.
           PUBLIC_URL="${{ steps.env-target.outputs.public_url }}"
-          js=$(curl -fsS -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/?ts=$(date +%s)" | grep -o 'assets/index-[^"]*\.js')
-          curl -fsS -o /dev/null -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/$js" || { echo "::error::$js not served"; exit 1; }
+          js=""
+          for i in $(seq 1 5); do
+            js=$(curl -fsS -m 15 -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/?ts=$(date +%s)" | grep -o 'assets/index-[^"]*\.js' || true)
+            if [ -n "$js" ]; then
+              if curl -fsS -m 15 -o /dev/null -A "Mozilla/5.0 agent360-ci" "$PUBLIC_URL/$js"; then
+                echo "Render smoke passed: $js reachable"
+                exit 0
+              fi
+            fi
+            echo "Retrying Render smoke probe ($i/5)..."
+            sleep 3
+          done
+          echo "::error::Render smoke failed: $js not served or unreachable on $PUBLIC_URL"
+          exit 1
 
       - name: Prune bundles older than 3 days (keep the live set)
         run: |
