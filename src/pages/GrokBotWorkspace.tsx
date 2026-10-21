@@ -3283,12 +3283,16 @@ export function GrokBotWorkspace() {
 
     let sse: EventSource | null = null;
     try {
-      let sseUrl = `/api/v1/agents/${encodeURIComponent(selectedAgentId)}/chats/${encodeURIComponent(selectedChatId)}/stream`;
+      const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
+      let sseUrl = `/api/agents/${encodeURIComponent(selectedAgentId)}/chats/${encodeURIComponent(selectedChatId)}/stream`;
       try {
         const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-        if (token) sseUrl += `?access_token=${encodeURIComponent(token)}`;
-        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token");
-        if (opKey) sseUrl += `${token ? "&" : "?"}operatorToken=${encodeURIComponent(opKey)}`;
+        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || defaultOpKey;
+        const qParams = new URLSearchParams();
+        if (token) qParams.set("access_token", token);
+        if (opKey) qParams.set("operatorToken", opKey);
+        const qStr = qParams.toString();
+        if (qStr) sseUrl += `?${qStr}`;
       } catch {}
 
       sse = new EventSource(sseUrl);
@@ -8020,17 +8024,15 @@ export function GrokBotWorkspace() {
 
                       return (
                         <>
-                          {isCRunning ? (
-                            <Loader2 size={13} className="text-blue-400 animate-spin" />
-                          ) : c.channel && c.channel.toLowerCase() !== "console" ? (
+                          {c.channel && c.channel.toLowerCase() !== "console" ? (
                             <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
                           ) : (
                             displayLetter
                           )}
-                          {/* Simple clean fixed dot at corner without extra pulse/glow */}
+                          {/* Loading state: subtle gently blinking dot */}
                           {isCRunning && (
                             <span
-                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border border-white dark:border-[#16161e] z-10"
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#16161e] z-10"
                               title="Phiên đang chạy"
                             />
                           )}
@@ -8237,18 +8239,10 @@ export function GrokBotWorkspace() {
                         <Check size={11} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#f8a87c]"} />
                       </span>
 
-                      {/* Default Channel icon or Live Running Spinner */}
-                      {(() => {
-                        return (
-                          <span className={selectedChatIds.includes(chat.id) ? "hidden" : isChatRunning ? "flex items-center justify-center" : "block group-hover:hidden flex items-center justify-center"}>
-                            {isChatRunning ? (
-                              <Loader2 size={11} className="text-blue-400 animate-spin shrink-0" />
-                            ) : (
-                              <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
-                            )}
-                          </span>
-                        );
-                      })()}
+                      {/* Default Channel icon */}
+                      <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden flex items-center justify-center"}>
+                        <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
+                      </span>
 
                       {/* Status Indicator Dot: Simple fixed corner dot without shadow/glow/pulse */}
                       {(() => {
@@ -8257,7 +8251,7 @@ export function GrokBotWorkspace() {
                         if (isChatRunning) {
                           return (
                             <span
-                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border border-white dark:border-[#181822] z-10"
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#181822] z-10"
                               title="Phiên đang chạy"
                             />
                           );
@@ -8311,9 +8305,6 @@ export function GrokBotWorkspace() {
                                 return (
                                   <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                                     <span>{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
-                                    {isChatRunning && (
-                                      <Loader2 size={10} className="text-blue-400 animate-spin shrink-0 inline-block" />
-                                    )}
                                   </span>
                                 );
                               })()}

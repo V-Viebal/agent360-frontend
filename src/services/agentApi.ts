@@ -423,10 +423,22 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
       `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}`
     ].filter(Boolean) as string[];
 
+    const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
+    let opToken = "";
+    let accessToken = "";
+    try {
+      accessToken = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || defaultOpKey;
+    } catch {}
+
+    const reqHeaders: Record<string, string> = { Accept: "application/json" };
+    if (accessToken) reqHeaders["Authorization"] = `Bearer ${accessToken}`;
+    if (opToken) reqHeaders["X-Agent360-Operator-Token"] = opToken;
+
     let res: Response | null = null;
     for (const u of urlsToTry) {
       try {
-        const attempt = await fetch(u, { headers: { Accept: "application/json" } });
+        const attempt = await fetch(u, { headers: reqHeaders });
         if (attempt.ok) {
           res = attempt;
           break;

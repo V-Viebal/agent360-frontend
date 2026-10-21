@@ -92,9 +92,6 @@ export function CollapsibleSessionsRail({
                   </div>
                   <h4 className="font-medium text-neutral-200 line-clamp-1 mb-1 flex items-center gap-1.5">
                     <span className="truncate">{sess.title}</span>
-                    {(sess.is_running || (sess as any).isRunning || sess.status === "running" || sess.status === "in_progress") && (
-                      <Loader2 size={11} className="text-blue-400 animate-spin shrink-0" />
-                    )}
                   </h4>
                   <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
                     {sess.lastMessageSnippet}
@@ -111,8 +108,8 @@ export function CollapsibleSessionsRail({
                   {isActive ? (
                     <span className="text-[#d86f4c] font-bold">{t("sessions.active")}</span>
                   ) : (sess.is_running || (sess as any).isRunning || sess.status === "running" || sess.status === "in_progress") ? (
-                    <span className="text-blue-400 font-semibold flex items-center gap-1">
-                      <Loader2 size={10} className="animate-spin" />
+                    <span className="text-blue-400 font-semibold flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
                       <span>running</span>
                     </span>
                   ) : null}
