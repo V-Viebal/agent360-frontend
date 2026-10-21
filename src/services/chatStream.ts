@@ -12,6 +12,7 @@ export interface StreamRetryOptions {
   initialDelayMs?: number;
   onRetryAttempt?: (attempt: number, error: Error) => void;
   signal?: AbortSignal;
+  channel?: string;
 }
 
 export async function sendConsoleChatMessageStream(
@@ -38,12 +39,19 @@ export async function sendConsoleChatMessageStream(
     }
   } catch {}
 
+  const resolvedChannel = options.channel ||
+    (sessionId.startsWith("telegram:") || sessionId.includes("telegram") ? "telegram"
+      : sessionId.startsWith("zalo:") || sessionId.includes("zalo") ? "zalo"
+      : sessionId.startsWith("discord:") ? "discord"
+      : sessionId.startsWith("slack:") ? "slack"
+      : "console");
+
   // Format standard Skyer console input with loop_mode support
   const payload = {
     user_id: "default",
     session_id: sessionId || `session-${Date.now()}`,
     agent_id: targetAgent,
-    channel: "console",
+    channel: resolvedChannel,
     loop_mode: activeLoopMode,
     input: [
       {

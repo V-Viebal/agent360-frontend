@@ -578,6 +578,102 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
             }
           }
         } else if (mtype === "message" || !mtype) {
+          // Process any tool executions embedded inside message data contents (QwenPaw native format)
+          if (callDatas.length > 0) {
+            for (const d of callDatas) {
+              const cid = d.call_id || d.tool_call_id || d.id;
+              const toolName = d.name || "Tool";
+              const rawArgs = d.arguments !== undefined
+                ? (typeof d.arguments === "string" ? d.arguments : JSON.stringify(d.arguments))
+                : (d.args !== undefined ? (typeof d.args === "string" ? d.args : JSON.stringify(d.args)) : "");
+              const hasOutput = d.output !== undefined || d.result !== undefined;
+              const strOut = hasOutput
+                ? (typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result)))
+                : undefined;
+              const toolState = hasOutput
+                ? ((d.state === "error" || d.status === "error" || d.error) ? "error" : "success")
+                : "calling";
+
+              if (currentAsst.steps) {
+                let matched = false;
+                if (cid) {
+                  for (const s of currentAsst.steps) {
+                    if (s.call_id === cid || s.id === cid) {
+                      if (hasOutput) {
+                        s.result = strOut;
+                        s.state = toolState;
+                      }
+                      if (rawArgs && !s.args) s.args = rawArgs;
+                      matched = true;
+                      break;
+                    }
+                  }
+                }
+                if (!matched) {
+                  currentAsst.steps.push({
+                    kind: "tool_call",
+                    id: cid || `step-${Date.now()}-${Math.random()}`,
+                    call_id: cid,
+                    tool: toolName,
+                    args: rawArgs,
+                    result: strOut,
+                    state: toolState
+                  });
+                }
+              }
+
+              if (currentAsst.toolCalls) {
+                let matched = false;
+                if (cid) {
+                  for (const tc of currentAsst.toolCalls) {
+                    if (tc.call_id === cid || tc.id === cid) {
+                      if (hasOutput) {
+                        tc.result = strOut;
+                        tc.state = toolState;
+                      }
+                      if (rawArgs && !tc.args) tc.args = rawArgs;
+                      matched = true;
+                      break;
+                    }
+                  }
+                }
+                if (!matched) {
+                  currentAsst.toolCalls.push({
+                    id: cid || `call-${Date.now()}-${Math.random()}`,
+                    call_id: cid,
+                    tool: toolName,
+                    args: rawArgs,
+                    result: strOut,
+                    state: toolState
+                  });
+                }
+              }
+            }
+          }
+
+          // Also process direct steps array on message if present
+          if (Array.isArray(m.steps) && m.steps.length > 0) {
+            for (const s of m.steps) {
+              const sid = s.id || s.call_id;
+              const sTool = s.name || s.tool || "Tool";
+              const sArgs = s.arguments || s.args || "";
+              const sOut = s.output || s.result || "";
+              const sState = s.status === "completed" || s.status === "succeeded" ? "success" : (s.status === "failed" || s.status === "error" ? "error" : "calling");
+
+              if (currentAsst.steps && !currentAsst.steps.some(existing => existing.call_id === sid || existing.id === sid)) {
+                currentAsst.steps.push({
+                  kind: "tool_call",
+                  id: sid || `step-${Date.now()}`,
+                  call_id: sid,
+                  tool: sTool,
+                  args: typeof sArgs === "string" ? sArgs : JSON.stringify(sArgs),
+                  result: typeof sOut === "string" ? sOut : JSON.stringify(sOut),
+                  state: sState
+                });
+              }
+            }
+          }
+
           const t = textContent.trim();
           if (t) {
             if (t.startsWith("The user said ") || t.startsWith("According to my activation instructions")) {

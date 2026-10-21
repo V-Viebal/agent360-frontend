@@ -4208,8 +4208,12 @@ export function GrokBotWorkspace() {
 
     try {
       let accumulated = "";
+      const currentActiveChat = chats.find((c) => c.id === selectedChatId || c.session_id === selectedChatId);
+      const activeTargetChannel = currentActiveChat?.channel;
+      const targetSessionId = currentActiveChat?.session_id || selectedChatId || "default";
+
       await sendConsoleChatMessageStream(
-        selectedChatId || "default",
+        targetSessionId,
         userText,
         selectedAgent.slug,
         (chunkText) => {
@@ -4247,7 +4251,7 @@ export function GrokBotWorkspace() {
             })
           );
         },
-        { signal: abortController.signal }
+        { signal: abortController.signal, channel: activeTargetChannel }
       );
 
       // Finalize: Reconcile any lingering "calling" tool states to "success" upon response completion
