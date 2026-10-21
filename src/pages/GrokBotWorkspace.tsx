@@ -8170,14 +8170,14 @@ export function GrokBotWorkspace() {
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
             {filteredChats.length > 0 && selectedChatIds.length > 0 && (
-              <div className="px-3 py-1.5 flex items-center justify-between border-b border-[#1c1c24] text-[11px] font-mono select-none bg-[#101017] animate-in fade-in duration-150">
+              <div className="px-2.5 py-1 flex items-center justify-between border-b border-[#1c1c24] text-[10px] font-mono select-none bg-[#101017]/90 animate-in fade-in duration-150">
                 <div
                   onClick={() => handleToggleSelectAll(filteredChats)}
-                  className="flex items-center gap-2 cursor-pointer group text-neutral-400 hover:text-white transition-colors"
+                  className="flex items-center gap-1.5 cursor-pointer group text-neutral-400 hover:text-white transition-colors"
                   title="Chọn tất cả hoặc bỏ chọn tất cả phiên trong danh sách này"
                 >
                   <div
-                    className={`h-4 w-4 rounded-md border flex items-center justify-center transition-all ${
+                    className={`h-3.5 w-3.5 rounded border flex items-center justify-center transition-all ${
                       filteredChats.every((c) => selectedChatIds.includes(c.id))
                         ? "bg-[#f8a87c] border-[#f8a87c] text-black shadow-xs"
                         : filteredChats.some((c) => selectedChatIds.includes(c.id))
@@ -8186,20 +8186,20 @@ export function GrokBotWorkspace() {
                     }`}
                   >
                     {filteredChats.every((c) => selectedChatIds.includes(c.id)) ? (
-                      <Check size={11} className="stroke-[3]" />
+                      <Check size={9} className="stroke-[3]" />
                     ) : filteredChats.some((c) => selectedChatIds.includes(c.id)) ? (
-                      <div className="h-1.5 w-1.5 rounded-xs bg-[#f8a87c]" />
+                      <div className="h-1 w-1 rounded-xs bg-[#f8a87c]" />
                     ) : null}
                   </div>
-                  <span className="font-sans font-medium text-xs text-neutral-300 group-hover:text-white">
+                  <span className="font-sans text-[11px] text-neutral-400 group-hover:text-neutral-200">
                     {filteredChats.every((c) => selectedChatIds.includes(c.id))
                       ? "Bỏ chọn tất cả"
-                      : "Chọn tất cả (Select All)"}
+                      : "Chọn tất cả"}
                   </span>
                 </div>
 
                 {selectedChatIds.length > 0 && (
-                  <span className="text-[10px] text-[#f8a87c] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.5 rounded">
+                  <span className="text-[9px] font-mono text-[#f8a87c] font-medium bg-[#f8a87c]/10 px-1.5 py-0.2 rounded border border-[#f8a87c]/20">
                     Đã chọn {selectedChatIds.length}/{filteredChats.length}
                   </span>
                 )}
