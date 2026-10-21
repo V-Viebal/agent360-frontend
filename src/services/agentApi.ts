@@ -252,16 +252,35 @@ export async function fetchActiveChats(): Promise<string[]> {
 export async function updateAgentActiveModel(agentId: string, providerId: string, model: string): Promise<boolean> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    // Fetch full current agent record first because Skyer API requires full payload on PUT
+    const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
+    let token = "";
+    let opToken = "";
+    try {
+      token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || defaultOpKey;
+    } catch {}
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Agent-Id": cleanId,
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (opToken) {
+      headers["X-Agent360-Operator-Token"] = opToken;
+      headers["X-Operator-Token"] = opToken;
+    }
+
     const putRes = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers,
       body: JSON.stringify({ scope: "agent", agent_id: cleanId, provider_id: providerId, model }),
     });
-    return putRes.ok;
+    if (!putRes.ok) {
+      console.warn(`updateAgentActiveModel failed: HTTP ${putRes.status}`);
+      return false;
+    }
+    return true;
   } catch (err) {
     console.warn("Failed to update agent active model:", err);
     return false;

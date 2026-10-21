@@ -2065,9 +2065,13 @@ export function GrokBotWorkspace() {
           })
         );
         if (Array.isArray(snapshot.unread_session_ids) && snapshot.unread_session_ids.length > 0) {
+          // Never mark currently viewed active chat as unread
+          const unreadFiltered = snapshot.unread_session_ids.filter(
+            (id) => id !== selectedChatId && (!selectedChat?.session_id || id !== selectedChat.session_id)
+          );
           setUnreadCompletedSessions((prev) => ({
             ...prev,
-            [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), ...snapshot.unread_session_ids]))
+            [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), ...unreadFiltered]))
           }));
         }
       },
@@ -2108,10 +2112,16 @@ export function GrokBotWorkspace() {
       },
       onUnreadUpdate: (update: SessionUnreadUpdate) => {
         if (!update.is_unread) {
-          setUnreadCompletedSessions((prev) => ({
-            ...prev,
-            [selectedAgentId]: (prev[selectedAgentId] || []).filter((id) => id !== update.session_id)
-          }));
+          setUnreadCompletedSessions((prev) => {
+            const next = { ...prev };
+            for (const key of Object.keys(next)) {
+              next[key] = next[key].filter((id) => id !== update.session_id);
+            }
+            try {
+              localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
+            } catch {}
+            return next;
+          });
           setChats((prev) => prev.map((c) => (c.id === update.session_id || c.session_id === update.session_id ? { ...c, unread: false } : c)));
         }
       }
@@ -2169,6 +2179,26 @@ export function GrokBotWorkspace() {
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const dragCounterRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Input composer with Draft Persistence per Session (hoisted to prevent TDZ ReferenceError)
+  const [inputText, setInputText] = useState(() => {
+    try {
+      const urlPrompt = new URLSearchParams(window.location.search).get("prompt")?.slice(0, 2000);
+      if (urlPrompt) return urlPrompt;
+      const lastChatId = localStorage.getItem("agent360_last_chat_id");
+      if (lastChatId) {
+        const savedDraft = localStorage.getItem(`agent360_draft_${lastChatId}`);
+        if (savedDraft) return savedDraft;
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  });
+  const inputTextRef = useRef(inputText);
+  useEffect(() => {
+    inputTextRef.current = inputText;
+  }, [inputText]);
 
   // Voice recording / Speech-to-text state
   const [isRecording, setIsRecording] = useState(false);
@@ -2296,7 +2326,7 @@ export function GrokBotWorkspace() {
         setIsRecording(true);
         setVoiceError(null);
         // Anchor the baseline text when recording starts so interim chunks do not duplicate
-        recognitionBaseTextRef.current = inputText.trim();
+        recognitionBaseTextRef.current = (inputTextRef.current || "").trim();
 
         // Safety fallback: if no speech is detected after 10 seconds of opening mic, auto-close mic
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -2484,21 +2514,7 @@ export function GrokBotWorkspace() {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Input composer with Draft Persistence per Session
-  const [inputText, setInputText] = useState(() => {
-    try {
-      const urlPrompt = new URLSearchParams(window.location.search).get("prompt")?.slice(0, 2000);
-      if (urlPrompt) return urlPrompt;
-      const lastChatId = localStorage.getItem("agent360_last_chat_id");
-      if (lastChatId) {
-        const savedDraft = localStorage.getItem(`agent360_draft_${lastChatId}`);
-        if (savedDraft) return savedDraft;
-      }
-      return "";
-    } catch {
-      return "";
-    }
-  });
+
 
   // Seamless focus & cursor retention when transitioning between single-line and multiline layout
   // Khi switch giữa multiple line và single line, luôn đảm bảo giữ focus và đặt con trỏ ở cuối
@@ -3428,13 +3444,14 @@ export function GrokBotWorkspace() {
       prev.map((c) => (c.id === selectedChatId || (currentChat?.session_id && c.session_id === currentChat.session_id) ? { ...c, unread: false } : c))
     );
     setUnreadCompletedSessions((prev) => {
-      const list = prev[selectedAgentId] || [];
-      const updatedList = list.filter((id) => !sessionIdsToClear.includes(id));
-      const updated = { ...prev, [selectedAgentId]: updatedList };
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        next[key] = next[key].filter((id) => !sessionIdsToClear.includes(id));
+      }
       try {
-        localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
+        localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
       } catch {}
-      return updated;
+      return next;
     });
 
     // 2. Background Revalidation from API
@@ -3506,10 +3523,23 @@ export function GrokBotWorkspace() {
           const isTurnRunning = payload.is_running ?? (payload.last_message && (payload.last_message.status === "in_progress" || payload.last_message.status === "running"));
           if (isTurnRunning) {
             setRunningChatIds((prev) => Array.from(new Set([...prev, ...ids, selectedChatId])));
-          } else if (payload.last_message && payload.last_message.status === "completed") {
-            setRunningChatIds((prev) => prev.filter((id) => !ids.includes(id) && id !== selectedChatId));
+          } else {
+            setRunningChatIds((prev) => prev.filter((id) => !ids.includes(id) && (id !== selectedChatId || !isStreaming)));
+            setChats((prev) =>
+              prev.map((c) => {
+                if (ids.includes(c.id) || (c.session_id && ids.includes(c.session_id))) {
+                  return {
+                    ...c,
+                    is_running: false,
+                    isRunning: false,
+                    status: "idle"
+                  };
+                }
+                return c;
+              })
+            );
             const targetChatId = payload.chat_id || payload.session_id;
-            if (targetChatId && (targetChatId !== selectedChatId || document.hidden)) {
+            if (targetChatId && targetChatId !== selectedChatId && document.hidden) {
               setUnreadCompletedSessions((prev) => {
                 const list = prev[selectedAgentId] || [];
                 if (list.includes(targetChatId)) return prev;
@@ -3728,6 +3758,20 @@ export function GrokBotWorkspace() {
     if (chat.session_id) {
       markChatAsRead(chat.session_id, selectedAgent.id);
     }
+    const idsToClear = [chat.id, chat.session_id].filter(Boolean) as string[];
+    setUnreadCompletedSessions((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        next[key] = next[key].filter((id) => !idsToClear.includes(id));
+      }
+      try {
+        localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setChats((prev) =>
+      prev.map((c) => (idsToClear.includes(c.id) || (c.session_id && idsToClear.includes(c.session_id)) ? { ...c, unread: false } : c))
+    );
     // Update local chat session state
     setChats((prev) => prev.map((c) => (c.id === chat.id ? { ...c, unread: false } : c)));
     // Clear unread mark for this session
@@ -5376,9 +5420,6 @@ export function GrokBotWorkspace() {
                           )}
                           <span className="font-medium">Vô hiệu hóa ({disabledFilteredAgents.length})</span>
                         </div>
-                        <span className="text-[10px] text-neutral-400 dark:text-neutral-600 font-mono">
-                          {disabledAgentsExpanded ? "Đang mở" : "Đã tắt"}
-                        </span>
                       </button>
 
                       {disabledAgentsExpanded && (
@@ -6212,7 +6253,8 @@ export function GrokBotWorkspace() {
                       {(() => {
                         if (!hasSteps && !hasTools) return null;
                         const traceKey = `${selectedChatId || "chat"}-turn-${mIdx}`;
-                        const isTurnDone = Boolean(msg.content && !(isStreaming && isLastTurn));
+                        const isTurnActive = (isStreaming || isCurrentSessionRunning) && isLastTurn;
+                        const isTurnDone = Boolean(msg.content && !isTurnActive);
                         const isTraceExpanded = expandedTraceKeys[traceKey] !== undefined
                           ? expandedTraceKeys[traceKey]
                           : !isTurnDone;
@@ -6220,7 +6262,7 @@ export function GrokBotWorkspace() {
                         return (
                           <TurnExecutionAccordion
                             msg={msg}
-                            isStreamingThisTurn={isStreaming && isLastTurn}
+                            isStreamingThisTurn={isTurnActive}
                             isExpanded={isTraceExpanded}
                             onToggle={() => {
                               setExpandedTraceKeys((prev) => ({
@@ -6418,8 +6460,8 @@ export function GrokBotWorkspace() {
           </>
           )}
 
-          {/* Active Session Responding Indicator when waiting for assistant to start first turn */}
-          {isCurrentSessionRunning && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+          {/* Active Session Responding Indicator during ongoing agent turn */}
+          {isCurrentSessionRunning && !isStreaming && (
             <div className="flex flex-col items-start w-full space-y-1.5 animate-in fade-in duration-200 my-2">
               <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none">
                 <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
