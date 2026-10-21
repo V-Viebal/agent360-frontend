@@ -2618,13 +2618,13 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     const handleOutsideChatMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-chat-menu-container="true"]')) {
+      if (!target.closest('[data-chat-menu-container="true"]') && !target.closest('[role="menu"]')) {
         setActiveChatMenuId(null);
       }
     };
     const handleOutsideAgentMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-agent-menu-container=\"true\"]")) {
+      if (!target.closest('[data-agent-menu-container="true"]') && !target.closest('[role="menu"]')) {
         setActiveAgentMenuId(null);
       }
     };
@@ -2641,7 +2641,35 @@ export function GrokBotWorkspace() {
   }, [activeChatMenuId, activeAgentMenuId]);
 
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned" | "archived">("all");
-  const [channelFilter, setChannelFilter] = useState<string>("console");
+  const [channelFilter, setChannelFilter] = useState<string>(() => {
+    try {
+      const savedGlobal = localStorage.getItem("agent360_last_channel_filter");
+      return savedGlobal || "console";
+    } catch {
+      return "console";
+    }
+  });
+
+  // Persist and restore channel tab filter specifically for each agent
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    try {
+      const savedForAgent = localStorage.getItem(`agent360_channel_filter_${selectedAgentId}`);
+      if (savedForAgent) {
+        setChannelFilter(savedForAgent);
+      }
+    } catch {}
+  }, [selectedAgentId]);
+
+  const handleSelectChannelFilter = (newChannel: string) => {
+    setChannelFilter(newChannel);
+    try {
+      localStorage.setItem("agent360_last_channel_filter", newChannel);
+      if (selectedAgentId) {
+        localStorage.setItem(`agent360_channel_filter_${selectedAgentId}`, newChannel);
+      }
+    } catch {}
+  };
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
   // Mobile Hold-Touch / Long-Press Action Sheet state
@@ -2810,8 +2838,20 @@ export function GrokBotWorkspace() {
     }
     triggerHaptic(20);
     const targetId = agent.id;
+    const rawSlug = agent.slug || agent.id.replace(/^bot:agent360:/, "");
+    const isRootDefault = ["default-core", "gm-boc", "climax-default", "its-default", "gl-default", "planthy-pm"].includes(rawSlug) ||
+                          rawSlug.endsWith("-default") || rawSlug === "default";
+
     const isCurrentlyEnabled = agent.enabled !== false && agent.status !== "disabled";
     const nextEnabled = !isCurrentlyEnabled;
+
+    // Prevent disabling core node root agents which cannot be disabled on QwenPaw runtime
+    if (!nextEnabled && isRootDefault) {
+      setActiveAgentMenuId(null);
+      setForkToast(`Agent ${agent.name} là Core Root Agent của cụm hạ tầng, không thể vô hiệu hóa.`);
+      setTimeout(() => setForkToast(null), 3500);
+      return;
+    }
 
     setTogglingAgentId(targetId);
     setActiveAgentMenuId(null);
@@ -2831,7 +2871,9 @@ export function GrokBotWorkspace() {
     setForkToast(nextEnabled ? `Đang kích hoạt Agent ${agent.name}...` : `Đang vô hiệu hóa Agent ${agent.name}...`);
 
     try {
+      console.log(`[Agent360] Initiating toggleAgentEnabled for ${targetId} -> enabled: ${nextEnabled}`);
       const ok = await toggleAgentEnabled(targetId, nextEnabled);
+      console.log(`[Agent360] toggleAgentEnabled result for ${targetId}:`, ok);
       if (ok) {
         setForkToast(nextEnabled ? `Đã kích hoạt Agent ${agent.name}` : `Đã vô hiệu hóa Agent ${agent.name}`);
         try {
@@ -8598,7 +8640,7 @@ export function GrokBotWorkspace() {
                     <button
                       key={ch.id}
                       type="button"
-                      onClick={() => setChannelFilter(ch.id)}
+                      onClick={() => handleSelectChannelFilter(ch.id)}
                       className={`px-2 py-0.5 rounded-full shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
                         isActive
                           ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c] font-semibold shadow-xs"
