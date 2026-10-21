@@ -88,7 +88,7 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className={`overflow-y-auto ${bodyClassName}`}>
+        <div className={`overflow-y-auto scrollbar-hover ${bodyClassName}`}>
           {children}
         </div>
       </div>

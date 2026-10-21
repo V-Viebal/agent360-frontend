@@ -60,7 +60,7 @@ export function SlideOverDrawer({
         </div>
 
         {/* Drawer Body (Scrollable) */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs font-sans">
+        <div className="flex-1 overflow-y-auto scrollbar-hover p-5 space-y-5 text-xs font-sans">
           {children}
         </div>
 

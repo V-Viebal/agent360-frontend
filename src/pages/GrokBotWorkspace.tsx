@@ -1726,7 +1726,7 @@ export function GrokBotWorkspace() {
         try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
       }
     }
-  }, [agentParam, agents.length]);
+  }, [agentParam, Boolean(agents.length > 0)]);
 
   useEffect(() => {
     if (chatParam && chatParam !== selectedChatId) {
@@ -3376,7 +3376,7 @@ const handleBatchDeleteSelectedChats = () => {
         if (cfg?.mode) setActiveLoopMode(cfg.mode);
       });
     }
-  }, [selectedAgentId, mcpRefreshTrigger, agents.length]);
+  }, [selectedAgentId, mcpRefreshTrigger]);
 
   // Fetch agent-specific chats whenever selectedAgentId changes
   useEffect(() => {
@@ -3444,7 +3444,7 @@ const handleBatchDeleteSelectedChats = () => {
       }
     }
     loadAgentChats();
-  }, [selectedAgentId, agents.length]);
+  }, [selectedAgentId]);
 
   // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
   // Client-created sessions (session-*) are not in the server list yet and are allowed.
@@ -3508,9 +3508,11 @@ const handleBatchDeleteSelectedChats = () => {
         const lastTurn = loadedMsgs[loadedMsgs.length - 1];
         if (lastTurn && lastTurn.content) {
           const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
-          setChats((prev) =>
-            prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
-          );
+          setChats((prev) => {
+            const cur = prev.find((c) => c.id === selectedChatId);
+            if (cur && cur.lastMessageSnippet === cleanLastText) return prev;
+            return prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c));
+          });
         }
       } else if (!cachedTurns || cachedTurns.length === 0) {
         // Empty new or clean session: keep messages empty to display quick prompt suggestions immediately
@@ -3827,40 +3829,7 @@ const handleBatchDeleteSelectedChats = () => {
     }
   };
 
-  // Auto-mark active session as read and clear unread completed dot whenever selectedChatId changes
-  useEffect(() => {
-    if (!selectedChatId) return;
-    const agId = selectedAgent.id || selectedAgentId;
-    markChatAsRead(selectedChatId, agId);
-    const curChat = chats.find((c) => c.id === selectedChatId);
-    if (curChat?.session_id) {
-      markChatAsRead(curChat.session_id, agId);
-    }
-    const idsToClear = [selectedChatId, curChat?.session_id].filter(Boolean) as string[];
 
-    setUnreadCompletedSessions((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const k of Object.keys(next)) {
-        const beforeLen = next[k].length;
-        next[k] = next[k].filter((id) => !idsToClear.includes(id));
-        if (next[k].length !== beforeLen) changed = true;
-      }
-      if (!changed) return prev;
-      try {
-        localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    setChats((prev) =>
-      prev.map((c) =>
-        idsToClear.includes(c.id) || (c.session_id && idsToClear.includes(c.session_id))
-          ? { ...c, unread: false }
-          : c
-      )
-    );
-  }, [selectedChatId, selectedAgentId]);
 
   const togglePinChat = (chatId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -4862,6 +4831,13 @@ const handleBatchDeleteSelectedChats = () => {
     }
     return false;
   }).sort((a, b) => {
+    // Disabled agents are always grouped to the bottom
+    const isDisA = a.enabled === false || a.status === "disabled";
+    const isDisB = b.enabled === false || b.status === "disabled";
+    if (!isDisA && isDisB) return -1;
+    if (isDisA && !isDisB) return 1;
+
+    // Within their respective groups, pinned agents stay at top
     const isPinA = pinnedAgentIds.includes(a.id);
     const isPinB = pinnedAgentIds.includes(b.id);
     if (isPinA && !isPinB) return -1;
@@ -5008,7 +4984,8 @@ const handleBatchDeleteSelectedChats = () => {
                 </div>
               ) : (
                 <>
-                  {filteredAgents.map((ag) => {
+                  {/* Active Agents in Rail */}
+                  {activeFilteredAgents.map((ag) => {
                     const isSelected = ag.id === selectedAgentId;
                     const hasError = ag.status === "degraded";
                     const unreadList = unreadCompletedSessions[ag.id] || [];
@@ -5019,26 +4996,15 @@ const handleBatchDeleteSelectedChats = () => {
                         key={ag.id}
                         aria-label={ag.name}
                         data-ux-target-min="24"
-                        disabled={ag.enabled === false || ag.status === "disabled"}
-                        onClick={() => {
-                          if (ag.enabled === false || ag.status === "disabled") return;
-                          handleSelectAgent(ag);
-                        }}
+                        onClick={() => handleSelectAgent(ag)}
                         className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
-                          ag.enabled === false || ag.status === "disabled"
-                            ? "border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none"
-                            : isSelected
+                          isSelected
                             ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25 cursor-pointer"
                             : "border-transparent hover:bg-[#161620] hover:border-[#2a2a38] cursor-pointer"
                         }`}
-                                                title={`${ag.name}\n${ag.roleTag || "Agent"} • ${ag.status || "active"}\n${ag.node} • ${ag.model}${hasUnreadCompleted ? ` (Có ${unreadList.length} session chưa xem)` : ""}${hasError ? " (Degraded)" : ""}`}
+                        title={`${ag.name}\n${ag.roleTag || "Agent"} • ${ag.status || "active"}\n${ag.node} • ${ag.model}${hasUnreadCompleted ? ` (Có ${unreadList.length} session chưa xem)` : ""}${hasError ? " (Degraded)" : ""}`}
                       >
-                        {/* Dedicated Agent Identity Avatar */}
-                        <div className={`relative shrink-0 transition-all ${
-                          ag.enabled === false || ag.status === "disabled"
-                            ? "opacity-40 grayscale blur-[0.6px]"
-                            : ""
-                        }`}>
+                        <div className="relative shrink-0 transition-all">
                           <AgentAvatar agent={ag} size="md" />
                           {pinnedAgentIds.includes(ag.id) && (
                             <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30" title="Đã ghim agent">
@@ -5046,7 +5012,6 @@ const handleBatchDeleteSelectedChats = () => {
                             </span>
                           )}
 
-                          {/* Single Clean Dot: Xanh dương nhấp nháy khi đang làm, Xanh lá khi có phiên hoàn thành, Đỏ khi lỗi */}
                           {(() => {
                             const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
                             if (isAgentBusy) {
@@ -5079,6 +5044,57 @@ const handleBatchDeleteSelectedChats = () => {
                       </button>
                     );
                   })}
+
+                  {/* Disabled Agents Group at bottom of Rail */}
+                  {disabledFilteredAgents.length > 0 && (
+                    <div className="pt-2 mt-1 border-t border-neutral-200/80 dark:border-[#1c1c24] flex flex-col items-center w-full space-y-1.5">
+                      <button
+                        type="button"
+                        aria-label="Thu gọn hoặc mở rộng nhóm Agent đã tắt"
+                        onClick={() => {
+                          triggerHaptic(10);
+                          setDisabledAgentsExpanded((prev) => {
+                            const next = !prev;
+                            try {
+                              localStorage.setItem("agent360_disabled_agents_expanded", String(next));
+                            } catch {}
+                            return next;
+                          });
+                        }}
+                        className={`h-8 w-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer select-none border ${
+                          disabledAgentsExpanded
+                            ? "bg-neutral-200 dark:bg-white/[0.08] text-[#f8a87c] border-[#f8a87c]/30"
+                            : "bg-transparent hover:bg-neutral-200/50 dark:hover:bg-white/[0.04] text-neutral-400 hover:text-neutral-200 border-transparent"
+                        }`}
+                        title={disabledAgentsExpanded ? `Thu gọn ${disabledFilteredAgents.length} agent đã tắt` : `Mở rộng ${disabledFilteredAgents.length} agent đã tắt`}
+                      >
+                        {disabledAgentsExpanded ? (
+                          <ChevronDown size={14} className="text-[#f8a87c]" />
+                        ) : (
+                          <ChevronRight size={14} className="text-neutral-400" />
+                        )}
+                      </button>
+
+                      {disabledAgentsExpanded && (
+                        <div className="space-y-1.5 flex flex-col items-center w-full animate-in fade-in duration-150">
+                          {disabledFilteredAgents.map((ag) => (
+                            <button
+                              key={ag.id}
+                              aria-label={ag.name}
+                              data-ux-target-min="24"
+                              disabled
+                              className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none shrink-0"
+                              title={`${ag.name} (Đã vô hiệu hóa)`}
+                            >
+                              <div className="relative shrink-0">
+                                <AgentAvatar agent={ag} size="md" />
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -5281,7 +5297,7 @@ const handleBatchDeleteSelectedChats = () => {
             </div>
 
             {/* Agents List */}
-            <div className="flex-1 overflow-y-auto px-1.5 py-1 space-y-0.5 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto px-1.5 py-1 space-y-0.5 scrollbar-hover">
               {isLoadingAgents ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -8846,7 +8862,7 @@ const handleBatchDeleteSelectedChats = () => {
             )}
 
             {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+            <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hover">
               {isLoadingChats ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -9495,7 +9511,7 @@ ${chat.id}`);
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 p-3.5 overflow-y-auto">
+            <div className="flex-1 p-3.5 overflow-y-auto scrollbar-hover">
               {rightTab === "Computer" && (() => {
                 const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
                 return (
