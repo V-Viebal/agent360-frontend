@@ -8170,7 +8170,7 @@ export function GrokBotWorkspace() {
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
             {filteredChats.length > 0 && selectedChatIds.length > 0 && (
-              <div className="px-2.5 py-1 flex items-center justify-between border-b border-[#1c1c24] text-[10px] font-mono select-none bg-[#101017]/90 animate-in fade-in duration-150">
+              <div className="px-2.5 py-1 flex items-center justify-between border-b border-[#1c1c24] text-[10px] font-mono select-none bg-[#101017]/90 animate-in fade-in duration-150 whitespace-nowrap">
                 <div
                   onClick={() => handleToggleSelectAll(filteredChats)}
                   className="flex items-center gap-1.5 cursor-pointer group text-neutral-400 hover:text-white transition-colors"
@@ -8193,14 +8193,14 @@ export function GrokBotWorkspace() {
                   </div>
                   <span className="font-sans text-[11px] text-neutral-400 group-hover:text-neutral-200">
                     {filteredChats.every((c) => selectedChatIds.includes(c.id))
-                      ? "Bỏ chọn tất cả"
+                      ? "Bỏ chọn"
                       : "Chọn tất cả"}
                   </span>
                 </div>
 
                 {selectedChatIds.length > 0 && (
-                  <span className="text-[9px] font-mono text-[#f8a87c] font-medium bg-[#f8a87c]/10 px-1.5 py-0.2 rounded border border-[#f8a87c]/20">
-                    Đã chọn {selectedChatIds.length}/{filteredChats.length}
+                  <span className="text-[9px] font-mono text-[#f8a87c] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.2 rounded border border-[#f8a87c]/20 shrink-0">
+                    {selectedChatIds.length}/{filteredChats.length}
                   </span>
                 )}
               </div>
