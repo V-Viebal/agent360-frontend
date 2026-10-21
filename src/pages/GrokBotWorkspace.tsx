@@ -2047,12 +2047,23 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     const disconnect = connectSessionMultiplexer({
       onSnapshot: (snapshot: ActiveSessionsSnapshot) => {
-        if (Array.isArray(snapshot.active_session_ids)) {
-          setRunningChatIds((prev) => {
-            const preserved = prev.filter((id) => (selectedChatId === id && isStreaming));
-            return Array.from(new Set([...preserved, ...snapshot.active_session_ids]));
-          });
-        }
+        const activeIds = Array.isArray(snapshot.active_session_ids) ? snapshot.active_session_ids : [];
+        setRunningChatIds((prev) => {
+          const preserved = prev.filter((id) => (selectedChatId === id && isStreaming));
+          return Array.from(new Set([...preserved, ...activeIds]));
+        });
+        // Sync chats array so non-active chats are guaranteed idle
+        setChats((prev) =>
+          prev.map((c) => {
+            const running = activeIds.includes(c.id) || (c.session_id ? activeIds.includes(c.session_id) : false);
+            return {
+              ...c,
+              is_running: running,
+              isRunning: running,
+              status: running ? "running" : (c.status === "running" ? "idle" : c.status)
+            };
+          })
+        );
         if (Array.isArray(snapshot.unread_session_ids) && snapshot.unread_session_ids.length > 0) {
           setUnreadCompletedSessions((prev) => ({
             ...prev,
@@ -2068,16 +2079,30 @@ export function GrokBotWorkspace() {
             setRunningAgentIds((prev) => ({ ...prev, [agId]: (prev[agId] || 0) + 1 }));
           }
         } else {
-          setRunningChatIds((prev) => prev.filter((id) => id !== update.session_id && id !== selectedChatId));
+          setRunningChatIds((prev) => prev.filter((id) => id !== update.session_id && (id !== selectedChatId || !isStreaming)));
           if (agId) {
             setRunningAgentIds((prev) => ({ ...prev, [agId]: Math.max(0, (prev[agId] || 1) - 1) }));
           }
+          // Mark chat as idle and stopped in chats array
+          setChats((prev) =>
+            prev.map((c) => {
+              if (c.id === update.session_id || c.session_id === update.session_id) {
+                return {
+                  ...c,
+                  is_running: false,
+                  isRunning: false,
+                  status: "idle",
+                  unread: update.session_id !== selectedChatId ? true : c.unread
+                };
+              }
+              return c;
+            })
+          );
           if (update.session_id && update.session_id !== selectedChatId) {
             setUnreadCompletedSessions((prev) => ({
               ...prev,
               [agId]: Array.from(new Set([...(prev[agId] || []), update.session_id]))
             }));
-            setChats((prev) => prev.map((c) => (c.id === update.session_id || c.session_id === update.session_id ? { ...c, unread: true } : c)));
           }
         }
       },
@@ -3589,6 +3614,11 @@ export function GrokBotWorkspace() {
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
+  const isCurrentSessionRunning = Boolean(
+    isStreaming ||
+    (selectedChatId && runningChatIds.includes(selectedChatId)) ||
+    (selectedChat?.session_id && runningChatIds.includes(selectedChat.session_id))
+  );
 
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
@@ -6168,12 +6198,18 @@ export function GrokBotWorkspace() {
                       )}
 
                       {/* 2. Formatted Main Response Content: left-aligned, transparent, no background, no border */}
-                      {/* Smooth Bullet Typing Animation while streaming with no text yet */}
-                      {isStreaming && isLastTurn && !msg.content && (
-                        <div className="flex items-center gap-1.5 py-2 px-1 select-none">
-                          <span className="h-2 w-2 rounded-full bg-[#f8a87c] typing-dot-1" />
-                          <span className="h-2 w-2 rounded-full bg-[#f8a87c] typing-dot-2" />
-                          <span className="h-2 w-2 rounded-full bg-[#f8a87c] typing-dot-3" />
+                      {/* Loading & Responding Indicator when assistant message has not produced text content yet */}
+                      {!msg.content && (
+                        <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150">
+                          <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
+                          <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 font-medium">
+                            {selectedAgent.name} đang suy nghĩ và phản hồi...
+                          </span>
+                          <span className="inline-flex items-center gap-1 ml-0.5 select-none">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                          </span>
                         </div>
                       )}
 
@@ -6338,6 +6374,23 @@ export function GrokBotWorkspace() {
             })
           )}
           </>
+          )}
+
+          {/* Active Session Responding Indicator when waiting for assistant to start first turn */}
+          {isCurrentSessionRunning && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+            <div className="flex flex-col items-start w-full space-y-1.5 animate-in fade-in duration-200 my-2">
+              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none">
+                <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
+                <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 font-medium">
+                  {selectedAgent.name} đang suy nghĩ và xử lý...
+                </span>
+                <span className="inline-flex items-center gap-1 ml-0.5 select-none">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                </span>
+              </div>
+            </div>
           )}
 
           <div ref={messagesEndRef} />
@@ -8458,10 +8511,6 @@ export function GrokBotWorkspace() {
                   >
                     {(() => {
                       const isCRunning = Boolean(
-                        c.is_running ||
-                        c.isRunning ||
-                        c.status === "running" ||
-                        c.status === "in_progress" ||
                         runningChatIds.includes(c.id) ||
                         (c.session_id ? runningChatIds.includes(c.session_id) : false) ||
                         (isSelected && isStreaming)
@@ -8621,10 +8670,6 @@ export function GrokBotWorkspace() {
                   {filteredChats.map((chat, cIdx) => {
                 const isSelected = chat.id === selectedChatId;
                 const isChatRunning = Boolean(
-                  chat.is_running ||
-                  chat.isRunning ||
-                  chat.status === "running" ||
-                  chat.status === "in_progress" ||
                   runningChatIds.includes(chat.id) ||
                   (chat.session_id ? runningChatIds.includes(chat.session_id) : false) ||
                   (isSelected && isStreaming)
