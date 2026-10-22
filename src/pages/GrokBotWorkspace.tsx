@@ -3394,7 +3394,7 @@ const handleBatchDeleteSelectedChats = () => {
         const savedChatId = localStorage.getItem(savedChatKey);
         const foundSaved = findChat(savedChatId);
         const urlChatFound = findChat(chatParam);
-        const targetChatId: string = (foundSaved ?? urlChatFound ?? loadedChats[0]).id;
+        const targetChatId: string = (urlChatFound ?? foundSaved ?? loadedChats[0]).id;
         setSelectedChatId(targetChatId);
         try {
           localStorage.setItem("agent360_last_chat_id", targetChatId);
@@ -3753,10 +3753,13 @@ const handleBatchDeleteSelectedChats = () => {
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
+  const isTurnActiveInStorage = typeof window !== "undefined" && Boolean(selectedChatId && sessionStorage.getItem(`agent360_active_turn_${selectedChatId}`) === "true");
   const isCurrentSessionRunning = Boolean(
     isStreaming ||
+    isTurnActiveInStorage ||
     (selectedChatId && runningChatIds.includes(selectedChatId)) ||
-    (selectedChat?.session_id && runningChatIds.includes(selectedChat.session_id))
+    (selectedChat?.session_id && runningChatIds.includes(selectedChat.session_id)) ||
+    Boolean(selectedChat && (selectedChat.isRunning || selectedChat.status === "running" || selectedChat.status === "in_progress"))
   );
 
   // Live turn of the open chat when it runs on another channel (Telegram, Zalo, cron, other console tab).
@@ -3784,6 +3787,10 @@ const handleBatchDeleteSelectedChats = () => {
         if (reloaded && reloaded.length > 0) setMessages(reloaded);
         setLiveTurn(null);
         if (streamed) {
+          try {
+            sessionStorage.removeItem(`agent360_active_turn_${chatId}`);
+            sessionStorage.removeItem(`agent360_last_prompt_${chatId}`);
+          } catch {}
           setRunningChatIds((prev) => prev.filter((id) => id !== chatId && id !== selectedChat?.session_id));
           markChatAsRead(chatId, selectedAgentId);
         }
@@ -3798,7 +3805,7 @@ const handleBatchDeleteSelectedChats = () => {
     if (!liveTurnForView) return messages;
     const base = [...messages];
     const lastUser = [...base].reverse().find((m) => m.role === "user");
-    const userText = liveTurnForView.userText?.trim();
+    const userText = liveTurnForView.userText?.trim() || (typeof window !== "undefined" && selectedChatId ? sessionStorage.getItem(`agent360_last_prompt_${selectedChatId}`) : null);
     if (userText && (!lastUser || lastUser.content.trim() !== userText)) {
       base.push({ id: `live-user-${selectedChatId}`, role: "user", content: userText, timestamp: new Date().toISOString() });
     }
@@ -4528,17 +4535,26 @@ const handleBatchDeleteSelectedChats = () => {
     const originAgentId = overrideAgentId || chatAgentMapRef.current[originChatId] || selectedAgentId;
     chatAgentMapRef.current[originChatId] = originAgentId;
     const targetAgent = agents.find((a) => a.id === originAgentId || a.slug === originAgentId) || selectedAgent;
+
+    try {
+      sessionStorage.setItem(`agent360_active_turn_${originChatId}`, "true");
+      sessionStorage.setItem(`agent360_last_prompt_${originChatId}`, userText);
+    } catch {}
+
     // Updates the origin chat: live on screen if it is still selected, otherwise in its message cache.
     const updateTurnMessages = (fn: (prev: ChatMessage[]) => ChatMessage[]) => {
       if (selectedChatIdRef.current === originChatId) {
         setMessages((prev) => {
           const next = fn(prev);
           inflightMessagesRef.current[originChatId] = next;
+          setCachedChatMessages(originChatId, next, originAgentId);
           return next;
         });
       } else {
         const base = inflightMessagesRef.current[originChatId] || getCachedChatMessages(originChatId, originAgentId) || [];
-        inflightMessagesRef.current[originChatId] = fn(base);
+        const next = fn(base);
+        inflightMessagesRef.current[originChatId] = next;
+        setCachedChatMessages(originChatId, next, originAgentId);
       }
     };
     const tempBotMsgId = `bot-${Date.now() + 1}`;
@@ -4722,6 +4738,10 @@ const handleBatchDeleteSelectedChats = () => {
       if (streamAbortControllersRef.current[originChatId] === abortController) {
         delete streamAbortControllersRef.current[originChatId];
       }
+      try {
+        sessionStorage.removeItem(`agent360_active_turn_${originChatId}`);
+        sessionStorage.removeItem(`agent360_last_prompt_${originChatId}`);
+      } catch {}
       const finalTranscript = inflightMessagesRef.current[originChatId];
       if (finalTranscript && !(requestQueuesRef.current[originChatId] || []).length) {
         setCachedChatMessages(originChatId, finalTranscript, originAgentId);
