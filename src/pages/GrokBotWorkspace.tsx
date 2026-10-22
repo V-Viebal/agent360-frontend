@@ -1687,7 +1687,7 @@ export function GrokBotWorkspace() {
         try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
       }
     }
-  }, [agentParam, Boolean(agents.length > 0), selectedAgentId]);
+  }, [agentParam, agents.length]);
 
   useEffect(() => {
     if (chatParam && chatParam !== selectedChatId) {
@@ -1699,7 +1699,7 @@ export function GrokBotWorkspace() {
         }
       } catch {}
     }
-  }, [chatParam]);
+  }, [chatParam, selectedAgentId]);
 
   // Rightmost bot info tab: 'Details' | 'Library' | 'Computer'
   const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Agents" | "Details">("Computer");
@@ -3387,15 +3387,14 @@ const handleBatchDeleteSelectedChats = () => {
         }
       if (loadedChats.length > 0) {
         const savedChatKey = `agent360_last_chat_${selectedAgentId}`;
-        // Preference: chatParam from route URL (if matching this agent) -> savedChatKey for this specific agent -> first chat in list
-        // Exact chat id wins; a channel session id is only a fallback (old chats can reuse another chat's id as session_id).
+        // Preference: savedChatKey for this specific agent -> first chat in list
+        // (Do NOT use chatParam blindly if route was pointing to another agent)
         const findChat = (key: string | null | undefined) =>
           key ? loadedChats.find((c) => c.id === key) || loadedChats.find((c) => c.session_id === key) : undefined;
-        const urlChatFound = findChat(chatParam);
         const savedChatId = localStorage.getItem(savedChatKey);
         const foundSaved = findChat(savedChatId);
-        // Only adopt chatParam if it actually belongs to this agent's chat list; otherwise cleanly fallback to saved chat or top chat without toast spam
-        const targetChatId: string = (urlChatFound ?? foundSaved ?? loadedChats[0]).id;
+        const urlChatFound = findChat(chatParam);
+        const targetChatId: string = (foundSaved ?? urlChatFound ?? loadedChats[0]).id;
         setSelectedChatId(targetChatId);
         try {
           localStorage.setItem("agent360_last_chat_id", targetChatId);
@@ -3403,7 +3402,7 @@ const handleBatchDeleteSelectedChats = () => {
         } catch {}
 
         // Sync routing URL to /app/:agentSlug/:chatId without disrupting history
-        const activeAg = agents.find((a) => a.id === selectedAgentId);
+        const activeAg = agents.find((a) => a.id === selectedAgentId || a.slug === selectedAgentId);
         const agentSegment = activeAg?.slug || activeAg?.id || selectedAgentId;
         if (agentSegment && targetChatId) {
           const expectedPath = `/app/${agentSegment}/${targetChatId}`;
