@@ -159,6 +159,7 @@ import {
   Target,
   Rocket,
   ArrowUp,
+  Bookmark,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
 
@@ -3226,6 +3227,10 @@ const handleBatchDeleteSelectedChats = () => {
 
   // Map of last scroll positions per session
   const sessionScrollPositionsRef = useRef<Record<string, number>>({});
+
+  // User Request Trace Bar hover state (desktop index navigator)
+  const [hoveredTraceIdx, setHoveredTraceIdx] = useState<number | null>(null);
+  const [traceMouseClientY, setTraceMouseClientY] = useState<number | null>(null);
 
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -6395,6 +6400,7 @@ const handleBatchDeleteSelectedChats = () => {
         )}
 
         {/* Messages Stream Area (Responsive & Lean for Compact/Minimize) */}
+        <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
         <div
           ref={messagesContainerRef}
           onScroll={handleMessagesScroll}
@@ -6524,6 +6530,7 @@ const handleBatchDeleteSelectedChats = () => {
               return (
                 <div
                   key={msg.id}
+                  id={`chat-msg-${msg.id}`}
                   className={`flex flex-col space-y-1 w-full group/msg ${isUser ? "items-end" : "items-start"}`}
                 >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
@@ -6858,6 +6865,150 @@ const handleBatchDeleteSelectedChats = () => {
           )}
 
           <div ref={messagesEndRef} />
+        </div>
+
+        {/* Desktop User Request Trace Bar (waveform tick indicator + popover card) */}
+        {(() => {
+          const userTurns = displayMessages
+            .map((msg, originalIdx) => ({ msg, originalIdx }))
+            .filter((item) => item.msg.role === "user");
+
+          if (userTurns.length === 0 || hasNoAgents) return null;
+
+          const activeTurnItem = hoveredTraceIdx !== null && userTurns[hoveredTraceIdx]
+            ? userTurns[hoveredTraceIdx]
+            : null;
+
+          // Find the assistant response immediately following the hovered user turn (if any)
+          let nextAssistantSnippet = "";
+          let nextAssistantHasCheck = false;
+          if (activeTurnItem) {
+            for (let i = activeTurnItem.originalIdx + 1; i < displayMessages.length; i++) {
+              const m = displayMessages[i];
+              if (m.role === "user") break;
+              if (m.role === "assistant" && m.content) {
+                nextAssistantSnippet = m.content.trim().slice(0, 160);
+                if (m.content.includes("✓") || m.content.toLowerCase().includes("thành công") || m.content.toLowerCase().includes("done") || (m.steps && m.steps.length > 0)) {
+                  nextAssistantHasCheck = true;
+                }
+                break;
+              }
+            }
+          }
+
+          const isCardBookmarked = activeTurnItem ? starredMsgIds.includes(activeTurnItem.msg.id) : false;
+
+          return (
+            <div
+              className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 z-30 flex-col items-start select-none"
+              onMouseLeave={() => {
+                setHoveredTraceIdx(null);
+                setTraceMouseClientY(null);
+              }}
+            >
+              {/* Ticks waveform stack */}
+              <div className="flex flex-col items-start gap-[6px] py-2 px-1">
+                {userTurns.map((turn, tIdx) => {
+                  const isHovered = hoveredTraceIdx === tIdx;
+                  const isBookmarked = starredMsgIds.includes(turn.msg.id);
+                  let widthClass = "w-2";
+                  if (hoveredTraceIdx !== null) {
+                    const dist = Math.abs(hoveredTraceIdx - tIdx);
+                    if (dist === 0) widthClass = "w-7";
+                    else if (dist === 1) widthClass = "w-5";
+                    else if (dist === 2) widthClass = "w-4";
+                    else if (dist === 3) widthClass = "w-3";
+                    else widthClass = "w-2";
+                  }
+
+                  return (
+                    <button
+                      key={turn.msg.id || tIdx}
+                      type="button"
+                      aria-label={`Đi tới yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
+                      onMouseEnter={(e) => {
+                        setHoveredTraceIdx(tIdx);
+                        setTraceMouseClientY(e.clientY);
+                      }}
+                      onClick={() => {
+                        triggerHaptic(10);
+                        const targetEl = document.getElementById(`chat-msg-${turn.msg.id}`);
+                        if (targetEl && messagesContainerRef.current) {
+                          const containerRect = messagesContainerRef.current.getBoundingClientRect();
+                          const targetRect = targetEl.getBoundingClientRect();
+                          const offset = targetRect.top - containerRect.top + messagesContainerRef.current.scrollTop;
+                          messagesContainerRef.current.scrollTo({
+                            top: Math.max(0, offset - 8),
+                            behavior: "smooth",
+                          });
+                        }
+                      }}
+                      className={`h-[2px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
+                        isHovered
+                          ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] scale-y-125"
+                          : isBookmarked
+                          ? "bg-amber-400/80 hover:bg-amber-300"
+                          : "bg-neutral-500/50 hover:bg-neutral-300 dark:bg-neutral-600/60 dark:hover:bg-neutral-300"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Hover Popover preview card */}
+              {activeTurnItem && (
+                <div
+                  style={{
+                    top: traceMouseClientY !== null
+                      ? `${Math.max(64, Math.min(window.innerHeight - 220, traceMouseClientY - 70))}px`
+                      : "50%",
+                  }}
+                  className="fixed left-12 z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-[#1e1e22]/95 dark:bg-[#18181c]/95 border border-neutral-300 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+                >
+                  {/* Prompt Title & Bookmark icon */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-xs text-white leading-snug line-clamp-2">
+                      {activeTurnItem.msg.content.trim()}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Đánh dấu sao"
+                      onClick={() => toggleStarMessage(activeTurnItem.msg.id)}
+                      className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-400 transition-colors cursor-pointer"
+                    >
+                      <Bookmark
+                        size={14}
+                        className={isCardBookmarked ? "fill-amber-400 text-amber-400" : ""}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Assistant summary snippet or checklist */}
+                  {nextAssistantSnippet && (
+                    <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
+                      <div className="flex items-start gap-1.5 text-[11px] text-neutral-400 font-sans leading-relaxed">
+                        {nextAssistantHasCheck && (
+                          <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold">
+                            ✓
+                          </span>
+                        )}
+                        <p className="line-clamp-3 select-none">
+                          {nextAssistantSnippet}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Micro action hint */}
+                  <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
+                    <span>Yêu cầu #{hoveredTraceIdx! + 1} / {userTurns.length}</span>
+                    <span className="text-[#f8a87c]">Bấm để cuộn lên đầu ↳</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         </div>
 
         {/* Floating Scroll to Bottom Button */}
@@ -8804,7 +8955,8 @@ const handleBatchDeleteSelectedChats = () => {
                           {/* Only show green dot for unread completed; no blue dot when running */}
                           {!isCRunning && isCUnread && !isSelected && (
                             <span
-                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white dark:border-[#16161e] z-10"
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 min-h-2 min-w-2 rounded-full bg-emerald-500 border border-white dark:border-[#16161e] shrink-0 z-10"
+                              style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
                               title="Hoàn thành chưa đọc"
                             />
                           )}
@@ -9062,7 +9214,8 @@ const handleBatchDeleteSelectedChats = () => {
                         if (!isChatRunning && isUnreadCompleted && !isSelected) {
                           return (
                             <span
-                              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 border border-white dark:border-[#181822] z-10"
+                              className="absolute -top-0.5 -right-0.5 h-2 w-2 min-h-2 min-w-2 rounded-full bg-emerald-500 border border-white dark:border-[#181822] shrink-0 z-10"
+                              style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
                               title="Hoàn thành chưa đọc"
                             />
                           );

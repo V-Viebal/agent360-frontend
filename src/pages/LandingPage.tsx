@@ -1011,7 +1011,7 @@ export function LandingPage() {
                     }}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap border ${
                       active
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-black font-semibold border-neutral-900 dark:border-white shadow-sm"
+                        ? "bg-[#f8a87c]/15 text-[#f8a87c] border-[#f8a87c]/40 dark:bg-white dark:text-black dark:border-white font-semibold shadow-sm"
                         : "bg-white dark:bg-[#0b0e14] text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/[0.08] hover:text-neutral-900 dark:hover:text-white border-neutral-200 dark:border-[var(--border-subtle)] shadow-2xs"
                     }`}
                   >

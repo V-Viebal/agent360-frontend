@@ -943,9 +943,10 @@ html.light .bg-\[\#0e0e14\],
   background-color: var(--bg-card-subtle) !important;
 }
 
-html.light .text-white,
-[data-theme="light"] .text-white {
-  color: var(--text-primary) !important;
+/* Only invert text-white when inside light containers, never inside dark components */
+html.light .text-white:not(.keep-white):not([class*="bg-neutral-900"]):not([class*="bg-black"]):not([class*="bg-[#f8a87c]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-amber"]),
+[data-theme="light"] .text-white:not(.keep-white):not([class*="bg-neutral-900"]):not([class*="bg-black"]):not([class*="bg-[#f8a87c]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-amber"]) {
+  color: var(--text-primary);
 }
 
 html.light .text-neutral-200,
