@@ -1309,7 +1309,9 @@ export async function stopConsoleChat(sessionId: string, agentId?: string): Prom
         Accept: "application/json",
       },
       body: JSON.stringify({
+        session_id: sessionId,
         sessionId,
+        agent_id: cleanId,
         agentId: cleanId,
       }),
     }, cleanId).catch(() => null);
@@ -1323,7 +1325,9 @@ export async function stopConsoleChat(sessionId: string, agentId?: string): Prom
         Accept: "application/json",
       },
       body: JSON.stringify({
+        session_id: sessionId,
         sessionId,
+        agent_id: cleanId,
         agentId: cleanId,
       }),
     }, cleanId).catch(() => null);

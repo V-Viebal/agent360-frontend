@@ -1683,9 +1683,12 @@ export function GrokBotWorkspace() {
       const matched = agents.find(
         (a) => a.id === agentParam || (a.id || "").toLowerCase() === agentParam.toLowerCase() || (a.slug || "").toLowerCase() === bare
       );
-      if (matched && matched.id !== selectedAgentId) {
-        setSelectedAgentId(matched.id);
-        try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
+      if (matched) {
+        const curBare = (selectedAgentIdRef.current || "").replace(/^bot:agent360:/i, "").toLowerCase();
+        if (matched.id !== selectedAgentIdRef.current && (matched.slug || "").toLowerCase() !== curBare && (matched.id || "").toLowerCase() !== curBare) {
+          setSelectedAgentId(matched.id);
+          try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
+        }
       }
     }
   }, [agentParam, agents.length]);
@@ -3356,18 +3359,27 @@ const handleBatchDeleteSelectedChats = () => {
   // Fetch agent-specific chats whenever selectedAgentId changes
   useEffect(() => {
     if (!isKnownAgent(selectedAgentId)) return;
+    let cancelled = false;
+    const currentAgent = selectedAgentId;
+
     async function loadAgentChats() {
       // SWR: Instant render from client memory/sessionStorage cache
-      const cached = getCachedAgentChats(selectedAgentId);
+      const cached = getCachedAgentChats(currentAgent);
       if (cached && cached.length > 0) {
-        setChats(cached);
-        setChatsAgentId(selectedAgentId);
+        if (!cancelled && selectedAgentIdRef.current === currentAgent) {
+          setChats(cached);
+          setChatsAgentId(currentAgent);
+        }
       } else {
-        setIsLoadingChats(true);
+        if (!cancelled && selectedAgentIdRef.current === currentAgent) {
+          setIsLoadingChats(true);
+        }
       }
 
       try {
-        const loadedChats = await fetchAgentChats(selectedAgentId);
+        const loadedChats = await fetchAgentChats(currentAgent);
+        if (cancelled || selectedAgentIdRef.current !== currentAgent) return;
+
         setChats(loadedChats);
         const activeIds = loadedChats
           .filter((c) => Boolean(c.isRunning || c.status === "running" || c.status === "in_progress"))
@@ -3378,57 +3390,65 @@ const handleBatchDeleteSelectedChats = () => {
           const currentPreserved = (isStreaming && selectedChatId) ? [selectedChatId] : [];
           return Array.from(new Set([...nonAgentIds, ...activeIds, ...currentPreserved]));
         });
-        setRunningAgentIds((prev) => ({ ...prev, [selectedAgentId]: activeIds.length }));
+        setRunningAgentIds((prev) => ({ ...prev, [currentAgent]: activeIds.length }));
         const unreadIds = loadedChats
           .filter((c) => Boolean(c.unread) && !isViewedChat(c.id) && !isViewedChat(c.session_id))
           .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
         if (unreadIds.length > 0) {
           setUnreadCompletedSessions((prev) => ({
             ...prev,
-            [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), ...unreadIds]))
+            [currentAgent]: Array.from(new Set([...(prev[currentAgent] || []), ...unreadIds]))
           }));
         }
-        setChatsAgentId(selectedAgentId);
+        setChatsAgentId(currentAgent);
         if (loadedChats.length > 0 && loadedChats[0]?.title) {
           setAgentRecentSessions((prev) => {
-            const next = { ...prev, [selectedAgentId]: loadedChats[0].title };
+            const next = { ...prev, [currentAgent]: loadedChats[0].title };
             try { localStorage.setItem("agent360_recent_sessions_map", JSON.stringify(next)); } catch {}
             return next;
           });
         }
-      if (loadedChats.length > 0) {
-        const savedChatKey = `agent360_last_chat_${selectedAgentId}`;
-        // Preference: savedChatKey for this specific agent -> first chat in list
-        // (Do NOT use chatParam blindly if route was pointing to another agent)
-        const findChat = (key: string | null | undefined) =>
-          key ? loadedChats.find((c) => c.id === key) || loadedChats.find((c) => c.session_id === key) : undefined;
-        const savedChatId = localStorage.getItem(savedChatKey);
-        const foundSaved = findChat(savedChatId);
-        const urlChatFound = findChat(chatParam);
-        const targetChatId: string = (urlChatFound ?? foundSaved ?? loadedChats[0]).id;
-        setSelectedChatId(targetChatId);
-        try {
-          localStorage.setItem("agent360_last_chat_id", targetChatId);
-          localStorage.setItem(savedChatKey, targetChatId);
-        } catch {}
+        if (loadedChats.length > 0) {
+          const savedChatKey = `agent360_last_chat_${currentAgent}`;
+          // Preference: savedChatKey for this specific agent -> first chat in list
+          // Only use chatParam if route is currently matching this agent
+          const findChat = (key: string | null | undefined) =>
+            key ? loadedChats.find((c) => c.id === key) || loadedChats.find((c) => c.session_id === key) : undefined;
+          const savedChatId = localStorage.getItem(savedChatKey);
+          const foundSaved = findChat(savedChatId);
+          const activeAg = agents.find((a) => a.id === currentAgent || a.slug === currentAgent);
+          const currentBare = (activeAg?.slug || activeAg?.id || currentAgent).replace(/^bot:agent360:/i, "").toLowerCase();
+          const routeAgentBare = (agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
+          const urlChatFound = (routeAgentBare === currentBare) ? findChat(chatParam) : undefined;
 
-        // Sync routing URL to /app/:agentSlug/:chatId without disrupting history
-        const activeAg = agents.find((a) => a.id === selectedAgentId || a.slug === selectedAgentId);
-        const agentSegment = activeAg?.slug || activeAg?.id || selectedAgentId;
-        if (agentSegment && targetChatId) {
-          const expectedPath = `/app/${agentSegment}/${targetChatId}`;
-          if (window.location.pathname !== expectedPath) {
-            navigate(expectedPath, { replace: true });
+          const targetChatId: string = (urlChatFound ?? foundSaved ?? loadedChats[0]).id;
+          setSelectedChatId(targetChatId);
+          try {
+            localStorage.setItem("agent360_last_chat_id", targetChatId);
+            localStorage.setItem(savedChatKey, targetChatId);
+          } catch {}
+
+          // Sync routing URL to /app/:agentSlug/:chatId without disrupting history
+          const agentSegment = activeAg?.slug || activeAg?.id || currentAgent;
+          if (agentSegment && targetChatId) {
+            const expectedPath = `/app/${agentSegment}/${targetChatId}`;
+            if (window.location.pathname !== expectedPath && selectedAgentIdRef.current === currentAgent) {
+              navigate(expectedPath, { replace: true });
+            }
           }
+        } else {
+          setSelectedChatId("");
         }
-      } else {
-        setSelectedChatId("");
-      }
       } finally {
-        setIsLoadingChats(false);
+        if (!cancelled && selectedAgentIdRef.current === currentAgent) {
+          setIsLoadingChats(false);
+        }
       }
     }
     loadAgentChats();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedAgentId]);
 
   // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
