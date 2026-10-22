@@ -83,9 +83,12 @@ export async function requestTokenRefresh(originalFetch: typeof fetch = window.f
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       // If refresh token is expired or revoked by Logto, clean up stale credentials
-      if (err.error === "invalid_grant" || res.status === 400 || res.status === 401) {
-        console.warn("[Auth] Refresh token expired or revoked. Clearing stale session state.");
-        clearAllSessionState();
+      if (err.error === "invalid_grant" || res.status === 401) {
+        const at = getStoredToken(ACCESS);
+        if (!at || tokenApproachingExpiry(at, 0)) {
+          console.warn("[Auth] Refresh token expired or revoked and access token expired. Clearing stale session state.");
+          clearAllSessionState();
+        }
       }
       return null;
     }
@@ -135,10 +138,47 @@ export function startSilentRenewLoop(): void {
 }
 
 let redirectingToSignIn = false;
+let sessionProbe: Promise<boolean> | null = null;
+
+/** True only when the backend rejects the stored access token for the signed-in user itself. */
+function sessionIsRejected(originalFetch: typeof fetch): Promise<boolean> {
+  if (!sessionProbe) {
+    sessionProbe = (async () => {
+      const token = getStoredToken(ACCESS);
+      if (!token) return true;
+      try {
+        const res = await originalFetch("/api/users/me", { headers: { Authorization: `Bearer ${token}` } });
+        return res.status === 401;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      setTimeout(() => { sessionProbe = null; }, 5_000);
+    });
+  }
+  return sessionProbe;
+}
+
+const REDIRECT_LOG = "skyer_signin_redirects";
+
+/** Refuses a 3rd automatic sign-in redirect within 2 minutes so an auth fault can never loop forever. */
+function signInLoopDetected(): boolean {
+  try {
+    const now = Date.now();
+    const recent = (JSON.parse(localStorage.getItem(REDIRECT_LOG) || "[]") as number[]).filter((t) => now - t < 120_000);
+    if (recent.length >= 2) return true;
+    localStorage.setItem(REDIRECT_LOG, JSON.stringify([...recent, now]));
+  } catch {}
+  return false;
+}
 
 export function redirectToSignIn(): void {
   if (typeof window === "undefined" || redirectingToSignIn) return;
   if (window.location.pathname === "/callback" || window.location.pathname === "/") return;
+  if (signInLoopDetected()) {
+    console.error("[Auth] Sign-in redirect loop detected; staying on page instead of redirecting again.");
+    return;
+  }
 
   redirectingToSignIn = true;
   try {
@@ -189,24 +229,17 @@ export function installAuthFetch(): void {
 
     const response = await withToken(token);
 
-    // On 401 Unauthorized from backend: attempt transparent token refresh once
+    // On 401: only treat it as a session problem when the backend rejects our token for /api/users/me.
+    // Agent runtime passthroughs can 401 for their own reasons; those must never refresh, wipe or eject.
     if (response.status === 401) {
+      if (window.location.pathname === "/callback" || window.location.pathname === "/") return response;
+      if (!url.pathname.includes("/users/me") && !(await sessionIsRejected(original))) return response;
+
       const freshToken = await getOrRenewAccessToken(original);
       if (freshToken) {
         return withToken(freshToken);
       }
-
-      // If token refresh fails completely on a protected route:
-      const hasOperatorKey = (() => {
-        try {
-          return !!localStorage.getItem("agent360.a2a.operatorKey");
-        } catch {
-          return false;
-        }
-      })();
-
-      // If user has no operator key and isn't on public landing or callback: auto eject to Logto sign-in
-      if (!hasOperatorKey && window.location.pathname !== "/callback" && window.location.pathname !== "/") {
+      if (!url.pathname.includes("/users/me")) {
         redirectToSignIn();
       }
     }

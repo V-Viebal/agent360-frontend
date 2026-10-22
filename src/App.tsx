@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { lazy, Suspense } from "react";
 import { AuthGuard } from "./components/AuthGuard";
 import { CallbackPage } from './pages/CallbackPage';
@@ -28,10 +29,11 @@ const AdminAuditPage = lazy(() => import("./pages/admin/AdminAuditPage").then(m 
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <OfflineBanner />
-      <Suspense fallback={<div className="min-h-screen bg-[#07090E] flex items-center justify-center text-xs font-mono text-neutral-400">Loading...</div>}>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <LanguageProvider>
+          <OfflineBanner />
+        <Suspense fallback={<div className="min-h-screen bg-[#07090E] flex items-center justify-center text-xs font-mono text-neutral-400">Loading...</div>}>
       <Routes>
       {/* 1. Public Marketing Landing Page at "/" */}
       <Route
@@ -133,8 +135,9 @@ export default function App() {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-      </Suspense>
-    </LanguageProvider>
-    </ThemeProvider>
+        </Suspense>
+      </LanguageProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

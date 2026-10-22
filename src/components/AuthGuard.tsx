@@ -13,9 +13,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+    let isCancelled = false;
+
     async function checkAuthSession() {
-      const token = getStoredToken("skyer_access_token");
-      const refreshToken = getStoredToken("skyer_refresh_token");
+      // 1. Initial check: check if token already in storage
+      let token = getStoredToken("skyer_access_token");
+      let refreshToken = getStoredToken("skyer_refresh_token");
       const hasOperatorKey = (() => {
         try {
           return !!localStorage.getItem("agent360.a2a.operatorKey");
@@ -25,27 +28,46 @@ export function AuthGuard({ children }: AuthGuardProps) {
       })();
 
       if (hasOperatorKey || token) {
-        setIsAuthenticated(true);
+        if (!isCancelled) setIsAuthenticated(true);
         return;
       }
 
-      // If access token is absent or expired but refresh token exists: attempt silent refresh first (monosbase pattern)
-      if (refreshToken) {
-        const renewed = await requestTokenRefresh();
-        if (renewed) {
-          setIsAuthenticated(true);
+      // 2. Storage synchronization grace period (up to 1500ms):
+      // If user just arrived from /callback, allow storage write to flush
+      const start = Date.now();
+      while (Date.now() - start < 1500) {
+        await new Promise((r) => setTimeout(r, 100));
+        token = getStoredToken("skyer_access_token");
+        refreshToken = getStoredToken("skyer_refresh_token");
+        if (token || hasOperatorKey) {
+          if (!isCancelled) setIsAuthenticated(true);
           return;
         }
       }
 
-      setIsAuthenticated(false);
-      // Immediately redirect to Logto OIDC sign-in without rendering app canvas
-      initiateSkyerSignIn(authConfig).catch((err) => {
-        console.error("[AuthGuard] Auto redirect failed:", err);
-      });
+      // 3. If access token is absent or expired but refresh token exists: attempt silent refresh
+      if (refreshToken) {
+        const renewed = await requestTokenRefresh();
+        if (renewed) {
+          if (!isCancelled) setIsAuthenticated(true);
+          return;
+        }
+      }
+
+      if (!isCancelled) {
+        setIsAuthenticated(false);
+        // Automatically redirect to Logto OIDC sign-in
+        initiateSkyerSignIn(authConfig).catch((err) => {
+          console.error("[AuthGuard] Auto redirect failed:", err);
+        });
+      }
     }
 
     checkAuthSession();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   if (isAuthenticated === null || isAuthenticated === false) {

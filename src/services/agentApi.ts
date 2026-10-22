@@ -9,7 +9,7 @@ export function cleanModelDisplayName(rawModel: string): string {
 
 import { InfraAgent, AgentSession, ChatMessage } from "../types/agent";
 import { operatorKey } from "./a2aApi";
-import { initiateSkyerSignIn } from "./pkceAuth";
+import { redirectToSignIn } from "./authFetch";
 import { authConfig } from "../config/authConfig";
 
 export const API_BASE_URL = "/api";
@@ -23,7 +23,7 @@ export class AgentListAuthError extends Error {
 
 export function hasCredential(): boolean {
   try {
-    return !!(sessionStorage.getItem("skyer_access_token") || operatorKey.get());
+    return !!(sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || operatorKey.get());
   } catch {
     return false;
   }
@@ -79,7 +79,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
     // No session and no operator key: an API call can only 401. Go to sign-in instead of probing.
     if (typeof window !== "undefined" && window.location.pathname !== "/callback" && !(window as any).__agent360SignInRedirect) {
       (window as any).__agent360SignInRedirect = true;
-      void initiateSkyerSignIn(authConfig);
+      redirectToSignIn();
     }
     throw new AgentListAuthError(401);
   }
@@ -165,15 +165,36 @@ export async function markChatAsRead(chatId: string, agentId?: string): Promise<
   }
 }
 
+const _agentChatsCache = new Map<string, { data: AgentSession[]; timestamp: number }>();
+
+export function getCachedAgentChats(agentId?: string): AgentSession[] | null {
+  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const cached = _agentChatsCache.get(cleanAgentId);
+  if (cached && Date.now() - cached.timestamp < 120_000) {
+    return cached.data;
+  }
+  try {
+    const raw = sessionStorage.getItem(`agent360_chats_cache_${cleanAgentId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        _agentChatsCache.set(cleanAgentId, { data: parsed, timestamp: Date.now() });
+        return parsed;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]> {
   try {
     const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
     const endpoint = cleanAgentId
       ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanAgentId)}/chats`
       : `${API_BASE_URL}/chats`;
-    const res = await fetch(endpoint, {
+    const res = await authorizedFetch(endpoint, {
       headers: { Accept: "application/json" }
-    });
+    }, cleanAgentId);
     if (!res.ok) {
       throw new Error(`Failed to fetch chats: ${res.statusText}`);
     }
@@ -186,7 +207,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
       return timeB - timeA;
     });
 
-    return sortedRaw.map((c: any) => {
+    const result = sortedRaw.map((c: any) => {
       let cleanTitle = (c.name || c.title || c.topic || '').trim();
       // Never expose raw technical UUID or session hashes to the UI
       if (!cleanTitle || /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleanTitle) || /^[0-9a-f]{16,}/i.test(cleanTitle) || cleanTitle.toLowerCase().startsWith('chat ') || cleanTitle.toLowerCase().startsWith('session ')) {
@@ -264,6 +285,17 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         _rawUpdatedAt: c.updated_at || c.last_finished_at || c.created_at || ""
       };
     });
+
+    // Populate SWR in-memory and sessionStorage cache
+    if (result && result.length > 0) {
+      const cacheKey = cleanAgentId || "default";
+      _agentChatsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      try {
+        sessionStorage.setItem(`agent360_chats_cache_${cacheKey}`, JSON.stringify(result.slice(0, 100)));
+      } catch {}
+    }
+
+    return result;
   } catch (err) {
     console.warn("fetchAgentChats error, returning empty list instead of stale mocks", err);
     return [];
@@ -378,9 +410,9 @@ export interface WorkspaceTreeNode {
 export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTreeNode[]> {
   const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/tree`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/tree`, {
       headers: { Accept: "application/json" }
-    });
+    }, cleanId);
     if (!res.ok) {
       throw new Error(`Failed to fetch workspace tree: ${res.statusText}`);
     }
@@ -401,9 +433,9 @@ export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTre
 export async function fetchWorkspaceFileContent(agentId: string, filePath: string): Promise<string> {
   const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
       headers: { Accept: "application/json" }
-    });
+    }, cleanId);
     if (!res.ok) {
       throw new Error(`Failed to fetch file content: ${res.statusText}`);
     }
@@ -808,9 +840,9 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
 export async function fetchSkills(agentId?: string): Promise<string[]> {
   try {
     const cleanId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
-    const res = await fetch(cleanId ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/skills` : `${API_BASE_URL}/agents/skills`, {
+    const res = await authorizedFetch(cleanId ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/skills` : `${API_BASE_URL}/agents/skills`, {
       headers: { Accept: "application/json" }
-    });
+    }, cleanId);
     if (!res.ok) {
       throw new Error(`Failed to fetch skills: ${res.statusText}`);
     }
@@ -842,12 +874,12 @@ export interface AgentMcpClient {
 export async function fetchAgentMcpClients(agentId: string): Promise<AgentMcpClient[]> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const res = await fetch(`${API_BASE_URL}/mcp?agentIdQuery=${encodeURIComponent(cleanId)}`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/mcp?agentIdQuery=${encodeURIComponent(cleanId)}`, {
       headers: {
         Accept: "application/json",
         "X-Agent-Id": cleanId,
       },
-    });
+    }, cleanId);
     if (!res.ok) {
       throw new Error(`Failed to fetch MCP clients: ${res.statusText}`);
     }
@@ -880,9 +912,9 @@ export interface AgentScheduleJob {
 export async function fetchAgentChannels(agentId: string): Promise<AgentChannelConfig[]> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels`, {
       headers: { Accept: "application/json" }
-    });
+    }, cleanId);
     if (!res.ok) throw new Error("Failed to fetch agent channels");
     const channelsObj = await res.json();
     
@@ -928,9 +960,10 @@ function agentScopedPath(agentId: string | undefined, path: string): string {
 
 export async function fetchAgentSchedules(agentId?: string): Promise<AgentScheduleJob[]> {
   try {
-    const res = await fetch(agentScopedPath(agentId, "cron/jobs"), {
+    const cleanId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
+    const res = await authorizedFetch(agentScopedPath(agentId, "cron/jobs"), {
       headers: { Accept: "application/json" }
-    });
+    }, cleanId);
     if (!res.ok) throw new Error("Failed to fetch cron jobs");
     const data = await res.json();
     const list = Array.isArray(data) ? data : [];
@@ -1202,9 +1235,9 @@ export interface AgentLoopModeConfig {
 export async function fetchAgentLoopMode(agentId: string): Promise<AgentLoopModeConfig> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const res = await fetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/loop-mode`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/loop-mode`, {
       headers: { Accept: "application/json", "X-Agent-Id": cleanId },
-    });
+    }, cleanId);
     if (res.ok) {
       const data = await res.json();
       if (data && data.mode) return data;

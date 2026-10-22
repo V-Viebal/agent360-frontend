@@ -170,6 +170,7 @@ import {
   AgentListAuthError,
   updateAgentActiveModel,
   fetchAgentChats,
+  getCachedAgentChats,
   markChatAsRead,
   fetchActiveChats,
   fetchChatMessages,
@@ -402,29 +403,29 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
   };
 
   return (
-    <div className="w-full rounded-xl border border-neutral-200 dark:border-[#22222c] bg-white dark:bg-[#121217] overflow-hidden my-1.5 transition-all text-xs font-mono shadow-sm">
-      {/* Header Bar */}
+    <div className="w-full rounded-lg border border-neutral-200/70 dark:border-[#22222c]/80 bg-white dark:bg-[#121217] overflow-hidden my-0.5 transition-all text-[11px] font-mono shadow-xs">
+      {/* Header Bar: Compact, reduced padding, height, spacing, font size & weight */}
       <div
         onClick={() => setOpen(!open)}
-        className="px-3 py-2 bg-neutral-50 dark:bg-[#15151c] hover:bg-neutral-100 dark:hover:bg-[#191922] flex items-center justify-between cursor-pointer select-none transition-colors border-b border-transparent"
+        className="px-2 py-1 bg-neutral-50/70 dark:bg-[#15151c]/70 hover:bg-neutral-100 dark:hover:bg-[#191922] flex items-center justify-between cursor-pointer select-none transition-colors border-b border-transparent min-h-[26px]"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           {isCalling ? (
-            <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
+            <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
           ) : isError ? (
-            <span className="h-4 w-4 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
-              <AlertCircle size={10} />
+            <span className="h-3.5 w-3.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
+              <AlertCircle size={9} />
             </span>
           ) : (
-            <span className="h-4 w-4 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-              <Terminal size={10} />
+            <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+              <Terminal size={9} />
             </span>
           )}
-          <span className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-200 truncate font-mono">
+          <span className="text-[11px] font-normal text-neutral-800 dark:text-neutral-300 truncate font-mono">
             {displayTitle}
           </span>
           <span
-            className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+            className={`text-[9px] px-1 py-0 rounded font-mono font-normal ${
               isCalling
                 ? "bg-[#f8a87c]/10 text-[#f8a87c]"
                 : isError
@@ -432,14 +433,14 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
                 : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             }`}
           >
-            {isCalling ? "calling..." : isError ? "error" : "exit 0"}
+            {isCalling ? "calling" : isError ? "error" : "0"}
           </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 shrink-0 ml-1">
           <ChevronDown
-            size={13}
-            className={`text-neutral-500 transition-transform duration-200 ${open ? "rotate-180 text-white" : ""}`}
+            size={11}
+            className={`text-neutral-400 transition-transform duration-200 ${open ? "rotate-180 text-neutral-200" : ""}`}
           />
         </div>
       </div>
@@ -1184,6 +1185,61 @@ interface QuickSuggestion {
 }
 
 // Dynamically generate 4 tailored quick prompt suggestions based on agent role, tools, and node placement
+// Helper to extract clean/friendly short name from full agent name (e.g. 'GM Bốc (Executive)' -> 'Bốc')
+function getCleanAgentShortName(agent?: InfraAgent): string {
+  if (!agent?.name) return 'Agent';
+  const raw = agent.name.split('(')[0].trim();
+  if (raw.toUpperCase().startsWith('GM ')) {
+    return raw.slice(3).trim();
+  }
+  return raw;
+}
+
+// Generate 3 flexible nickname choices matching Image 1
+function getAgentNicknameChoices(agent?: InfraAgent): { id: string; label: string; name: string }[] {
+  const originalName = agent?.name || 'Agent';
+  const shortName = getCleanAgentShortName(agent);
+  const role = (agent?.roleTag || '').toLowerCase();
+  const slug = (agent?.slug || '').toLowerCase();
+
+  let optA = shortName;
+  let optB = shortName + ' Bot';
+
+  if (slug.includes('mons') || originalName.toLowerCase().includes('mons')) {
+    optA = 'Mon';
+    optB = 'Mons';
+  } else if (slug.includes('ken') || originalName.toLowerCase().includes('ken')) {
+    optA = 'Ken';
+    optB = 'PO Ken';
+  } else if (slug.includes('gm') || originalName.toLowerCase().includes('bốc')) {
+    optA = 'Bốc';
+    optB = 'GM Assistant';
+  } else if (slug.includes('zen') || originalName.toLowerCase().includes('zen')) {
+    optA = 'Zen';
+    optB = 'Zenith';
+  } else if (slug.includes('climax') || originalName.toLowerCase().includes('climax')) {
+    optA = 'Climax';
+    optB = 'Max';
+  } else if (slug.includes('qa') || originalName.toLowerCase().includes('qa')) {
+    optA = 'Tester';
+    optB = 'QA Helper';
+  } else if (role.includes('finance') || role.includes('ops')) {
+    optA = shortName;
+    optB = shortName + ' Finance';
+  }
+
+  const uniqueNames = Array.from(new Set([optA, optB, originalName]));
+  while (uniqueNames.length < 3) {
+    uniqueNames.push(shortName + ' AI');
+  }
+
+  return [
+    { id: 'A', label: 'A', name: uniqueNames[0] },
+    { id: 'B', label: 'B', name: uniqueNames[1] },
+    { id: 'C', label: 'C', name: uniqueNames[2] || originalName },
+  ];
+}
+
 function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
   if (!agent) {
     return [
@@ -1220,33 +1276,33 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
   const name = (agent.name || "").toLowerCase();
   const tools = (agent.tools || []).map((t: any) => (typeof t === "string" ? t : t.name || "").toLowerCase());
 
-  // 1. ERPNext / Business Operations Agents (e.g. GM Bốc, GM Gạo, GM Lúa, GM Team)
-  const hasErpTools = tools.some((t: string) => t.includes("erpnext") || t.includes("invoice") || t.includes("quotation"));
-  if (hasErpTools || id.includes("gm-") || slug.includes("gm-")) {
+  // 1. ERPNext / Business Operations Agents (e.g. GM Bốc, GM Gạo, GM Lúa, GM Team) - Direct actionable prompts like Image 2
+  const hasErpTools = tools.some((t: string) => t.includes("erpnext") || t.includes("invoice") || t.includes("quotation") || t.includes("order"));
+  if (hasErpTools || id.includes("gm-") || slug.includes("gm-") || name.includes("bốc") || name.includes("gạo") || name.includes("lúa") || name.includes("gm")) {
     return [
       {
-        title: "ERP & Stock Balance",
-        desc: `Check warehouse stock levels, pending inventory transfers, and batch balance on ${agent.node}`,
-        prompt: "Query current ERPNext inventory balances, pending stock movements, and item valuations.",
-        badge: "ERP"
+        title: "Xuất file sản lượng bán",
+        desc: "Xuất dữ liệu bán hàng tổng hợp theo mặt hàng trên 30kg",
+        prompt: "Xuất giùm tôi file sản lượng bán từng mặt hàng, các loại tổng hợp trên 30kg trong tháng này nhé.",
+        badge: "Excel / ERPNext"
       },
       {
-        title: "Order & Invoice Reconcile",
-        desc: "Three-way invoice match for recent supplier receipts and payments",
-        prompt: "Reconcile recent purchase orders against supplier invoices and generate a summary report.",
-        badge: "Finance"
+        title: "Đối chiếu biên bản công nợ",
+        desc: "Kiểm tra danh sách hóa đơn xuất bù và đối chiếu công nợ",
+        prompt: "Đối chiếu biên bản công nợ tháng này cho các khách hàng, rà soát xem có hóa đơn nào thiếu cần xuất bù không.",
+        badge: "Kế toán TT99"
       },
       {
-        title: "Draft Commercial Quotation",
-        desc: "Generate official Vietnamese quote with pricing, terms, and item lines",
-        prompt: "Create a formal draft service quotation for a prospective client with line items and TT99 terms.",
-        badge: "Sales"
+        title: "Kiểm tra tồn kho & số đã giao",
+        desc: "Tổng hợp số xuất đã giao và đối soát số lượng tồn kho",
+        prompt: "Kiểm tra số đã giao trên sổ phiếu xuất từ ngày 02 đến ngày 20, tổng hợp các mặt hàng tính theo gói và theo kg.",
+        badge: "Kho vận"
       },
       {
-        title: "Triage Operations Inquiries",
-        desc: "Review open tickets, delivery schedules, and partner communications",
-        prompt: "Triage pending customer tickets and summarize high-priority fulfillment bottlenecks.",
-        badge: "Ops"
+        title: "Báo cáo doanh thu & giao dịch",
+        desc: "Tổng hợp tổng doanh số và tình trạng thanh toán",
+        prompt: "Lập bảng báo cáo nhanh tổng hợp doanh số bán hàng và danh sách công nợ sắp đến hạn thanh toán.",
+        badge: "Báo cáo"
       }
     ];
   }
@@ -1343,31 +1399,31 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
     ];
   }
 
-  // 5. Default Engineering / Fullstack Developer (e.g. Mons, AgentTeams Gateway, Fullstack SWE)
+  // 5. Engineering & Dev / Ops (e.g. Mons, AgentTeams, Fullstack SWE) - Direct actionable prompts like Image 2
   return [
     {
-      title: "Inspect & Review Git Diffs",
-      desc: "Check uncommitted files, inspect git diffs, and prepare clean atomic commit",
-      prompt: "Review current git status and code diffs across frontend and backend services.",
-      badge: "Git"
+      title: "Review Git Diffs & Status",
+      desc: "Kiểm tra git diffs và trạng thái thay đổi code",
+      prompt: "Review current git status and code diffs across frontend and backend services, chuẩn bị sẵn sàng commit.",
+      badge: "Git CLI"
     },
     {
-      title: "Build & Deploy Verification",
-      desc: "Run local build, verify TypeScript types, and check deployment health",
-      prompt: "Execute local production build and verify service endpoints respond with exit code 0.",
-      badge: "Build"
+      title: "Build & Kiểm chứng Integrity",
+      desc: "Chạy build production và xác thực endpoint",
+      prompt: "Execute local production build, verify TypeScript types and confirm HTTP 200 on all service routes.",
+      badge: "Vite / Node"
     },
     {
-      title: "Inspect ACP & MCP Tool Registry",
-      desc: "List active tool schemas, runtime bridges, and registered capabilities",
-      prompt: "List all active tools and MCP servers registered for this agent session.",
-      badge: "Tools"
+      title: "Điều phối Sub-Agent chuyên trách",
+      desc: "Lập kế hoạch và ủy quyền việc cho sub-agent",
+      prompt: "Lập kế hoạch công việc và ủy quyền nhiệm vụ cho sub-agent với tiêu chí nghiệm thu rõ ràng.",
+      badge: "Sub-Agents"
     },
     {
-      title: "Sub-Agent Delegation Task",
-      desc: `Dispatch multi-step objective to specialized sub-agents via ${agent.name}`,
-      prompt: "Plan and coordinate a multi-agent delegation pipeline with acceptance criteria.",
-      badge: "Swarm"
+      title: "Kiểm tra MCP Tools & Server Registry",
+      desc: "Liệt kê danh sách công cụ và quyền hạn khả dụng",
+      prompt: "List all active tools and MCP servers registered for this agent session, verify connectivity.",
+      badge: "MCP Tools"
     }
   ];
 }
@@ -1377,8 +1433,32 @@ export function GrokBotWorkspace() {
   const { agentParam, chatParam } = useParams<{ agentParam?: string; chatParam?: string }>();
   const navigate = useNavigate();
   const [agents, setAgents] = useState<InfraAgent[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(() => {
+    if (agentParam) return agentParam;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlAgent = params.get("agent");
+      if (urlAgent) return urlAgent;
+    } catch {}
+
+    try {
+      // Ids stored while the UI was on the old mock fleet (e.g. bot:agent360:swe-lead) do not exist on any runtime.
+      const last = localStorage.getItem("agent360_last_agent_id") || "";
+      if (/^bot:agent360:(swe-lead|sre-sentinel|qa-vision|kb-researcher)$/i.test(last)) {
+        localStorage.removeItem("agent360_last_agent_id");
+        return "";
+      }
+      return last;
+    } catch {
+      return "";
+    }
+  });
   // Agent-scoped loads only run for an id that exists in the real fleet (stale/unknown ids would 404 on every API).
-  const isKnownAgent = (id: string | null | undefined) => !!id && agents.some((a) => a.id === id);
+  const isKnownAgent = (id: string | null | undefined) => {
+    if (!id) return false;
+    const bare = id.replace(/^bot:agent360:/i, "").toLowerCase();
+    return agents.some((a) => a.id === id || a.slug === bare || a.id.toLowerCase() === `bot:agent360:${bare}`);
+  };
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isOnlineState, setIsOnlineState] = useState<boolean>(() => {
@@ -1441,6 +1521,29 @@ export function GrokBotWorkspace() {
     }
   }, [isOnlineState, offlinePendingQueue]);
 
+
+    // Persistent customizable agent nickname (Image 1)
+  const [agentNickname, setAgentNickname] = useState<string>("");
+
+  useEffect(() => {
+    if (!selectedAgentId) return;
+    try {
+      const saved = localStorage.getItem(`skyer_agent_nickname_${selectedAgentId}`) || "";
+      setAgentNickname(saved);
+    } catch {}
+  }, [selectedAgentId, agents.length]);
+
+  const handleSetAgentNickname = (name: string) => {
+    setAgentNickname(name);
+    try {
+      if (selectedAgentId) {
+        localStorage.setItem(`skyer_agent_nickname_${selectedAgentId}`, name);
+        window.dispatchEvent(new CustomEvent("agent360_nickname_updated", { detail: { agentId: selectedAgentId, name } }));
+      }
+    } catch {}
+    setForkToast(`Đã lưu tên gọi thân mật: ${name}`);
+    setTimeout(() => setForkToast(null), 2000);
+  };
 
   const [selectedInstance, setSelectedInstance] = useState<string>(() => {
     try {
@@ -1655,26 +1758,7 @@ export function GrokBotWorkspace() {
       setTimeout(() => setForkToast(null), 3000);
     }
   };
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(() => {
-    if (agentParam) return agentParam;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const urlAgent = params.get("agent");
-      if (urlAgent) return urlAgent;
-    } catch {}
 
-    try {
-      // Ids stored while the UI was on the old mock fleet (e.g. bot:agent360:swe-lead) do not exist on any runtime.
-      const last = localStorage.getItem("agent360_last_agent_id") || "";
-      if (/^bot:agent360:(swe-lead|sre-sentinel|qa-vision|kb-researcher)$/i.test(last)) {
-        localStorage.removeItem("agent360_last_agent_id");
-        return "";
-      }
-      return last;
-    } catch {
-      return "";
-    }
-  });
   const [chats, setChats] = useState<AgentSession[]>([]);
   // Which agent the current `chats` list belongs to (avoids loading agent A's chat under agent B while switching).
   const [chatsAgentId, setChatsAgentId] = useState<string>("");
@@ -1887,6 +1971,7 @@ export function GrokBotWorkspace() {
     }
   });
   const [isResizingChatSessions, setIsResizingChatSessions] = useState(false);
+  const chatSessionsAsideRef = useRef<HTMLElement>(null);
 
     // Adjustable Computer Split Ratio (20% to 80% with 35% default)
   const [computerChatWidthPercent, setComputerChatWidthPercent] = useState<number>(() => {
@@ -1935,9 +2020,10 @@ export function GrokBotWorkspace() {
     try {
       if (localStorage.getItem("agent360_computer_split") === "true") return true;
       const saved = localStorage.getItem("agent360_chat_list_collapsed");
-      return saved !== null ? saved === "true" : false;
+      // Default to true (collapsed) for new users so the chat canvas remains clean & focused
+      return saved !== null ? saved === "true" : true;
     } catch {
-      return false;
+      return true;
     }
   });
   // 2. isBotInfoCollapsed: collapse bar for rightmost bot information pane
@@ -1946,9 +2032,10 @@ export function GrokBotWorkspace() {
     try {
       if (localStorage.getItem("agent360_computer_split") === "true") return true;
       const saved = localStorage.getItem("agent360_bot_info_collapsed");
-      return saved !== null ? saved === "true" : false;
+      // Default to true (collapsed) for new users
+      return saved !== null ? saved === "true" : true;
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -1969,10 +2056,15 @@ export function GrokBotWorkspace() {
         setBotInfoWidth(newW);
         try { localStorage.setItem("agent360_bot_info_w", newW.toString()); } catch {}
       } else if (isResizingChatSessions) {
-        // Chat sessions is positioned to the left of Agent Specification (or right edge if bot info collapsed)
-        const offsetFromRight = window.innerWidth - e.clientX;
-        const currentBotInfoOffset = (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280) ? botInfoWidth : 0;
-        const computedWidth = offsetFromRight - currentBotInfoOffset;
+        let computedWidth = 280;
+        if (chatSessionsAsideRef.current) {
+          const rect = chatSessionsAsideRef.current.getBoundingClientRect();
+          computedWidth = rect.right - e.clientX;
+        } else {
+          const offsetFromRight = window.innerWidth - e.clientX;
+          const currentBotInfoOffset = (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280) ? botInfoWidth : 0;
+          computedWidth = offsetFromRight - currentBotInfoOffset;
+        }
         const boundedW = Math.min(460, Math.max(220, computedWidth));
         setChatSessionsWidth(boundedW);
         try { localStorage.setItem("agent360_chat_sessions_w", boundedW.toString()); } catch {}
@@ -3366,6 +3458,10 @@ const handleBatchDeleteSelectedChats = () => {
       setCurrentAgentSubBindings([]);
     });
 
+    fetchSkills(selectedAgentId).then((sk) => {
+      if (Array.isArray(sk) && sk.length > 0) setSkills(sk);
+    }).catch(() => {});
+
     // Restore persistent Loop Mode per agent from localStorage with backend sync fallback
     try {
       const localSaved = localStorage.getItem(`skyer_loop_mode_${selectedAgentId}`);
@@ -3384,13 +3480,21 @@ const handleBatchDeleteSelectedChats = () => {
         if (cfg?.mode) setActiveLoopMode(cfg.mode);
       });
     }
-  }, [selectedAgentId, mcpRefreshTrigger]);
+  }, [selectedAgentId, mcpRefreshTrigger, agents.length]);
 
   // Fetch agent-specific chats whenever selectedAgentId changes
   useEffect(() => {
     if (!isKnownAgent(selectedAgentId)) return;
     async function loadAgentChats() {
-      setIsLoadingChats(true);
+      // SWR: Instant render from client memory/sessionStorage cache
+      const cached = getCachedAgentChats(selectedAgentId);
+      if (cached && cached.length > 0) {
+        setChats(cached);
+        setChatsAgentId(selectedAgentId);
+      } else {
+        setIsLoadingChats(true);
+      }
+
       try {
         const loadedChats = await fetchAgentChats(selectedAgentId);
         setChats(loadedChats);
@@ -6238,43 +6342,109 @@ const handleBatchDeleteSelectedChats = () => {
               </div>
             </div>
           ) : displayMessages.length === 0 ? (
-            /* Quick Suggestions for fresh New Chat session: Lean, no greeting text or descriptions */
-            <div className="py-8 px-2 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-xl mx-auto w-full">
-              <div className="w-full flex items-center justify-between mb-3 px-1 text-xs text-neutral-400 font-mono">
-                <span className="flex items-center gap-1.5 text-neutral-300 font-medium">
-                  <Sparkles size={13} className="text-[#f8a87c]" />
-                  <span>Suggested Prompts</span>
-                </span>
-                <span className="text-[10px] text-neutral-500">Click to send immediately</span>
+            /* First-turn Interactive Onboarding & MCP Suggested Workflows (Matching Image 1 & 2) */
+            <div className="py-6 px-3 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-xl mx-auto w-full space-y-4">
+              {/* 1. Friendly Greeting Bubble from the selected Agent (Image 1) */}
+              <div className="w-full flex flex-col space-y-1.5 items-start">
+                <div className="flex items-center gap-2 mb-0.5 select-none text-[11px] font-mono text-neutral-400">
+                  <AgentAvatar agent={selectedAgent} size="xs" interactive={false} />
+                  <span className="font-semibold text-slate-800 dark:text-neutral-200">{selectedAgent.name}</span>
+                  <span className="text-[10px] text-neutral-500">• {selectedAgent.roleTag || "AI Assistant"}</span>
+                </div>
+
+                <div className="rounded-2xl rounded-tl-xs p-3.5 sm:p-4 bg-slate-100 dark:bg-[#181822] border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-neutral-100 text-[13px] leading-relaxed shadow-xs max-w-lg">
+                  <p>
+                    {t("onboarding.helloLead") || "Xin chào!"} Tôi là <strong className="text-[#f8a87c]">{agentNickname || selectedAgent.name}</strong>, trợ lý chuyên trách hỗ trợ công việc và xử lý các tác vụ thực chiến cho bạn.
+                  </p>
+                </div>
               </div>
 
-              {/* Grid of 4 dynamic, agent-specific quick prompt suggestion cards with responsive container-based wrapping */}
-              <div className="grid grid-cols-1 [container-type:inline-size] @[520px]:grid-cols-2 gap-2 sm:gap-2.5 w-full text-left font-sans">
-                {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
-                  <button
-                    key={qIdx}
-                    type="button"
-                    onClick={() => {
-                      executeTurnStream(item.prompt);
-                    }}
-                    className="p-2.5 sm:p-3 md:p-3.5 rounded-2xl bg-white dark:bg-[#14141c]/90 hover:bg-slate-50 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer group shadow-xs hover:shadow-sm flex items-center justify-between gap-2 w-full min-w-0 overflow-hidden"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0" />
-                      <span className="text-xs font-medium text-slate-800 dark:text-neutral-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors truncate whitespace-nowrap min-w-0 block">
-                        {item.title}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                      {item.badge && (
-                        <span className="hidden @[260px]:inline-block text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#1e1e2c] text-[#f8a87c] border border-[#2b2b3e] shrink-0 whitespace-nowrap">
-                          {item.badge}
-                        </span>
-                      )}
-                      <ArrowRight size={13} className="text-neutral-500 group-hover:text-[#f8a87c] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0 hidden @[320px]:block" />
-                    </div>
-                  </button>
-                ))}
+              {/* 2. Interactive Name Choice Card (Image 1: What would you like to call me?) */}
+              <div className="w-full max-w-lg rounded-2xl p-4 sm:p-5 bg-white dark:bg-[#121218] border border-slate-200 dark:border-white/10 shadow-sm space-y-3">
+                <div className="space-y-1 text-left">
+                  <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
+                    {t("onboarding.nameQuestion") || "Bạn muốn gọi tôi là gì? Bạn có thể đổi lại bất cứ lúc nào."}
+                  </h4>
+                  <p className="text-[11px] text-neutral-500 font-sans">
+                    Chọn một tên gọi ngắn gọn thân quen để xưng hô trong các phiên làm việc:
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  {getAgentNicknameChoices(selectedAgent).map((choice) => {
+                    const isCurrent = (agentNickname || selectedAgent.name) === choice.name;
+                    return (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        onClick={() => handleSetAgentNickname(choice.name)}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs transition-all cursor-pointer text-left ${
+                          isCurrent
+                            ? "bg-[#f8a87c]/15 border-[#f8a87c] text-[#f8a87c] font-semibold shadow-xs"
+                            : "bg-slate-50 dark:bg-[#181820] hover:bg-slate-100 dark:hover:bg-[#20202c] border-slate-200 dark:border-white/5 text-slate-800 dark:text-neutral-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`h-6 w-6 rounded-lg flex items-center justify-center text-[11px] font-mono font-semibold transition-colors ${
+                            isCurrent
+                              ? "bg-[#f8a87c] text-neutral-950 font-bold"
+                              : "bg-slate-200 dark:bg-white/10 text-neutral-600 dark:text-neutral-300"
+                          }`}>
+                            {choice.label}
+                          </span>
+                          <span className="text-xs">{choice.name}</span>
+                        </div>
+                        {isCurrent && (
+                          <span className="text-[10px] font-mono text-[#f8a87c] flex items-center gap-1">
+                            <span>Đang dùng</span>
+                            <Check size={12} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Actionable Work Prompts tailored to this Agent's MCP Skills (Image 2) */}
+              <div className="w-full max-w-lg space-y-2 pt-2">
+                <div className="flex items-center justify-between px-1 text-xs text-neutral-400 font-mono">
+                  <span className="flex items-center gap-1.5 text-neutral-300 font-medium text-xs">
+                    <Sparkles size={13} className="text-[#f8a87c]" />
+                    <span>Nhiệm vụ đề xuất cho {agentNickname || getCleanAgentShortName(selectedAgent)}:</span>
+                  </span>
+                  <span className="text-[10px] text-neutral-500">Chạm để giao việc ngay</span>
+                </div>
+
+                <div className="space-y-2 w-full text-left font-sans">
+                  {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
+                    <button
+                      key={qIdx}
+                      type="button"
+                      onClick={() => {
+                        executeTurnStream(item.prompt);
+                      }}
+                      className="w-full p-3 sm:p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#14141c]/90 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer group shadow-xs flex items-center justify-between gap-3 min-w-0"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className="h-2 w-2 rounded-full bg-[#f8a87c] shrink-0 group-hover:scale-125 transition-transform" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-slate-800 dark:text-neutral-100 group-hover:text-[#f8a87c] transition-colors leading-snug line-clamp-2">
+                            {item.prompt}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                        {item.badge && (
+                          <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-md bg-slate-200 dark:bg-[#1e1e2c] text-neutral-700 dark:text-[#f8a87c] border border-slate-300 dark:border-[#2b2b3e] shrink-0 whitespace-nowrap">
+                            {item.badge}
+                          </span>
+                        )}
+                        <ArrowRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -6444,16 +6614,10 @@ const handleBatchDeleteSelectedChats = () => {
                       {/* 2. Formatted Main Response Content: left-aligned, transparent, no background, no border */}
                       {/* Loading & Responding Indicator when assistant message has not produced text content yet */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
-                        <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150">
-                          <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
-                          <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 font-medium">
-                            {msg.steps && msg.steps.some((st) => st.kind === "tool_call" && st.state === "calling") ? `${selectedAgent.name} đang chạy công cụ...` : `${selectedAgent.name} đang suy nghĩ và phản hồi...`}
-                          </span>
-                          <span className="inline-flex items-center gap-1 ml-0.5 select-none">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                          </span>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                         </div>
                       )}
 
@@ -6623,16 +6787,10 @@ const handleBatchDeleteSelectedChats = () => {
           {/* Active Session Responding Indicator during ongoing agent turn */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1.5 animate-in fade-in duration-200 my-2">
-              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none">
-                <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
-                <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 font-medium">
-                  {selectedAgent.name} đang suy nghĩ và xử lý...
-                </span>
-                <span className="inline-flex items-center gap-1 ml-0.5 select-none">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                </span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
               </div>
             </div>
           )}
@@ -8456,157 +8614,10 @@ const handleBatchDeleteSelectedChats = () => {
       </main>
 
       {/* ========================================================= */}
-      {/* 2.5 LIVE COMPUTER EXPAND PANE (Desktop: 70% width, Mobile: Fullscreen) */}
-      {/* ========================================================= */}
-      {isComputerSplitOpen && (() => {
-        const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
-        return (
-          <>
-            {/* Minimalist Resizer Splitter between Chat and Computer */}
-            <div
-              onMouseDown={() => setIsResizingComputerSplit(true)}
-              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/60 active:bg-[#f8a87c] transition-colors shrink-0 z-30 select-none group"
-              title={t("computer.dragSplitterTitle") || "Kéo để thay đổi tỷ lệ"}
-            >
-              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[#f8a87c] group-hover:h-9 transition-all" />
-            </div>
-
-            <section
-            data-testid="virtual-computer-split-pane"
-            aria-label="Virtual Computer Interactive Workspace"
-            className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
-          >
-            {/* Top Control Bar */}
-            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
-              </div>
-
-              {/* Action Buttons: Minimized Icon Buttons with Precision Tooltips */}
-              <div className="flex items-center gap-1 shrink-0">
-                {/* 1. Quick Screenshot Button with instant feedback */}
-                <Tooltip content={isScreenshotCaptured ? "Đã chụp và đính kèm vào chat!" : t("computer.screenshotBtn")} placement="bottom">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      triggerHaptic();
-                      playNotificationChime("retro");
-                      setIsScreenshotCaptured(true);
-                      setTimeout(() => setIsScreenshotCaptured(false), 1500);
-                      const timestamp = new Date().toLocaleTimeString();
-                      const frameUrl = agentBrowserImageUrl(agentBrowserFor, Date.now());
-                      
-                      // Add real screenshot item to attachedFiles state
-                      const newAttachment: UploadedFileResult = {
-                        file_name: `${selectedAgent.slug}-screen-${Date.now().toString().slice(-4)}.jpg`,
-                        url: frameUrl,
-                        size: 145000,
-                        mime_type: "image/jpeg",
-                      };
-                      setAttachedFiles((prev) => [...prev, newAttachment]);
-
-                      const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${timestamp} Attached]`;
-                      setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
-                      textareaRef.current?.focus();
-                    }}
-                    className={`h-8 w-8 rounded-lg border flex items-center justify-center text-xs font-mono transition-all cursor-pointer ${
-                      isScreenshotCaptured
-                        ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 scale-105"
-                        : "bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-cyan-600 dark:hover:text-cyan-400"
-                    }`}
-                    aria-label={t("computer.screenshotBtn")}
-                  >
-                    {isScreenshotCaptured ? (
-                      <Check size={14} className="text-emerald-400 animate-in zoom-in-75 duration-150" />
-                    ) : (
-                      <Camera size={14} className="text-cyan-400" />
-                    )}
-                  </button>
-                </Tooltip>
-
-                {/* 2. Reload Session Button */}
-                <Tooltip content={t("computer.reloadProfileBtn")} placement="bottom">
-                  <button
-                    type="button"
-                    disabled={isReloadingBrowser}
-                    onClick={() => {
-                      triggerHaptic();
-                      setIsReloadingBrowser(true);
-                      setBrowserIframeKey((k) => k + 1);
-                      setTimeout(() => setIsReloadingBrowser(false), 900);
-                    }}
-                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
-                    aria-label={t("computer.reloadProfileBtn")}
-                  >
-                    <RefreshCw size={13} className={isReloadingBrowser ? "animate-spin text-[#f8a87c]" : ""} />
-                  </button>
-                </Tooltip>
-
-                {/* 3. Zen Mode (Fullscreen) Button */}
-                <Tooltip content={t("computer.zenMode")} placement="bottom">
-                  <button
-                    type="button"
-                    onClick={() => handleSetBrowserModalOpen(true)}
-                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
-                    aria-label={t("computer.zenMode")}
-                  >
-                    <Maximize2 size={13} />
-                  </button>
-                </Tooltip>
-
-                {/* 4. Open External Window Button */}
-                <Tooltip content={t("computer.openExternal")} placement="bottom">
-                  <a
-                    href={browserTarget.url ? "#" : undefined}
-                    onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
-                    aria-label={t("computer.openExternal")}
-                  >
-                    <ExternalLink size={13} />
-                  </a>
-                </Tooltip>
-
-                {/* 5. Close Split Button */}
-                <Tooltip content={t("computer.closeComputer")} placement="bottom">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleComputerSplit(false)}
-                    className="h-8 w-8 rounded-lg bg-slate-200/80 hover:bg-red-500/10 hover:text-red-500 dark:bg-[#22222e] dark:hover:bg-red-500/20 dark:hover:text-red-400 border border-slate-300 dark:border-[#303042] hover:border-red-500/30 text-slate-700 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
-                    aria-label={t("computer.closeComputer")}
-                  >
-                    <X size={15} />
-                  </button>
-                </Tooltip>
-              </div>
-            </div>
-
-            {/* Iframe Workspace with automatic viewport scaling */}
-            <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
-              {browserTarget.url ? (
-                <SelkiesViewer
-                  key={`split-${selectedAgent.id}-${browserTarget.url}`}
-                  agentId={agentBrowserFor}
-                  url={browserTarget.url}
-                  title={`${selectedAgent.name} Computer Live Split`}
-                  profile={browserTarget.profile}
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
-                  {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
-                </div>
-              )}
-            </div>
-          </section>
-          </>
-        );
-      })()}
-
-      {/* ========================================================= */}
       {/* 3. CONVERSATION SESSIONS LIST (COLLAPSIBLE, RIGHT OF CHAT) */}
       {/* ========================================================= */}
       <aside
+        ref={chatSessionsAsideRef}
         id="tour-chat-sessions"
         style={{
           width:
@@ -8662,29 +8673,7 @@ const handleBatchDeleteSelectedChats = () => {
             </div>
 
             {/* Action & Expand/Collapse icons shifted to the right with Tooltips */}
-            <div className="flex items-center gap-1.5 ml-auto shrink-0">
-              <Tooltip content="Tìm kiếm cuộc hội thoại" placement="bottom" minWidth={140}>
-                <button aria-label="Search chats" data-ux-target-min="24"
-                  onClick={() => setChatSearchOpen(!chatSearchOpen)}
-                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-                >
-                  <Search size={14} />
-                </button>
-              </Tooltip>
-
-              {/* Mark All As Read Button: icon-only */}
-              <Tooltip content="Đánh dấu đã đọc tất cả" placement="bottom" minWidth={150}>
-                <button
-                  aria-label="Đánh dấu đã đọc tất cả"
-                  data-ux-target-min="24"
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-[#f8a87c] dark:hover:text-[#f8a87c] transition-colors cursor-pointer"
-                >
-                  <CheckCheck size={15} />
-                </button>
-              </Tooltip>
-
+            <div className="flex items-center gap-1 ml-auto shrink-0">
               <Tooltip content="Tạo cuộc hội thoại mới" placement="bottom" shortcut="Ctrl+Shift+O" minWidth={160}>
                 <button aria-label="New Chat Session" data-ux-target-min="24"
                   onClick={handleNewChat}
@@ -8799,21 +8788,55 @@ const handleBatchDeleteSelectedChats = () => {
               </div>
             )}
 
-            {/* Filter Tabs for Conversations: All / Unread / Pinned (Shared Tabs Primitive, scrollable horizontally on 1 single line) */}
+            {/* Filter Tabs for Conversations: All / Unread / Pinned with Search & Mark All Read on right */}
             <div className="px-2 pt-2 pb-1 border-b border-slate-200 dark:border-[#1c1c24] space-y-1.5">
-              <div className="w-full overflow-x-auto scrollbar-none flex items-center">
-                <Tabs
-                  size="sm"
-                  className="w-full justify-between min-w-max flex items-center gap-1"
-                  activeTab={chatFilterTab}
-                  onChange={(tabId) => setChatFilterTab(tabId as any)}
-                  tabs={[
-                    { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
-                    { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).filter(id => !archivedChatIds.includes(id)).length || undefined },
-                    { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
-                    { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
-                  ]}
-                />
+              <div className="flex items-center justify-between gap-1 w-full">
+                {/* Scrollable Tabs on 1 line with right blur mask */}
+                <div className="flex-1 min-w-0 overflow-x-auto scrollbar-none scroll-mask-horizontal">
+                  <Tabs
+                    size="sm"
+                    className="justify-start min-w-max flex items-center gap-1"
+                    activeTab={chatFilterTab}
+                    onChange={(tabId) => setChatFilterTab(tabId as any)}
+                    tabs={[
+                      { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
+                      { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).filter(id => !archivedChatIds.includes(id)).length || undefined },
+                      { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
+                      { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
+                    ]}
+                  />
+                </div>
+
+                {/* Action buttons on the same line to the right of the tabs */}
+                <div className="flex items-center gap-0.5 shrink-0 pl-1 border-l border-slate-200/70 dark:border-[#22222e]">
+                  <Tooltip content="Tìm kiếm cuộc hội thoại" placement="bottom" minWidth={140}>
+                    <button
+                      aria-label="Search chats"
+                      data-ux-target-min="24"
+                      type="button"
+                      onClick={() => setChatSearchOpen(!chatSearchOpen)}
+                      className={`h-6 w-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
+                        chatSearchOpen
+                          ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                          : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-[#1f1f26]"
+                      }`}
+                    >
+                      <Search size={13} />
+                    </button>
+                  </Tooltip>
+
+                  <Tooltip content="Đánh dấu đã đọc tất cả" placement="bottom" minWidth={150}>
+                    <button
+                      aria-label="Đánh dấu đã đọc tất cả"
+                      data-ux-target-min="24"
+                      type="button"
+                      onClick={handleMarkAllAsRead}
+                      className="h-6 w-6 rounded-md hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-[#f8a87c] dark:hover:text-[#f8a87c] transition-colors cursor-pointer"
+                    >
+                      <CheckCheck size={14} />
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
 
               {/* Sub-Channel Filter Bar (All / Console / Telegram / Zalo / Khác) */}
@@ -9338,6 +9361,154 @@ ${chat.id}`);
           </>
         )}
       </aside>
+
+      {/* ========================================================= */}
+      {/* 2.5 LIVE COMPUTER EXPAND PANE (Desktop: 70% width, Mobile: Fullscreen) */}
+      {/* ========================================================= */}
+      {isComputerSplitOpen && (() => {
+        const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
+        return (
+          <>
+            {/* Minimalist Resizer Splitter between Chat and Computer */}
+            <div
+              onMouseDown={() => setIsResizingComputerSplit(true)}
+              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/60 active:bg-[#f8a87c] transition-colors shrink-0 z-30 select-none group"
+              title={t("computer.dragSplitterTitle") || "Kéo để thay đổi tỷ lệ"}
+            >
+              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[#f8a87c] group-hover:h-9 transition-all" />
+            </div>
+
+            <section
+            data-testid="virtual-computer-split-pane"
+            aria-label="Virtual Computer Interactive Workspace"
+            className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
+          >
+            {/* Top Control Bar */}
+            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
+              </div>
+
+              {/* Action Buttons: Minimized Icon Buttons with Precision Tooltips */}
+              <div className="flex items-center gap-1 shrink-0">
+                {/* 1. Quick Screenshot Button with instant feedback */}
+                <Tooltip content={isScreenshotCaptured ? "Đã chụp và đính kèm vào chat!" : t("computer.screenshotBtn")} placement="bottom">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      triggerHaptic();
+                      playNotificationChime("retro");
+                      setIsScreenshotCaptured(true);
+                      setTimeout(() => setIsScreenshotCaptured(false), 1500);
+                      const timestamp = new Date().toLocaleTimeString();
+                      const frameUrl = agentBrowserImageUrl(agentBrowserFor, Date.now());
+                      
+                      // Add real screenshot item to attachedFiles state
+                      const newAttachment: UploadedFileResult = {
+                        file_name: `${selectedAgent.slug}-screen-${Date.now().toString().slice(-4)}.jpg`,
+                        url: frameUrl,
+                        size: 145000,
+                        mime_type: "image/jpeg",
+                      };
+                      setAttachedFiles((prev) => [...prev, newAttachment]);
+
+                      const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${timestamp} Attached]`;
+                      setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
+                      textareaRef.current?.focus();
+                    }}
+                    className={`h-8 w-8 rounded-lg border flex items-center justify-center text-xs font-mono transition-all cursor-pointer ${
+                      isScreenshotCaptured
+                        ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 scale-105"
+                        : "bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-cyan-600 dark:hover:text-cyan-400"
+                    }`}
+                    aria-label={t("computer.screenshotBtn")}
+                  >
+                    {isScreenshotCaptured ? (
+                      <Check size={14} className="text-emerald-400 animate-in zoom-in-75 duration-150" />
+                    ) : (
+                      <Camera size={14} className="text-cyan-400" />
+                    )}
+                  </button>
+                </Tooltip>
+
+                {/* 2. Reload Session Button */}
+                <Tooltip content={t("computer.reloadProfileBtn")} placement="bottom">
+                  <button
+                    type="button"
+                    disabled={isReloadingBrowser}
+                    onClick={() => {
+                      triggerHaptic();
+                      setIsReloadingBrowser(true);
+                      setBrowserIframeKey((k) => k + 1);
+                      setTimeout(() => setIsReloadingBrowser(false), 900);
+                    }}
+                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
+                    aria-label={t("computer.reloadProfileBtn")}
+                  >
+                    <RefreshCw size={13} className={isReloadingBrowser ? "animate-spin text-[#f8a87c]" : ""} />
+                  </button>
+                </Tooltip>
+
+                {/* 3. Zen Mode (Fullscreen) Button */}
+                <Tooltip content={t("computer.zenMode")} placement="bottom">
+                  <button
+                    type="button"
+                    onClick={() => handleSetBrowserModalOpen(true)}
+                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
+                    aria-label={t("computer.zenMode")}
+                  >
+                    <Maximize2 size={13} />
+                  </button>
+                </Tooltip>
+
+                {/* 4. Open External Window Button */}
+                <Tooltip content={t("computer.openExternal")} placement="bottom">
+                  <a
+                    href={browserTarget.url ? "#" : undefined}
+                    onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
+                    aria-label={t("computer.openExternal")}
+                  >
+                    <ExternalLink size={13} />
+                  </a>
+                </Tooltip>
+
+                {/* 5. Close Split Button */}
+                <Tooltip content={t("computer.closeComputer")} placement="bottom">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleComputerSplit(false)}
+                    className="h-8 w-8 rounded-lg bg-slate-200/80 hover:bg-red-500/10 hover:text-red-500 dark:bg-[#22222e] dark:hover:bg-red-500/20 dark:hover:text-red-400 border border-slate-300 dark:border-[#303042] hover:border-red-500/30 text-slate-700 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                    aria-label={t("computer.closeComputer")}
+                  >
+                    <X size={15} />
+                  </button>
+                </Tooltip>
+              </div>
+            </div>
+
+            {/* Iframe Workspace with automatic viewport scaling */}
+            <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
+              {browserTarget.url ? (
+                <SelkiesViewer
+                  key={`split-${selectedAgent.id}-${browserTarget.url}`}
+                  agentId={agentBrowserFor}
+                  url={browserTarget.url}
+                  title={`${selectedAgent.name} Computer Live Split`}
+                  profile={browserTarget.profile}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
+                  {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+                </div>
+              )}
+            </div>
+          </section>
+          </>
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* 4. RIGHTMOST PANE: SELECTED BOT INFO (COLLAPSIBLE) */}
