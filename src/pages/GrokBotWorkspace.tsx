@@ -1687,7 +1687,7 @@ export function GrokBotWorkspace() {
         try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
       }
     }
-  }, [agentParam, Boolean(agents.length > 0)]);
+  }, [agentParam, Boolean(agents.length > 0), selectedAgentId]);
 
   useEffect(() => {
     if (chatParam && chatParam !== selectedChatId) {
@@ -2122,10 +2122,12 @@ export function GrokBotWorkspace() {
   // Request Queue: Allows users to enter new requests while agent is in progress
   const [requestQueues, setRequestQueues] = useState<Record<string, string[]>>({});
   const requestQueuesRef = useRef<Record<string, string[]>>({});
+  const chatAgentMapRef = useRef<Record<string, string>>({});
   const processingChatsRef = useRef<Set<string>>(new Set());
   const streamAbortControllersRef = useRef<Record<string, AbortController>>({});
   const requestQueue = (selectedChatId && requestQueues[selectedChatId]) || [];
-  const setChatQueue = (chatId: string, queue: string[]) => {
+  const setChatQueue = (chatId: string, queue: string[], agentId?: string) => {
+    if (agentId) chatAgentMapRef.current[chatId] = agentId;
     requestQueuesRef.current = { ...requestQueuesRef.current, [chatId]: queue };
     setRequestQueues(requestQueuesRef.current);
   };
@@ -3747,7 +3749,12 @@ const handleBatchDeleteSelectedChats = () => {
       return () => clearTimeout(timer);
     }
   }, [isLoadingMessages, selectedChatId, hasNoAgents]);
-  const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0] || {
+  const selectedAgent = agents.find((a) =>
+    a.id === selectedAgentId ||
+    a.slug === selectedAgentId ||
+    (a.id || "").toLowerCase() === `bot:agent360:${(selectedAgentId || "").toLowerCase()}` ||
+    (a.slug || "").toLowerCase() === (selectedAgentId || "").replace(/^bot:agent360:/i, "").toLowerCase()
+  ) || agents[0] || {
     id: "",
     name: "",
     slug: "",
@@ -4513,10 +4520,16 @@ const handleBatchDeleteSelectedChats = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isComputerSplitOpen, selectedChatId, activeLoopMode]);
 
-  // Core function to execute a single prompt stream
-  const executeTurnStream = async (userText: string, originChatId: string = selectedChatId) => {
+  // Core function to execute a single prompt stream (multi-agent safe)
+  const executeTurnStream = async (
+    userText: string,
+    originChatId: string = selectedChatId,
+    overrideAgentId?: string
+  ) => {
     recordMilestone("sentMessage");
-    const originAgentId = selectedAgentId;
+    const originAgentId = overrideAgentId || chatAgentMapRef.current[originChatId] || selectedAgentId;
+    chatAgentMapRef.current[originChatId] = originAgentId;
+    const targetAgent = agents.find((a) => a.id === originAgentId || a.slug === originAgentId) || selectedAgent;
     // Updates the origin chat: live on screen if it is still selected, otherwise in its message cache.
     const updateTurnMessages = (fn: (prev: ChatMessage[]) => ChatMessage[]) => {
       if (selectedChatIdRef.current === originChatId) {
@@ -4555,6 +4568,11 @@ const handleBatchDeleteSelectedChats = () => {
     });
     setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
     setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
+    setRunningAgentIds((prev) => ({
+      ...prev,
+      [originAgentId]: (prev[originAgentId] || 0) + 1,
+      ...(targetAgent?.slug ? { [targetAgent.slug]: (prev[targetAgent.slug] || 0) + 1 } : {})
+    }));
 
     // Instantiate active AbortController for this stream turn
     const abortController = new AbortController();
@@ -4565,7 +4583,10 @@ const handleBatchDeleteSelectedChats = () => {
 
     try {
       let accumulated = "";
-      const currentActiveChat = (chats.find((c) => c.id === originChatId) || chats.find((c) => c.session_id === originChatId));
+      const targetChatList = chats.some((c) => c.id === originChatId)
+        ? chats
+        : (getCachedAgentChats(originAgentId) || chats);
+      const currentActiveChat = targetChatList.find((c) => c.id === originChatId) || targetChatList.find((c) => c.session_id === originChatId);
       const activeTargetChannel = currentActiveChat?.channel;
       const targetSessionId = currentActiveChat?.session_id || originChatId || "default";
 
@@ -4587,7 +4608,7 @@ const handleBatchDeleteSelectedChats = () => {
       await sendConsoleChatMessageStream(
         targetSessionId,
         userText,
-        selectedAgent.slug,
+        targetAgent.slug,
         (chunkText) => {
           if (firstTokenTime === null) {
             firstTokenTime = performance.now();
@@ -4636,27 +4657,27 @@ const handleBatchDeleteSelectedChats = () => {
         totalDurationMs: Math.round(totalDur),
         tokenCount: estTokens,
         tokensPerSec: tokPerSec,
-        model: selectedAgent.model,
+        model: targetAgent.model,
         estimatedCostUsd: estTokens * 0.000002,
       };
       setTurnTelemetry(telemetryData);
 
       // Ingest real-time turn telemetry beacon into Prometheus/Beszel backend metrics
       sendTurnTelemetryBeacon({
-        agentId: selectedAgent.id,
+        agentId: targetAgent.id,
         sessionId: originChatId || "default",
-        model: selectedAgent.model,
+        model: targetAgent.model,
         ttftMs: ttft,
         totalDurationMs: Math.round(totalDur),
         tokenCount: estTokens,
         tokensPerSec: tokPerSec,
         estimatedCostUsd: estTokens * 0.000002,
-        node: selectedAgent.node,
+        node: targetAgent.node,
       });
 
       // Dispatch Web Notification if window is in background
       notifyTaskComplete({
-        agentName: selectedAgent.name,
+        agentName: targetAgent.name,
         taskSnippet: accumulated || "Finished autonomous task execution.",
         sessionId: originChatId || "default",
         soundEnabled: isSoundEnabled,
@@ -4710,6 +4731,11 @@ const handleBatchDeleteSelectedChats = () => {
       }
       setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
       setRunningChatIds((prev) => prev.filter((id) => id !== originChatId));
+      setRunningAgentIds((prev) => ({
+        ...prev,
+        [originAgentId]: Math.max(0, (prev[originAgentId] || 1) - 1),
+        ...(targetAgent?.slug ? { [targetAgent.slug]: Math.max(0, (prev[targetAgent.slug] || 1) - 1) } : {})
+      }));
       // Process next item in this chat's queue if present
       processNextInQueue(originChatId);
     }
@@ -4721,9 +4747,10 @@ const handleBatchDeleteSelectedChats = () => {
     const queue = requestQueuesRef.current[chatId] || [];
     if (queue.length > 0) {
       const [nextPrompt, ...rest] = queue;
-      setChatQueue(chatId, rest);
+      const targetAgentId = chatAgentMapRef.current[chatId] || selectedAgentId;
+      setChatQueue(chatId, rest, targetAgentId);
       setTimeout(() => {
-        executeTurnStream(nextPrompt, chatId);
+        executeTurnStream(nextPrompt, chatId, targetAgentId);
       }, 50);
     } else {
       processingChatsRef.current.delete(chatId);
@@ -4788,12 +4815,13 @@ const handleBatchDeleteSelectedChats = () => {
 
     // Instant Local Message Echo: append to messages immediately so user gets 0ms visual confirmation
     const sendChatId = selectedChatId;
+    chatAgentMapRef.current[sendChatId] = selectedAgentId;
     if (isStreaming || processingChatsRef.current.has(sendChatId)) {
       // Agent is busy: enqueue prompt into Request Queue only (do not show in chat stream until it executes)
-      setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), userText]);
+      setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), userText], selectedAgentId);
     } else {
       processingChatsRef.current.add(sendChatId);
-      executeTurnStream(userText, sendChatId);
+      executeTurnStream(userText, sendChatId, selectedAgentId);
       requestAnimationFrame(() => smoothScrollToBottom());
     }
   };
