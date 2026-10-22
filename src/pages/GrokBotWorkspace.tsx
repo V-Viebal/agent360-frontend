@@ -3641,6 +3641,7 @@ const handleBatchDeleteSelectedChats = () => {
         } else {
           jumpToBottom();
         }
+        isInitialLoadRef.current = false;
       }, 0);
     } else {
       setIsLoadingMessages(true);
@@ -3697,9 +3698,17 @@ const handleBatchDeleteSelectedChats = () => {
         setShowPollCard(false);
       }
       setIsLoadingMessages(false);
-      isUserScrolledUpRef.current = false;
-      setTimeout(jumpToBottom, 0);
-      setTimeout(jumpToBottom, 60);
+      // Trigger load latest (jumpToBottom) only when newly opening chat session without cached turns
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+        const savedPos = sessionScrollPositionsRef.current[selectedChatId];
+        if (typeof savedPos === "number" && messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = savedPos;
+        } else {
+          setTimeout(jumpToBottom, 0);
+          setTimeout(jumpToBottom, 60);
+        }
+      }
     }).catch(() => {
       // Keep whatever real (cached) turns we have; never substitute canned dialogue.
       if (mounted) setIsLoadingMessages(false);
@@ -3798,9 +3807,6 @@ const handleBatchDeleteSelectedChats = () => {
                     prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
                   );
                 }
-                if (!isUserScrolledUpRef.current) {
-                  jumpToBottom();
-                }
               }
             } else {
             fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
@@ -3813,9 +3819,6 @@ const handleBatchDeleteSelectedChats = () => {
                   setChats((prev) =>
                     prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
                   );
-                }
-                if (!isUserScrolledUpRef.current) {
-                  jumpToBottom();
                 }
               }
             });
@@ -4012,9 +4015,15 @@ const handleBatchDeleteSelectedChats = () => {
     // Only jump to bottom on initial load / chat switch
     if (isInitialLoadRef.current) {
       isInitialLoadRef.current = false;
-      jumpToBottom();
-      const timer = setTimeout(jumpToBottom, 40);
-      return () => clearTimeout(timer);
+      const savedPos = sessionScrollPositionsRef.current[selectedChatId];
+      if (typeof savedPos === "number" && messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = savedPos;
+      } else {
+        jumpToBottom();
+        const timer = setTimeout(jumpToBottom, 40);
+        return () => clearTimeout(timer);
+      }
+      return;
     }
     // During active streaming or new messages, only scroll if user has NOT scrolled up
     if (isStreaming && !isUserScrolledUpRef.current) {
