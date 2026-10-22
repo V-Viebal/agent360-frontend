@@ -1086,7 +1086,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
             className="w-full h-full border-0 bg-black z-10 transition-opacity duration-300"
             allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
             allowFullScreen
-            style={{ touchAction: "none", aspectRatio: "16/10", maxWidth: "100%", maxHeight: "100%" }}
+            style={{ touchAction: "none", maxWidth: "100%", maxHeight: "100%" }}
           />
         </div>
       )}
@@ -1195,235 +1195,111 @@ function getCleanAgentShortName(agent?: InfraAgent): string {
   return raw;
 }
 
-// Generate 3 flexible nickname choices matching Image 1
-function getAgentNicknameChoices(agent?: InfraAgent): { id: string; label: string; name: string }[] {
-  const originalName = agent?.name || 'Agent';
-  const shortName = getCleanAgentShortName(agent);
-  const role = (agent?.roleTag || '').toLowerCase();
-  const slug = (agent?.slug || '').toLowerCase();
 
-  let optA = shortName;
-  let optB = shortName + ' Bot';
 
-  if (slug.includes('mons') || originalName.toLowerCase().includes('mons')) {
-    optA = 'Mon';
-    optB = 'Mons';
-  } else if (slug.includes('ken') || originalName.toLowerCase().includes('ken')) {
-    optA = 'Ken';
-    optB = 'PO Ken';
-  } else if (slug.includes('gm') || originalName.toLowerCase().includes('bốc')) {
-    optA = 'Bốc';
-    optB = 'GM Assistant';
-  } else if (slug.includes('zen') || originalName.toLowerCase().includes('zen')) {
-    optA = 'Zen';
-    optB = 'Zenith';
-  } else if (slug.includes('climax') || originalName.toLowerCase().includes('climax')) {
-    optA = 'Climax';
-    optB = 'Max';
-  } else if (slug.includes('qa') || originalName.toLowerCase().includes('qa')) {
-    optA = 'Tester';
-    optB = 'QA Helper';
-  } else if (role.includes('finance') || role.includes('ops')) {
-    optA = shortName;
-    optB = shortName + ' Finance';
-  }
-
-  const uniqueNames = Array.from(new Set([optA, optB, originalName]));
-  while (uniqueNames.length < 3) {
-    uniqueNames.push(shortName + ' AI');
-  }
-
-  return [
-    { id: 'A', label: 'A', name: uniqueNames[0] },
-    { id: 'B', label: 'B', name: uniqueNames[1] },
-    { id: 'C', label: 'C', name: uniqueNames[2] || originalName },
-  ];
-}
-
+// Dynamic task suggestions based on agent role and capabilities (concise, office-focused)
 function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
-  if (!agent) {
+  const role = (agent?.roleTag || "").toLowerCase();
+  const id = (agent?.id || "").toLowerCase();
+  const slug = (agent?.slug || "").toLowerCase();
+  const name = (agent?.name || "").toLowerCase();
+  const tools = (agent?.tools || []).map((t: any) => (typeof t === "string" ? t : t.name || "").toLowerCase());
+
+  // Business & Accounting / ERP (GM Bốc, Gạo, Lúa, Sales, ERPNext)
+  const isErp = tools.some((t: string) => t.includes("erpnext") || t.includes("invoice") || t.includes("order")) ||
+    id.includes("gm-") || slug.includes("gm-") || name.includes("bốc") || name.includes("gạo") || name.includes("lúa") || name.includes("gm") || role.includes("finance");
+  if (isErp) {
     return [
       {
-        title: "Audit Fleet & Health",
-        desc: "Scan infrastructure nodes, memory pressure and service uptime",
-        prompt: "Scan all infrastructure nodes and report active status, memory usage, and runtime health.",
-        badge: "Fleet"
-      },
-      {
-        title: "Deploy & Verify Diffs",
-        desc: "Inspect latest git changes, run local build and check deployment status",
-        prompt: "Check recent git changes, build the code, and verify service responses on 2nd.",
-        badge: "Build"
-      },
-      {
-        title: "Security Constitution Check",
-        desc: "Evaluate current security posture against rootless container policy",
-        prompt: "Perform a security audit against container isolation and approval policies.",
-        badge: "Audit"
-      },
-      {
-        title: "Inspect ACP & MCP Tools",
-        desc: "List active tool schemas, external bridges and Skyer capabilities",
-        prompt: "List all active tools and MCP servers registered for this agent session.",
-        badge: "Tools"
-      }
-    ];
-  }
-
-  const role = agent.roleTag || "Engineering";
-  const id = (agent.id || "").toLowerCase();
-  const slug = (agent.slug || "").toLowerCase();
-  const name = (agent.name || "").toLowerCase();
-  const tools = (agent.tools || []).map((t: any) => (typeof t === "string" ? t : t.name || "").toLowerCase());
-
-  // 1. ERPNext / Business Operations Agents (e.g. GM Bốc, GM Gạo, GM Lúa, GM Team) - Direct actionable prompts like Image 2
-  const hasErpTools = tools.some((t: string) => t.includes("erpnext") || t.includes("invoice") || t.includes("quotation") || t.includes("order"));
-  if (hasErpTools || id.includes("gm-") || slug.includes("gm-") || name.includes("bốc") || name.includes("gạo") || name.includes("lúa") || name.includes("gm")) {
-    return [
-      {
-        title: "Xuất file sản lượng bán",
-        desc: "Xuất dữ liệu bán hàng tổng hợp theo mặt hàng trên 30kg",
-        prompt: "Xuất giùm tôi file sản lượng bán từng mặt hàng, các loại tổng hợp trên 30kg trong tháng này nhé.",
-        badge: "Excel / ERPNext"
-      },
-      {
-        title: "Đối chiếu biên bản công nợ",
-        desc: "Kiểm tra danh sách hóa đơn xuất bù và đối chiếu công nợ",
-        prompt: "Đối chiếu biên bản công nợ tháng này cho các khách hàng, rà soát xem có hóa đơn nào thiếu cần xuất bù không.",
-        badge: "Kế toán TT99"
-      },
-      {
-        title: "Kiểm tra tồn kho & số đã giao",
-        desc: "Tổng hợp số xuất đã giao và đối soát số lượng tồn kho",
-        prompt: "Kiểm tra số đã giao trên sổ phiếu xuất từ ngày 02 đến ngày 20, tổng hợp các mặt hàng tính theo gói và theo kg.",
-        badge: "Kho vận"
-      },
-      {
-        title: "Báo cáo doanh thu & giao dịch",
-        desc: "Tổng hợp tổng doanh số và tình trạng thanh toán",
-        prompt: "Lập bảng báo cáo nhanh tổng hợp doanh số bán hàng và danh sách công nợ sắp đến hạn thanh toán.",
+        title: "Báo cáo doanh số",
+        desc: "Tổng hợp doanh thu và đơn hàng hôm nay",
+        prompt: "Lập báo cáo tổng hợp doanh thu và danh sách đơn hàng xuất bán hôm nay.",
         badge: "Báo cáo"
+      },
+      {
+        title: "Đối chiếu công nợ",
+        desc: "Rà soát công nợ khách hàng sắp đến hạn",
+        prompt: "Kiểm tra và đối chiếu các khoản công nợ của khách hàng sắp đến hạn thanh toán.",
+        badge: "Kế toán"
+      },
+      {
+        title: "Kiểm tra tồn kho",
+        desc: "Tra cứu lượng tồn và số đã xuất giao",
+        prompt: "Kiểm tra số lượng tồn kho các mặt hàng chủ lực và danh sách phiếu xuất trong tuần.",
+        badge: "Kho vận"
       }
     ];
   }
 
-  // 2. Research & Creative Discovery (e.g. Climax Default, Climax Team, KB Researcher, Zen)
-  const hasResearchTools = tools.some((t: string) => t.includes("search_papers") || t.includes("brave") || t.includes("paper"));
-  if (hasResearchTools || role === "Research" || id.includes("climax") || slug.includes("climax")) {
+  // Creative & Market Research (Climax, Zen, Media, Content)
+  const isCreative = role.includes("research") || role.includes("creative") || id.includes("climax") || slug.includes("climax") || id.includes("zen") || slug.includes("zen");
+  if (isCreative) {
     return [
       {
-        title: "Deep Market & Competitor Scan",
-        desc: "Analyze industry competitors, market trends, and product positioning",
-        prompt: "Perform evidence-backed market research on leading Vietnamese AI employee platforms and summarize key differentiators.",
-        badge: "Research"
+        title: "Nghiên cứu thị trường",
+        desc: "Phân tích xu hướng và đối thủ cạnh tranh",
+        prompt: "Phân tích xu hướng nổi bật của thị trường và các điểm mạnh của đối thủ cạnh tranh trong tuần này.",
+        badge: "Nghiên cứu"
       },
       {
-        title: "Topic & Trend Discovery",
-        desc: "Harvest trending search topics, discussion keywords, and engagement signals",
-        prompt: "Analyze trending topics and query branches related to AI automation for enterprise operations.",
-        badge: "Trends"
+        title: "Lên ý tưởng bài viết",
+        desc: "Gợi ý góc nhìn và thông điệp truyền thông",
+        prompt: "Đề xuất 3 chủ đề bài viết và thông điệp truyền thông thu hút cho kênh mạng xã hội tuần tới.",
+        badge: "Nội dung"
       },
       {
-        title: "Synthesize Knowledge Brief",
-        desc: "Compile findings into a structured, citation-backed briefing for the KB Hub",
-        prompt: "Synthesize a concise, layered research brief with key takeaways, data evidence, and actionable next steps.",
-        badge: "Docs"
-      },
-      {
-        title: "Social Content Planning",
-        desc: "Draft multi-channel publication outlines with narrative hooks and visuals",
-        prompt: "Draft an engaging 5-part LinkedIn and Threads series explaining how autonomous agents reduce operational friction.",
-        badge: "Creative"
+        title: "Tóm tắt tin tức ngành",
+        desc: "Trích xuất thông tin trọng tâm",
+        prompt: "Tổng hợp và tóm tắt ngắn gọn các tin tức công nghệ và tự động hóa đáng chú ý trong ngày.",
+        badge: "Tổng hợp"
       }
     ];
   }
 
-  // 3. Quality & UI/UX / Vision (e.g. QA Helper, Vision QA)
-  const hasVisionOrBrowser = tools.some((t: string) => t.includes("click") || t.includes("cdp") || t.includes("browser") || t.includes("drag"));
-  if (hasVisionOrBrowser || role === "Quality" || id.includes("qa") || slug.includes("qa") || name.includes("vision")) {
+  // Operations & Tech / Product (Mons, Ken, QA, SRE)
+  const isOps = role.includes("engineering") || role.includes("dev") || id.includes("mons") || id.includes("ken") || id.includes("qa");
+  if (isOps) {
     return [
       {
-        title: "Visual Regression Audit",
-        desc: "Inspect live viewport rendering across mobile, tablet, and desktop breakpoints",
-        prompt: "Run a browser visual check on https://agent360.antares.vn/app and audit layout contrast, spacing, and responsive scaling.",
-        badge: "UI/UX"
+        title: "Rà soát tiến độ",
+        desc: "Kiểm tra backlog và đầu việc ưu tiên",
+        prompt: "Rà soát các đầu việc đang xử lý trong sprint và liệt kê danh sách việc cần ưu tiên hôm nay.",
+        badge: "Tiến độ"
       },
       {
-        title: "Interactive Flow Test",
-        desc: "Simulate click events, form inputs, modal toggles, and drawer animations",
-        prompt: "Verify conversational flow: create a new session, test prompt execution, and confirm CTAs appear only after completion.",
-        badge: "Test"
+        title: "Kiểm tra trạng thái",
+        desc: "Kiểm tra vận hành và thông báo lỗi",
+        prompt: "Kiểm tra trạng thái hoạt động của hệ thống, ghi nhận các cảnh báo hoặc dịch vụ gặp sự cố.",
+        badge: "Vận hành"
       },
       {
-        title: "Accessibility & WCAG Check",
-        desc: "Audit touch target dimensions, color contrast ratios, and aria labels",
-        prompt: "Audit accessibility standards: verify aria labels, keyboard navigation (Ctrl+K), and color contrast for dark mode.",
-        badge: "A11y"
-      },
-      {
-        title: "Network & Console Diagnostics",
-        desc: "Inspect DevTools network traffic, SSE event stream health, and error logs",
-        prompt: "Check browser console and network responses for any 4xx/5xx status codes or unhandled rejections.",
-        badge: "Logs"
+        title: "Phân công nhiệm vụ",
+        desc: "Lập checklist công việc cụ thể",
+        prompt: "Lập bảng kế hoạch công việc và phân chia các mốc hoàn thành rõ ràng cho dự án.",
+        badge: "Kế hoạch"
       }
     ];
   }
 
-  // 4. Security / Inference Gateway (e.g. LLM360, SRE Sentinel)
-  if (role === "Security" || id.includes("llm360") || id.includes("sre") || slug.includes("sre")) {
-    return [
-      {
-        title: "Audit Fleet & Node Latency",
-        desc: "Scan infrastructure nodes (1st–7th), memory pressure, and container status",
-        prompt: "Audit all fleet nodes (1st–7th, storage1) for CPU load, memory headroom, and container health.",
-        badge: "Fleet"
-      },
-      {
-        title: "Security Constitution Check",
-        desc: "Evaluate container isolation, rootless execution, and bypass guards",
-        prompt: "Perform a security compliance audit against rootless container guidelines and zero-trust proxy rules.",
-        badge: "Audit"
-      },
-      {
-        title: "Model Gateway & Quota Check",
-        desc: "Inspect provider health, token quotas, and active inference routes",
-        prompt: "Verify LLM360 provider availability, active upstream routes, and token consumption rate.",
-        badge: "Gateway"
-      },
-      {
-        title: "Audit Approval & Tool Receipts",
-        desc: "Review high-risk tool execution approvals, policy hashes, and receipts",
-        prompt: "Inspect recent security approvals and tool receipts across active agent sessions.",
-        badge: "Receipts"
-      }
-    ];
-  }
-
-  // 5. Engineering & Dev / Ops (e.g. Mons, AgentTeams, Fullstack SWE) - Direct actionable prompts like Image 2
+  // Default Office & Generalist (Mkai, Assistant, Office tasks)
   return [
     {
-      title: "Review Git Diffs & Status",
-      desc: "Kiểm tra git diffs và trạng thái thay đổi code",
-      prompt: "Review current git status and code diffs across frontend and backend services, chuẩn bị sẵn sàng commit.",
-      badge: "Git CLI"
+      title: "Soạn thảo văn bản",
+      desc: "Soạn email thông báo hoặc thư mời họp",
+      prompt: "Soạn thảo email thông báo kế hoạch làm việc tuần mới gửi nội bộ, văn phong lịch sự và rõ ràng.",
+      badge: "Văn bản"
     },
     {
-      title: "Build & Kiểm chứng Integrity",
-      desc: "Chạy build production và xác thực endpoint",
-      prompt: "Execute local production build, verify TypeScript types and confirm HTTP 200 on all service routes.",
-      badge: "Vite / Node"
+      title: "Tóm tắt tài liệu",
+      desc: "Trích xuất ý chính và đầu việc cần làm",
+      prompt: "Tóm tắt ngắn gọn nội dung cốt lõi của tài liệu này và liệt kê các hành động cần thực hiện.",
+      badge: "Tóm tắt"
     },
     {
-      title: "Điều phối Sub-Agent chuyên trách",
-      desc: "Lập kế hoạch và ủy quyền việc cho sub-agent",
-      prompt: "Lập kế hoạch công việc và ủy quyền nhiệm vụ cho sub-agent với tiêu chí nghiệm thu rõ ràng.",
-      badge: "Sub-Agents"
-    },
-    {
-      title: "Kiểm tra MCP Tools & Server Registry",
-      desc: "Liệt kê danh sách công cụ và quyền hạn khả dụng",
-      prompt: "List all active tools and MCP servers registered for this agent session, verify connectivity.",
-      badge: "MCP Tools"
+      title: "Lập kế hoạch tuần",
+      desc: "Sắp xếp thứ tự ưu tiên các mục tiêu",
+      prompt: "Giúp tôi lập lịch trình làm việc và phân chia thời gian cho các mục tiêu trọng tâm trong tuần.",
+      badge: "Kế hoạch"
     }
   ];
 }
@@ -4899,24 +4775,8 @@ const handleBatchDeleteSelectedChats = () => {
     // Instant Local Message Echo: append to messages immediately so user gets 0ms visual confirmation
     const sendChatId = selectedChatId;
     if (isStreaming || processingChatsRef.current.has(sendChatId)) {
-      // Agent is busy: show optimistic user message with Queued indicator
-      const queuedUserMsg: ChatMessage = {
-        id: `usr-queued-${Date.now()}`,
-        role: "user",
-        content: userText,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      };
-      setMessages((prev) => {
-        const next = [...prev, queuedUserMsg];
-        inflightMessagesRef.current[sendChatId] = next;
-        return next;
-      });
-
-      // Enqueue prompt for execution
+      // Agent is busy: enqueue prompt into Request Queue only (do not show in chat stream until it executes)
       setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), userText]);
-
-      // Smooth scroll anchor on instant echo
-      requestAnimationFrame(() => smoothScrollToBottom());
     } else {
       processingChatsRef.current.add(sendChatId);
       executeTurnStream(userText, sendChatId);
@@ -5138,23 +4998,24 @@ const handleBatchDeleteSelectedChats = () => {
                     const unreadList = unreadCompletedSessions[ag.id] || [];
                     const hasUnreadCompleted = unreadList.length > 0;
 
+                    const tooltipText = ag.roleTag ? `${ag.name} (${ag.roleTag})` : ag.name;
+
                     return (
-                      <button
-                        key={ag.id}
-                        aria-label={ag.name}
-                        data-ux-target-min="24"
-                        onClick={() => handleSelectAgent(ag)}
-                        className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
-                          isSelected
-                            ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25 cursor-pointer"
-                            : "border-transparent hover:bg-[#161620] hover:border-[#2a2a38] cursor-pointer"
-                        }`}
-                        title={`${ag.name}\n${ag.roleTag || "Agent"} • ${ag.status || "active"}\n${ag.node} • ${ag.model}${hasUnreadCompleted ? ` (Có ${unreadList.length} session chưa xem)` : ""}${hasError ? " (Degraded)" : ""}`}
-                      >
+                      <Tooltip key={ag.id} content={tooltipText} placement="right" minWidth={120}>
+                        <button
+                          aria-label={ag.name}
+                          data-ux-target-min="24"
+                          onClick={() => handleSelectAgent(ag)}
+                          className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
+                            isSelected
+                              ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25 cursor-pointer"
+                              : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#161620] hover:border-transparent cursor-pointer"
+                          }`}
+                        >
                         <div className="relative shrink-0 transition-all">
-                          <AgentAvatar agent={ag} size="md" />
+                          <AgentAvatar agent={ag} size="md" interactive={false} />
                           {pinnedAgentIds.includes(ag.id) && (
-                            <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30" title="Đã ghim agent">
+                            <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30">
                               <Pin size={8} className="fill-amber-400" />
                             </span>
                           )}
@@ -5165,7 +5026,7 @@ const handleBatchDeleteSelectedChats = () => {
                               return (
                                 <span
                                   className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#0c0c0e]"
-                                  title="Agent đang làm"
+                                  
                                 />
                               );
                             }
@@ -5173,7 +5034,7 @@ const handleBatchDeleteSelectedChats = () => {
                               return (
                                 <span
                                   className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 border border-white dark:border-[#0c0c0e]"
-                                  title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                  
                                 />
                               );
                             }
@@ -5181,7 +5042,7 @@ const handleBatchDeleteSelectedChats = () => {
                               return (
                                 <span
                                   className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500 border border-white dark:border-[#0c0c0e]"
-                                  title="Sự cố hạ tầng"
+                                  
                                 />
                               );
                             }
@@ -5189,6 +5050,7 @@ const handleBatchDeleteSelectedChats = () => {
                           })()}
                         </div>
                       </button>
+                    </Tooltip>
                     );
                   })}
 
@@ -5225,18 +5087,18 @@ const handleBatchDeleteSelectedChats = () => {
                       {disabledAgentsExpanded && (
                         <div className="space-y-1.5 flex flex-col items-center w-full animate-in fade-in duration-150">
                           {disabledFilteredAgents.map((ag) => (
-                            <button
-                              key={ag.id}
-                              aria-label={ag.name}
-                              data-ux-target-min="24"
-                              disabled
-                              className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none shrink-0"
-                              title={`${ag.name} (Đã vô hiệu hóa)`}
-                            >
-                              <div className="relative shrink-0">
-                                <AgentAvatar agent={ag} size="md" />
-                              </div>
-                            </button>
+                            <Tooltip key={ag.id} content={`${ag.name} (Đã tắt)`} placement="right" minWidth={120}>
+                              <button
+                                aria-label={ag.name}
+                                data-ux-target-min="24"
+                                disabled
+                                className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none shrink-0"
+                              >
+                                <div className="relative shrink-0">
+                                  <AgentAvatar agent={ag} size="md" />
+                                </div>
+                              </button>
+                            </Tooltip>
                           ))}
                         </div>
                       )}
@@ -5509,7 +5371,7 @@ const handleBatchDeleteSelectedChats = () => {
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
-                              title="Sự cố hạ tầng"
+                              
                             />
                           )}
                         </div>
@@ -5549,7 +5411,7 @@ const handleBatchDeleteSelectedChats = () => {
                                   return (
                                     <span
                                       className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-0.5"
-                                      title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                      
                                     />
                                   );
                                 }
@@ -5735,7 +5597,7 @@ const handleBatchDeleteSelectedChats = () => {
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
-                              title="Sự cố hạ tầng"
+                              
                             />
                           )}
                         </div>
@@ -5775,7 +5637,7 @@ const handleBatchDeleteSelectedChats = () => {
                                   return (
                                     <span
                                       className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-0.5"
-                                      title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                      
                                     />
                                   );
                                 }
@@ -6342,109 +6204,41 @@ const handleBatchDeleteSelectedChats = () => {
               </div>
             </div>
           ) : displayMessages.length === 0 ? (
-            /* First-turn Interactive Onboarding & MCP Suggested Workflows (Matching Image 1 & 2) */
-            <div className="py-6 px-3 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-xl mx-auto w-full space-y-4">
-              {/* 1. Friendly Greeting Bubble from the selected Agent (Image 1) */}
-              <div className="w-full flex flex-col space-y-1.5 items-start">
-                <div className="flex items-center gap-2 mb-0.5 select-none text-[11px] font-mono text-neutral-400">
-                  <AgentAvatar agent={selectedAgent} size="xs" interactive={false} />
-                  <span className="font-semibold text-slate-800 dark:text-neutral-200">{selectedAgent.name}</span>
-                  <span className="text-[10px] text-neutral-500">• {selectedAgent.roleTag || "AI Assistant"}</span>
-                </div>
+            /* First-turn Suggested Tasks (Minimal, Clean & Dynamic per Agent) */
+            <div className="py-8 px-4 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-lg mx-auto w-full space-y-3">
+              
 
-                <div className="rounded-2xl rounded-tl-xs p-3.5 sm:p-4 bg-slate-100 dark:bg-[#181822] border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-neutral-100 text-[13px] leading-relaxed shadow-xs max-w-lg">
-                  <p>
-                    {t("onboarding.helloLead") || "Xin chào!"} Tôi là <strong className="text-[#f8a87c]">{agentNickname || selectedAgent.name}</strong>, trợ lý chuyên trách hỗ trợ công việc và xử lý các tác vụ thực chiến cho bạn.
-                  </p>
-                </div>
-              </div>
-
-              {/* 2. Interactive Name Choice Card (Image 1: What would you like to call me?) */}
-              <div className="w-full max-w-lg rounded-2xl p-4 sm:p-5 bg-white dark:bg-[#121218] border border-slate-200 dark:border-white/10 shadow-sm space-y-3">
-                <div className="space-y-1 text-left">
-                  <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
-                    {t("onboarding.nameQuestion") || "Bạn muốn gọi tôi là gì? Bạn có thể đổi lại bất cứ lúc nào."}
-                  </h4>
-                  <p className="text-[11px] text-neutral-500 font-sans">
-                    Chọn một tên gọi ngắn gọn thân quen để xưng hô trong các phiên làm việc:
-                  </p>
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  {getAgentNicknameChoices(selectedAgent).map((choice) => {
-                    const isCurrent = (agentNickname || selectedAgent.name) === choice.name;
-                    return (
-                      <button
-                        key={choice.id}
-                        type="button"
-                        onClick={() => handleSetAgentNickname(choice.name)}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs transition-all cursor-pointer text-left ${
-                          isCurrent
-                            ? "bg-[#f8a87c]/15 border-[#f8a87c] text-[#f8a87c] font-semibold shadow-xs"
-                            : "bg-slate-50 dark:bg-[#181820] hover:bg-slate-100 dark:hover:bg-[#20202c] border-slate-200 dark:border-white/5 text-slate-800 dark:text-neutral-200"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`h-6 w-6 rounded-lg flex items-center justify-center text-[11px] font-mono font-semibold transition-colors ${
-                            isCurrent
-                              ? "bg-[#f8a87c] text-neutral-950 font-bold"
-                              : "bg-slate-200 dark:bg-white/10 text-neutral-600 dark:text-neutral-300"
-                          }`}>
-                            {choice.label}
-                          </span>
-                          <span className="text-xs">{choice.name}</span>
-                        </div>
-                        {isCurrent && (
-                          <span className="text-[10px] font-mono text-[#f8a87c] flex items-center gap-1">
-                            <span>Đang dùng</span>
-                            <Check size={12} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 3. Actionable Work Prompts tailored to this Agent's MCP Skills (Image 2) */}
-              <div className="w-full max-w-lg space-y-2 pt-2">
-                <div className="flex items-center justify-between px-1 text-xs text-neutral-400 font-mono">
-                  <span className="flex items-center gap-1.5 text-neutral-300 font-medium text-xs">
-                    <Sparkles size={13} className="text-[#f8a87c]" />
-                    <span>Nhiệm vụ đề xuất cho {agentNickname || getCleanAgentShortName(selectedAgent)}:</span>
-                  </span>
-                  <span className="text-[10px] text-neutral-500">Chạm để giao việc ngay</span>
-                </div>
-
-                <div className="space-y-2 w-full text-left font-sans">
-                  {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
-                    <button
-                      key={qIdx}
-                      type="button"
-                      onClick={() => {
-                        executeTurnStream(item.prompt);
-                      }}
-                      className="w-full p-3 sm:p-3.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#14141c]/90 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer group shadow-xs flex items-center justify-between gap-3 min-w-0"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="h-2 w-2 rounded-full bg-[#f8a87c] shrink-0 group-hover:scale-125 transition-transform" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-800 dark:text-neutral-100 group-hover:text-[#f8a87c] transition-colors leading-snug line-clamp-2">
-                            {item.prompt}
+              <div className="space-y-1.5 w-full text-left font-sans pt-1">
+                {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
+                  <button
+                    key={qIdx}
+                    type="button"
+                    onClick={() => {
+                      executeTurnStream(item.prompt);
+                    }}
+                    className="w-full p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#14141c]/90 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/40 text-left transition-all cursor-pointer group shadow-xs flex items-center justify-between gap-2.5 min-w-0"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0 group-hover:scale-125 transition-transform" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-medium text-slate-900 dark:text-neutral-100 group-hover:text-[#f8a87c] transition-colors truncate">
+                            {item.title}
                           </p>
+                          {item.badge && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-[#1e1e2c] text-neutral-600 dark:text-[#f8a87c] border border-slate-300 dark:border-[#2b2b3e] shrink-0">
+                              {item.badge}
+                            </span>
+                          )}
                         </div>
+                        <p className="text-[11px] text-neutral-500 truncate mt-0.5">
+                          {item.desc}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-1">
-                        {item.badge && (
-                          <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-md bg-slate-200 dark:bg-[#1e1e2c] text-neutral-700 dark:text-[#f8a87c] border border-slate-300 dark:border-[#2b2b3e] shrink-0 whitespace-nowrap">
-                            {item.badge}
-                          </span>
-                        )}
-                        <ArrowRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                    <ArrowRight size={12} className="text-neutral-400 group-hover:text-[#f8a87c] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0" />
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -8416,7 +8210,7 @@ const handleBatchDeleteSelectedChats = () => {
                       ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
                       : isStreaming
                       ? "Agent is responding • Enter to queue next request..."
-                      : "Work with Skyer"
+                      : (t("composer.placeholder") || "Nhập yêu cầu công việc, phân tích dữ liệu hoặc hỏi đáp...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed scrollbar-none ${
