@@ -41,7 +41,7 @@ export interface A2AMetrics {
 
 const B = "/api";
 const KEY = "agent360.a2a.operatorKey";
-const enc = (s: string) => encodeURIComponent(s);
+function enc(s: string): string { return encodeURIComponent(s); }
 const DEFAULT_OP_KEY = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
 export const operatorKey = {
   get: () => (typeof localStorage !== "undefined" ? localStorage.getItem(KEY) || DEFAULT_OP_KEY : DEFAULT_OP_KEY),
@@ -59,7 +59,7 @@ async function j<T>(path: string, init?: RequestInit): Promise<T> {
   if (!r.ok) throw new Error((d as any)?.error || `HTTP ${r.status}`);
   return d as T;
 }
-const bare = (agentId: string) => agentId.split(":").pop() as string;
+function bare(agentId: string): string { return agentId.split(":").pop() as string; }
 
 export const a2aApi = {
   health: () => j<A2AHealth>("/a2a/health"),

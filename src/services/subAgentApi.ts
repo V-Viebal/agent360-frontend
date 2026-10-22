@@ -91,7 +91,9 @@ export interface DelegationTask {
   turns?: DelegationTurn[];
 }
 
-export const normalizeAgentId = (id: string) => (id.includes(":") ? id.split(":").pop()! : id);
+export function normalizeAgentId(id: string): string {
+  return id.includes(":") ? id.split(":").pop()! : id;
+}
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const key = operatorKey.get();
@@ -116,7 +118,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-const a = (id: string) => encodeURIComponent(normalizeAgentId(id));
+function a(id: string): string {
+  return encodeURIComponent(normalizeAgentId(id));
+}
 
 export const subAgentApi = {
   list: (parent: string) => call<SubAgentBinding[]>(`/agents/${a(parent)}/subagents`),

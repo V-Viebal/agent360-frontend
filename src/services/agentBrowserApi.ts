@@ -19,7 +19,7 @@ export interface AgentBrowserInfo {
   tabs: AgentBrowserTab[];
 }
 
-const bare = (agentId: string) => agentId.replace(/^bot:agent360:/i, "");
+function bare(agentId: string): string { return agentId.replace(/^bot:agent360:/i, ""); }
 
 // Agents without a mapped browser (404) are remembered for the session so polling never re-asks.
 const noBrowser = new Set<string>();

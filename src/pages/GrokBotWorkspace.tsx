@@ -3530,7 +3530,9 @@ const handleBatchDeleteSelectedChats = () => {
     };
   }, [selectedChatId, selectedAgentId, selectedChatKnown]);
 
-  // Real-time bidirectional Telegram & external turn sync listener
+
+
+    // Real-time bidirectional Telegram & external turn sync listener
   useEffect(() => {
     if (!selectedChatId || !selectedAgentId || !selectedChatKnown) return;
     if (selectedChatId.startsWith("session-")) return;
@@ -3733,6 +3735,18 @@ const handleBatchDeleteSelectedChats = () => {
   };
 
   const hasNoAgents = !isLoadingAgents && agents.length === 0;
+
+  // Always focus textarea when chat finishes loading or user switches sessions
+  useEffect(() => {
+    if (!isLoadingMessages && selectedChatId && !hasNoAgents) {
+      const timer = setTimeout(() => {
+        if (textareaRef.current && document.activeElement !== textareaRef.current) {
+          textareaRef.current.focus({ preventScroll: true });
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingMessages, selectedChatId, hasNoAgents]);
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0] || {
     id: "",
     name: "",
