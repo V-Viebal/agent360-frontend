@@ -3228,9 +3228,59 @@ const handleBatchDeleteSelectedChats = () => {
   // Map of last scroll positions per session
   const sessionScrollPositionsRef = useRef<Record<string, number>>({});
 
-  // User Request Trace Bar hover state (desktop index navigator)
+  // User Request Trace Bar state (desktop index navigator)
   const [hoveredTraceIdx, setHoveredTraceIdx] = useState<number | null>(null);
+  const [activeTraceIdx, setActiveTraceIdx] = useState<number | null>(null);
+  const activeTraceIdxRef = useRef<number | null>(null);
+  const userTurnsRef = useRef<{ msg: ChatMessage; originalIdx: number }[]>([]);
+  const traceCardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [traceMouseClientY, setTraceMouseClientY] = useState<number | null>(null);
+
+  const findCurrentVisibleUserTurnIdx = (userTurns: { msg: ChatMessage; originalIdx: number }[]): number => {
+    if (!messagesContainerRef.current || userTurns.length === 0) return 0;
+    const container = messagesContainerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const currentScrollTop = container.scrollTop;
+
+    let bestIdx = 0;
+    for (let i = 0; i < userTurns.length; i++) {
+      const el = document.getElementById(`chat-msg-${userTurns[i].msg.id}`);
+      if (el) {
+        const targetRect = el.getBoundingClientRect();
+        const elTopOffset = targetRect.top - containerRect.top + currentScrollTop;
+        if (elTopOffset <= currentScrollTop + 80) {
+          bestIdx = i;
+        }
+      }
+    }
+    return bestIdx;
+  };
+
+  const scrollToUserTurn = (targetIdx: number) => {
+    const userTurns = userTurnsRef.current;
+    if (targetIdx < 0 || targetIdx >= userTurns.length || !messagesContainerRef.current) return;
+    const turn = userTurns[targetIdx];
+    const targetEl = document.getElementById(`chat-msg-${turn.msg.id}`);
+    if (targetEl && messagesContainerRef.current) {
+      triggerHaptic(12);
+      const containerRect = messagesContainerRef.current.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const offset = targetRect.top - containerRect.top + messagesContainerRef.current.scrollTop;
+      messagesContainerRef.current.scrollTo({
+        top: Math.max(0, offset - 8),
+        behavior: "smooth",
+      });
+      setHoveredTraceIdx(targetIdx);
+      setActiveTraceIdx(targetIdx);
+      activeTraceIdxRef.current = targetIdx;
+
+      // Show preview card for 2200ms
+      if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+      traceCardTimeoutRef.current = setTimeout(() => {
+        setHoveredTraceIdx(null);
+      }, 2200);
+    }
+  };
 
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
@@ -3243,6 +3293,15 @@ const handleBatchDeleteSelectedChats = () => {
     const isScrolledUp = distanceFromBottom > 35;
     isUserScrolledUpRef.current = isScrolledUp;
     setShowScrollBottomBtn(isScrolledUp);
+
+    // Update active visible user turn on scroll
+    if (userTurnsRef.current.length > 0) {
+      const curIdx = findCurrentVisibleUserTurnIdx(userTurnsRef.current);
+      if (curIdx !== activeTraceIdxRef.current) {
+        activeTraceIdxRef.current = curIdx;
+        setActiveTraceIdx(curIdx);
+      }
+    }
   };
   const [isConnectAppsOpen, setIsConnectAppsOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -3863,6 +3922,8 @@ const handleBatchDeleteSelectedChats = () => {
   // Close browser modal on Escape key and persist state
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isInputFocused = targetTag === "input" || targetTag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
       if (e.key === "Escape" && isBrowserModalOpen) {
         handleSetBrowserModalOpen(false);
       }
@@ -4468,6 +4529,18 @@ const handleBatchDeleteSelectedChats = () => {
   // - Esc: Close any open popovers/modals
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isInputFocused = targetTag === "input" || targetTag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
+      // 0. Focus Chat Input (Shift+Esc or '/')
+      if (
+        (e.key === "Escape" && e.shiftKey) ||
+        (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !isInputFocused)
+      ) {
+        e.preventDefault();
+        textareaRef.current?.focus();
+        return;
+      }
+
       // 1. Command Palette
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -4538,8 +4611,24 @@ const handleBatchDeleteSelectedChats = () => {
         return;
       }
 
-      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to cycle Agents
+      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to quick-navigate User Request Trace
       if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        const userTurns = userTurnsRef.current;
+        if (userTurns.length > 0) {
+          e.preventDefault();
+          const curVisible = findCurrentVisibleUserTurnIdx(userTurns);
+          const baseIdx = activeTraceIdxRef.current !== null ? activeTraceIdxRef.current : curVisible;
+          let nextIdx = baseIdx;
+          if (e.key === "ArrowDown") {
+            nextIdx = Math.min(userTurns.length - 1, baseIdx + 1);
+          } else {
+            nextIdx = Math.max(0, baseIdx - 1);
+          }
+          scrollToUserTurn(nextIdx);
+          return;
+        }
+
+        // Fallback: cycle agents if no user turns in current chat
         const list = filteredAgentsRef.current;
         if (list.length > 0) {
           e.preventDefault();
@@ -4595,8 +4684,6 @@ const handleBatchDeleteSelectedChats = () => {
       }
 
       // 3. Home / End keyboard shortcuts for dialogue scrolling (when not actively editing text)
-      const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      const isInputFocused = targetTag === "input" || targetTag === "textarea" || (e.target as HTMLElement)?.isContentEditable;
 
       if (!isInputFocused) {
         if (e.key === "End") {
@@ -5297,17 +5384,19 @@ const handleBatchDeleteSelectedChats = () => {
                             if (isAgentBusy) {
                               return (
                                 <span
-                                  className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#0c0c0e]"
-                                  
+                                  className="absolute -top-0.5 -right-0.5 h-2 w-2 min-h-2 min-w-2 rounded-full bg-blue-500 animate-pulse border border-white dark:border-[#0c0c0e] z-10 shrink-0"
+                                  style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
+                                  title="Agent đang có phiên chat đang chạy"
                                 />
                               );
                             }
                             if (hasUnreadCompleted) {
                               return (
                                 <span
-                                  className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500 border border-white dark:border-[#0c0c0e]"
-                                  
-                                />
+                                  className="absolute -top-0.5 -right-0.5 h-2 w-2 min-h-2 min-w-2 rounded-full bg-emerald-500 border border-white dark:border-[#0c0c0e] z-10 shrink-0"
+                                  style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
+                                  title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                  />
                               );
                             }
                             if (hasError) {
@@ -5674,17 +5763,19 @@ const handleBatchDeleteSelectedChats = () => {
                                 if (isAgentBusy) {
                                   return (
                                     <span
-                                      className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse mr-0.5"
-                                      title="Agent đang thực hiện phiên chat"
+                                      className="h-2 w-2 min-h-2 min-w-2 rounded-full bg-blue-500 animate-pulse mr-1 shrink-0"
+                                      style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
+                                      title="Agent đang có phiên chat đang chạy"
                                     />
                                   );
                                 }
                                 if (hasUnreadCompleted) {
                                   return (
                                     <span
-                                      className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-0.5"
-                                      
-                                    />
+                                      className="h-2 w-2 min-h-2 min-w-2 rounded-full bg-emerald-500 mr-1 shrink-0"
+                                      style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
+                                      title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                  />
                                   );
                                 }
                                 if (hasError) {
@@ -5900,17 +5991,19 @@ const handleBatchDeleteSelectedChats = () => {
                                 if (isAgentBusy) {
                                   return (
                                     <span
-                                      className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse mr-0.5"
-                                      title="Agent đang thực hiện phiên chat"
+                                      className="h-2 w-2 min-h-2 min-w-2 rounded-full bg-blue-500 animate-pulse mr-1 shrink-0"
+                                      style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
+                                      title="Agent đang có phiên chat đang chạy"
                                     />
                                   );
                                 }
                                 if (hasUnreadCompleted) {
                                   return (
                                     <span
-                                      className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-0.5"
-                                      
-                                    />
+                                      className="h-2 w-2 min-h-2 min-w-2 rounded-full bg-emerald-500 mr-1 shrink-0"
+                                      style={{ borderRadius: "9999px", aspectRatio: "1 / 1" }}
+                                      title={`Có ${unreadList.length} phiên đã hoàn thành`}
+                                  />
                                   );
                                 }
                                 if (hasError) {
@@ -6873,6 +6966,8 @@ const handleBatchDeleteSelectedChats = () => {
             .map((msg, originalIdx) => ({ msg, originalIdx }))
             .filter((item) => item.msg.role === "user");
 
+          userTurnsRef.current = userTurns;
+
           if (userTurns.length === 0 || hasNoAgents) return null;
 
           const activeTurnItem = hoveredTraceIdx !== null && userTurns[hoveredTraceIdx]
@@ -6898,18 +6993,31 @@ const handleBatchDeleteSelectedChats = () => {
 
           const isCardBookmarked = activeTurnItem ? starredMsgIds.includes(activeTurnItem.msg.id) : false;
 
+          // Compute card top position dynamically (relative to mouse or active tick)
+          let cardTopStyle = "50%";
+          if (traceMouseClientY !== null) {
+            cardTopStyle = `${Math.max(64, Math.min(window.innerHeight - 220, traceMouseClientY - 70))}px`;
+          } else if (hoveredTraceIdx !== null && typeof document !== "undefined") {
+            const tickEl = document.querySelector(`[data-trace-tick-idx="${hoveredTraceIdx}"]`);
+            if (tickEl) {
+              const rect = tickEl.getBoundingClientRect();
+              cardTopStyle = `${Math.max(64, Math.min(window.innerHeight - 220, rect.top - 70))}px`;
+            }
+          }
+
           return (
             <div
-              className="hidden lg:flex absolute left-3 top-1/2 -translate-y-1/2 z-30 flex-col items-start select-none"
+              className="hidden lg:flex absolute right-2.5 top-1/2 -translate-y-1/2 z-30 flex-col items-end select-none"
               onMouseLeave={() => {
                 setHoveredTraceIdx(null);
                 setTraceMouseClientY(null);
               }}
             >
-              {/* Ticks waveform stack */}
-              <div className="flex flex-col items-start gap-[6px] py-2 px-1">
+              {/* Ticks waveform stack: centered vertically, hugging right edge */}
+              <div className="flex flex-col items-end gap-[6px] py-2 px-1 max-h-[60vh] overflow-y-auto no-scrollbar">
                 {userTurns.map((turn, tIdx) => {
                   const isHovered = hoveredTraceIdx === tIdx;
+                  const isCurrentActive = activeTraceIdx === tIdx;
                   const isBookmarked = starredMsgIds.includes(turn.msg.id);
                   let widthClass = "w-2";
                   if (hoveredTraceIdx !== null) {
@@ -6924,46 +7032,34 @@ const handleBatchDeleteSelectedChats = () => {
                   return (
                     <button
                       key={turn.msg.id || tIdx}
+                      data-trace-tick-idx={tIdx}
                       type="button"
-                      aria-label={`Đi tới yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
+                      aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
                       onMouseEnter={(e) => {
                         setHoveredTraceIdx(tIdx);
                         setTraceMouseClientY(e.clientY);
+                        if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
                       }}
-                      onClick={() => {
-                        triggerHaptic(10);
-                        const targetEl = document.getElementById(`chat-msg-${turn.msg.id}`);
-                        if (targetEl && messagesContainerRef.current) {
-                          const containerRect = messagesContainerRef.current.getBoundingClientRect();
-                          const targetRect = targetEl.getBoundingClientRect();
-                          const offset = targetRect.top - containerRect.top + messagesContainerRef.current.scrollTop;
-                          messagesContainerRef.current.scrollTo({
-                            top: Math.max(0, offset - 8),
-                            behavior: "smooth",
-                          });
-                        }
-                      }}
-                      className={`h-[2px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
+                      onClick={() => scrollToUserTurn(tIdx)}
+                      className={`h-[2.5px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
                         isHovered
-                          ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] scale-y-125"
+                          ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-125"
                           : isBookmarked
                           ? "bg-amber-400/80 hover:bg-amber-300"
-                          : "bg-neutral-500/50 hover:bg-neutral-300 dark:bg-neutral-600/60 dark:hover:bg-neutral-300"
+                          : isCurrentActive
+                          ? "bg-white/80 dark:bg-white/80 shadow-[0_0_4px_rgba(255,255,255,0.5)]"
+                          : "bg-neutral-400/60 hover:bg-neutral-200 dark:bg-neutral-600/70 dark:hover:bg-neutral-300"
                       }`}
                     />
                   );
                 })}
               </div>
 
-              {/* Hover Popover preview card */}
+              {/* Hover Popover preview card: opened to the left of the right edge */}
               {activeTurnItem && (
                 <div
-                  style={{
-                    top: traceMouseClientY !== null
-                      ? `${Math.max(64, Math.min(window.innerHeight - 220, traceMouseClientY - 70))}px`
-                      : "50%",
-                  }}
-                  className="fixed left-12 z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-[#1e1e22]/95 dark:bg-[#18181c]/95 border border-neutral-300 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+                  style={{ top: cardTopStyle }}
+                  className="fixed right-12 z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-[#1e1e22]/95 dark:bg-[#18181c]/95 border border-neutral-300 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
                 >
                   {/* Prompt Title & Bookmark icon */}
                   <div className="flex items-start justify-between gap-2">
@@ -7002,7 +7098,7 @@ const handleBatchDeleteSelectedChats = () => {
                   {/* Micro action hint */}
                   <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
                     <span>Yêu cầu #{hoveredTraceIdx! + 1} / {userTurns.length}</span>
-                    <span className="text-[#f8a87c]">Bấm để cuộn lên đầu ↳</span>
+                    <span className="text-[#f8a87c]">Bấm hoặc Alt+↑/↓ để cuộn ↳</span>
                   </div>
                 </div>
               )}
@@ -8607,7 +8703,7 @@ const handleBatchDeleteSelectedChats = () => {
                       ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
                       : isStreaming
                       ? "Agent is responding • Enter to queue next request..."
-                      : (t("composer.placeholder") || "Nhập yêu cầu công việc, phân tích dữ liệu hoặc hỏi đáp...")
+                      : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed scrollbar-none ${

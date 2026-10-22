@@ -29,7 +29,7 @@ export const en = {
   "announcement.exploreOnPrem": "Explore On-Premise",
 
   // Chat Composer
-  "composer.placeholder": "Type a work request or attach files...",
+  "composer.placeholder": "Type a work request (Shift+Esc or / to focus)...",
 
   // Hero Section
   "hero.title": "Meet Skyer. AI teammates you can give real work to.",

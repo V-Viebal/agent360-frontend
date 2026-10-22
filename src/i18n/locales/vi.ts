@@ -29,7 +29,7 @@ export const vi = {
   "announcement.exploreOnPrem": "Khám phá On-Premise",
 
   // Chat Composer
-  "composer.placeholder": "Nhập yêu cầu công việc hoặc đính kèm tài liệu...",
+  "composer.placeholder": "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...",
 
   // Hero Section
   "hero.title": "Gặp gỡ Skyer. Nhân viên AI thực sự hoàn thành công\u00A0việc.",
