@@ -1092,7 +1092,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
       )}
       {profile && (
         <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
-          profile: {profile}
+          profile: {agentId}
         </div>
       )}
       <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
@@ -3795,7 +3795,7 @@ const handleBatchDeleteSelectedChats = () => {
     return () => controller.abort();
   }, [selectedChatId, selectedAgentId, isStreaming, isCurrentSessionRunning]);
   const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
-  const displayMessages: ChatMessage[] = (() => {
+  var displayMessages: ChatMessage[] = (() => {
     if (!liveTurnForView) return messages;
     const base = [...messages];
     const lastUser = [...base].reverse().find((m) => m.role === "user");
@@ -3870,10 +3870,11 @@ const handleBatchDeleteSelectedChats = () => {
       localStorage.setItem("agent360_last_agent_id", agent.id);
     } catch {}
 
-    // Find last saved chat for this target agent
+    // Clear stale chat selection so it does not bounce back
+    setSelectedChatId("");
+    const agentSegment = agent.slug || agent.id;
     const savedChatKey = `agent360_last_chat_${agent.id}`;
     const lastChatForAgent = localStorage.getItem(savedChatKey);
-    const agentSegment = agent.slug || agent.id;
     if (lastChatForAgent) {
       navigate(`/app/${agentSegment}/${lastChatForAgent}`);
     } else {
@@ -4895,8 +4896,8 @@ const handleBatchDeleteSelectedChats = () => {
     return 0;
   });
 
-  const activeFilteredAgents = filteredAgents.filter((a) => a.enabled !== false && a.status !== "disabled");
-  const disabledFilteredAgents = filteredAgents.filter((a) => a.enabled === false || a.status === "disabled");
+  var activeFilteredAgents = filteredAgents.filter((a) => a.enabled !== false && a.status !== "disabled");
+  var disabledFilteredAgents = filteredAgents.filter((a) => a.enabled === false || a.status === "disabled");
 
   const filteredChats = chats
     .filter((c) => {
