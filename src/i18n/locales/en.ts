@@ -28,6 +28,9 @@ export const en = {
   "announcement.cloud": "Managed Cloud Deployment",
   "announcement.exploreOnPrem": "Explore On-Premise",
 
+  // Chat Composer
+  "composer.placeholder": "Type a work request or attach files...",
+
   // Hero Section
   "hero.title": "Meet Skyer. AI teammates you can give real work to.",
   "hero.subtitle": "Bots can sign in to your tools, use them just like you do, collaborate in parallel 24/7, and come back with finished work.",

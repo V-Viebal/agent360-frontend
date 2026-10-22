@@ -28,6 +28,9 @@ export const vi = {
   "announcement.cloud": "Triển khai Cloud linh hoạt",
   "announcement.exploreOnPrem": "Khám phá On-Premise",
 
+  // Chat Composer
+  "composer.placeholder": "Nhập yêu cầu công việc hoặc đính kèm tài liệu...",
+
   // Hero Section
   "hero.title": "Gặp gỡ Skyer. Nhân viên AI thực sự hoàn thành công\u00A0việc.",
   "hero.subtitle": "Các Bot có thể đăng nhập công cụ của bạn, thao tác y hệt con người, phối hợp song song 24/7 và bàn giao kết quả nghiệm thu có biên nhận xác thực.",

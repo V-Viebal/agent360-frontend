@@ -3176,25 +3176,7 @@ const handleBatchDeleteSelectedChats = () => {
     }
   };
 
-  useEffect(() => {
-    // When messages change or chat is loaded:
-    // If it's a switch / initial load, jump at once
-    if (isInitialLoadRef.current) {
-      jumpToBottom();
-      // Double check after DOM render settle
-      const timer = setTimeout(jumpToBottom, 40);
-      return () => clearTimeout(timer);
-    } else if (isStreaming) {
-      // During active token streaming, only auto-scroll if user has NOT scrolled up to read earlier text
-      if (!isUserScrolledUpRef.current) {
-        jumpToBottom();
-      }
-    } else {
-      if (!isUserScrolledUpRef.current) {
-        jumpToBottom();
-      }
-    }
-  }, [messages, showPollCard, isStreaming]);
+
 
   // Realtime Server-Sent Events stream for high-risk tool approvals (<100ms push)
   useEffect(() => {
@@ -3521,7 +3503,9 @@ const handleBatchDeleteSelectedChats = () => {
         setShowPollCard(false);
       }
       setIsLoadingMessages(false);
+      isUserScrolledUpRef.current = false;
       setTimeout(jumpToBottom, 0);
+      setTimeout(jumpToBottom, 60);
     }).catch(() => {
       // Keep whatever real (cached) turns we have; never substitute canned dialogue.
       if (mounted) setIsLoadingMessages(false);
@@ -3822,6 +3806,23 @@ const handleBatchDeleteSelectedChats = () => {
     base.push(liveTurnForView.msg);
     return base;
   })();
+
+  useEffect(() => {
+    // When messages change or chat is loaded:
+    // If it's a switch / initial load, jump at once
+    if (isInitialLoadRef.current) {
+      jumpToBottom();
+      const rAf = requestAnimationFrame(() => jumpToBottom());
+      const timer = setTimeout(jumpToBottom, 50);
+      return () => {
+        cancelAnimationFrame(rAf);
+        clearTimeout(timer);
+      };
+    } else if (!isUserScrolledUpRef.current) {
+      jumpToBottom();
+      requestAnimationFrame(() => jumpToBottom());
+    }
+  }, [displayMessages, showPollCard, isStreaming, selectedChatId]);
 
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
@@ -6172,6 +6173,7 @@ const handleBatchDeleteSelectedChats = () => {
         {/* Messages Stream Area (Responsive & Lean for Compact/Minimize) */}
         <div
           ref={messagesContainerRef}
+          onScroll={handleMessagesScroll}
           className={`flex-1 overflow-y-auto scrollbar-hover ${isCompactMode ? "px-3 py-2 space-y-3" : "px-4 md:px-8 py-3 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
         >
           {hasNoAgents ? (
