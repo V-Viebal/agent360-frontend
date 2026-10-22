@@ -1,3 +1,4 @@
+import React from "react";
 import { connectSessionMultiplexer, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate } from "../services/sessionMultiplexer";
 function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string; isSelected?: boolean; size?: number }) {
   const ch = (channel || "console").toLowerCase();
@@ -661,13 +662,38 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
   );
 }
 
-// Markdown & Structured Content Formatter
-function renderInlineMarkdown(rawText: string) {
+// Markdown & Structured Content Formatter with support for links, bold, italics, code, and bare URLs
+function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (!rawText) return "";
-  const parts = rawText.split(/(\*\*.*?\*\*|`.*?`)/g);
-  if (parts.length === 1) return rawText;
+  // Tokenizer pattern matching:
+  // 1. Markdown link: [label](url)
+  // 2. Bold: **text**
+  // 3. Inline code: `code`
+  // 4. Italic: *text* (excluding **)
+  // 5. Bare URL: https?://...
+  const tokenRegex = /(\[[^\]]+\]\([^\s)]+\)|\*\*[^*]+?\*\*|`[^`]+?`|\*[^*\n]+?\*|https?:\/\/[^\s)\]]+)/g;
+  const parts = rawText.split(tokenRegex);
+  if (parts.length === 1 && !rawText.match(tokenRegex)) return rawText;
 
-  return parts.map((part, pIdx) => {
+  return parts.filter(Boolean).map((part, pIdx) => {
+    // 1. Markdown link: [label](url)
+    if (part.startsWith("[") && part.includes("](") && part.endsWith(")")) {
+      const match = part.match(/^\[([^\]]+)\]\(([^\s)]+)\)$/);
+      if (match) {
+        return (
+          <a
+            key={pIdx}
+            href={match[2]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#f8a87c] hover:underline underline-offset-2 font-medium break-all"
+          >
+            {match[1]}
+          </a>
+        );
+      }
+    }
+    // 2. Bold: **text**
     if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
       return (
         <strong key={pIdx} className="font-semibold text-slate-900 dark:text-white">
@@ -675,6 +701,7 @@ function renderInlineMarkdown(rawText: string) {
         </strong>
       );
     }
+    // 3. Inline code: `code`
     if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
       return (
         <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] font-mono text-[11px] text-[#f8a87c] mx-0.5">
@@ -682,8 +709,74 @@ function renderInlineMarkdown(rawText: string) {
         </code>
       );
     }
+    // 4. Italic: *text*
+    if (part.startsWith("*") && part.endsWith("*") && part.length >= 2 && !part.startsWith("**")) {
+      return (
+        <em key={pIdx} className="italic text-slate-800 dark:text-neutral-200">
+          {part.slice(1, -1)}
+        </em>
+      );
+    }
+    // 5. Bare URL: https?://...
+    if (part.startsWith("http://") || part.startsWith("https://")) {
+      let url = part;
+      let trailing = "";
+      if (/[.,;:!]$/.test(url)) {
+        trailing = url.slice(-1);
+        url = url.slice(0, -1);
+      }
+      return (
+        <React.Fragment key={pIdx}>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#f8a87c] hover:underline underline-offset-2 break-all"
+          >
+            {url}
+          </a>
+          {trailing}
+        </React.Fragment>
+      );
+    }
     return part;
   });
+}
+
+function parseRowCells(line: string): string[] {
+  const trimmed = line.trim();
+  const inner = trimmed.startsWith("|") && trimmed.endsWith("|")
+    ? trimmed.slice(1, -1)
+    : trimmed.replace(/^\|/, "").replace(/\|$/, "");
+  return inner.split("|").map((cell) => cell.trim());
+}
+
+function parseMarkdownTableBlock(tableLines: string[]) {
+  let hasSeparator = false;
+  let separatorIdx = -1;
+  for (let i = 0; i < tableLines.length; i++) {
+    const t = tableLines[i].trim();
+    if (/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/.test(t)) {
+      hasSeparator = true;
+      separatorIdx = i;
+      break;
+    }
+  }
+
+  let headers: string[] = [];
+  let rows: string[][] = [];
+
+  if (hasSeparator && separatorIdx > 0) {
+    headers = parseRowCells(tableLines[0]);
+    rows = tableLines
+      .slice(separatorIdx + 1)
+      .filter((l) => l.trim() && !/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/.test(l.trim()))
+      .map(parseRowCells);
+  } else {
+    rows = tableLines.map(parseRowCells);
+  }
+
+  return { headers, rows };
 }
 
 // Search Match Highlighting helper for conversation titles & snippets
@@ -867,20 +960,80 @@ function FormattedMessageContent({
           );
         }
 
-        // Segment regular text into paragraphs or markdown headers
-        const lines = part.split("\n");
+        // Preprocess: join split markdown links [label]\n(url) -> [label](url)
+        const normalizedPart = part.replace(/\[([^\]\n]+)\]\s*\n\s*\((https?:\/\/[^\s)]+)\)/g, "[$1]($2)");
+        const rawLines = normalizedPart.split("\n");
+
+        type BlockItem =
+          | { type: "table"; headers: string[]; rows: string[][] }
+          | { type: "line"; line: string; trimmed: string };
+
+        const blockItems: BlockItem[] = [];
+        let tableBuffer: string[] = [];
+
+        const flushTableBuffer = () => {
+          if (tableBuffer.length > 0) {
+            blockItems.push({ type: "table", ...parseMarkdownTableBlock(tableBuffer) });
+            tableBuffer = [];
+          }
+        };
+
+        for (let l = 0; l < rawLines.length; l++) {
+          const rawLine = rawLines[l];
+          const tr = rawLine.trim();
+          if (tr.startsWith("|") && (tr.endsWith("|") || tr.includes("|", 1))) {
+            tableBuffer.push(tr);
+            continue;
+          }
+          flushTableBuffer();
+          blockItems.push({ type: "line", line: rawLine, trimmed: tr });
+        }
+        flushTableBuffer();
+
         return (
-          <div key={idx} className="space-y-1.5">
-            {lines.map((line, lineIdx) => {
-              const trimmed = line.trim();
+          <div key={idx} className="space-y-1.5 max-w-full overflow-hidden">
+            {blockItems.map((blk, blkIdx) => {
+              if (blk.type === "table") {
+                return (
+                  <div key={blkIdx} className="my-2.5 max-w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-[#252532] bg-white/70 dark:bg-[#0e0e14]/90 shadow-2xs">
+                    <table className="w-full text-left text-xs border-collapse">
+                      {blk.headers.length > 0 && (
+                        <thead>
+                          <tr className="border-b border-slate-200 dark:border-[#252532] bg-slate-50 dark:bg-[#161620]">
+                            {blk.headers.map((h, hIdx) => (
+                              <th key={hIdx} className="px-3 py-2 font-semibold text-slate-800 dark:text-white font-mono text-[11px] whitespace-nowrap">
+                                {renderInlineMarkdown(h)}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                      )}
+                      <tbody className="divide-y divide-slate-100 dark:divide-[#1d1d28]">
+                        {blk.rows.map((row, rIdx) => (
+                          <tr key={rIdx} className="hover:bg-slate-50/60 dark:hover:bg-[#14141e]/70 transition-colors">
+                            {row.map((cell, cIdx) => (
+                              <td key={cIdx} className="px-3 py-2 text-slate-700 dark:text-neutral-300 align-top leading-relaxed text-[12px]">
+                                {renderInlineMarkdown(cell)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+
+              const line = blk.line;
+              const trimmed = blk.trimmed;
               if (!trimmed) {
-                return <div key={lineIdx} className="h-2" />;
+                return <div key={blkIdx} className="h-2" />;
               }
 
               // Subtle split dash separator (---, ***, ___)
               if (trimmed === "---" || trimmed === "***" || trimmed === "___" || /^[-*_]{3,}$/.test(trimmed)) {
                 return (
-                  <div key={lineIdx} className="my-3 py-1 flex items-center">
+                  <div key={blkIdx} className="my-3 py-1 flex items-center">
                     <div className="w-full border-t border-dashed border-[#2b2b38]/70" />
                   </div>
                 );
@@ -888,7 +1041,7 @@ function FormattedMessageContent({
 
               if (trimmed.startsWith("### ")) {
                 return (
-                  <div key={lineIdx} className="pt-2 pb-0.5">
+                  <div key={blkIdx} className="pt-2 pb-0.5">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-200 tracking-wide font-mono flex items-center gap-2">
                       <span className="h-1 w-1 rounded-full bg-[#f8a87c]/70" />
                       {trimmed.slice(4)}
@@ -898,7 +1051,7 @@ function FormattedMessageContent({
               }
               if (trimmed.startsWith("## ")) {
                 return (
-                  <div key={lineIdx} className="pt-3 pb-1 border-b border-dashed border-slate-200 dark:border-[#232330]">
+                  <div key={blkIdx} className="pt-3 pb-1 border-b border-dashed border-slate-200 dark:border-[#232330]">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                       <span className="text-[#f8a87c] text-xs">§</span>
                       {trimmed.slice(3)}
@@ -908,18 +1061,20 @@ function FormattedMessageContent({
               }
               if (trimmed.startsWith("# ")) {
                 return (
-                  <div key={lineIdx} className="pt-3 pb-1.5 border-b border-dashed border-slate-200 dark:border-[#2b2b3a]">
+                  <div key={blkIdx} className="pt-3 pb-1.5 border-b border-dashed border-slate-200 dark:border-[#2b2b3a]">
                     <h2 className="text-base font-bold text-[#f8a87c] tracking-tight">
                       {trimmed.slice(2)}
                     </h2>
                   </div>
                 );
               }
-              if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+              if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ") || trimmed.startsWith("↳ ")) {
+                const bulletSymbol = trimmed.startsWith("↳ ") ? "↳" : "↳";
+                const sliceLen = trimmed.startsWith("↳ ") ? 2 : 2;
                 return (
-                  <div key={lineIdx} className="flex items-start gap-2.5 pl-2 py-0.5 text-slate-700 dark:text-neutral-300">
-                    <span className="text-[#f8a87c]/80 shrink-0 text-[11px] font-mono select-none mt-0.5">↳</span>
-                    <span className="flex-1">{renderInlineMarkdown(trimmed.slice(2))}</span>
+                  <div key={blkIdx} className="flex items-start gap-2 pl-1 py-0.5 text-slate-700 dark:text-neutral-300">
+                    <span className="text-[#f8a87c]/80 shrink-0 text-[11px] font-mono select-none mt-0.5">{bulletSymbol}</span>
+                    <span className="flex-1 break-words">{renderInlineMarkdown(trimmed.slice(sliceLen))}</span>
                   </div>
                 );
               }
@@ -928,11 +1083,11 @@ function FormattedMessageContent({
               const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
               if (numMatch) {
                 return (
-                  <div key={lineIdx} className="flex items-start gap-2.5 pl-2 py-0.5 text-slate-700 dark:text-neutral-300">
+                  <div key={blkIdx} className="flex items-start gap-2 pl-1 py-0.5 text-slate-700 dark:text-neutral-300">
                     <span className="text-[#f8a87c]/70 font-mono text-[11px] shrink-0 select-none mt-0.5">
                       {numMatch[1]}.
                     </span>
-                    <span className="flex-1">{renderInlineMarkdown(numMatch[2])}</span>
+                    <span className="flex-1 break-words">{renderInlineMarkdown(numMatch[2])}</span>
                   </div>
                 );
               }
@@ -943,7 +1098,7 @@ function FormattedMessageContent({
                 const alt = imgMatch[1] || "Browser Screenshot Preview";
                 const src = imgMatch[2];
                 return (
-                  <div key={lineIdx} className="my-2.5 max-w-full">
+                  <div key={blkIdx} className="my-2.5 max-w-full">
                     <div
                       onClick={() => onImageClick?.(src, alt)}
                       className="group relative inline-block max-w-full rounded-xl overflow-hidden border border-slate-200 dark:border-[#2b2b3c] bg-white dark:bg-[#0c0c12] shadow-sm hover:border-[#f8a87c]/50 transition-all cursor-zoom-in"
@@ -970,7 +1125,7 @@ function FormattedMessageContent({
 
               return (
                 <p
-                  key={lineIdx}
+                  key={blkIdx}
                   onDoubleClick={() => onSpeakSentence?.(trimmed)}
                   title="Double click to read this sentence aloud"
                   className="text-slate-800 dark:text-neutral-200 leading-relaxed break-words hover:text-slate-900 dark:hover:text-white transition-colors cursor-text"
@@ -1939,7 +2094,13 @@ export function GrokBotWorkspace() {
         let computedWidth = 280;
         if (chatSessionsAsideRef.current) {
           const rect = chatSessionsAsideRef.current.getBoundingClientRect();
-          computedWidth = rect.right - e.clientX;
+          if (isComputerSplitOpen) {
+            // When virtual computer is open to the right of chat sessions, splitter is on the right edge
+            computedWidth = e.clientX - rect.left;
+          } else {
+            // When virtual computer is closed, chat sessions is on the right of screen, splitter is on left edge
+            computedWidth = rect.right - e.clientX;
+          }
         } else {
           const offsetFromRight = window.innerWidth - e.clientX;
           const currentBotInfoOffset = (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280) ? botInfoWidth : 0;
@@ -1971,7 +2132,7 @@ export function GrokBotWorkspace() {
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isResizingLeft, isResizingRight, isResizingComputerSplit, isResizingChatSessions, isBotInfoCollapsed, botInfoWidth]);
+  }, [isResizingLeft, isResizingRight, isResizingComputerSplit, isResizingChatSessions, isBotInfoCollapsed, botInfoWidth, isComputerSplitOpen]);
 
   // Helper setters that persist to localStorage
   const handleToggleChatList = (collapse?: boolean) => {
@@ -8505,11 +8666,13 @@ const handleBatchDeleteSelectedChats = () => {
             : "hidden lg:flex lg:w-[320px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
         }`}
       >
-        {/* Subtle, Slim Resizer Splitter between Chat and Session Chats */}
+        {/* Subtle, Slim Resizer Splitter between Chat / Virtual Computer and Session Chats */}
         {!isChatListCollapsed && (
           <div
             onMouseDown={() => setIsResizingChatSessions(true)}
-            className="hidden lg:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-[#f8a87c]/40 active:bg-[#f8a87c] transition-colors z-30 -ml-1 group"
+            className={`hidden lg:block absolute top-0 ${
+              isComputerSplitOpen ? "right-0 -mr-1" : "left-0 -ml-1"
+            } w-1.5 h-full cursor-col-resize hover:bg-[#f8a87c]/40 active:bg-[#f8a87c] transition-colors z-30 group`}
             title="Kéo để chỉnh độ rộng danh sách chat"
           >
             <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[#f8a87c] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
