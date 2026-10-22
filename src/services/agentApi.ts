@@ -1298,3 +1298,39 @@ export async function toggleAgentEnabled(agentId: string, enabled: boolean): Pro
     return false;
   }
 }
+
+export async function stopConsoleChat(sessionId: string, agentId?: string): Promise<boolean> {
+  try {
+    const cleanId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/console/chat/stop`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        sessionId,
+        agentId: cleanId,
+      }),
+    }, cleanId).catch(() => null);
+
+    if (res && res.ok) return true;
+
+    const fallbackRes = await authorizedFetch(`${API_BASE_URL}/console/chat/stop`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        sessionId,
+        agentId: cleanId,
+      }),
+    }, cleanId).catch(() => null);
+
+    return !!(fallbackRes && fallbackRes.ok);
+  } catch (err) {
+    console.warn("stopConsoleChat error:", err);
+    return false;
+  }
+}

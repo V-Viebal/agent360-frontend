@@ -177,6 +177,7 @@ import {
   parseRawChatMessages,
   getCachedChatMessages,
   setCachedChatMessages,
+  stopConsoleChat,
   fetchSkills,
   fetchAgentChannels,
   toggleAgentChannel,
@@ -2137,10 +2138,20 @@ export function GrokBotWorkspace() {
 
   const handleStopStreaming = () => {
     if (!selectedChatId) return;
+    const targetChat = chats.find((c) => c.id === selectedChatId) || chats.find((c) => c.session_id === selectedChatId);
+    const targetSessionId = targetChat?.session_id || selectedChatId;
+    const targetAgentSlug = selectedAgent.slug || selectedAgentId;
+
     streamAbortControllersRef.current[selectedChatId]?.abort();
     delete streamAbortControllersRef.current[selectedChatId];
     setStreamingChatIds((prev) => prev.filter((id) => id !== selectedChatId));
     setRunningChatIds((prev) => prev.filter((id) => id !== selectedChatId));
+    try {
+      sessionStorage.removeItem(`agent360_active_turn_${selectedChatId}`);
+      sessionStorage.removeItem(`agent360_last_prompt_${selectedChatId}`);
+    } catch {}
+
+    stopConsoleChat(targetSessionId, targetAgentSlug).catch(() => {});
   };
 
   // Choice poll card state ("What would you like to call me?")
@@ -8885,7 +8896,7 @@ const handleBatchDeleteSelectedChats = () => {
                             className="bg-[#121218] border border-[#f8a87c] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
                           />
                         ) : (
-                          <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1">
+                          <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
                               className={`text-xs chat-title-marquee inline-block whitespace-nowrap ${
@@ -8909,6 +8920,18 @@ const handleBatchDeleteSelectedChats = () => {
                                 );
                               })()}
                             </span>
+                            {(() => {
+                              const qCount = (requestQueues[chat.id] || []).length;
+                              if (qCount <= 0) return null;
+                              return (
+                                <span
+                                  className="ml-1.5 px-1.5 py-0.2 rounded-md bg-[#f8a87c]/15 text-[#f8a87c] text-[9px] font-mono border border-[#f8a87c]/30 shrink-0 font-semibold"
+                                  title={`${qCount} tin nhắn trong hàng đợi`}
+                                >
+                                  +{qCount}
+                                </span>
+                              );
+                            })()}
                           </div>
                         )}
 
