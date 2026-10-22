@@ -3422,8 +3422,11 @@ const handleBatchDeleteSelectedChats = () => {
 
   // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
   // Client-created sessions (session-*) are not in the server list yet and are allowed.
-  const selectedChatKnown = !!selectedChatId && (selectedChatId.startsWith("session-")
-    || (chatsAgentId === selectedAgentId && chats.some((c) => c.id === selectedChatId)));
+  const selectedChatKnown = !!selectedChatId && (
+    selectedChatId.startsWith("session-") ||
+    chats.some((c) => c.id === selectedChatId || c.session_id === selectedChatId) ||
+    Boolean(chatParam && chatParam === selectedChatId)
+  );
 
   // When selectedChatId changes, fetch real messages with instant client cache display
   useEffect(() => {
@@ -3887,11 +3890,14 @@ const handleBatchDeleteSelectedChats = () => {
 
   // Switch chat session
   const handleSelectChat = (chat: AgentSession) => {
+    if (!chat?.id || chat.id === selectedChatId) return;
     setSelectedChatId(chat.id);
     setMobileChatsOpen(false);
     try {
       localStorage.setItem("agent360_last_chat_id", chat.id);
-      localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chat.id);
+      if (selectedAgentId) {
+        localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chat.id);
+      }
     } catch {}
 
     // Update routing URL to /app/:agentSlug/:chatId
