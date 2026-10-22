@@ -3060,7 +3060,7 @@ const handleBatchDeleteSelectedChats = () => {
     }
     // Calculate distance from bottom
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const isScrolledUp = distanceFromBottom > 160;
+    const isScrolledUp = distanceFromBottom > 35;
     isUserScrolledUpRef.current = isScrolledUp;
     setShowScrollBottomBtn(isScrolledUp);
   };
@@ -3807,21 +3807,18 @@ const handleBatchDeleteSelectedChats = () => {
   })();
 
   useEffect(() => {
-    // When messages change or chat is loaded:
-    // If it's a switch / initial load, jump at once
+    // Only jump to bottom on initial load / chat switch
     if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
       jumpToBottom();
-      const rAf = requestAnimationFrame(() => jumpToBottom());
-      const timer = setTimeout(jumpToBottom, 50);
-      return () => {
-        cancelAnimationFrame(rAf);
-        clearTimeout(timer);
-      };
-    } else if (!isUserScrolledUpRef.current) {
-      jumpToBottom();
-      requestAnimationFrame(() => jumpToBottom());
+      const timer = setTimeout(jumpToBottom, 40);
+      return () => clearTimeout(timer);
     }
-  }, [displayMessages, showPollCard, isStreaming, selectedChatId]);
+    // During active streaming or new messages, only scroll if user has NOT scrolled up
+    if (isStreaming && !isUserScrolledUpRef.current) {
+      jumpToBottom();
+    }
+  }, [displayMessages, isStreaming, selectedChatId]);
 
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
@@ -6638,43 +6635,21 @@ const handleBatchDeleteSelectedChats = () => {
 
         {/* Floating Scroll to Bottom Button */}
         {showScrollBottomBtn && (
-          <div className="absolute bottom-20 right-8 z-30 animate-in fade-in zoom-in-95 duration-150">
-            <button
-              type="button"
-              onClick={() => {
-                isUserScrolledUpRef.current = false;
-                setShowScrollBottomBtn(false);
-                smoothScrollToBottom();
-              }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#181824]/95 border font-mono text-[11px] shadow-xl transition-all cursor-pointer backdrop-blur-md ${
-                isStreaming
-                  ? "border-[#f8a87c] text-white bg-[#221812]/95 shadow-[0_0_20px_rgba(248,168,124,0.5)] ring-1 ring-[#f8a87c]/60 animate-bounce"
-                  : "border-[#f8a87c]/40 text-[#f8a87c] hover:bg-[#f8a87c] hover:text-black hover:shadow-[0_0_15px_rgba(248,168,124,0.4)]"
-              }`}
-              title="Jump to latest turn"
-            >
-              {isStreaming ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f8a87c] opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#f8a87c]" />
-                  </span>
-                  <span>Generating response</span>
-                  {turnTelemetry?.tokensPerSec ? (
-                    <span className="px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#f8a87c] font-bold text-[10px]">
-                      {turnTelemetry.tokensPerSec.toFixed(0)} t/s
-                    </span>
-                  ) : (
-                    <span className="px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#f8a87c] font-bold text-[10px]">
-                      Live
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span>Scroll to latest</span>
-              )}
-              <ChevronDown size={14} className={isStreaming ? "animate-pulse text-[#f8a87c]" : ""} />
-            </button>
+          <div className="absolute bottom-20 right-6 z-30 animate-in fade-in zoom-in-95 duration-150">
+            <Tooltip content="Cuộn xuống tin nhắn mới nhất" placement="top" minWidth={140}>
+              <button
+                type="button"
+                aria-label="Cuộn xuống tin nhắn mới nhất"
+                onClick={() => {
+                  isUserScrolledUpRef.current = false;
+                  setShowScrollBottomBtn(false);
+                  smoothScrollToBottom();
+                }}
+                className="h-8 w-8 rounded-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a38] shadow-md hover:shadow-lg flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-[#f8a87c] hover:border-[#f8a87c]/60 transition-all cursor-pointer"
+              >
+                <ChevronDown size={16} className={isStreaming ? "animate-bounce text-[#f8a87c]" : ""} />
+              </button>
+            </Tooltip>
           </div>
         )}
 
