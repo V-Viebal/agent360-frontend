@@ -3275,13 +3275,13 @@ const handleBatchDeleteSelectedChats = () => {
       setActiveTraceIdx(targetIdx);
       activeTraceIdxRef.current = targetIdx;
 
-      // Position preview card next to tick
+      // Position minimal tooltip next to tick
       const tickEl = document.querySelector(`[data-trace-tick-idx="${targetIdx}"]`);
       if (tickEl) {
         const rect = tickEl.getBoundingClientRect();
         setTraceCardPos({
-          right: Math.round(window.innerWidth - rect.left + 14),
-          top: Math.round(Math.max(64, Math.min(window.innerHeight - 240, rect.top + rect.height / 2 - 60))),
+          right: Math.round(window.innerWidth - rect.left + 10),
+          top: Math.round(rect.top + rect.height / 2),
         });
       }
 
@@ -4623,8 +4623,8 @@ const handleBatchDeleteSelectedChats = () => {
         return;
       }
 
-      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to quick-navigate User Request Trace
-      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to quick-navigate User Request Trace (when not typing in textarea)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && !isInputFocused) {
         const userTurns = userTurnsRef.current;
         if (userTurns.length > 0) {
           e.preventDefault();
@@ -7048,8 +7048,8 @@ const handleBatchDeleteSelectedChats = () => {
                         setHoveredTraceIdx(tIdx);
                         const rect = e.currentTarget.getBoundingClientRect();
                         setTraceCardPos({
-                          right: Math.round(window.innerWidth - rect.left + 14),
-                          top: Math.round(Math.max(64, Math.min(window.innerHeight - 240, rect.top + rect.height / 2 - 60))),
+                          right: Math.round(window.innerWidth - rect.left + 10),
+                          top: Math.round(rect.top + rect.height / 2),
                         });
                         if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
                       }}
@@ -7068,54 +7068,22 @@ const handleBatchDeleteSelectedChats = () => {
                 })}
               </div>
 
-              {/* Hover Popover preview card: opened to the left of the right edge, adaptive light/dark */}
+              {/* Clean, lightweight minimal tooltip: aligned vertically with tick, positioned to the left */}
               {activeTurnItem && (
                 <div
                   style={{
                     top: `${effectiveCardPos.top}px`,
                     right: `${effectiveCardPos.right}px`,
+                    transform: "translateY(-50%)",
                   }}
-                  className="fixed z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#18181c]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+                  className="fixed z-50 max-w-[280px] sm:max-w-[340px] px-3 py-1.5 rounded-lg bg-neutral-900/95 dark:bg-[#1a1a20]/95 text-white dark:text-neutral-200 text-xs shadow-lg backdrop-blur-md border border-neutral-700/50 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2"
                 >
-                  {/* Prompt Title & Bookmark icon */}
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-xs text-slate-900 dark:text-white leading-snug line-clamp-2">
-                      {activeTurnItem.msg.content.trim()}
-                    </p>
-                    <button
-                      type="button"
-                      aria-label="Đánh dấu sao"
-                      onClick={() => toggleStarMessage(activeTurnItem.msg.id)}
-                      className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
-                    >
-                      <Bookmark
-                        size={14}
-                        className={isCardBookmarked ? "fill-amber-400 text-amber-500 dark:text-amber-400" : ""}
-                      />
-                    </button>
-                  </div>
-
-                  {/* Assistant summary snippet or checklist */}
-                  {nextAssistantSnippet && (
-                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/10 space-y-1">
-                      <div className="flex items-start gap-1.5 text-[11px] text-slate-600 dark:text-neutral-400 font-sans leading-relaxed">
-                        {nextAssistantHasCheck && (
-                          <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold">
-                            ✓
-                          </span>
-                        )}
-                        <p className="line-clamp-3 select-none">
-                          {nextAssistantSnippet}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Micro action hint */}
-                  <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
-                    <span>Yêu cầu #{hoveredTraceIdx! + 1} / {userTurns.length}</span>
-                    <span className="text-[#f8a87c]">Bấm hoặc Alt+↑/↓ để cuộn ↳</span>
-                  </div>
+                  <span className="font-mono text-[10px] text-[#f8a87c] shrink-0 font-medium">
+                    #{hoveredTraceIdx! + 1}
+                  </span>
+                  <p className="truncate font-normal leading-tight text-[11px] select-none">
+                    {activeTurnItem.msg.content.trim()}
+                  </p>
                 </div>
               )}
             </div>
@@ -8484,8 +8452,8 @@ const handleBatchDeleteSelectedChats = () => {
                     }
                   }}
                   onKeyDown={(e) => {
-                    // Prompt History Recall: If textarea is empty and ArrowUp is pressed, restore previous user prompt
-                    if (e.key === "ArrowUp" && !inputText.trim() && messages.length > 0) {
+                    // Prompt History Recall: When input is empty and pure ArrowUp (no Alt/Ctrl/Meta/Shift) is pressed, restore previous user prompt
+                    if (e.key === "ArrowUp" && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && !inputText.trim() && messages.length > 0) {
                       const userMsgs = messages.filter((m) => m.role === "user");
                       const lastUserMsg = userMsgs[userMsgs.length - 1];
                       if (lastUserMsg && lastUserMsg.content) {
