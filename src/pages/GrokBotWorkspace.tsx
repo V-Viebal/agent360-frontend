@@ -3863,9 +3863,24 @@ const handleBatchDeleteSelectedChats = () => {
           const activeAg = agents.find((a) => a.id === currentAgent || a.slug === currentAgent);
           const currentBare = (activeAg?.slug || activeAg?.id || currentAgent).replace(/^bot:agent360:/i, "").toLowerCase();
           const routeAgentBare = (agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
+          const isNewSessionParam = Boolean(routeAgentBare === currentBare && chatParam && chatParam.startsWith("session-"));
           const urlChatFound = (routeAgentBare === currentBare) ? findChat(chatParam) : undefined;
 
-          const targetChat = urlChatFound ?? foundSaved ?? loadedChats[0];
+          const targetChat = urlChatFound
+            ?? (isNewSessionParam && chatParam
+                ? {
+                    id: chatParam,
+                    title: "New Chat",
+                    updatedAt: "Just now",
+                    messageCount: 0,
+                    lastMessageSnippet: "Start a conversation...",
+                    session_id: chatParam,
+                    agentId: currentBare,
+                    channel: "console",
+                  }
+                : undefined)
+            ?? foundSaved
+            ?? loadedChats[0];
           const targetChatId: string = targetChat.id;
           setSelectedChatId(targetChatId);
           try {
@@ -4454,7 +4469,7 @@ const handleBatchDeleteSelectedChats = () => {
   const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
   var displayMessages: ChatMessage[] = (() => {
     const base = [...messages];
-    if (activeSessionRoom && activeSessionRoom.host_chat_id === selectedChatId && Array.isArray(activeSessionRoom.turns)) {
+    if (activeSessionRoom && (activeSessionRoom.host_chat_id === selectedChatId || activeSessionRoom.host_session_id === selectedChatId || (selectedChat?.session_id && (activeSessionRoom.host_chat_id === selectedChat.session_id || activeSessionRoom.host_session_id === selectedChat.session_id))) && Array.isArray(activeSessionRoom.turns)) {
       for (const rt of activeSessionRoom.turns) {
         if (rt.kind !== "collaborator_reply" && rt.kind !== "question" && rt.kind !== "manager_guard") continue;
         if (base.some((m) => m.id === rt.id)) continue;
@@ -4910,6 +4925,12 @@ const handleBatchDeleteSelectedChats = () => {
     // Optimistic UI update: unshift to front and select immediately
     setChats((prev) => [newSession, ...prev.filter((c) => c.id !== newChatId)]);
     setSelectedChatId(newChatId);
+    setMessages([]);
+    fetchChatSessionRoom(selectedAgent.slug || selectedAgent.id || selectedAgentId, newChatId, true)
+      .then((r) => {
+        if (r) setActiveSessionRoom(r);
+      })
+      .catch(() => {});
     try {
       localStorage.setItem("agent360_last_chat_id", newChatId);
       localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, newChatId);
@@ -7092,7 +7113,7 @@ const handleBatchDeleteSelectedChats = () => {
           ) : (
           <>
           {/* Session-Sticky AgentTeams Collaboration Room Bar ([Agent A, Agent B, Manager, Admin]) */}
-          {activeSessionRoom && activeSessionRoom.host_chat_id === selectedChatId && (
+          {activeSessionRoom && (activeSessionRoom.host_chat_id === selectedChatId || activeSessionRoom.host_session_id === selectedChatId || (selectedChat?.session_id && (activeSessionRoom.host_chat_id === selectedChat.session_id || activeSessionRoom.host_session_id === selectedChat.session_id))) && (
             <div
               data-testid="session-collaboration-room-bar"
               className="mb-3 p-2.5 rounded-xl bg-slate-100/90 dark:bg-[#14141f]/95 border border-cyan-500/30 dark:border-cyan-500/25 shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs font-sans animate-in fade-in duration-150"

@@ -1492,12 +1492,12 @@ export async function stopConsoleChat(sessionId: string, agentId?: string): Prom
 }
 
 
-export async function fetchChatSessionRoom(agentId: string, chatId: string): Promise<SessionCollaborationRoom | null> {
+export async function fetchChatSessionRoom(agentId: string, chatId: string, ensure: boolean = true): Promise<SessionCollaborationRoom | null> {
   if (!agentId || !chatId) return null;
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
     const res = await authorizedFetch(
-      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/room`,
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/room${ensure ? "?ensure=true" : ""}`,
       { headers: { Accept: "application/json" } },
       cleanId
     );
