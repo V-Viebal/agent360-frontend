@@ -10929,6 +10929,7 @@ ${chat.id}`);
           setSelectedJobForConfig(job);
           setIsScheduleModalOpen(true);
         }}
+        turnTelemetry={turnTelemetry}
         skills={skills}
       />
 

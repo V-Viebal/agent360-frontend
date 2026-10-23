@@ -72,6 +72,14 @@ interface AgentSettingsModalProps {
   loadingSchedules: boolean;
   onAddSchedule: () => void;
   onEditSchedule: (job: AgentScheduleJob) => void;
+  // Telemetry & Metrics
+  turnTelemetry?: {
+    ttftMs?: number;
+    tokensPerSec?: number;
+    totalDurationMs?: number;
+    estimatedCostUsd?: number;
+    model?: string;
+  } | null;
   // Skills
   skills: string[];
 }
@@ -99,6 +107,7 @@ export function AgentSettingsModal({
   loadingSchedules,
   onAddSchedule,
   onEditSchedule,
+  turnTelemetry,
   skills,
 }: AgentSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
@@ -491,6 +500,41 @@ export function AgentSettingsModal({
                       <div className="text-[#e0682b] dark:text-[#f8a87c] font-semibold truncate mt-0.5">
                         {skills.length} available
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Real-time Turn Telemetry & System Latency */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Activity size={15} className="text-[#f8a87c]" />
+                      <span>Hiệu năng & Telemetry Thời gian thực</span>
+                    </span>
+                    {turnTelemetry?.estimatedCostUsd !== undefined && (
+                      <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        ${turnTelemetry.estimatedCostUsd.toFixed(4)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
+                      <span className="text-[10px] text-neutral-500">TTFT (Latency)</span>
+                      <span className="text-amber-500 dark:text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
+                      <span className="text-[10px] text-neutral-500">Tốc độ sinh</span>
+                      <span className="text-emerald-500 dark:text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
+                      <span className="text-[10px] text-neutral-500">Thời gian phản hồi</span>
+                      <span className="text-slate-800 dark:text-neutral-300 font-bold">{turnTelemetry?.totalDurationMs ? `${(turnTelemetry.totalDurationMs / 1000).toFixed(1)}s` : "—"}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
+                      <span className="text-[10px] text-neutral-500">Model kiểm thử</span>
+                      <span className="text-[#e0682b] dark:text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || agent.model}>
+                        {(turnTelemetry?.model || agent.model).split("/").pop()}
+                      </span>
                     </div>
                   </div>
                 </div>

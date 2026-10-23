@@ -97,53 +97,68 @@ export function ScheduleJobModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs text-slate-800 dark:text-neutral-200">
         {/* Header */}
-        <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-[#242432] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock size={15} className="text-[#f8a87c]" />
-            <span className="font-semibold text-white tracking-wide uppercase font-mono">
-              {job ? "Edit Automation Schedule" : "New Automation Schedule"}
-            </span>
+        <div className="px-5 py-3.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] flex items-center justify-center shrink-0">
+              <Clock size={15} />
+            </div>
+            <div>
+              <span className="font-semibold text-slate-900 dark:text-white tracking-wide text-xs">
+                {job ? "Chỉnh sửa Lịch Routine" : "Thêm Lịch Routine mới"}
+              </span>
+              <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
+                {agentName} • Tác vụ chạy định kỳ theo Cron
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 text-slate-500 dark:text-neutral-400 hover:text-white rounded-lg hover:bg-[#232330] transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#232330] transition-colors cursor-pointer"
+            aria-label="Đóng modal"
           >
             <X size={15} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} className="p-4 space-y-3.5">
-          <div className="space-y-1">
-            <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("scheduleJob.name")}</label>
+        <form onSubmit={handleSave} className="p-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
+              {t("scheduleJob.name") || "Tên công việc (Routine Title)"}
+            </label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Daily Order Check, SRE Health Audit"
-              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-sans placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70"
+              placeholder="VD: Nhắc uống nước buổi sáng, Báo cáo tiến độ hằng ngày"
+              className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-2 text-slate-900 dark:text-white font-sans placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] transition-colors"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium font-mono">{t("scheduleJob.cron")}</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-slate-700 dark:text-neutral-300 font-medium font-mono text-xs">
+                {t("scheduleJob.cron") || "Biểu thức Cron (Cron Expression)"}
+              </label>
               <input
                 type="text"
                 required
                 value={cronExpr}
                 onChange={(e) => setCronExpr(e.target.value)}
-                placeholder="0 9 * * *"
-                className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-[#f8a87c] font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70"
+                placeholder="0 7 * * *"
+                className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-2 text-[#e0682b] dark:text-[#f8a87c] font-mono placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] transition-colors"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("scheduleJob.targetChannel")}</label>
+            <div className="space-y-1.5">
+              <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
+                {t("scheduleJob.targetChannel") || "Kênh phát (Dispatch Channel)"}
+              </label>
               <CustomSelect
                 value={targetChannel}
                 onChange={(val) => setTargetChannel(val)}
@@ -155,72 +170,93 @@ export function ScheduleJobModal({
                   { value: "slack", label: "Slack Workspace" },
                 ]}
                 className="w-full"
-                triggerClassName="w-full bg-[#181824] border border-[#2a2a3c] hover:border-[#f8a87c]/70 rounded-lg px-2.5 py-1.5 text-white font-mono text-[11px]"
+                triggerClassName="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] focus:border-[#f8a87c] rounded-xl px-3 py-2 text-slate-800 dark:text-white font-mono text-xs"
               />
             </div>
           </div>
 
           {/* Quick Presets */}
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {COMMON_PRESETS.map((p) => (
-              <button
-                key={p.cron}
-                type="button"
-                onClick={() => setCronExpr(p.cron)}
-                className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
-                  cronExpr === p.cron
-                    ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#f8a87c]"
-                    : "bg-[#181824] border-[#262638] text-slate-500 dark:text-neutral-400 hover:text-white"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono uppercase tracking-wider">
+              Chọn nhanh tần suất:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {COMMON_PRESETS.map((p) => {
+                const isSelected = cronExpr === p.cron;
+                return (
+                  <button
+                    key={p.cron}
+                    type="button"
+                    onClick={() => setCronExpr(p.cron)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#e0682b] dark:text-[#f8a87c] font-semibold"
+                        : "bg-slate-100 hover:bg-slate-200/80 dark:bg-[#181824] dark:hover:bg-[#202030] border-slate-200 dark:border-[#262638] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-slate-700 dark:text-neutral-300 font-medium">Instruction Prompt to Execute</label>
+          <div className="space-y-1.5">
+            <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
+              Câu lệnh thực thi (Instruction Prompt)
+            </label>
             <textarea
               rows={3}
               required
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="What instructions should the bot run at the scheduled time? (e.g. Check system logs, query unread orders...)"
-              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl p-2.5 text-white font-sans placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70 resize-none leading-relaxed"
+              placeholder="Nội dung lệnh hoặc yêu cầu mà Agent sẽ tự động chạy (VD: Nhắc nhở uống nước vào 7:00 sáng, kiểm tra nhật ký...)"
+              className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl p-3 text-slate-900 dark:text-white font-sans placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] resize-none leading-relaxed text-xs transition-colors"
             />
           </div>
 
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-[#242432]">
-            <div className="flex flex-col">
-              <span className="font-medium text-white">Active Status</span>
-              <span className="text-[10px] text-slate-500 dark:text-neutral-400">
-                Automated scheduler fires according to cron expression
+          {/* Active Status Card with Toggle */}
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432]">
+            <div className="flex flex-col min-w-0 pr-3">
+              <span className="font-semibold text-slate-900 dark:text-white text-xs">
+                Trạng thái kích hoạt (Active Status)
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans mt-0.5">
+                {enabled ? "Lịch đang hoạt động và sẽ tự động bắn lệnh theo chu kỳ" : "Lịch đang tạm dừng (paused)"}
               </span>
             </div>
+
+            {/* Clean Toggle Switch matching reference */}
             <button
               type="button"
+              role="switch"
+              aria-checked={enabled}
               onClick={() => setEnabled(!enabled)}
-              className={`px-3 py-1 rounded-full font-mono font-medium transition-all cursor-pointer border ${
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                 enabled
-                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
-                  : "bg-white/5 text-slate-500 dark:text-neutral-400 border-white/10"
+                  ? "bg-[#1d6eed] dark:bg-[#1d7bf2]"
+                  : "bg-slate-300 dark:bg-[#2c2c3a]"
               }`}
             >
-              {enabled ? "ACTIVE" : "PAUSED"}
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  enabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
             </button>
           </div>
 
           {/* Footer Controls */}
-          <div className="flex items-center justify-between pt-2 border-t border-white/5">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-white/10">
             {job ? (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors p-1 cursor-pointer font-medium"
+                className="flex items-center gap-1.5 text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors px-2.5 py-1.5 rounded-xl cursor-pointer font-medium text-xs"
               >
                 <Trash2 size={13} />
-                <span>Delete</span>
+                <span>Xoá lịch</span>
               </button>
             ) : <span />}
 
@@ -228,17 +264,17 @@ export function ScheduleJobModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 dark:border-[#2a2a3a] dark:hover:border-[#3e3e52] bg-white hover:bg-slate-100 dark:bg-[#181822] dark:hover:bg-[#222230] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer text-xs font-medium"
               >
-                Cancel
+                Hủy bỏ
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-1.5 bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold px-4 py-1.5 rounded-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
+                className="flex items-center gap-1.5 bg-[#f8a87c] hover:bg-[#f5935f] text-neutral-950 font-semibold px-4 py-1.5 rounded-xl transition-all cursor-pointer shadow-md disabled:opacity-50 text-xs"
               >
                 <Save size={13} />
-                <span>{job ? "Update Schedule" : "Create Schedule"}</span>
+                <span>{job ? "Lưu thay đổi" : "Tạo Lịch mới"}</span>
               </button>
             </div>
           </div>
