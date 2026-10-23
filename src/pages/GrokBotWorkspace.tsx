@@ -205,6 +205,7 @@ import {
   toggleAgentEnabled,
   fetchChatSessionRoom,
   pullAgentIntoChatRoom,
+  updateChatRoomTitle,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
@@ -4617,10 +4618,14 @@ const handleBatchDeleteSelectedChats = () => {
       setEditingChatId(null);
       return;
     }
+    const nextTitle = editingChatTitle.trim();
     setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, title: editingChatTitle.trim() } : c))
+      prev.map((c) => (c.id === chatId ? { ...c, title: nextTitle } : c))
     );
     setEditingChatId(null);
+    updateChatRoomTitle(selectedAgentId, chatId, nextTitle).then((r) => {
+      if (r && chatId === selectedChatId) setActiveSessionRoom(r);
+    }).catch(() => {});
   };
 
   const handleExportAuditCertificate = () => {
@@ -7121,7 +7126,7 @@ const handleBatchDeleteSelectedChats = () => {
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 font-mono text-[10px] font-semibold flex items-center gap-1.5">
                   <span className={`h-1.5 w-1.5 rounded-full ${activeSessionRoom.status === "collaborator_running" ? "bg-blue-400 animate-ping" : "bg-emerald-400"}`} />
-                  <span>Phiên phối hợp</span>
+                  <span>{activeSessionRoom.room_title || "Phiên phối hợp"}</span>
                 </span>
                 <div className="flex items-center gap-1 flex-wrap">
                   {activeSessionRoom.participants.map((p) => (

@@ -77,6 +77,7 @@ export interface SessionCollaborationRoom {
   turns: SessionRoomTurn[];
   created_at: string;
   updated_at: string;
+  room_title?: string | null;
 }
 
 export interface ChatMessage {
