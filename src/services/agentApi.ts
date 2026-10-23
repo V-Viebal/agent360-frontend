@@ -121,6 +121,9 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
       } else if (nodeStr.includes("7th") || idStr.includes("control")) {
         instanceKey = "node-7th";
         displayNode = a.node || "Node 7th (Control) - control.hmz.one";
+      } else if (idStr.startsWith("its-") || slugStr.startsWith("its-") || idStr.startsWith("gl-") || slugStr.startsWith("gl-") || nodeStr.includes("8th") || (displayNode && displayNode.includes("8th"))) {
+        instanceKey = "node-8th";
+        displayNode = a.node || "Node 8th (ITS & GL) - antares.vn";
       } else if (nodeStr.includes("2nd")) {
         instanceKey = "node-2nd";
         displayNode = a.node || "Node 2nd (Platform) - api-agent360.antares.vn";
@@ -399,35 +402,115 @@ export async function fetchAvailableModels(): Promise<ModelOption[]> {
   }
 }
 
+export type LibraryCategory = "all" | "pages" | "files" | "apps" | "images" | "media";
+
 export interface WorkspaceTreeNode {
   name: string;
   path: string;
   kind: "file" | "directory";
+  previewKind?: string | null;
+  category?: string | null;
+  extension?: string | null;
+  mimeType?: string | null;
   size?: number | null;
+  modifiedAt?: string | null;
   children?: WorkspaceTreeNode[];
 }
 
-export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTreeNode[]> {
+export interface WorkspaceLibraryResult {
+  entries: WorkspaceTreeNode[];
+  categoryCounts: Record<string, number>;
+  formatCounts: Record<string, number>;
+  totalCount: number;
+}
+
+const PAGE_EXTS = new Set(["md", "mdx", "html", "htm"]);
+const APP_EXTS = new Set(["py", "ts", "tsx", "js", "jsx", "sh", "bash", "cs", "go", "rs", "java", "cpp", "c", "h", "css", "scss", "less", "sql", "vue", "svelte"]);
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp"]);
+const MEDIA_EXTS = new Set(["mp4", "webm", "mov", "avi", "mp3", "wav", "ogg", "m4a", "aac", "flac"]);
+
+function inferClientCategory(pathOrName: string, kind: string): { category: string; previewKind: string; ext: string } {
+  if (kind === "directory") return { category: "directory", previewKind: "directory", ext: "" };
+  const ext = (pathOrName.split(".").pop() || "").toLowerCase();
+  if (!pathOrName.includes(".")) return { category: "files", previewKind: "text", ext: "" };
+  if (PAGE_EXTS.has(ext)) return { category: "pages", previewKind: ext === "html" || ext === "htm" ? "html" : "markdown", ext };
+  if (APP_EXTS.has(ext)) return { category: "apps", previewKind: "code", ext };
+  if (IMAGE_EXTS.has(ext)) return { category: "images", previewKind: "image", ext };
+  if (MEDIA_EXTS.has(ext)) return { category: "media", previewKind: ["mp4", "webm", "mov", "avi"].includes(ext) ? "video" : "audio", ext };
+  if (ext === "pdf") return { category: "files", previewKind: "pdf", ext };
+  if (ext === "csv" || ext === "tsv") return { category: "files", previewKind: "csv", ext };
+  if (["xlsx", "xls", "xlsm"].includes(ext)) return { category: "files", previewKind: "spreadsheet", ext };
+  if (["docx", "doc"].includes(ext)) return { category: "files", previewKind: "document", ext };
+  return { category: "files", previewKind: "text", ext };
+}
+
+export async function fetchWorkspaceLibrary(
+  agentId?: string,
+  options?: { category?: string; ext?: string; search?: string; includeSystem?: boolean }
+): Promise<WorkspaceLibraryResult> {
   const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const params = new URLSearchParams();
+  if (options?.category && options.category !== "all") params.set("category", options.category);
+  if (options?.ext) params.set("ext", options.ext);
+  if (options?.search) params.set("search", options.search);
+  if (options?.includeSystem) params.set("includeSystem", "true");
+  const qs = params.toString() ? `?${params.toString()}` : "";
+
   try {
-    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/tree`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/tree${qs}`, {
       headers: { Accept: "application/json" }
     }, cleanId);
     if (!res.ok) {
-      throw new Error(`Failed to fetch workspace tree: ${res.statusText}`);
+      throw new Error(`Failed to fetch workspace library: ${res.statusText}`);
     }
     const data = await res.json();
     const rawEntries = Array.isArray(data) ? data : (data.entries || data.files || []);
-    return rawEntries.map((e: any) => ({
-      name: e.name || e.path || "file",
-      path: e.path || e.name || "",
-      kind: e.kind === "directory" || e.type === "directory" ? "directory" : "file",
-      size: typeof e.size === "number" ? e.size : null
-    }));
+    const entries: WorkspaceTreeNode[] = rawEntries.map((e: any) => {
+      const pathStr = e.path || e.name || "";
+      const kind = e.kind === "directory" || e.type === "directory" ? "directory" : "file";
+      const inferred = inferClientCategory(pathStr, kind);
+      const rawName = e.name || pathStr.split("/").pop() || "file";
+      return {
+        name: rawName.includes("/") ? (rawName.split("/").pop() || rawName) : rawName,
+        path: pathStr,
+        kind,
+        previewKind: e.preview_kind || e.previewKind || inferred.previewKind,
+        category: e.category || inferred.category,
+        extension: e.extension || inferred.ext || null,
+        mimeType: e.mime_type || e.mimeType || null,
+        size: typeof e.size === "number" ? e.size : null,
+        modifiedAt: e.modified_at || e.modifiedAt || e.modified_time || null
+      };
+    });
+
+    const categoryCounts: Record<string, number> = data.category_counts || data.categoryCounts || {};
+    const formatCounts: Record<string, number> = data.format_counts || data.formatCounts || {};
+    if (Object.keys(categoryCounts).length === 0) {
+      categoryCounts.all = entries.length;
+      for (const item of entries) {
+        const c = item.category || "files";
+        categoryCounts[c] = (categoryCounts[c] || 0) + 1;
+        if (item.extension) {
+          formatCounts[item.extension] = (formatCounts[item.extension] || 0) + 1;
+        }
+      }
+    }
+
+    return {
+      entries,
+      categoryCounts,
+      formatCounts,
+      totalCount: typeof data.total_count === "number" ? data.total_count : entries.length
+    };
   } catch (err) {
-    console.warn(`fetchWorkspaceTree failed for ${cleanId}:`, err);
-    return [];
+    console.warn(`fetchWorkspaceLibrary failed for ${cleanId}:`, err);
+    return { entries: [], categoryCounts: { all: 0 }, formatCounts: {}, totalCount: 0 };
   }
+}
+
+export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTreeNode[]> {
+  const result = await fetchWorkspaceLibrary(agentId);
+  return result.entries;
 }
 
 export async function fetchWorkspaceFileContent(agentId: string, filePath: string): Promise<string> {
@@ -444,6 +527,41 @@ export async function fetchWorkspaceFileContent(agentId: string, filePath: strin
   } catch (err) {
     console.warn(`fetchWorkspaceFileContent failed for ${cleanId}/${filePath}:`, err);
     return `# ${filePath}\n\n[Unable to load live content]`;
+  }
+}
+
+export async function fetchWorkspaceFileBlobUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  try {
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-download?path=${encodeURIComponent(filePath)}&inline=${inline ? "true" : "false"}`,
+      {},
+      cleanId
+    );
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    console.warn(`fetchWorkspaceFileBlobUrl failed for ${cleanId}/${filePath}:`, err);
+    return null;
+  }
+}
+
+export async function downloadWorkspaceFile(agentId: string, filePath: string, fileName?: string): Promise<boolean> {
+  const url = await fetchWorkspaceFileBlobUrl(agentId, filePath, false);
+  if (!url) return false;
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName || filePath.split("/").pop() || "download";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return true;
+  } catch {
+    URL.revokeObjectURL(url);
+    return false;
   }
 }
 
