@@ -46,3 +46,21 @@ The Agent360 Workspace adheres strictly to a 4-pane progressive disclosure layou
 The `/app` workspace is a high-density desktop console. Icon buttons, tab pills and inline inputs use compact
 24 px hit areas (16 px for inline text inputs) with at least 8 px spacing, declared per element with
 `data-ux-target-min` so the harness UI gate validates the documented minimum.
+
+## 6. Lean Content-First Pattern: Icon-First Controls & Overlay Filter Menus
+When building data/artifact lists, toolbars, or inspectors (e.g. Workspace Library, chat toolbars, asset browsers):
+- **Core Principle: Zero Visual Clutter / Content-First Focus:**
+  - The main canvas/panel belongs exclusively to primary content (files, cards, logs, previews).
+  - Do NOT clutter headers or sub-headers with multi-row filter pills, tag chips, or verbose inline filter buttons.
+- **Icon-First Controls with Precision Tooltips:**
+  - View switchers (e.g., List/Folder/Date, Grid/Table, Sort) use compact icon buttons with dedicated tooltips.
+  - Interactive targets MUST have explicit `aria-label` and `Tooltip` hover hints (`content="..."`, `placement="top"|"bottom"`).
+  - Active button states use translucent accent backgrounds (`bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold`).
+- **Unified Overlay Filter Menu (`DropdownMenu` Portal):**
+  - All secondary filters (Categories, Format extensions, Date ranges, Search queries) MUST be grouped into an overlay menu triggered by a single `<Filter size={12} />` button.
+  - The trigger button displays a numerical badge indicator (`activeFiltersCount`) when any filters are active.
+  - Dropdown surfaces MUST use solid backgrounds matching the DESIGN.md card standard (`bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] shadow-2xl`), rendered via React Portal (`document.body`) at `z-[999999]`.
+  - The overlay menu embeds an inline instant search input with auto-focus and clear button, categorized grid selectors, format chips, and a "Clear all filters" reset action.
+- **Transient Active-Filter Pill Bar:**
+  - When filters are active, render a lean single-line active summary bar (`cat: ...`, `ext: ...`, `q: ...`) directly below the header with 1-click `X` clear buttons.
+  - The active pill bar disappears completely when filters are at default state, restoring maximum vertical canvas height.

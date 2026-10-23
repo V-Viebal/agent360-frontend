@@ -1508,9 +1508,14 @@ export function GrokBotWorkspace() {
     }
   });
   // Agent-scoped loads only run for an id that exists in the real fleet (stale/unknown ids would 404 on every API).
+  // While fleet is still initializing (isLoadingAgents === true), allow candidate IDs so initial fetch starts eagerly.
   const isKnownAgent = (id: string | null | undefined) => {
     if (!id) return false;
     const bare = id.replace(/^bot:agent360:/i, "").toLowerCase();
+    if (agents.length === 0) {
+      // During initial bootstrap, accept valid-format agent identifiers (e.g. from URL route /app/:agentParam)
+      return bare.length > 0 && !/^bot:agent360:(swe-lead|sre-sentinel|qa-vision|kb-researcher)$/i.test(id);
+    }
     return agents.some((a) => a.id === id || a.slug === bare || a.id.toLowerCase() === `bot:agent360:${bare}`);
   };
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
@@ -3860,12 +3865,24 @@ const handleBatchDeleteSelectedChats = () => {
           const routeAgentBare = (agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
           const urlChatFound = (routeAgentBare === currentBare) ? findChat(chatParam) : undefined;
 
-          const targetChatId: string = (urlChatFound ?? foundSaved ?? loadedChats[0]).id;
+          const targetChat = urlChatFound ?? foundSaved ?? loadedChats[0];
+          const targetChatId: string = targetChat.id;
           setSelectedChatId(targetChatId);
           try {
             localStorage.setItem("agent360_last_chat_id", targetChatId);
             localStorage.setItem(savedChatKey, targetChatId);
           } catch {}
+
+          // Ensure channel filter does not hide this newly selected chat if it belongs to a different channel
+          const targetChannel = (targetChat.channel || "console").toLowerCase();
+          setChannelFilter((prev) => {
+            if (prev !== "all" && prev !== targetChannel) {
+              if (prev === "other" && !["console", "telegram", "zalo"].includes(targetChannel)) return prev;
+              // If target channel has sessions, switch to that channel or "all"
+              return targetChannel || "all";
+            }
+            return prev;
+          });
 
           // Sync routing URL to /app/:agentSlug/:chatId without disrupting history
           const agentSegment = activeAg?.slug || activeAg?.id || currentAgent;
@@ -3888,7 +3905,7 @@ const handleBatchDeleteSelectedChats = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedAgentId]);
+  }, [selectedAgentId, agents.length]);
 
   // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
   // Client-created sessions (session-*) are not in the server list yet and are allowed.

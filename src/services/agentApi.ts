@@ -195,11 +195,28 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
     const endpoint = cleanAgentId
       ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanAgentId)}/chats`
       : `${API_BASE_URL}/chats`;
-    const res = await authorizedFetch(endpoint, {
-      headers: { Accept: "application/json" }
-    }, cleanAgentId);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch chats: ${res.statusText}`);
+
+    // Retry transient errors during initial load / token initialization
+    let res: Response | null = null;
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        res = await authorizedFetch(endpoint, {
+          headers: { Accept: "application/json" }
+        }, cleanAgentId);
+        if (res.ok) break;
+        if (res.status === 404 && cleanAgentId) {
+          // If cleanAgentId 404s, try fallback with raw agentId or /chats
+          break;
+        }
+      } catch (e) {
+        lastError = e;
+      }
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
+
+    if (!res || !res.ok) {
+      throw new Error(`Failed to fetch chats: ${res ? res.statusText : lastError?.message || "network error"}`);
     }
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.chats || []);
