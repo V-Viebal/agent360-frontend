@@ -10282,30 +10282,7 @@ ${chat.id}`);
                     )}
                   </div>
 
-                  {/* 4. Deep Settings Link */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAgentSettingsModalTab("general");
-                      setIsAgentSettingsModalOpen(true);
-                    }}
-                    className="w-full p-3 rounded-2xl bg-gradient-to-r from-[#f8a87c]/15 via-[#f8a87c]/5 to-transparent border border-[#f8a87c]/30 hover:border-[#f8a87c] flex items-center justify-between text-left transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-xl bg-[#f8a87c]/20 flex items-center justify-center text-[#e0682b] dark:text-[#f8a87c] shrink-0">
-                        <Settings size={15} className="group-hover:rotate-45 transition-transform duration-200" />
-                      </div>
-                      <div className="truncate">
-                        <div className="text-xs font-semibold text-slate-900 dark:text-white">
-                          Cài đặt Chuyên sâu Agent
-                        </div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">
-                          Apps, MCP, Đội ngũ A2A, Kênh & Bộ nhớ
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-[#f8a87c] group-hover:translate-x-0.5 transition-transform shrink-0" />
-                  </button>
+
                 </div>
               )}
 
