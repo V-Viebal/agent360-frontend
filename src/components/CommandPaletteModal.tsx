@@ -1,7 +1,8 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { startOnboardingTour } from "../services/onboardingService";
 import React, { useState, useEffect, useRef } from "react";
-import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic } from "lucide-react";
+import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic, Settings, Layers, Network, Radio, Brain } from "lucide-react";
+import { AgentSettingsTab } from "./AgentSettingsModal";
 import { InfraAgent, AgentSession } from "../types/agent";
 import { SOUND_PRESETS, SoundPreset, playNotificationChime } from "../services/notificationService";
 
@@ -18,6 +19,7 @@ interface CommandPaletteModalProps {
   onOpenPermissions?: () => void;
   onFilterInstance: (instanceId: string) => void;
   onCompactContext?: () => void;
+  onOpenAgentSettings?: (tab: AgentSettingsTab) => void;
   infraInstances: { value: string; label: string; badge: string }[];
 }
 
@@ -35,6 +37,7 @@ export function CommandPaletteModal({
   onFilterInstance,
   infraInstances,
   onCompactContext,
+  onOpenAgentSettings,
 }: CommandPaletteModalProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -55,6 +58,63 @@ export function CommandPaletteModal({
   const q = query.trim().toLowerCase();
 
   const actionItems = [
+    ...(onOpenAgentSettings ? [
+      {
+        id: "act-agent-settings-general",
+        type: "action",
+        title: "Cài đặt Agent: Hồ sơ & Mô hình AI (Agent Settings)",
+        subtitle: "Đổi LLM Model, Avatar, Governance & Trạng thái hoạt động (Alt+,)",
+        icon: <Settings size={14} className="text-[#f8a87c]" />,
+        action: () => {
+          onOpenAgentSettings("general");
+          onClose();
+        },
+      },
+      {
+        id: "act-agent-settings-apps",
+        type: "action",
+        title: "Cài đặt Agent: Ứng dụng & MCP (Connected Apps)",
+        subtitle: "Quản lý kết nối Composio OAuth & MCP Tool Schemas",
+        icon: <Layers size={14} className="text-cyan-400" />,
+        action: () => {
+          onOpenAgentSettings("apps_mcp");
+          onClose();
+        },
+      },
+      {
+        id: "act-agent-settings-subagents",
+        type: "action",
+        title: "Cài đặt Agent: Đội ngũ Sub-Agents & Mạng lưới A2A",
+        subtitle: "Cấu hình uỷ thác Sub-Agents nội bộ và liên cụm AgentTeams",
+        icon: <Network size={14} className="text-emerald-400" />,
+        action: () => {
+          onOpenAgentSettings("subagents");
+          onClose();
+        },
+      },
+      {
+        id: "act-agent-settings-channels",
+        type: "action",
+        title: "Cài đặt Agent: Kênh Giao tiếp & Lịch trình Tự động (Cron)",
+        subtitle: "Bật/tắt Telegram, Discord, Slack, Console & Cron Schedules",
+        icon: <Radio size={14} className="text-amber-400" />,
+        action: () => {
+          onOpenAgentSettings("channels_cron");
+          onClose();
+        },
+      },
+      {
+        id: "act-agent-settings-memory",
+        type: "action",
+        title: "Cài đặt Agent: Bộ nhớ Dài hạn & Kỹ năng (Memory & Skills)",
+        subtitle: "Quản lý bộ nhớ ngữ cảnh của Agent và danh sách SKILL.md",
+        icon: <Brain size={14} className="text-violet-400" />,
+        action: () => {
+          onOpenAgentSettings("memory_skills");
+          onClose();
+        },
+      },
+    ] : []),
     ...(onCompactContext ? [{
       id: "act-compact-context",
       type: "action",

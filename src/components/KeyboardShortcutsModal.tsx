@@ -45,6 +45,13 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     customizable: true,
   },
   {
+    id: "open_agent_settings",
+    defaultKeys: ["Alt", ","],
+    description: "Open active Agent Settings modal (Model, Apps, A2A, Channels, Memory)",
+    category: "Navigation & Search",
+    customizable: true,
+  },
+  {
     id: "toggle_computer_workspace",
     defaultKeys: ["Ctrl", "M"],
     description: "Toggle Virtual Computer Workspace (Auto-collapse sidebars)",

@@ -187,7 +187,11 @@ import {
   AgentChannelConfig,
   AgentScheduleJob,
   fetchWorkspaceTree,
+  fetchWorkspaceLibrary,
   fetchWorkspaceFileContent,
+  fetchWorkspaceFileBlobUrl,
+  downloadWorkspaceFile,
+  LibraryCategory,
   fetchAgentMcpClients,
   AgentMcpClient,
   fetchAvailableModels,
@@ -2328,11 +2332,20 @@ export function GrokBotWorkspace() {
   const [showPollCard, setShowPollCard] = useState(true);
   const [customCallName, setCustomCallName] = useState("");
 
-  // Workspace Tree State
+  // Workspace Library State (Pages, Files, Apps, Images, Media)
   const [workspaceFiles, setWorkspaceFiles] = useState<WorkspaceTreeNode[]>([]);
+  const [libraryCategoryCounts, setLibraryCategoryCounts] = useState<Record<string, number>>({});
+  const [libraryFormatCounts, setLibraryFormatCounts] = useState<Record<string, number>>({});
+  const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<LibraryCategory>("all");
+  const [libraryExtFilter, setLibraryExtFilter] = useState<string>("");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
+  const [libraryGroupMode, setLibraryGroupMode] = useState<"flat" | "folder" | "date">("flat");
+  const [libraryCollapsedGroups, setLibraryCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [libraryPage, setLibraryPage] = useState<number>(1);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [selectedLibraryNode, setSelectedLibraryNode] = useState<WorkspaceTreeNode | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
+  const [fileBlobUrl, setFileBlobUrl] = useState<string | null>(null);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [isLoadingTree, setIsLoadingTree] = useState(false);
 
@@ -3912,11 +3925,15 @@ const handleBatchDeleteSelectedChats = () => {
     };
   }, [selectedChatId, selectedAgentId, selectedChatKnown]);
 
-  const loadWorkspaceTree = async () => {
+  const loadWorkspaceTree = async (overrideAgentId?: string) => {
+    const targetId = overrideAgentId || selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+    if (!targetId) return;
     setIsLoadingTree(true);
     try {
-      if (!selectedAgent?.id) return; const entries = await fetchWorkspaceTree(selectedAgent.id);
-      setWorkspaceFiles(entries);
+      const lib = await fetchWorkspaceLibrary(targetId);
+      setWorkspaceFiles(lib.entries);
+      setLibraryCategoryCounts(lib.categoryCounts || {});
+      setLibraryFormatCounts(lib.formatCounts || {});
     } finally {
       setIsLoadingTree(false);
     }
@@ -3925,10 +3942,27 @@ const handleBatchDeleteSelectedChats = () => {
   const handleSelectFile = async (node: WorkspaceTreeNode) => {
     if (node.kind === "directory") return;
     setSelectedFilePath(node.path);
+    setSelectedLibraryNode(node);
+    setFileContent(null);
+    if (fileBlobUrl) {
+      URL.revokeObjectURL(fileBlobUrl);
+      setFileBlobUrl(null);
+    }
     setIsLoadingFile(true);
     try {
-      if (!selectedAgent?.id) return; const content = await fetchWorkspaceFileContent(selectedAgent.id, node.path);
-      setFileContent(content);
+      const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+      if (!targetId) return;
+      const pk = (node.previewKind || "").toLowerCase();
+      const cat = (node.category || "").toLowerCase();
+      if (pk === "image" || cat === "images" || pk === "pdf" || pk === "video" || pk === "audio" || cat === "media") {
+        const blobUrl = await fetchWorkspaceFileBlobUrl(targetId, node.path, true);
+        setFileBlobUrl(blobUrl);
+      } else if (pk === "spreadsheet" || pk === "document" || pk === "binary") {
+        setFileContent(null);
+      } else {
+        const content = await fetchWorkspaceFileContent(targetId, node.path);
+        setFileContent(content);
+      }
     } finally {
       setIsLoadingFile(false);
     }
@@ -3948,7 +3982,28 @@ const handleBatchDeleteSelectedChats = () => {
   }, [isBrowserModalOpen]);
 
   useEffect(() => {
-    if ((rightTab === "Library" || (rightTab === "Details" && detailSubTab === "Library")) && workspaceFiles.length === 0) {
+    setSelectedFilePath(null);
+    setSelectedLibraryNode(null);
+    setFileContent(null);
+    if (fileBlobUrl) {
+      URL.revokeObjectURL(fileBlobUrl);
+      setFileBlobUrl(null);
+    }
+    setLibraryCategoryFilter("all");
+    setLibraryExtFilter("");
+    setLibraryPage(1);
+    setLibraryCollapsedGroups({});
+    if (selectedAgentId && isKnownAgent(selectedAgentId)) {
+      loadWorkspaceTree(selectedAgentId);
+    } else {
+      setWorkspaceFiles([]);
+      setLibraryCategoryCounts({});
+      setLibraryFormatCounts({});
+    }
+  }, [selectedAgentId, agents.length]);
+
+  useEffect(() => {
+    if ((rightTab === "Library" || (rightTab === "Details" && detailSubTab === "Library")) && workspaceFiles.length === 0 && !isLoadingTree) {
       loadWorkspaceTree();
     }
   }, [rightTab, detailSubTab]);
@@ -4567,6 +4622,14 @@ const handleBatchDeleteSelectedChats = () => {
       if (e.altKey && e.key.toLowerCase() === "m") {
         e.preventDefault();
         setActiveChatMenuId((prev) => (prev ? null : selectedChatId));
+        return;
+      }
+
+      // 1c-2. Fast Open Agent Settings Modal (Alt+,)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === ",") {
+        e.preventDefault();
+        setAgentSettingsModalTab("general");
+        setIsAgentSettingsModalOpen((prev) => !prev);
         return;
       }
 
@@ -6436,6 +6499,22 @@ const handleBatchDeleteSelectedChats = () => {
                 )}
               </div>
             </Tooltip>
+
+            {!hasNoAgents && selectedAgent.id && (
+              <Tooltip content="Cài đặt Agent (Model, Apps, A2A, Kênh, Bộ nhớ)" shortcut="Alt+," placement="bottom" minWidth={220}>
+                <button
+                  type="button"
+                  aria-label="Mở cài đặt Agent"
+                  onClick={() => {
+                    setAgentSettingsModalTab("general");
+                    setIsAgentSettingsModalOpen(true);
+                  }}
+                  className="h-7 w-7 rounded-lg bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-[#f8a87c]/50 text-neutral-500 dark:text-neutral-400 hover:text-[#e0682b] dark:hover:text-[#f8a87c] flex items-center justify-center transition-all cursor-pointer shrink-0"
+                >
+                  <Settings size={13} />
+                </button>
+              </Tooltip>
+            )}
           </div>
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
@@ -7545,6 +7624,18 @@ const handleBatchDeleteSelectedChats = () => {
                           },
                         },
                         {
+                          id: "cmd-agent-settings",
+                          title: "Agent Settings",
+                          description: "Mở cài đặt chuyên sâu của Agent (Model, Apps, A2A, Cron, Memory)",
+                          icon: <Settings size={14} className="text-[#f8a87c]" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            setAgentSettingsModalTab("general");
+                            setIsAgentSettingsModalOpen(true);
+                          },
+                        },
+                        {
                           id: "cmd-mcp",
                           title: "MCP",
                           description: "Show MCP server status",
@@ -8496,6 +8587,7 @@ const handleBatchDeleteSelectedChats = () => {
                         if (trigger === "/") {
                           // Session actions list for '/'
                           const slashNavList = [
+                            { id: "cmd-agent-settings", type: "action" },
                             { id: "cmd-goal", type: "action" },
                             { id: "cmd-mcp", type: "action" },
                             { id: "cmd-memories", type: "action" },
@@ -8510,6 +8602,7 @@ const handleBatchDeleteSelectedChats = () => {
                           ];
 
                           const slashTitles: Record<string, { title: string; desc: string }> = {
+                            "cmd-agent-settings": { title: "Agent Settings", desc: "Mở cài đặt chuyên sâu của Agent" },
                             "cmd-goal": { title: "Goal", desc: "Set a goal to keep pursuing" },
                             "cmd-mcp": { title: "MCP", desc: "Show MCP server status" },
                             "cmd-memories": { title: "Memories", desc: "Xem và quản lý bộ nhớ của agent" },
@@ -8545,7 +8638,10 @@ const handleBatchDeleteSelectedChats = () => {
                               setIsPlusMenuOpen(false);
                               setInputText("");
 
-                              if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
+                              if (selected.id === "cmd-agent-settings") {
+                                setAgentSettingsModalTab("general");
+                                setIsAgentSettingsModalOpen(true);
+                              } else if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
                                 handleSelectLoopMode("goal");
                               } else if (selected.id === "cmd-mcp") {
                                 setAgentSettingsModalTab("apps_mcp");
@@ -10130,48 +10226,200 @@ ${chat.id}`);
               )}
 
               {rightTab === "Library" && (() => {
-                const filteredWorkspaceFiles = librarySearchQuery.trim()
-                  ? workspaceFiles.filter((node) =>
-                      node.name.toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
-                      node.path.toLowerCase().includes(librarySearchQuery.toLowerCase())
+                const categoryFiltered = libraryCategoryFilter === "all"
+                  ? workspaceFiles
+                  : workspaceFiles.filter((node) => (node.category || "files").toLowerCase() === libraryCategoryFilter);
+
+                const extCountsInCategory: Record<string, number> = {};
+                for (const node of categoryFiltered) {
+                  if (node.extension) {
+                    const extKey = node.extension.toLowerCase();
+                    extCountsInCategory[extKey] = (extCountsInCategory[extKey] || 0) + 1;
+                  }
+                }
+                const availableFormats = Object.entries(extCountsInCategory)
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 12);
+
+                const extFiltered = libraryExtFilter
+                  ? categoryFiltered.filter((node) => (node.extension || "").toLowerCase() === libraryExtFilter.toLowerCase())
+                  : categoryFiltered;
+
+                const q = librarySearchQuery.trim().toLowerCase();
+                const filteredWorkspaceFiles = q
+                  ? extFiltered.filter((node) =>
+                      node.name.toLowerCase().includes(q) ||
+                      node.path.toLowerCase().includes(q) ||
+                      (node.extension || "").toLowerCase().includes(q) ||
+                      (node.category || "").toLowerCase().includes(q)
                     )
-                  : workspaceFiles;
+                  : extFiltered;
+
+                const categories: Array<{ id: LibraryCategory; label: string; count: number }> = [
+                  { id: "all", label: "All", count: libraryCategoryCounts.all ?? workspaceFiles.length },
+                  { id: "pages", label: "Pages", count: libraryCategoryCounts.pages ?? workspaceFiles.filter((n) => n.category === "pages").length },
+                  { id: "files", label: "Files", count: libraryCategoryCounts.files ?? workspaceFiles.filter((n) => n.category === "files").length },
+                  { id: "apps", label: "Apps", count: libraryCategoryCounts.apps ?? workspaceFiles.filter((n) => n.category === "apps").length },
+                  { id: "images", label: "Images", count: libraryCategoryCounts.images ?? workspaceFiles.filter((n) => n.category === "images").length },
+                  { id: "media", label: "Media", count: libraryCategoryCounts.media ?? workspaceFiles.filter((n) => n.category === "media").length },
+                ];
+
+                const formatSize = (bytes?: number | null) => {
+                  if (bytes === null || bytes === undefined) return "";
+                  if (bytes < 1024) return `${bytes}B`;
+                  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+                  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+                };
+
+                const getCategoryBadgeStyle = (cat?: string | null) => {
+                  switch ((cat || "").toLowerCase()) {
+                    case "pages":
+                      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+                    case "apps":
+                      return "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30";
+                    case "images":
+                      return "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30";
+                    case "media":
+                      return "bg-pink-500/15 text-pink-600 dark:text-pink-400 border-pink-500/30";
+                    default:
+                      return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30";
+                  }
+                };
 
                 return (
-                  <div className="space-y-3 text-xs flex flex-col flex-1 min-h-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        Workspace Files ({filteredWorkspaceFiles.length}{librarySearchQuery.trim() ? ` / ${workspaceFiles.length}` : ""})
+                  <div className="space-y-2.5 text-xs flex flex-col flex-1 min-h-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Layers size={13} className="text-[#f8a87c]" />
+                        <span>Library ({filteredWorkspaceFiles.length}{filteredWorkspaceFiles.length !== workspaceFiles.length ? ` / ${workspaceFiles.length}` : ""})</span>
                       </span>
-                      <button
-                        aria-label="Refresh workspace tree"
-                        data-ux-target-min="24"
-                        onClick={loadWorkspaceTree}
-                        disabled={isLoadingTree}
-                        className="text-neutral-400 hover:text-slate-900 dark:hover:text-white p-1 rounded hover:bg-slate-200/60 dark:hover:bg-[#1a1a22] transition-colors cursor-pointer"
-                        title="Refresh workspace tree"
-                      >
-                        <RefreshCw
-                          size={12}
-                          className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
-                        />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {/* Group Mode Switcher: Flat | Folder | Date */}
+                        <div className="flex items-center bg-slate-100 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] rounded-lg p-0.5 text-[9px] font-mono">
+                          {([
+                            { id: "flat" as const, label: "List" },
+                            { id: "folder" as const, label: "Folder" },
+                            { id: "date" as const, label: "Date" },
+                          ]).map((gm) => (
+                            <button
+                              key={gm.id}
+                              type="button"
+                              onClick={() => {
+                                setLibraryGroupMode(gm.id);
+                                setLibraryPage(1);
+                              }}
+                              className={`px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
+                                libraryGroupMode === gm.id
+                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold"
+                                  : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                              title={`Group by ${gm.label}`}
+                            >
+                              {gm.label}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          aria-label="Refresh workspace library"
+                          data-ux-target-min="24"
+                          onClick={() => loadWorkspaceTree()}
+                          disabled={isLoadingTree}
+                          className="text-neutral-400 hover:text-slate-900 dark:hover:text-white p-1 rounded hover:bg-slate-200/60 dark:hover:bg-[#1a1a22] transition-colors cursor-pointer"
+                          title="Refresh workspace library"
+                        >
+                          <RefreshCw
+                            size={12}
+                            className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
+                          />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Instant File Filter */}
+                    {/* Category Filter Pills: All | Pages | Files | Apps | Images | Media */}
+                    <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+                      {categories.map((cat) => {
+                        if (cat.id !== "all" && cat.count === 0 && libraryCategoryFilter !== cat.id) return null;
+                        const active = libraryCategoryFilter === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setLibraryCategoryFilter(cat.id);
+                              setLibraryExtFilter("");
+                              setLibraryPage(1);
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-mono whitespace-nowrap transition-all cursor-pointer border flex items-center gap-1 ${
+                              active
+                                ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold"
+                                : "bg-slate-100 dark:bg-[#14141c] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#22222e] hover:text-slate-900 dark:hover:text-white"
+                            }`}
+                          >
+                            <span>{cat.label}</span>
+                            <span className="opacity-70">({cat.count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Format / Extension Quick Chips (.md, .pdf, .xlsx, .docx, .py, .png, ...) */}
+                    {availableFormats.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {availableFormats.map(([ext, count]) => {
+                          const isSelectedExt = libraryExtFilter.toLowerCase() === ext;
+                          return (
+                            <button
+                              key={ext}
+                              type="button"
+                              onClick={() => {
+                                setLibraryExtFilter(isSelectedExt ? "" : ext);
+                                setLibraryPage(1);
+                              }}
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors cursor-pointer border ${
+                                isSelectedExt
+                                  ? "bg-[#f8a87c] text-black border-[#f8a87c] font-semibold"
+                                  : "bg-slate-50 dark:bg-[#101016] text-slate-500 dark:text-neutral-400 border-slate-200 dark:border-[#1f1f2a] hover:border-[#f8a87c]/40 hover:text-slate-800 dark:hover:text-neutral-200"
+                              }`}
+                            >
+                              .{ext} <span className="opacity-70">{count}</span>
+                            </button>
+                          );
+                        })}
+                        {libraryExtFilter && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLibraryExtFilter("");
+                              setLibraryPage(1);
+                            }}
+                            className="px-1.5 py-0.5 rounded text-[9px] font-mono text-neutral-400 hover:text-white cursor-pointer"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Instant Search Filter */}
                     <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] rounded-lg px-2 py-1 text-xs">
                       <Search size={12} className="text-neutral-400 shrink-0" />
                       <input
                         type="text"
                         value={librarySearchQuery}
-                        onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                        placeholder="Filter files (.md, .py, .yaml)..."
+                        onChange={(e) => {
+                          setLibrarySearchQuery(e.target.value);
+                          setLibraryPage(1);
+                        }}
+                        placeholder="Search pages, files, apps (.md, .xlsx, .pdf, .py)..."
                         className="w-full bg-transparent text-slate-900 dark:text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
                       />
                       {librarySearchQuery && (
                         <button
                           type="button"
-                          onClick={() => setLibrarySearchQuery("")}
+                          onClick={() => {
+                            setLibrarySearchQuery("");
+                            setLibraryPage(1);
+                          }}
                           className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
                         >
                           <X size={11} />
@@ -10179,57 +10427,266 @@ ${chat.id}`);
                       )}
                     </div>
 
-                    {/* File Tree List */}
-                    <div className="bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl p-2 max-h-56 overflow-y-auto space-y-1 font-mono text-[11px]">
-                      {isLoadingTree ? (
-                        <div className="space-y-1.5 py-1">
-                          <div className="h-6 w-3/4 rounded-md skeleton-shimmer" />
-                          <div className="h-6 w-5/6 rounded-md skeleton-shimmer" />
-                          <div className="h-6 w-2/3 rounded-md skeleton-shimmer" />
-                        </div>
-                      ) : filteredWorkspaceFiles.length === 0 ? (
-                        <div className="text-center py-4 text-neutral-500 font-mono">
-                          {librarySearchQuery ? `No files matching "${librarySearchQuery}"` : "No files found in workspace"}
-                        </div>
-                      ) : (
-                        filteredWorkspaceFiles.map((node) => {
-                          const isSelected = selectedFilePath === node.path;
-                          return (
-                            <div
-                              key={node.path}
-                              onClick={() => handleSelectFile(node)}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                                isSelected
-                                  ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-medium"
-                                  : "text-slate-700 dark:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#1c1c24]"
-                              }`}
-                            >
-                              {node.kind === "directory" ? (
-                                <Folder size={13} className="text-amber-400 shrink-0" />
-                              ) : (
-                                <FileText size={13} className="text-neutral-400 shrink-0" />
-                              )}
-                              <span className="truncate flex-1">{node.name}</span>
-                              {node.size !== null && node.size !== undefined && (
-                                <span className="text-[9px] text-neutral-500">
-                                  {Math.round(node.size / 1024)}k
-                                </span>
+                    {/* Library Artifact List with Pagination & Folder/Date Grouping */}
+                    {(() => {
+                      const PAGE_SIZE = 40;
+                      const totalPages = Math.max(1, Math.ceil(filteredWorkspaceFiles.length / PAGE_SIZE));
+                      const safePage = Math.min(libraryPage, totalPages);
+                      const pagedFiles = filteredWorkspaceFiles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+                      const renderNodeItem = (node: WorkspaceTreeNode, showFolderHint = true) => {
+                        const isSelected = selectedFilePath === node.path;
+                        const folderHint = showFolderHint && node.path.includes("/")
+                          ? node.path.split("/").slice(0, -1).join("/")
+                          : "";
+                        return (
+                          <div
+                            key={node.path}
+                            onClick={() => handleSelectFile(node)}
+                            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors group ${
+                              isSelected
+                                ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-medium border border-[#f8a87c]/30"
+                                : "text-slate-700 dark:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#1c1c24] border border-transparent"
+                            }`}
+                          >
+                            {node.kind === "directory" ? (
+                              <Folder size={13} className="text-amber-400 shrink-0" />
+                            ) : node.category === "apps" ? (
+                              <Terminal size={13} className="text-purple-400 shrink-0" />
+                            ) : node.category === "pages" ? (
+                              <Globe size={13} className="text-emerald-400 shrink-0" />
+                            ) : node.category === "images" ? (
+                              <Camera size={13} className="text-cyan-400 shrink-0" />
+                            ) : node.category === "media" ? (
+                              <Play size={13} className="text-pink-400 shrink-0" />
+                            ) : (
+                              <FileText size={13} className="text-amber-400 shrink-0" />
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <div className="truncate text-[11px] leading-tight">{node.name}</div>
+                              {folderHint && (
+                                <div className="truncate text-[9px] text-neutral-500 leading-tight">{folderHint}</div>
                               )}
                             </div>
-                          );
-                        })
-                      )}
-                    </div>
 
-                    {/* Selected File Content Preview */}
+                            {node.extension && (
+                              <span className={`px-1 py-0.2 rounded text-[8px] uppercase border shrink-0 ${getCategoryBadgeStyle(node.category)}`}>
+                                {node.extension}
+                              </span>
+                            )}
+
+                            {node.size !== null && node.size !== undefined && (
+                              <span className="text-[9px] text-neutral-500 shrink-0">
+                                {formatSize(node.size)}
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+                                if (targetId) downloadWorkspaceFile(targetId, node.path, node.name);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-opacity shrink-0 cursor-pointer"
+                              title={`Download ${node.name}`}
+                            >
+                              <Download size={11} />
+                            </button>
+                          </div>
+                        );
+                      };
+
+                      const groupedMap = new Map<string, WorkspaceTreeNode[]>();
+                      if (libraryGroupMode !== "flat") {
+                        for (const node of pagedFiles) {
+                          let groupKey = "Workspace Root";
+                          if (libraryGroupMode === "folder") {
+                            groupKey = node.path.includes("/")
+                              ? node.path.split("/").slice(0, -1).join("/")
+                              : "Workspace Root";
+                          } else if (libraryGroupMode === "date") {
+                            const rawDate = (node.modifiedAt || "").slice(0, 10);
+                            groupKey = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : "Recent / Unspecified";
+                          }
+                          const arr = groupedMap.get(groupKey) || [];
+                          arr.push(node);
+                          groupedMap.set(groupKey, arr);
+                        }
+                      }
+
+                      return (
+                        <>
+                          <div className="bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl p-2 max-h-64 overflow-y-auto space-y-1 font-mono text-[11px]">
+                            {isLoadingTree ? (
+                              <div className="space-y-1.5 py-1">
+                                <div className="h-7 w-3/4 rounded-md skeleton-shimmer" />
+                                <div className="h-7 w-5/6 rounded-md skeleton-shimmer" />
+                                <div className="h-7 w-2/3 rounded-md skeleton-shimmer" />
+                              </div>
+                            ) : filteredWorkspaceFiles.length === 0 ? (
+                              <div className="text-center py-6 px-3 text-neutral-500 font-sans text-xs">
+                                {workspaceFiles.length === 0
+                                  ? "Pages, files, and apps this Bot makes show up here"
+                                  : `No artifacts matching current filter`}
+                              </div>
+                            ) : libraryGroupMode === "flat" ? (
+                              pagedFiles.map((node) => renderNodeItem(node, true))
+                            ) : (
+                              Array.from(groupedMap.entries()).map(([groupKey, items]) => {
+                                const isCollapsed = Boolean(libraryCollapsedGroups[groupKey]);
+                                return (
+                                  <div key={groupKey} className="space-y-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setLibraryCollapsedGroups((prev) => ({
+                                          ...prev,
+                                          [groupKey]: !prev[groupKey],
+                                        }))
+                                      }
+                                      className="w-full flex items-center justify-between px-2 py-1 rounded-md bg-slate-200/50 dark:bg-[#1b1b24] text-[10px] font-semibold text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                                    >
+                                      <span className="flex items-center gap-1.5 truncate">
+                                        {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+                                        {libraryGroupMode === "folder" ? (
+                                          <Folder size={11} className="text-amber-400 shrink-0" />
+                                        ) : (
+                                          <Clock size={11} className="text-[#f8a87c] shrink-0" />
+                                        )}
+                                        <span className="truncate">{groupKey}</span>
+                                      </span>
+                                      <span className="text-[9px] text-neutral-500 shrink-0 ml-2">
+                                        {items.length}
+                                      </span>
+                                    </button>
+                                    {!isCollapsed && (
+                                      <div className="pl-2 space-y-0.5 border-l border-slate-200 dark:border-[#242432] ml-2">
+                                        {items.map((node) => renderNodeItem(node, libraryGroupMode !== "folder"))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* Pagination Footer when items exceed page size */}
+                          {totalPages > 1 && (
+                            <div className="flex items-center justify-between px-1 pt-0.5 text-[10px] font-mono text-neutral-400">
+                              <span>
+                                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredWorkspaceFiles.length)} of {filteredWorkspaceFiles.length}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={safePage <= 1}
+                                  onClick={() => setLibraryPage((p) => Math.max(1, p - 1))}
+                                  className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                  Prev
+                                </button>
+                                <span className="px-1 text-slate-700 dark:text-neutral-300">
+                                  {safePage}/{totalPages}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={safePage >= totalPages}
+                                  onClick={() => setLibraryPage((p) => Math.min(totalPages, p + 1))}
+                                  className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+
+                    {/* Selected Artifact Rich Preview */}
                     {selectedFilePath && (
-                      <div className="flex-1 flex flex-col bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl overflow-hidden min-h-[160px] max-h-72">
-                        <div className="h-8 px-2.5 bg-slate-100 dark:bg-[#181822] border-b border-slate-200 dark:border-[#20202c] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-                          <span className="truncate text-slate-900 dark:text-white font-semibold">{selectedFilePath.split("/").pop()}</span>
-                          <span className="text-[9px] text-neutral-500">Read-Only</span>
+                      <div className="flex-1 flex flex-col bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl overflow-hidden min-h-[180px] max-h-80">
+                        <div className="h-8 px-2.5 bg-slate-100 dark:bg-[#181822] border-b border-slate-200 dark:border-[#20202c] flex items-center justify-between gap-2 text-[11px] font-mono text-neutral-500">
+                          <span className="truncate text-slate-900 dark:text-white font-semibold" title={selectedFilePath}>
+                            {selectedFilePath.split("/").pop()}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {selectedLibraryNode?.extension && (
+                              <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-white/5 text-neutral-400">
+                                .{selectedLibraryNode.extension}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+                                if (targetId && selectedFilePath) {
+                                  downloadWorkspaceFile(targetId, selectedFilePath, selectedFilePath.split("/").pop());
+                                }
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] hover:bg-[#f8a87c]/25 flex items-center gap-1 text-[10px] cursor-pointer"
+                              title="Download file"
+                            >
+                              <Download size={10} />
+                              <span>Download</span>
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex-1 p-2.5 overflow-auto font-mono text-[10px] text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed select-text">
-                          {isLoadingFile ? "Loading file content..." : fileContent || "Empty file"}
+
+                        <div className="flex-1 p-2.5 overflow-auto font-mono text-[10px] text-slate-700 dark:text-neutral-300 select-text">
+                          {isLoadingFile ? (
+                            <div className="flex items-center justify-center h-32 text-neutral-500 gap-2">
+                              <Loader2 size={14} className="animate-spin text-[#f8a87c]" />
+                              <span>Loading preview...</span>
+                            </div>
+                          ) : fileBlobUrl && (selectedLibraryNode?.previewKind === "image" || selectedLibraryNode?.category === "images") ? (
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <img
+                                src={fileBlobUrl}
+                                alt={selectedLibraryNode?.name || "Preview"}
+                                onClick={() => setLightboxImageUrl({ url: fileBlobUrl, name: selectedLibraryNode?.name || "Image" })}
+                                className="max-h-56 w-auto object-contain rounded-lg border border-white/10 cursor-zoom-in"
+                              />
+                            </div>
+                          ) : fileBlobUrl && selectedLibraryNode?.previewKind === "pdf" ? (
+                            <iframe
+                              src={fileBlobUrl}
+                              title={selectedLibraryNode?.name || "PDF Preview"}
+                              className="w-full h-56 rounded border-0 bg-white"
+                            />
+                          ) : fileBlobUrl && selectedLibraryNode?.previewKind === "video" ? (
+                            <video src={fileBlobUrl} controls className="w-full max-h-56 rounded bg-black" />
+                          ) : fileBlobUrl && selectedLibraryNode?.previewKind === "audio" ? (
+                            <div className="py-6 flex items-center justify-center">
+                              <audio src={fileBlobUrl} controls className="w-full" />
+                            </div>
+                          ) : (selectedLibraryNode?.previewKind === "spreadsheet" || selectedLibraryNode?.previewKind === "document" || selectedLibraryNode?.previewKind === "binary") ? (
+                            <div className="py-6 px-3 text-center space-y-2 font-sans">
+                              <div className="text-neutral-300 font-medium text-xs">{selectedLibraryNode?.name}</div>
+                              <div className="text-[11px] text-neutral-500">
+                                Định dạng .{selectedLibraryNode?.extension?.toUpperCase()} ({formatSize(selectedLibraryNode?.size)}) sẵn sàng tải về để mở bằng ứng dụng chuyên dụng.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+                                  if (targetId && selectedFilePath) {
+                                    downloadWorkspaceFile(targetId, selectedFilePath, selectedLibraryNode?.name);
+                                  }
+                                }}
+                                className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 cursor-pointer"
+                              >
+                                <Download size={12} />
+                                <span>Tải xuống {selectedLibraryNode?.name}</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="whitespace-pre-wrap leading-relaxed">
+                              {fileContent || "Empty file"}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -10713,6 +11170,10 @@ ${chat.id}`);
       <CommandPaletteModal
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
+        onOpenAgentSettings={(tab) => {
+          setAgentSettingsModalTab(tab);
+          setIsAgentSettingsModalOpen(true);
+        }}
         agents={agents}
         chats={chats}
         onSelectAgent={handleSelectAgent}
@@ -10966,7 +11427,22 @@ ${chat.id}`);
                 <span>Tạo Chat mới với Agent (New Session)</span>
               </button>
 
-              {/* 3. View Agent Specs */}
+              {/* 3. Open Agent Settings Modal */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleSelectAgent(mobileActionAgent);
+                  setAgentSettingsModalTab("general");
+                  setIsAgentSettingsModalOpen(true);
+                  setMobileActionAgent(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Settings size={15} className="text-[#f8a87c]" />
+                <span>Cài đặt Chuyên sâu Agent (Agent Settings)</span>
+              </button>
+
+              {/* 4. View Agent Specs */}
               <button
                 type="button"
                 onClick={() => {
