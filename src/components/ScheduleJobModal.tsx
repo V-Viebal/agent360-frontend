@@ -1,7 +1,7 @@
 import { useTranslation } from "../i18n/LanguageContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
-import { X, Clock, Calendar, Save, Trash2, Check, Radio } from "lucide-react";
+import { X, Clock, Calendar, Save, Trash2, Check, Radio, ChevronDown, Sparkles, Sliders } from "lucide-react";
 import { AgentScheduleJob, createOrUpdateSchedule, deleteSchedule } from "../services/agentApi";
 
 interface ScheduleJobModalProps {
@@ -13,12 +13,16 @@ interface ScheduleJobModalProps {
   onSaved: () => void;
 }
 
-const COMMON_PRESETS = [
-  { label: "Every Hour", cron: "0 * * * *" },
-  { label: "Every Day at 09:00", cron: "0 9 * * *" },
-  { label: "Every Night at 21:00", cron: "0 21 * * *" },
-  { label: "Every Monday 08:00", cron: "0 8 * * 1" },
-  { label: "Every 15 Minutes", cron: "*/15 * * * *" },
+type FrequencyType = "daily" | "weekly" | "hourly" | "workdays" | "interval15" | "custom";
+
+const DAYS_OF_WEEK = [
+  { value: "1", label: "Thứ 2" },
+  { value: "2", label: "Thứ 3" },
+  { value: "3", label: "Thứ 4" },
+  { value: "4", label: "Thứ 5" },
+  { value: "5", label: "Thứ 6" },
+  { value: "6", label: "Thứ 7" },
+  { value: "0", label: "Chủ nhật" },
 ];
 
 export function ScheduleJobModal({
@@ -39,6 +43,48 @@ export function ScheduleJobModal({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Friendly End-User Scheduler State
+  const [frequency, setFrequency] = useState<FrequencyType>("daily");
+  const [selectedTime, setSelectedTime] = useState("09:00"); // HH:mm
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState("1"); // Monday
+  const [showAdvancedCron, setShowAdvancedCron] = useState(false);
+
+  // Parse existing cron into friendly frequency + time
+  const parseCronToFriendly = (cron: string) => {
+    const parts = cron.trim().split(/\s+/);
+    if (parts.length === 5) {
+      const [minute, hour, dom, month, dow] = parts;
+      if (dom === "*" && month === "*") {
+        if (dow === "*" && minute === "0" && !isNaN(Number(hour))) {
+          const hh = hour.padStart(2, "0");
+          return { freq: "daily" as FrequencyType, time: `${hh}:00`, dow: "1" };
+        }
+        if (dow === "*" && !isNaN(Number(minute)) && !isNaN(Number(hour))) {
+          const hh = hour.padStart(2, "0");
+          const mm = minute.padStart(2, "0");
+          return { freq: "daily" as FrequencyType, time: `${hh}:${mm}`, dow: "1" };
+        }
+        if (dow === "1-5" && !isNaN(Number(minute)) && !isNaN(Number(hour))) {
+          const hh = hour.padStart(2, "0");
+          const mm = minute.padStart(2, "0");
+          return { freq: "workdays" as FrequencyType, time: `${hh}:${mm}`, dow: "1" };
+        }
+        if (dow !== "*" && !isNaN(Number(dow)) && !isNaN(Number(minute)) && !isNaN(Number(hour))) {
+          const hh = hour.padStart(2, "0");
+          const mm = minute.padStart(2, "0");
+          return { freq: "weekly" as FrequencyType, time: `${hh}:${mm}`, dow };
+        }
+        if (minute === "0" && hour === "*" && dow === "*") {
+          return { freq: "hourly" as FrequencyType, time: "09:00", dow: "1" };
+        }
+        if (minute === "*/15" && hour === "*" && dow === "*") {
+          return { freq: "interval15" as FrequencyType, time: "09:00", dow: "1" };
+        }
+      }
+    }
+    return { freq: "custom" as FrequencyType, time: "09:00", dow: "1" };
+  };
+
   useEffect(() => {
     if (job) {
       setName(job.name);
@@ -47,15 +93,90 @@ export function ScheduleJobModal({
       setTargetChannel(job.targetChannel || "telegram");
       setPrompt(job.promptSnippet || "");
       setEnabled(job.enabled !== false);
+
+      const parsed = parseCronToFriendly(job.cronExpr);
+      setFrequency(parsed.freq);
+      setSelectedTime(parsed.time);
+      setSelectedDayOfWeek(parsed.dow);
+      setShowAdvancedCron(parsed.freq === "custom");
     } else {
-      setName(`Daily Intelligence Brief for ${agentName}`);
-      setCronExpr("0 9 * * *");
+      setName(`Nhắc việc hằng ngày cho ${agentName}`);
+      setCronExpr("0 7 * * *");
       setTimezone("Asia/Ho_Chi_Minh");
       setTargetChannel("telegram");
-      setPrompt("Summarize all pending approvals, system health, and unread customer messages.");
+      setPrompt("Gửi tin nhắn chào buổi sáng và nhắc nhở các công việc quan trọng cần xử lý hôm nay.");
       setEnabled(true);
+      setFrequency("daily");
+      setSelectedTime("07:00");
+      setSelectedDayOfWeek("1");
+      setShowAdvancedCron(false);
     }
   }, [job, agentName]);
+
+  // When frequency, time, or day of week changes, calculate cronExpr automatically
+  const updateCronFromFriendly = (freq: FrequencyType, time: string, dow: string) => {
+    const [hStr, mStr] = time.split(":");
+    const h = parseInt(hStr || "9", 10);
+    const m = parseInt(mStr || "0", 10);
+
+    let generatedCron = cronExpr;
+    if (freq === "daily") {
+      generatedCron = `${m} ${h} * * *`;
+    } else if (freq === "workdays") {
+      generatedCron = `${m} ${h} * * 1-5`;
+    } else if (freq === "weekly") {
+      generatedCron = `${m} ${h} * * ${dow}`;
+    } else if (freq === "hourly") {
+      generatedCron = `0 * * * *`;
+    } else if (freq === "interval15") {
+      generatedCron = `*/15 * * * *`;
+    }
+    setCronExpr(generatedCron);
+  };
+
+  const handleFrequencyChange = (newFreq: FrequencyType) => {
+    setFrequency(newFreq);
+    if (newFreq === "custom") {
+      setShowAdvancedCron(true);
+    } else {
+      updateCronFromFriendly(newFreq, selectedTime, selectedDayOfWeek);
+    }
+  };
+
+  const handleTimeChange = (newTime: string) => {
+    setSelectedTime(newTime);
+    if (frequency !== "custom") {
+      updateCronFromFriendly(frequency, newTime, selectedDayOfWeek);
+    }
+  };
+
+  const handleDayOfWeekChange = (newDow: string) => {
+    setSelectedDayOfWeek(newDow);
+    if (frequency === "weekly") {
+      updateCronFromFriendly("weekly", selectedTime, newDow);
+    }
+  };
+
+  // Human-readable summary of schedule
+  const humanReadableSummary = useMemo(() => {
+    if (frequency === "daily") {
+      return `Chạy mỗi ngày vào lúc ${selectedTime}`;
+    }
+    if (frequency === "workdays") {
+      return `Chạy từ Thứ 2 đến Thứ 6 vào lúc ${selectedTime}`;
+    }
+    if (frequency === "weekly") {
+      const dayName = DAYS_OF_WEEK.find((d) => d.value === selectedDayOfWeek)?.label || "Thứ 2";
+      return `Chạy vào ${dayName} hằng tuần lúc ${selectedTime}`;
+    }
+    if (frequency === "hourly") {
+      return "Chạy mỗi giờ một lần (vào đầu mỗi giờ)";
+    }
+    if (frequency === "interval15") {
+      return "Chạy liên tục mỗi 15 phút";
+    }
+    return `Chạy theo biểu thức tùy chỉnh: ${cronExpr}`;
+  }, [frequency, selectedTime, selectedDayOfWeek, cronExpr]);
 
   if (!isOpen) return null;
 
@@ -110,7 +231,7 @@ export function ScheduleJobModal({
                 {job ? "Chỉnh sửa Lịch Routine" : "Thêm Lịch Routine mới"}
               </span>
               <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
-                {agentName} • Tác vụ chạy định kỳ theo Cron
+                {agentName} • Tự động thực thi theo thời gian
               </p>
             </div>
           </div>
@@ -126,9 +247,10 @@ export function ScheduleJobModal({
 
         {/* Form Body */}
         <form onSubmit={handleSave} className="p-5 space-y-4">
+          {/* 1. Name */}
           <div className="space-y-1.5">
             <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
-              {t("scheduleJob.name") || "Tên công việc (Routine Title)"}
+              Tên công việc (Routine Title)
             </label>
             <input
               type="text"
@@ -140,67 +262,132 @@ export function ScheduleJobModal({
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium font-mono text-xs">
-                {t("scheduleJob.cron") || "Biểu thức Cron (Cron Expression)"}
-              </label>
-              <input
-                type="text"
-                required
-                value={cronExpr}
-                onChange={(e) => setCronExpr(e.target.value)}
-                placeholder="0 7 * * *"
-                className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-2 text-[#e0682b] dark:text-[#f8a87c] font-mono placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] transition-colors"
-              />
+          {/* 2. End-User Friendly Frequency & Time Configuration */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432]">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-900 dark:text-white">
+              <span className="flex items-center gap-1.5">
+                <Calendar size={14} className="text-[#f8a87c]" />
+                <span>Thời gian & Tần suất thực hiện</span>
+              </span>
+              <span className="text-[11px] font-mono font-normal text-[#e0682b] dark:text-[#f8a87c]">
+                {humanReadableSummary}
+              </span>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
-                {t("scheduleJob.targetChannel") || "Kênh phát (Dispatch Channel)"}
-              </label>
-              <CustomSelect
-                value={targetChannel}
-                onChange={(val) => setTargetChannel(val)}
-                options={[
-                  { value: "telegram", label: "Telegram Channel" },
-                  { value: "discord", label: "Discord Channel" },
-                  { value: "console", label: "Internal Console" },
-                  { value: "matrix", label: "Matrix Room" },
-                  { value: "slack", label: "Slack Workspace" },
-                ]}
-                className="w-full"
-                triggerClassName="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] focus:border-[#f8a87c] rounded-xl px-3 py-2 text-slate-800 dark:text-white font-mono text-xs"
-              />
-            </div>
-          </div>
-
-          {/* Quick Presets */}
-          <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-mono uppercase tracking-wider">
-              Chọn nhanh tần suất:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {COMMON_PRESETS.map((p) => {
-                const isSelected = cronExpr === p.cron;
+            {/* Frequency Options Radio Pills */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              {[
+                { id: "daily", label: "Mỗi ngày" },
+                { id: "workdays", label: "Thứ 2 - Thứ 6" },
+                { id: "weekly", label: "Hằng tuần" },
+                { id: "hourly", label: "Mỗi giờ" },
+                { id: "interval15", label: "15 phút / lần" },
+                { id: "custom", label: "Tùy chỉnh..." },
+              ].map((opt) => {
+                const isSelected = frequency === opt.id;
                 return (
                   <button
-                    key={p.cron}
+                    key={opt.id}
                     type="button"
-                    onClick={() => setCronExpr(p.cron)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border transition-all cursor-pointer ${
+                    onClick={() => handleFrequencyChange(opt.id as FrequencyType)}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-medium border transition-all cursor-pointer text-center ${
                       isSelected
-                        ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#e0682b] dark:text-[#f8a87c] font-semibold"
-                        : "bg-slate-100 hover:bg-slate-200/80 dark:bg-[#181824] dark:hover:bg-[#202030] border-slate-200 dark:border-[#262638] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                        ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#e0682b] dark:text-[#f8a87c] font-semibold shadow-xs"
+                        : "bg-white dark:bg-[#181824] hover:bg-slate-100 dark:hover:bg-[#20202e] border-slate-200 dark:border-[#28283a] text-slate-700 dark:text-neutral-300"
                     }`}
                   >
-                    {p.label}
+                    {opt.label}
                   </button>
                 );
               })}
             </div>
+
+            {/* Time Picker & Day of Week Picker (when applicable) */}
+            {(frequency === "daily" || frequency === "workdays" || frequency === "weekly") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-200/80 dark:border-white/10">
+                <div className="space-y-1">
+                  <label className="text-[11px] text-slate-600 dark:text-neutral-400 font-medium">
+                    Giờ thực hiện:
+                  </label>
+                  <input
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => handleTimeChange(e.target.value)}
+                    className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-[#f8a87c] hover:border-slate-300 dark:hover:border-[#3a3a50]"
+                  />
+                </div>
+
+                {frequency === "weekly" && (
+                  <div className="space-y-1">
+                    <label className="text-[11px] text-slate-600 dark:text-neutral-400 font-medium">
+                      Ngày trong tuần:
+                    </label>
+                    <CustomSelect
+                      value={selectedDayOfWeek}
+                      onChange={handleDayOfWeekChange}
+                      options={DAYS_OF_WEEK}
+                      className="w-full"
+                      triggerClassName="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] rounded-xl px-3 py-1.5 text-slate-800 dark:text-white font-sans text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Expandable Advanced Cron Input for Power Users */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedCron(!showAdvancedCron)}
+                className="text-[10px] font-mono text-slate-500 dark:text-neutral-500 hover:text-[#e0682b] dark:hover:text-[#f8a87c] flex items-center gap-1 cursor-pointer"
+              >
+                <Sliders size={11} />
+                <span>{showAdvancedCron ? "Ẩn biểu thức Cron kỹ thuật" : "Hiển thị biểu thức Cron kỹ thuật (Nâng cao)"}</span>
+              </button>
+
+              {showAdvancedCron && (
+                <div className="mt-2 space-y-1 animate-in fade-in duration-100">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-neutral-400">
+                    <span>Cron Expression (phút giờ ngày tháng thứ):</span>
+                    <span className="text-[#e0682b] dark:text-[#f8a87c]">{cronExpr}</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={cronExpr}
+                    onChange={(e) => {
+                      setCronExpr(e.target.value);
+                      setFrequency("custom");
+                    }}
+                    placeholder="VD: 0 21 * * *"
+                    className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-1.5 text-[#e0682b] dark:text-[#f8a87c] font-mono text-xs focus:outline-none focus:border-[#f8a87c]"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* 3. Dispatch Channel */}
+          <div className="space-y-1.5">
+            <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
+              Kênh gửi thông báo (Dispatch Channel)
+            </label>
+            <CustomSelect
+              value={targetChannel}
+              onChange={(val) => setTargetChannel(val)}
+              options={[
+                { value: "telegram", label: "Telegram Channel" },
+                { value: "discord", label: "Discord Channel" },
+                { value: "console", label: "Internal Console" },
+                { value: "matrix", label: "Matrix Room" },
+                { value: "slack", label: "Slack Workspace" },
+              ]}
+              className="w-full"
+              triggerClassName="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] focus:border-[#f8a87c] rounded-xl px-3 py-2 text-slate-800 dark:text-white font-mono text-xs"
+            />
+          </div>
+
+          {/* 4. Instruction Prompt */}
           <div className="space-y-1.5">
             <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">
               Câu lệnh thực thi (Instruction Prompt)
@@ -215,7 +402,7 @@ export function ScheduleJobModal({
             />
           </div>
 
-          {/* Active Status Card with Toggle */}
+          {/* 5. Active Status Card with Toggle */}
           <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432]">
             <div className="flex flex-col min-w-0 pr-3">
               <span className="font-semibold text-slate-900 dark:text-white text-xs">
@@ -226,7 +413,6 @@ export function ScheduleJobModal({
               </span>
             </div>
 
-            {/* Clean Toggle Switch matching reference */}
             <button
               type="button"
               role="switch"
