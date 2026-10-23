@@ -12188,7 +12188,7 @@ ${chat.id}`);
       {mobileActionMsg && (
         <div
           onClick={() => setMobileActionMsg(null)}
-          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
