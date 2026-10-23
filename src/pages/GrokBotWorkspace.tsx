@@ -10282,32 +10282,6 @@ ${chat.id}`);
                     )}
                   </div>
 
-                  {/* 3. Hiệu năng & Telemetry (Compact summary) */}
-                  <div className="rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] p-3 space-y-2">
-                    <div className="flex items-center justify-between text-slate-900 dark:text-white font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <Activity size={13} className="text-[#f8a87c]" />
-                        <span>Hiệu năng & Telemetry</span>
-                      </span>
-                      {turnTelemetry?.estimatedCostUsd !== undefined && (
-                        <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                          ${turnTelemetry.estimatedCostUsd.toFixed(4)}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="p-2 rounded-xl bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
-                        <span className="text-[10px] text-neutral-500">TTFT (Latency)</span>
-                        <span className="text-amber-500 dark:text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
-                      </div>
-                      <div className="p-2 rounded-xl bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
-                        <span className="text-[10px] text-neutral-500">Tốc độ sinh</span>
-                        <span className="text-emerald-500 dark:text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* 4. Deep Settings Link */}
                   <button
                     type="button"
