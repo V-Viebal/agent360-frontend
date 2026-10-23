@@ -1868,7 +1868,8 @@ export function GrokBotWorkspace() {
   }, [chatParam, selectedAgentId]);
 
   // Rightmost bot info tab: 'Computer' | 'Details' | 'Library'
-  const [rightTab, setRightTab] = useState<"Computer" | "Details" | "Library">("Computer");
+  const [rightTab, setRightTab] = useState<"Details" | "Computer" | "Library">("Details");
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
   const [isAgentSettingsModalOpen, setIsAgentSettingsModalOpen] = useState(false);
   const [agentSettingsModalTab, setAgentSettingsModalTab] = useState<AgentSettingsTab>("general");
@@ -5344,6 +5345,40 @@ const handleBatchDeleteSelectedChats = () => {
       return 0;
     });
 
+  // Toggle schedule routine enabled status
+  const handleToggleScheduleRoutine = async (job: AgentScheduleJob, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextState = !job.enabled;
+    triggerHaptic(12);
+    // Optimistic UI update
+    setSchedules((prev) =>
+      prev.map((s) => (s.id === job.id ? { ...s, enabled: nextState } : s))
+    );
+    try {
+      const { createOrUpdateSchedule } = await import("../services/agentApi");
+      const ok = await createOrUpdateSchedule({
+        agentId: selectedAgent.id,
+        id: job.id,
+        name: job.name,
+        cronExpr: job.cronExpr,
+        timezone: job.timezone,
+        targetChannel: job.targetChannel,
+        promptSnippet: job.promptSnippet,
+        enabled: nextState,
+      });
+      if (!ok) {
+        // Rollback on failure
+        setSchedules((prev) =>
+          prev.map((s) => (s.id === job.id ? { ...s, enabled: !nextState } : s))
+        );
+      }
+    } catch {
+      setSchedules((prev) =>
+        prev.map((s) => (s.id === job.id ? { ...s, enabled: !nextState } : s))
+      );
+    }
+  };
+
   // Keep live references updated for global keyboard navigation
   filteredAgentsRef.current = filteredAgents;
   filteredChatsRef.current = filteredChats;
@@ -6500,21 +6535,7 @@ const handleBatchDeleteSelectedChats = () => {
               </div>
             </Tooltip>
 
-            {!hasNoAgents && selectedAgent.id && (
-              <Tooltip content="Cài đặt Agent (Model, Apps, A2A, Kênh, Bộ nhớ)" shortcut="Alt+," placement="bottom" minWidth={220}>
-                <button
-                  type="button"
-                  aria-label="Mở cài đặt Agent"
-                  onClick={() => {
-                    setAgentSettingsModalTab("general");
-                    setIsAgentSettingsModalOpen(true);
-                  }}
-                  className="h-7 w-7 rounded-lg bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-[#f8a87c]/50 text-neutral-500 dark:text-neutral-400 hover:text-[#e0682b] dark:hover:text-[#f8a87c] flex items-center justify-center transition-all cursor-pointer shrink-0"
-                >
-                  <Settings size={13} />
-                </button>
-              </Tooltip>
-            )}
+
           </div>
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
@@ -9933,7 +9954,7 @@ ${chat.id}`);
               <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">Agent Detail</span>
               <div className="flex items-center gap-1">
                 {!hasNoAgents && selectedAgent.id && (
-                  <Tooltip content="Mở Cài đặt Agent (Model, Apps, Sub-Agents, Channels, Memory)" placement="bottom">
+                  <Tooltip content="Cài đặt Agent (Model, Apps, Sub-Agents, Channels, Memory)" shortcut="Alt+," placement="bottom">
                     <button
                       type="button"
                       aria-label="Mở Cài đặt Agent"
@@ -9941,10 +9962,9 @@ ${chat.id}`);
                         setAgentSettingsModalTab("general");
                         setIsAgentSettingsModalOpen(true);
                       }}
-                      className="h-7 px-2 rounded-lg bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 flex items-center gap-1.5 text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] cursor-pointer transition-colors"
+                      className="h-7 w-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] flex items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-[#e0682b] dark:hover:text-[#f8a87c] cursor-pointer transition-colors"
                     >
-                      <Settings size={12} />
-                      <span>Cài đặt</span>
+                      <Settings size={13} />
                     </button>
                   </Tooltip>
                 )}
@@ -10031,7 +10051,7 @@ ${chat.id}`);
 
             {/* 3 Streamlined Tabs: Computer | Details | Library */}
             <div className="flex items-center justify-around border-b border-neutral-200 dark:border-[#1c1c22] text-xs font-medium text-neutral-500 dark:text-neutral-400 px-2 shrink-0">
-              {(["Computer", "Details", "Library"] as const).map((tab) => (
+              {(["Details", "Computer", "Library"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
@@ -10123,9 +10143,147 @@ ${chat.id}`);
               })()}
 
               {rightTab === "Details" && (
-                <div className="space-y-3.5 text-xs text-slate-700 dark:text-neutral-300 font-sans pb-4">
-                  {/* Real-time Turn Telemetry & Performance Metrics */}
-                  <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2">
+                <div className="space-y-4 text-xs text-slate-700 dark:text-neutral-300 font-sans pb-4">
+                  {/* 1. Concise Description: 2-3 lines by default, collapsed */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400">
+                      <span className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">
+                        Giới thiệu & Vai trò
+                      </span>
+                      <span className="text-[10px] uppercase text-[#e0682b] dark:text-[#f8a87c]">
+                        {selectedAgent.roleTag || "Agent"}
+                      </span>
+                    </div>
+
+                    <div className="relative p-3 rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] transition-all">
+                      <p
+                        className={`text-xs text-slate-600 dark:text-neutral-300 leading-relaxed select-text transition-all ${
+                          isDescExpanded ? "" : "line-clamp-3"
+                        }`}
+                      >
+                        {selectedAgent.description || "Chưa có mô tả chi tiết cho Agent này."}
+                      </p>
+
+                      {/* Expand / Collapse toggle if description is lengthy */}
+                      {selectedAgent.description && selectedAgent.description.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsDescExpanded(!isDescExpanded)}
+                          className="mt-1.5 text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>{isDescExpanded ? "Thu gọn bớt" : "Xem thêm"}</span>
+                          <ChevronDown
+                            size={12}
+                            className={`transition-transform duration-200 ${isDescExpanded ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Routines (Automated Schedules) Section with clean card toggle matching user reference */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white font-sans">
+                        Routines
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedJobForConfig(null);
+                          setIsScheduleModalOpen(true);
+                        }}
+                        className="text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Thêm routine mới"
+                      >
+                        <Plus size={11} />
+                        <span>Thêm mới</span>
+                      </button>
+                    </div>
+
+                    {loadingSchedules ? (
+                      <div className="space-y-2">
+                        <div className="h-16 w-full rounded-2xl skeleton-shimmer border border-slate-200/80 dark:border-[#22222e]" />
+                      </div>
+                    ) : schedules.length === 0 ? (
+                      <div
+                        onClick={() => {
+                          setSelectedJobForConfig(null);
+                          setIsScheduleModalOpen(true);
+                        }}
+                        className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[#f8a87c]/50 flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                      >
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="text-xs font-medium text-slate-800 dark:text-white truncate">
+                            Tạo Routine tự động đầu tiên
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
+                            Bấm để lên lịch chạy tự động định kỳ
+                          </span>
+                        </div>
+                        <div className="h-7 w-7 rounded-xl bg-slate-100 dark:bg-[#1f1f2c] text-[#f8a87c] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <Plus size={14} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {schedules.map((job) => {
+                          // Format cron schedule into human readable time description
+                          const getHumanScheduleText = (cron: string, tz?: string) => {
+                            if (!cron) return "Theo lịch định kỳ";
+                            if (cron === "0 7 * * *") return "Every day around 7:00 AM";
+                            if (cron === "0 9 * * *") return "Every day around 9:00 AM";
+                            if (cron === "0 21 * * *") return "Every night around 9:00 PM";
+                            if (cron.startsWith("*/15")) return "Every 15 minutes";
+                            if (cron.startsWith("0 *")) return "Every hour";
+                            return `Cron: ${cron}${tz ? ` (${tz.split("/").pop()})` : ""}`;
+                          };
+
+                          return (
+                            <div
+                              key={job.id}
+                              onClick={() => {
+                                setSelectedJobForConfig(job);
+                                setIsScheduleModalOpen(true);
+                              }}
+                              className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-slate-300 dark:hover:border-[#323242] shadow-xs flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                            >
+                              <div className="flex flex-col min-w-0 pr-2">
+                                <span className="text-xs font-medium text-slate-900 dark:text-white truncate group-hover:text-[#e0682b] dark:group-hover:text-[#f8a87c] transition-colors">
+                                  {job.name}
+                                </span>
+                                <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
+                                  {getHumanScheduleText(job.cronExpr, job.timezone)}
+                                </span>
+                              </div>
+
+                              {/* Clean iOS / Material style toggle switch as in user screenshot */}
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={job.enabled}
+                                onClick={(e) => handleToggleScheduleRoutine(job, e)}
+                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  job.enabled
+                                    ? "bg-[#1d6eed] dark:bg-[#1d7bf2]"
+                                    : "bg-slate-300 dark:bg-[#2c2c3a]"
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                    job.enabled ? "translate-x-5" : "translate-x-0"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Hiệu năng & Telemetry (Compact summary) */}
+                  <div className="rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] p-3 space-y-2">
                     <div className="flex items-center justify-between text-slate-900 dark:text-white font-semibold">
                       <span className="flex items-center gap-1.5">
                         <Activity size={13} className="text-[#f8a87c]" />
@@ -10139,76 +10297,28 @@ ${chat.id}`);
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
+                      <div className="p-2 rounded-xl bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
                         <span className="text-[10px] text-neutral-500">TTFT (Latency)</span>
                         <span className="text-amber-500 dark:text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
-                        <span className="text-[10px] text-neutral-500">Tốc độ sinh (Speed)</span>
+                      <div className="p-2 rounded-xl bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
+                        <span className="text-[10px] text-neutral-500">Tốc độ sinh</span>
                         <span className="text-emerald-500 dark:text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
-                        <span className="text-[10px] text-neutral-500">Thời gian phản hồi</span>
-                        <span className="text-slate-800 dark:text-neutral-300 font-bold">{turnTelemetry?.totalDurationMs ? `${(turnTelemetry.totalDurationMs / 1000).toFixed(1)}s` : "—"}</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
-                        <span className="text-[10px] text-neutral-500">Model hoạt động</span>
-                        <span className="text-[#e0682b] dark:text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || selectedAgent.model}>
-                          {(turnTelemetry?.model || selectedAgent.model).split("/").pop()}
-                        </span>
-                      </div>
                     </div>
                   </div>
 
-                  {/* Agent Description & Overview */}
-                  <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-1.5">
-                    <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
-                      <span>Mô tả nhiệm vụ (Description)</span>
-                      <span className="text-[10px] font-mono text-neutral-500 uppercase">{selectedAgent.roleTag}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 dark:text-neutral-400 leading-relaxed select-text">
-                      {selectedAgent.description}
-                    </p>
-                  </div>
-
-                  {/* Runtime & Node Summary */}
-                  <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2">
-                    <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <Bot size={13} className="text-[#f8a87c]" />
-                        <span>Thông số Runtime</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                        Online
-                      </span>
-                    </div>
-                    <div className="text-[11px] font-mono space-y-1.5 bg-white dark:bg-[#0f0f15] p-2.5 rounded-lg border border-slate-200/80 dark:border-[#1e1e28]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-500">Node hạ tầng:</span>
-                        <span className="text-slate-800 dark:text-neutral-200 truncate max-w-[160px]">{selectedAgent.node}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-500">Phiên bản:</span>
-                        <span className="text-slate-800 dark:text-neutral-200">{(selectedAgent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer")}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-neutral-500">Hồ sơ SOUL:</span>
-                        <span className="text-slate-800 dark:text-neutral-200 truncate max-w-[160px]">SOUL.md ({selectedAgent.slug})</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Card to open Full Agent Settings Modal */}
+                  {/* 4. Deep Settings Link */}
                   <button
                     type="button"
                     onClick={() => {
                       setAgentSettingsModalTab("general");
                       setIsAgentSettingsModalOpen(true);
                     }}
-                    className="w-full p-3 rounded-xl bg-gradient-to-r from-[#f8a87c]/15 via-[#f8a87c]/5 to-transparent border border-[#f8a87c]/30 hover:border-[#f8a87c] flex items-center justify-between text-left transition-all cursor-pointer group"
+                    className="w-full p-3 rounded-2xl bg-gradient-to-r from-[#f8a87c]/15 via-[#f8a87c]/5 to-transparent border border-[#f8a87c]/30 hover:border-[#f8a87c] flex items-center justify-between text-left transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/20 flex items-center justify-center text-[#e0682b] dark:text-[#f8a87c] shrink-0">
+                      <div className="h-8 w-8 rounded-xl bg-[#f8a87c]/20 flex items-center justify-center text-[#e0682b] dark:text-[#f8a87c] shrink-0">
                         <Settings size={15} className="group-hover:rotate-45 transition-transform duration-200" />
                       </div>
                       <div className="truncate">
@@ -10216,7 +10326,7 @@ ${chat.id}`);
                           Cài đặt Chuyên sâu Agent
                         </div>
                         <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">
-                          Apps, MCP, Đội ngũ A2A, Kênh, Cron & Bộ nhớ
+                          Apps, MCP, Đội ngũ A2A, Kênh & Bộ nhớ
                         </div>
                       </div>
                     </div>
