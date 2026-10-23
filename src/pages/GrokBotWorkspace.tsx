@@ -7043,12 +7043,12 @@ const handleBatchDeleteSelectedChats = () => {
                       {/* Clean minimal tooltip positioned directly relative to this tick item */}
                       {isHovered && (
                         <div
-                          className="absolute right-full mr-2.5 z-50 max-w-[280px] sm:max-w-[340px] px-2.5 py-1 rounded-lg bg-neutral-900/95 dark:bg-[#181820]/95 text-white dark:text-neutral-100 text-[11px] shadow-lg backdrop-blur-md border border-neutral-700/60 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-1.5 whitespace-nowrap select-none"
+                          className="absolute right-full mr-2.5 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 backdrop-blur-md pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
                         >
-                          <span className="font-mono text-[10px] text-[#f8a87c] font-semibold shrink-0">
+                          <span className="font-mono text-[11px] text-[#e0682b] dark:text-[#f8a87c] font-bold shrink-0">
                             #{tIdx + 1}
                           </span>
-                          <span className="truncate max-w-[220px] sm:max-w-[280px] font-normal leading-tight">
+                          <span className="truncate max-w-[260px] sm:max-w-[360px] font-medium leading-snug text-slate-700 dark:text-neutral-200">
                             {turn.msg.content.trim()}
                           </span>
                         </div>
