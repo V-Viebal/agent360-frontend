@@ -1654,6 +1654,7 @@ export function GrokBotWorkspace() {
     { value: "node-5th", label: "Node 5th (Creative & Delivery)", badge: "Apps", description: "ai-climax / planthy-ai" },
     { value: "node-4th", label: "Node 4th (Swarm & Inference)", badge: "Swarm", description: "AgentTeams Swarm & LLM360" },
     { value: "node-7th", label: "Node 7th (Control)", badge: "Control", description: "control.hmz.one / SRE Observer" },
+    { value: "node-8th", label: "Node 8th (ITS & GL)", badge: "Edge", description: "ai-its / ai-gl (Inox Tân Sơn & GL)" },
     { value: "node-2nd", label: "Node 2nd (Agent360)", badge: "Platform", description: "agent360.antares.vn" },
   ];
   // Interactive Mascot Eye Tracking State
@@ -3234,7 +3235,7 @@ const handleBatchDeleteSelectedChats = () => {
   const activeTraceIdxRef = useRef<number | null>(null);
   const userTurnsRef = useRef<{ msg: ChatMessage; originalIdx: number }[]>([]);
   const traceCardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [traceMouseClientY, setTraceMouseClientY] = useState<number | null>(null);
+  const [traceCardPos, setTraceCardPos] = useState<{ top: number; right: number } | null>(null);
 
   const findCurrentVisibleUserTurnIdx = (userTurns: { msg: ChatMessage; originalIdx: number }[]): number => {
     if (!messagesContainerRef.current || userTurns.length === 0) return 0;
@@ -3274,10 +3275,21 @@ const handleBatchDeleteSelectedChats = () => {
       setActiveTraceIdx(targetIdx);
       activeTraceIdxRef.current = targetIdx;
 
+      // Position preview card next to tick
+      const tickEl = document.querySelector(`[data-trace-tick-idx="${targetIdx}"]`);
+      if (tickEl) {
+        const rect = tickEl.getBoundingClientRect();
+        setTraceCardPos({
+          right: Math.round(window.innerWidth - rect.left + 14),
+          top: Math.round(Math.max(64, Math.min(window.innerHeight - 240, rect.top + rect.height / 2 - 60))),
+        });
+      }
+
       // Show preview card for 2200ms
       if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
       traceCardTimeoutRef.current = setTimeout(() => {
         setHoveredTraceIdx(null);
+        setTraceCardPos(null);
       }, 2200);
     }
   };
@@ -5192,6 +5204,9 @@ const handleBatchDeleteSelectedChats = () => {
     if (selectedInstance === "node-7th") {
       return node.includes("7th") || node.includes("control");
     }
+    if (selectedInstance === "node-8th") {
+      return node.includes("8th") || id.includes("its") || id.includes("gl");
+    }
     if (selectedInstance === "node-2nd") {
       return node.includes("2nd");
     }
@@ -5612,6 +5627,7 @@ const handleBatchDeleteSelectedChats = () => {
                       if (val === "node-7th") return node.includes("7th") || node.includes("control") || id.includes("ken") || id.includes("sre");
                       if (val === "node-2nd") return node.includes("2nd") || node.includes("llm") || id.includes("zen");
                       if (val === "node-1st") return node.includes("1st") || node.includes("api.antares") || id.includes("gateway");
+                      if (val === "node-8th") return node.includes("8th") || id.includes("its") || id.includes("gl");
                       if (val === "node-5th") return node.includes("5th") || node.includes("storage");
                       return false;
                     });
@@ -6993,24 +7009,17 @@ const handleBatchDeleteSelectedChats = () => {
 
           const isCardBookmarked = activeTurnItem ? starredMsgIds.includes(activeTurnItem.msg.id) : false;
 
-          // Compute card top position dynamically (relative to mouse or active tick)
-          let cardTopStyle = "50%";
-          if (traceMouseClientY !== null) {
-            cardTopStyle = `${Math.max(64, Math.min(window.innerHeight - 220, traceMouseClientY - 70))}px`;
-          } else if (hoveredTraceIdx !== null && typeof document !== "undefined") {
-            const tickEl = document.querySelector(`[data-trace-tick-idx="${hoveredTraceIdx}"]`);
-            if (tickEl) {
-              const rect = tickEl.getBoundingClientRect();
-              cardTopStyle = `${Math.max(64, Math.min(window.innerHeight - 220, rect.top - 70))}px`;
-            }
-          }
+          const effectiveCardPos = traceCardPos || {
+            top: typeof window !== "undefined" ? Math.max(64, Math.round(window.innerHeight / 2 - 80)) : 200,
+            right: 48,
+          };
 
           return (
             <div
               className="hidden lg:flex absolute right-2.5 top-1/2 -translate-y-1/2 z-30 flex-col items-end select-none"
               onMouseLeave={() => {
                 setHoveredTraceIdx(null);
-                setTraceMouseClientY(null);
+                setTraceCardPos(null);
               }}
             >
               {/* Ticks waveform stack: centered vertically, hugging right edge */}
@@ -7037,54 +7046,61 @@ const handleBatchDeleteSelectedChats = () => {
                       aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
                       onMouseEnter={(e) => {
                         setHoveredTraceIdx(tIdx);
-                        setTraceMouseClientY(e.clientY);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setTraceCardPos({
+                          right: Math.round(window.innerWidth - rect.left + 14),
+                          top: Math.round(Math.max(64, Math.min(window.innerHeight - 240, rect.top + rect.height / 2 - 60))),
+                        });
                         if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
                       }}
                       onClick={() => scrollToUserTurn(tIdx)}
                       className={`h-[2.5px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
                         isHovered
-                          ? "bg-white shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-125"
+                          ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-125"
                           : isBookmarked
-                          ? "bg-amber-400/80 hover:bg-amber-300"
+                          ? "bg-amber-500/90 dark:bg-amber-400/80 hover:bg-amber-600 dark:hover:bg-amber-300"
                           : isCurrentActive
-                          ? "bg-white/80 dark:bg-white/80 shadow-[0_0_4px_rgba(255,255,255,0.5)]"
-                          : "bg-neutral-400/60 hover:bg-neutral-200 dark:bg-neutral-600/70 dark:hover:bg-neutral-300"
+                          ? "bg-slate-700 dark:bg-white/80 shadow-[0_0_4px_rgba(0,0,0,0.2)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]"
+                          : "bg-neutral-300 hover:bg-neutral-500 dark:bg-neutral-600/70 dark:hover:bg-neutral-300"
                       }`}
                     />
                   );
                 })}
               </div>
 
-              {/* Hover Popover preview card: opened to the left of the right edge */}
+              {/* Hover Popover preview card: opened to the left of the right edge, adaptive light/dark */}
               {activeTurnItem && (
                 <div
-                  style={{ top: cardTopStyle }}
-                  className="fixed right-12 z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-[#1e1e22]/95 dark:bg-[#18181c]/95 border border-neutral-300 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+                  style={{
+                    top: `${effectiveCardPos.top}px`,
+                    right: `${effectiveCardPos.right}px`,
+                  }}
+                  className="fixed z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#18181c]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
                 >
                   {/* Prompt Title & Bookmark icon */}
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-xs text-white leading-snug line-clamp-2">
+                    <p className="font-semibold text-xs text-slate-900 dark:text-white leading-snug line-clamp-2">
                       {activeTurnItem.msg.content.trim()}
                     </p>
                     <button
                       type="button"
                       aria-label="Đánh dấu sao"
                       onClick={() => toggleStarMessage(activeTurnItem.msg.id)}
-                      className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-400 transition-colors cursor-pointer"
+                      className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
                     >
                       <Bookmark
                         size={14}
-                        className={isCardBookmarked ? "fill-amber-400 text-amber-400" : ""}
+                        className={isCardBookmarked ? "fill-amber-400 text-amber-500 dark:text-amber-400" : ""}
                       />
                     </button>
                   </div>
 
                   {/* Assistant summary snippet or checklist */}
                   {nextAssistantSnippet && (
-                    <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
-                      <div className="flex items-start gap-1.5 text-[11px] text-neutral-400 font-sans leading-relaxed">
+                    <div className="mt-2 pt-2 border-t border-slate-100 dark:border-white/10 space-y-1">
+                      <div className="flex items-start gap-1.5 text-[11px] text-slate-600 dark:text-neutral-400 font-sans leading-relaxed">
                         {nextAssistantHasCheck && (
-                          <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold">
+                          <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 text-[9px] font-bold">
                             ✓
                           </span>
                         )}
@@ -7096,7 +7112,7 @@ const handleBatchDeleteSelectedChats = () => {
                   )}
 
                   {/* Micro action hint */}
-                  <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
+                  <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] text-neutral-500 font-mono">
                     <span>Yêu cầu #{hoveredTraceIdx! + 1} / {userTurns.length}</span>
                     <span className="text-[#f8a87c]">Bấm hoặc Alt+↑/↓ để cuộn ↳</span>
                   </div>
