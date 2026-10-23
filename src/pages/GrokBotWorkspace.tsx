@@ -160,6 +160,7 @@ import {
   Rocket,
   ArrowUp,
   Bookmark,
+  MoreHorizontal,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom } from "../types/agent";
 
@@ -237,17 +238,111 @@ import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBro
 
 
 
+// Shared Modal Thinking & Tool Calls Detail
+function AgentThinkingModal({
+  msg,
+  agentLabel,
+  onClose,
+}: {
+  msg: ChatMessage;
+  agentLabel?: string;
+  onClose: () => void;
+}) {
+  const steps = msg.steps || [];
+  const toolCalls = msg.toolCalls || [];
+  const allToolItems = steps.filter((s) => s.kind === "tool_call").length > 0
+    ? steps.filter((s) => s.kind === "tool_call")
+    : toolCalls.map((tc) => ({ kind: "tool_call" as const, ...tc }));
+  const reasoningItems = steps.filter((s) => s.kind === "reasoning");
+  if (reasoningItems.length === 0 && msg.reasoning) {
+    reasoningItems.push({ kind: "reasoning", text: msg.reasoning });
+  }
+
+  const totalToolCount = allToolItems.length;
+  const displayAgent = msg.senderAgentName || msg.senderAgentId || agentLabel || "Agent";
+
+  return (
+    <div
+      data-testid="agent-thinking-modal"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[82vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles size={15} className="text-[#f8a87c] shrink-0" />
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
+                Thinking & Tool Execution — {displayAgent}
+              </h3>
+              <p className="text-[10px] font-mono text-neutral-500">
+                {totalToolCount} công cụ thực thi · {reasoningItems.length} bước suy luận
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label="Đóng modal thinking"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
+          {reasoningItems.map((r, rIdx) => {
+            const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
+            const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+            return (
+              <div
+                key={rIdx}
+                className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
+              >
+                <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
+                  <Sparkles size={12} className="text-[#f8a87c]" />
+                  <span className="font-semibold">Suy luận (~{estimatedSec}s · {wordCount} từ)</span>
+                </div>
+                <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                  {renderInlineMarkdown(r.text || "")}
+                </div>
+              </div>
+            );
+          })}
+
+          {allToolItems.map((step, sIdx) => (
+            <AgentToolCard
+              key={sIdx}
+              toolCall={{
+                tool: step.tool || "Tool",
+                args: step.args,
+                result: step.result,
+                state: step.state,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Collapsible Accordion wrapper for tool calls & execution trace
 function TurnExecutionAccordion({
   msg,
   isStreamingThisTurn,
   agentLabel,
+  onOpenModal,
 }: {
   msg: ChatMessage;
   isStreamingThisTurn: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
   agentLabel?: string;
+  onOpenModal?: () => void;
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const steps = msg.steps || [];
@@ -263,6 +358,14 @@ function TurnExecutionAccordion({
   const totalToolCount = allToolItems.length;
   const displayAgent = msg.senderAgentName || msg.senderAgentId || agentLabel || "Agent";
 
+  const handleOpen = () => {
+    if (onOpenModal) {
+      onOpenModal();
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
   return (
     <div className="w-full my-1">
       {/* Lean Trigger Pill in Chat Session: Click to open Thinking & Tool Execution Modal */}
@@ -270,7 +373,7 @@ function TurnExecutionAccordion({
         data-ux-target-min="24"
         data-testid="open-thinking-modal-btn"
         type="button"
-        onClick={() => setIsModalOpen(true)}
+        onClick={handleOpen}
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
       >
         {isStreamingThisTurn ? (
@@ -290,71 +393,11 @@ function TurnExecutionAccordion({
 
       {/* Modal Thinking & Tool Calls Detail */}
       {isModalOpen && (
-        <div
-          data-testid="agent-thinking-modal"
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150"
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-2xl max-h-[82vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
-              <div className="flex items-center gap-2 min-w-0">
-                <Sparkles size={15} className="text-[#f8a87c] shrink-0" />
-                <div className="min-w-0">
-                  <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
-                    Thinking & Tool Execution — {displayAgent}
-                  </h3>
-                  <p className="text-[10px] font-mono text-neutral-500">
-                    {totalToolCount} công cụ thực thi · {reasoningItems.length} bước suy luận
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                aria-label="Đóng modal thinking"
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
-              {reasoningItems.map((r, rIdx) => {
-                const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
-                const estimatedSec = Math.max(1, Math.round(wordCount / 18));
-                return (
-                  <div
-                    key={rIdx}
-                    className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
-                  >
-                    <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
-                      <Sparkles size={12} className="text-[#f8a87c]" />
-                      <span className="font-semibold">Suy luận (~{estimatedSec}s · {wordCount} từ)</span>
-                    </div>
-                    <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                      {renderInlineMarkdown(r.text || "")}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {allToolItems.map((step, sIdx) => (
-                <AgentToolCard
-                  key={sIdx}
-                  toolCall={{
-                    tool: step.tool || "Tool",
-                    args: step.args,
-                    result: step.result,
-                    state: step.state,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        <AgentThinkingModal
+          msg={msg}
+          agentLabel={agentLabel}
+          onClose={() => setIsModalOpen(false)}
+        />
       )}
     </div>
   );
@@ -3041,9 +3084,18 @@ export function GrokBotWorkspace() {
   // Mobile Hold-Touch / Long-Press Action Sheet state
   const [mobileActionAgent, setMobileActionAgent] = useState<InfraAgent | null>(null);
   const [mobileActionChat, setMobileActionChat] = useState<AgentSession | null>(null);
-  const [mobileActionMsg, setMobileActionMsg] = useState<{ id: string; content: string; turnIdx: number } | null>(null);
+  const [mobileActionMsg, setMobileActionMsg] = useState<{
+    id: string;
+    content: string;
+    turnIdx: number;
+    role?: "user" | "assistant";
+    hasThinking?: boolean;
+    rawMsg?: ChatMessage;
+  } | null>(null);
+  const [activeThinkingModalMsg, setActiveThinkingModalMsg] = useState<ChatMessage | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressPreventClickRef = useRef<boolean>(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStartAgent = (ag: InfraAgent) => {
     longPressPreventClickRef.current = false;
@@ -3083,7 +3135,20 @@ export function GrokBotWorkspace() {
     }
   };
 
-  const handleTouchStartMsg = (msg: { id: string; content: string; turnIdx: number }) => {
+  const handleTouchStartMsg = (
+    e: React.TouchEvent,
+    msgData: {
+      id: string;
+      content: string;
+      turnIdx: number;
+      role?: "user" | "assistant";
+      hasThinking?: boolean;
+      rawMsg?: ChatMessage;
+    }
+  ) => {
+    if (e.touches.length > 0) {
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
     longPressPreventClickRef.current = false;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
@@ -3091,11 +3156,24 @@ export function GrokBotWorkspace() {
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(25); } catch {}
       }
-      setMobileActionMsg(msg);
-    }, 400);
+      setMobileActionMsg(msgData);
+    }, 380);
+  };
+
+  const handleTouchMoveMsg = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current || e.touches.length === 0) return;
+    const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+    const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+    if (dx > 10 || dy > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
   };
 
   const handleTouchEndMsg = () => {
+    touchStartPosRef.current = null;
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -7117,77 +7195,7 @@ const handleBatchDeleteSelectedChats = () => {
             </div>
           ) : (
           <>
-          {/* Session-Sticky AgentTeams Collaboration Room Bar ([Agent A, Agent B, Manager, Admin]) */}
-          {activeSessionRoom && (activeSessionRoom.host_chat_id === selectedChatId || activeSessionRoom.host_session_id === selectedChatId || (selectedChat?.session_id && (activeSessionRoom.host_chat_id === selectedChat.session_id || activeSessionRoom.host_session_id === selectedChat.session_id))) && (
-            <div
-              data-testid="session-collaboration-room-bar"
-              className="mb-3 p-2.5 rounded-xl bg-slate-100/90 dark:bg-[#14141f]/95 border border-cyan-500/30 dark:border-cyan-500/25 shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs font-sans animate-in fade-in duration-150"
-            >
-              <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 font-mono text-[10px] font-semibold flex items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${activeSessionRoom.status === "collaborator_running" ? "bg-blue-400 animate-ping" : "bg-emerald-400"}`} />
-                  <span>{activeSessionRoom.room_title || "Phiên phối hợp"}</span>
-                </span>
-                <div className="flex items-center gap-1 flex-wrap">
-                  {activeSessionRoom.participants.map((p) => (
-                    <span
-                      key={p.agent_id}
-                      data-room-participant={p.agent_id}
-                      data-room-role={p.role}
-                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono border flex items-center gap-1 ${
-                        p.role === "host"
-                          ? "bg-[#f8a87c]/15 border-[#f8a87c]/30 text-[#f8a87c]"
-                          : p.role === "collaborator"
-                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                          : p.role === "manager"
-                          ? "bg-violet-500/15 border-violet-500/30 text-violet-600 dark:text-violet-300"
-                          : "bg-slate-200 dark:bg-white/10 border-slate-300 dark:border-white/15 text-neutral-600 dark:text-neutral-300"
-                      }`}
-                      title={`${p.display_name} (${p.role}) - ${p.matrix_user_id}`}
-                    >
-                      {p.status === "running" && <Loader2 size={9} className="animate-spin shrink-0" />}
-                      <span>@{p.agent_id}</span>
-                      <span className="opacity-70 text-[9px]">({p.role})</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsRoomInspectOpen((prev) => !prev)}
-                  className="px-2 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-300/80 dark:bg-[#1e1e2d] dark:hover:bg-[#28283c] text-slate-700 dark:text-neutral-200 font-mono text-[10px] border border-slate-300 dark:border-[#2e2e42] cursor-pointer transition-colors"
-                >
-                  {isRoomInspectOpen ? "Ẩn Room Log" : `Room Log (${activeSessionRoom.turns?.length || 0})`}
-                </button>
-                <a
-                  href={activeSessionRoom.element_room_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-600 dark:text-cyan-300 font-mono text-[10px] border border-cyan-500/30 flex items-center gap-1 transition-colors"
-                  title="Mở Room trên Element (AgentTeams)"
-                >
-                  <span>Element</span>
-                  <ExternalLink size={10} />
-                </a>
-              </div>
-              {isRoomInspectOpen && (
-                <div className="w-full mt-2 pt-2 border-t border-slate-200 dark:border-white/10 space-y-1.5 max-h-48 overflow-y-auto font-mono text-[11px]">
-                  {activeSessionRoom.turns.map((rt) => (
-                    <div key={rt.id} className="p-1.5 rounded-lg bg-white/80 dark:bg-[#0e0e14] border border-slate-200/70 dark:border-white/5 flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between text-[10px] text-neutral-400">
-                        <span className="font-semibold text-cyan-500">#{rt.turn_no} @{rt.author_id} ({rt.author_role}) · {rt.kind}</span>
-                        <span>{new Date(rt.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                      </div>
-                      <div className="text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words font-sans text-xs">{rt.text}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {isLoadingMessages ? (
+{isLoadingMessages ? (
             <div className="space-y-4 py-2 w-full animate-in fade-in duration-200">
               {/* User turn skeleton */}
               <div className="flex justify-end">
@@ -7272,14 +7280,14 @@ const handleBatchDeleteSelectedChats = () => {
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
                     <div
-                      onTouchStart={() => handleTouchStartMsg({ id: msg.id, content: msg.content, turnIdx: mIdx })}
+                      onTouchStart={(e) => handleTouchStartMsg(e, { id: msg.id, content: msg.content, turnIdx: mIdx, role: "user", rawMsg: msg })}
                       onTouchEnd={handleTouchEndMsg}
-                      onTouchMove={handleTouchEndMsg}
+                      onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
-                          setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx });
+                          setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx, role: "user", rawMsg: msg });
                         }
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
@@ -7294,8 +7302,8 @@ const handleBatchDeleteSelectedChats = () => {
                         )}
                       </div>
 
-                      {/* User Request Action CTAs: Hidden by default, only shown on hover, aligned to right */}
-                      <div className="flex items-center gap-1 pt-1 mt-0.5 select-none transition-opacity duration-150 opacity-0 group-hover/msg:opacity-100 justify-end">
+                      {/* User Request Action CTAs: Desktop hover toolbar, hidden on mobile */}
+                      <div className="hidden sm:flex items-center gap-1 pt-1 mt-0.5 select-none transition-opacity duration-150 opacity-0 group-hover/msg:opacity-100 justify-end">
                         {/* 0. Star / Bookmark Prompt CTA */}
                         <Tooltip content={starredMsgIds.includes(msg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao (Star)"} placement="top" minWidth={130}>
                           <button data-ux-target-min="24"
@@ -7368,49 +7376,48 @@ const handleBatchDeleteSelectedChats = () => {
                           </button>
                         </Tooltip>
                       </div>
+
+                      {/* Mobile Action Menu Button for User Message */}
+                      <div className="sm:hidden flex items-center justify-end pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx, role: "user", rawMsg: msg })}
+                          className="p-1 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                          aria-label="Tùy chọn câu hỏi"
+                        >
+                          <MoreHorizontal size={14} />
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     /* Assistant Turn: Structured Content Blocks + Agent Tool Cards */
                     <div
-                      onTouchStart={() => handleTouchStartMsg({ id: msg.id, content: msg.content, turnIdx: mIdx })}
+                      onTouchStart={(e) => handleTouchStartMsg(e, {
+                        id: msg.id,
+                        content: msg.content,
+                        turnIdx: mIdx,
+                        role: "assistant",
+                        hasThinking: Boolean(hasSteps || hasTools || msg.reasoning),
+                        rawMsg: msg,
+                      })}
                       onTouchEnd={handleTouchEndMsg}
-                      onTouchMove={handleTouchEndMsg}
+                      onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
-                          setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx });
+                          setMobileActionMsg({
+                            id: msg.id,
+                            content: msg.content,
+                            turnIdx: mIdx,
+                            role: "assistant",
+                            hasThinking: Boolean(hasSteps || hasTools || msg.reasoning),
+                            rawMsg: msg,
+                          });
                         }
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* 1. Intermediate Steps (Reasoning & Tool Calls): Collapsible summary when turn is completed */}
-                      {(() => {
-                        if (!hasSteps && !hasTools) return null;
-                        const traceKey = `${selectedChatId || "chat"}-turn-${mIdx}`;
-                        const isTurnActive = (isStreaming || isCurrentSessionRunning) && isLastTurn;
-                        const isTurnDone = Boolean(msg.content && !isTurnActive);
-                        const isTraceExpanded = expandedTraceKeys[traceKey] !== undefined
-                          ? expandedTraceKeys[traceKey]
-                          : !isTurnDone;
-
-                        return (
-                          <TurnExecutionAccordion
-                            msg={msg}
-                            isStreamingThisTurn={isTurnActive}
-                            agentLabel={msg.senderAgentName || msg.senderAgentId || selectedAgent.name || selectedAgent.slug || selectedAgentId.replace(/^bot:agent360:/i, "")}
-                          />
-                        );
-                      })()}
-
-                      {/* Subtle split dash divider between execution steps and final synthesis */}
-                      {hasSteps && msg.content && (
-                        <div className="py-1 flex items-center justify-center">
-                          <div className="w-full border-t border-dashed border-[#242432]/60" />
-                        </div>
-                      )}
-
-                      {/* 2. Formatted Main Response Content: left-aligned, transparent, no background, no border */}
                       {/* Loading & Responding Indicator showing which Agent is currently responding */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
                         <div
@@ -7490,6 +7497,18 @@ const handleBatchDeleteSelectedChats = () => {
                                 </span>
                               )}
                             </div>
+
+                            {/* Detail mở rộng ở sau cùng tin nhắn: Thinking & Tool Execution trace (Hình 2) */}
+                            {(hasSteps || hasTools || Boolean(msg.reasoning)) && (
+                              <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-white/10">
+                                <TurnExecutionAccordion
+                                  msg={msg}
+                                  isStreamingThisTurn={Boolean((isStreaming || isCurrentSessionRunning) && isLastTurn)}
+                                  agentLabel={msg.senderAgentName || msg.senderAgentId || selectedAgent.name || selectedAgent.slug || selectedAgentId.replace(/^bot:agent360:/i, "")}
+                                  onOpenModal={() => setActiveThinkingModalMsg(msg)}
+                                />
+                              </div>
+                            )}
                           </div>
                           {/* Visual Karaoke sentence pill indicator during TTS readout */}
                           {speakingMsgId === msg.id && speakingSentence && (
@@ -7500,9 +7519,9 @@ const handleBatchDeleteSelectedChats = () => {
                             </div>
                           )}
 
-                          {/* Message Turn Action CTAs: Hidden by default, only shown on hover */}
+                          {/* Message Turn Action CTAs: Desktop hover toolbar, hidden on mobile */}
                           {!(isStreaming && isLastTurn) && (
-                          <div className={`flex items-center gap-1 pt-1 mt-1 select-none transition-opacity duration-150 ${
+                          <div className={`hidden sm:flex items-center gap-1 pt-1 mt-1 select-none transition-opacity duration-150 ${
                             speakingMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"
                           }`}>
                             {/* 0. Star / Bookmark Turn CTA */}
@@ -7595,6 +7614,27 @@ const handleBatchDeleteSelectedChats = () => {
                               </button>
                             </Tooltip>
                           </div>
+                          )}
+
+                          {/* Mobile Action Menu Button for Assistant Message */}
+                          {!(isStreaming && isLastTurn) && (
+                            <div className="sm:hidden flex items-center pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setMobileActionMsg({
+                                  id: msg.id,
+                                  content: msg.content,
+                                  turnIdx: mIdx,
+                                  role: "assistant",
+                                  hasThinking: Boolean(hasSteps || hasTools || msg.reasoning),
+                                  rawMsg: msg,
+                                })}
+                                className="p-1 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                                aria-label="Tùy chọn tin nhắn"
+                              >
+                                <MoreHorizontal size={14} />
+                              </button>
+                            </div>
                           )}
                         </>
                       )}
@@ -12143,7 +12183,7 @@ ${chat.id}`);
       )}
 
       {/* ========================================================= */}
-      {/* MOBILE HOLD-TOUCH / LONG-PRESS ACTION SHEET: BOT RESPONSE */}
+      {/* MOBILE HOLD-TOUCH / LONG-PRESS ACTION SHEET: MESSAGE TURN */}
       {/* ========================================================= */}
       {mobileActionMsg && (
         <div
@@ -12157,7 +12197,9 @@ ${chat.id}`);
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#22222e]">
               <div className="min-w-0 flex-1 pr-2">
-                <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Message Turn Actions</span>
+                <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">
+                  {mobileActionMsg.role === "user" ? "User Prompt Actions" : "Assistant Turn Actions"}
+                </span>
                 <p className="text-xs text-neutral-400 truncate max-w-xs italic">
                   "{mobileActionMsg.content.slice(0, 60)}..."
                 </p>
@@ -12173,7 +12215,7 @@ ${chat.id}`);
 
             {/* Quick Actions List */}
             <div className="space-y-1">
-              {/* 1. Star / Bookmark Turn */}
+              {/* Star / Bookmark */}
               <button
                 type="button"
                 onClick={() => {
@@ -12183,10 +12225,10 @@ ${chat.id}`);
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Star size={15} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
-                <span>{starredMsgIds.includes(mobileActionMsg.id) ? "Bỏ đánh dấu sao câu trả lời" : "Đánh dấu sao (Star / Bookmark)"}</span>
+                <span>{starredMsgIds.includes(mobileActionMsg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao (Star / Bookmark)"}</span>
               </button>
 
-              {/* 2. Copy Response */}
+              {/* Copy */}
               <button
                 type="button"
                 onClick={() => {
@@ -12198,41 +12240,69 @@ ${chat.id}`);
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Copy size={15} className="text-neutral-300" />
-                <span>Sao chép toàn bộ phản hồi (Copy)</span>
+                <span>Sao chép nội dung (Copy)</span>
               </button>
 
-              {/* 3. Read Aloud (TTS) */}
-              <button
-                type="button"
-                onClick={() => {
-                  const content = mobileActionMsg.content;
-                  const id = mobileActionMsg.id;
-                  setMobileActionMsg(null);
-                  if (speakingMsgId === id) {
-                    stopSpeaking();
-                    setSpeakingMsgId(null);
-                  } else {
-                    setSpeakingMsgId(id);
-                    speakText(content, {
-                      onSegmentChange: (seg) => setSpeakingSentence(seg),
-                      onEnd: () => {
-                        setSpeakingMsgId(null);
-                        setSpeakingSentence(null);
-                      },
-                      onError: () => {
-                        setSpeakingMsgId(null);
-                        setSpeakingSentence(null);
-                      },
-                    });
-                  }
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <Volume2 size={15} className="text-[#f8a87c]" />
-                <span>Đọc to phản hồi bằng giọng nói (TTS)</span>
-              </button>
+              {/* Edit Prompt (chỉ dành cho user prompt) */}
+              {mobileActionMsg.role === "user" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = mobileActionMsg.content;
+                    setMobileActionMsg(null);
+                    setInputText(text);
+                    if (textareaRef.current) {
+                      textareaRef.current.style.height = "auto";
+                      textareaRef.current.focus();
+                      setTimeout(() => {
+                        if (textareaRef.current) {
+                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                          textareaRef.current.setSelectionRange(text.length, text.length);
+                        }
+                      }, 0);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <Edit2 size={15} className="text-cyan-400" />
+                  <span>Chỉnh sửa câu hỏi (Edit Prompt)</span>
+                </button>
+              )}
 
-              {/* 4. Branch / Fork Session */}
+              {/* Read Aloud TTS (chỉ dành cho assistant response) */}
+              {mobileActionMsg.role !== "user" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const content = mobileActionMsg.content;
+                    const id = mobileActionMsg.id;
+                    setMobileActionMsg(null);
+                    if (speakingMsgId === id) {
+                      stopSpeaking();
+                      setSpeakingMsgId(null);
+                    } else {
+                      setSpeakingMsgId(id);
+                      speakText(content, {
+                        onSegmentChange: (seg) => setSpeakingSentence(seg),
+                        onEnd: () => {
+                          setSpeakingMsgId(null);
+                          setSpeakingSentence(null);
+                        },
+                        onError: () => {
+                          setSpeakingMsgId(null);
+                          setSpeakingSentence(null);
+                        },
+                      });
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <Volume2 size={15} className="text-[#f8a87c]" />
+                  <span>Đọc to phản hồi bằng giọng nói (TTS)</span>
+                </button>
+              )}
+
+              {/* Fork Session */}
               <button
                 type="button"
                 onClick={() => {
@@ -12243,25 +12313,52 @@ ${chat.id}`);
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <GitFork size={15} className="text-cyan-400" />
-                <span>Tách nhánh phiên mới từ đây (Fork Session)</span>
+                <span>Tách nhánh phiên mới từ đây (Fork)</span>
               </button>
 
-              {/* 5. Forward to Another Agent */}
-              <button
-                type="button"
-                onClick={() => {
-                  const content = mobileActionMsg.content;
-                  setMobileActionMsg(null);
-                  setForwardModalMsg(content);
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <Share2 size={15} className="text-purple-400" />
-                <span>Chuyển tiếp cho Agent khác tiếp nối</span>
-              </button>
+              {/* Forward to Another Agent (chỉ dành cho assistant response) */}
+              {mobileActionMsg.role !== "user" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const content = mobileActionMsg.content;
+                    setMobileActionMsg(null);
+                    setForwardModalMsg(content);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <Share2 size={15} className="text-purple-400" />
+                  <span>Chuyển tiếp cho Agent khác tiếp nối</span>
+                </button>
+              )}
+
+              {/* View Thinking & Tools (chỉ dành cho assistant response có thinking) */}
+              {mobileActionMsg.hasThinking && mobileActionMsg.rawMsg && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const raw = mobileActionMsg.rawMsg;
+                    setMobileActionMsg(null);
+                    if (raw) setActiveThinkingModalMsg(raw);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors cursor-pointer"
+                >
+                  <Sparkles size={15} className="text-emerald-400" />
+                  <span>Xem chi tiết Thinking & Công cụ thực thi</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
+      )}
+
+      {/* Global Shared Thinking Modal */}
+      {activeThinkingModalMsg && (
+        <AgentThinkingModal
+          msg={activeThinkingModalMsg}
+          agentLabel={activeThinkingModalMsg.senderAgentName || activeThinkingModalMsg.senderAgentId || selectedAgent.name}
+          onClose={() => setActiveThinkingModalMsg(null)}
+        />
       )}
       {/* Global Toast Primitive Notification */}
       <Toast
