@@ -3276,11 +3276,11 @@ const handleBatchDeleteSelectedChats = () => {
       activeTraceIdxRef.current = targetIdx;
 
       // Position minimal tooltip next to tick
-      const tickEl = document.querySelector(`[data-trace-tick-idx="${targetIdx}"]`);
+      const tickEl = document.querySelector(`[data-trace-tick-idx="${targetIdx}"]`) as HTMLElement;
       if (tickEl) {
         const rect = tickEl.getBoundingClientRect();
         setTraceCardPos({
-          right: Math.round(window.innerWidth - rect.left + 10),
+          right: Math.round(window.innerWidth - rect.left + 12),
           top: Math.round(rect.top + rect.height / 2),
         });
       }
@@ -4623,8 +4623,8 @@ const handleBatchDeleteSelectedChats = () => {
         return;
       }
 
-      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to quick-navigate User Request Trace (when not typing in textarea)
-      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && !isInputFocused) {
+      // 2b. Keyboard Navigation: Alt + ArrowUp / ArrowDown to quick-navigate User Request Trace (always triggers, even when input focused)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         const userTurns = userTurnsRef.current;
         if (userTurns.length > 0) {
           e.preventDefault();
@@ -7023,7 +7023,7 @@ const handleBatchDeleteSelectedChats = () => {
               }}
             >
               {/* Ticks waveform stack: centered vertically, hugging right edge */}
-              <div className="flex flex-col items-end gap-[6px] py-2 px-1 max-h-[60vh] overflow-y-auto no-scrollbar">
+              <div className="flex flex-col items-end gap-[6px] py-2 px-1 max-h-[70vh] overflow-visible select-none">
                 {userTurns.map((turn, tIdx) => {
                   const isHovered = hoveredTraceIdx === tIdx;
                   const isCurrentActive = activeTraceIdx === tIdx;
@@ -7039,53 +7039,46 @@ const handleBatchDeleteSelectedChats = () => {
                   }
 
                   return (
-                    <button
-                      key={turn.msg.id || tIdx}
-                      data-trace-tick-idx={tIdx}
-                      type="button"
-                      aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
-                      onMouseEnter={(e) => {
-                        setHoveredTraceIdx(tIdx);
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        setTraceCardPos({
-                          right: Math.round(window.innerWidth - rect.left + 10),
-                          top: Math.round(rect.top + rect.height / 2),
-                        });
-                        if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
-                      }}
-                      onClick={() => scrollToUserTurn(tIdx)}
-                      className={`h-[2.5px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
-                        isHovered
-                          ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-125"
-                          : isBookmarked
-                          ? "bg-amber-500/90 dark:bg-amber-400/80 hover:bg-amber-600 dark:hover:bg-amber-300"
-                          : isCurrentActive
-                          ? "bg-slate-700 dark:bg-white/80 shadow-[0_0_4px_rgba(0,0,0,0.2)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]"
-                          : "bg-neutral-300 hover:bg-neutral-500 dark:bg-neutral-600/70 dark:hover:bg-neutral-300"
-                      }`}
-                    />
+                    <div key={turn.msg.id || tIdx} className="relative flex items-center justify-end">
+                      {/* Clean minimal tooltip positioned directly relative to this tick item */}
+                      {isHovered && (
+                        <div
+                          className="absolute right-full mr-2.5 z-50 max-w-[280px] sm:max-w-[340px] px-2.5 py-1 rounded-lg bg-neutral-900/95 dark:bg-[#181820]/95 text-white dark:text-neutral-100 text-[11px] shadow-lg backdrop-blur-md border border-neutral-700/60 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-1.5 whitespace-nowrap select-none"
+                        >
+                          <span className="font-mono text-[10px] text-[#f8a87c] font-semibold shrink-0">
+                            #{tIdx + 1}
+                          </span>
+                          <span className="truncate max-w-[220px] sm:max-w-[280px] font-normal leading-tight">
+                            {turn.msg.content.trim()}
+                          </span>
+                        </div>
+                      )}
+
+                      <button
+                        data-trace-tick-idx={tIdx}
+                        type="button"
+                        aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
+                        onMouseEnter={() => {
+                          setHoveredTraceIdx(tIdx);
+                          if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+                        }}
+                        onClick={() => scrollToUserTurn(tIdx)}
+                        className={`h-[2.5px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
+                          isHovered
+                            ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-125"
+                            : isBookmarked
+                            ? "bg-amber-500/90 dark:bg-amber-400/80 hover:bg-amber-600 dark:hover:bg-amber-300"
+                            : isCurrentActive
+                            ? "bg-slate-700 dark:bg-white/80 shadow-[0_0_4px_rgba(0,0,0,0.2)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]"
+                            : "bg-neutral-300 hover:bg-neutral-500 dark:bg-neutral-600/70 dark:hover:bg-neutral-300"
+                        }`}
+                      />
+                    </div>
                   );
                 })}
               </div>
 
-              {/* Clean, lightweight minimal tooltip: aligned vertically with tick, positioned to the left */}
-              {activeTurnItem && (
-                <div
-                  style={{
-                    top: `${effectiveCardPos.top}px`,
-                    right: `${effectiveCardPos.right}px`,
-                    transform: "translateY(-50%)",
-                  }}
-                  className="fixed z-50 max-w-[280px] sm:max-w-[340px] px-3 py-1.5 rounded-lg bg-neutral-900/95 dark:bg-[#1a1a20]/95 text-white dark:text-neutral-200 text-xs shadow-lg backdrop-blur-md border border-neutral-700/50 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2"
-                >
-                  <span className="font-mono text-[10px] text-[#f8a87c] shrink-0 font-medium">
-                    #{hoveredTraceIdx! + 1}
-                  </span>
-                  <p className="truncate font-normal leading-tight text-[11px] select-none">
-                    {activeTurnItem.msg.content.trim()}
-                  </p>
-                </div>
-              )}
+
             </div>
           );
         })()}
