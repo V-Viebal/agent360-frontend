@@ -264,7 +264,7 @@ function AgentThinkingModal({
   return (
     <div
       data-testid="agent-thinking-modal"
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
@@ -12009,7 +12009,7 @@ ${chat.id}`);
       {mobileActionAgent && (
         <div
           onClick={() => setMobileActionAgent(null)}
-          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-[85] flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
