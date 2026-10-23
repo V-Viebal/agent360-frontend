@@ -209,6 +209,7 @@ import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSetti
 import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { SettingsModal } from "../components/SettingsModal";
+import { AgentSettingsModal, AgentSettingsTab } from "../components/AgentSettingsModal";
 import { PermissionsModal } from "../components/PermissionsModal";
 import { OnboardingChecklistWidget, recordMilestone } from "../components/OnboardingChecklistWidget";
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
@@ -1862,9 +1863,11 @@ export function GrokBotWorkspace() {
     }
   }, [chatParam, selectedAgentId]);
 
-  // Rightmost bot info tab: 'Details' | 'Library' | 'Computer'
-  const [rightTab, setRightTab] = useState<"Computer" | "Apps" | "Agents" | "Details">("Computer");
-    const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
+  // Rightmost bot info tab: 'Computer' | 'Details' | 'Library'
+  const [rightTab, setRightTab] = useState<"Computer" | "Details" | "Library">("Computer");
+  const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
+  const [isAgentSettingsModalOpen, setIsAgentSettingsModalOpen] = useState(false);
+  const [agentSettingsModalTab, setAgentSettingsModalTab] = useState<AgentSettingsTab>("general");
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
@@ -3945,7 +3948,7 @@ const handleBatchDeleteSelectedChats = () => {
   }, [isBrowserModalOpen]);
 
   useEffect(() => {
-    if (rightTab === "Details" && detailSubTab === "Library" && workspaceFiles.length === 0) {
+    if ((rightTab === "Library" || (rightTab === "Details" && detailSubTab === "Library")) && workspaceFiles.length === 0) {
       loadWorkspaceTree();
     }
   }, [rightTab, detailSubTab]);
@@ -5853,6 +5856,16 @@ const handleBatchDeleteSelectedChats = () => {
                                     }}
                                   />
                                   <DropdownMenuItem
+                                    icon={<Settings size={13} className="text-[#f8a87c]" />}
+                                    label="Cài đặt Agent (Settings)"
+                                    onClick={() => {
+                                      handleSelectAgent(ag);
+                                      setAgentSettingsModalTab("general");
+                                      setIsAgentSettingsModalOpen(true);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
                                     icon={<Bot size={13} className="text-cyan-400" />}
                                     label="Xem thông số kỹ thuật"
                                     onClick={() => {
@@ -6077,6 +6090,16 @@ const handleBatchDeleteSelectedChats = () => {
                                     onClick={() => {
                                       handleSelectAgent(ag);
                                       setTimeout(() => handleNewChat(), 50);
+                                      setActiveAgentMenuId(null);
+                                    }}
+                                  />
+                                  <DropdownMenuItem
+                                    icon={<Settings size={13} className="text-[#f8a87c]" />}
+                                    label="Cài đặt Agent (Settings)"
+                                    onClick={() => {
+                                      handleSelectAgent(ag);
+                                      setAgentSettingsModalTab("general");
+                                      setIsAgentSettingsModalOpen(true);
                                       setActiveAgentMenuId(null);
                                     }}
                                   />
@@ -7530,8 +7553,8 @@ const handleBatchDeleteSelectedChats = () => {
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText("");
-                            handleToggleBotInfo(false);
-                            setRightTab("Apps");
+                            setAgentSettingsModalTab("apps_mcp");
+                            setIsAgentSettingsModalOpen(true);
                           },
                         },
                         {
@@ -7542,9 +7565,8 @@ const handleBatchDeleteSelectedChats = () => {
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText("");
-                            handleToggleBotInfo(false);
-                            setRightTab("Details");
-                            setDetailSubTab("Memory");
+                            setAgentSettingsModalTab("memory_skills");
+                            setIsAgentSettingsModalOpen(true);
                           },
                         },
                         {
@@ -8088,8 +8110,8 @@ const handleBatchDeleteSelectedChats = () => {
                           type="button"
                           onClick={() => {
                             setIsPlusMenuOpen(false);
-                            handleToggleBotInfo(false);
-                            setRightTab("Apps");
+                            setAgentSettingsModalTab("apps_mcp");
+                            setIsAgentSettingsModalOpen(true);
                           }}
                           className="p-1 rounded-md text-neutral-400 hover:text-[#f8a87c] hover:bg-white/5 transition-colors cursor-pointer"
                           aria-label="View Apps in sidebar"
@@ -8217,8 +8239,8 @@ const handleBatchDeleteSelectedChats = () => {
                           type="button"
                           onClick={() => {
                             setIsPlusMenuOpen(false);
-                            handleToggleBotInfo(false);
-                            setRightTab("Agents");
+                            setAgentSettingsModalTab("subagents");
+                            setIsAgentSettingsModalOpen(true);
                           }}
                           className="p-1 rounded-md text-neutral-400 hover:text-[#f8a87c] hover:bg-white/5 transition-colors cursor-pointer"
                           aria-label="View Subagents in sidebar"
@@ -8526,12 +8548,11 @@ const handleBatchDeleteSelectedChats = () => {
                               if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
                                 handleSelectLoopMode("goal");
                               } else if (selected.id === "cmd-mcp") {
-                                handleToggleBotInfo(false);
-                                setRightTab("Apps");
+                                setAgentSettingsModalTab("apps_mcp");
+                                setIsAgentSettingsModalOpen(true);
                               } else if (selected.id === "cmd-memories") {
-                                handleToggleBotInfo(false);
-                                setRightTab("Details");
-                                setDetailSubTab("Memory");
+                                setAgentSettingsModalTab("memory_skills");
+                                setIsAgentSettingsModalOpen(true);
                               } else if (selected.id === "cmd-new-chat") {
                                 handleNewChat();
                               } else if (selected.id === "cmd-pin-chat" && selectedChatId) {
@@ -9811,19 +9832,37 @@ ${chat.id}`);
         )}
         {!isBotInfoCollapsed && (
           <>
-            {/* Clean Header with Mobile Close Button */}
+            {/* Clean Header with Agent Settings Trigger & Mobile Close Button */}
             <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-3 shrink-0 bg-[var(--bg-sidebar)]">
-              <span className="text-xs font-mono text-neutral-400">Agent Specification</span>
-              <button aria-label="Close Agent Specification" data-ux-target-min="24"
-                onClick={() => {
-                  handleToggleBotInfo(true);
-                  setMobileBotInfoOpen(false);
-                }}
-                className="h-6 w-6 rounded-md hover:bg-[#1c1c24] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer transition-colors"
-                title="Close Agent Specification"
-              >
-                <X size={14} />
-              </button>
+              <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">Agent Detail</span>
+              <div className="flex items-center gap-1">
+                {!hasNoAgents && selectedAgent.id && (
+                  <Tooltip content="Mở Cài đặt Agent (Model, Apps, Sub-Agents, Channels, Memory)" placement="bottom">
+                    <button
+                      type="button"
+                      aria-label="Mở Cài đặt Agent"
+                      onClick={() => {
+                        setAgentSettingsModalTab("general");
+                        setIsAgentSettingsModalOpen(true);
+                      }}
+                      className="h-7 px-2 rounded-lg bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 flex items-center gap-1.5 text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] cursor-pointer transition-colors"
+                    >
+                      <Settings size={12} />
+                      <span>Cài đặt</span>
+                    </button>
+                  </Tooltip>
+                )}
+                <button aria-label="Close Agent Specification" data-ux-target-min="24"
+                  onClick={() => {
+                    handleToggleBotInfo(true);
+                    setMobileBotInfoOpen(false);
+                  }}
+                  className="h-6 w-6 rounded-md hover:bg-slate-200/70 dark:hover:bg-[#1c1c24] flex items-center justify-center text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors"
+                  title="Close Agent Specification"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
 
             {hasNoAgents || !selectedAgent.id ? (
@@ -9831,32 +9870,31 @@ ${chat.id}`);
                 <div className="w-12 h-12 rounded-2xl bg-[#f8a87c]/10 border border-[#f8a87c]/25 flex items-center justify-center text-[#f8a87c]">
                   <Bot size={24} />
                 </div>
-                <h3 className="text-xs font-semibold text-white">Chưa chọn Agent</h3>
+                <h3 className="text-xs font-semibold text-slate-900 dark:text-white">Chưa chọn Agent</h3>
                 <p className="text-[11px] text-neutral-400 max-w-[220px] leading-relaxed">
                   Tài khoản của bạn chưa có Agent nào được gán để hiển thị thông số kỹ thuật.
                 </p>
               </div>
             ) : (
             <>
-            {/* Dedicated Agent Identity Avatar matching Left Sidebar & Interactive Model Switcher */}
-            <div className="p-5 flex flex-col items-center text-center border-b border-[#1c1c22]">
-              {/* Agent Avatar matching left sidebar */}
+            {/* Compact Agent Identity Header */}
+            <div className="p-4 flex flex-col items-center text-center border-b border-neutral-200 dark:border-[#1c1c22]">
               <div
                 ref={mascotRef}
-                onClick={() => setIsAvatarSetupModalOpen(true)}
-                className="relative mb-2.5 transition-transform hover:scale-105 cursor-pointer group"
-                title={`${selectedAgent.name} (${selectedAgent.roleTag || "Agent"})`}
+                onClick={() => {
+                  setAgentSettingsModalTab("general");
+                  setIsAgentSettingsModalOpen(true);
+                }}
+                className="relative mb-2 transition-transform hover:scale-105 cursor-pointer group"
+                title="Bấm để mở Cài đặt Agent"
               >
-                <AgentAvatar agent={selectedAgent} size="xl" className="shadow-xl" />
-                
-                {/* Active Status Beacon Badge: Red when degraded, Green when healthy/online */}
+                <AgentAvatar agent={selectedAgent} size="lg" className="shadow-lg" />
                 <span
-                  className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-[#0c0c0e] ${
+                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-[#0c0c0e] ${
                     selectedAgent.status === "degraded"
                       ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse"
                       : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
                   }`}
-                  title={selectedAgent.status === "degraded" ? "Sự cố hạ tầng" : "Đang hoạt động (Online)"}
                 />
               </div>
 
@@ -9878,132 +9916,46 @@ ${chat.id}`);
                 )}
               </div>
 
-              {/* Interactive Model Selector Dropdown */}
-              <div className="relative mt-1.5">
-                <button aria-label="Click to change active model" data-ux-target-min="24"
+              <div className="mt-1 flex items-center gap-2 text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+                <span>{selectedAgent.roleTag || "Agent"}</span>
+                <span>•</span>
+                <button
                   type="button"
-                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                  disabled={isChangingModel}
-                  className="flex items-center gap-1.5 text-[11px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 px-2.5 py-1 rounded-full cursor-pointer transition-all disabled:opacity-50"
-                  title="Click to change active model"
+                  onClick={() => {
+                    setAgentSettingsModalTab("general");
+                    setIsAgentSettingsModalOpen(true);
+                  }}
+                  className="text-[#e0682b] dark:text-[#f8a87c] hover:underline cursor-pointer"
+                  title="Đổi mô hình AI trong Cài đặt Agent"
                 >
-                  <span className="truncate max-w-[150px]">
-                    {isChangingModel ? "Updating model..." : (selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model)}
-                  </span>
-                  <ChevronDown
-                    size={11}
-                    className={`transition-transform duration-200 ${isModelDropdownOpen ? "rotate-180" : ""}`}
-                  />
+                  {selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}
                 </button>
-
-                {/* Model selection dropdown menu (Clean, Unique Models, No Provider Noise) */}
-                {isModelDropdownOpen && (() => {
-                  // Build distinct list of unique models configured and enabled across active agents & verified fleet
-                  const agentConfiguredModels = agents.map((a) => a.model).filter(Boolean);
-                  const baseList = availableModels.length > 0 ? availableModels : [
-                    { providerId: "llm360coding", providerName: "LLM360", model: "gpt-5.6-luna", name: "gpt-5.6-luna" },
-                    { providerId: "llm360coding", providerName: "LLM360", model: "grok-4.7", name: "grok-4.7" },
-                    { providerId: "llm360coding", providerName: "LLM360", model: "gpt-6-sol", name: "gpt-6-sol" },
-                    { providerId: "llm360coding", providerName: "LLM360", model: "grok-4.6", name: "grok-4.6" },
-                    { providerId: "llm360coding", providerName: "LLM360", model: "claude-opus-4.6-thinking", name: "claude-opus-4.6-thinking" },
-                    { providerId: "llm360coding", providerName: "LLM360", model: "gemini-3.7-flash-tiered", name: "gemini-3.7-flash-tiered" },
-                  ];
-
-                  // Deduplicate strictly by model string without provider prefixes
-                  const uniqueMap = new Map<string, typeof baseList[0]>();
-                  for (const m of baseList) {
-                    const clean = m.model.includes("/") ? m.model.split("/").pop()! : m.model;
-                    if (clean && !uniqueMap.has(clean) && clean !== "metadata_health") {
-                      uniqueMap.set(clean, { ...m, model: clean });
-                    }
-                  }
-                  // Ensure current agent model is always present in list
-                  if (selectedAgent.model && !uniqueMap.has(selectedAgent.model)) {
-                    uniqueMap.set(selectedAgent.model, {
-                      providerId: "llm360coding",
-                      providerName: "",
-                      model: selectedAgent.model,
-                      name: selectedAgent.model,
-                    });
-                  }
-
-                  const uniqueModelsList = Array.from(uniqueMap.values()).filter((m) => {
-                    if (!modelSearchQuery.trim()) return true;
-                    return m.model.toLowerCase().includes(modelSearchQuery.toLowerCase());
-                  });
-
-                  return (
-                  <div className="absolute left-1/2 -translate-x-1/2 z-50 mt-1.5 w-64 rounded-xl bg-[#14141c] border border-[#2a2a38] p-1.5 shadow-lg backdrop-blur-md animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-1.5 pb-1.5 text-[10px] font-mono text-neutral-400 border-b border-[#22222e] flex items-center justify-between">
-                      <span className="font-semibold text-white">Mô hình trí tuệ</span>
-                      <span className="text-[9px] text-[#f8a87c] font-mono">{uniqueModelsList.length} models</span>
-                    </div>
-
-                    {/* Instant Model Search */}
-                    <div className="my-1.5 flex items-center gap-1.5 bg-[#1a1a24] border border-[#28283a] focus-within:border-[#f8a87c] rounded-lg px-2 py-1 text-xs">
-                      <Search size={12} className="text-neutral-400 shrink-0" />
-                      <input
-                        type="text"
-                        autoFocus
-                        value={modelSearchQuery}
-                        onChange={(e) => setModelSearchQuery(e.target.value)}
-                        placeholder="Tìm mô hình (grok, gpt, claude)..."
-                        className="w-full bg-transparent text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
-                      />
-                      {modelSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setModelSearchQuery("")}
-                          className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
-                        >
-                          <X size={11} />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="space-y-0.5 max-h-56 overflow-y-auto mt-1 text-left">
-                      {uniqueModelsList.map((m) => {
-                        const isCurrent = selectedAgent.model === m.model;
-                        return (
-                          <div
-                            key={m.model}
-                            onClick={() => handleSelectModel(m.model)}
-                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
-                              isCurrent
-                                ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold border border-[#f8a87c]/30"
-                                : "text-neutral-300 hover:bg-[#1a1a24] hover:text-white"
-                            }`}
-                          >
-                            <span className="truncate text-[11px] font-mono">{m.model}</span>
-                            {isCurrent && <Check size={12} className="text-[#f8a87c] shrink-0" />}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  );
-                })()}
               </div>
             </div>
 
-            {/* 4 Main Tabs: Computer | Apps | Agents | Details */}
+            {/* 3 Streamlined Tabs: Computer | Details | Library */}
             <div className="flex items-center justify-around border-b border-neutral-200 dark:border-[#1c1c22] text-xs font-medium text-neutral-500 dark:text-neutral-400 px-2 shrink-0">
-              {(["Computer", "Apps", "Agents", "Details"] as const).map((tab) => (
+              {(["Computer", "Details", "Library"] as const).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setRightTab(tab)}
+                  onClick={() => {
+                    setRightTab(tab);
+                    if (tab === "Library" && workspaceFiles.length === 0) {
+                      loadWorkspaceTree();
+                    }
+                  }}
                   className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-mono ${
                     rightTab === tab
                       ? "text-neutral-900 dark:text-white border-[#f8a87c] font-semibold"
                       : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
                   }`}
                 >
-                  {tab}
+                  {tab === "Library" && workspaceFiles.length > 0 ? `Library (${workspaceFiles.length})` : tab}
                 </button>
               ))}
             </div>
 
-            {/* Tab Content */}
+            {/* Tab Content: Computer | Details | Library */}
             <div className="flex-1 p-3.5 overflow-y-auto scrollbar-hover">
               {rightTab === "Computer" && (() => {
                 const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
@@ -10048,8 +10000,6 @@ ${chat.id}`);
                         className="cursor-pointer group flex items-center justify-center rounded-b-2xl bg-white dark:bg-black transition-colors"
                         title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
                       >
-                        {/* The full Selkies desktop is only opened on demand (modal); a hidden 1024x768 live
-                            iframe kept a second stream running per viewer and resized the shared display. */}
                         <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
                         {browserTarget.profile && (
                           <div data-testid="agent-browser-profile" className="absolute top-1.5 left-1.5 z-[5] px-1.5 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
@@ -10062,7 +10012,6 @@ ${chat.id}`);
                           </div>
                         )}
 
-                        {/* Hover Overlay: Chế độ mặc định khi người dùng hover vào preview computer */}
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-10 select-none">
                           <div className="h-9 w-9 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                             <Maximize2 size={16} className="stroke-[2.5]" />
@@ -10077,430 +10026,216 @@ ${chat.id}`);
                 );
               })()}
 
-              {rightTab === "Apps" && (
-                <AgentConnectedAppsTab
-                  agentId={selectedAgent.id}
-                  agentName={selectedAgent.name}
-                  onOpenConnectModal={() => setIsConnectAppsOpen(true)}
-                  onRefreshTrigger={mcpRefreshTrigger}
-                />
-              )}
-
-              {rightTab === "Agents" && (
-                <div className="space-y-4">
-                  {/* Team Topology / Org Structure trigger */}
-                  <div className="p-3 rounded-2xl bg-gradient-to-r from-[#f8a87c]/10 via-[#f8a87c]/5 to-transparent border border-[#f8a87c]/20 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-xl bg-[#f8a87c]/20 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] shrink-0">
-                        <Network size={16} />
-                      </div>
-                      <div className="flex flex-col min-w-0 text-left">
-                        <span className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
-                          Sơ đồ Đội ngũ & Tổ chức
-                          <span className="px-1.5 py-0.2 rounded-full bg-[#f8a87c]/20 text-[#f8a87c] text-[9px] font-mono font-bold">A2A</span>
-                        </span>
-                        <span className="text-[10px] text-neutral-400 font-mono truncate">
-                          Vị trí của {selectedAgent.name} trong mạng lưới
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsTopologyModalOpen(true)}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#f8a87c] hover:bg-[#f8a87c]/90 text-neutral-950 text-xs font-medium font-mono shrink-0 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
-                      title="Mở sơ đồ mạng lưới và xem vị trí của agent này"
-                    >
-                      <span>Xem sơ đồ</span>
-                      <ArrowUpRight size={13} />
-                    </button>
-                  </div>
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Internal</div>
-                  <AgentSubAgentsTab agentId={selectedAgent.id} agentName={selectedAgent.name} allAgents={agents} />
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-500 pt-2 border-t border-[#22222e]">External (AgentTeams A2A)</div>
-                  <ExternalSubAgentsTab agentId={selectedAgent.id} agentName={selectedAgent.name} />
-                </div>
-              )}
-
               {rightTab === "Details" && (
-                <div className="space-y-4 text-xs text-neutral-300 font-sans pb-4 flex flex-col h-full">
-                  {/* Details Sub-Tabs: Overview | Memory | Library */}
-                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#14141c] border border-[#22222e] text-xs font-mono select-none shrink-0">
-                    {(["Overview", "Memory", "Library"] as const).map((st) => (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => {
-                          setDetailSubTab(st);
-                          if (st === "Library" && workspaceFiles.length === 0) {
-                            loadWorkspaceTree();
-                          }
-                        }}
-                        className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all cursor-pointer font-medium ${
-                          detailSubTab === st
-                            ? "bg-[#222230] text-[#f8a87c] font-semibold shadow-xs border border-[#f8a87c]/30"
-                            : "text-neutral-400 hover:text-white hover:bg-white/5 border border-transparent"
-                        }`}
-                      >
-                        {st === "Library" ? `Library (${workspaceFiles.length})` : st}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Sub-tab 1: Memory */}
-                  {detailSubTab === "Memory" && (
-                    <AgentMemoryTab
-                      agentId={selectedAgent.id}
-                      agentName={selectedAgent.name}
-                      agentSlug={selectedAgent.slug}
-                    />
-                  )}
-
-                  {/* Sub-tab 2: Library (Workspace Files) */}
-                  {detailSubTab === "Library" && (() => {
-                    const filteredWorkspaceFiles = librarySearchQuery.trim()
-                      ? workspaceFiles.filter((node) =>
-                          node.name.toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
-                          node.path.toLowerCase().includes(librarySearchQuery.toLowerCase())
-                        )
-                      : workspaceFiles;
-
-                    return (
-                    <div className="space-y-3 text-xs flex flex-col flex-1 min-h-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-white">
-                          Workspace Files ({filteredWorkspaceFiles.length}{librarySearchQuery.trim() ? ` / ${workspaceFiles.length}` : ""})
-                        </span>
-                        <button
-                          aria-label="Refresh workspace tree"
-                          data-ux-target-min="24"
-                          onClick={loadWorkspaceTree}
-                          disabled={isLoadingTree}
-                          className="text-neutral-400 hover:text-white p-1 rounded hover:bg-[#1a1a22] transition-colors cursor-pointer"
-                          title="Refresh workspace tree"
-                        >
-                          <RefreshCw
-                            size={12}
-                            className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Instant File Filter */}
-                      <div className="flex items-center gap-1.5 bg-[#14141c] border border-[#22222e] rounded-lg px-2 py-1 text-xs">
-                        <Search size={12} className="text-neutral-400 shrink-0" />
-                        <input
-                          type="text"
-                          value={librarySearchQuery}
-                          onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                          placeholder="Filter files (.md, .py, .yaml)..."
-                          className="w-full bg-transparent text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
-                        />
-                        {librarySearchQuery && (
-                          <button
-                            type="button"
-                            onClick={() => setLibrarySearchQuery("")}
-                            className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
-                          >
-                            <X size={11} />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* File Tree List */}
-                      <div className="bg-[#14141a] border border-[#1e1e26] rounded-xl p-2 max-h-48 overflow-y-auto space-y-1 font-mono text-[11px]">
-                        {isLoadingTree ? (
-                          <div className="space-y-1.5 py-1">
-                            <div className="h-6 w-3/4 rounded-md skeleton-shimmer" />
-                            <div className="h-6 w-5/6 rounded-md skeleton-shimmer" />
-                            <div className="h-6 w-2/3 rounded-md skeleton-shimmer" />
-                          </div>
-                        ) : filteredWorkspaceFiles.length === 0 ? (
-                          <div className="text-center py-4 text-neutral-500 font-mono">
-                            {librarySearchQuery ? `No files matching "${librarySearchQuery}"` : "No files found in workspace"}
-                          </div>
-                        ) : (
-                          filteredWorkspaceFiles.map((node) => {
-                            const isSelected = selectedFilePath === node.path;
-                            return (
-                              <div
-                                key={node.path}
-                                onClick={() => handleSelectFile(node)}
-                                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                                  isSelected
-                                    ? "bg-[#22222e] text-[#f8a87c] font-medium"
-                                    : "text-neutral-300 hover:bg-[#1c1c24]"
-                                }`}
-                              >
-                                {node.kind === "directory" ? (
-                                  <Folder size={13} className="text-amber-400 shrink-0" />
-                                ) : (
-                                  <FileText size={13} className="text-neutral-400 shrink-0" />
-                                )}
-                                <span className="truncate flex-1">{node.name}</span>
-                                {node.size !== null && node.size !== undefined && (
-                                  <span className="text-[9px] text-neutral-600">
-                                    {Math.round(node.size / 1024)}k
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      {/* Selected File Content Preview */}
-                      {selectedFilePath && (
-                        <div className="flex-1 flex flex-col bg-[#14141a] border border-[#1e1e26] rounded-xl overflow-hidden min-h-[140px] max-h-64">
-                          <div className="h-8 px-2.5 bg-[#181822] border-b border-[#20202c] flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                            <span className="truncate text-white">{selectedFilePath.split("/").pop()}</span>
-                            <span className="text-[9px] text-neutral-500">Read-Only</span>
-                          </div>
-                          <div className="flex-1 p-2 overflow-auto font-mono text-[10px] text-neutral-300 whitespace-pre-wrap leading-relaxed select-text">
-                            {isLoadingFile ? "Loading file content..." : fileContent || "Empty file"}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    );
-                  })()}
-
-                  {/* Sub-tab 3: Overview */}
-                  {detailSubTab === "Overview" && (
-                    <div className="space-y-4">
-
-
-                  {/* Real-time Turn Telemetry & Performance Metrics (Moved to Detail Tab per request) */}
-                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
-                    <div className="flex items-center justify-between text-white font-semibold">
+                <div className="space-y-3.5 text-xs text-slate-700 dark:text-neutral-300 font-sans pb-4">
+                  {/* Real-time Turn Telemetry & Performance Metrics */}
+                  <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2">
+                    <div className="flex items-center justify-between text-slate-900 dark:text-white font-semibold">
                       <span className="flex items-center gap-1.5">
                         <Activity size={13} className="text-[#f8a87c]" />
                         <span>Hiệu năng & Telemetry</span>
                       </span>
                       {turnTelemetry?.estimatedCostUsd !== undefined && (
-                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                           ${turnTelemetry.estimatedCostUsd.toFixed(4)}
                         </span>
                       )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
                         <span className="text-[10px] text-neutral-500">TTFT (Latency)</span>
-                        <span className="text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
+                        <span className="text-amber-500 dark:text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
                         <span className="text-[10px] text-neutral-500">Tốc độ sinh (Speed)</span>
-                        <span className="text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
+                        <span className="text-emerald-500 dark:text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
                         <span className="text-[10px] text-neutral-500">Thời gian phản hồi</span>
-                        <span className="text-neutral-300 font-bold">{turnTelemetry?.totalDurationMs ? `${(turnTelemetry.totalDurationMs / 1000).toFixed(1)}s` : "—"}</span>
+                        <span className="text-slate-800 dark:text-neutral-300 font-bold">{turnTelemetry?.totalDurationMs ? `${(turnTelemetry.totalDurationMs / 1000).toFixed(1)}s` : "—"}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-[#0f0f15] border border-[#1e1e28] flex flex-col gap-0.5">
+                      <div className="p-2 rounded-lg bg-white dark:bg-[#0f0f15] border border-slate-200/80 dark:border-[#1e1e28] flex flex-col gap-0.5">
                         <span className="text-[10px] text-neutral-500">Model hoạt động</span>
-                        <span className="text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || selectedAgent.model}>
+                        <span className="text-[#e0682b] dark:text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || selectedAgent.model}>
                           {(turnTelemetry?.model || selectedAgent.model).split("/").pop()}
                         </span>
                       </div>
                     </div>
                   </div>
-                  {/* Agent Persona & System Governance */}
-                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
-                    <div className="flex items-center justify-between text-white font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <Bot size={13} className="text-[#f8a87c]" />
-                        <span>Persona & Governance</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
-                        {(selectedAgent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer")}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-neutral-400 font-mono space-y-1 bg-[#0f0f15] p-2.5 rounded-lg border border-[#1e1e28]">
-                      <div className="flex items-center justify-between text-neutral-300">
-                        <span>Role Constitution:</span>
-                        <span className="text-emerald-400">Enforced (Pass)</span>
-                      </div>
-                      <div className="flex items-center justify-between text-neutral-400">
-                        <span>Identity Profile:</span>
-                        <span className="text-neutral-200 truncate max-w-[150px]">SOUL.md ({selectedAgent.slug})</span>
-                      </div>
-                      <div className="flex items-center justify-between text-neutral-400">
-                        <span>Skills Bound:</span>
-                        <span className="text-[#f8a87c]">{skills.length} available</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Agent Description */}
-                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-1.5">
-                    <div className="font-semibold text-white flex items-center justify-between">
-                      <span>Description</span>
+                  {/* Agent Description & Overview */}
+                  <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-1.5">
+                    <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
+                      <span>Mô tả nhiệm vụ (Description)</span>
                       <span className="text-[10px] font-mono text-neutral-500 uppercase">{selectedAgent.roleTag}</span>
                     </div>
-                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                    <p className="text-[11px] text-slate-600 dark:text-neutral-400 leading-relaxed select-text">
                       {selectedAgent.description}
                     </p>
                   </div>
 
-                  {/* Connected Dispatch Channels */}
-                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white flex items-center gap-1.5">
-                        <Radio size={13} className="text-[#f8a87c]" />
-                        <span>Integrated Channels</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        {channels.filter((c) => c.enabled).length} active
-                      </span>
-                    </div>
-
-                    {loadingChannels ? (
-                      <div className="space-y-2 py-1">
-                        <div className="h-10 w-full rounded-xl skeleton-shimmer border border-[#22222e]" />
-                        <div className="h-10 w-full rounded-xl skeleton-shimmer border border-[#22222e]" />
-                        <div className="h-10 w-full rounded-xl skeleton-shimmer border border-[#22222e]" />
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-1.5">
-                        {channels
-                          .filter((c) => ["console", "telegram", "discord", "slack", "matrix", "voice"].includes(c.type))
-                          .map((ch) => (
-                            <div
-                              key={ch.type}
-                              className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all ${
-                                ch.enabled
-                                  ? "bg-[#181824] border-[#2e2e42] text-white"
-                                  : "bg-[#101016] border-[#1e1e28] text-neutral-500 opacity-70"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`h-2 w-2 rounded-full shrink-0 ${ch.enabled ? "bg-emerald-400 animate-pulse" : "bg-neutral-600"}`} />
-                                <span className="font-mono text-xs font-medium uppercase tracking-wider">{ch.name}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <button aria-label={`Configure ${ch.name} credentials & filters`} data-ux-target-min="24"
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedChannelForConfig(ch);
-                                    setIsChannelModalOpen(true);
-                                  }}
-                                  className="p-1 rounded text-neutral-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                                  title={`Configure ${ch.name} credentials & filters`}
-                                >
-                                  <SlidersHorizontal size={12} />
-                                </button>
-                                <button data-ux-target-min="24"
-                                  type="button"
-                                  onClick={() => handleToggleChannel(ch.type, ch.enabled)}
-                                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                    ch.enabled
-                                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
-                                      : "bg-white/5 border-white/10 text-neutral-400 hover:text-white hover:bg-white/10"
-                                  }`}
-                                >
-                                  {ch.enabled ? "Enabled" : "Disabled"}
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Scheduled Tasks & Automation (Cron) */}
-                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white flex items-center gap-1.5">
-                        <Clock size={13} className="text-[#f8a87c]" />
-                        <span>Schedules & Automations</span>
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button aria-label="Add automated cron schedule" data-ux-target-min="24"
-                          type="button"
-                          onClick={() => {
-                            setSelectedJobForConfig(null);
-                            setIsScheduleModalOpen(true);
-                          }}
-                          className="flex items-center gap-1 bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all cursor-pointer"
-                          title="Add automated cron schedule"
-                        >
-                          <Plus size={11} />
-                          <span>Add</span>
-                        </button>
-                        <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
-                          {schedules.length}
-                        </span>
-                      </div>
-                    </div>
-
-                    {loadingSchedules ? (
-                      <div className="space-y-2 py-1">
-                        <div className="h-14 w-full rounded-xl skeleton-shimmer border border-[#22222e]" />
-                        <div className="h-14 w-full rounded-xl skeleton-shimmer border border-[#22222e]" />
-                      </div>
-                    ) : schedules.length === 0 ? (
-                      <div className="text-center py-3 text-neutral-500 font-mono text-[11px] border border-dashed border-[#22222e] rounded-lg">
-                        No active cron schedules for this agent.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {schedules.map((job) => (
-                          <div
-                            key={job.id}
-                            onClick={() => {
-                              setSelectedJobForConfig(job);
-                              setIsScheduleModalOpen(true);
-                            }}
-                            className="p-2.5 rounded-lg bg-[#181822] hover:bg-[#1f1f2e] border border-[#242432] hover:border-[#383850] space-y-1.5 shadow-xs cursor-pointer transition-all group"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-white text-xs truncate max-w-[170px]" title={job.name}>
-                                {job.name}
-                              </span>
-                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                {job.cronExpr}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-neutral-400 leading-snug line-clamp-2">
-                              {job.promptSnippet}
-                            </p>
-                            <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-0.5 border-t border-white/5">
-                              <span>Target: #{job.targetChannel}</span>
-                              <span className="text-neutral-400">{job.timezone}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Live Skills Pool */}
-                  <div className="rounded-xl bg-[#14141c] border border-[#22222e] p-3 space-y-2">
-                    <div className="font-semibold text-white flex items-center justify-between">
+                  {/* Runtime & Node Summary */}
+                  <div className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2">
+                    <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        <Sparkles size={13} className="text-[#f8a87c]" />
-                        <span>Live Skills</span>
+                        <Bot size={13} className="text-[#f8a87c]" />
+                        <span>Thông số Runtime</span>
                       </span>
-                      <span className="text-[10px] font-mono text-neutral-400">({skills.length})</span>
+                      <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        Online
+                      </span>
                     </div>
-                    <div className="space-y-1 font-mono text-[11px] max-h-36 overflow-y-auto pr-1">
-                      {skills.map((s) => (
-                        <div
-                          key={s}
-                          className="px-2 py-1 rounded bg-[#16161e] border border-[#20202a] text-neutral-300 flex items-center justify-between"
-                        >
-                          <span className="truncate">{s}</span>
-                          <span className="text-[9px] text-[#f8a87c] font-sans">Ready</span>
-                        </div>
-                      ))}
+                    <div className="text-[11px] font-mono space-y-1.5 bg-white dark:bg-[#0f0f15] p-2.5 rounded-lg border border-slate-200/80 dark:border-[#1e1e28]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500">Node hạ tầng:</span>
+                        <span className="text-slate-800 dark:text-neutral-200 truncate max-w-[160px]">{selectedAgent.node}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500">Phiên bản:</span>
+                        <span className="text-slate-800 dark:text-neutral-200">{(selectedAgent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer")}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500">Hồ sơ SOUL:</span>
+                        <span className="text-slate-800 dark:text-neutral-200 truncate max-w-[160px]">SOUL.md ({selectedAgent.slug})</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Quick Card to open Full Agent Settings Modal */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAgentSettingsModalTab("general");
+                      setIsAgentSettingsModalOpen(true);
+                    }}
+                    className="w-full p-3 rounded-xl bg-gradient-to-r from-[#f8a87c]/15 via-[#f8a87c]/5 to-transparent border border-[#f8a87c]/30 hover:border-[#f8a87c] flex items-center justify-between text-left transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/20 flex items-center justify-center text-[#e0682b] dark:text-[#f8a87c] shrink-0">
+                        <Settings size={15} className="group-hover:rotate-45 transition-transform duration-200" />
+                      </div>
+                      <div className="truncate">
+                        <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                          Cài đặt Chuyên sâu Agent
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">
+                          Apps, MCP, Đội ngũ A2A, Kênh, Cron & Bộ nhớ
+                        </div>
+                      </div>
                     </div>
-                  )}
+                    <ChevronRight size={14} className="text-[#f8a87c] group-hover:translate-x-0.5 transition-transform shrink-0" />
+                  </button>
                 </div>
               )}
 
-              
+              {rightTab === "Library" && (() => {
+                const filteredWorkspaceFiles = librarySearchQuery.trim()
+                  ? workspaceFiles.filter((node) =>
+                      node.name.toLowerCase().includes(librarySearchQuery.toLowerCase()) ||
+                      node.path.toLowerCase().includes(librarySearchQuery.toLowerCase())
+                    )
+                  : workspaceFiles;
+
+                return (
+                  <div className="space-y-3 text-xs flex flex-col flex-1 min-h-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        Workspace Files ({filteredWorkspaceFiles.length}{librarySearchQuery.trim() ? ` / ${workspaceFiles.length}` : ""})
+                      </span>
+                      <button
+                        aria-label="Refresh workspace tree"
+                        data-ux-target-min="24"
+                        onClick={loadWorkspaceTree}
+                        disabled={isLoadingTree}
+                        className="text-neutral-400 hover:text-slate-900 dark:hover:text-white p-1 rounded hover:bg-slate-200/60 dark:hover:bg-[#1a1a22] transition-colors cursor-pointer"
+                        title="Refresh workspace tree"
+                      >
+                        <RefreshCw
+                          size={12}
+                          className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Instant File Filter */}
+                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] rounded-lg px-2 py-1 text-xs">
+                      <Search size={12} className="text-neutral-400 shrink-0" />
+                      <input
+                        type="text"
+                        value={librarySearchQuery}
+                        onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                        placeholder="Filter files (.md, .py, .yaml)..."
+                        className="w-full bg-transparent text-slate-900 dark:text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
+                      />
+                      {librarySearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setLibrarySearchQuery("")}
+                          className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* File Tree List */}
+                    <div className="bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl p-2 max-h-56 overflow-y-auto space-y-1 font-mono text-[11px]">
+                      {isLoadingTree ? (
+                        <div className="space-y-1.5 py-1">
+                          <div className="h-6 w-3/4 rounded-md skeleton-shimmer" />
+                          <div className="h-6 w-5/6 rounded-md skeleton-shimmer" />
+                          <div className="h-6 w-2/3 rounded-md skeleton-shimmer" />
+                        </div>
+                      ) : filteredWorkspaceFiles.length === 0 ? (
+                        <div className="text-center py-4 text-neutral-500 font-mono">
+                          {librarySearchQuery ? `No files matching "${librarySearchQuery}"` : "No files found in workspace"}
+                        </div>
+                      ) : (
+                        filteredWorkspaceFiles.map((node) => {
+                          const isSelected = selectedFilePath === node.path;
+                          return (
+                            <div
+                              key={node.path}
+                              onClick={() => handleSelectFile(node)}
+                              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
+                                isSelected
+                                  ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-medium"
+                                  : "text-slate-700 dark:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#1c1c24]"
+                              }`}
+                            >
+                              {node.kind === "directory" ? (
+                                <Folder size={13} className="text-amber-400 shrink-0" />
+                              ) : (
+                                <FileText size={13} className="text-neutral-400 shrink-0" />
+                              )}
+                              <span className="truncate flex-1">{node.name}</span>
+                              {node.size !== null && node.size !== undefined && (
+                                <span className="text-[9px] text-neutral-500">
+                                  {Math.round(node.size / 1024)}k
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Selected File Content Preview */}
+                    {selectedFilePath && (
+                      <div className="flex-1 flex flex-col bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl overflow-hidden min-h-[160px] max-h-72">
+                        <div className="h-8 px-2.5 bg-slate-100 dark:bg-[#181822] border-b border-slate-200 dark:border-[#20202c] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+                          <span className="truncate text-slate-900 dark:text-white font-semibold">{selectedFilePath.split("/").pop()}</span>
+                          <span className="text-[9px] text-neutral-500">Read-Only</span>
+                        </div>
+                        <div className="flex-1 p-2.5 overflow-auto font-mono text-[10px] text-slate-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed select-text">
+                          {isLoadingFile ? "Loading file content..." : fileContent || "Empty file"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             </>
             )}
@@ -10593,6 +10328,41 @@ ${chat.id}`);
         isOpen={isAvatarSetupModalOpen}
         onClose={() => setIsAvatarSetupModalOpen(false)}
         agent={selectedAgent}
+      />
+
+      <AgentSettingsModal
+        isOpen={isAgentSettingsModalOpen}
+        onClose={() => setIsAgentSettingsModalOpen(false)}
+        initialTab={agentSettingsModalTab}
+        agent={selectedAgent}
+        allAgents={agents}
+        availableModels={availableModels}
+        isChangingModel={isChangingModel}
+        onSelectModel={handleSelectModel}
+        onOpenAvatarModal={() => setIsAvatarSetupModalOpen(true)}
+        togglingAgentId={togglingAgentId}
+        onToggleAgentEnabled={handleToggleAgentEnabled}
+        onOpenConnectModal={() => setIsConnectAppsOpen(true)}
+        mcpRefreshTrigger={mcpRefreshTrigger}
+        onOpenTopologyModal={() => setIsTopologyModalOpen(true)}
+        channels={channels}
+        loadingChannels={loadingChannels}
+        onToggleChannel={handleToggleChannel}
+        onConfigureChannel={(ch) => {
+          setSelectedChannelForConfig(ch);
+          setIsChannelModalOpen(true);
+        }}
+        schedules={schedules}
+        loadingSchedules={loadingSchedules}
+        onAddSchedule={() => {
+          setSelectedJobForConfig(null);
+          setIsScheduleModalOpen(true);
+        }}
+        onEditSchedule={(job) => {
+          setSelectedJobForConfig(job);
+          setIsScheduleModalOpen(true);
+        }}
+        skills={skills}
       />
 
       <SettingsModal
