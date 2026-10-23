@@ -5412,12 +5412,12 @@ const handleBatchDeleteSelectedChats = () => {
         }}
         className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform ${
           mobileAgentsOpen
-            ? "w-[85vw] max-w-[380px] translate-x-0 shadow-2xl"
+            ? "w-full sm:w-[380px] translate-x-0 shadow-2xl"
             : isCompactMode
-            ? "w-[85vw] max-w-[380px] -translate-x-full invisible"
+            ? "w-full sm:w-[380px] -translate-x-full invisible"
             : isLeftSidebarCollapsed
-            ? "w-[85vw] max-w-[380px] lg:w-[64px] -translate-x-full max-lg:invisible lg:translate-x-0"
-            : "w-[85vw] max-w-[380px] -translate-x-full max-lg:invisible lg:translate-x-0"
+            ? "w-full sm:w-[380px] lg:w-[64px] -translate-x-full max-lg:invisible lg:translate-x-0"
+            : "w-full sm:w-[380px] -translate-x-full max-lg:invisible lg:translate-x-0"
         }`}
         aria-hidden={!mobileAgentsOpen && isCompactMode ? true : undefined}
       >
@@ -9031,7 +9031,7 @@ const handleBatchDeleteSelectedChats = () => {
         }}
         className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok relative ${
           mobileChatsOpen
-            ? "flex w-[85vw] max-w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
+            ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
             : isChatListCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0"
             : "hidden lg:flex lg:w-[320px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
@@ -9936,7 +9936,7 @@ ${chat.id}`);
         className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok relative ${
           isBotInfoCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0"
-            : "w-[85vw] max-w-[560px] sm:w-[380px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
+            : "w-full sm:w-[380px] xl:w-[380px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
         }`}
       >
         {/* Right Pane Draggable Resizer Splitter */}
