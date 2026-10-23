@@ -7,7 +7,7 @@ export function cleanModelDisplayName(rawModel: string): string {
   return m;
 }
 
-import { InfraAgent, AgentSession, ChatMessage } from "../types/agent";
+import { InfraAgent, AgentSession, ChatMessage, SessionCollaborationRoom, SessionRoomTurn } from "../types/agent";
 import { operatorKey } from "./a2aApi";
 import { redirectToSignIn } from "./authFetch";
 import { authConfig } from "../config/authConfig";
@@ -625,6 +625,11 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         timestamp: ts
       });
     } else if (role === "assistant") {
+      const msgSenderAgentId = m.metadata?.sender_agent_id || undefined;
+      const msgRoomId = m.metadata?.room_id || undefined;
+      if (currentAsst && (currentAsst.senderAgentId !== msgSenderAgentId || currentAsst.roomId !== msgRoomId)) {
+        currentAsst = null;
+      }
       if (!currentAsst) {
         currentAsst = {
           id: m.id || `${chatId}-${mIdx}-asst`,
@@ -633,7 +638,14 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           timestamp: ts,
           steps: [],
           toolCalls: [],
-          reasoning: ""
+          reasoning: "",
+          senderAgentId: msgSenderAgentId,
+          senderAgentName: m.metadata?.sender_agent_name || undefined,
+          authorRole: m.metadata?.author_role || undefined,
+          roomId: msgRoomId,
+          matrixRoomId: m.metadata?.matrix_room_id || undefined,
+          elementRoomUrl: m.metadata?.element_room_url || undefined,
+          metadata: m.metadata || undefined
         };
         turns.push(currentAsst);
       }
@@ -1454,5 +1466,96 @@ export async function stopConsoleChat(sessionId: string, agentId?: string): Prom
   } catch (err) {
     console.warn("stopConsoleChat error:", err);
     return false;
+  }
+}
+
+
+export async function fetchChatSessionRoom(agentId: string, chatId: string): Promise<SessionCollaborationRoom | null> {
+  if (!agentId || !chatId) return null;
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/room`,
+      { headers: { Accept: "application/json" } },
+      cleanId
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.room || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function pullAgentIntoChatRoom(
+  agentId: string,
+  chatId: string,
+  collaboratorAgentId: string,
+  options: {
+    objective?: string;
+    contextSnippet?: string;
+    hostSessionId?: string;
+    autoDispatch?: boolean;
+  } = {}
+): Promise<{ room: SessionCollaborationRoom; collaborator_turn?: SessionRoomTurn } | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const cleanCollab = collaboratorAgentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/room/pull`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          collaborator_agent_id: cleanCollab,
+          objective: options.objective,
+          context_snippet: options.contextSnippet,
+          host_session_id: options.hostSessionId,
+          auto_dispatch: Boolean(options.autoDispatch),
+        }),
+      },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("pullAgentIntoChatRoom error:", err);
+    return null;
+  }
+}
+
+export async function postChatRoomMessage(
+  agentId: string,
+  chatId: string,
+  body: {
+    author_id: string;
+    author_role?: string;
+    kind?: string;
+    text: string;
+    target_agent_id?: string;
+  }
+): Promise<{ room: SessionCollaborationRoom; turn: SessionRoomTurn } | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/room/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("postChatRoomMessage error:", err);
+    return null;
   }
 }

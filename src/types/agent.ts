@@ -41,6 +41,44 @@ export interface ChatStep {
   exitCode?: number;
 }
 
+export interface SessionRoomParticipant {
+  agent_id: string;
+  display_name: string;
+  role: "host" | "collaborator" | "manager" | "admin" | string;
+  matrix_user_id: string;
+  status: "idle" | "running" | "completed" | "awaiting_input" | string;
+  joined_at: string;
+}
+
+export interface SessionRoomTurn {
+  id: string;
+  turn_no: number;
+  author_id: string;
+  author_name: string;
+  author_role: "host" | "collaborator" | "manager" | "admin" | "user" | string;
+  kind: "request" | "collaborator_progress" | "collaborator_reply" | "question" | "answer" | "manager_guard" | "synthesis" | string;
+  text: string;
+  target_agent_id?: string | null;
+  created_at: string;
+}
+
+export interface SessionCollaborationRoom {
+  room_id: string;
+  matrix_room_id: string;
+  element_room_url: string;
+  host_agent_id: string;
+  host_chat_id: string;
+  host_session_id: string;
+  participants: SessionRoomParticipant[];
+  status: "idle" | "collaborator_running" | "awaiting_clarification" | "synthesizing" | "completed" | string;
+  active_collaborator_id?: string | null;
+  max_room_turns: number;
+  current_turn_count: number;
+  turns: SessionRoomTurn[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -51,6 +89,12 @@ export interface ChatMessage {
   steps?: ChatStep[];
   toolCalls?: ToolCallItem[];
   metadata?: Record<string, any>;
+  senderAgentId?: string;
+  senderAgentName?: string;
+  authorRole?: "host" | "collaborator" | "manager" | "admin" | string;
+  roomId?: string;
+  matrixRoomId?: string;
+  elementRoomUrl?: string;
 }
 
 export interface InfraAgent {

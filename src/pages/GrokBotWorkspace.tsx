@@ -161,7 +161,7 @@ import {
   ArrowUp,
   Bookmark,
 } from "lucide-react";
-import { InfraAgent, ChatMessage, AgentSession } from "../types/agent";
+import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom } from "../types/agent";
 
 /** Short haptic tick on supporting devices; silently ignored elsewhere. */
 const triggerHaptic = (ms = 10) => {
@@ -203,6 +203,8 @@ import {
   updateAgentLoopMode,
   AgentLoopModeConfig,
   toggleAgentEnabled,
+  fetchChatSessionRoom,
+  pullAgentIntoChatRoom,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
@@ -1876,6 +1878,8 @@ export function GrokBotWorkspace() {
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
+  const [activeSessionRoom, setActiveSessionRoom] = useState<SessionCollaborationRoom | null>(null);
+  const [isRoomInspectOpen, setIsRoomInspectOpen] = useState(false);
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
     try {
       const saved = selectedAgentId ? localStorage.getItem(`skyer_loop_mode_${selectedAgentId}`) : null;
@@ -3917,6 +3921,11 @@ const handleBatchDeleteSelectedChats = () => {
       return next;
     });
 
+    // Load Session-Sticky Collaboration Room if bound to this chat session
+    fetchChatSessionRoom(selectedAgentId, selectedChatId).then((r) => {
+      if (mounted) setActiveSessionRoom(r);
+    }).catch(() => {});
+
     // 2. Background Revalidation from API
     fetchChatMessages(selectedChatId, selectedAgentId).then((loadedMsgs) => {
       if (!mounted) return;
@@ -4401,8 +4410,27 @@ const handleBatchDeleteSelectedChats = () => {
   }, [selectedChatId, selectedAgentId, isStreaming, isCurrentSessionRunning]);
   const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
   var displayMessages: ChatMessage[] = (() => {
-    if (!liveTurnForView) return messages;
     const base = [...messages];
+    if (activeSessionRoom && activeSessionRoom.host_chat_id === selectedChatId && Array.isArray(activeSessionRoom.turns)) {
+      for (const rt of activeSessionRoom.turns) {
+        if (rt.kind !== "collaborator_reply" && rt.kind !== "question" && rt.kind !== "manager_guard") continue;
+        if (base.some((m) => m.id === rt.id)) continue;
+        base.push({
+          id: rt.id,
+          role: "assistant",
+          content: rt.text,
+          timestamp: rt.created_at,
+          evidenceStatus: "observed",
+          senderAgentId: rt.author_id,
+          senderAgentName: rt.author_name,
+          authorRole: rt.author_role,
+          roomId: activeSessionRoom.room_id,
+          matrixRoomId: activeSessionRoom.matrix_room_id,
+          elementRoomUrl: activeSessionRoom.element_room_url,
+        });
+      }
+    }
+    if (!liveTurnForView) return base;
     const lastUser = [...base].reverse().find((m) => m.role === "user");
     const userText = liveTurnForView.userText?.trim() || (typeof window !== "undefined" && selectedChatId ? sessionStorage.getItem(`agent360_last_prompt_${selectedChatId}`) : null);
     if (userText && (!lastUser || lastUser.content.trim() !== userText)) {
@@ -5291,6 +5319,41 @@ const handleBatchDeleteSelectedChats = () => {
           signal: abortController.signal,
           channel: activeTargetChannel,
           onEvent: (ev) => {
+            if (ev?.object === "room_event" && ev.room) {
+              if (selectedChatIdRef.current === originChatId) {
+                setActiveSessionRoom(ev.room);
+              }
+              return;
+            }
+            if (ev?.object === "room_turn" && ev.turn) {
+              if (ev.room && selectedChatIdRef.current === originChatId) {
+                setActiveSessionRoom(ev.room);
+              }
+              const roomMsg: ChatMessage = {
+                id: ev.turn.id || `room-turn-${Date.now()}`,
+                role: "assistant",
+                content: ev.turn.text || "",
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                evidenceStatus: "observed",
+                senderAgentId: ev.turn.author_id,
+                senderAgentName: ev.turn.author_name,
+                authorRole: ev.turn.author_role,
+                roomId: ev.room?.room_id,
+                matrixRoomId: ev.room?.matrix_room_id,
+                elementRoomUrl: ev.room?.element_room_url,
+              };
+              updateTurnMessages((prev) => {
+                if (prev.some((m) => m.id === roomMsg.id)) return prev;
+                const botIdx = prev.findIndex((m) => m.id === tempBotMsgId);
+                if (botIdx >= 0) {
+                  const copy = [...prev];
+                  copy.splice(botIdx, 0, roomMsg);
+                  return copy;
+                }
+                return [...prev, roomMsg];
+              });
+              return;
+            }
             if (turnAcc.ingest(ev)) paintTurn(turnAcc.done);
           },
         }
@@ -6968,7 +7031,78 @@ const handleBatchDeleteSelectedChats = () => {
             </div>
           ) : (
           <>
-          {/* Lean dialogue flow without redundant banners */}
+          {/* Session-Sticky AgentTeams Collaboration Room Bar ([Agent A, Agent B, Manager, Admin]) */}
+          {activeSessionRoom && activeSessionRoom.host_chat_id === selectedChatId && (
+            <div
+              data-testid="session-collaboration-room-bar"
+              className="mb-3 p-2.5 rounded-xl bg-slate-100/90 dark:bg-[#14141f]/95 border border-cyan-500/30 dark:border-cyan-500/25 shadow-xs flex flex-wrap items-center justify-between gap-2 text-xs font-sans animate-in fade-in duration-150"
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 font-mono text-[10px] font-semibold flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full ${activeSessionRoom.status === "collaborator_running" ? "bg-blue-400 animate-ping" : "bg-emerald-400"}`} />
+                  <span>AgentTeams Room</span>
+                </span>
+                <span className="font-mono text-[10px] text-neutral-500 dark:text-neutral-400 truncate max-w-[220px]" title={activeSessionRoom.matrix_room_id}>
+                  {activeSessionRoom.matrix_room_id}
+                </span>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {activeSessionRoom.participants.map((p) => (
+                    <span
+                      key={p.agent_id}
+                      data-room-participant={p.agent_id}
+                      data-room-role={p.role}
+                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono border flex items-center gap-1 ${
+                        p.role === "host"
+                          ? "bg-[#f8a87c]/15 border-[#f8a87c]/30 text-[#f8a87c]"
+                          : p.role === "collaborator"
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                          : p.role === "manager"
+                          ? "bg-violet-500/15 border-violet-500/30 text-violet-600 dark:text-violet-300"
+                          : "bg-slate-200 dark:bg-white/10 border-slate-300 dark:border-white/15 text-neutral-600 dark:text-neutral-300"
+                      }`}
+                      title={`${p.display_name} (${p.role}) - ${p.matrix_user_id}`}
+                    >
+                      {p.status === "running" && <Loader2 size={9} className="animate-spin shrink-0" />}
+                      <span>@{p.agent_id}</span>
+                      <span className="opacity-70 text-[9px]">({p.role})</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsRoomInspectOpen((prev) => !prev)}
+                  className="px-2 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-300/80 dark:bg-[#1e1e2d] dark:hover:bg-[#28283c] text-slate-700 dark:text-neutral-200 font-mono text-[10px] border border-slate-300 dark:border-[#2e2e42] cursor-pointer transition-colors"
+                >
+                  {isRoomInspectOpen ? "Ẩn Room Log" : `Room Log (${activeSessionRoom.turns?.length || 0})`}
+                </button>
+                <a
+                  href={activeSessionRoom.element_room_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-600 dark:text-cyan-300 font-mono text-[10px] border border-cyan-500/30 flex items-center gap-1 transition-colors"
+                  title="Mở Room trên Element (AgentTeams)"
+                >
+                  <span>Element</span>
+                  <ExternalLink size={10} />
+                </a>
+              </div>
+              {isRoomInspectOpen && (
+                <div className="w-full mt-2 pt-2 border-t border-slate-200 dark:border-white/10 space-y-1.5 max-h-48 overflow-y-auto font-mono text-[11px]">
+                  {activeSessionRoom.turns.map((rt) => (
+                    <div key={rt.id} className="p-1.5 rounded-lg bg-white/80 dark:bg-[#0e0e14] border border-slate-200/70 dark:border-white/5 flex flex-col gap-0.5">
+                      <div className="flex items-center justify-between text-[10px] text-neutral-400">
+                        <span className="font-semibold text-cyan-500">#{rt.turn_no} @{rt.author_id} ({rt.author_role}) · {rt.kind}</span>
+                        <span>{new Date(rt.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                      </div>
+                      <div className="text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words font-sans text-xs">{rt.text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {isLoadingMessages ? (
             <div className="space-y-4 py-2 w-full animate-in fade-in duration-200">
@@ -7211,8 +7345,30 @@ const handleBatchDeleteSelectedChats = () => {
 
                       {msg.content && (
                         <>
+                          {/* Collaborator / Room Routing Badge when response comes from Agent B or Manager in Room */}
+                          {msg.senderAgentId && (
+                            <div
+                              data-testid={`room-msg-badge-${msg.senderAgentId}`}
+                              className="flex items-center gap-1.5 text-[10px] font-mono mb-0.5 px-1 select-none"
+                            >
+                              <span className={`px-1.5 py-0.5 rounded-md border font-semibold ${
+                                msg.authorRole === "manager"
+                                  ? "bg-violet-500/15 border-violet-500/30 text-violet-400"
+                                  : "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                              }`}>
+                                @{msg.senderAgentId} ({msg.senderAgentName || msg.senderAgentId})
+                              </span>
+                              <span className="text-neutral-500">
+                                via AgentTeams Room {msg.matrixRoomId || activeSessionRoom?.matrix_room_id || ""}
+                              </span>
+                            </div>
+                          )}
                           {/* Assistant Response Bubble: Bọc trong background clean card cho cả light và dark mode, co giãn đúng nội dung (fit-content) */}
-                          <div className="inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs transition-colors">
+                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs transition-colors ${
+                            msg.senderAgentId
+                              ? "bg-emerald-500/[0.06] border border-emerald-500/30 text-slate-800 dark:bg-[#111c1a]/90 dark:border-emerald-500/25 dark:text-neutral-100"
+                              : "bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200"
+                          }`}>
                             <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
                               content={msg.content}
@@ -8699,15 +8855,22 @@ const handleBatchDeleteSelectedChats = () => {
                             data-popover-nav-idx={appsCount + subIdx}
                             onClick={() => {
                               setIsPlusMenuOpen(false);
+                              const mentionTag = ag.slug || ag.id.replace(/^bot:agent360:/, "");
                               setInputText((prev) => {
-                                if (isAlreadyMentioned) {
-                                  // Remove the @mention cleanly
+                                if (isAlreadyMentioned || prev.includes(`@${mentionTag}`)) {
                                   return prev
-                                    .replace(new RegExp(`@${ag.name}\\s*`, "g"), "")
+                                    .replace(new RegExp(`@(${ag.name}|${mentionTag})\\s*`, "g"), "")
                                     .trimStart();
                                 }
-                                return prev ? `${prev} @${ag.name} ` : `@${ag.name} `;
+                                return prev ? `${prev} @${mentionTag} ` : `@${mentionTag} `;
                               });
+                              if (selectedChatId && selectedAgentId) {
+                                pullAgentIntoChatRoom(selectedAgentId, selectedChatId, mentionTag, {
+                                  hostSessionId: selectedChat?.session_id || selectedChatId,
+                                }).then((res) => {
+                                  if (res?.room) setActiveSessionRoom(res.room);
+                                });
+                              }
                               textareaRef.current?.focus();
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
