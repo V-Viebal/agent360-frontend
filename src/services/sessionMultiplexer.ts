@@ -22,6 +22,7 @@ export interface SessionUnreadUpdate {
 export interface ActiveSessionsSnapshot {
   type: "active_sessions_snapshot";
   active_session_ids: string[];
+  active_agent_sessions?: Record<string, string[]>;
   unread_session_ids: string[];
   timestamp?: string;
 }

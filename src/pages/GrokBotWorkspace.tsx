@@ -2211,21 +2211,114 @@ export function GrokBotWorkspace() {
   // Ids (chat UUID + channel session id) of the chat currently on screen; a finished turn there is already read.
   const viewedChatIdsRef = useRef<string[]>([]);
   const agentRunningSessionsRef = useRef<Record<string, Set<string>>>({});
+  const sessionAliasesRef = useRef<Record<string, string>>({});
+  const normalizeAgentKey = (idOrSlug?: string | null): string =>
+    (idOrSlug || "").replace(/^bot:agent360:/i, "").trim().toLowerCase();
+
+  const registerSessionAgent = (chatId?: string | null, sessionId?: string | null, agentIdOrSlug?: string | null) => {
+    const normAg = normalizeAgentKey(agentIdOrSlug);
+    if (chatId && normAg) chatAgentMapRef.current[chatId] = normAg;
+    if (sessionId && normAg) chatAgentMapRef.current[sessionId] = normAg;
+    if (chatId && sessionId && chatId !== sessionId) {
+      sessionAliasesRef.current[chatId] = sessionId;
+      sessionAliasesRef.current[sessionId] = chatId;
+    }
+  };
+
+  const syncAgentRunningCounts = () => {
+    const nextCounts: Record<string, number> = {};
+    for (const [key, set] of Object.entries(agentRunningSessionsRef.current)) {
+      const norm = normalizeAgentKey(key);
+      if (!norm) continue;
+      const count = set ? set.size : 0;
+      nextCounts[norm] = count;
+      nextCounts[`bot:agent360:${norm}`] = count;
+    }
+    setRunningAgentIds(nextCounts);
+  };
+
+  const updateAgentSessionRunning = (
+    agentIdOrSlug: string | null | undefined,
+    sessionIds: (string | null | undefined)[],
+    isRunning: boolean
+  ) => {
+    const validIds = sessionIds.filter(Boolean) as string[];
+    if (validIds.length === 0) return;
+
+    const allRelatedIds = new Set<string>(validIds);
+    for (const id of validIds) {
+      const alias = sessionAliasesRef.current[id];
+      if (alias) allRelatedIds.add(alias);
+    }
+
+    let normAg = normalizeAgentKey(agentIdOrSlug);
+    if (!normAg) {
+      for (const id of allRelatedIds) {
+        const mapped = chatAgentMapRef.current[id];
+        if (mapped) {
+          normAg = normalizeAgentKey(mapped);
+          break;
+        }
+      }
+    }
+
+    if (normAg) {
+      for (const id of allRelatedIds) {
+        chatAgentMapRef.current[id] = normAg;
+      }
+      const agentSet = (agentRunningSessionsRef.current[normAg] ||= new Set<string>());
+      if (isRunning) {
+        const canonicalId = validIds[0];
+        for (const id of allRelatedIds) {
+          if (id !== canonicalId) agentSet.delete(id);
+        }
+        agentSet.add(canonicalId);
+      } else {
+        for (const id of allRelatedIds) {
+          agentSet.delete(id);
+        }
+      }
+    } else if (!isRunning) {
+      for (const set of Object.values(agentRunningSessionsRef.current)) {
+        for (const id of allRelatedIds) {
+          set.delete(id);
+        }
+      }
+    }
+    syncAgentRunningCounts();
+  };
+
   const isViewedChat = (id?: string | null) => Boolean(id && !document.hidden && viewedChatIdsRef.current.includes(id));
   const markViewedChatRead = (id: string) => {
-    markChatAsRead(id, selectedAgentId).catch?.(() => {});
+    markChatAsRead(id, selectedAgentIdRef.current).catch?.(() => {});
   };
   useEffect(() => {
     const disconnect = connectSessionMultiplexer({
       onSnapshot: (snapshot: ActiveSessionsSnapshot) => {
         const activeIds = Array.isArray(snapshot.active_session_ids) ? snapshot.active_session_ids : [];
+        if (snapshot.active_agent_sessions && typeof snapshot.active_agent_sessions === "object") {
+          for (const [agKey, sids] of Object.entries(snapshot.active_agent_sessions)) {
+            const normAg = normalizeAgentKey(agKey);
+            if (!normAg || !Array.isArray(sids)) continue;
+            const agentSet = (agentRunningSessionsRef.current[normAg] ||= new Set<string>());
+            for (const sid of sids) {
+              if (!sid) continue;
+              chatAgentMapRef.current[sid] = normAg;
+              agentSet.add(sid);
+            }
+          }
+          syncAgentRunningCounts();
+        }
         setRunningChatIds((prev) => {
-          const preserved = prev.filter((id) => (selectedChatId === id && isStreaming));
+          const preserved = prev.filter((id) => streamingChatIdsRef.current.includes(id));
           return Array.from(new Set([...preserved, ...activeIds]));
         });
         setChats((prev) =>
           prev.map((c) => {
-            const running = activeIds.includes(c.id) || (c.session_id ? activeIds.includes(c.session_id) : false);
+            const running =
+              activeIds.includes(c.id) ||
+              (c.session_id ? activeIds.includes(c.session_id) : false) ||
+              streamingChatIdsRef.current.includes(c.id);
             return {
               ...c,
               is_running: running,
@@ -2238,28 +2331,56 @@ export function GrokBotWorkspace() {
       onTurnUpdate: (update: SessionTurnUpdate) => {
         const sid = update.session_id;
         if (!sid) return;
-        const agId = update.agent_id || selectedAgentId;
-        const agentSet = (agentRunningSessionsRef.current[agId] ||= new Set<string>());
+        const resolvedAgId =
+          update.agent_id ||
+          chatAgentMapRef.current[sid] ||
+          (update.id ? chatAgentMapRef.current[update.id] : undefined);
+        const normAg = normalizeAgentKey(resolvedAgId);
+        const aliasId = sessionAliasesRef.current[sid];
+        const isStillStreamingLocally =
+          streamingChatIdsRef.current.includes(sid) ||
+          (aliasId ? streamingChatIdsRef.current.includes(aliasId) : false);
+
         if (update.is_running) {
-          agentSet.add(sid);
+          updateAgentSessionRunning(normAg, [sid, update.id, aliasId], true);
           setRunningChatIds((prev) => (prev.includes(sid) ? prev : [...prev, sid]));
+          setChats((prev) =>
+            prev.map((c) =>
+              c.id === sid || c.session_id === sid
+                ? { ...c, is_running: true, isRunning: true, status: "running" }
+                : c
+            )
+          );
         } else {
-          agentSet.delete(sid);
-          setRunningChatIds((prev) => prev.filter((id) => id !== sid || (isStreaming && id === selectedChatId)));
-          const viewed = isViewedChat(sid);
+          if (!isStillStreamingLocally) {
+            updateAgentSessionRunning(normAg, [sid, update.id, aliasId], false);
+          }
+          setRunningChatIds((prev) =>
+            prev.filter((id) => (id !== sid && id !== aliasId) || streamingChatIdsRef.current.includes(id))
+          );
+          const viewed = isViewedChat(sid) || (aliasId ? isViewedChat(aliasId) : false);
           if (viewed) markViewedChatRead(sid);
           setChats((prev) =>
             prev.map((c) =>
               c.id === sid || c.session_id === sid
-                ? { ...c, is_running: false, isRunning: false, status: "idle", unread: viewed ? false : true }
+                ? {
+                    ...c,
+                    is_running: isStillStreamingLocally,
+                    isRunning: isStillStreamingLocally,
+                    status: isStillStreamingLocally ? "running" : "idle",
+                    unread: viewed ? false : true
+                  }
                 : c
             )
           );
-          if (!viewed) {
+          if (!viewed && normAg) {
+            const fullKey = `bot:agent360:${normAg}`;
             setUnreadCompletedSessions((prev) => {
-              const list = prev[agId] || [];
-              if (list.includes(sid)) return prev;
-              const next = { ...prev, [agId]: [...list, sid] };
+              const listBare = prev[normAg] || [];
+              const listFull = prev[fullKey] || [];
+              const nextBare = listBare.includes(sid) ? listBare : [...listBare, sid];
+              const nextFull = listFull.includes(sid) ? listFull : [...listFull, sid];
+              const next = { ...prev, [normAg]: nextBare, [fullKey]: nextFull };
               try {
                 localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
               } catch {}
@@ -2267,7 +2388,6 @@ export function GrokBotWorkspace() {
             });
           }
         }
-        setRunningAgentIds((prev) => ({ ...prev, [agId]: agentSet.size }));
       },
       onUnreadUpdate: (update: SessionUnreadUpdate) => {
         const sid = update.session_id;
@@ -2293,7 +2413,7 @@ export function GrokBotWorkspace() {
     return () => {
       disconnect();
     };
-  }, [selectedAgentId, selectedChatId, isStreaming]);
+  }, []);
   // Request Queue: Allows users to enter new requests while agent is in progress
   const [requestQueues, setRequestQueues] = useState<Record<string, string[]>>({});
   const requestQueuesRef = useRef<Record<string, string[]>>({});
@@ -2318,8 +2438,16 @@ export function GrokBotWorkspace() {
 
     streamAbortControllersRef.current[selectedChatId]?.abort();
     delete streamAbortControllersRef.current[selectedChatId];
-    setStreamingChatIds((prev) => prev.filter((id) => id !== selectedChatId));
-    setRunningChatIds((prev) => prev.filter((id) => id !== selectedChatId));
+    setStreamingChatIds((prev) => prev.filter((id) => id !== selectedChatId && id !== targetSessionId));
+    setRunningChatIds((prev) => prev.filter((id) => id !== selectedChatId && id !== targetSessionId));
+    updateAgentSessionRunning(targetAgentSlug, [selectedChatId, targetSessionId], false);
+    setChats((prev) =>
+      prev.map((c) =>
+        c.id === selectedChatId || c.session_id === targetSessionId
+          ? { ...c, is_running: false, isRunning: false, status: "idle" }
+          : c
+      )
+    );
     try {
       sessionStorage.removeItem(`agent360_active_turn_${selectedChatId}`);
       sessionStorage.removeItem(`agent360_last_prompt_${selectedChatId}`);
@@ -3635,23 +3763,50 @@ const handleBatchDeleteSelectedChats = () => {
         if (cancelled || selectedAgentIdRef.current !== currentAgent) return;
 
         setChats(loadedChats);
-        const activeIds = loadedChats
-          .filter((c) => Boolean(c.isRunning || c.status === "running" || c.status === "in_progress"))
-          .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
+        const normCurrentAgent = normalizeAgentKey(currentAgent);
+        for (const c of loadedChats) {
+          registerSessionAgent(c.id, c.session_id, normCurrentAgent);
+        }
+        const activeChatsForAgent = loadedChats.filter((c) =>
+          Boolean(
+            c.isRunning ||
+              c.is_running ||
+              c.status === "running" ||
+              c.status === "in_progress" ||
+              streamingChatIdsRef.current.includes(c.id) ||
+              (c.session_id ? streamingChatIdsRef.current.includes(c.session_id) : false)
+          )
+        );
+        const activeIds = activeChatsForAgent.flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
         const agentChatIds = loadedChats.flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
         setRunningChatIds((prev) => {
-          const nonAgentIds = prev.filter((id) => !agentChatIds.includes(id));
+          const nonAgentIds = prev.filter((id) => !agentChatIds.includes(id) || streamingChatIdsRef.current.includes(id));
           const currentPreserved = (isStreaming && selectedChatId) ? [selectedChatId] : [];
           return Array.from(new Set([...nonAgentIds, ...activeIds, ...currentPreserved]));
         });
-        setRunningAgentIds((prev) => ({ ...prev, [currentAgent]: activeIds.length }));
+        if (normCurrentAgent) {
+          const agentSet = new Set<string>();
+          for (const c of activeChatsForAgent) {
+            agentSet.add(c.id);
+          }
+          for (const streamId of streamingChatIdsRef.current) {
+            if (normalizeAgentKey(chatAgentMapRef.current[streamId]) === normCurrentAgent) {
+              agentSet.add(streamId);
+            }
+          }
+          agentRunningSessionsRef.current[normCurrentAgent] = agentSet;
+          syncAgentRunningCounts();
+        }
         const unreadIds = loadedChats
           .filter((c) => Boolean(c.unread) && !isViewedChat(c.id) && !isViewedChat(c.session_id))
           .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
         if (unreadIds.length > 0) {
+          const fullKey = normCurrentAgent ? `bot:agent360:${normCurrentAgent}` : currentAgent;
           setUnreadCompletedSessions((prev) => ({
             ...prev,
-            [currentAgent]: Array.from(new Set([...(prev[currentAgent] || []), ...unreadIds]))
+            [currentAgent]: Array.from(new Set([...(prev[currentAgent] || []), ...unreadIds])),
+            ...(normCurrentAgent ? { [normCurrentAgent]: Array.from(new Set([...(prev[normCurrentAgent] || []), ...unreadIds])) } : {}),
+            [fullKey]: Array.from(new Set([...(prev[fullKey] || []), ...unreadIds]))
           }));
         }
         setChatsAgentId(currentAgent);
@@ -3838,9 +3993,11 @@ const handleBatchDeleteSelectedChats = () => {
       sse.addEventListener("connected", (e) => {
         try {
           const meta = JSON.parse(e.data);
+          registerSessionAgent(meta.chat_id || selectedChatId, meta.session_id, meta.agent_id || selectedAgentId);
           if (meta.is_running) {
             const ids = [meta.chat_id, meta.session_id, selectedChatId].filter(Boolean) as string[];
             setRunningChatIds((prev) => Array.from(new Set([...prev, ...ids])));
+            updateAgentSessionRunning(meta.agent_id || selectedAgentId, ids, true);
           }
         } catch {}
       });
@@ -3848,20 +4005,39 @@ const handleBatchDeleteSelectedChats = () => {
       sse.addEventListener("session_update", (e) => {
         try {
           const payload = JSON.parse(e.data);
+          registerSessionAgent(payload.chat_id || selectedChatId, payload.session_id, payload.agent_id || selectedAgentId);
           const ids = [payload.chat_id, payload.session_id].filter(Boolean) as string[];
           const isTurnRunning = payload.is_running ?? (payload.last_message && (payload.last_message.status === "in_progress" || payload.last_message.status === "running"));
           if (isTurnRunning) {
             setRunningChatIds((prev) => Array.from(new Set([...prev, ...ids, selectedChatId])));
-          } else {
-            setRunningChatIds((prev) => prev.filter((id) => !ids.includes(id) && (id !== selectedChatId || !isStreaming)));
+            updateAgentSessionRunning(payload.agent_id || selectedAgentId, [...ids, selectedChatId], true);
             setChats((prev) =>
               prev.map((c) => {
                 if (ids.includes(c.id) || (c.session_id && ids.includes(c.session_id))) {
                   return {
                     ...c,
-                    is_running: false,
-                    isRunning: false,
-                    status: "idle"
+                    is_running: true,
+                    isRunning: true,
+                    status: "running"
+                  };
+                }
+                return c;
+              })
+            );
+          } else {
+            const isStillStreaming = ids.some((id) => streamingChatIdsRef.current.includes(id)) || streamingChatIdsRef.current.includes(selectedChatId);
+            setRunningChatIds((prev) => prev.filter((id) => !ids.includes(id) && (id !== selectedChatId || !isStillStreaming)));
+            if (!isStillStreaming) {
+              updateAgentSessionRunning(payload.agent_id || selectedAgentId, [...ids, selectedChatId], false);
+            }
+            setChats((prev) =>
+              prev.map((c) => {
+                if (ids.includes(c.id) || (c.session_id && ids.includes(c.session_id))) {
+                  return {
+                    ...c,
+                    is_running: isStillStreaming,
+                    isRunning: isStillStreaming,
+                    status: isStillStreaming ? "running" : "idle"
                   };
                 }
                 return c;
@@ -3870,9 +4046,16 @@ const handleBatchDeleteSelectedChats = () => {
             const targetChatId = payload.chat_id || payload.session_id;
             if (targetChatId && targetChatId !== selectedChatId && document.hidden) {
               setUnreadCompletedSessions((prev) => {
+                const normAg = normalizeAgentKey(payload.agent_id || selectedAgentId);
+                const fullKey = normAg ? `bot:agent360:${normAg}` : selectedAgentId;
                 const list = prev[selectedAgentId] || [];
                 if (list.includes(targetChatId)) return prev;
-                const updated = { ...prev, [selectedAgentId]: [...list, targetChatId] };
+                const updated = {
+                  ...prev,
+                  [selectedAgentId]: Array.from(new Set([...(prev[selectedAgentId] || []), targetChatId])),
+                  ...(normAg ? { [normAg]: Array.from(new Set([...(prev[normAg] || []), targetChatId])) } : {}),
+                  [fullKey]: Array.from(new Set([...(prev[fullKey] || []), targetChatId]))
+                };
                 try {
                   localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
                 } catch {}
@@ -4097,6 +4280,79 @@ const handleBatchDeleteSelectedChats = () => {
     Boolean(selectedChat && (selectedChat.isRunning || selectedChat.status === "running" || selectedChat.status === "in_progress"))
   );
 
+  const getAgentUnreadList = (ag: { id?: string; slug?: string }): string[] => {
+    const normId = normalizeAgentKey(ag.id);
+    const normSlug = normalizeAgentKey(ag.slug);
+    const set = new Set<string>([
+      ...(ag.id ? unreadCompletedSessions[ag.id] || [] : []),
+      ...(ag.slug ? unreadCompletedSessions[ag.slug] || [] : []),
+      ...(normId ? unreadCompletedSessions[normId] || [] : []),
+      ...(normSlug ? unreadCompletedSessions[normSlug] || [] : []),
+      ...(normId ? unreadCompletedSessions[`bot:agent360:${normId}`] || [] : []),
+    ]);
+    return Array.from(set);
+  };
+
+  const checkIsAgentBusy = (ag: InfraAgent): boolean => {
+    const normId = normalizeAgentKey(ag.id);
+    const normSlug = normalizeAgentKey(ag.slug);
+    const normSelected = normalizeAgentKey(selectedAgentId);
+    const isSelectedAg = Boolean(normSelected && (normId === normSelected || normSlug === normSelected));
+
+    // 1. Check active multiplexer / turn counts across all key variants
+    if (
+      (runningAgentIds[ag.id] || 0) > 0 ||
+      (ag.slug ? (runningAgentIds[ag.slug] || 0) > 0 : false) ||
+      (normId ? (runningAgentIds[normId] || 0) > 0 : false) ||
+      (normSlug ? (runningAgentIds[normSlug] || 0) > 0 : false) ||
+      (normId ? (runningAgentIds[`bot:agent360:${normId}`] || 0) > 0 : false)
+    ) {
+      return true;
+    }
+
+    // 2. Check active session sets tracked in ref
+    if (
+      (normId && (agentRunningSessionsRef.current[normId]?.size || 0) > 0) ||
+      (normSlug && (agentRunningSessionsRef.current[normSlug]?.size || 0) > 0) ||
+      (agentRunningSessionsRef.current[ag.id]?.size || 0) > 0 ||
+      (ag.slug && (agentRunningSessionsRef.current[ag.slug]?.size || 0) > 0)
+    ) {
+      return true;
+    }
+
+    // 3. Check if any currently streaming or running chat belongs to this agent
+    const allActiveChatIds = [...streamingChatIds, ...runningChatIds];
+    for (const cid of allActiveChatIds) {
+      const owner = normalizeAgentKey(chatAgentMapRef.current[cid]);
+      if (owner && (owner === normId || owner === normSlug)) {
+        return true;
+      }
+    }
+
+    // 4. If this is the currently selected agent, also check current streaming/running flags & loaded chats
+    if (isSelectedAg) {
+      if (isStreaming || isCurrentSessionRunning) return true;
+      const normChatsOwner = normalizeAgentKey(chatsAgentId);
+      if (!normChatsOwner || normChatsOwner === normId || normChatsOwner === normSlug) {
+        const hasRunningInChats = chats.some((c) =>
+          Boolean(
+            c.isRunning ||
+              c.is_running ||
+              c.status === "running" ||
+              c.status === "in_progress" ||
+              runningChatIds.includes(c.id) ||
+              (c.session_id ? runningChatIds.includes(c.session_id) : false) ||
+              streamingChatIds.includes(c.id) ||
+              (c.session_id ? streamingChatIds.includes(c.session_id) : false)
+          )
+        );
+        if (hasRunningInChats) return true;
+      }
+    }
+
+    return false;
+  };
+
   // Live turn of the open chat when it runs on another channel (Telegram, Zalo, cron, other console tab).
   // Uses the same QwenPaw event stream as a console send, so reasoning and every executed tool render identically.
   const [liveTurn, setLiveTurn] = useState<{ chatId: string; userText: string | null; msg: ChatMessage } | null>(null);
@@ -4127,6 +4383,14 @@ const handleBatchDeleteSelectedChats = () => {
             sessionStorage.removeItem(`agent360_last_prompt_${chatId}`);
           } catch {}
           setRunningChatIds((prev) => prev.filter((id) => id !== chatId && id !== selectedChat?.session_id));
+          updateAgentSessionRunning(selectedAgentId, [chatId, selectedChat?.session_id], false);
+          setChats((prev) =>
+            prev.map((c) =>
+              c.id === chatId || (selectedChat?.session_id && c.session_id === selectedChat.session_id)
+                ? { ...c, is_running: false, isRunning: false, status: "idle" }
+                : c
+            )
+          );
           markChatAsRead(chatId, selectedAgentId);
         }
       } catch {
@@ -4958,13 +5222,24 @@ const handleBatchDeleteSelectedChats = () => {
       };
       return [...prev, userMsg, initialBotMsg];
     });
+    const targetChatListForStart = chats.some((c) => c.id === originChatId)
+      ? chats
+      : (getCachedAgentChats(originAgentId) || chats);
+    const activeChatForStart =
+      targetChatListForStart.find((c) => c.id === originChatId) ||
+      targetChatListForStart.find((c) => c.session_id === originChatId);
+    const startSessionId = activeChatForStart?.session_id || originChatId;
+    registerSessionAgent(originChatId, startSessionId, targetAgent?.slug || originAgentId);
     setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
     setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
-    setRunningAgentIds((prev) => ({
-      ...prev,
-      [originAgentId]: (prev[originAgentId] || 0) + 1,
-      ...(targetAgent?.slug ? { [targetAgent.slug]: (prev[targetAgent.slug] || 0) + 1 } : {})
-    }));
+    updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, startSessionId], true);
+    setChats((prev) =>
+      prev.map((c) =>
+        c.id === originChatId || c.session_id === startSessionId
+          ? { ...c, is_running: true, isRunning: true, status: "running" }
+          : c
+      )
+    );
 
     // Instantiate active AbortController for this stream turn
     const abortController = new AbortController();
@@ -5080,9 +5355,16 @@ const handleBatchDeleteSelectedChats = () => {
       if (originChatId && (document.hidden || selectedChatIdRef.current !== originChatId)) {
         setChats((prev) => prev.map((c) => (c.id === originChatId ? { ...c, unread: true } : c)));
         setUnreadCompletedSessions((prev) => {
+          const normAg = normalizeAgentKey(targetAgent?.slug || originAgentId);
+          const fullKey = normAg ? `bot:agent360:${normAg}` : originAgentId;
           const list = prev[originAgentId] || [];
           if (list.includes(originChatId)) return prev;
-          const updated = { ...prev, [originAgentId]: [...list, originChatId] };
+          const updated = {
+            ...prev,
+            [originAgentId]: Array.from(new Set([...(prev[originAgentId] || []), originChatId])),
+            ...(normAg ? { [normAg]: Array.from(new Set([...(prev[normAg] || []), originChatId])) } : {}),
+            [fullKey]: Array.from(new Set([...(prev[fullKey] || []), originChatId]))
+          };
           try {
             localStorage.setItem("agent360_unread_sessions", JSON.stringify(updated));
           } catch {}
@@ -5125,13 +5407,17 @@ const handleBatchDeleteSelectedChats = () => {
         setCachedChatMessages(originChatId, finalTranscript, originAgentId);
         delete inflightMessagesRef.current[originChatId];
       }
-      setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
-      setRunningChatIds((prev) => prev.filter((id) => id !== originChatId));
-      setRunningAgentIds((prev) => ({
-        ...prev,
-        [originAgentId]: Math.max(0, (prev[originAgentId] || 1) - 1),
-        ...(targetAgent?.slug ? { [targetAgent.slug]: Math.max(0, (prev[targetAgent.slug] || 1) - 1) } : {})
-      }));
+      const endSessionId = sessionAliasesRef.current[originChatId] || originChatId;
+      setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId && id !== endSessionId));
+      setRunningChatIds((prev) => prev.filter((id) => id !== originChatId && id !== endSessionId));
+      updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, endSessionId], false);
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === originChatId || c.session_id === endSessionId
+            ? { ...c, is_running: false, isRunning: false, status: "idle" }
+            : c
+        )
+      );
       // Process next item in this chat's queue if present
       processNextInQueue(originChatId);
     }
@@ -5324,7 +5610,7 @@ const handleBatchDeleteSelectedChats = () => {
         return pinnedChatIds.includes(c.id);
       }
       if (chatFilterTab === "unread") {
-        return (unreadCompletedSessions[selectedAgent.id] || []).includes(c.id);
+        return getAgentUnreadList(selectedAgent).includes(c.id);
       }
       return true;
     })
@@ -5388,10 +5674,11 @@ const handleBatchDeleteSelectedChats = () => {
       {/* ========================================================= */}
       {/* BACKDROP OVERLAY FOR MOBILE DRAWERS (Click-outside catcher: transparent, no backdrop dimming or blur filter) */}
       {/* ========================================================= */}
-      {mobileAgentsOpen && (
+      {(mobileAgentsOpen || mobileChatsOpen || (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth < 1280)) && (
         <div
           onClick={() => {
             setMobileAgentsOpen(false);
+            setMobileChatsOpen(false);
             setMobileBotInfoOpen(false);
             handleToggleBotInfo(true);
           }}
@@ -5468,9 +5755,9 @@ const handleBatchDeleteSelectedChats = () => {
                 <>
                   {/* Active Agents in Rail */}
                   {activeFilteredAgents.map((ag) => {
-                    const isSelected = ag.id === selectedAgentId;
+                    const isSelected = ag.id === selectedAgentId || ag.slug === selectedAgentId || normalizeAgentKey(ag.id) === normalizeAgentKey(selectedAgentId);
                     const hasError = ag.status === "degraded";
-                    const unreadList = unreadCompletedSessions[ag.id] || [];
+                    const unreadList = getAgentUnreadList(ag);
                     const hasUnreadCompleted = unreadList.length > 0;
 
                     const tooltipText = ag.roleTag ? `${ag.name} (${ag.roleTag})` : ag.name;
@@ -5496,7 +5783,7 @@ const handleBatchDeleteSelectedChats = () => {
                           )}
 
                           {(() => {
-                            const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
+                            const isAgentBusy = checkIsAgentBusy(ag);
                             if (isAgentBusy) {
                               return (
                                 <span
@@ -5609,7 +5896,7 @@ const handleBatchDeleteSelectedChats = () => {
                 placement="top"
                 width="w-64"
               >
-                <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
+                <div className="px-2.5 py-1.5 border-b border-slate-200 dark:border-[#22222e] mb-1">
                   <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
                   <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
@@ -5803,7 +6090,7 @@ const handleBatchDeleteSelectedChats = () => {
               ) : (
                 <>
                   {activeFilteredAgents.map((ag, index) => {
-                    const isSelected = ag.id === selectedAgentId;
+                    const isSelected = ag.id === selectedAgentId || ag.slug === selectedAgentId || normalizeAgentKey(ag.id) === normalizeAgentKey(selectedAgentId);
                     return (
                       <div
                         key={ag.id}
@@ -5873,9 +6160,9 @@ const handleBatchDeleteSelectedChats = () => {
 
                               {(() => {
                                 const hasError = ag.status === "degraded";
-                                const unreadList = unreadCompletedSessions[ag.id] || [];
+                                const unreadList = getAgentUnreadList(ag);
                                 const hasUnreadCompleted = unreadList.length > 0;
-                                const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
+                                const isAgentBusy = checkIsAgentBusy(ag);
 
                                 if (isAgentBusy) {
                                   return (
@@ -6041,7 +6328,7 @@ const handleBatchDeleteSelectedChats = () => {
                       {disabledAgentsExpanded && (
                         <div className="mt-1 space-y-0.5 animate-in fade-in duration-150">
                           {disabledFilteredAgents.map((ag, index) => {
-                            const isSelected = ag.id === selectedAgentId;
+                            const isSelected = ag.id === selectedAgentId || ag.slug === selectedAgentId || normalizeAgentKey(ag.id) === normalizeAgentKey(selectedAgentId);
                             return (
                       <div
                         key={ag.id}
@@ -6111,9 +6398,9 @@ const handleBatchDeleteSelectedChats = () => {
 
                               {(() => {
                                 const hasError = ag.status === "degraded";
-                                const unreadList = unreadCompletedSessions[ag.id] || [];
+                                const unreadList = getAgentUnreadList(ag);
                                 const hasUnreadCompleted = unreadList.length > 0;
-                                const isAgentBusy = (runningAgentIds[ag.id] || 0) > 0 || (ag.id === selectedAgentId && isStreaming);
+                                const isAgentBusy = checkIsAgentBusy(ag);
 
                                 if (isAgentBusy) {
                                   return (
@@ -6311,7 +6598,7 @@ const handleBatchDeleteSelectedChats = () => {
                 placement="top"
                 width="w-72"
               >
-                <div className="px-2.5 py-1.5 border-b border-[#22222e] mb-1">
+                <div className="px-2.5 py-1.5 border-b border-slate-200 dark:border-[#22222e] mb-1">
                   <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
                   <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
@@ -9150,8 +9437,8 @@ const handleBatchDeleteSelectedChats = () => {
                       );
                       const isCUnread = !isCRunning && (
                         Boolean(c.unread) ||
-                        (unreadCompletedSessions[selectedAgent.id] || []).includes(c.id) ||
-                        (c.session_id ? (unreadCompletedSessions[selectedAgent.id] || []).includes(c.session_id) : false)
+                        getAgentUnreadList(selectedAgent).includes(c.id) ||
+                        (c.session_id ? getAgentUnreadList(selectedAgent).includes(c.session_id) : false)
                       );
 
                       return (
@@ -9205,7 +9492,7 @@ const handleBatchDeleteSelectedChats = () => {
                     onChange={(tabId) => setChatFilterTab(tabId as any)}
                     tabs={[
                       { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
-                      { id: "unread", label: "Done", count: (unreadCompletedSessions[selectedAgent.id] || []).filter(id => !archivedChatIds.includes(id)).length || undefined },
+                      { id: "unread", label: "Done", count: getAgentUnreadList(selectedAgent).filter(id => !archivedChatIds.includes(id)).length || undefined },
                       { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
                       { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
                     ]}
@@ -9356,8 +9643,8 @@ const handleBatchDeleteSelectedChats = () => {
                 );
                 const isUnreadCompleted = !isChatRunning && (
                   Boolean(chat.unread) ||
-                  (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.id) ||
-                  (chat.session_id ? (unreadCompletedSessions[selectedAgent.id] || []).includes(chat.session_id) : false)
+                  getAgentUnreadList(selectedAgent).includes(chat.id) ||
+                  (chat.session_id ? getAgentUnreadList(selectedAgent).includes(chat.session_id) : false)
                 );
                 return (
                   <div
@@ -10083,7 +10370,7 @@ ${chat.id}`);
                       <div className="h-9 px-3 bg-slate-100 dark:bg-[#171720] border-b border-slate-200 dark:border-[#242430] flex items-center justify-between text-xs font-mono select-none shrink-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
-                          <span className="text-[11px] font-semibold text-slate-900 dark:text-white truncate">
+                          <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-900 dark:text-white truncate">
                             {selectedAgent.name} Computer
                           </span>
                         </div>
@@ -10214,7 +10501,7 @@ ${chat.id}`);
                         className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[#f8a87c]/50 flex items-center justify-between gap-3 cursor-pointer group transition-all"
                       >
                         <div className="flex flex-col min-w-0 pr-2">
-                          <span className="text-xs font-medium text-slate-800 dark:text-white truncate">
+                          <span className="text-xs font-medium text-slate-800 dark:text-slate-900 dark:text-white truncate">
                             Tạo Routine tự động đầu tiên
                           </span>
                           <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
@@ -10249,7 +10536,7 @@ ${chat.id}`);
                               className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-slate-300 dark:hover:border-[#323242] shadow-xs flex items-center justify-between gap-3 cursor-pointer group transition-all"
                             >
                               <div className="flex flex-col min-w-0 pr-2">
-                                <span className="text-xs font-medium text-slate-900 dark:text-white truncate group-hover:text-[#e0682b] dark:group-hover:text-[#f8a87c] transition-colors">
+                                <span className="text-xs font-medium text-slate-900 dark:text-slate-900 dark:text-white truncate group-hover:text-[#e0682b] dark:group-hover:text-[#f8a87c] transition-colors">
                                   {job.name}
                                 </span>
                                 <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
@@ -11271,7 +11558,7 @@ ${chat.id}`);
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md bg-[#14141c] border border-[#262634] rounded-xl p-4 shadow-2xl text-neutral-200 font-sans space-y-3"
           >
-            <div className="flex items-center justify-between border-b border-[#22222e] pb-2">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#22222e] pb-2">
               <span className="text-sm font-semibold text-white">Forward Response to Another Agent</span>
               <button onClick={() => setForwardModalMsg(null)} className="text-neutral-400 hover:text-white">
                 <X size={15} />
@@ -11440,21 +11727,21 @@ ${chat.id}`);
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+            className="w-full max-w-md mx-auto bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-slate-800 dark:text-neutral-200 font-sans"
           >
             {/* Header / Agent Name */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#22222e]">
               <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
                 <AgentAvatar agent={mobileActionAgent} size="sm" />
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Agent Quick Actions</span>
-                  <h4 className="text-sm font-semibold text-white truncate">{mobileActionAgent.name}</h4>
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{mobileActionAgent.name}</h4>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileActionAgent(null)}
-                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-400 hover:text-slate-900 dark:hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -11469,7 +11756,7 @@ ${chat.id}`);
                   togglePinAgent(mobileActionAgent.id, e);
                   setMobileActionAgent(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Pin size={15} className={pinnedAgentIds.includes(mobileActionAgent.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
                 <span>{pinnedAgentIds.includes(mobileActionAgent.id) ? "Bỏ ghim Agent (Unpin)" : "Ghim Agent lên đầu (Pin to top)"}</span>
@@ -11483,7 +11770,7 @@ ${chat.id}`);
                   setTimeout(() => handleNewChat(), 50);
                   setMobileActionAgent(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Plus size={15} className="text-[#f8a87c]" />
                 <span>Tạo Chat mới với Agent (New Session)</span>
@@ -11498,7 +11785,7 @@ ${chat.id}`);
                   setIsAgentSettingsModalOpen(true);
                   setMobileActionAgent(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Settings size={15} className="text-[#f8a87c]" />
                 <span>Cài đặt Chuyên sâu Agent (Agent Settings)</span>
@@ -11512,7 +11799,7 @@ ${chat.id}`);
                   handleToggleBotInfo(false);
                   setMobileActionAgent(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Bot size={15} className="text-cyan-400" />
                 <span>Xem thông số kỹ thuật (Agent Specs)</span>
@@ -11532,18 +11819,18 @@ ${chat.id}`);
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+            className="w-full max-w-md mx-auto bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-slate-800 dark:text-neutral-200 font-sans"
           >
             {/* Header / Session Title */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#22222e]">
               <div className="min-w-0 flex-1 pr-2">
                 <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Session Actions</span>
-                <h4 className="text-sm font-semibold text-white truncate">{mobileActionChat.title}</h4>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{mobileActionChat.title}</h4>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileActionChat(null)}
-                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-400 hover:text-slate-900 dark:hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -11558,7 +11845,7 @@ ${chat.id}`);
                   togglePinChat(mobileActionChat.id);
                   setMobileActionChat(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Pin size={15} className={pinnedChatIds.includes(mobileActionChat.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
                 <span>{pinnedChatIds.includes(mobileActionChat.id) ? "Bỏ ghim phiên hội thoại (Unpin)" : "Ghim phiên lên đầu (Pin to top)"}</span>
@@ -11572,7 +11859,7 @@ ${chat.id}`);
                   setEditingChatTitle(mobileActionChat.title);
                   setMobileActionChat(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Edit2 size={15} className="text-cyan-400" />
                 <span>Đổi tên phiên hội thoại (Rename)</span>
@@ -11585,7 +11872,7 @@ ${chat.id}`);
                   handleExportSessionMarkdown();
                   setMobileActionChat(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Download size={15} className="text-emerald-400" />
                 <span>Xuất tệp Markdown (.md)</span>
@@ -11619,10 +11906,10 @@ ${chat.id}`);
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md mx-auto bg-[#14141c] border border-[#2a2a3c] rounded-xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-neutral-200"
+            className="w-full max-w-md mx-auto bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-slate-800 dark:text-neutral-200 font-sans"
           >
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-[#22222e]">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#22222e]">
               <div className="min-w-0 flex-1 pr-2">
                 <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Message Turn Actions</span>
                 <p className="text-xs text-neutral-400 truncate max-w-xs italic">
@@ -11632,7 +11919,7 @@ ${chat.id}`);
               <button
                 type="button"
                 onClick={() => setMobileActionMsg(null)}
-                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white"
+                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-400 hover:text-slate-900 dark:hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -11647,7 +11934,7 @@ ${chat.id}`);
                   toggleStarMessage(mobileActionMsg.id);
                   setMobileActionMsg(null);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Star size={15} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
                 <span>{starredMsgIds.includes(mobileActionMsg.id) ? "Bỏ đánh dấu sao câu trả lời" : "Đánh dấu sao (Star / Bookmark)"}</span>
@@ -11662,7 +11949,7 @@ ${chat.id}`);
                   setMobileActionMsg(null);
                   setTimeout(() => setCopiedResponseMsgId(null), 1800);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Copy size={15} className="text-neutral-300" />
                 <span>Sao chép toàn bộ phản hồi (Copy)</span>
@@ -11693,7 +11980,7 @@ ${chat.id}`);
                     });
                   }
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Volume2 size={15} className="text-[#f8a87c]" />
                 <span>Đọc to phản hồi bằng giọng nói (TTS)</span>
@@ -11707,7 +11994,7 @@ ${chat.id}`);
                   setMobileActionMsg(null);
                   handleForkSession(turnIdx);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <GitFork size={15} className="text-cyan-400" />
                 <span>Tách nhánh phiên mới từ đây (Fork Session)</span>
@@ -11721,7 +12008,7 @@ ${chat.id}`);
                   setMobileActionMsg(null);
                   setForwardModalMsg(content);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#1f1f2c] text-xs text-neutral-200 hover:text-white transition-colors cursor-pointer"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
                 <Share2 size={15} className="text-purple-400" />
                 <span>Chuyển tiếp cho Agent khác tiếp nối</span>
