@@ -631,14 +631,16 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         currentAsst = null;
       }
       if (!currentAsst) {
+        const metaSteps = Array.isArray(m.metadata?.steps) ? m.metadata.steps : [];
+        const metaTools = metaSteps.filter((s: any) => s.kind === "tool_call");
         currentAsst = {
           id: m.id || `${chatId}-${mIdx}-asst`,
           role: "assistant",
           content: "",
           timestamp: ts,
-          steps: [],
-          toolCalls: [],
-          reasoning: "",
+          steps: [...metaSteps],
+          toolCalls: [...metaTools],
+          reasoning: m.metadata?.reasoning || "",
           senderAgentId: msgSenderAgentId,
           senderAgentName: m.metadata?.sender_agent_name || undefined,
           authorRole: m.metadata?.author_role || undefined,
@@ -952,6 +954,9 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
       throw new Error(`Failed to fetch messages for chat ${chatId}`);
     }
     const data = await res.json();
+    if (data && !Array.isArray(data) && data.collaboration_room && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("agent360_room_synced", { detail: { chatId, room: data.collaboration_room } }));
+    }
     const rawList = Array.isArray(data) ? data : (data.messages || []);
     const filteredTurns = parseRawChatMessages(rawList, chatId, false);
     setCachedChatMessages(chatId, filteredTurns, agentId);

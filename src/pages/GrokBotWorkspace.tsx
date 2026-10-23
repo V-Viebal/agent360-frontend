@@ -240,105 +240,119 @@ import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBro
 function TurnExecutionAccordion({
   msg,
   isStreamingThisTurn,
-  isExpanded,
-  onToggle
+  agentLabel,
 }: {
   msg: ChatMessage;
   isStreamingThisTurn: boolean;
   isExpanded?: boolean;
   onToggle?: () => void;
+  agentLabel?: string;
 }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const steps = msg.steps || [];
   const toolCalls = msg.toolCalls || [];
   const allToolItems = steps.filter((s) => s.kind === "tool_call").length > 0
     ? steps.filter((s) => s.kind === "tool_call")
     : toolCalls.map((tc) => ({ kind: "tool_call" as const, ...tc }));
   const reasoningItems = steps.filter((s) => s.kind === "reasoning");
+  if (reasoningItems.length === 0 && msg.reasoning) {
+    reasoningItems.push({ kind: "reasoning", text: msg.reasoning });
+  }
 
   const totalToolCount = allToolItems.length;
-  const isTurnDone = Boolean(msg.content && !isStreamingThisTurn);
+  const displayAgent = msg.senderAgentName || msg.senderAgentId || agentLabel || "Agent";
 
-  // Fallback local toggle if not controlled by parent
-  const [localExpanded, setLocalExpanded] = useState<boolean | null>(null);
-  const effectiveExpanded = typeof isExpanded === "boolean"
-    ? isExpanded
-    : (localExpanded !== null ? localExpanded : !isTurnDone);
-
-  const handleToggle = () => {
-    if (onToggle) {
-      onToggle();
-    } else {
-      setLocalExpanded(!effectiveExpanded);
-    }
-  };
-
-  // If there are only tool calls / reasoning without final text yet, or user expanded it
   return (
-    <div className="w-full my-1 space-y-1.5">
-      {/* Header bar to collapse/expand all tool steps when done */}
-      {isTurnDone && totalToolCount > 0 && (
-        <button data-ux-target-min="24"
-          type="button"
-          onClick={handleToggle}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-neutral-300 dark:hover:border-[#303040] text-xs font-mono text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
+    <div className="w-full my-1">
+      {/* Lean Trigger Pill in Chat Session: Click to open Thinking & Tool Execution Modal */}
+      <button
+        data-ux-target-min="24"
+        data-testid="open-thinking-modal-btn"
+        type="button"
+        onClick={() => setIsModalOpen(true)}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
+      >
+        {isStreamingThisTurn ? (
+          <Loader2 size={12} className="text-[#f8a87c] animate-spin shrink-0" />
+        ) : (
+          <Sparkles size={12} className="text-emerald-400 shrink-0" />
+        )}
+        <span className="font-semibold text-slate-800 dark:text-neutral-200">
+          {isStreamingThisTurn
+            ? `${displayAgent} đang suy nghĩ & chạy công cụ (${totalToolCount} bước)`
+            : `Thinking · ${displayAgent} (${totalToolCount} ${totalToolCount === 1 ? "tool call" : "tool calls"}${reasoningItems.length > 0 ? " + suy nghĩ" : ""})`}
+        </span>
+        <span className="text-[10px] text-[#f8a87c] font-sans underline ml-1">
+          Xem chi tiết
+        </span>
+      </button>
+
+      {/* Modal Thinking & Tool Calls Detail */}
+      {isModalOpen && (
+        <div
+          data-testid="agent-thinking-modal"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150"
+          onClick={() => setIsModalOpen(false)}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          <span className="font-semibold text-neutral-200">
-            {totalToolCount} {totalToolCount === 1 ? "tool call" : "tool calls"} executed
-          </span>
-          <span className="text-[10px] text-neutral-500 font-sans">
-            {effectiveExpanded ? "(click to collapse)" : "(click to view trace)"}
-          </span>
-          <ChevronDown
-            size={13}
-            className={`ml-auto transition-transform duration-200 ${effectiveExpanded ? "rotate-180 text-white" : ""}`}
-          />
-        </button>
-      )}
-
-      {/* Accordion Body: reasoning + tool cards */}
-      {(!isTurnDone || effectiveExpanded) && (
-        <div className="space-y-1.5 w-full animate-in fade-in duration-150">
-          {reasoningItems.map((r, rIdx) => {
-            const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
-            const estimatedSec = Math.max(1, Math.round(wordCount / 18));
-            return (
-              <details
-                key={rIdx}
-                className="group rounded-xl bg-[#14141a]/70 border border-[#22222e] text-xs font-sans overflow-hidden transition-all select-none"
-                open={!isTurnDone}
-              >
-                <summary className="flex items-center gap-2 px-3.5 py-2 cursor-pointer hover:bg-white/[0.03] text-neutral-400 hover:text-neutral-200 list-none">
-                  <Sparkles size={13} className="text-[#f8a87c] shrink-0" />
-                  <span className="font-mono text-[11px] font-medium text-neutral-300">
-                    Thought for ~{estimatedSec}s
-                  </span>
-                  <span className="text-[10px] text-neutral-500 font-sans ml-1">
-                    ({wordCount} words reasoning trace)
-                  </span>
-                  <ChevronDown
-                    size={12}
-                    className="ml-auto text-neutral-500 transition-transform duration-200 group-open:rotate-180"
-                  />
-                </summary>
-                <div className="px-3.5 py-2.5 pt-1 text-xs text-neutral-400 leading-relaxed italic border-t border-[#1e1e28] whitespace-pre-wrap break-words select-text">
-                  {renderInlineMarkdown(r.text || "")}
+          <div
+            className="w-full max-w-2xl max-h-[82vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles size={15} className="text-[#f8a87c] shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
+                    Thinking & Tool Execution — {displayAgent}
+                  </h3>
+                  <p className="text-[10px] font-mono text-neutral-500">
+                    {totalToolCount} công cụ thực thi · {reasoningItems.length} bước suy luận
+                  </p>
                 </div>
-              </details>
-            );
-          })}
+              </div>
+              <button
+                type="button"
+                aria-label="Đóng modal thinking"
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            </div>
 
-          {allToolItems.map((step, sIdx) => (
-            <AgentToolCard
-              key={sIdx}
-              toolCall={{
-                tool: step.tool || "Tool",
-                args: step.args,
-                result: step.result,
-                state: step.state
-              }}
-            />
-          ))}
+            <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
+              {reasoningItems.map((r, rIdx) => {
+                const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
+                const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+                return (
+                  <div
+                    key={rIdx}
+                    className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
+                  >
+                    <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
+                      <Sparkles size={12} className="text-[#f8a87c]" />
+                      <span className="font-semibold">Suy luận (~{estimatedSec}s · {wordCount} từ)</span>
+                    </div>
+                    <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                      {renderInlineMarkdown(r.text || "")}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {allToolItems.map((step, sIdx) => (
+                <AgentToolCard
+                  key={sIdx}
+                  toolCall={{
+                    tool: step.tool || "Tool",
+                    args: step.args,
+                    result: step.result,
+                    state: step.state,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1880,6 +1894,18 @@ export function GrokBotWorkspace() {
   const [currentAgentSubBindings, setCurrentAgentSubBindings] = useState<SubAgentBinding[]>([]);
   const [activeSessionRoom, setActiveSessionRoom] = useState<SessionCollaborationRoom | null>(null);
   const [isRoomInspectOpen, setIsRoomInspectOpen] = useState(false);
+  const [activeRespondingAgent, setActiveRespondingAgent] = useState<{ id: string; name: string; statusText: string } | null>(null);
+
+  useEffect(() => {
+    const onRoomSynced = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (detail?.chatId === selectedChatId && detail?.room) {
+        setActiveSessionRoom(detail.room);
+      }
+    };
+    window.addEventListener("agent360_room_synced", onRoomSynced);
+    return () => window.removeEventListener("agent360_room_synced", onRoomSynced);
+  }, [selectedChatId]);
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
     try {
       const saved = selectedAgentId ? localStorage.getItem(`skyer_loop_mode_${selectedAgentId}`) : null;
@@ -4415,10 +4441,14 @@ const handleBatchDeleteSelectedChats = () => {
       for (const rt of activeSessionRoom.turns) {
         if (rt.kind !== "collaborator_reply" && rt.kind !== "question" && rt.kind !== "manager_guard") continue;
         if (base.some((m) => m.id === rt.id)) continue;
+        const rtSteps = Array.isArray((rt as any).steps) ? (rt as any).steps : [];
         base.push({
           id: rt.id,
           role: "assistant",
           content: rt.text,
+          reasoning: (rt as any).reasoning || undefined,
+          steps: rtSteps,
+          toolCalls: rtSteps.filter((s: any) => s.kind === "tool_call"),
           timestamp: rt.created_at,
           evidenceStatus: "observed",
           senderAgentId: rt.author_id,
@@ -5322,6 +5352,16 @@ const handleBatchDeleteSelectedChats = () => {
             if (ev?.object === "room_event" && ev.room) {
               if (selectedChatIdRef.current === originChatId) {
                 setActiveSessionRoom(ev.room);
+                const collabId = ev.collaborator_id || ev.room.active_collaborator_id || targetAgent.slug || originAgentId;
+                const matchedParticipant = ev.room.participants?.find((p: any) => p.agent_id === collabId);
+                const dispName = matchedParticipant?.display_name || collabId;
+                setActiveRespondingAgent({
+                  id: collabId,
+                  name: dispName,
+                  statusText: ev.status === "synthesizing"
+                    ? `${dispName} đang tổng hợp phản hồi...`
+                    : `${dispName} đang xử lý và phản hồi...`,
+                });
               }
               return;
             }
@@ -5471,6 +5511,9 @@ const handleBatchDeleteSelectedChats = () => {
         delete inflightMessagesRef.current[originChatId];
       }
       const endSessionId = sessionAliasesRef.current[originChatId] || originChatId;
+      if (selectedChatIdRef.current === originChatId) {
+        setActiveRespondingAgent(null);
+      }
       setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId && id !== endSessionId));
       setRunningChatIds((prev) => prev.filter((id) => id !== originChatId && id !== endSessionId));
       updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, endSessionId], false);
@@ -7040,10 +7083,7 @@ const handleBatchDeleteSelectedChats = () => {
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/30 font-mono text-[10px] font-semibold flex items-center gap-1.5">
                   <span className={`h-1.5 w-1.5 rounded-full ${activeSessionRoom.status === "collaborator_running" ? "bg-blue-400 animate-ping" : "bg-emerald-400"}`} />
-                  <span>AgentTeams Room</span>
-                </span>
-                <span className="font-mono text-[10px] text-neutral-500 dark:text-neutral-400 truncate max-w-[220px]" title={activeSessionRoom.matrix_room_id}>
-                  {activeSessionRoom.matrix_room_id}
+                  <span>Phiên phối hợp</span>
                 </span>
                 <div className="flex items-center gap-1 flex-wrap">
                   {activeSessionRoom.participants.map((p) => (
@@ -7315,13 +7355,7 @@ const handleBatchDeleteSelectedChats = () => {
                           <TurnExecutionAccordion
                             msg={msg}
                             isStreamingThisTurn={isTurnActive}
-                            isExpanded={isTraceExpanded}
-                            onToggle={() => {
-                              setExpandedTraceKeys((prev) => ({
-                                ...prev,
-                                [traceKey]: !isTraceExpanded,
-                              }));
-                            }}
+                            agentLabel={msg.senderAgentName || msg.senderAgentId || selectedAgent.name || selectedAgent.slug || selectedAgentId.replace(/^bot:agent360:/i, "")}
                           />
                         );
                       })()}
@@ -7334,12 +7368,16 @@ const handleBatchDeleteSelectedChats = () => {
                       )}
 
                       {/* 2. Formatted Main Response Content: left-aligned, transparent, no background, no border */}
-                      {/* Loading & Responding Indicator when assistant message has not produced text content yet */}
+                      {/* Loading & Responding Indicator showing which Agent is currently responding */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                        <div
+                          data-testid="active-responding-agent-pill"
+                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150"
+                        >
+                          <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
+                          <span className="text-xs font-mono font-medium text-slate-700 dark:text-neutral-200">
+                            {activeRespondingAgent?.statusText || `${msg.senderAgentName || selectedAgent.name} đang phản hồi...`}
+                          </span>
                         </div>
                       )}
 
@@ -7358,9 +7396,7 @@ const handleBatchDeleteSelectedChats = () => {
                               }`}>
                                 @{msg.senderAgentId} ({msg.senderAgentName || msg.senderAgentId})
                               </span>
-                              <span className="text-neutral-500">
-                                via AgentTeams Room {msg.matrixRoomId || activeSessionRoom?.matrix_room_id || ""}
-                              </span>
+
                             </div>
                           )}
                           {/* Assistant Response Bubble: Bọc trong background clean card cho cả light và dark mode, co giãn đúng nội dung (fit-content) */}
@@ -7528,13 +7564,17 @@ const handleBatchDeleteSelectedChats = () => {
           </>
           )}
 
-          {/* Active Session Responding Indicator during ongoing agent turn */}
+          {/* Active Session Responding Indicator showing which Agent is currently responding */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1.5 animate-in fade-in duration-200 my-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+              <div
+                data-testid="active-responding-agent-pill"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none"
+              >
+                <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
+                <span className="text-xs font-mono font-medium text-slate-700 dark:text-neutral-200">
+                  {activeRespondingAgent?.statusText || `${selectedAgent.name} đang phản hồi...`}
+                </span>
               </div>
             </div>
           )}
