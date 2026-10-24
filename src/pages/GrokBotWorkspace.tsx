@@ -7680,6 +7680,67 @@ export function GrokBotWorkspace() {
               const isExtendOpen = activeExtendPopoverMsgId === msg.id;
               const isHighlighted = highlightedReplyMsgId === msg.id;
 
+              const renderAgentMentionChip = (rawSlugOrId: string, fallbackName?: string, variant: "inline" | "meta" = "inline") => {
+                const cleanSlug = rawSlugOrId.replace(/^@/, "").replace(/^bot:agent360:/i, "").toLowerCase();
+                const matchedAg = agents.find(
+                  (a) => (a.slug || "").toLowerCase() === cleanSlug || a.id.replace(/^bot:agent360:/i, "").toLowerCase() === cleanSlug
+                );
+                const fullName = matchedAg?.name || fallbackName || rawSlugOrId.replace(/^@/, "");
+                const shortName = fullName.split(" (")[0];
+                const roleLabel = matchedAg?.roleTag || "Collaborator Agent";
+                const modelLabel = matchedAg?.model || "llm360";
+                const isAgRunning = matchedAg ? checkIsAgentBusy(matchedAg) : false;
+                const isAgOnline = matchedAg ? matchedAg.status !== "disabled" : true;
+
+                return (
+                  <span
+                    data-testid={`agent-mention-chip-${cleanSlug}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    className={`relative inline-flex items-center gap-1 group/agchip cursor-pointer select-none ${
+                      variant === "inline"
+                        ? "px-1.5 py-0.2 mx-0.5 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium text-[12px] align-baseline hover:bg-blue-500/25"
+                        : "font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                    }`}
+                  >
+                    <Bot size={variant === "inline" ? 11 : 12} className="shrink-0" />
+                    <span>{shortName}</span>
+
+                    {/* Hover / Focus Popover Card showing Bot Role, Model & Live Status */}
+                    <span
+                      data-testid={`agent-mention-card-${cleanSlug}`}
+                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-56 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100"
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-xs text-slate-900 dark:text-white truncate">{fullName}</span>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono shrink-0 ${
+                          isAgRunning
+                            ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                            : isAgOnline
+                            ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                            : "bg-neutral-500/15 text-neutral-400 border border-neutral-500/30"
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            isAgRunning ? "bg-amber-400 animate-ping" : isAgOnline ? "bg-emerald-400" : "bg-neutral-400"
+                          }`} />
+                          <span>{isAgRunning ? "Đang xử lý" : isAgOnline ? "Online" : "Offline"}</span>
+                        </span>
+                      </span>
+                      {matchedAg?.description && (
+                        <span className="text-[10px] text-slate-500 dark:text-neutral-400 line-clamp-2 leading-snug">
+                          {matchedAg.description}
+                        </span>
+                      )}
+                      <span className="flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-neutral-500 pt-1 border-t border-slate-100 dark:border-white/5">
+                        <span className="truncate">{roleLabel}</span>
+                        <span className="truncate text-[#f8a87c]">{modelLabel}</span>
+                      </span>
+                    </span>
+                  </span>
+                );
+              };
+
               const renderQuotedReplyBox = () => {
                 if (!parsedReplyTo) return null;
                 return (
@@ -8102,18 +8163,7 @@ export function GrokBotWorkspace() {
                         <p className="whitespace-pre-wrap select-text break-words">
                           {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
                             if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
-                              const mentionSlug = part.slice(1).toLowerCase();
-                              const matchedAg = agents.find((a) => (a.slug || "").toLowerCase() === mentionSlug || a.id.replace(/^bot:agent360:/i, "").toLowerCase() === mentionSlug);
-                              const label = matchedAg ? matchedAg.name.split(" (")[0] : part.slice(1);
-                              return (
-                                <span
-                                  key={pIdx}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.2 mx-0.5 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium text-[12px] align-baseline"
-                                >
-                                  <Bot size={11} className="shrink-0" />
-                                  <span>{label}</span>
-                                </span>
-                              );
+                              return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
                             }
                             return <span key={pIdx}>{part}</span>;
                           })}
@@ -8234,10 +8284,7 @@ export function GrokBotWorkspace() {
                                 className="flex items-center justify-end self-end gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-1 px-1 select-none"
                               >
                                 <span>Message from</span>
-                                <span className="inline-flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
-                                  <Bot size={12} className="shrink-0" />
-                                  <span>{(msg.senderAgentName || msg.senderAgentId).split(" (")[0]}</span>
-                                </span>
+                                {renderAgentMentionChip(msg.senderAgentId, msg.senderAgentName || msg.senderAgentId, "meta")}
                               </div>
                             )}
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
@@ -8286,6 +8333,29 @@ export function GrokBotWorkspace() {
                               )}
                             </div>
                             </div>
+                            {/* Subtle "Messaged <Bot>" footer right-aligned below Host Agent bubble when collaborating */}
+                            {!msg.senderAgentId && (() => {
+                              const nextTurn = displayMessages[mIdx + 1];
+                              const prevTurn = mIdx > 0 ? displayMessages[mIdx - 1] : null;
+                              let messagedAgentId: string | undefined = nextTurn?.senderAgentId;
+                              let messagedAgentName: string | undefined = nextTurn?.senderAgentName;
+                              if (!messagedAgentId && prevTurn?.role === "user") {
+                                const mMatch = prevTurn.content.match(/@([a-zA-Z0-9_-]+)/);
+                                if (mMatch && mMatch[1].toLowerCase() !== (selectedAgent.slug || "").toLowerCase()) {
+                                  messagedAgentId = mMatch[1].toLowerCase();
+                                }
+                              }
+                              if (!messagedAgentId) return null;
+                              return (
+                                <div
+                                  data-testid={`messaged-collaborator-${messagedAgentId}`}
+                                  className="flex items-center justify-end self-end gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mt-1 px-1 select-none"
+                                >
+                                  <span>Messaged</span>
+                                  {renderAgentMentionChip(messagedAgentId, messagedAgentName, "meta")}
+                                </div>
+                              );
+                            })()}
                           </div>
                           {/* Visual Karaoke sentence pill indicator during TTS readout */}
                           {speakingMsgId === msg.id && speakingSentence && (
