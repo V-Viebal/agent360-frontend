@@ -3152,7 +3152,9 @@ export function GrokBotWorkspace() {
   const [replyingToMsg, setReplyingToMsg] = useState<ReplyToMessageInfo | null>(null);
   const [highlightedReplyMsgId, setHighlightedReplyMsgId] = useState<string | null>(null);
   const [activeReactPopoverMsgId, setActiveReactPopoverMsgId] = useState<string | null>(null);
+  const [reactPopoverAbove, setReactPopoverAbove] = useState<boolean>(true);
   const [activeExtendPopoverMsgId, setActiveExtendPopoverMsgId] = useState<string | null>(null);
+  const [extendPopoverAbove, setExtendPopoverAbove] = useState<boolean>(true);
   const [isMobileActionExtended, setIsMobileActionExtended] = useState<boolean>(false);
   const [showFullEmojiPicker, setShowFullEmojiPicker] = useState<boolean>(false);
   const [recentReactions, setRecentReactions] = useState<string[]>(() => getStoredRecentReactions());
@@ -4360,19 +4362,22 @@ const handleBatchDeleteSelectedChats = () => {
             if (!isStillStreaming) {
               updateAgentSessionRunning(payload.agent_id || selectedAgentId, [...ids, selectedChatId], false);
             }
-            setChats((prev) =>
-              prev.map((c) => {
+            setChats((prev) => {
+              const wantStatus = isStillStreaming ? "running" : "idle";
+              const needsUpdate = prev.some((c) => (ids.includes(c.id) || (c.session_id && ids.includes(c.session_id))) && (c.isRunning !== isStillStreaming || c.status !== wantStatus));
+              if (!needsUpdate) return prev;
+              return prev.map((c) => {
                 if (ids.includes(c.id) || (c.session_id && ids.includes(c.session_id))) {
                   return {
                     ...c,
                     is_running: isStillStreaming,
                     isRunning: isStillStreaming,
-                    status: isStillStreaming ? "running" : "idle"
+                    status: wantStatus
                   };
                 }
                 return c;
-              })
-            );
+              });
+            });
             const targetChatId = payload.chat_id || payload.session_id;
             if (targetChatId && targetChatId !== selectedChatId && document.hidden) {
               setUnreadCompletedSessions((prev) => {
@@ -4401,33 +4406,43 @@ const handleBatchDeleteSelectedChats = () => {
             (activeChatRef && (payload.chat_id === activeChatRef.id || payload.chat_id === activeChatRef.session_id || payload.session_id === activeChatRef.session_id));
 
           if (isTargetSession && !streamingChatIdsRef.current.includes(selectedChatId)) {
+            const applySyncedMessages = (nextTurns: ChatMessage[]) => {
+              if (!nextTurns || nextTurns.length === 0) return;
+              setMessages((prev) => {
+                if (prev.length === nextTurns.length) {
+                  const prevLast = prev[prev.length - 1];
+                  const nextLast = nextTurns[nextTurns.length - 1];
+                  if (
+                    prevLast &&
+                    nextLast &&
+                    prevLast.content === nextLast.content &&
+                    (prevLast.steps?.length || 0) === (nextLast.steps?.length || 0) &&
+                    (prevLast.toolCalls?.length || 0) === (nextLast.toolCalls?.length || 0)
+                  ) {
+                    return prev;
+                  }
+                }
+                return nextTurns;
+              });
+              setShowPollCard(false);
+              const lastTurn = nextTurns[nextTurns.length - 1];
+              if (lastTurn?.content) {
+                const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
+                setChats((prev) => {
+                  const cur = prev.find((c) => c.id === selectedChatId);
+                  if (cur && cur.lastMessageSnippet === cleanLastText) return prev;
+                  return prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c));
+                });
+              }
+            };
+
             if (Array.isArray(payload.messages) && payload.messages.length > 0) {
               const parsedTurns = parseRawChatMessages(payload.messages, selectedChatId, isTurnRunning);
-              if (parsedTurns && parsedTurns.length > 0) {
-                setMessages(parsedTurns);
-                setShowPollCard(false);
-                const lastTurn = parsedTurns[parsedTurns.length - 1];
-                if (lastTurn?.content) {
-                  const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
-                  setChats((prev) =>
-                    prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
-                  );
-                }
-              }
+              applySyncedMessages(parsedTurns);
             } else {
-            fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
-              if (reloadedMsgs && reloadedMsgs.length > 0) {
-                setMessages(reloadedMsgs);
-                setShowPollCard(false);
-                const lastTurn = reloadedMsgs[reloadedMsgs.length - 1];
-                if (lastTurn?.content) {
-                  const cleanLastText = lastTurn.content.trim().replace(/\s+/g, " ").slice(0, 90);
-                  setChats((prev) =>
-                    prev.map((c) => (c.id === selectedChatId ? { ...c, lastMessageSnippet: cleanLastText } : c))
-                  );
-                }
-              }
-            });
+              fetchChatMessages(selectedChatId, selectedAgentId).then((reloadedMsgs) => {
+                if (reloadedMsgs) applySyncedMessages(reloadedMsgs);
+              });
             }
           }
         } catch {}
@@ -7550,7 +7565,13 @@ const handleBatchDeleteSelectedChats = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                                const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                                const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                                setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
                                 setActiveExtendPopoverMsgId(null);
+                                setShowFullEmojiPicker(false);
                                 setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                               }}
                               className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
@@ -7569,9 +7590,11 @@ const handleBatchDeleteSelectedChats = () => {
                             <div
                               data-testid="msg-react-popover"
                               onClick={(e) => e.stopPropagation()}
-                              className="absolute bottom-full mb-1.5 left-0 z-50 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-[#1c2430] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 select-none"
+                              className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-[#1c2430] border border-white/10 shadow-xl animate-in zoom-in-95 duration-100 select-none left-0 ${
+                                reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
+                              }`}
                             >
-                              <div className="flex items-center gap-1 px-1.5 py-0.5">
+                              <div className="flex items-center gap-0.5 px-1 py-0.5">
                                 {recentReactions.slice(0, 7).map((emoji) => {
                                   const active = currentReactions.includes(emoji);
                                   return (
@@ -7580,7 +7603,7 @@ const handleBatchDeleteSelectedChats = () => {
                                       type="button"
                                       data-testid={`react-option-${emoji}`}
                                       onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
-                                      className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
+                                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
                                         active ? "bg-[#f8a87c]/25 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
                                       }`}
                                       aria-label={`Thả ${emoji}`}
@@ -7601,14 +7624,14 @@ const handleBatchDeleteSelectedChats = () => {
                                   }`}
                                   title="Mở thêm biểu tượng cảm xúc"
                                 >
-                                  <Plus size={13} className="shrink-0" />
+                                  <Plus size={12} className="shrink-0" />
                                 </button>
                               </div>
 
                               {showFullEmojiPicker && (
                                 <div
                                   data-testid="desktop-full-emoji-picker-grid"
-                                  className="grid grid-cols-6 gap-1 p-1.5 rounded-xl bg-[#141a24] border border-white/10 w-full text-sm"
+                                  className="grid grid-cols-6 gap-0.5 p-1 rounded-lg bg-[#141a24] border border-white/10 w-full text-xs max-h-44 overflow-y-auto"
                                 >
                                   {FULL_EMOJI_PALETTE.map((emoji) => (
                                     <button
@@ -7619,7 +7642,7 @@ const handleBatchDeleteSelectedChats = () => {
                                         toggleMessageReaction(msg.id, emoji, msg);
                                         setShowFullEmojiPicker(false);
                                       }}
-                                      className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
+                                      className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
                                     >
                                       {emoji}
                                     </button>
@@ -7648,48 +7671,51 @@ const handleBatchDeleteSelectedChats = () => {
                         </button>
                       </Tooltip>
 
-                      {/* 3. Extend Menu Button (...) */}
+                      {/* 3. Extend Menu Button (...) - No Tooltip */}
                       <div className="relative">
-                        <Tooltip content="Mở rộng" placement="top" minWidth={85}>
-                          <button
-                            data-ux-target-min="24"
-                            data-testid="msg-extend-btn"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveReactPopoverMsgId(null);
-                              if (typeof window !== "undefined" && window.innerWidth < 640) {
-                                setMobileActionMsg({
-                                  id: msg.id,
-                                  content: cleanContent,
-                                  turnIdx: mIdx,
-                                  role: isUser ? "user" : "assistant",
-                                  hasThinking,
-                                  rawMsg: msg,
-                                });
-                              } else {
-                                setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                              }
-                            }}
-                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                              isExtendOpen
-                                ? "bg-[#f8a87c]/20 text-[#f8a87c]"
-                                : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                            }`}
-                            aria-label="Mở rộng"
-                          >
-                            <MoreHorizontal size={13} />
-                          </button>
-                        </Tooltip>
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-extend-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                            const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                            const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                            setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
+                            setActiveReactPopoverMsgId(null);
+                            if (typeof window !== "undefined" && window.innerWidth < 640) {
+                              setMobileActionMsg({
+                                id: msg.id,
+                                content: cleanContent,
+                                turnIdx: mIdx,
+                                role: isUser ? "user" : "assistant",
+                                hasThinking,
+                                rawMsg: msg,
+                              });
+                            } else {
+                              setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                            }
+                          }}
+                          className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            isExtendOpen
+                              ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                              : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
+                          aria-label="Mở rộng"
+                        >
+                          <MoreHorizontal size={13} />
+                        </button>
 
-                        {/* Desktop Vertical Extend Dropdown Menu */}
+                        {/* Desktop Vertical Extend Dropdown Menu - Compact & Always In Viewport */}
                         {isExtendOpen && (
                           <div
                             data-testid="msg-extend-menu"
                             onClick={(e) => e.stopPropagation()}
-                            className={`absolute bottom-full mb-1.5 z-50 w-52 py-1.5 rounded-2xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-xs font-sans text-left ${
-                              isUser ? "right-0" : "left-0"
-                            }`}
+                            className={`absolute z-50 w-40 py-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/80 dark:border-white/10 shadow-lg animate-in zoom-in-95 duration-100 flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-[11px] font-sans text-left max-h-[65vh] overflow-y-auto ${
+                              extendPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
+                            } ${isUser ? "right-0" : "left-0"}`}
                           >
                             <div className="space-y-0.5 pb-1">
                               {/* Reply */}
@@ -7945,14 +7971,14 @@ const handleBatchDeleteSelectedChats = () => {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Loading & Responding Indicator showing which Agent is currently responding */}
+                      {/* Loading & Responding Indicator showing which Agent is currently responding (Compact) */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
                         <div
                           data-testid="active-responding-agent-pill"
-                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 border border-slate-200/60 text-slate-600 dark:bg-[#14141c]/80 dark:border-white/[0.06] dark:text-neutral-400 select-none"
                         >
-                          <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
-                          <span className="text-xs font-mono font-medium text-slate-700 dark:text-neutral-200">
+                          <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+                          <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400">
                             {activeRespondingAgent?.statusText || `${msg.senderAgentName || selectedAgent.name} đang phản hồi...`}
                           </span>
                         </div>
@@ -8046,15 +8072,15 @@ const handleBatchDeleteSelectedChats = () => {
           </>
           )}
 
-          {/* Active Session Responding Indicator showing which Agent is currently responding */}
+          {/* Active Session Responding Indicator showing which Agent is currently responding (Compact) */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
-            <div className="flex flex-col items-start w-full space-y-1.5 animate-in fade-in duration-200 my-2">
+            <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
               <div
                 data-testid="active-responding-agent-pill"
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 border border-slate-200/60 text-slate-600 dark:bg-[#14141c]/80 dark:border-white/[0.06] dark:text-neutral-400 select-none"
               >
-                <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
-                <span className="text-xs font-mono font-medium text-slate-700 dark:text-neutral-200">
+                <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+                <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400">
                   {activeRespondingAgent?.statusText || `${selectedAgent.name} đang phản hồi...`}
                 </span>
               </div>
@@ -12615,11 +12641,11 @@ ${chat.id}`);
       {mobileActionMsg && (
         <div
           onClick={() => { setShowFullEmojiPicker(false); setMobileActionMsg(null); }}
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/45 select-none p-4 duration-100"
+          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/30 select-none p-4 duration-100 overflow-y-auto"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex flex-col items-center gap-2.5 w-full max-w-[270px] animate-in zoom-in-95 duration-150 select-none"
+            className="flex flex-col items-center gap-2 w-full max-w-[225px] max-h-[85vh] animate-in zoom-in-95 duration-150 select-none my-auto"
           >
             {/* 1. TOP HORIZONTAL REACTION PILL (Telegram style): ONLY FOR AGENT MESSAGE */}
             {mobileActionMsg.role !== "user" && (
@@ -12641,7 +12667,7 @@ ${chat.id}`);
                             setShowFullEmojiPicker(false);
                             setMobileActionMsg(null);
                           }}
-                          className={`h-8 w-8 rounded-full flex items-center justify-center text-base transition-transform active:scale-125 hover:scale-110 cursor-pointer ${
+                          className={`h-6.5 w-6.5 rounded-full flex items-center justify-center text-sm transition-transform active:scale-125 hover:scale-110 cursor-pointer ${
                             isSelected ? "bg-[#f8a87c]/30 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
                           }`}
                           aria-label={`Thả ${emoji}`}
