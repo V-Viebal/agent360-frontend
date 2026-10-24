@@ -12484,7 +12484,7 @@ ${chat.id}`);
             {/* 2. TELEGRAM-STYLE VERTICAL ACTION MENU LIST */}
             <div
               data-testid="mobile-vertical-menu"
-              className="w-full rounded-2xl bg-[#1c2430] border border-white/10 shadow-2xl overflow-hidden py-1 divide-y divide-white/5 text-xs text-white font-sans text-left"
+              className="w-full rounded-2xl bg-[#1c2430] border border-white/10 shadow-2xl overflow-hidden py-1 divide-y divide-white/5 text-xs text-white keep-white font-sans text-left"
             >
               <div className="space-y-0.5 pb-1">
                 {/* Reply */}
@@ -12505,10 +12505,10 @@ ${chat.id}`);
                       setTimeout(() => textareaRef.current?.focus(), 50);
                     }
                   }}
-                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white keep-white transition-colors cursor-pointer"
                 >
-                  <CornerUpLeft size={16} className="text-neutral-300 shrink-0" />
-                  <span className="font-medium text-xs text-white">Reply</span>
+                  <CornerUpLeft size={16} className="shrink-0 text-slate-300" style={{ color: "#cbd5e1" }} />
+                  <span className="font-medium text-xs text-white keep-white" style={{ color: "#ffffff" }}>Reply</span>
                 </button>
 
                 {/* Copy */}
@@ -12521,14 +12521,16 @@ ${chat.id}`);
                     setMobileActionMsg(null);
                     setTimeout(() => setCopiedResponseMsgId(null), 1800);
                   }}
-                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white keep-white transition-colors cursor-pointer"
                 >
                   {copiedResponseMsgId === mobileActionMsg.id ? (
-                    <Check size={16} className="text-emerald-400 shrink-0" />
+                    <Check size={16} className="text-emerald-400 shrink-0" style={{ color: "#34d399" }} />
                   ) : (
-                    <Copy size={16} className="text-neutral-300 shrink-0" />
+                    <Copy size={16} className="shrink-0 text-slate-300" style={{ color: "#cbd5e1" }} />
                   )}
-                  <span className="font-medium text-xs text-white">{copiedResponseMsgId === mobileActionMsg.id ? "Đã chép!" : "Copy"}</span>
+                  <span className="font-medium text-xs text-white keep-white" style={{ color: "#ffffff" }}>
+                    {copiedResponseMsgId === mobileActionMsg.id ? "Đã chép!" : "Copy"}
+                  </span>
                 </button>
 
                 {/* Thinking (Agent only, when has thinking) */}
@@ -12541,10 +12543,10 @@ ${chat.id}`);
                       setMobileActionMsg(null);
                       if (raw) setActiveThinkingModalMsg(raw);
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-emerald-400 transition-colors cursor-pointer font-medium"
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-emerald-400 keep-white transition-colors cursor-pointer font-medium"
                   >
-                    <Sparkles size={16} className="text-emerald-400 shrink-0" />
-                    <span className="text-xs text-emerald-400 font-medium">Thinking & Tools</span>
+                    <Sparkles size={16} className="shrink-0 text-emerald-400" style={{ color: "#34d399" }} />
+                    <span className="text-xs font-medium" style={{ color: "#34d399" }}>Thinking & Tools</span>
                   </button>
                 )}
 
@@ -12568,10 +12570,10 @@ ${chat.id}`);
                         }, 0);
                       }
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-cyan-400 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-cyan-400 keep-white transition-colors cursor-pointer"
                   >
-                    <Edit2 size={16} className="text-cyan-400 shrink-0" />
-                    <span className="font-medium text-xs text-cyan-400">Edit</span>
+                    <Edit2 size={16} className="shrink-0 text-cyan-400" style={{ color: "#22d3ee" }} />
+                    <span className="font-medium text-xs" style={{ color: "#22d3ee" }}>Edit</span>
                   </button>
                 )}
 
@@ -12602,10 +12604,10 @@ ${chat.id}`);
                         });
                       }
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white keep-white transition-colors cursor-pointer"
                   >
-                    <Volume2 size={16} className="text-neutral-300 shrink-0" />
-                    <span className="font-medium text-xs text-white">Read Aloud</span>
+                    <Volume2 size={16} className="shrink-0 text-slate-300" style={{ color: "#cbd5e1" }} />
+                    <span className="font-medium text-xs text-white keep-white" style={{ color: "#ffffff" }}>Read Aloud</span>
                   </button>
                 )}
               </div>
@@ -12619,10 +12621,10 @@ ${chat.id}`);
                     toggleStarMessage(mobileActionMsg.id);
                     setMobileActionMsg(null);
                   }}
-                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white keep-white transition-colors cursor-pointer"
                 >
-                  <Star size={16} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-300 shrink-0"} />
-                  <span className="font-medium text-xs text-white">{starredMsgIds.includes(mobileActionMsg.id) ? "Unpin" : "Pin / Star"}</span>
+                  <Star size={16} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "shrink-0 text-slate-300"} style={{ color: starredMsgIds.includes(mobileActionMsg.id) ? "#fbbf24" : "#cbd5e1" }} />
+                  <span className="font-medium text-xs text-white keep-white" style={{ color: "#ffffff" }}>{starredMsgIds.includes(mobileActionMsg.id) ? "Unpin" : "Pin / Star"}</span>
                 </button>
 
                 {/* Forward (Agent only) */}
@@ -12635,10 +12637,10 @@ ${chat.id}`);
                       setMobileActionMsg(null);
                       setForwardModalMsg(content);
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white keep-white transition-colors cursor-pointer"
                   >
-                    <Share2 size={16} className="text-neutral-300 shrink-0" />
-                    <span className="font-medium text-xs text-white">Forward</span>
+                    <Share2 size={16} className="shrink-0 text-slate-300" style={{ color: "#cbd5e1" }} />
+                    <span className="font-medium text-xs text-white keep-white" style={{ color: "#ffffff" }}>Forward</span>
                   </button>
                 )}
 
@@ -12651,10 +12653,10 @@ ${chat.id}`);
                     setMobileActionMsg(null);
                     handleForkSession(turnIdx);
                   }}
-                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/10 text-white keep-white transition-colors cursor-pointer"
                 >
-                  <GitFork size={16} className="text-neutral-300 shrink-0" />
-                  <span className="font-medium text-xs text-white">Fork Session</span>
+                  <GitFork size={16} className="shrink-0 text-slate-300" style={{ color: "#cbd5e1" }} />
+                  <span className="font-medium text-xs text-white keep-white" style={{ color: "#ffffff" }}>Fork Session</span>
                 </button>
               </div>
             </div>
