@@ -6274,7 +6274,7 @@ export function GrokBotWorkspace() {
     isExpandedEmoji?: boolean,
     clickY?: number
   ) => {
-    if (typeof window === 'undefined') return { top: '50%', left: '50%' };
+    if (typeof window === 'undefined') return { top: '50%', left: '50%', isAbove: false, transformOrigin: 'top center' };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const menuWidth = 230;
@@ -6288,6 +6288,8 @@ export function GrokBotWorkspace() {
       return {
         top: Math.round(Math.max(topMargin, (vh - menuHeight) / 2)) + 'px',
         left: Math.round(Math.max(margin, (vw - menuWidth) / 2)) + 'px',
+        isAbove: false,
+        transformOrigin: 'center center',
       };
     }
 
@@ -6302,14 +6304,19 @@ export function GrokBotWorkspace() {
     const spaceAbove = refTop - topMargin;
 
     let top: number;
+    let isAbove = false;
     if (spaceBelow >= menuHeight) {
       top = refBottom + 6;
+      isAbove = false;
     } else if (spaceAbove >= menuHeight) {
       top = refTop - menuHeight - 6;
+      isAbove = true;
     } else if (spaceBelow >= spaceAbove) {
       top = refBottom + 6;
+      isAbove = false;
     } else {
       top = refTop - menuHeight - 6;
+      isAbove = true;
     }
 
     top = Math.max(topMargin, Math.min(vh - menuHeight - bottomMargin, top));
@@ -6323,7 +6330,16 @@ export function GrokBotWorkspace() {
 
     left = Math.max(margin, Math.min(vw - menuWidth - margin, left));
 
-    return { top: Math.round(top) + 'px', left: Math.round(left) + 'px' };
+    const originY = isAbove ? 'bottom' : 'top';
+    const originX = isUser ? 'right' : 'left';
+    const transformOrigin = originY + ' ' + originX;
+
+    return {
+      top: Math.round(top) + 'px',
+      left: Math.round(left) + 'px',
+      isAbove,
+      transformOrigin,
+    };
   };
 
   filteredChatsRef.current = filteredChats;
@@ -13221,8 +13237,9 @@ ${chat.id}`);
                 top: coords.top,
                 left: coords.left,
                 width: "225px",
+                transformOrigin: coords.transformOrigin,
               }}
-              className="flex flex-col items-center gap-2 max-h-[85vh] animate-in zoom-in-95 duration-150 select-none"
+              className="flex flex-col items-center gap-2 max-h-[85vh] animate-in zoom-in-90 fade-in duration-200 ease-out select-none will-change-transform"
             >
             {/* 1. TOP HORIZONTAL REACTION PILL (Telegram style): ONLY FOR AGENT MESSAGE */}
             {mobileActionMsg.role !== "user" && (
