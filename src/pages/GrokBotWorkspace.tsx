@@ -214,9 +214,10 @@ const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "👀", "🚀"];
 
 function stripSharedRoomContext(text: string): string {
   if (!text) return "";
-  let idx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
-  if (idx < 0) idx = text.indexOf("[AGENTTEAMS COLLABORATION ROOM");
-  return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
+  let cleaned = text.replace(/^\s*QUESTION_FOR_PARENT:\s*/i, "");
+  let idx = cleaned.indexOf("[SHARED SESSION ROOM CONTEXT]");
+  if (idx < 0) idx = cleaned.indexOf("[AGENTTEAMS COLLABORATION ROOM");
+  return idx >= 0 ? cleaned.slice(0, idx).trimEnd() : cleaned;
 }
 
 function parseQuotedReplyFromContent(
