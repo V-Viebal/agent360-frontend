@@ -3176,6 +3176,15 @@ export function GrokBotWorkspace() {
   } | null>(null);
   const [activeThinkingModalMsg, setActiveThinkingModalMsg] = useState<ChatMessage | null>(null);
   const [isLiveThinkingModalOpen, setIsLiveThinkingModalOpen] = useState<boolean>(false);
+  const [sharedHistoryCollabAgent, setSharedHistoryCollabAgent] = useState<{
+    slug: string;
+    name: string;
+    roleTag?: string;
+    model?: string;
+    description?: string;
+    isOnline?: boolean;
+    isBusy?: boolean;
+  } | null>(null);
 
   const handleOpenActiveThinkingModal = (targetMsg?: ChatMessage) => {
     setActiveExtendPopoverMsgId(null);
@@ -7778,12 +7787,25 @@ export function GrokBotWorkspace() {
                 const isAgRunning = matchedAg ? checkIsAgentBusy(matchedAg) : false;
                 const isAgOnline = matchedAg ? matchedAg.status !== "disabled" : true;
 
+                const openCollabHistory = (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  triggerHaptic(12);
+                  setSharedHistoryCollabAgent({
+                    slug: cleanSlug,
+                    name: fullName,
+                    roleTag: roleLabel,
+                    model: modelLabel,
+                    description: matchedAg?.description,
+                    isOnline: isAgOnline,
+                    isBusy: isAgRunning,
+                  });
+                };
+
                 return (
                   <span
                     data-testid={`agent-mention-chip-${cleanSlug}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
+                    onClick={openCollabHistory}
+                    title={`Bấm để xem lịch sử phối hợp với ${shortName}`}
                     className={`relative inline-flex items-center gap-1 group/agchip cursor-pointer select-none ${
                       variant === "inline"
                         ? "px-1.5 py-0.2 mx-0.5 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium text-[12px] align-baseline hover:bg-blue-500/25"
@@ -7793,10 +7815,11 @@ export function GrokBotWorkspace() {
                     <Bot size={variant === "inline" ? 11 : 12} className="shrink-0" />
                     <span>{shortName}</span>
 
-                    {/* Hover / Focus Popover Card showing Bot Role, Model & Live Status */}
+                    {/* Hover / Focus Popover Card showing Bot Role, Model, Live Status & Click to Open Shared History */}
                     <span
                       data-testid={`agent-mention-card-${cleanSlug}`}
-                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-56 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100"
+                      onClick={openCollabHistory}
+                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-60 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100"
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-xs text-slate-900 dark:text-white truncate">{fullName}</span>
@@ -7821,6 +7844,10 @@ export function GrokBotWorkspace() {
                       <span className="flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-neutral-500 pt-1 border-t border-slate-100 dark:border-white/5">
                         <span className="truncate">{roleLabel}</span>
                         <span className="truncate text-[#f8a87c]">{modelLabel}</span>
+                      </span>
+                      <span className="mt-0.5 pt-1 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                        <span>Xem lịch sử phối hợp chung</span>
+                        <span>→</span>
                       </span>
                     </span>
                   </span>
@@ -9816,20 +9843,26 @@ export function GrokBotWorkspace() {
                         })();
 
                         return displayList.map((ag, subIdx) => {
+                          const mentionTag = ag.slug || ag.id.replace(/^bot:agent360:/, "");
                           const isHighlighted = plusMenuSelectedIndex === (appsCount + subIdx);
-                          const isAlreadyMentioned = inputText.includes(`@${ag.name}`);
+                          const isAlreadyMentioned = inputText.includes(`@${ag.name}`) || new RegExp(`@${mentionTag}\\b`, "i").test(inputText);
+                          const isBusy = checkIsAgentBusy(ag);
+                          const isOnline = ag.status !== "disabled";
                           return (
                           <button
                             key={`popover-subagent-${ag.id}-${subIdx}`}
                             type="button"
+                            data-testid={`mention-autocomplete-item-${mentionTag}`}
                             data-popover-nav-idx={appsCount + subIdx}
                             onClick={() => {
                               setIsPlusMenuOpen(false);
-                              const mentionTag = ag.slug || ag.id.replace(/^bot:agent360:/, "");
                               setInputText((prev) => {
-                                if (isAlreadyMentioned || prev.includes(`@${mentionTag}`)) {
+                                if (/(@[a-zA-Z0-9_-]*)$/.test(prev)) {
+                                  return prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${mentionTag} `);
+                                }
+                                if (isAlreadyMentioned) {
                                   return prev
-                                    .replace(new RegExp(`@(${ag.name}|${mentionTag})\\s*`, "g"), "")
+                                    .replace(new RegExp(`@(${ag.name}|${mentionTag})\\s*`, "gi"), "")
                                     .trimStart();
                                 }
                                 return prev ? `${prev} @${mentionTag} ` : `@${mentionTag} `;
@@ -9852,19 +9885,28 @@ export function GrokBotWorkspace() {
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
+                              <div className={`relative h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
                                 isAlreadyMentioned
                                   ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
                                   : "bg-amber-500/15 dark:bg-[#f8a87c]/20 border-amber-500/40 dark:border-[#f8a87c]/30 text-[#f8a87c]"
                               }`}>
                                 {isAlreadyMentioned ? <Check size={11} className="stroke-[2.5]" /> : ag.name.slice(0, 1)}
+                                <span
+                                  data-testid={`mention-autocomplete-status-${mentionTag}`}
+                                  className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white dark:ring-[#181822] ${
+                                    isBusy ? "bg-amber-400 animate-ping" : isOnline ? "bg-emerald-400" : "bg-neutral-400"
+                                  }`}
+                                />
                               </div>
-                              <span className="truncate text-[11px]">{ag.name}</span>
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="truncate text-[11px] font-medium">{ag.name}</span>
+                                <span className="truncate text-[9px] font-mono text-neutral-400">@{mentionTag} · {isBusy ? "Đang xử lý" : isOnline ? "Online" : "Offline"}</span>
+                              </div>
                             </div>
                             <span className={`text-[9px] font-mono shrink-0 flex items-center gap-1 ${
                               isAlreadyMentioned ? "text-emerald-400 font-semibold" : "text-neutral-500 group-hover:text-cyan-400"
                             }`}>
-                              {isAlreadyMentioned ? "Active" : "@Mention"}
+                              {isAlreadyMentioned ? "Active" : `@${mentionTag}`}
                             </span>
                           </button>
                         );
@@ -9878,6 +9920,59 @@ export function GrokBotWorkspace() {
 
                 </div>
             )}
+
+            {(() => {
+              const atMatch = inputText.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+              if (!atMatch) return null;
+              const q = atMatch[1].toLowerCase();
+              const candidateAgents = agents
+                .filter((ag) => ag.id !== selectedAgent.id && ag.slug !== selectedAgent.slug && ag.status !== "disabled")
+                .filter((ag) => {
+                  const slug = (ag.slug || ag.id.replace(/^bot:agent360:/i, "")).toLowerCase();
+                  return !q || slug.includes(q) || ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q);
+                })
+                .slice(0, 6);
+              if (candidateAgents.length === 0) return null;
+              return (
+                <div
+                  data-testid="mention-autocomplete-bar"
+                  className="mb-2 p-1.5 rounded-xl bg-white/95 dark:bg-[#161622]/95 border border-slate-200 dark:border-[#2a2a3c] shadow-lg flex items-center gap-1.5 overflow-x-auto no-scrollbar animate-in fade-in slide-in-from-bottom-1 duration-100 select-none"
+                >
+                  <span className="text-[10px] font-mono text-neutral-400 px-2 shrink-0">Phối hợp nhanh:</span>
+                  {candidateAgents.map((ag) => {
+                    const slug = ag.slug || ag.id.replace(/^bot:agent360:/i, "");
+                    const shortName = ag.name.split(" (")[0];
+                    const isBusy = checkIsAgentBusy(ag);
+                    return (
+                      <button
+                        key={`quick-at-${slug}`}
+                        type="button"
+                        data-testid={`quick-mention-option-${slug}`}
+                        onClick={() => {
+                          triggerHaptic(10);
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/@([a-zA-Z0-9_-]*)$/, `@${slug} `));
+                          if (selectedChatId && selectedAgentId) {
+                            pullAgentIntoChatRoom(selectedAgentId, selectedChatId, slug, {
+                              hostSessionId: selectedChat?.session_id || selectedChatId,
+                            }).then((res) => {
+                              if (res?.room) setActiveSessionRoom(res.room);
+                            });
+                          }
+                          textareaRef.current?.focus();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-[#1e1e2e] hover:bg-blue-500/15 dark:hover:bg-blue-500/20 border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 text-xs text-slate-700 dark:text-neutral-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer shrink-0"
+                      >
+                        <Bot size={12} className="text-blue-500 shrink-0" />
+                        <span className="font-medium text-[11px]">{shortName}</span>
+                        <span className="text-[9px] font-mono text-neutral-400">@{slug}</span>
+                        <span className={`h-1.5 w-1.5 rounded-full ${isBusy ? "bg-amber-400 animate-ping" : "bg-emerald-400"}`} title={isBusy ? "Đang xử lý" : "Online"} />
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {replyingToMsg && (
               <div
@@ -10196,7 +10291,15 @@ export function GrokBotWorkspace() {
                               } else if (selected.type === "app") {
                                 setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `/${selected.id} `));
                               } else if (selected.type === "agent") {
-                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${selected.title} `));
+                                const agSlug = selected.id.replace(/^bot:agent360:/i, "");
+                                setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${agSlug} `));
+                                if (selectedChatId && selectedAgentId) {
+                                  pullAgentIntoChatRoom(selectedAgentId, selectedChatId, agSlug, {
+                                    hostSessionId: selectedChat?.session_id || selectedChatId,
+                                  }).then((res) => {
+                                    if (res?.room) setActiveSessionRoom(res.room);
+                                  });
+                                }
                               }
                               return;
                             }
@@ -13535,6 +13638,135 @@ ${chat.id}`);
           />
         );
       })()}
+      {/* Shared Collaboration History Modal when clicking on a Collaborator Bot Chip / Card */}
+      {sharedHistoryCollabAgent && (() => {
+        const collabSlug = sharedHistoryCollabAgent.slug.toLowerCase();
+        const collabShortName = sharedHistoryCollabAgent.name.split(" (")[0];
+        const sharedTurns = displayMessages.filter((m) => {
+          if (m.senderAgentId && m.senderAgentId.replace(/^bot:agent360:/i, "").toLowerCase() === collabSlug) {
+            return true;
+          }
+          if (m.role === "user" && new RegExp(`@${collabSlug}\\b`, "i").test(m.content)) {
+            return true;
+          }
+          return false;
+        });
+
+        return (
+          <div
+            data-testid="collaborator-shared-history-modal"
+            onClick={() => setSharedHistoryCollabAgent(null)}
+            className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-3 sm:p-4 animate-in fade-in duration-150"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg max-h-[80vh] rounded-2xl bg-white dark:bg-[#141822] border border-slate-200 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden text-left font-sans"
+            >
+              <div className="px-4 py-3 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-[#18202c]">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-8 w-8 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0">
+                    <Bot size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
+                        Phối hợp chung: {selectedAgent.name.split(" (")[0]} ↔ {collabShortName}
+                      </h3>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono shrink-0 ${
+                        sharedHistoryCollabAgent.isBusy
+                          ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                          : sharedHistoryCollabAgent.isOnline
+                          ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
+                          : "bg-neutral-500/15 text-neutral-400 border border-neutral-500/30"
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${
+                          sharedHistoryCollabAgent.isBusy ? "bg-amber-400 animate-ping" : sharedHistoryCollabAgent.isOnline ? "bg-emerald-400" : "bg-neutral-400"
+                        }`} />
+                        <span>{sharedHistoryCollabAgent.isBusy ? "Đang xử lý" : sharedHistoryCollabAgent.isOnline ? "Online" : "Offline"}</span>
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-mono text-neutral-500 truncate">
+                      @{collabSlug} · {sharedHistoryCollabAgent.roleTag || "Collaborator"} · {sharedTurns.length} lượt trao đổi trong phiên
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-testid="close-collab-history-modal-btn"
+                  onClick={() => setSharedHistoryCollabAgent(null)}
+                  className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                  aria-label="Đóng lịch sử phối hợp"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="p-4 overflow-y-auto space-y-3 flex-1">
+                {sharedTurns.length === 0 ? (
+                  <div className="py-8 text-center space-y-2">
+                    <p className="text-xs text-slate-600 dark:text-neutral-300">
+                      Chưa có lượt phản hồi trực tiếp nào từ @{collabSlug} trong phiên này.
+                    </p>
+                    <p className="text-[11px] text-neutral-400">
+                      Bạn có thể gắn thẻ @{collabSlug} trong ô nhập tin nhắn để mời bot cùng xử lý công việc.
+                    </p>
+                  </div>
+                ) : (
+                  sharedTurns.map((t, idx) => {
+                    const isU = t.role === "user";
+                    const cleaned = stripSharedRoomContext(t.content);
+                    return (
+                      <div
+                        key={t.id || idx}
+                        className={`flex flex-col ${isU ? "items-end" : "items-start"} space-y-1`}
+                      >
+                        <span className="text-[10px] font-mono text-neutral-400 px-1">
+                          {isU ? "Yêu cầu của bạn" : `Message from ${collabShortName}`}
+                        </span>
+                        <div className={`rounded-xl px-3 py-2 text-xs leading-relaxed max-w-[90%] ${
+                          isU
+                            ? "bg-amber-500/10 text-slate-900 dark:bg-[#1c1c26] dark:text-neutral-100 border border-amber-500/30 dark:border-[#2c2c3e]"
+                            : "bg-slate-100 text-slate-800 dark:bg-[#1c2430] dark:text-neutral-100 border border-slate-200 dark:border-white/10"
+                        }`}>
+                          <p className="whitespace-pre-wrap break-words">{cleaned}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="px-4 py-2.5 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#18202c] flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  data-testid="mention-collab-from-modal-btn"
+                  onClick={() => {
+                    const slug = sharedHistoryCollabAgent.slug;
+                    setSharedHistoryCollabAgent(null);
+                    setInputText((prev) => (prev.includes(`@${slug}`) ? prev : prev ? `${prev} @${slug} ` : `@${slug} `));
+                    setTimeout(() => textareaRef.current?.focus(), 50);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-blue-400 text-xs font-medium transition-colors cursor-pointer"
+                >
+                  + Nhắc @{collabSlug} vào câu nhắn
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const matched = agents.find((a) => (a.slug || "").toLowerCase() === collabSlug || a.id.replace(/^bot:agent360:/i, "").toLowerCase() === collabSlug);
+                    setSharedHistoryCollabAgent(null);
+                    if (matched) handleSelectAgent(matched);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-slate-200/80 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/15 text-slate-700 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
+                >
+                  Mở không gian của {collabShortName} →
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Global Toast Primitive Notification */}
       <Toast
         toast={
