@@ -230,6 +230,7 @@ import {
   fetchAgentChats,
   getCachedAgentChats,
   markChatAsRead,
+  updateCachedAgentChatsRead,
   fetchActiveChats,
   fetchChatMessages,
   parseRawChatMessages,
@@ -3387,31 +3388,62 @@ export function GrokBotWorkspace() {
     const handleMarkAllAsRead = async () => {
     if (!selectedAgent?.id) return;
     const agId = selectedAgent.id;
-    const currentUnreadIds = unreadCompletedSessions[agId] || [];
-    if (currentUnreadIds.length === 0 && !chats.some((c) => c.unread)) {
+    const normId = normalizeAgentKey(selectedAgent.id);
+    const normSlug = normalizeAgentKey(selectedAgent.slug);
+    const agFullKey = normId ? "bot:agent360:" + normId : agId;
+
+    const unreadFromAgent = getAgentUnreadList(selectedAgent);
+    const unreadFromChats = chats
+      .filter((c) => Boolean(c.unread))
+      .flatMap((c) => [c.id, c.session_id].filter(Boolean) as string[]);
+    const allUnreadIds = Array.from(new Set([...unreadFromAgent, ...unreadFromChats]));
+
+    if (allUnreadIds.length === 0 && !chats.some((c) => c.unread)) {
       triggerHaptic(10);
       return;
     }
     triggerHaptic(20);
-    // 1. Clear unread from local state
+
+    // 1. Clear unread from local state for all alias keys of this agent
+    const matchingKeys = new Set<string>([
+      agId,
+      agFullKey,
+      ...(selectedAgent.slug ? [selectedAgent.slug] : []),
+      ...(normId ? [normId] : []),
+      ...(normSlug ? [normSlug] : []),
+    ]);
+
     setUnreadCompletedSessions((prev) => {
-      const next = { ...prev, [agId]: [] };
+      const next: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (matchingKeys.has(k)) {
+          next[k] = [];
+        } else {
+          next[k] = v.filter((id) => !allUnreadIds.includes(id));
+        }
+      }
       try {
         localStorage.setItem("agent360_unread_sessions", JSON.stringify(next));
       } catch {}
       return next;
     });
-    setChats((prev) => prev.map((c) => ({ ...c, unread: false })));
 
-    // 2. Call backend for each unread session in background
-    for (const sid of currentUnreadIds) {
+    // 2. Update chats state and cached storage
+    setChats((prev) => prev.map((c) => ({ ...c, unread: false })));
+    updateCachedAgentChatsRead(agId);
+    if (selectedAgent.slug && selectedAgent.slug !== agId) {
+      updateCachedAgentChatsRead(selectedAgent.slug);
+    }
+
+    // 3. Call backend for each unread session in background
+    for (const sid of allUnreadIds) {
       markChatAsRead(sid, agId).catch(() => {});
     }
     setForkToast("Đã đánh dấu đã đọc tất cả");
     setTimeout(() => setForkToast(null), 2500);
   };
 
-const handleBatchDeleteSelectedChats = () => {
+  const handleBatchDeleteSelectedChats = () => {
     if (selectedChatIds.length === 0) return;
     setChats((prev) => prev.filter((c) => !selectedChatIds.includes(c.id)));
     setPinnedChatIds((prev) => prev.filter((id) => !selectedChatIds.includes(id)));

@@ -170,6 +170,24 @@ export async function markChatAsRead(chatId: string, agentId?: string): Promise<
 
 const _agentChatsCache = new Map<string, { data: AgentSession[]; timestamp: number }>();
 
+export function updateCachedAgentChatsRead(agentId?: string): void {
+  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const cached = _agentChatsCache.get(cleanAgentId);
+  if (cached && Array.isArray(cached.data)) {
+    cached.data = cached.data.map((c) => ({ ...c, unread: false }));
+    _agentChatsCache.set(cleanAgentId, cached);
+  }
+  try {
+    const raw = sessionStorage.getItem(`agent360_chats_cache_${cleanAgentId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        sessionStorage.setItem(`agent360_chats_cache_${cleanAgentId}`, JSON.stringify(parsed.map((c: any) => ({ ...c, unread: false }))));
+      }
+    }
+  } catch {}
+}
+
 export function getCachedAgentChats(agentId?: string): AgentSession[] | null {
   const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
   const cached = _agentChatsCache.get(cleanAgentId);
