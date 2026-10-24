@@ -10029,12 +10029,12 @@ const handleBatchDeleteSelectedChats = () => {
                 : `${chatSessionsWidth}px`
               : undefined,
         }}
-        className={`fixed lg:static inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok mobile-drawer-panel relative ${
+        className={`fixed lg:static inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok chat-sidebar-panel mobile-drawer-panel relative ${
           mobileChatsOpen
             ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl pointer-events-auto"
             : isChatListCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0"
-            : "hidden lg:flex lg:w-[320px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
+            : "flex lg:w-[320px] translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
         }`}
       >
         {/* Subtle, Slim Resizer Splitter between Chat / Virtual Computer and Session Chats */}
@@ -10363,7 +10363,7 @@ const handleBatchDeleteSelectedChats = () => {
                   <div
                     key={chat.id}
                     data-chat-item-id={chat.id}
-                    style={{ animationDelay: `${Math.min(cIdx * 20, 200)}ms` }}
+                    style={{ animationDelay: `${Math.min(cIdx * 12, 100)}ms` }}
                     onTouchStart={() => handleTouchStartChat(chat)}
                     onTouchEnd={handleTouchEndChat}
                     onTouchMove={handleTouchEndChat}
