@@ -808,7 +808,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
             href={match[2]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#f8a87c] hover:underline underline-offset-2 font-medium break-all"
+            className="text-[#f8a87c] hover:underline underline-offset-2 font-medium break-words"
           >
             {match[1]}
           </a>
@@ -3221,11 +3221,7 @@ export function GrokBotWorkspace() {
             target_agent_id: foundMsg.senderAgentId,
           }).catch(() => {});
         }
-        setForkToast(`Đã phản hồi cảm xúc ${emoji} đến ${author}: "${snippet}..."`);
-      } else {
-        setForkToast(`Đã gỡ phản hồi cảm xúc ${emoji}`);
       }
-      setTimeout(() => setForkToast(null), 2500);
     }
     setActiveReactPopoverMsgId(null);
   };
@@ -7919,7 +7915,7 @@ const handleBatchDeleteSelectedChats = () => {
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
-                        <p className="whitespace-pre-wrap select-text break-words break-all">{cleanContent}</p>
+                        <p className="whitespace-pre-wrap select-text break-words">{cleanContent}</p>
                         {msg.metadata?.isOfflineQueued && (
                           <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
