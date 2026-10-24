@@ -80,7 +80,16 @@ import { Tabs, Tooltip, ConfirmDialog, CodeBlock, AgentPill } from "../component
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "../components/SkyerLogo";
 import { fetchPendingApprovals, approveToolExecution, denyToolExecution, PendingApproval } from "../services/approvalApi";
-import { ShieldAlert, CheckCircle, XCircle, ShieldCheck, GitFork, Network, Keyboard, Info } from "lucide-react";
+import {
+  ShieldAlert,
+  CheckCircle,
+  XCircle,
+  ShieldCheck,
+  GitFork,
+  Network,
+  Keyboard,
+  Info,
+} from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
 import { ConnectAppsModal, APPS_CATALOG } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
@@ -94,8 +103,7 @@ import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Monitor,
-  Trash2,
+Trash2,
   Globe,
   MoreVertical,
   LogOut,
@@ -7563,27 +7571,7 @@ export function GrokBotWorkspace() {
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Mobile & Desktop Quick Computer / Browser Preview Toggle */}
-            {!hasNoAgents && selectedAgent.id && (
-              <Tooltip content="Mở Preview Browser / Computer (Alt+C)" placement="bottom" minWidth={140}>
-                <button
-                  type="button"
-                  aria-label="Toggle Agent Browser Preview"
-                  data-ux-target-min="24"
-                  onClick={() => {
-                    triggerHaptic();
-                    handleToggleComputerSplit();
-                  }}
-                  className={`h-8 w-8 rounded-lg border flex items-center justify-center cursor-pointer shrink-0 transition-colors ${
-                    isComputerSplitOpen
-                      ? "bg-[#f8a87c]/20 border-[#f8a87c]/50 text-[#e0682b] dark:text-[#f8a87c]"
-                      : "bg-[#181820] hover:bg-[#22222e] border-[#242430] text-neutral-400 hover:text-white"
-                  }`}
-                >
-                  <Monitor size={15} />
-                </button>
-              </Tooltip>
-            )}
+            
 
 
 
