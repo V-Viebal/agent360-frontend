@@ -280,6 +280,8 @@ import {
   fetchChatSessionRoom,
   pullAgentIntoChatRoom,
   postChatRoomMessage,
+  submitMessageReaction,
+  classifyReactionEmoji,
   updateChatRoomTitle,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
@@ -3258,25 +3260,128 @@ export function GrokBotWorkspace() {
       return updated;
     });
 
-    // Ghi nhận reaction như 1 hình thức reply đến tin nhắn
+    // Ghi nhận reaction và kích hoạt Implicit Evaluation Turn trực tiếp xuống QwenPaw
     const foundMsg = targetMsg || messages.find((m) => m.id === msgId);
-    if (foundMsg) {
-      const author = foundMsg.role === "user"
-        ? "Bạn"
-        : (foundMsg.senderAgentName || foundMsg.senderAgentId || selectedAgent?.name || "Agent");
-      const snippet = (foundMsg.content || "").slice(0, 36).replace(/\s+/g, " ");
+    if (foundMsg && selectedAgent?.id && selectedChatId) {
+      const isAgentResponse = foundMsg.role === "assistant";
+      const targetAgentId = foundMsg.senderAgentId || selectedAgent.id;
+      const snippet = (foundMsg.content || "").slice(0, 160).replace(/\s+/g, " ");
 
       if (isAdded) {
-        // Gửi ghi nhận reaction reply đến Session Room (AgentTeams backend)
-        if (selectedAgent?.id && selectedChatId) {
-          postChatRoomMessage(selectedAgent.id, selectedChatId, {
-            author_id: "user",
-            author_role: "user",
-            kind: "reaction",
-            text: `[Reaction Reply ${emoji}]`,
-            target_agent_id: foundMsg.senderAgentId,
-          }).catch(() => {});
+        // Post background record to session room
+        postChatRoomMessage(selectedAgent.id, selectedChatId, {
+          author_id: "user",
+          author_role: "user",
+          kind: "reaction",
+          text: `[Reaction Reply ${emoji}]`,
+          target_agent_id: targetAgentId,
+        }).catch(() => {});
+
+        // Nếu là reaction trên câu trả lời của Agent -> Gửi request ngầm để Agent treat & respond
+        if (isAgentResponse && !isStreaming && !isCurrentSessionRunning) {
+          const originChatId = selectedChatId;
+          const originAgentId = selectedAgent.id;
+          const classification = classifyReactionEmoji(emoji);
+          const feedbackToast = `Đã gửi đánh giá ${emoji} (${classification.labelVi})`;
+          setForkToast(feedbackToast);
+          setTimeout(() => setForkToast(null), 2500);
+
+          // Tạo placeholder turn phản hồi ngầm cho Agent mà không tạo thêm user bubble
+          const tempBotMsgId = `bot-react-${Date.now()}`;
+          const initialBotMsg: ChatMessage = {
+            id: tempBotMsgId,
+            role: "assistant",
+            content: "",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            evidenceStatus: "observed",
+            senderAgentId: targetAgentId,
+            senderAgentName: foundMsg.senderAgentName || selectedAgent.name,
+          };
+
+          setMessages((prev: ChatMessage[]) => [...prev, initialBotMsg]);
+          setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
+          setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
+          setActiveRespondingAgent({
+            id: targetAgentId,
+            name: foundMsg.senderAgentName || selectedAgent.name,
+            statusText: `${foundMsg.senderAgentName || selectedAgent.name} đang phản hồi đánh giá ${emoji}...`,
+          });
+
+          // Gọi API submitMessageReaction hỗ trợ stream
+          submitMessageReaction(selectedAgent.id, selectedChatId, msgId, {
+            emoji,
+            action: "add",
+            session_id: selectedChat?.session_id || selectedChatId,
+            message_snippet: snippet,
+            target_agent_id: targetAgentId,
+            trigger_agent_response: true,
+          }).then(async (response) => {
+            if (!response.ok || !response.body) {
+              setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
+              setRunningChatIds((prev) => prev.filter((id) => id !== originChatId));
+              setActiveRespondingAgent(null);
+              return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let accumulated = "";
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith(":")) continue;
+                if (trimmed.startsWith("data:")) {
+                  const rawData = trimmed.replace(/^data:\s*/, "");
+                  if (rawData === "[DONE]") break;
+                  try {
+                    const parsed = JSON.parse(rawData);
+                    if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {
+                      if (parsed.delta && parsed.text) {
+                        accumulated += parsed.text;
+                      } else if (parsed.text) {
+                        accumulated = parsed.text;
+                      }
+                      setMessages((prev: ChatMessage[]) =>
+                        prev.map((m: ChatMessage) => (m.id === tempBotMsgId ? { ...m, content: accumulated } : m))
+                      );
+                    }
+                  } catch {}
+                }
+              }
+            }
+
+            setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
+            setRunningChatIds((prev) => prev.filter((id) => id !== originChatId));
+            setActiveRespondingAgent(null);
+            if (originChatId) {
+              setMessages((cur: ChatMessage[]) => {
+                setCachedChatMessages(originChatId, cur, originAgentId);
+                return cur;
+              });
+            }
+          }).catch(() => {
+            setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
+            setRunningChatIds((prev) => prev.filter((id) => id !== originChatId));
+            setActiveRespondingAgent(null);
+          });
         }
+      } else {
+        // Gỡ bỏ reaction
+        submitMessageReaction(selectedAgent.id, selectedChatId, msgId, {
+          emoji,
+          action: "remove",
+          session_id: selectedChat?.session_id || selectedChatId,
+          target_agent_id: targetAgentId,
+          trigger_agent_response: false,
+        }).catch(() => {});
       }
     }
     setActiveReactPopoverMsgId(null);

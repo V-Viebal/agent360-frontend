@@ -1638,3 +1638,83 @@ export async function updateChatRoomTitle(
     return null;
   }
 }
+
+
+export interface SubmitMessageReactionPayload {
+  emoji: string;
+  action?: "add" | "remove";
+  session_id?: string;
+  message_snippet?: string;
+  target_agent_id?: string;
+  trigger_agent_response?: boolean;
+}
+
+export interface ReactionClassification {
+  sentiment: "positive" | "negative" | "neutral";
+  category: "praise" | "approve" | "disapprove" | "sad_frustrated" | "surprised_curious" | "amused" | "feedback";
+  labelVi: string;
+}
+
+export function classifyReactionEmoji(emoji: string): ReactionClassification {
+  switch (emoji) {
+    case "❤️":
+    case "🔥":
+    case "🚀":
+    case "🎉":
+    case "💯":
+    case "👏":
+    case "🤩":
+    case "😍":
+    case "🙌":
+    case "⚡":
+    case "💪":
+      return { sentiment: "positive", category: "praise", labelVi: "Khen ngợi / Rất tốt" };
+    case "👍":
+    case "🤝":
+    case "🫡":
+    case "🎯":
+    case "💡":
+    case "🙏":
+    case "☕":
+    case "🤖":
+      return { sentiment: "positive", category: "approve", labelVi: "Đồng ý / Đúng ý" };
+    case "👎":
+      return { sentiment: "negative", category: "disapprove", labelVi: "Chưa hài lòng / Không đúng" };
+    case "😢":
+      return { sentiment: "negative", category: "sad_frustrated", labelVi: "Hụt hẫng / Cần khắc phục" };
+    case "😮":
+    case "👀":
+      return { sentiment: "neutral", category: "surprised_curious", labelVi: "Ngạc nhiên / Cần làm rõ" };
+    case "😆":
+      return { sentiment: "positive", category: "amused", labelVi: "Thú vị / Vui vẻ" };
+    default:
+      return { sentiment: "neutral", category: "feedback", labelVi: "Đánh giá" };
+  }
+}
+
+export async function submitMessageReaction(
+  agentId: string,
+  chatId: string,
+  messageId: string,
+  payload: SubmitMessageReactionPayload
+): Promise<Response> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const authHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "text/event-stream, application/json",
+    "X-Agent-Id": cleanId,
+  };
+  try {
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    if (token) authHeaders["Authorization"] = "Bearer " + token;
+    const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
+    if (opKey) authHeaders["X-Agent360-Operator-Token"] = opKey;
+  } catch {}
+
+  const url = `/api/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/reactions`;
+  return await fetch(url, {
+    method: "POST",
+    headers: authHeaders,
+    body: JSON.stringify(payload),
+  });
+}
