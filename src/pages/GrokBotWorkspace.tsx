@@ -4904,11 +4904,28 @@ export function GrokBotWorkspace() {
   const displayMessages = useMemo<ChatMessage[]>(() => {
     const base = [...messages];
     if (activeSessionRoom && (activeSessionRoom.host_chat_id === selectedChatId || activeSessionRoom.host_session_id === selectedChatId || (selectedChat?.session_id && (activeSessionRoom.host_chat_id === selectedChat.session_id || activeSessionRoom.host_session_id === selectedChat.session_id))) && Array.isArray(activeSessionRoom.turns)) {
-      for (const rt of activeSessionRoom.turns) {
-        if (rt.kind !== "collaborator_reply" && rt.kind !== "question" && rt.kind !== "manager_guard") continue;
-        if (base.some((m) => m.id === rt.id)) continue;
+      const sortedRoomTurns = [...activeSessionRoom.turns].sort((a, b) => (a.turn_no || 0) - (b.turn_no || 0));
+      for (const rt of sortedRoomTurns) {
+        if (rt.kind === "request" && rt.author_role !== "manager") {
+          const cleanReq = stripSharedRoomContext(rt.text || "").trim();
+          if (cleanReq && !base.some((m) => m.role === "user" && stripSharedRoomContext(m.content).trim() === cleanReq)) {
+            const reqMsg: ChatMessage = {
+              id: rt.id,
+              role: "user",
+              content: cleanReq,
+              timestamp: rt.created_at,
+            };
+            const firstCollabIdx = base.findIndex((m) => Boolean(m.senderAgentId) && m.roomId === activeSessionRoom.room_id);
+            if (firstCollabIdx >= 0) base.splice(firstCollabIdx, 0, reqMsg);
+            else base.push(reqMsg);
+          }
+          continue;
+        }
+        if (rt.kind !== "collaborator_reply" && rt.kind !== "question" && rt.kind !== "manager_guard" && rt.kind !== "synthesis") continue;
+        const isSynth = rt.kind === "synthesis";
+        if (base.some((m) => m.id === rt.id || (isSynth && m.role === "assistant" && !m.senderAgentId && m.content.trim() === (rt.text || "").trim()))) continue;
         const rtSteps = Array.isArray((rt as any).steps) ? (rt as any).steps : [];
-        base.push({
+        const turnMsg: ChatMessage = {
           id: rt.id,
           role: "assistant",
           content: rt.text,
@@ -4917,13 +4934,28 @@ export function GrokBotWorkspace() {
           toolCalls: rtSteps.filter((s: any) => s.kind === "tool_call"),
           timestamp: rt.created_at,
           evidenceStatus: "observed",
-          senderAgentId: rt.author_id,
-          senderAgentName: rt.author_name,
+          senderAgentId: isSynth ? undefined : rt.author_id,
+          senderAgentName: isSynth ? undefined : rt.author_name,
           authorRole: rt.author_role,
           roomId: activeSessionRoom.room_id,
           matrixRoomId: activeSessionRoom.matrix_room_id,
           elementRoomUrl: activeSessionRoom.element_room_url,
-        });
+        };
+        if (!isSynth) {
+          // If the last message in base is an active/completed Host synthesis turn for this room batch, insert collaborator reply BEFORE the Host synthesis turn so Host is always LAST!
+          const lastIdx = base.length - 1;
+          const lastItem = lastIdx >= 0 ? base[lastIdx] : null;
+          if (
+            lastItem &&
+            lastItem.role === "assistant" &&
+            !lastItem.senderAgentId &&
+            (lastItem.id.startsWith("bot-") || (lastIdx > 0 && (base[lastIdx - 1].senderAgentId || /@[a-zA-Z0-9_-]+/.test(base[lastIdx - 1].content))))
+          ) {
+            base.splice(lastIdx, 0, turnMsg);
+            continue;
+          }
+        }
+        base.push(turnMsg);
       }
     }
     const isRemoteOrReloadedTurnActive = Boolean(liveTurnForView) || (isCurrentSessionRunning && !isStreaming);
@@ -5810,7 +5842,8 @@ export function GrokBotWorkspace() {
         : (getCachedAgentChats(originAgentId) || chats);
       const currentActiveChat = targetChatList.find((c) => c.id === originChatId) || targetChatList.find((c) => c.session_id === originChatId);
       const activeTargetChannel = currentActiveChat?.channel;
-      const targetSessionId = currentActiveChat?.session_id || originChatId || "default";
+      // Always pass originChatId (the unique chat UUID) so backend maps to the exact chat branch and user_id
+      const targetSessionId = originChatId || currentActiveChat?.session_id || "default";
 
       const turnAcc = new TurnAccumulator(tempBotMsgId);
       let lastPaint = 0;
