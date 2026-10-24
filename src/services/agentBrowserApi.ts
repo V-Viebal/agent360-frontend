@@ -87,13 +87,43 @@ export async function issueAgentDesktopUrl(agentId: string, mode: "control" | "w
   return body.url;
 }
 
-/** Opens the desktop in a new tab; the tab is opened synchronously so popup blockers allow it. */
+// Pre-warmed signed desktop URLs per agentId+mode so mobile window.open can navigate synchronously
+const cachedSignedDesktopUrls = new Map<string, { url: string; expiresAt: number }>();
+
+export async function prefetchAgentDesktopUrl(agentId: string, mode: "control" | "watch" = "control"): Promise<string | null> {
+  try {
+    const url = await issueAgentDesktopUrl(agentId, mode);
+    cachedSignedDesktopUrls.set(`${bare(agentId)}:${mode}`, { url, expiresAt: Date.now() + 7 * 3600 * 1000 });
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+/** Opens the desktop in a new tab; uses pre-warmed URL on mobile when available so iOS Safari / Android Chrome never strand on about:blank. */
 export function openAgentDesktopTab(agentId: string, hash = "#collab"): void {
+  const mode = hash === "#shared" ? "watch" : "control";
+  const cacheKey = `${bare(agentId)}:${mode}`;
+  const cached = cachedSignedDesktopUrls.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    const w = window.open(cached.url + hash, "_blank", "noopener,noreferrer");
+    if (!w) window.location.assign(cached.url + hash);
+    return;
+  }
+
   const w = window.open("about:blank", "_blank");
-  issueAgentDesktopUrl(agentId, hash === "#shared" ? "watch" : "control")
-    .then((url) => { if (w) { w.opener = null; w.location.href = url + hash; } })
+  issueAgentDesktopUrl(agentId, mode)
+    .then((url) => {
+      cachedSignedDesktopUrls.set(cacheKey, { url, expiresAt: Date.now() + 7 * 3600 * 1000 });
+      if (w && !w.closed) {
+        w.opener = null;
+        w.location.replace(url + hash);
+      } else {
+        window.location.assign(url + hash);
+      }
+    })
     .catch((e) => {
-      w?.close();
-      window.alert(e instanceof DesktopAuthError ? "Cần operator key để mở desktop của agent." : `Không mở được desktop: ${e.message}`);
+      try { w?.close(); } catch {}
+      window.alert(e instanceof DesktopAuthError ? "Cần quyền truy cập hoặc operator key để mở desktop của agent." : `Không mở được desktop: ${e.message}`);
     });
 }

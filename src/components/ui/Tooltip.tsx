@@ -85,6 +85,9 @@ export function Tooltip({
   }, [isVisible, placement]);
 
   const handleMouseEnter = () => {
+    if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
+      return;
+    }
     timerRef.current = setTimeout(() => {
       setIsVisible(true);
     }, delay);
