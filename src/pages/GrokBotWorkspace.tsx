@@ -91,7 +91,7 @@ import { ScheduleJobModal } from "../components/ScheduleJobModal";
 import { VoiceRecordSettingsModal } from "../components/VoiceRecordSettingsModal";
 import { StarredAndShortcutsModal } from "../components/StarredAndShortcutsModal";
 import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Monitor,
@@ -3176,7 +3176,7 @@ export function GrokBotWorkspace() {
       targetEl = document.getElementById(`chat-msg-${targetMsgId}`);
     }
     if (!targetEl && snippet) {
-      const matchingMsg = displayMessages.find((m) =>
+      const matchingMsg = displayMessages.find((m: ChatMessage) =>
         m.content && m.content.replace(/\s+/g, " ").includes(snippet.slice(0, 40))
       );
       if (matchingMsg) {
@@ -4647,7 +4647,7 @@ const handleBatchDeleteSelectedChats = () => {
     return () => controller.abort();
   }, [selectedChatId, selectedAgentId, isStreaming, isCurrentSessionRunning]);
   const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
-  var displayMessages: ChatMessage[] = (() => {
+  const displayMessages = useMemo<ChatMessage[]>(() => {
     const base = [...messages];
     if (activeSessionRoom && (activeSessionRoom.host_chat_id === selectedChatId || activeSessionRoom.host_session_id === selectedChatId || (selectedChat?.session_id && (activeSessionRoom.host_chat_id === selectedChat.session_id || activeSessionRoom.host_session_id === selectedChat.session_id))) && Array.isArray(activeSessionRoom.turns)) {
       for (const rt of activeSessionRoom.turns) {
@@ -4680,7 +4680,7 @@ const handleBatchDeleteSelectedChats = () => {
     }
     base.push(liveTurnForView.msg);
     return base;
-  })();
+  }, [messages, activeSessionRoom, liveTurnForView, selectedChatId, selectedChat?.session_id]);
 
   useEffect(() => {
     // Only jump to bottom on initial load / chat switch
@@ -4691,8 +4691,6 @@ const handleBatchDeleteSelectedChats = () => {
         messagesContainerRef.current.scrollTop = savedPos;
       } else {
         jumpToBottom();
-        const timer = setTimeout(jumpToBottom, 40);
-        return () => clearTimeout(timer);
       }
       return;
     }
@@ -4700,7 +4698,7 @@ const handleBatchDeleteSelectedChats = () => {
     if (isStreaming && !isUserScrolledUpRef.current) {
       jumpToBottom();
     }
-  }, [displayMessages, isStreaming, selectedChatId]);
+  }, [displayMessages.length, isStreaming, selectedChatId]);
 
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
@@ -7368,18 +7366,18 @@ const handleBatchDeleteSelectedChats = () => {
             </div>
           ) : (
             displayMessages
-            .filter((msg) => {
+            .filter((msg: ChatMessage) => {
               if (inSessionSearchQuery === "__STARRED__") return starredMsgIds.includes(msg.id);
               return !inSessionSearchQuery || msg.content.toLowerCase().includes(inSessionSearchQuery.toLowerCase());
             })
-            .map((msg, mIdx) => {
+            .map((msg: ChatMessage, mIdx: number) => {
               const isLastTurn = mIdx === displayMessages.length - 1;
               const isUser = msg.role === "user";
               const hasSteps = Boolean(msg.steps && msg.steps.length > 0);
               const hasTools = Boolean(msg.toolCalls && msg.toolCalls.length > 0);
               const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning);
               const { replyTo: parsedReplyTo, cleanContent } = parseQuotedReplyFromContent(msg.content, msg.replyTo);
-              const currentReactions = msgReactions[msg.id] || [];
+              const currentReactions = isUser ? [] : (msgReactions[msg.id] || []);
               const isReactOpen = activeReactPopoverMsgId === msg.id;
               const isExtendOpen = activeExtendPopoverMsgId === msg.id;
               const isHighlighted = highlightedReplyMsgId === msg.id;
@@ -7408,11 +7406,11 @@ const handleBatchDeleteSelectedChats = () => {
 
               const renderMessageReactionsAndActions = () => (
                 <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} w-full relative`}>
-                  {/* Displayed Reaction Badges under bubble */}
-                  {currentReactions.length > 0 && (
+                  {/* Reaction Badges: Only for assistant messages */}
+                  {!isUser && currentReactions.length > 0 && (
                     <div
                       data-testid={`msg-reactions-${msg.id}`}
-                      className={`flex items-center flex-wrap gap-1 mt-1 select-none ${isUser ? "justify-end" : "justify-start"}`}
+                      className="flex items-center flex-wrap gap-1 mt-1 select-none justify-start"
                     >
                       {currentReactions.map((emoji) => (
                         <button
@@ -7429,70 +7427,70 @@ const handleBatchDeleteSelectedChats = () => {
                     </div>
                   )}
 
-                  {/* Minimalist 3-Button Hover / Touch Bar: React + Reply + Extend Icon */}
+                  {/* Lean Icon-Only Action Bar (Mobile-like compact rounded pill) */}
                   {!(isStreaming && isLastTurn && !isUser) && (
                     <div
                       data-testid={`msg-action-bar-${msg.id}`}
-                      className={`relative flex items-center gap-1 pt-1 mt-0.5 select-none transition-opacity duration-150 ${
+                      className={`relative flex items-center gap-0.5 p-0.5 mt-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-opacity duration-150 ${
                         speakingMsgId === msg.id || isReactOpen || isExtendOpen
                           ? "opacity-100"
                           : "opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100"
                       } ${isUser ? "justify-end" : "justify-start"}`}
                     >
-                      {/* 1. React Button */}
-                      <div className="relative">
-                        <Tooltip content="Thả cảm xúc (React)" placement="top" minWidth={120}>
-                          <button
-                            data-ux-target-min="24"
-                            data-testid="msg-react-btn"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveExtendPopoverMsgId(null);
-                              setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                            }}
-                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
-                              isReactOpen
-                                ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c]"
-                                : "hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
-                            }`}
-                            aria-label="Thả cảm xúc"
-                          >
-                            <Smile size={14} />
-                          </button>
-                        </Tooltip>
+                      {/* React Button: Only for Agent message */}
+                      {!isUser && (
+                        <div className="relative">
+                          <Tooltip content="Thả cảm xúc" placement="top" minWidth={100}>
+                            <button
+                              data-ux-target-min="24"
+                              data-testid="msg-react-btn"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveExtendPopoverMsgId(null);
+                                setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                              }}
+                              className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                                isReactOpen
+                                  ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                                  : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                              aria-label="Thả cảm xúc"
+                            >
+                              <Smile size={13} />
+                            </button>
+                          </Tooltip>
 
-                        {/* Quick Emoji Reaction Bar Popover */}
-                        {isReactOpen && (
-                          <div
-                            data-testid="msg-react-popover"
-                            onClick={(e) => e.stopPropagation()}
-                            className={`absolute bottom-full mb-1.5 z-50 flex items-center gap-1 px-2 py-1 rounded-full bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-xl animate-in fade-in zoom-in-95 duration-150 ${
-                              isUser ? "right-0" : "left-0"
-                            }`}
-                          >
-                            {QUICK_REACTIONS.map((emoji) => {
-                              const active = currentReactions.includes(emoji);
-                              return (
-                                <button
-                                  key={emoji}
-                                  type="button"
-                                  data-testid={`react-option-${emoji}`}
-                                  onClick={() => toggleMessageReaction(msg.id, emoji)}
-                                  className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer ${
-                                    active ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]/50" : "hover:bg-slate-100 dark:hover:bg-white/10"
-                                  }`}
-                                >
-                                  {emoji}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                          {/* Quick Emoji Reaction Popover */}
+                          {isReactOpen && (
+                            <div
+                              data-testid="msg-react-popover"
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute bottom-full mb-1.5 left-0 z-50 flex items-center gap-1 px-2 py-1 rounded-full bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-xl animate-in zoom-in-95 duration-100"
+                            >
+                              {QUICK_REACTIONS.map((emoji) => {
+                                const active = currentReactions.includes(emoji);
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    data-testid={`react-option-${emoji}`}
+                                    onClick={() => toggleMessageReaction(msg.id, emoji)}
+                                    className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer ${
+                                      active ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]/50" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                                    }`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                      {/* 2. Reply Button */}
-                      <Tooltip content="Trả lời tin nhắn (Reply)" placement="top" minWidth={135}>
+                      {/* Reply Button (Both User & Agent) */}
+                      <Tooltip content="Trả lời" placement="top" minWidth={90}>
                         <button
                           data-ux-target-min="24"
                           data-testid="msg-reply-btn"
@@ -7501,16 +7499,139 @@ const handleBatchDeleteSelectedChats = () => {
                             e.stopPropagation();
                             handleStartReply(msg);
                           }}
-                          className="h-7 w-7 rounded-lg hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
-                          aria-label="Trả lời tin nhắn"
+                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                          aria-label="Trả lời"
                         >
-                          <CornerUpLeft size={14} />
+                          <CornerUpLeft size={13} />
                         </button>
                       </Tooltip>
 
-                      {/* 3. Extend Icon (...) */}
+                      {/* Copy Button (Both User & Agent) */}
+                      <Tooltip content={copiedResponseMsgId === msg.id ? "Đã chép!" : "Sao chép"} placement="top" minWidth={95}>
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-copy-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(cleanContent);
+                            setCopiedResponseMsgId(msg.id);
+                            setTimeout(() => setCopiedResponseMsgId(null), 1800);
+                          }}
+                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                          aria-label="Sao chép"
+                        >
+                          {copiedResponseMsgId === msg.id ? (
+                            <Check size={13} className="text-emerald-400" />
+                          ) : (
+                            <Copy size={13} />
+                          )}
+                        </button>
+                      </Tooltip>
+
+                      {/* Edit Button: User only */}
+                      {isUser && (
+                        <Tooltip content="Chỉnh sửa" placement="top" minWidth={95}>
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-edit-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInputText(cleanContent);
+                              if (textareaRef.current) {
+                                textareaRef.current.style.height = "auto";
+                                textareaRef.current.focus();
+                                setTimeout(() => {
+                                  if (textareaRef.current) {
+                                    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                                    textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
+                                  }
+                                }, 0);
+                              }
+                            }}
+                            className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            aria-label="Chỉnh sửa"
+                          >
+                            <Edit2 size={13} className="text-cyan-400" />
+                          </button>
+                        </Tooltip>
+                      )}
+
+                      {/* TTS Voice Readout Button: Agent only */}
+                      {!isUser && (
+                        <Tooltip content={speakingMsgId === msg.id ? "Dừng đọc" : "Đọc to"} placement="top" minWidth={90}>
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-tts-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (speakingMsgId === msg.id) {
+                                stopSpeaking();
+                                setSpeakingMsgId(null);
+                              } else {
+                                setSpeakingMsgId(msg.id);
+                                speakText(cleanContent, {
+                                  onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                  onEnd: () => {
+                                    setSpeakingMsgId(null);
+                                    setSpeakingSentence(null);
+                                  },
+                                  onError: () => {
+                                    setSpeakingMsgId(null);
+                                    setSpeakingSentence(null);
+                                  },
+                                });
+                              }
+                            }}
+                            className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                            aria-label="Đọc thoại"
+                          >
+                            <Volume2 size={13} className={speakingMsgId === msg.id ? "text-[#f8a87c] animate-pulse" : ""} />
+                          </button>
+                        </Tooltip>
+                      )}
+
+                      {/* Thinking Button (Icon Sparkles): Agent only, when message has thinking */}
+                      {!isUser && hasThinking && (
+                        <Tooltip content="Thinking & Tool Execution" placement="top" minWidth={160}>
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-thinking-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveThinkingModalMsg(msg);
+                            }}
+                            className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-emerald-500 hover:text-emerald-400 flex items-center justify-center transition-colors cursor-pointer"
+                            aria-label="Thinking & Tool Execution"
+                          >
+                            <Sparkles size={13} />
+                          </button>
+                        </Tooltip>
+                      )}
+
+                      {/* Star Button (Both User & Agent) */}
+                      <Tooltip content={starredMsgIds.includes(msg.id) ? "Bỏ sao" : "Đánh dấu sao"} placement="top" minWidth={110}>
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-star-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStarMessage(msg.id);
+                          }}
+                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                          aria-label="Đánh dấu sao"
+                        >
+                          <Star size={13} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400" : ""} />
+                        </button>
+                      </Tooltip>
+
+                      {/* Extend Menu Trigger (...) */}
                       <div className="relative">
-                        <Tooltip content="Mở rộng tùy chọn" placement="top" minWidth={125}>
+                        <Tooltip content="Mở rộng" placement="top" minWidth={85}>
                           <button
                             data-ux-target-min="24"
                             data-testid="msg-extend-btn"
@@ -7519,7 +7640,6 @@ const handleBatchDeleteSelectedChats = () => {
                               e.stopPropagation();
                               setActiveReactPopoverMsgId(null);
                               if (typeof window !== "undefined" && window.innerWidth < 640) {
-                                setIsMobileActionExtended(false);
                                 setMobileActionMsg({
                                   id: msg.id,
                                   content: cleanContent,
@@ -7532,155 +7652,58 @@ const handleBatchDeleteSelectedChats = () => {
                                 setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                               }
                             }}
-                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
+                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                               isExtendOpen
-                                ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c]"
-                                : "hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
+                                ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                                : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
-                            aria-label={isUser ? "Tùy chọn câu hỏi" : "Tùy chọn tin nhắn"}
+                            aria-label="Mở rộng"
                           >
-                            <MoreHorizontal size={14} />
+                            <MoreHorizontal size={13} />
                           </button>
                         </Tooltip>
 
-                        {/* Desktop Extend Menu Popover grouping secondary CTAs */}
+                        {/* Desktop Compact Extend Popover */}
                         {isExtendOpen && (
                           <div
                             data-testid="msg-extend-menu"
                             onClick={(e) => e.stopPropagation()}
-                            className={`absolute bottom-full mb-1.5 z-50 w-52 py-1.5 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-xs font-sans ${
+                            className={`absolute bottom-full mb-1.5 z-50 py-1 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-2xl animate-in zoom-in-95 duration-100 flex items-center gap-1 px-1.5 ${
                               isUser ? "right-0" : "left-0"
                             }`}
                           >
-                            {/* Copy */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(cleanContent);
-                                setCopiedResponseMsgId(msg.id);
-                                setActiveExtendPopoverMsgId(null);
-                                setTimeout(() => setCopiedResponseMsgId(null), 1800);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
-                            >
-                              {copiedResponseMsgId === msg.id ? (
-                                <Check size={14} className="text-emerald-400 shrink-0" />
-                              ) : (
-                                <Copy size={14} className="text-neutral-400 shrink-0" />
-                              )}
-                              <span>{copiedResponseMsgId === msg.id ? "Đã sao chép!" : "Sao chép nội dung"}</span>
-                            </button>
-
-                            {/* Star / Bookmark */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                toggleStarMessage(msg.id);
-                                setActiveExtendPopoverMsgId(null);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
-                            >
-                              <Star size={14} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-400 shrink-0"} />
-                              <span>{starredMsgIds.includes(msg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao"}</span>
-                            </button>
-
-                            {/* Edit Prompt (User only) */}
-                            {isUser && (
+                            {/* Fork */}
+                            <Tooltip content="Tách nhánh phiên" placement="top" minWidth={130}>
                               <button
                                 type="button"
+                                data-testid="extend-fork-btn"
                                 onClick={() => {
                                   setActiveExtendPopoverMsgId(null);
-                                  setInputText(cleanContent);
-                                  if (textareaRef.current) {
-                                    textareaRef.current.style.height = "auto";
-                                    textareaRef.current.focus();
-                                    setTimeout(() => {
-                                      if (textareaRef.current) {
-                                        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
-                                        textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
-                                      }
-                                    }, 0);
-                                  }
+                                  handleForkSession(mIdx);
                                 }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                                className="h-7 w-7 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-cyan-400 flex items-center justify-center cursor-pointer transition-colors"
+                                aria-label="Tách nhánh phiên"
                               >
-                                <Edit2 size={14} className="text-cyan-400 shrink-0" />
-                                <span>Chỉnh sửa câu hỏi</span>
+                                <GitFork size={14} />
                               </button>
-                            )}
+                            </Tooltip>
 
-                            {/* Read Aloud TTS (Assistant only) */}
+                            {/* Forward (Agent only) */}
                             {!isUser && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveExtendPopoverMsgId(null);
-                                  if (speakingMsgId === msg.id) {
-                                    stopSpeaking();
-                                    setSpeakingMsgId(null);
-                                  } else {
-                                    setSpeakingMsgId(msg.id);
-                                    speakText(cleanContent, {
-                                      onSegmentChange: (seg) => setSpeakingSentence(seg),
-                                      onEnd: () => {
-                                        setSpeakingMsgId(null);
-                                        setSpeakingSentence(null);
-                                      },
-                                      onError: () => {
-                                        setSpeakingMsgId(null);
-                                        setSpeakingSentence(null);
-                                      },
-                                    });
-                                  }
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
-                              >
-                                <Volume2 size={14} className={speakingMsgId === msg.id ? "text-[#f8a87c] animate-pulse shrink-0" : "text-[#f8a87c] shrink-0"} />
-                                <span>{speakingMsgId === msg.id ? "Dừng đọc thoại" : "Đọc to bằng giọng nói (TTS)"}</span>
-                              </button>
-                            )}
-
-                            {/* Fork Session */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveExtendPopoverMsgId(null);
-                                handleForkSession(mIdx);
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
-                            >
-                              <GitFork size={14} className="text-cyan-400 shrink-0" />
-                              <span>Tách nhánh phiên mới</span>
-                            </button>
-
-                            {/* Forward to Another Agent (Assistant only) */}
-                            {!isUser && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveExtendPopoverMsgId(null);
-                                  setForwardModalMsg(cleanContent);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
-                              >
-                                <Share2 size={14} className="text-purple-400 shrink-0" />
-                                <span>Chuyển tiếp cho Agent khác</span>
-                              </button>
-                            )}
-
-                            {/* View Thinking & Tools */}
-                            {hasThinking && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveExtendPopoverMsgId(null);
-                                  setActiveThinkingModalMsg(msg);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer text-left border-t border-slate-100 dark:border-white/5 mt-1 pt-2"
-                              >
-                                <Sparkles size={14} className="text-emerald-400 shrink-0" />
-                                <span>Xem Thinking & Công cụ</span>
-                              </button>
+                              <Tooltip content="Chuyển tiếp" placement="top" minWidth={100}>
+                                <button
+                                  type="button"
+                                  data-testid="extend-forward-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    setForwardModalMsg(cleanContent);
+                                  }}
+                                  className="h-7 w-7 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-purple-400 flex items-center justify-center cursor-pointer transition-colors"
+                                  aria-label="Chuyển tiếp"
+                                >
+                                  <Share2 size={14} />
+                                </button>
+                              </Tooltip>
                             )}
                           </div>
                         )}
@@ -7706,13 +7729,12 @@ const handleBatchDeleteSelectedChats = () => {
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
-                          setIsMobileActionExtended(false);
                           setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
                         }
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
-                      <div className={`inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words transition-all ${
+                      <div className={`inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words ${
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
@@ -7744,7 +7766,6 @@ const handleBatchDeleteSelectedChats = () => {
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
-                          setIsMobileActionExtended(false);
                           setMobileActionMsg({
                             id: msg.id,
                             content: cleanContent,
@@ -7761,7 +7782,7 @@ const handleBatchDeleteSelectedChats = () => {
                       {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
                         <div
                           data-testid="active-responding-agent-pill"
-                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none animate-in fade-in duration-150"
+                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 shadow-xs select-none"
                         >
                           <Loader2 size={13} className="text-[#f8a87c] animate-spin shrink-0" />
                           <span className="text-xs font-mono font-medium text-slate-700 dark:text-neutral-200">
@@ -7787,8 +7808,8 @@ const handleBatchDeleteSelectedChats = () => {
                               </span>
                             </div>
                           )}
-                          {/* Assistant Response Bubble */}
-                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs transition-all ${
+                          {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
+                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs ${
                             msg.senderAgentId
                               ? "bg-emerald-500/[0.06] border border-emerald-500/30 text-slate-800 dark:bg-[#111c1a]/90 dark:border-emerald-500/25 dark:text-neutral-100"
                               : "bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200"
@@ -7836,18 +7857,6 @@ const handleBatchDeleteSelectedChats = () => {
                                 </span>
                               )}
                             </div>
-
-                            {/* Detail mở rộng ở sau cùng tin nhắn: Thinking & Tool Execution trace (Hình 2) */}
-                            {hasThinking && (
-                              <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-white/10">
-                                <TurnExecutionAccordion
-                                  msg={msg}
-                                  isStreamingThisTurn={Boolean((isStreaming || isCurrentSessionRunning) && isLastTurn)}
-                                  agentLabel={msg.senderAgentName || msg.senderAgentId || selectedAgent.name || selectedAgent.slug || selectedAgentId.replace(/^bot:agent360:/i, "")}
-                                  onOpenModal={() => setActiveThinkingModalMsg(msg)}
-                                />
-                              </div>
-                            )}
                           </div>
                           {/* Visual Karaoke sentence pill indicator during TTS readout */}
                           {speakingMsgId === msg.id && speakingSentence && (
@@ -7891,8 +7900,8 @@ const handleBatchDeleteSelectedChats = () => {
         {/* Desktop User Request Trace Bar (waveform tick indicator + popover card) */}
         {(() => {
           const userTurns = displayMessages
-            .map((msg, originalIdx) => ({ msg, originalIdx }))
-            .filter((item) => item.msg.role === "user");
+            .map((msg: ChatMessage, originalIdx: number) => ({ msg, originalIdx }))
+            .filter((item: { msg: ChatMessage; originalIdx: number }) => item.msg.role === "user");
 
           userTurnsRef.current = userTurns;
 
@@ -7936,7 +7945,7 @@ const handleBatchDeleteSelectedChats = () => {
             >
               {/* Ticks waveform stack: centered vertically, hugging right edge */}
               <div className="flex flex-col items-end gap-[6px] py-2 px-1 max-h-[70vh] overflow-visible select-none">
-                {userTurns.map((turn, tIdx) => {
+                {userTurns.map((turn: { msg: ChatMessage; originalIdx: number }, tIdx: number) => {
                   const isHovered = hoveredTraceIdx === tIdx;
                   const isCurrentActive = activeTraceIdx === tIdx;
                   const isBookmarked = starredMsgIds.includes(turn.msg.id);
@@ -12434,70 +12443,63 @@ ${chat.id}`);
       )}
 
       {/* ========================================================= */}
-      {/* MOBILE HOLD-TOUCH / LONG-PRESS ACTION SHEET: MESSAGE TURN */}
+      {/* MOBILE HOLD-TOUCH COMPACT FLOATING ICON-ONLY MENU */}
       {/* ========================================================= */}
       {mobileActionMsg && (
         <div
-          onClick={() => {
-            setMobileActionMsg(null);
-            setIsMobileActionExtended(false);
-          }}
-          className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+          onClick={() => setMobileActionMsg(null)}
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 select-none p-4 duration-100"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md mx-auto bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#2a2a3c] rounded-2xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom-5 duration-200 text-slate-800 dark:text-neutral-200 font-sans"
+            className="w-auto max-w-[290px] rounded-2xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] shadow-2xl p-2.5 space-y-2 text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-100 text-left"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#22222e]">
-              <div className="min-w-0 flex-1 pr-2">
-                <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">
-                  {mobileActionMsg.role === "user" ? "User Prompt Actions" : "Assistant Turn Actions"}
-                </span>
-                <p className="text-xs text-neutral-400 truncate max-w-xs italic">
-                  "{mobileActionMsg.content.slice(0, 60)}..."
-                </p>
-              </div>
+            {/* Header: Short Snippet + Close button */}
+            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80 dark:border-[#22222e]">
+              <span className="text-[11px] text-neutral-400 italic truncate max-w-[220px]">
+                "{mobileActionMsg.content.slice(0, 42)}..."
+              </span>
               <button
                 type="button"
-                onClick={() => {
-                  setMobileActionMsg(null);
-                  setIsMobileActionExtended(false);
-                }}
-                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                onClick={() => setMobileActionMsg(null)}
+                className="p-1 rounded-md text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                aria-label="Đóng"
               >
-                <X size={16} />
+                <X size={13} />
               </button>
             </div>
 
-            {/* 1. Quick Emoji Reactions Row */}
-            <div
-              data-testid="mobile-quick-react-bar"
-              className="flex items-center justify-between px-2 py-1.5 rounded-xl bg-slate-100/80 dark:bg-[#1a1a26] border border-slate-200/70 dark:border-[#282838]"
-            >
-              {QUICK_REACTIONS.map((emoji) => {
-                const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
-                return (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => {
-                      toggleMessageReaction(mobileActionMsg.id, emoji);
-                      setMobileActionMsg(null);
-                      setIsMobileActionExtended(false);
-                    }}
-                    className={`h-9 w-9 rounded-full flex items-center justify-center text-lg transition-transform active:scale-90 cursor-pointer ${
-                      isSelected ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]" : "hover:bg-black/5 dark:hover:bg-white/10"
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Quick Reactions Bar: ONLY FOR AGENT MESSAGE (User message has NO reaction) */}
+            {mobileActionMsg.role !== "user" && (
+              <div
+                data-testid="mobile-quick-react-bar"
+                className="flex items-center justify-around py-1 px-1 rounded-xl bg-slate-100/80 dark:bg-[#12121c] border border-slate-200/60 dark:border-[#242434]"
+              >
+                {QUICK_REACTIONS.map((emoji) => {
+                  const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => {
+                        toggleMessageReaction(mobileActionMsg.id, emoji);
+                        setMobileActionMsg(null);
+                      }}
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-base transition-transform active:scale-90 cursor-pointer ${
+                        isSelected ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]" : "hover:bg-black/5 dark:hover:bg-white/10"
+                      }`}
+                      aria-label={`Thả ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* 2. Primary Compact Bar: Reply + Extend (...) */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Action Icons Grid: Lean, No Text, Icon-Only, Mobile-Like */}
+            <div className="flex items-center justify-center flex-wrap gap-1.5 pt-0.5">
+              {/* Reply */}
               <button
                 type="button"
                 data-testid="mobile-reply-btn"
@@ -12512,66 +12514,42 @@ ${chat.id}`);
                       snippet: mobileActionMsg.content.slice(0, 140),
                     });
                     setMobileActionMsg(null);
-                    setIsMobileActionExtended(false);
                     setTimeout(() => textareaRef.current?.focus(), 50);
                   }
                 }}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 border border-[#f8a87c]/30 text-xs font-semibold text-[#f8a87c] transition-colors cursor-pointer"
+                className="h-9 w-9 rounded-xl flex items-center justify-center text-[#f8a87c] bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 border border-[#f8a87c]/30 active:scale-95 transition-transform cursor-pointer"
+                title="Trả lời (Reply)"
+                aria-label="Trả lời"
               >
-                <CornerUpLeft size={15} />
-                <span>Trả lời (Reply)</span>
-              </button>
-
-              <button
-                type="button"
-                data-testid="mobile-extend-btn"
-                onClick={() => setIsMobileActionExtended((prev) => !prev)}
-                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
-                  isMobileActionExtended
-                    ? "bg-slate-200 dark:bg-[#242436] border-slate-300 dark:border-[#383850] text-slate-900 dark:text-white"
-                    : "bg-slate-100 dark:bg-[#1a1a26] hover:bg-slate-200 dark:hover:bg-[#222232] border-slate-200 dark:border-[#2a2a3c] text-slate-700 dark:text-neutral-200"
-                }`}
-              >
-                <MoreHorizontal size={15} />
-                <span>{isMobileActionExtended ? "Thu gọn tùy chọn" : "Mở rộng"}</span>
-              </button>
-            </div>
-
-            {/* 3. Extended Secondary CTAs List (shown when user taps Extend) */}
-            {isMobileActionExtended && (
-            <div data-testid="mobile-extended-cta-list" className="space-y-1 pt-2 border-t border-slate-200 dark:border-[#22222e] animate-in fade-in duration-150">
-              {/* Star / Bookmark */}
-              <button
-                type="button"
-                onClick={() => {
-                  toggleStarMessage(mobileActionMsg.id);
-                  setMobileActionMsg(null);
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <Star size={15} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
-                <span>{starredMsgIds.includes(mobileActionMsg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao (Star / Bookmark)"}</span>
+                <CornerUpLeft size={16} />
               </button>
 
               {/* Copy */}
               <button
                 type="button"
+                data-testid="mobile-copy-btn"
                 onClick={() => {
                   navigator.clipboard.writeText(mobileActionMsg.content);
                   setCopiedResponseMsgId(mobileActionMsg.id);
                   setMobileActionMsg(null);
                   setTimeout(() => setCopiedResponseMsgId(null), 1800);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                className="h-9 w-9 rounded-xl flex items-center justify-center text-neutral-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
+                title="Sao chép"
+                aria-label="Sao chép"
               >
-                <Copy size={15} className="text-neutral-300" />
-                <span>Sao chép nội dung (Copy)</span>
+                {copiedResponseMsgId === mobileActionMsg.id ? (
+                  <Check size={16} className="text-emerald-400" />
+                ) : (
+                  <Copy size={16} />
+                )}
               </button>
 
-              {/* Edit Prompt (chỉ dành cho user prompt) */}
+              {/* Edit (User only) */}
               {mobileActionMsg.role === "user" && (
                 <button
                   type="button"
+                  data-testid="mobile-edit-btn"
                   onClick={() => {
                     const text = mobileActionMsg.content;
                     setMobileActionMsg(null);
@@ -12587,17 +12565,19 @@ ${chat.id}`);
                       }, 0);
                     }
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-cyan-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
+                  title="Chỉnh sửa câu hỏi"
+                  aria-label="Chỉnh sửa"
                 >
-                  <Edit2 size={15} className="text-cyan-400" />
-                  <span>Chỉnh sửa câu hỏi (Edit Prompt)</span>
+                  <Edit2 size={16} />
                 </button>
               )}
 
-              {/* Read Aloud TTS (chỉ dành cho assistant response) */}
+              {/* TTS Voice Readout (Agent only) */}
               {mobileActionMsg.role !== "user" && (
                 <button
                   type="button"
+                  data-testid="mobile-tts-btn"
                   onClick={() => {
                     const content = mobileActionMsg.content;
                     const id = mobileActionMsg.id;
@@ -12620,60 +12600,81 @@ ${chat.id}`);
                       });
                     }
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-[#f8a87c] bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
+                  title="Đọc thoại"
+                  aria-label="Đọc thoại"
                 >
-                  <Volume2 size={15} className="text-[#f8a87c]" />
-                  <span>Đọc to phản hồi bằng giọng nói (TTS)</span>
+                  <Volume2 size={16} />
                 </button>
               )}
 
-              {/* Fork Session */}
-              <button
-                type="button"
-                onClick={() => {
-                  const turnIdx = mobileActionMsg.turnIdx;
-                  setMobileActionMsg(null);
-                  handleForkSession(turnIdx);
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <GitFork size={15} className="text-cyan-400" />
-                <span>Tách nhánh phiên mới từ đây (Fork)</span>
-              </button>
-
-              {/* Forward to Another Agent (chỉ dành cho assistant response) */}
-              {mobileActionMsg.role !== "user" && (
+              {/* Thinking Modal (Agent only, when message has thinking) */}
+              {mobileActionMsg.role !== "user" && mobileActionMsg.hasThinking && mobileActionMsg.rawMsg && (
                 <button
                   type="button"
-                  onClick={() => {
-                    const content = mobileActionMsg.content;
-                    setMobileActionMsg(null);
-                    setForwardModalMsg(content);
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                >
-                  <Share2 size={15} className="text-purple-400" />
-                  <span>Chuyển tiếp cho Agent khác tiếp nối</span>
-                </button>
-              )}
-
-              {/* View Thinking & Tools (chỉ dành cho assistant response có thinking) */}
-              {mobileActionMsg.hasThinking && mobileActionMsg.rawMsg && (
-                <button
-                  type="button"
+                  data-testid="mobile-thinking-btn"
                   onClick={() => {
                     const raw = mobileActionMsg.rawMsg;
                     setMobileActionMsg(null);
                     if (raw) setActiveThinkingModalMsg(raw);
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors cursor-pointer"
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 active:scale-95 transition-transform cursor-pointer"
+                  title="Thinking & Công cụ"
+                  aria-label="Thinking & Công cụ"
                 >
-                  <Sparkles size={15} className="text-emerald-400" />
-                  <span>Xem chi tiết Thinking & Công cụ thực thi</span>
+                  <Sparkles size={16} />
+                </button>
+              )}
+
+              {/* Star */}
+              <button
+                type="button"
+                data-testid="mobile-star-btn"
+                onClick={() => {
+                  toggleStarMessage(mobileActionMsg.id);
+                  setMobileActionMsg(null);
+                }}
+                className="h-9 w-9 rounded-xl flex items-center justify-center text-amber-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
+                title="Đánh dấu sao"
+                aria-label="Đánh dấu sao"
+              >
+                <Star size={16} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400" : ""} />
+              </button>
+
+              {/* Fork */}
+              <button
+                type="button"
+                data-testid="mobile-fork-btn"
+                onClick={() => {
+                  const turnIdx = mobileActionMsg.turnIdx;
+                  setMobileActionMsg(null);
+                  handleForkSession(turnIdx);
+                }}
+                className="h-9 w-9 rounded-xl flex items-center justify-center text-cyan-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
+                title="Tách nhánh phiên"
+                aria-label="Tách nhánh phiên"
+              >
+                <GitFork size={16} />
+              </button>
+
+              {/* Forward (Agent only) */}
+              {mobileActionMsg.role !== "user" && (
+                <button
+                  type="button"
+                  data-testid="mobile-forward-btn"
+                  onClick={() => {
+                    const content = mobileActionMsg.content;
+                    setMobileActionMsg(null);
+                    setForwardModalMsg(content);
+                  }}
+                  className="h-9 w-9 rounded-xl flex items-center justify-center text-purple-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
+                  title="Chuyển tiếp"
+                  aria-label="Chuyển tiếp"
+                >
+                  <Share2 size={16} />
                 </button>
               )}
             </div>
-            )}
           </div>
         </div>
       )}
