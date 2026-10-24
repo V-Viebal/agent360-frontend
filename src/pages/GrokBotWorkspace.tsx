@@ -10070,7 +10070,7 @@ const handleBatchDeleteSelectedChats = () => {
                 : `${chatSessionsWidth}px`
               : undefined,
         }}
-        className={`fixed lg:static inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok chat-sidebar-panel mobile-drawer-panel relative ${
+        className={`fixed lg:static lg:relative inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok chat-sidebar-panel mobile-drawer-panel ${
           mobileChatsOpen
             ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl pointer-events-auto"
             : isChatListCollapsed
@@ -10971,7 +10971,7 @@ ${chat.id}`);
       {/* ========================================================= */}
       <aside
         style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
-        className={`fixed xl:static inset-y-0 right-0 z-[60] xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok mobile-drawer-panel relative ${
+        className={`fixed xl:static xl:relative inset-y-0 right-0 z-[60] xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok mobile-drawer-panel ${
           isBotInfoCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0 invisible xl:visible"
             : "w-full sm:w-[380px] xl:w-[380px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none pointer-events-auto"
