@@ -171,6 +171,30 @@ const triggerHaptic = (ms = 10) => {
   try { navigator.vibrate?.(ms); } catch { /* unsupported */ }
 };
 
+const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"];
+
+function getStoredRecentReactions(): string[] {
+  try {
+    const raw = typeof window !== "undefined" ? localStorage.getItem("agent360_recent_reactions") : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const merged = Array.from(new Set([...parsed, ...DEFAULT_REACTIONS]));
+        return merged.slice(0, 8);
+      }
+    }
+  } catch {}
+  return DEFAULT_REACTIONS;
+}
+
+function saveStoredRecentReaction(emoji: string) {
+  try {
+    const current = getStoredRecentReactions();
+    const updated = [emoji, ...current.filter((e) => e !== emoji)].slice(0, 8);
+    localStorage.setItem("agent360_recent_reactions", JSON.stringify(updated));
+  } catch {}
+}
+
 const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "👀", "🚀"];
 
 function parseQuotedReplyFromContent(
@@ -3123,6 +3147,7 @@ export function GrokBotWorkspace() {
   const [activeReactPopoverMsgId, setActiveReactPopoverMsgId] = useState<string | null>(null);
   const [activeExtendPopoverMsgId, setActiveExtendPopoverMsgId] = useState<string | null>(null);
   const [isMobileActionExtended, setIsMobileActionExtended] = useState<boolean>(false);
+  const [recentReactions, setRecentReactions] = useState<string[]>(() => getStoredRecentReactions());
   const [msgReactions, setMsgReactions] = useState<Record<string, string[]>>(() => {
     try {
       const saved = localStorage.getItem("agent360_msg_reactions");
@@ -3134,6 +3159,8 @@ export function GrokBotWorkspace() {
 
   const toggleMessageReaction = (msgId: string, emoji: string) => {
     triggerHaptic(12);
+    saveStoredRecentReaction(emoji);
+    setRecentReactions(getStoredRecentReactions());
     setMsgReactions((prev) => {
       const current = prev[msgId] || [];
       const exists = current.includes(emoji);
@@ -3279,6 +3306,9 @@ export function GrokBotWorkspace() {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    setTimeout(() => {
+      longPressPreventClickRef.current = false;
+    }, 120);
   };
   const [isBatchClearModalOpen, setIsBatchClearModalOpen] = useState(false);
   // Multi-select state for bulk deleting chat sessions
@@ -7427,14 +7457,14 @@ const handleBatchDeleteSelectedChats = () => {
                     </div>
                   )}
 
-                  {/* Desktop Hover Bar: ONLY React, Reply, and Extend (...) */}
+                  {/* Desktop Hover Bar: ONLY React, Reply, and Extend (...) - Hidden completely on mobile */}
                   {!(isStreaming && isLastTurn && !isUser) && (
                     <div
                       data-testid={`msg-action-bar-${msg.id}`}
-                      className={`relative flex items-center gap-0.5 p-0.5 mt-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-opacity duration-150 ${
+                      className={`relative hidden sm:flex items-center gap-0.5 p-0.5 mt-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-opacity duration-150 ${
                         speakingMsgId === msg.id || isReactOpen || isExtendOpen
                           ? "opacity-100"
-                          : "opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100"
+                          : "opacity-0 group-hover/msg:opacity-100"
                       } ${isUser ? "justify-end" : "justify-start"}`}
                     >
                       {/* 1. React Button: ONLY for Agent message */}
@@ -7468,7 +7498,7 @@ const handleBatchDeleteSelectedChats = () => {
                               onClick={(e) => e.stopPropagation()}
                               className="absolute bottom-full mb-1.5 left-0 z-50 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 select-none"
                             >
-                              {["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"].map((emoji) => {
+                              {recentReactions.map((emoji) => {
                                 const active = currentReactions.includes(emoji);
                                 return (
                                   <button
@@ -7724,9 +7754,19 @@ const handleBatchDeleteSelectedChats = () => {
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
+                      onClick={(e) => {
+                        if (window.innerWidth < 640 && !longPressPreventClickRef.current) {
+                          const target = e.target as HTMLElement;
+                          if (!target.closest("button") && !target.closest("a") && !target.closest("input")) {
+                            triggerHaptic(15);
+                            setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
+                          }
+                        }
+                      }}
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
+                          triggerHaptic(15);
                           setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
                         }
                       }}
@@ -7761,9 +7801,26 @@ const handleBatchDeleteSelectedChats = () => {
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
+                      onClick={(e) => {
+                        if (window.innerWidth < 640 && !longPressPreventClickRef.current) {
+                          const target = e.target as HTMLElement;
+                          if (!target.closest("button") && !target.closest("a") && !target.closest("input") && !target.closest("pre")) {
+                            triggerHaptic(15);
+                            setMobileActionMsg({
+                              id: msg.id,
+                              content: cleanContent,
+                              turnIdx: mIdx,
+                              role: "assistant",
+                              hasThinking,
+                              rawMsg: msg,
+                            });
+                          }
+                        }
+                      }}
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
+                          triggerHaptic(15);
                           setMobileActionMsg({
                             id: msg.id,
                             content: cleanContent,
@@ -12458,7 +12515,7 @@ ${chat.id}`);
                 data-testid="mobile-quick-react-bar"
                 className="flex items-center justify-between px-3 py-1.5 rounded-full bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl w-full"
               >
-                {["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"].map((emoji) => {
+                {recentReactions.map((emoji) => {
                   const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
                   return (
                     <button
@@ -12516,6 +12573,7 @@ ${chat.id}`);
                   type="button"
                   data-testid="mobile-copy-btn"
                   onClick={() => {
+                    triggerHaptic(10);
                     navigator.clipboard.writeText(mobileActionMsg.content);
                     setCopiedResponseMsgId(mobileActionMsg.id);
                     setMobileActionMsg(null);
@@ -12539,6 +12597,7 @@ ${chat.id}`);
                     type="button"
                     data-testid="mobile-thinking-btn"
                     onClick={() => {
+                      triggerHaptic(10);
                       const raw = mobileActionMsg.rawMsg;
                       setMobileActionMsg(null);
                       if (raw) setActiveThinkingModalMsg(raw);
@@ -12556,6 +12615,7 @@ ${chat.id}`);
                     type="button"
                     data-testid="mobile-edit-btn"
                     onClick={() => {
+                      triggerHaptic(10);
                       const text = mobileActionMsg.content;
                       setMobileActionMsg(null);
                       setInputText(text);
@@ -12583,6 +12643,7 @@ ${chat.id}`);
                     type="button"
                     data-testid="mobile-tts-btn"
                     onClick={() => {
+                      triggerHaptic(10);
                       const content = mobileActionMsg.content;
                       const id = mobileActionMsg.id;
                       setMobileActionMsg(null);
@@ -12618,6 +12679,7 @@ ${chat.id}`);
                   type="button"
                   data-testid="mobile-star-btn"
                   onClick={() => {
+                    triggerHaptic(10);
                     toggleStarMessage(mobileActionMsg.id);
                     setMobileActionMsg(null);
                   }}
@@ -12633,6 +12695,7 @@ ${chat.id}`);
                     type="button"
                     data-testid="mobile-forward-btn"
                     onClick={() => {
+                      triggerHaptic(10);
                       const content = mobileActionMsg.content;
                       setMobileActionMsg(null);
                       setForwardModalMsg(content);
@@ -12649,6 +12712,7 @@ ${chat.id}`);
                   type="button"
                   data-testid="mobile-fork-btn"
                   onClick={() => {
+                    triggerHaptic(10);
                     const turnIdx = mobileActionMsg.turnIdx;
                     setMobileActionMsg(null);
                     handleForkSession(turnIdx);
