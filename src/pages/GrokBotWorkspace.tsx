@@ -339,7 +339,7 @@ function AgentThinkingModal({
   return (
     <div
       data-testid="agent-thinking-modal"
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/65 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-3 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
@@ -696,7 +696,7 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
           {isModalOpen && (
             <div
               onClick={(e) => e.stopPropagation()}
-              className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-150"
+              className="fixed inset-0 z-50 flex flex-col bg-black/90 p-4 animate-in fade-in duration-150"
             >
               <div className="h-10 border-b border-[#242432] flex items-center justify-between text-xs font-mono text-neutral-300 pb-2">
                 <div className="flex items-center gap-2">
@@ -999,7 +999,7 @@ function FormattedMessageContent({
             <div
               key={idx}
               className={`my-2 rounded-xl overflow-hidden border border-[#262634] bg-[#0a0a0f] font-mono text-xs shadow-md transition-all ${
-                expandedBlock === idx ? "fixed inset-4 z-50 flex flex-col bg-[#0a0a0f]/95 backdrop-blur-xl border-[#f8a87c]/40 shadow-2xl p-2" : ""
+                expandedBlock === idx ? "fixed inset-4 z-50 flex flex-col bg-[#0a0a0f]/95 border-[#f8a87c]/40 shadow-2xl p-2" : ""
               }`}
             >
               <div className="px-3 py-1.5 bg-[#14141c] border-b border-[#262634] flex items-center justify-between text-[11px] text-neutral-400 select-none">
@@ -1407,7 +1407,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
         <button
           type="button"
           onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm backdrop-blur-md transition-colors cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
           title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
         >
           {mode === "shared" ? "Control" : "Watch only"}
@@ -1415,7 +1415,7 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
         <button
           type="button"
           onClick={() => setAttempt((a) => a + 1)}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm backdrop-blur-md transition-colors cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
           title="Reconnect stream"
         >
           Reconnect
@@ -7467,7 +7467,7 @@ export function GrokBotWorkspace() {
         className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0"
       >
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
-        <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[var(--bg-workspace)]/85 backdrop-blur-md z-10">
+        <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-2 sm:px-3 shrink-0 relative bg-[var(--bg-workspace)] z-10">
           {/* Left button: mobile drawer only on mobile viewport */}
           <button aria-label="Toggle Agents Sidebar" data-ux-target-min="24"
             onClick={() => {
@@ -8628,7 +8628,7 @@ export function GrokBotWorkspace() {
                       {/* Clean minimal tooltip positioned directly relative to this tick item */}
                       {isHovered && (
                         <div
-                          className="absolute right-full mr-2.5 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 backdrop-blur-md pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
+                          className="absolute right-full mr-2.5 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
                         >
                           <span className="font-mono text-[11px] text-[#e0682b] dark:text-[#f8a87c] font-bold shrink-0">
                             #{tIdx + 1}
@@ -8693,7 +8693,7 @@ export function GrokBotWorkspace() {
       {loopModeToast && (
         <div
           data-testid="loop-mode-hud-toast"
-          className={`pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full backdrop-blur-xl border shadow-2xl transition-all duration-200 select-none ${
+          className={`pointer-events-none fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border shadow-2xl transition-all duration-200 select-none ${
             loopModeToast.visible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-2 scale-95"
           } ${
             loopModeToast.mode === "goal"
@@ -8909,7 +8909,7 @@ export function GrokBotWorkspace() {
               {pendingApprovals.map((app) => (
                 <div
                   key={app.request_id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-950/20 p-3.5 text-xs text-white shadow-lg backdrop-blur-md"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-950/20 p-3.5 text-xs text-white shadow-lg"
                 >
                   <div className="flex items-start gap-2.5">
                     <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />
@@ -9026,7 +9026,7 @@ export function GrokBotWorkspace() {
                   transform: plusMenuDragY > 0 ? "translateY(" + plusMenuDragY + "px)" : undefined,
                   transition: isPlusMenuDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
-                className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-2 max-h-[85vh] md:max-h-[520px] flex flex-col rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-white/[0.08] shadow-2xl backdrop-blur-none p-3 sm:p-4 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
+                className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-2 max-h-[85vh] md:max-h-[520px] flex flex-col rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-white/[0.08] shadow-2xl p-3 sm:p-4 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
               >
                 {/* Mobile iOS-style Swipe-down Handle (Kéo để đóng) */}
                 <div
@@ -10490,7 +10490,7 @@ export function GrokBotWorkspace() {
                   } rounded-2xl shadow-xs transition-all overflow-hidden`}
                 >
                   {isDraggingFiles && (
-                    <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                    <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-2xl animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
                       <Paperclip size={15} className="text-[#f8a87c] animate-bounce" />
                       <span className="text-xs font-mono font-semibold text-white tracking-wide">
                         Drop files here to attach to {selectedAgent.name}
@@ -11013,7 +11013,7 @@ export function GrokBotWorkspace() {
                               ? "opacity-100 pointer-events-auto bg-slate-100 dark:bg-[#181822] border-slate-300 dark:border-white/15"
                               : pinnedChatIds.includes(chat.id) || archivedChatIds.includes(chat.id)
                               ? "opacity-100 pointer-events-auto bg-slate-100/90 dark:bg-[#181822]/95 border-slate-200 dark:border-white/10"
-                              : "opacity-0 pointer-events-none group-hover/chatitem:opacity-100 group-hover/chatitem:pointer-events-auto bg-slate-100/95 dark:bg-[#14141c]/95 backdrop-blur-xs border-slate-200 dark:border-white/10"
+                              : "opacity-0 pointer-events-none group-hover/chatitem:opacity-100 group-hover/chatitem:pointer-events-auto bg-slate-100/95 dark:bg-[#14141c]/95 border-slate-200 dark:border-white/10"
                           }`}
                         >
                           {/* Quick Pin Toggle Button (Visible on hover or when pinned) */}
@@ -11643,11 +11643,11 @@ ${chat.id}`);
                           </div>
                         )}
 
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-10 select-none">
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-2 z-10 select-none">
                           <div className="h-9 w-9 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                             <Maximize2 size={16} className="stroke-[2.5]" />
                           </div>
-                          <span className="text-[11px] font-mono font-semibold text-white! keep-white bg-slate-900/90 dark:bg-black/90 px-3 py-1 rounded-full border border-white/20 shadow-lg tracking-wide backdrop-blur-md">
+                          <span className="text-[11px] font-mono font-semibold text-white! keep-white bg-slate-900/90 dark:bg-black/90 px-3 py-1 rounded-full border border-white/20 shadow-lg tracking-wide">
                             Mở Computer Workspace
                           </span>
                         </div>
@@ -12443,7 +12443,7 @@ ${chat.id}`);
       {isBrowserModalOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
-          <div className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="fixed inset-0 z-50 flex flex-col bg-black/90 animate-in fade-in duration-150">
             {/* Top Navigation Bar with Controls & Close Button */}
             <header className="h-12 border-b border-[#252532] bg-[#121218] px-4 flex items-center justify-between shrink-0 select-none">
               <div className="flex items-center gap-3 min-w-0">
@@ -12604,7 +12604,7 @@ ${chat.id}`);
             }
             setLightboxImageUrl(null);
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200 select-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -12833,7 +12833,7 @@ ${chat.id}`);
               {showLightboxMeta && lightboxMeta && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute bottom-4 left-4 z-40 p-3 rounded-xl bg-slate-900/95 dark:bg-[#14141c]/95 border border-white/10 shadow-2xl backdrop-blur-xl text-left text-xs font-mono space-y-1.5 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute bottom-4 left-4 z-40 p-3 rounded-xl bg-slate-900/95 dark:bg-[#14141c]/95 border border-white/10 shadow-2xl text-left text-xs font-mono space-y-1.5 animate-in fade-in zoom-in-95 duration-150"
                 >
                   <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between gap-4">
                     <span>Image Metadata</span>
@@ -12940,7 +12940,7 @@ ${chat.id}`);
       {forwardModalMsg && (
         <div
           onClick={() => setForwardModalMsg(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -12982,7 +12982,7 @@ ${chat.id}`);
       {isBatchClearModalOpen && (
         <div
           onClick={() => setIsBatchClearModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-100"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-100"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -13111,7 +13111,7 @@ ${chat.id}`);
       {mobileActionAgent && (
         <div
           onClick={() => setMobileActionAgent(null)}
-          className="fixed inset-0 z-[85] flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-[85] flex flex-col justify-end bg-black/40 p-4 animate-in fade-in duration-150 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -13203,7 +13203,7 @@ ${chat.id}`);
       {mobileActionChat && (
         <div
           onClick={() => setMobileActionChat(null)}
-          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 p-4 animate-in fade-in duration-150 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -13298,7 +13298,7 @@ ${chat.id}`);
         return (
           <div
             onClick={() => { setShowFullEmojiPicker(false); setMobileActionMsg(null); }}
-            className="fixed inset-0 z-[80] bg-black/30 select-none duration-100 overflow-hidden"
+            className="fixed inset-0 z-[80] bg-transparent select-none duration-100 overflow-hidden"
           >
             <div
               onClick={(e) => e.stopPropagation()}

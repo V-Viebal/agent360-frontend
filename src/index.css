@@ -623,7 +623,7 @@ html.light,
   max-width: 380px !important;
   font-family: var(--font-sans, system-ui, sans-serif) !important;
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  backdrop-filter: blur(12px) !important;
+  /* backdrop-filter removed */
 }
 
 .driverjs-skyer-theme .driver-popover-title {
