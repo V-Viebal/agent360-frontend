@@ -137,6 +137,7 @@ import {
   Volume2,
   VolumeX,
   Bot,
+  Filter,
   SlidersHorizontal,
   ExternalLink,
   AlertCircle,
@@ -203,11 +204,17 @@ function saveStoredRecentReaction(emoji: string) {
 
 const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "👀", "🚀"];
 
+function stripSharedRoomContext(text: string): string {
+  if (!text) return "";
+  const idx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
+  return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
+}
+
 function parseQuotedReplyFromContent(
   rawContent: string,
   explicitReplyTo?: ReplyToMessageInfo
 ): { replyTo?: ReplyToMessageInfo; cleanContent: string } {
-  const text = rawContent || "";
+  const text = stripSharedRoomContext(rawContent || "");
   const match = text.match(/^\[Replying to ([^:\]]+):\s*"([^"]*)"\]\s*\n\n?([\s\S]*)$/);
   if (match) {
     return {
@@ -215,7 +222,7 @@ function parseQuotedReplyFromContent(
         authorName: match[1].trim(),
         snippet: match[2].trim(),
       },
-      cleanContent: match[3],
+      cleanContent: stripSharedRoomContext(match[3]),
     };
   }
   return {
@@ -291,7 +298,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab, prefetchAgentDesktopUrl } from "../services/agentBrowserApi";
 
 
 
@@ -299,10 +306,12 @@ import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBro
 function AgentThinkingModal({
   msg,
   agentLabel,
+  agentId,
   onClose,
 }: {
   msg: ChatMessage;
   agentLabel?: string;
+  agentId?: string;
   onClose: () => void;
 }) {
   const steps = msg.steps || [];
@@ -386,6 +395,7 @@ function AgentThinkingModal({
           {allToolItems.map((step, sIdx) => (
             <AgentToolCard
               key={sIdx}
+              agentId={msg.senderAgentId || agentId || agentLabel}
               toolCall={{
                 tool: step.tool || "Tool",
                 args: step.args,
@@ -474,10 +484,11 @@ function TurnExecutionAccordion({
 }
 
 // Agent Tool Execution Block
-function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; result?: string; state?: "calling" | "success" | "error" } }) {
+function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?: string; result?: string; state?: "calling" | "success" | "error" }; agentId?: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState<"args" | "result" | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [previewRefreshNonce, setPreviewRefreshNonce] = useState(0);
 
   const isCalling = toolCall.state === "calling";
   const isError = toolCall.state === "error";
@@ -603,13 +614,7 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Trigger quick reload / snapshot ping
-                  const iframe = document.querySelector('iframe[title="Browser View Screen"]') as HTMLIFrameElement | null;
-                  if (iframe && iframe.src) {
-                    const original = iframe.src;
-                    iframe.src = "about:blank";
-                    setTimeout(() => { iframe.src = original; }, 100);
-                  }
+                  setPreviewRefreshNonce((n) => n + 1);
                 }}
                 className="p-1 rounded hover:bg-[#181822] hover:text-white transition-colors cursor-pointer text-neutral-400"
                 title="Refresh live screen capture"
@@ -659,20 +664,21 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
                 <span>Click to view full screen</span>
               </div>
             </div>
-          ) : screenUrl ? (
+          ) : (screenUrl || agentId) ? (
             <div
               onClick={() => setIsModalOpen(true)}
               className="w-full h-[180px] rounded-lg overflow-hidden border border-[#20202c] bg-black relative cursor-pointer group shadow-inner"
             >
-              <iframe
-                src={screenUrl}
-                title="Browser View Screen"
-                className="w-full h-full border-0 pointer-events-none opacity-85 group-hover:opacity-100 transition-opacity"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-mono">
+              {agentId ? (
+                <AgentBrowserPreview key={`${agentId}-${previewRefreshNonce}`} agentId={agentId} enabled />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-xs font-mono">
+                  {screenUrl}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-[11px] font-mono z-10">
                 <Maximize2 size={13} />
-                <span>Live Browser • Click to interact full screen</span>
+                <span>Live Browser • Click to inspect full screen</span>
               </div>
             </div>
           ) : null}
@@ -707,12 +713,10 @@ function AgentToolCard({ toolCall }: { toolCall: { tool: string; args?: string; 
                     alt="Full Browser Screen"
                     className="max-w-full max-h-full object-contain rounded-lg border border-[#262638] shadow-2xl"
                   />
-                ) : screenUrl ? (
-                  <iframe
-                    src={screenUrl}
-                    title="Full Browser Session"
-                    className="w-full h-full border-0 rounded-lg bg-black"
-                  />
+                ) : agentId ? (
+                  <div className="relative w-full h-full rounded-lg overflow-hidden bg-black border border-[#262638]">
+                    <AgentBrowserPreview key={`modal-${agentId}-${previewRefreshNonce}`} agentId={agentId} enabled />
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -1315,10 +1319,12 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
   const [mode, setMode] = useState<"collab" | "shared">("collab");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const hiddenAt = useRef<number>(0);
   useEffect(() => {
     let alive = true;
     setError("");
+    setIframeLoaded(false);
     // The desktop host only serves /a360/{signed-token}/, so a fresh signed URL is requested per (re)connect.
     Promise.all([issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control"), focusAgentBrowser(agentId)])
       .then(([signed]) => { if (alive) setSrc(`${signed}#${mode}`); })
@@ -1367,18 +1373,19 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
           </div>
         </>
       )}
-      {/* Background preview placeholder while waiting for stream or connecting */}
-      <AgentBrowserPreview agentId={agentId} enabled={!error} />
+      {/* Background preview placeholder while waiting for stream or connecting (paused once iframe is live to save mobile bandwidth) */}
+      <AgentBrowserPreview agentId={agentId} enabled={!error && !iframeLoaded} />
       {src && (
         <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-black">
           <iframe
             key={`${src}#${attempt}`}
             src={src}
             title={title}
+            onLoad={() => setIframeLoaded(true)}
             className="w-full h-full border-0 bg-black z-10 transition-opacity duration-300"
             allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
             allowFullScreen
-            style={{ touchAction: "none", maxWidth: "100%", maxHeight: "100%" }}
+            style={{ touchAction: "manipulation", maxWidth: "100%", maxHeight: "100%" }}
           />
         </div>
       )}
@@ -2617,6 +2624,8 @@ export function GrokBotWorkspace() {
   const [libraryCategoryFilter, setLibraryCategoryFilter] = useState<LibraryCategory>("all");
   const [libraryExtFilter, setLibraryExtFilter] = useState<string>("");
   const [librarySearchQuery, setLibrarySearchQuery] = useState("");
+  const [isLibraryFilterMenuOpen, setIsLibraryFilterMenuOpen] = useState(false);
+  const libraryFilterBtnRef = useRef<HTMLButtonElement>(null);
   const [libraryGroupMode, setLibraryGroupMode] = useState<"flat" | "folder" | "date">("flat");
   const [libraryCollapsedGroups, setLibraryCollapsedGroups] = useState<Record<string, boolean>>({});
   const [libraryPage, setLibraryPage] = useState<number>(1);
@@ -4760,7 +4769,7 @@ export function GrokBotWorkspace() {
 
   // Abort live attach only when switching chat/agent or starting a local console stream
   useEffect(() => {
-    const key = `${selectedAgentId}:${selectedChatId}`;
+    const key = `${normalizeAgentKey(selectedAgentId)}:${selectedChatId}`;
     if (liveAttachRef.current && (liveAttachRef.current.key !== key || isStreaming)) {
       liveAttachRef.current.controller.abort();
       liveAttachRef.current = null;
@@ -4774,7 +4783,7 @@ export function GrokBotWorkspace() {
     if (!selectedChatId || !selectedAgentId || isStreaming) return;
     if (selectedChatId.startsWith("session-") && !isCurrentSessionRunning && messages.length === 0) return;
 
-    const key = `${selectedAgentId}:${selectedChatId}`;
+    const key = `${normalizeAgentKey(selectedAgentId)}:${selectedChatId}`;
     if (liveAttachRef.current?.key === key && liveAttachRef.current.active) {
       return;
     }
@@ -4790,15 +4799,24 @@ export function GrokBotWorkspace() {
 
     (async () => {
       try {
-        const streamed = await attachLiveTurn(agentId, chatId, (msg, userText) => {
-          if (controller.signal.aborted) return;
-          latestStreamedMsg = msg;
-          latestStreamedUserText = userText;
-          setLiveTurn({ chatId, userText, msg });
-          setRunningChatIds((prev) => (prev.includes(chatId) ? prev : [...prev, chatId]));
-          updateAgentSessionRunning(agentId, [chatId, selectedChat?.session_id], true);
-          if (!isUserScrolledUpRef.current) jumpToBottom();
-        }, controller.signal);
+        let streamed = false;
+        const maxAttempts = isCurrentSessionRunning ? 4 : 1;
+        for (let attempt = 0; attempt < maxAttempts && !controller.signal.aborted; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 650));
+            if (controller.signal.aborted) return;
+          }
+          streamed = await attachLiveTurn(agentId, chatId, (msg, userText) => {
+            if (controller.signal.aborted) return;
+            latestStreamedMsg = msg;
+            latestStreamedUserText = userText;
+            setLiveTurn({ chatId, userText, msg });
+            setRunningChatIds((prev) => (prev.includes(chatId) ? prev : [...prev, chatId]));
+            updateAgentSessionRunning(agentId, [chatId, selectedChat?.session_id], true);
+            if (!isUserScrolledUpRef.current) jumpToBottom();
+          }, controller.signal);
+          if (streamed) break;
+        }
         if (controller.signal.aborted) return;
 
         if (streamed) {
@@ -4955,8 +4973,9 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     setAgentBrowser(null);
     if (!agentBrowserFor) return;
-    // Bring the target agent's Chromium profile window to the top immediately (on mount & selection)
+    // Bring the target agent's Chromium profile window to the top immediately (on mount & selection) and pre-warm signed desktop URL for mobile
     focusAgentBrowser(agentBrowserFor).catch(() => {});
+    prefetchAgentDesktopUrl(agentBrowserFor).catch(() => {});
     let alive = true;
     const ctrl = new AbortController();
     const want = agentBrowserFor.replace(/^bot:agent360:/i, "").toLowerCase();
@@ -7414,6 +7433,27 @@ export function GrokBotWorkspace() {
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Mobile & Desktop Quick Computer / Browser Preview Toggle */}
+            {!hasNoAgents && selectedAgent.id && (
+              <Tooltip content="Mở Preview Browser / Computer (Alt+C)" placement="bottom" minWidth={140}>
+                <button
+                  type="button"
+                  aria-label="Toggle Agent Browser Preview"
+                  data-ux-target-min="24"
+                  onClick={() => {
+                    triggerHaptic();
+                    handleToggleComputerSplit();
+                  }}
+                  className={`h-8 w-8 rounded-lg border flex items-center justify-center cursor-pointer shrink-0 transition-colors ${
+                    isComputerSplitOpen
+                      ? "bg-[#f8a87c]/20 border-[#f8a87c]/50 text-[#e0682b] dark:text-[#f8a87c]"
+                      : "bg-[#181820] hover:bg-[#22222e] border-[#242430] text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  <Monitor size={15} />
+                </button>
+              </Tooltip>
+            )}
 
 
 
@@ -8058,7 +8098,25 @@ export function GrokBotWorkspace() {
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
-                        <p className="whitespace-pre-wrap select-text break-words">{cleanContent}</p>
+                        <p className="whitespace-pre-wrap select-text break-words">
+                          {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
+                            if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
+                              const mentionSlug = part.slice(1).toLowerCase();
+                              const matchedAg = agents.find((a) => (a.slug || "").toLowerCase() === mentionSlug || a.id.replace(/^bot:agent360:/i, "").toLowerCase() === mentionSlug);
+                              const label = matchedAg ? matchedAg.name.split(" (")[0] : part.slice(1);
+                              return (
+                                <span
+                                  key={pIdx}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.2 mx-0.5 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium text-[12px] align-baseline"
+                                >
+                                  <Bot size={11} className="shrink-0" />
+                                  <span>{label}</span>
+                                </span>
+                              );
+                            }
+                            return <span key={pIdx}>{part}</span>;
+                          })}
+                        </p>
                         {msg.metadata?.isOfflineQueued && (
                           <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
@@ -8167,27 +8225,21 @@ export function GrokBotWorkspace() {
 
                       {msg.content && (
                         <>
-                          {/* Collaborator / Room Routing Badge when response comes from Agent B or Manager in Room */}
+                          {/* Subtle Collaborator Header matching reference UI ("Message from <Agent>") */}
                           {msg.senderAgentId && (
                             <div
                               data-testid={`room-msg-badge-${msg.senderAgentId}`}
-                              className="flex items-center gap-1.5 text-[10px] font-mono mb-0.5 px-1 select-none"
+                              className="flex items-center justify-end w-full max-w-[85%] sm:max-w-[80%] gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-0.5 px-1 select-none"
                             >
-                              <span className={`px-1.5 py-0.5 rounded-md border font-semibold ${
-                                msg.authorRole === "manager"
-                                  ? "bg-violet-500/15 border-violet-500/30 text-violet-400"
-                                  : "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                              }`}>
-                                @{msg.senderAgentId} ({msg.senderAgentName || msg.senderAgentId})
+                              <span>Message from</span>
+                              <span className="inline-flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
+                                <Bot size={12} className="shrink-0" />
+                                <span>{(msg.senderAgentName || msg.senderAgentId).split(" (")[0]}</span>
                               </span>
                             </div>
                           )}
                           {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs ${
-                            msg.senderAgentId
-                              ? "bg-emerald-500/[0.06] border border-emerald-500/30 text-slate-800 dark:bg-[#111c1a]/90 dark:border-emerald-500/25 dark:text-neutral-100"
-                              : "bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200"
-                          } ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
@@ -11513,13 +11565,13 @@ ${chat.id}`);
                 }
                 const availableFormats = Object.entries(extCountsInCategory)
                   .sort((a, b) => b[1] - a[1])
-                  .slice(0, 12);
+                  .slice(0, 16);
 
+                const q = librarySearchQuery.trim().toLowerCase();
                 const extFiltered = libraryExtFilter
                   ? categoryFiltered.filter((node) => (node.extension || "").toLowerCase() === libraryExtFilter.toLowerCase())
                   : categoryFiltered;
 
-                const q = librarySearchQuery.trim().toLowerCase();
                 const filteredWorkspaceFiles = q
                   ? extFiltered.filter((node) =>
                       node.name.toLowerCase().includes(q) ||
@@ -11529,13 +11581,13 @@ ${chat.id}`);
                     )
                   : extFiltered;
 
-                const categories: Array<{ id: LibraryCategory; label: string; count: number }> = [
-                  { id: "all", label: "All", count: libraryCategoryCounts.all ?? workspaceFiles.length },
-                  { id: "pages", label: "Pages", count: libraryCategoryCounts.pages ?? workspaceFiles.filter((n) => n.category === "pages").length },
-                  { id: "files", label: "Files", count: libraryCategoryCounts.files ?? workspaceFiles.filter((n) => n.category === "files").length },
-                  { id: "apps", label: "Apps", count: libraryCategoryCounts.apps ?? workspaceFiles.filter((n) => n.category === "apps").length },
-                  { id: "images", label: "Images", count: libraryCategoryCounts.images ?? workspaceFiles.filter((n) => n.category === "images").length },
-                  { id: "media", label: "Media", count: libraryCategoryCounts.media ?? workspaceFiles.filter((n) => n.category === "media").length },
+                const categories: Array<{ id: LibraryCategory; label: string; icon: React.ReactNode; count: number }> = [
+                  { id: "all", label: "All", icon: <Layers size={13} />, count: libraryCategoryCounts.all ?? workspaceFiles.length },
+                  { id: "pages", label: "Pages", icon: <Globe size={13} className="text-emerald-400" />, count: libraryCategoryCounts.pages ?? workspaceFiles.filter((n) => n.category === "pages").length },
+                  { id: "files", label: "Files", icon: <FileText size={13} className="text-amber-400" />, count: libraryCategoryCounts.files ?? workspaceFiles.filter((n) => n.category === "files").length },
+                  { id: "apps", label: "Apps", icon: <Terminal size={13} className="text-purple-400" />, count: libraryCategoryCounts.apps ?? workspaceFiles.filter((n) => n.category === "apps").length },
+                  { id: "images", label: "Images", icon: <Camera size={13} className="text-cyan-400" />, count: libraryCategoryCounts.images ?? workspaceFiles.filter((n) => n.category === "images").length },
+                  { id: "media", label: "Media", icon: <Play size={13} className="text-pink-400" />, count: libraryCategoryCounts.media ?? workspaceFiles.filter((n) => n.category === "media").length },
                 ];
 
                 const formatSize = (bytes?: number | null) => {
@@ -11560,324 +11612,483 @@ ${chat.id}`);
                   }
                 };
 
-                return (
-                  <div className="space-y-2.5 text-xs flex flex-col flex-1 min-h-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <Layers size={13} className="text-[#f8a87c]" />
-                        <span>Library ({filteredWorkspaceFiles.length}{filteredWorkspaceFiles.length !== workspaceFiles.length ? ` / ${workspaceFiles.length}` : ""})</span>
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {/* Group Mode Switcher: Flat | Folder | Date */}
-                        <div className="flex items-center bg-slate-100 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] rounded-lg p-0.5 text-[9px] font-mono">
-                          {([
-                            { id: "flat" as const, label: "List" },
-                            { id: "folder" as const, label: "Folder" },
-                            { id: "date" as const, label: "Date" },
-                          ]).map((gm) => (
-                            <button
-                              key={gm.id}
-                              type="button"
-                              onClick={() => {
-                                setLibraryGroupMode(gm.id);
-                                setLibraryPage(1);
-                              }}
-                              className={`px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
-                                libraryGroupMode === gm.id
-                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold"
-                                  : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                              }`}
-                              title={`Group by ${gm.label}`}
-                            >
-                              {gm.label}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          aria-label="Refresh workspace library"
-                          data-ux-target-min="24"
-                          onClick={() => loadWorkspaceTree()}
-                          disabled={isLoadingTree}
-                          className="text-neutral-400 hover:text-slate-900 dark:hover:text-white p-1 rounded hover:bg-slate-200/60 dark:hover:bg-[#1a1a22] transition-colors cursor-pointer"
-                          title="Refresh workspace library"
-                        >
-                          <RefreshCw
-                            size={12}
-                            className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
-                          />
-                        </button>
-                      </div>
-                    </div>
+                const activeFiltersCount = (libraryCategoryFilter !== "all" ? 1 : 0) + (libraryExtFilter ? 1 : 0) + (librarySearchQuery.trim() ? 1 : 0);
 
-                    {/* Category Filter Pills: All | Pages | Files | Apps | Images | Media */}
-                    <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
-                      {categories.map((cat) => {
-                        if (cat.id !== "all" && cat.count === 0 && libraryCategoryFilter !== cat.id) return null;
-                        const active = libraryCategoryFilter === cat.id;
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => {
-                              setLibraryCategoryFilter(cat.id);
-                              setLibraryExtFilter("");
-                              setLibraryPage(1);
-                            }}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-mono whitespace-nowrap transition-all cursor-pointer border flex items-center gap-1 ${
-                              active
-                                ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold"
-                                : "bg-slate-100 dark:bg-[#14141c] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#22222e] hover:text-slate-900 dark:hover:text-white"
-                            }`}
-                          >
-                            <span>{cat.label}</span>
-                            <span className="opacity-70">({cat.count})</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                const PAGE_SIZE = 40;
+                const totalPages = Math.max(1, Math.ceil(filteredWorkspaceFiles.length / PAGE_SIZE));
+                const safePage = Math.min(libraryPage, totalPages);
+                const pagedFiles = filteredWorkspaceFiles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-                    {/* Format / Extension Quick Chips (.md, .pdf, .xlsx, .docx, .py, .png, ...) */}
-                    {availableFormats.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {availableFormats.map(([ext, count]) => {
-                          const isSelectedExt = libraryExtFilter.toLowerCase() === ext;
-                          return (
-                            <button
-                              key={ext}
-                              type="button"
-                              onClick={() => {
-                                setLibraryExtFilter(isSelectedExt ? "" : ext);
-                                setLibraryPage(1);
-                              }}
-                              className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors cursor-pointer border ${
-                                isSelectedExt
-                                  ? "bg-[#f8a87c] text-black border-[#f8a87c] font-semibold"
-                                  : "bg-slate-50 dark:bg-[#101016] text-slate-500 dark:text-neutral-400 border-slate-200 dark:border-[#1f1f2a] hover:border-[#f8a87c]/40 hover:text-slate-800 dark:hover:text-neutral-200"
-                              }`}
-                            >
-                              .{ext} <span className="opacity-70">{count}</span>
-                            </button>
-                          );
-                        })}
-                        {libraryExtFilter && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLibraryExtFilter("");
-                              setLibraryPage(1);
-                            }}
-                            className="px-1.5 py-0.5 rounded text-[9px] font-mono text-neutral-400 hover:text-white cursor-pointer"
-                          >
-                            Clear
-                          </button>
+                const renderNodeItem = (node: WorkspaceTreeNode, showFolderHint = true) => {
+                  const isSelected = selectedFilePath === node.path;
+                  const folderHint = showFolderHint && node.path.includes("/")
+                    ? node.path.split("/").slice(0, -1).join("/")
+                    : "";
+                  return (
+                    <div
+                      key={node.path}
+                      onClick={() => handleSelectFile(node)}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors group ${
+                        isSelected
+                          ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-medium border border-[#f8a87c]/30"
+                          : "text-slate-700 dark:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#1c1c24] border border-transparent"
+                      }`}
+                    >
+                      {node.kind === "directory" ? (
+                        <Folder size={14} className="text-amber-400 shrink-0" />
+                      ) : node.category === "apps" ? (
+                        <Terminal size={14} className="text-purple-400 shrink-0" />
+                      ) : node.category === "pages" ? (
+                        <Globe size={14} className="text-emerald-400 shrink-0" />
+                      ) : node.category === "images" ? (
+                        <Camera size={14} className="text-cyan-400 shrink-0" />
+                      ) : node.category === "media" ? (
+                        <Play size={14} className="text-pink-400 shrink-0" />
+                      ) : (
+                        <FileText size={14} className="text-amber-400 shrink-0" />
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate text-[11px] leading-tight font-medium">{node.name}</div>
+                        {folderHint && (
+                          <div className="truncate text-[9px] text-neutral-500 leading-tight font-mono">{folderHint}</div>
                         )}
                       </div>
-                    )}
 
-                    {/* Instant Search Filter */}
-                    <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] rounded-lg px-2 py-1 text-xs">
-                      <Search size={12} className="text-neutral-400 shrink-0" />
-                      <input
-                        type="text"
-                        value={librarySearchQuery}
-                        onChange={(e) => {
-                          setLibrarySearchQuery(e.target.value);
-                          setLibraryPage(1);
-                        }}
-                        placeholder="Search pages, files, apps (.md, .xlsx, .pdf, .py)..."
-                        className="w-full bg-transparent text-slate-900 dark:text-white placeholder-neutral-500 font-mono text-[11px] focus:outline-none"
-                      />
-                      {librarySearchQuery && (
+                      {node.extension && (
+                        <span className={`px-1 py-0.2 rounded text-[8px] uppercase border font-mono shrink-0 ${getCategoryBadgeStyle(node.category)}`}>
+                          {node.extension}
+                        </span>
+                      )}
+
+                      {node.size !== null && node.size !== undefined && (
+                        <span className="text-[9px] text-neutral-500 font-mono shrink-0">
+                          {formatSize(node.size)}
+                        </span>
+                      )}
+
+                      <Tooltip content={`Download ${node.name}`} placement="left" minWidth={100}>
+                        <button
+                          type="button"
+                          aria-label={`Download ${node.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+                            if (targetId) downloadWorkspaceFile(targetId, node.path, node.name);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-opacity shrink-0 cursor-pointer"
+                        >
+                          <Download size={12} />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  );
+                };
+
+                const groupedMap = new Map<string, WorkspaceTreeNode[]>();
+                if (libraryGroupMode !== "flat") {
+                  for (const node of pagedFiles) {
+                    let groupKey = "Workspace Root";
+                    if (libraryGroupMode === "folder") {
+                      groupKey = node.path.includes("/")
+                        ? node.path.split("/").slice(0, -1).join("/")
+                        : "Workspace Root";
+                    } else if (libraryGroupMode === "date") {
+                      const rawDate = (node.modifiedAt || "").slice(0, 10);
+                      groupKey = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : "Recent / Unspecified";
+                    }
+                    const arr = groupedMap.get(groupKey) || [];
+                    arr.push(node);
+                    groupedMap.set(groupKey, arr);
+                  }
+                }
+
+                return (
+                  <div className="space-y-2 text-xs flex flex-col flex-1 min-h-0">
+                    {/* Clean Minimal Header: Count & Icon-only Action Controls with Tooltips */}
+                    <div className="flex items-center justify-between gap-1.5 px-0.5">
+                      <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 text-xs">
+                        <Layers size={13} className="text-[#f8a87c] shrink-0" />
+                        <span>
+                          Library ({filteredWorkspaceFiles.length}
+                          {filteredWorkspaceFiles.length !== workspaceFiles.length ? ` / ${workspaceFiles.length}` : ""})
+                        </span>
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        {/* Group Mode Switcher Icons: List | Folder | Date */}
+                        <div className="flex items-center bg-slate-100 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] rounded-lg p-0.5">
+                          <Tooltip content="Group: List" placement="top" minWidth={90}>
+                            <button
+                              type="button"
+                              aria-label="Group: List"
+                              onClick={() => {
+                                setLibraryGroupMode("flat");
+                                setLibraryPage(1);
+                              }}
+                              className={`p-1 rounded transition-colors cursor-pointer ${
+                                libraryGroupMode === "flat"
+                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c]"
+                                  : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                            >
+                              <Layers size={12} />
+                            </button>
+                          </Tooltip>
+
+                          <Tooltip content="Group: Folder" placement="top" minWidth={100}>
+                            <button
+                              type="button"
+                              aria-label="Group: Folder"
+                              onClick={() => {
+                                setLibraryGroupMode("folder");
+                                setLibraryPage(1);
+                              }}
+                              className={`p-1 rounded transition-colors cursor-pointer ${
+                                libraryGroupMode === "folder"
+                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c]"
+                                  : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                            >
+                              <Folder size={12} />
+                            </button>
+                          </Tooltip>
+
+                          <Tooltip content="Group: Date" placement="top" minWidth={90}>
+                            <button
+                              type="button"
+                              aria-label="Group: Date"
+                              onClick={() => {
+                                setLibraryGroupMode("date");
+                                setLibraryPage(1);
+                              }}
+                              className={`p-1 rounded transition-colors cursor-pointer ${
+                                libraryGroupMode === "date"
+                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c]"
+                                  : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                            >
+                              <Clock size={12} />
+                            </button>
+                          </Tooltip>
+                        </div>
+
+                        {/* Filter Overlay Menu Trigger Button */}
+                        <div className="relative inline-flex">
+                          <Tooltip
+                            content={activeFiltersCount > 0 ? `Filters (${activeFiltersCount} active)` : "Filters & Search"}
+                            placement="top"
+                            minWidth={110}
+                          >
+                            <button
+                              ref={libraryFilterBtnRef}
+                              type="button"
+                              aria-label="Filters & Search"
+                              onClick={() => setIsLibraryFilterMenuOpen(!isLibraryFilterMenuOpen)}
+                              className={`relative p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                isLibraryFilterMenuOpen || activeFiltersCount > 0
+                                  ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold"
+                                  : "bg-slate-100 dark:bg-[#14141c] text-neutral-400 border-slate-200 dark:border-[#22222e] hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                            >
+                              <Filter size={12} />
+                              {activeFiltersCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-[#f8a87c] text-black font-mono text-[8px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#101016]">
+                                  {activeFiltersCount}
+                                </span>
+                              )}
+                            </button>
+                          </Tooltip>
+
+                          {/* Overlay Filter Menu (Portal with solid surface & click outside dismissal) */}
+                          <DropdownMenu
+                            isOpen={isLibraryFilterMenuOpen}
+                            onClose={() => setIsLibraryFilterMenuOpen(false)}
+                            anchorRef={libraryFilterBtnRef}
+                            align="right"
+                            width="w-72"
+                          >
+                            {/* Search Bar inside Overlay */}
+                            <div className="p-1.5 pb-2 border-b border-slate-100 dark:border-white/[0.08]">
+                              <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#121218] border border-slate-200 dark:border-[#282836] rounded-lg px-2 py-1 text-xs">
+                                <Search size={11} className="text-neutral-400 shrink-0" />
+                                <input
+                                  type="text"
+                                  value={librarySearchQuery}
+                                  onChange={(e) => {
+                                    setLibrarySearchQuery(e.target.value);
+                                    setLibraryPage(1);
+                                  }}
+                                  placeholder="Search (.md, .xlsx, .pdf, .py)..."
+                                  className="w-full bg-transparent text-slate-900 dark:text-white placeholder-neutral-500 font-mono text-[10px] focus:outline-none"
+                                  autoFocus
+                                />
+                                {librarySearchQuery && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setLibrarySearchQuery("");
+                                      setLibraryPage(1);
+                                    }}
+                                    className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
+                                  >
+                                    <X size={10} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Category Filter Section */}
+                            <DropdownMenuSection label="Categories">
+                              <div className="grid grid-cols-3 gap-1 px-1 py-1">
+                                {categories.map((cat) => {
+                                  const isActive = libraryCategoryFilter === cat.id;
+                                  return (
+                                    <button
+                                      key={cat.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setLibraryCategoryFilter(cat.id);
+                                        setLibraryExtFilter("");
+                                        setLibraryPage(1);
+                                      }}
+                                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-mono transition-colors cursor-pointer border ${
+                                        isActive
+                                          ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold"
+                                          : "bg-slate-50 dark:bg-[#121218] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-[#242432] hover:border-slate-300 dark:hover:border-[#323242]"
+                                      }`}
+                                    >
+                                      <span className="shrink-0">{cat.icon}</span>
+                                      <span className="truncate">{cat.label}</span>
+                                      <span className="text-[9px] opacity-60 ml-auto">{cat.count}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </DropdownMenuSection>
+
+                            {/* Format / Extension Section */}
+                            {availableFormats.length > 0 && (
+                              <DropdownMenuSection label="Formats">
+                                <div className="flex flex-wrap gap-1 px-1 py-1 max-h-28 overflow-y-auto scrollbar-thin">
+                                  {availableFormats.map(([ext, count]) => {
+                                    const isSelectedExt = libraryExtFilter.toLowerCase() === ext;
+                                    return (
+                                      <button
+                                        key={ext}
+                                        type="button"
+                                        onClick={() => {
+                                          setLibraryExtFilter(isSelectedExt ? "" : ext);
+                                          setLibraryPage(1);
+                                        }}
+                                        className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors cursor-pointer border ${
+                                          isSelectedExt
+                                            ? "bg-[#f8a87c] text-black border-[#f8a87c] font-semibold"
+                                            : "bg-slate-50 dark:bg-[#121218] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/40"
+                                        }`}
+                                      >
+                                        .{ext} <span className="opacity-60">{count}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </DropdownMenuSection>
+                            )}
+
+                            {/* Reset All Filters Button */}
+                            {activeFiltersCount > 0 && (
+                              <div className="p-1 border-t border-slate-100 dark:border-white/[0.08] pt-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setLibraryCategoryFilter("all");
+                                    setLibraryExtFilter("");
+                                    setLibrarySearchQuery("");
+                                    setLibraryPage(1);
+                                    setIsLibraryFilterMenuOpen(false);
+                                  }}
+                                  className="w-full text-center py-1 rounded-md text-[10px] font-mono text-neutral-400 hover:text-white hover:bg-white/5 cursor-pointer transition-colors"
+                                >
+                                  Clear all filters
+                                </button>
+                              </div>
+                            )}
+                          </DropdownMenu>
+                        </div>
+
+                        {/* Refresh Library Button */}
+                        <Tooltip content="Refresh workspace library" placement="top" minWidth={140}>
+                          <button
+                            aria-label="Refresh workspace library"
+                            data-ux-target-min="24"
+                            onClick={() => loadWorkspaceTree()}
+                            disabled={isLoadingTree}
+                            className="text-neutral-400 hover:text-slate-900 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-[#1a1a22] transition-colors cursor-pointer border border-transparent"
+                          >
+                            <RefreshCw
+                              size={12}
+                              className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
+                            />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
+
+                    {/* Active Filters Pill Bar (Only visible when filters are applied, 1-click clear) */}
+                    {activeFiltersCount > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap px-0.5 text-[9px] font-mono text-neutral-400">
+                        {libraryCategoryFilter !== "all" && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3a] text-slate-700 dark:text-neutral-300">
+                            <span>cat: {libraryCategoryFilter}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLibraryCategoryFilter("all");
+                                setLibraryPage(1);
+                              }}
+                              className="hover:text-white cursor-pointer"
+                            >
+                              <X size={9} />
+                            </button>
+                          </span>
+                        )}
+                        {libraryExtFilter && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3a] text-slate-700 dark:text-neutral-300">
+                            <span>ext: .{libraryExtFilter}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLibraryExtFilter("");
+                                setLibraryPage(1);
+                              }}
+                              className="hover:text-white cursor-pointer"
+                            >
+                              <X size={9} />
+                            </button>
+                          </span>
+                        )}
+                        {librarySearchQuery.trim() && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3a] text-slate-700 dark:text-neutral-300">
+                            <span>q: "{librarySearchQuery.trim()}"</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLibrarySearchQuery("");
+                                setLibraryPage(1);
+                              }}
+                              className="hover:text-white cursor-pointer"
+                            >
+                              <X size={9} />
+                            </button>
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
+                            setLibraryCategoryFilter("all");
+                            setLibraryExtFilter("");
                             setLibrarySearchQuery("");
                             setLibraryPage(1);
                           }}
-                          className="text-neutral-500 hover:text-neutral-300 p-0.5 cursor-pointer"
+                          className="text-neutral-500 hover:text-neutral-300 underline cursor-pointer ml-1"
                         >
-                          <X size={11} />
+                          Clear all
                         </button>
+                      </div>
+                    )}
+
+                    {/* Artifact List Container */}
+                    <div className="bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl p-2 max-h-64 overflow-y-auto space-y-1 font-mono text-[11px]">
+                      {isLoadingTree ? (
+                        <div className="space-y-1.5 py-1">
+                          <div className="h-7 w-3/4 rounded-md skeleton-shimmer" />
+                          <div className="h-7 w-5/6 rounded-md skeleton-shimmer" />
+                          <div className="h-7 w-2/3 rounded-md skeleton-shimmer" />
+                        </div>
+                      ) : filteredWorkspaceFiles.length === 0 ? (
+                        <div className="text-center py-6 px-3 text-neutral-500 font-sans text-xs">
+                          {workspaceFiles.length === 0
+                            ? "Pages, files, and apps this Bot makes show up here"
+                            : `No artifacts matching current filter`}
+                        </div>
+                      ) : libraryGroupMode === "flat" ? (
+                        pagedFiles.map((node) => renderNodeItem(node, true))
+                      ) : (
+                        Array.from(groupedMap.entries()).map(([groupKey, items]) => {
+                          const isCollapsed = Boolean(libraryCollapsedGroups[groupKey]);
+                          return (
+                            <div key={groupKey} className="space-y-0.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setLibraryCollapsedGroups((prev) => ({
+                                    ...prev,
+                                    [groupKey]: !prev[groupKey],
+                                  }))
+                                }
+                                className="w-full flex items-center justify-between px-2 py-1 rounded-md bg-slate-200/50 dark:bg-[#1b1b24] text-[10px] font-semibold text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                              >
+                                <span className="flex items-center gap-1.5 truncate">
+                                  {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+                                  {libraryGroupMode === "folder" ? (
+                                    <Folder size={11} className="text-amber-400 shrink-0" />
+                                  ) : (
+                                    <Clock size={11} className="text-[#f8a87c] shrink-0" />
+                                  )}
+                                  <span className="truncate">{groupKey}</span>
+                                </span>
+                                <span className="text-[9px] text-neutral-500 shrink-0 ml-2">
+                                  {items.length}
+                                </span>
+                              </button>
+                              {!isCollapsed && (
+                                <div className="pl-2 space-y-0.5 border-l border-slate-200 dark:border-[#242432] ml-2">
+                                  {items.map((node) => renderNodeItem(node, libraryGroupMode !== "folder"))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
 
-                    {/* Library Artifact List with Pagination & Folder/Date Grouping */}
-                    {(() => {
-                      const PAGE_SIZE = 40;
-                      const totalPages = Math.max(1, Math.ceil(filteredWorkspaceFiles.length / PAGE_SIZE));
-                      const safePage = Math.min(libraryPage, totalPages);
-                      const pagedFiles = filteredWorkspaceFiles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-                      const renderNodeItem = (node: WorkspaceTreeNode, showFolderHint = true) => {
-                        const isSelected = selectedFilePath === node.path;
-                        const folderHint = showFolderHint && node.path.includes("/")
-                          ? node.path.split("/").slice(0, -1).join("/")
-                          : "";
-                        return (
-                          <div
-                            key={node.path}
-                            onClick={() => handleSelectFile(node)}
-                            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors group ${
-                              isSelected
-                                ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-medium border border-[#f8a87c]/30"
-                                : "text-slate-700 dark:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#1c1c24] border border-transparent"
-                            }`}
-                          >
-                            {node.kind === "directory" ? (
-                              <Folder size={13} className="text-amber-400 shrink-0" />
-                            ) : node.category === "apps" ? (
-                              <Terminal size={13} className="text-purple-400 shrink-0" />
-                            ) : node.category === "pages" ? (
-                              <Globe size={13} className="text-emerald-400 shrink-0" />
-                            ) : node.category === "images" ? (
-                              <Camera size={13} className="text-cyan-400 shrink-0" />
-                            ) : node.category === "media" ? (
-                              <Play size={13} className="text-pink-400 shrink-0" />
-                            ) : (
-                              <FileText size={13} className="text-amber-400 shrink-0" />
-                            )}
-
-                            <div className="flex-1 min-w-0">
-                              <div className="truncate text-[11px] leading-tight">{node.name}</div>
-                              {folderHint && (
-                                <div className="truncate text-[9px] text-neutral-500 leading-tight">{folderHint}</div>
-                              )}
-                            </div>
-
-                            {node.extension && (
-                              <span className={`px-1 py-0.2 rounded text-[8px] uppercase border shrink-0 ${getCategoryBadgeStyle(node.category)}`}>
-                                {node.extension}
-                              </span>
-                            )}
-
-                            {node.size !== null && node.size !== undefined && (
-                              <span className="text-[9px] text-neutral-500 shrink-0">
-                                {formatSize(node.size)}
-                              </span>
-                            )}
-
+                    {/* Pagination Footer */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between px-1 pt-0.5 text-[10px] font-mono text-neutral-400">
+                        <span>
+                          {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredWorkspaceFiles.length)} of {filteredWorkspaceFiles.length}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Tooltip content="Previous page" placement="top" minWidth={90}>
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
-                                if (targetId) downloadWorkspaceFile(targetId, node.path, node.name);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-opacity shrink-0 cursor-pointer"
-                              title={`Download ${node.name}`}
+                              aria-label="Previous page"
+                              disabled={safePage <= 1}
+                              onClick={() => setLibraryPage((p) => Math.max(1, p - 1))}
+                              className="p-1 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
                             >
-                              <Download size={11} />
+                              <ChevronLeft size={11} />
                             </button>
-                          </div>
-                        );
-                      };
+                          </Tooltip>
 
-                      const groupedMap = new Map<string, WorkspaceTreeNode[]>();
-                      if (libraryGroupMode !== "flat") {
-                        for (const node of pagedFiles) {
-                          let groupKey = "Workspace Root";
-                          if (libraryGroupMode === "folder") {
-                            groupKey = node.path.includes("/")
-                              ? node.path.split("/").slice(0, -1).join("/")
-                              : "Workspace Root";
-                          } else if (libraryGroupMode === "date") {
-                            const rawDate = (node.modifiedAt || "").slice(0, 10);
-                            groupKey = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : "Recent / Unspecified";
-                          }
-                          const arr = groupedMap.get(groupKey) || [];
-                          arr.push(node);
-                          groupedMap.set(groupKey, arr);
-                        }
-                      }
+                          <span className="px-1 text-slate-700 dark:text-neutral-300">
+                            {safePage}/{totalPages}
+                          </span>
 
-                      return (
-                        <>
-                          <div className="bg-slate-50 dark:bg-[#14141a] border border-slate-200 dark:border-[#1e1e26] rounded-xl p-2 max-h-64 overflow-y-auto space-y-1 font-mono text-[11px]">
-                            {isLoadingTree ? (
-                              <div className="space-y-1.5 py-1">
-                                <div className="h-7 w-3/4 rounded-md skeleton-shimmer" />
-                                <div className="h-7 w-5/6 rounded-md skeleton-shimmer" />
-                                <div className="h-7 w-2/3 rounded-md skeleton-shimmer" />
-                              </div>
-                            ) : filteredWorkspaceFiles.length === 0 ? (
-                              <div className="text-center py-6 px-3 text-neutral-500 font-sans text-xs">
-                                {workspaceFiles.length === 0
-                                  ? "Pages, files, and apps this Bot makes show up here"
-                                  : `No artifacts matching current filter`}
-                              </div>
-                            ) : libraryGroupMode === "flat" ? (
-                              pagedFiles.map((node) => renderNodeItem(node, true))
-                            ) : (
-                              Array.from(groupedMap.entries()).map(([groupKey, items]) => {
-                                const isCollapsed = Boolean(libraryCollapsedGroups[groupKey]);
-                                return (
-                                  <div key={groupKey} className="space-y-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setLibraryCollapsedGroups((prev) => ({
-                                          ...prev,
-                                          [groupKey]: !prev[groupKey],
-                                        }))
-                                      }
-                                      className="w-full flex items-center justify-between px-2 py-1 rounded-md bg-slate-200/50 dark:bg-[#1b1b24] text-[10px] font-semibold text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
-                                    >
-                                      <span className="flex items-center gap-1.5 truncate">
-                                        {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
-                                        {libraryGroupMode === "folder" ? (
-                                          <Folder size={11} className="text-amber-400 shrink-0" />
-                                        ) : (
-                                          <Clock size={11} className="text-[#f8a87c] shrink-0" />
-                                        )}
-                                        <span className="truncate">{groupKey}</span>
-                                      </span>
-                                      <span className="text-[9px] text-neutral-500 shrink-0 ml-2">
-                                        {items.length}
-                                      </span>
-                                    </button>
-                                    {!isCollapsed && (
-                                      <div className="pl-2 space-y-0.5 border-l border-slate-200 dark:border-[#242432] ml-2">
-                                        {items.map((node) => renderNodeItem(node, libraryGroupMode !== "folder"))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-
-                          {/* Pagination Footer when items exceed page size */}
-                          {totalPages > 1 && (
-                            <div className="flex items-center justify-between px-1 pt-0.5 text-[10px] font-mono text-neutral-400">
-                              <span>
-                                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredWorkspaceFiles.length)} of {filteredWorkspaceFiles.length}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  disabled={safePage <= 1}
-                                  onClick={() => setLibraryPage((p) => Math.max(1, p - 1))}
-                                  className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
-                                >
-                                  Prev
-                                </button>
-                                <span className="px-1 text-slate-700 dark:text-neutral-300">
-                                  {safePage}/{totalPages}
-                                </span>
-                                <button
-                                  type="button"
-                                  disabled={safePage >= totalPages}
-                                  onClick={() => setLibraryPage((p) => Math.min(totalPages, p + 1))}
-                                  className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
-                                >
-                                  Next
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
+                          <Tooltip content="Next page" placement="top" minWidth={80}>
+                            <button
+                              type="button"
+                              aria-label="Next page"
+                              disabled={safePage >= totalPages}
+                              onClick={() => setLibraryPage((p) => Math.min(totalPages, p + 1))}
+                              className="p-1 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              <ChevronRight size={11} />
+                            </button>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Selected Artifact Rich Preview */}
                     {selectedFilePath && (
@@ -11892,20 +12103,21 @@ ${chat.id}`);
                                 .{selectedLibraryNode.extension}
                               </span>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
-                                if (targetId && selectedFilePath) {
-                                  downloadWorkspaceFile(targetId, selectedFilePath, selectedFilePath.split("/").pop());
-                                }
-                              }}
-                              className="px-1.5 py-0.5 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] hover:bg-[#f8a87c]/25 flex items-center gap-1 text-[10px] cursor-pointer"
-                              title="Download file"
-                            >
-                              <Download size={10} />
-                              <span>Download</span>
-                            </button>
+                            <Tooltip content={`Download ${selectedFilePath.split("/").pop()}`} placement="left" minWidth={110}>
+                              <button
+                                type="button"
+                                aria-label="Download file"
+                                onClick={() => {
+                                  const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+                                  if (targetId && selectedFilePath) {
+                                    downloadWorkspaceFile(targetId, selectedFilePath, selectedFilePath.split("/").pop());
+                                  }
+                                }}
+                                className="p-1 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] hover:bg-[#f8a87c]/25 cursor-pointer"
+                              >
+                                <Download size={11} />
+                              </button>
+                            </Tooltip>
                           </div>
                         </div>
 
@@ -13119,6 +13331,7 @@ ${chat.id}`);
           <AgentThinkingModal
             msg={modalMsg}
             agentLabel={modalMsg.senderAgentName || modalMsg.senderAgentId || selectedAgent.name}
+            agentId={selectedAgent?.slug || selectedAgent?.id || selectedAgentId}
             onClose={() => {
               setActiveThinkingModalMsg(null);
               setIsLiveThinkingModalOpen(false);

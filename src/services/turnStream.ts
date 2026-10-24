@@ -31,9 +31,13 @@ export class TurnAccumulator {
       const id = (event.id as string) || `msg-${this.stepOrder.length}`;
       const type = event.type || event.message_type || "message";
       if (event.role === "user") {
-        const text = typeof event.content === "string"
+        let text = typeof event.content === "string"
           ? event.content.trim()
           : (event.content || []).map((c: any) => c?.text || "").join("\n").trim();
+        const roomCtxIdx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
+        if (roomCtxIdx >= 0) {
+          text = text.slice(0, roomCtxIdx).trimEnd();
+        }
         if (text) {
           this.userText = text;
           return true;

@@ -653,6 +653,10 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           .map((c: any) => c.text || "")
           .join("\n");
       }
+      const roomCtxIdx = userContent.indexOf("[SHARED SESSION ROOM CONTEXT]");
+      if (roomCtxIdx >= 0) {
+        userContent = userContent.slice(0, roomCtxIdx).trimEnd();
+      }
       turns.push({
         id: m.id || `${chatId}-${mIdx}-user`,
         role: "user",
