@@ -3166,13 +3166,13 @@ export function GrokBotWorkspace() {
   const [isLiveThinkingModalOpen, setIsLiveThinkingModalOpen] = useState<boolean>(false);
 
   const handleOpenActiveThinkingModal = (targetMsg?: ChatMessage) => {
-    if (targetMsg && (targetMsg.steps?.length || targetMsg.toolCalls?.length || targetMsg.reasoning)) {
+    setActiveExtendPopoverMsgId(null);
+    setActiveReactPopoverMsgId(null);
+    setMobileActionMsg(null);
+    if (targetMsg) {
       setActiveThinkingModalMsg(targetMsg);
-      setIsLiveThinkingModalOpen(false);
-      return;
     }
     setIsLiveThinkingModalOpen(true);
-    setActiveThinkingModalMsg(null);
   };
   const [replyingToMsg, setReplyingToMsg] = useState<ReplyToMessageInfo | null>(null);
   const [highlightedReplyMsgId, setHighlightedReplyMsgId] = useState<string | null>(null);
@@ -4356,7 +4356,7 @@ export function GrokBotWorkspace() {
     // Real-time bidirectional Telegram & external turn sync listener
   useEffect(() => {
     if (!selectedChatId || !selectedAgentId || !selectedChatKnown) return;
-    if (selectedChatId.startsWith("session-")) return;
+    if (selectedChatId.startsWith("session-") && !isCurrentSessionRunning && messages.length === 0) return;
 
     let sse: EventSource | null = null;
     try {
@@ -4753,34 +4753,89 @@ export function GrokBotWorkspace() {
   // Live turn of the open chat when it runs on another channel (Telegram, Zalo, cron, other console tab).
   // Uses the same QwenPaw event stream as a console send, so reasoning and every executed tool render identically.
   const [liveTurn, setLiveTurn] = useState<{ chatId: string; userText: string | null; msg: ChatMessage } | null>(null);
+  const liveAttachRef = useRef<{ key: string; controller: AbortController; active: boolean } | null>(null);
   useEffect(() => {
     viewedChatIdsRef.current = [selectedChatId, selectedChat?.session_id].filter(Boolean) as string[];
   }, [selectedChatId, selectedChat?.session_id]);
+
+  // Abort live attach only when switching chat/agent or starting a local console stream
   useEffect(() => {
-    setLiveTurn(null);
-    if (!selectedChatId || !selectedAgentId || isStreaming || !isCurrentSessionRunning || selectedChatId.startsWith("session-")) return;
+    const key = `${selectedAgentId}:${selectedChatId}`;
+    if (liveAttachRef.current && (liveAttachRef.current.key !== key || isStreaming)) {
+      liveAttachRef.current.controller.abort();
+      liveAttachRef.current = null;
+    }
+    if (isStreaming) {
+      setLiveTurn(null);
+    }
+  }, [selectedChatId, selectedAgentId, isStreaming]);
+
+  useEffect(() => {
+    if (!selectedChatId || !selectedAgentId || isStreaming) return;
+    if (selectedChatId.startsWith("session-") && !isCurrentSessionRunning && messages.length === 0) return;
+
+    const key = `${selectedAgentId}:${selectedChatId}`;
+    if (liveAttachRef.current?.key === key && liveAttachRef.current.active) {
+      return;
+    }
+
     const chatId = selectedChatId;
+    const agentId = selectedAgentId;
     const controller = new AbortController();
+    const attachState = { key, controller, active: true };
+    liveAttachRef.current = attachState;
+
+    let latestStreamedMsg: ChatMessage | null = null;
+    let latestStreamedUserText: string | null = null;
+
     (async () => {
       try {
-        const streamed = await attachLiveTurn(selectedAgentId, chatId, (msg, userText) => {
+        const streamed = await attachLiveTurn(agentId, chatId, (msg, userText) => {
           if (controller.signal.aborted) return;
+          latestStreamedMsg = msg;
+          latestStreamedUserText = userText;
           setLiveTurn({ chatId, userText, msg });
+          setRunningChatIds((prev) => (prev.includes(chatId) ? prev : [...prev, chatId]));
+          updateAgentSessionRunning(agentId, [chatId, selectedChat?.session_id], true);
           if (!isUserScrolledUpRef.current) jumpToBottom();
         }, controller.signal);
         if (controller.signal.aborted) return;
-        // Turn finished (or session was idle): reload the persisted history, which now contains this turn.
-        const reloaded = await fetchChatMessages(chatId, selectedAgentId).catch(() => null);
-        if (controller.signal.aborted) return;
-        if (reloaded && reloaded.length > 0) setMessages(reloaded);
-        setLiveTurn(null);
+
         if (streamed) {
+          const reloaded = await fetchChatMessages(chatId, agentId).catch(() => null);
+          if (controller.signal.aborted) return;
+          if (reloaded && reloaded.length > 0) {
+            const finalMsg = latestStreamedMsg as ChatMessage | null;
+            const hasLatestContent = !finalMsg?.content || reloaded.some((m) => m.role === "assistant" && m.content.trim() === finalMsg.content.trim());
+            if (hasLatestContent) {
+              setMessages(reloaded);
+              setCachedChatMessages(chatId, reloaded, agentId);
+            } else if (finalMsg) {
+              const merged = [...reloaded];
+              const uText = (latestStreamedUserText as string | null)?.trim() || (typeof window !== "undefined" ? sessionStorage.getItem(`agent360_last_prompt_${chatId}`)?.trim() : null);
+              const lastU = [...merged].reverse().find((m) => m.role === "user");
+              if (uText && (!lastU || lastU.content.trim() !== uText)) {
+                merged.push({ id: `usr-reloaded-${Date.now()}`, role: "user", content: uText, timestamp: new Date().toISOString() });
+              }
+              merged.push(finalMsg);
+              setMessages(merged);
+              setCachedChatMessages(chatId, merged, agentId);
+              setTimeout(() => {
+                fetchChatMessages(chatId, agentId).then((later) => {
+                  if (!controller.signal.aborted && later && later.length >= merged.length) {
+                    setMessages(later);
+                  }
+                }).catch(() => {});
+              }, 800);
+            }
+          }
           try {
             sessionStorage.removeItem(`agent360_active_turn_${chatId}`);
             sessionStorage.removeItem(`agent360_last_prompt_${chatId}`);
           } catch {}
+          setLiveTurn(null);
           setRunningChatIds((prev) => prev.filter((id) => id !== chatId && id !== selectedChat?.session_id));
-          updateAgentSessionRunning(selectedAgentId, [chatId, selectedChat?.session_id], false);
+          updateAgentSessionRunning(agentId, [chatId, selectedChat?.session_id], false);
           setChats((prev) =>
             prev.map((c) =>
               c.id === chatId || (selectedChat?.session_id && c.session_id === selectedChat.session_id)
@@ -4788,14 +4843,24 @@ export function GrokBotWorkspace() {
                 : c
             )
           );
-          markChatAsRead(chatId, selectedAgentId);
+          markChatAsRead(chatId, agentId);
+        } else if (!isCurrentSessionRunning) {
+          setLiveTurn(null);
         }
       } catch {
         if (!controller.signal.aborted) setLiveTurn(null);
+      } finally {
+        attachState.active = false;
       }
     })();
-    return () => controller.abort();
   }, [selectedChatId, selectedAgentId, isStreaming, isCurrentSessionRunning]);
+
+  useEffect(() => {
+    return () => {
+      liveAttachRef.current?.controller.abort();
+    };
+  }, []);
+
   const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
   const displayMessages = useMemo<ChatMessage[]>(() => {
     const base = [...messages];
@@ -4822,15 +4887,37 @@ export function GrokBotWorkspace() {
         });
       }
     }
-    if (!liveTurnForView) return base;
+    const isRemoteOrReloadedTurnActive = Boolean(liveTurnForView) || (isCurrentSessionRunning && !isStreaming);
+    if (!isRemoteOrReloadedTurnActive) return base;
+
+    // If base ends with an orphaned empty/partial bot-* placeholder from before a page reload, replace it with liveTurn
+    if (liveTurnForView && base.length > 0) {
+      const lastItem = base[base.length - 1];
+      if (lastItem.role === "assistant" && (lastItem.id.startsWith("bot-") || !lastItem.content)) {
+        base.pop();
+      }
+    }
+
     const lastUser = [...base].reverse().find((m) => m.role === "user");
-    const userText = liveTurnForView.userText?.trim() || (typeof window !== "undefined" && selectedChatId ? sessionStorage.getItem(`agent360_last_prompt_${selectedChatId}`) : null);
+    const storedPrompt = typeof window !== "undefined" && selectedChatId ? sessionStorage.getItem(`agent360_last_prompt_${selectedChatId}`)?.trim() : null;
+    const userText = liveTurnForView?.userText?.trim() || storedPrompt;
     if (userText && (!lastUser || lastUser.content.trim() !== userText)) {
       base.push({ id: `live-user-${selectedChatId}`, role: "user", content: userText, timestamp: new Date().toISOString() });
     }
-    base.push(liveTurnForView.msg);
+
+    if (liveTurnForView) {
+      base.push(liveTurnForView.msg);
+    } else if (base.length === 0 || base[base.length - 1].role === "user") {
+      base.push({
+        id: `live-pending-${selectedChatId}`,
+        role: "assistant",
+        content: "",
+        timestamp: new Date().toISOString(),
+        evidenceStatus: "observed",
+      });
+    }
     return base;
-  }, [messages, activeSessionRoom, liveTurnForView, selectedChatId, selectedChat?.session_id]);
+  }, [messages, activeSessionRoom, liveTurnForView, isCurrentSessionRunning, isStreaming, selectedChatId, selectedChat?.session_id]);
 
   useEffect(() => {
     // Only jump to bottom on initial load / chat switch
@@ -8001,6 +8088,11 @@ export function GrokBotWorkspace() {
                         if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("pre")) return;
                         if (window.getSelection()?.toString().trim()) return;
                         triggerHaptic(12);
+                        // When this assistant turn is actively in-progress, clicking it ONLY opens the realtime thinking & tool calls modal
+                        if ((isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn) {
+                          handleOpenActiveThinkingModal(msg);
+                          return;
+                        }
                         if (window.innerWidth < 640) {
                           if (!longPressPreventClickRef.current) {
                             setMobileActionMsg({
@@ -8023,6 +8115,12 @@ export function GrokBotWorkspace() {
                         }
                       }}
                       onContextMenu={(e) => {
+                        if ((isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn) {
+                          e.preventDefault();
+                          triggerHaptic(12);
+                          handleOpenActiveThinkingModal(msg);
+                          return;
+                        }
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
                           triggerHaptic(15);
@@ -8038,27 +8136,34 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Loading & Responding Indicator showing which Agent is currently responding (Compact & Clickable) */}
-                      {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
-                        <button
-                          type="button"
-                          data-testid="active-responding-agent-pill"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerHaptic(12);
-                            handleOpenActiveThinkingModal(msg);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 dark:bg-[#14141c]/80 border border-slate-200/60 dark:border-white/[0.06] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:border-[#f8a87c]/40 hover:bg-slate-200/50 dark:hover:bg-[#1c1c28] transition-all cursor-pointer select-none group"
-                          title="Bấm để xem chi tiết tool call và suy luận thời gian thực"
-                          aria-label="Xem chi tiết tool call và suy luận"
-                        >
-                          <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
-                          <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white">
-                            {activeRespondingAgent?.statusText || `${msg.senderAgentName || selectedAgent.name} đang phản hồi...`}
-                          </span>
-                          <Sparkles size={11} className="text-[#f8a87c] opacity-70 group-hover:opacity-100 shrink-0 ml-0.5" />
-                        </button>
-                      )}
+                      {/* Loading & Responding Indicator showing which Agent is currently responding (Compact & Clickable throughout the entire active turn) */}
+                      {(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (() => {
+                        const liveToolCount = (msg.toolCalls?.length || msg.steps?.filter((s) => s.kind === "tool_call").length || 0);
+                        const liveReasonCount = (msg.steps?.filter((s) => s.kind === "reasoning").length || (msg.reasoning ? 1 : 0));
+                        const stepBadge = (liveToolCount > 0 || liveReasonCount > 0)
+                          ? ` (${liveToolCount} tool · ${liveReasonCount} suy luận)`
+                          : "";
+                        return (
+                          <button
+                            type="button"
+                            data-testid="active-responding-agent-pill"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerHaptic(12);
+                              handleOpenActiveThinkingModal(msg);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 dark:bg-[#14141c]/80 border border-slate-200/60 dark:border-white/[0.06] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:border-[#f8a87c]/40 hover:bg-slate-200/50 dark:hover:bg-[#1c1c28] transition-all cursor-pointer select-none group"
+                            title="Bấm để xem chi tiết tool call và suy luận thời gian thực"
+                            aria-label="Xem chi tiết tool call và suy luận"
+                          >
+                            <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+                            <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white">
+                              {(activeRespondingAgent?.statusText || `${msg.senderAgentName || selectedAgent.name} đang phản hồi...`) + stepBadge}
+                            </span>
+                            <Sparkles size={11} className="text-[#f8a87c] opacity-70 group-hover:opacity-100 shrink-0 ml-0.5" />
+                          </button>
+                        );
+                      })()}
 
                       {msg.content && (
                         <>
@@ -12994,6 +13099,9 @@ ${chat.id}`);
 
       {/* Global Shared Thinking Modal (Supports static turns & live in-progress streaming turns) */}
       {(activeThinkingModalMsg || isLiveThinkingModalOpen) && (() => {
+        const dynamicMatch = activeThinkingModalMsg
+          ? displayMessages.find((m) => m.id === activeThinkingModalMsg.id)
+          : null;
         const liveBotMsg = liveTurnForView?.msg
           || inflightMessagesRef.current[selectedChatId]?.slice().reverse().find((m) => m.role === "assistant")
           || [...displayMessages].reverse().find((m) => m.role === "assistant")
@@ -13006,7 +13114,7 @@ ${chat.id}`);
             steps: [],
             toolCalls: [],
           };
-        const modalMsg = activeThinkingModalMsg || liveBotMsg;
+        const modalMsg = (isLiveThinkingModalOpen ? (dynamicMatch || liveBotMsg) : (dynamicMatch || activeThinkingModalMsg)) || liveBotMsg;
         return (
           <AgentThinkingModal
             msg={modalMsg}

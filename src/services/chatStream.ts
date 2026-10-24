@@ -112,12 +112,24 @@ export async function sendConsoleChatMessageStream(
         }
       } catch {}
 
-      let response = await fetch("/api/agents/console/chat", {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify(payload),
-        signal: options.signal
-      }).catch(() => null);
+      let response: Response | null = null;
+      if (attempt > 0 && payload.session_id) {
+        // Reconnect to the in-flight QwenPaw turn first instead of re-sending a duplicate user prompt
+        response = await fetch(`/api/agents/${encodeURIComponent(targetAgent)}/chats/${encodeURIComponent(payload.session_id)}/live`, {
+          method: "GET",
+          headers: authHeaders,
+          signal: options.signal
+        }).catch(() => null);
+      }
+
+      if (!response || !response.ok) {
+        response = await fetch("/api/agents/console/chat", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify(payload),
+          signal: options.signal
+        }).catch(() => null);
+      }
 
       if (!response || !response.ok) {
         // Fallback to /api/console/chat
@@ -277,6 +289,9 @@ export async function sendConsoleChatMessageStream(
         return { text: accumulatedText, reasoning: accumulatedReasoning || undefined };
       }
     } catch (err: any) {
+      if (options.signal?.aborted || err?.name === "AbortError") {
+        throw err;
+      }
       lastError = err instanceof Error ? err : new Error(String(err));
       console.warn(`[chatStream] Attempt ${attempt + 1}/${maxRetries + 1} failed:`, lastError.message);
 

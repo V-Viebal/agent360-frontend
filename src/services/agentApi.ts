@@ -950,11 +950,6 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
 }
 
 export async function fetchChatMessages(chatId: string, agentId?: string): Promise<ChatMessage[]> {
-  // If this is a fresh client-generated session (e.g. session-xxxxxx), return immediately without network latency
-  if (chatId.startsWith("session-")) {
-    setCachedChatMessages(chatId, [], agentId);
-    return [];
-  }
   try {
     const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
     // Priority URLs: /api/agents/chats/:chatId (direct history endpoint on AgentFeaturesEndpoints)
@@ -994,16 +989,26 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
     if (data && !Array.isArray(data) && data.collaboration_room && typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("agent360_room_synced", { detail: { chatId, room: data.collaboration_room } }));
     }
+    const isRunningOnServer = Boolean(data && !Array.isArray(data) && (data.status === "running" || data.status === "in_progress" || data.is_running));
     const rawList = Array.isArray(data) ? data : (data.messages || []);
-    const filteredTurns = parseRawChatMessages(rawList, chatId, false);
+    const filteredTurns = parseRawChatMessages(rawList, chatId, isRunningOnServer);
+    if (filteredTurns.length === 0) {
+      const existingCached = getCachedChatMessages(chatId, agentId);
+      const isTurnActive = typeof window !== "undefined" && sessionStorage.getItem(`agent360_active_turn_${chatId}`) === "true";
+      if (existingCached && existingCached.length > 0 && (isTurnActive || isRunningOnServer)) {
+        return existingCached;
+      }
+    }
     setCachedChatMessages(chatId, filteredTurns, agentId);
     return filteredTurns;
   } catch (err) {
-    // If this is a fresh new session created on the client (starts with session-), return empty turns immediately
+    const existingCached = getCachedChatMessages(chatId, agentId);
+    if (existingCached && existingCached.length > 0) {
+      return existingCached;
+    }
     if (chatId.startsWith("session-")) {
       return [];
     }
-    // Real data only: never show canned dialogues for a chat that failed to load.
     console.warn("fetchChatMessages failed", err);
     throw err;
   }

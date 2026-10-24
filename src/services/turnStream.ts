@@ -8,7 +8,6 @@ import { API_BASE_URL, getAuthHeaders } from "./agentApi";
  */
 export class TurnAccumulator {
   private readonly messageTypes = new Map<string, string>();
-  private reasoningParts: string[] = [];
   private readonly reasoningById = new Map<string, string>();
   private readonly textById = new Map<string, string>();
   private readonly textOrder: string[] = [];
@@ -25,24 +24,37 @@ export class TurnAccumulator {
     if (event.object === "response") {
       if (event.status === "completed" || event.status === "failed" || event.status === "canceled" || event.status === "cancelled") {
         this.done = true;
-        return true;
       }
-      return false;
+      return true;
     }
     if (event.object === "message") {
-      const id = event.id as string;
-      const type = event.type || "message";
+      const id = (event.id as string) || `msg-${this.stepOrder.length}`;
+      const type = event.type || event.message_type || "message";
       if (event.role === "user") {
-        const text = (event.content || []).map((c: any) => c?.text || "").join("\n").trim();
-        if (text) this.userText = text;
+        const text = typeof event.content === "string"
+          ? event.content.trim()
+          : (event.content || []).map((c: any) => c?.text || "").join("\n").trim();
+        if (text) {
+          this.userText = text;
+          return true;
+        }
         return false;
       }
       this.messageTypes.set(id, type);
-      if (type === "reasoning" && !this.reasoningById.has(id)) {
+      if ((type === "reasoning" || type === "thinking") && !this.reasoningById.has(id)) {
         this.reasoningById.set(id, "");
         this.stepOrder.push({ kind: "reasoning", id });
       }
-      for (const part of event.content || []) this.ingestContent({ ...part, msg_id: part.msg_id || id }, event.status === "completed");
+      if (typeof event.content === "string" && event.content) {
+        this.ingestContent({ type: "text", text: event.content, msg_id: id }, event.status === "completed");
+      } else if (Array.isArray(event.content)) {
+        for (const part of event.content) {
+          this.ingestContent({ ...part, msg_id: part?.msg_id || id }, event.status === "completed");
+        }
+      }
+      if ((type === "plugin_call" || type === "tool_call" || type === "function_call" || type === "tool" || type === "plugin_call_output" || type === "tool_result" || type === "function_result") && (event.data || event.payload)) {
+        this.ingestContent({ type: "data", data: event.data || event.payload, msg_id: id, status: event.status }, event.status === "completed");
+      }
       return true;
     }
     if (event.object === "content") {
@@ -53,37 +65,46 @@ export class TurnAccumulator {
   }
 
   private ingestContent(part: any, completed: boolean) {
-    const msgId: string = part.msg_id || "";
-    const msgType = this.messageTypes.get(msgId) || "message";
-    if (part.type === "text") {
-      const target = msgType === "reasoning" ? this.reasoningById : this.textById;
-      if (msgType !== "reasoning" && !this.textById.has(msgId)) this.textOrder.push(msgId);
+    if (!part || typeof part !== "object") return;
+    const msgId: string = part.msg_id || "default-msg";
+    const msgType = this.messageTypes.get(msgId) || (part.type === "reasoning" || part.type === "thinking" ? "reasoning" : "message");
+    if (part.type === "text" || part.type === "reasoning" || part.type === "thinking") {
+      const isReasoning = msgType === "reasoning" || msgType === "thinking" || part.type === "reasoning" || part.type === "thinking";
+      if (isReasoning && !this.reasoningById.has(msgId)) {
+        this.reasoningById.set(msgId, "");
+        if (!this.stepOrder.some((s) => s.kind === "reasoning" && s.id === msgId)) {
+          this.stepOrder.push({ kind: "reasoning", id: msgId });
+        }
+      }
+      const target = isReasoning ? this.reasoningById : this.textById;
+      if (!isReasoning && !this.textById.has(msgId)) this.textOrder.push(msgId);
       const prev = target.get(msgId) || "";
       target.set(msgId, part.delta ? prev + (part.text || "") : (part.text || prev));
       return;
     }
     if (part.type !== "data" || !part.data) return;
     const d = part.data;
-    const callId: string | undefined = d.call_id || this.toolMsgToCall.get(msgId);
-    if (!callId) return;
-    if (msgId) this.toolMsgToCall.set(msgId, callId);
+    const callId: string = d.call_id || d.tool_call_id || d.id || this.toolMsgToCall.get(msgId) || (msgId !== "default-msg" ? msgId : `call-${this.tools.length + 1}`);
+    if (msgId && msgId !== "default-msg") this.toolMsgToCall.set(msgId, callId);
     let tool = this.tools.find((t) => t.call_id === callId);
     if (!tool) {
-      tool = { id: callId, call_id: callId, tool: d.name || "Tool", args: "", state: "calling" };
+      tool = { id: callId, call_id: callId, tool: d.name || d.function?.name || "Tool", args: "", state: "calling" };
       this.tools.push(tool);
       this.stepOrder.push({ kind: "tool_call", callId });
     }
-    if (d.name) tool.tool = d.name;
-    if (d.arguments !== undefined) {
-      const args = typeof d.arguments === "string" ? d.arguments : JSON.stringify(d.arguments);
-      tool.args = part.delta && msgType === "plugin_call" ? (tool.args || "") + args : args;
+    if (d.name || d.function?.name) tool.tool = d.name || d.function?.name;
+    const rawArgs = d.arguments !== undefined ? d.arguments : d.function?.arguments !== undefined ? d.function.arguments : d.args;
+    if (rawArgs !== undefined) {
+      const args = typeof rawArgs === "string" ? rawArgs : JSON.stringify(rawArgs);
+      tool.args = part.delta && (msgType === "plugin_call" || msgType === "tool_call") ? (tool.args || "") + args : args;
     }
-    if (msgType === "plugin_call_output" || d.output !== undefined) {
-      if (d.output !== undefined && d.output !== "") {
-        tool.result = typeof d.output === "string" ? d.output : JSON.stringify(d.output);
+    const rawOutput = d.output !== undefined ? d.output : d.result;
+    if (msgType === "plugin_call_output" || msgType === "tool_result" || msgType === "function_result" || rawOutput !== undefined) {
+      if (rawOutput !== undefined && rawOutput !== "") {
+        tool.result = typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput);
       }
-      if (completed || part.status === "completed") {
-        tool.state = d.state === "error" ? "error" : "success";
+      if (completed || part.status === "completed" || msgType === "plugin_call_output" || msgType === "tool_result" || rawOutput !== undefined) {
+        tool.state = d.state === "error" || d.status === "error" || Boolean(d.error) ? "error" : "success";
         tool.exitCode = tool.state === "error" ? 1 : 0;
       }
     }
@@ -164,12 +185,16 @@ export async function attachLiveTurn(
   if (!res.ok || !res.body) return false;
   const acc = new TurnAccumulator(`live-${chatId}`);
   let sawTurn = false;
+  let emittedInitial = false;
   let lastEmit = 0;
   for await (const ev of readSseEvents(res.body, signal)) {
-    if (ev?.object === "response") sawTurn = true;
+    if (ev?.object === "response" || ev?.object === "message" || ev?.object === "content") {
+      sawTurn = true;
+    }
     if (!acc.ingest(ev)) continue;
     const now = performance.now();
-    if (acc.done || now - lastEmit > 80) {
+    if (!emittedInitial || acc.done || now - lastEmit > 45) {
+      emittedInitial = true;
       lastEmit = now;
       onUpdate(acc.snapshot(), acc.userText);
     }
