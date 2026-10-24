@@ -9408,21 +9408,31 @@ export function GrokBotWorkspace() {
                     const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
                     const displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
 
-                    const agentActions = displayAgents.map((ag) => ({
-                      id: `agent-${ag.id}`,
-                      title: ag.name,
-                      description: ag.roleTag || ag.description || "Fast helper subagent running in fleet",
-                      icon: (
-                        <div className="h-5 w-5 rounded-full bg-gradient-to-br from-amber-400 to-[#f8a87c] flex items-center justify-center text-black font-bold text-[10px] shrink-0 shadow-2xs">
-                          {ag.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      ),
-                      action: () => {
-                        setIsPlusMenuOpen(false);
-                        setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${ag.name} `));
-                        textareaRef.current?.focus();
-                      },
-                    }));
+                    const agentActions = displayAgents.map((ag) => {
+                      const mentionSlug = ag.slug || ag.id.replace(/^bot:agent360:/i, "");
+                      return {
+                        id: `agent-${ag.id}`,
+                        title: ag.name,
+                        description: ag.roleTag || ag.description || "Fast helper subagent running in fleet",
+                        icon: (
+                          <div className="h-5 w-5 rounded-full bg-gradient-to-br from-amber-400 to-[#f8a87c] flex items-center justify-center text-black font-bold text-[10px] shrink-0 shadow-2xs">
+                            {ag.name.slice(0, 1).toUpperCase()}
+                          </div>
+                        ),
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${mentionSlug} `));
+                          if (selectedChatId && selectedAgentId) {
+                            pullAgentIntoChatRoom(selectedAgentId, selectedChatId, mentionSlug, {
+                              hostSessionId: selectedChat?.session_id || selectedChatId,
+                            }).then((res) => {
+                              if (res?.room) setActiveSessionRoom(res.room);
+                            });
+                          }
+                          textareaRef.current?.focus();
+                        },
+                      };
+                    });
 
                     const filterItems = <T extends { title: string; description: string; id: string }>(items: T[]) => {
                       if (!activeQuery) return items;
@@ -9868,13 +9878,10 @@ export function GrokBotWorkspace() {
                           const mentionTag = ag.slug || ag.id.replace(/^bot:agent360:/, "");
                           const isHighlighted = plusMenuSelectedIndex === (appsCount + subIdx);
                           const isAlreadyMentioned = inputText.includes(`@${ag.name}`) || new RegExp(`@${mentionTag}\\b`, "i").test(inputText);
-                          const isBusy = checkIsAgentBusy(ag);
-                          const isOnline = ag.status !== "disabled";
                           return (
                           <button
                             key={`popover-subagent-${ag.id}-${subIdx}`}
                             type="button"
-                            data-testid={`mention-autocomplete-item-${mentionTag}`}
                             data-popover-nav-idx={appsCount + subIdx}
                             onClick={() => {
                               setIsPlusMenuOpen(false);
@@ -9907,28 +9914,19 @@ export function GrokBotWorkspace() {
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <div className={`relative h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
+                              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
                                 isAlreadyMentioned
                                   ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
                                   : "bg-amber-500/15 dark:bg-[#f8a87c]/20 border-amber-500/40 dark:border-[#f8a87c]/30 text-[#f8a87c]"
                               }`}>
                                 {isAlreadyMentioned ? <Check size={11} className="stroke-[2.5]" /> : ag.name.slice(0, 1)}
-                                <span
-                                  data-testid={`mention-autocomplete-status-${mentionTag}`}
-                                  className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white dark:ring-[#181822] ${
-                                    isBusy ? "bg-amber-400 animate-ping" : isOnline ? "bg-emerald-400" : "bg-neutral-400"
-                                  }`}
-                                />
                               </div>
-                              <div className="flex flex-col min-w-0 flex-1">
-                                <span className="truncate text-[11px] font-medium">{ag.name}</span>
-                                <span className="truncate text-[9px] font-mono text-neutral-400">@{mentionTag} · {isBusy ? "Đang xử lý" : isOnline ? "Online" : "Offline"}</span>
-                              </div>
+                              <span className="truncate text-[11px]">{ag.name}</span>
                             </div>
                             <span className={`text-[9px] font-mono shrink-0 flex items-center gap-1 ${
                               isAlreadyMentioned ? "text-emerald-400 font-semibold" : "text-neutral-500 group-hover:text-cyan-400"
                             }`}>
-                              {isAlreadyMentioned ? "Active" : `@${mentionTag}`}
+                              {isAlreadyMentioned ? "Active" : "@Mention"}
                             </span>
                           </button>
                         );
@@ -9942,82 +9940,6 @@ export function GrokBotWorkspace() {
 
                 </div>
             )}
-
-            {(() => {
-              const atMatch = inputText.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
-              if (!atMatch || isPlusMenuOpen) return null;
-              const q = atMatch[1].toLowerCase();
-              const candidateAgents = agents
-                .filter((ag) => ag.id !== selectedAgent.id && ag.slug !== selectedAgent.slug && ag.status !== "disabled")
-                .filter((ag) => {
-                  const slug = (ag.slug || ag.id.replace(/^bot:agent360:/i, "")).toLowerCase();
-                  return !q || slug.includes(q) || ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q);
-                })
-                .slice(0, 8);
-              if (candidateAgents.length === 0) return null;
-              const activeIdx = Math.min(mentionSelectedIndex, candidateAgents.length - 1);
-              return (
-                <div
-                  data-testid="mention-autocomplete-bar"
-                  className="mb-2 p-1.5 rounded-2xl bg-white/95 dark:bg-[#161822]/95 border border-slate-200 dark:border-white/10 shadow-xl flex flex-col gap-1 max-h-56 overflow-y-auto animate-in fade-in slide-in-from-bottom-1 duration-100 select-none text-left"
-                >
-                  <div className="flex items-center justify-between px-2.5 py-1 text-[10px] font-mono text-neutral-400">
-                    <span>Chọn bot phối hợp (@mention)</span>
-                    <span>↑↓ Chọn · Enter Chèn</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                    {candidateAgents.map((ag, idx) => {
-                      const slug = ag.slug || ag.id.replace(/^bot:agent360:/i, "");
-                      const isBusy = checkIsAgentBusy(ag);
-                      const isSelected = idx === activeIdx;
-                      return (
-                        <button
-                          key={`quick-at-${slug}`}
-                          type="button"
-                          data-testid={`quick-mention-option-${slug}`}
-                          onMouseEnter={() => setMentionSelectedIndex(idx)}
-                          onClick={() => {
-                            triggerHaptic(10);
-                            setInputText((prev) => prev.replace(/@([a-zA-Z0-9_-]*)$/, `@${slug} `));
-                            if (selectedChatId && selectedAgentId) {
-                              pullAgentIntoChatRoom(selectedAgentId, selectedChatId, slug, {
-                                hostSessionId: selectedChat?.session_id || selectedChatId,
-                              }).then((res) => {
-                                if (res?.room) setActiveSessionRoom(res.room);
-                              });
-                            }
-                            textareaRef.current?.focus();
-                          }}
-                          className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer border ${
-                            isSelected
-                              ? "bg-blue-500/15 dark:bg-blue-500/20 border-blue-500/40 text-blue-600 dark:text-blue-300"
-                              : "bg-slate-50/80 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border-transparent text-slate-700 dark:text-neutral-200"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="h-6 w-6 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0">
-                              <Bot size={12} />
-                            </div>
-                            <div className="flex flex-col min-w-0 text-left">
-                              <span className="font-medium text-[11px] truncate">{ag.name}</span>
-                              <span className="text-[9px] font-mono text-neutral-400 truncate">@{slug} · {ag.roleTag || "Collaborator"}</span>
-                            </div>
-                          </div>
-                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono shrink-0 ${
-                            isBusy
-                              ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
-                              : "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
-                          }`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${isBusy ? "bg-amber-400 animate-ping" : "bg-emerald-400"}`} />
-                            <span>{isBusy ? "Đang xử lý" : "Online"}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
 
             {replyingToMsg && (
               <div
@@ -10151,21 +10073,16 @@ export function GrokBotWorkspace() {
                     e.target.style.height = Math.min(e.target.scrollHeight, 220) + "px";
 
                     const textUpToCursor = newVal.slice(0, cursorPos);
-                    const slashMatch = textUpToCursor.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
-                    const atMatch = textUpToCursor.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
+                    const triggerMatch = textUpToCursor.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
 
-                    if (atMatch) {
-                      setMentionSelectedIndex(0);
-                      if (isPlusMenuOpen) {
-                        setIsPlusMenuOpen(false);
-                      }
-                    } else if (slashMatch) {
-                      setPlusMenuSearch(slashMatch[1]);
+                    if (triggerMatch) {
+                      setPlusMenuSearch(triggerMatch[2]);
                       if (!isPlusMenuOpen) {
                         setIsPlusMenuOpen(true);
                         setPlusMenuSelectedIndex(0);
                       }
                     } else if (isPlusMenuOpen) {
+                      // Automatically close popover when '@' or '/' was removed or cursor moved away
                       setIsPlusMenuOpen(false);
                       setPlusMenuSearch("");
                       setPlusMenuSelectedIndex(-1);
@@ -10190,42 +10107,6 @@ export function GrokBotWorkspace() {
                           }, 0);
                         }
                         return;
-                      }
-                    }
-                    const activeAtMatch = inputText.match(/(?:^|\s)@([a-zA-Z0-9_-]*)$/);
-                    if (activeAtMatch && !isPlusMenuOpen) {
-                      const q = activeAtMatch[1].toLowerCase();
-                      const candidateAgents = agents
-                        .filter((ag) => ag.id !== selectedAgent.id && ag.slug !== selectedAgent.slug && ag.status !== "disabled")
-                        .filter((ag) => {
-                          const slug = (ag.slug || ag.id.replace(/^bot:agent360:/i, "")).toLowerCase();
-                          return !q || slug.includes(q) || ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q);
-                        })
-                        .slice(0, 8);
-                      if (candidateAgents.length > 0) {
-                        if (e.key === "ArrowDown") {
-                          e.preventDefault();
-                          setMentionSelectedIndex((prev) => (prev + 1) % candidateAgents.length);
-                          return;
-                        } else if (e.key === "ArrowUp") {
-                          e.preventDefault();
-                          setMentionSelectedIndex((prev) => (prev - 1 + candidateAgents.length) % candidateAgents.length);
-                          return;
-                        } else if (e.key === "Enter" || e.key === "Tab") {
-                          e.preventDefault();
-                          const chosen = candidateAgents[Math.min(mentionSelectedIndex, candidateAgents.length - 1)] || candidateAgents[0];
-                          const slug = chosen.slug || chosen.id.replace(/^bot:agent360:/i, "");
-                          triggerHaptic(10);
-                          setInputText((prev) => prev.replace(/@([a-zA-Z0-9_-]*)$/, `@${slug} `));
-                          if (selectedChatId && selectedAgentId) {
-                            pullAgentIntoChatRoom(selectedAgentId, selectedChatId, slug, {
-                              hostSessionId: selectedChat?.session_id || selectedChatId,
-                            }).then((res) => {
-                              if (res?.room) setActiveSessionRoom(res.room);
-                            });
-                          }
-                          return;
-                        }
                       }
                     }
                     if (isPlusMenuOpen) {
