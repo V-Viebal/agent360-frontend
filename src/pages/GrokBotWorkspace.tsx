@@ -351,6 +351,19 @@ function AgentThinkingModal({
         </div>
 
         <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
+          {reasoningItems.length === 0 && allToolItems.length === 0 && (
+            <div className="p-8 flex flex-col items-center justify-center text-center space-y-3">
+              <Loader2 size={24} className="text-[#f8a87c] animate-spin" />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-slate-800 dark:text-neutral-200">
+                  {displayAgent} đang khởi tạo suy luận & công cụ...
+                </p>
+                <p className="text-[11px] font-mono text-neutral-500">
+                  Các block tool call và suy luận sẽ hiển thị thời gian thực tại đây khi bot thực thi.
+                </p>
+              </div>
+            </div>
+          )}
           {reasoningItems.map((r, rIdx) => {
             const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
             const estimatedSec = Math.max(1, Math.round(wordCount / 18));
@@ -3150,6 +3163,17 @@ export function GrokBotWorkspace() {
     rawMsg?: ChatMessage;
   } | null>(null);
   const [activeThinkingModalMsg, setActiveThinkingModalMsg] = useState<ChatMessage | null>(null);
+  const [isLiveThinkingModalOpen, setIsLiveThinkingModalOpen] = useState<boolean>(false);
+
+  const handleOpenActiveThinkingModal = (targetMsg?: ChatMessage) => {
+    if (targetMsg && (targetMsg.steps?.length || targetMsg.toolCalls?.length || targetMsg.reasoning)) {
+      setActiveThinkingModalMsg(targetMsg);
+      setIsLiveThinkingModalOpen(false);
+      return;
+    }
+    setIsLiveThinkingModalOpen(true);
+    setActiveThinkingModalMsg(null);
+  };
   const [replyingToMsg, setReplyingToMsg] = useState<ReplyToMessageInfo | null>(null);
   const [highlightedReplyMsgId, setHighlightedReplyMsgId] = useState<string | null>(null);
   const [activeReactPopoverMsgId, setActiveReactPopoverMsgId] = useState<string | null>(null);
@@ -8014,17 +8038,26 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Loading & Responding Indicator showing which Agent is currently responding (Compact) */}
+                      {/* Loading & Responding Indicator showing which Agent is currently responding (Compact & Clickable) */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning) && isLastTurn && (
-                        <div
+                        <button
+                          type="button"
                           data-testid="active-responding-agent-pill"
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 border border-slate-200/60 text-slate-600 dark:bg-[#14141c]/80 dark:border-white/[0.06] dark:text-neutral-400 select-none"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic(12);
+                            handleOpenActiveThinkingModal(msg);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 dark:bg-[#14141c]/80 border border-slate-200/60 dark:border-white/[0.06] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:border-[#f8a87c]/40 hover:bg-slate-200/50 dark:hover:bg-[#1c1c28] transition-all cursor-pointer select-none group"
+                          title="Bấm để xem chi tiết tool call và suy luận thời gian thực"
+                          aria-label="Xem chi tiết tool call và suy luận"
                         >
                           <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
-                          <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400">
+                          <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white">
                             {activeRespondingAgent?.statusText || `${msg.senderAgentName || selectedAgent.name} đang phản hồi...`}
                           </span>
-                        </div>
+                          <Sparkles size={11} className="text-[#f8a87c] opacity-70 group-hover:opacity-100 shrink-0 ml-0.5" />
+                        </button>
                       )}
 
                       {msg.content && (
@@ -8115,18 +8148,27 @@ export function GrokBotWorkspace() {
           </>
           )}
 
-          {/* Active Session Responding Indicator showing which Agent is currently responding (Compact) */}
+          {/* Active Session Responding Indicator showing which Agent is currently responding (Compact & Clickable) */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
-              <div
+              <button
+                type="button"
                 data-testid="active-responding-agent-pill"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 border border-slate-200/60 text-slate-600 dark:bg-[#14141c]/80 dark:border-white/[0.06] dark:text-neutral-400 select-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic(12);
+                  handleOpenActiveThinkingModal();
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/70 dark:bg-[#14141c]/80 border border-slate-200/60 dark:border-white/[0.06] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:border-[#f8a87c]/40 hover:bg-slate-200/50 dark:hover:bg-[#1c1c28] transition-all cursor-pointer select-none group"
+                title="Bấm để xem chi tiết tool call và suy luận thời gian thực"
+                aria-label="Xem chi tiết tool call và suy luận"
               >
                 <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
-                <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400">
+                <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white">
                   {activeRespondingAgent?.statusText || `${selectedAgent.name} đang phản hồi...`}
                 </span>
-              </div>
+                <Sparkles size={11} className="text-[#f8a87c] opacity-70 group-hover:opacity-100 shrink-0 ml-0.5" />
+              </button>
             </div>
           )}
 
@@ -12950,14 +12992,32 @@ ${chat.id}`);
         </div>
       )}
 
-      {/* Global Shared Thinking Modal */}
-      {activeThinkingModalMsg && (
-        <AgentThinkingModal
-          msg={activeThinkingModalMsg}
-          agentLabel={activeThinkingModalMsg.senderAgentName || activeThinkingModalMsg.senderAgentId || selectedAgent.name}
-          onClose={() => setActiveThinkingModalMsg(null)}
-        />
-      )}
+      {/* Global Shared Thinking Modal (Supports static turns & live in-progress streaming turns) */}
+      {(activeThinkingModalMsg || isLiveThinkingModalOpen) && (() => {
+        const liveBotMsg = liveTurnForView?.msg
+          || inflightMessagesRef.current[selectedChatId]?.slice().reverse().find((m) => m.role === "assistant")
+          || [...displayMessages].reverse().find((m) => m.role === "assistant")
+          || {
+            id: `live-thinking-${selectedChatId}`,
+            role: "assistant" as const,
+            content: "",
+            timestamp: new Date().toISOString(),
+            senderAgentName: selectedAgent.name,
+            steps: [],
+            toolCalls: [],
+          };
+        const modalMsg = activeThinkingModalMsg || liveBotMsg;
+        return (
+          <AgentThinkingModal
+            msg={modalMsg}
+            agentLabel={modalMsg.senderAgentName || modalMsg.senderAgentId || selectedAgent.name}
+            onClose={() => {
+              setActiveThinkingModalMsg(null);
+              setIsLiveThinkingModalOpen(false);
+            }}
+          />
+        );
+      })()}
       {/* Global Toast Primitive Notification */}
       <Toast
         toast={
