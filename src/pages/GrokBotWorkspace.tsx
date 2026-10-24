@@ -6411,7 +6411,7 @@ const handleBatchDeleteSelectedChats = () => {
               {/* Row 1: Logo & Brand Typography + Collapse Button */}
               <div className="flex items-center justify-between">
                 <a aria-label="Return to Skyer Home" href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity" title="Return to Skyer Home">
-                  <SkyerLogo size={24} showText={true} showBotBadge={false} />
+                  <SkyerLogo size={28} showText={true} showBotBadge={false} />
                 </a>
 
                 <div className="flex items-center gap-1">
