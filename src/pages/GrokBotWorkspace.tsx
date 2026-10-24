@@ -7427,7 +7427,7 @@ const handleBatchDeleteSelectedChats = () => {
                     </div>
                   )}
 
-                  {/* Lean Icon-Only Action Bar (Mobile-like compact rounded pill) */}
+                  {/* Desktop Hover Bar: ONLY React, Reply, and Extend (...) */}
                   {!(isStreaming && isLastTurn && !isUser) && (
                     <div
                       data-testid={`msg-action-bar-${msg.id}`}
@@ -7437,7 +7437,7 @@ const handleBatchDeleteSelectedChats = () => {
                           : "opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100"
                       } ${isUser ? "justify-end" : "justify-start"}`}
                     >
-                      {/* React Button: Only for Agent message */}
+                      {/* 1. React Button: ONLY for Agent message */}
                       {!isUser && (
                         <div className="relative">
                           <Tooltip content="Thả cảm xúc" placement="top" minWidth={100}>
@@ -7466,9 +7466,9 @@ const handleBatchDeleteSelectedChats = () => {
                             <div
                               data-testid="msg-react-popover"
                               onClick={(e) => e.stopPropagation()}
-                              className="absolute bottom-full mb-1.5 left-0 z-50 flex items-center gap-1 px-2 py-1 rounded-full bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-xl animate-in zoom-in-95 duration-100"
+                              className="absolute bottom-full mb-1.5 left-0 z-50 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 select-none"
                             >
-                              {QUICK_REACTIONS.map((emoji) => {
+                              {["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"].map((emoji) => {
                                 const active = currentReactions.includes(emoji);
                                 return (
                                   <button
@@ -7476,8 +7476,8 @@ const handleBatchDeleteSelectedChats = () => {
                                     type="button"
                                     data-testid={`react-option-${emoji}`}
                                     onClick={() => toggleMessageReaction(msg.id, emoji)}
-                                    className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer ${
-                                      active ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]/50" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                                    className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
+                                      active ? "bg-[#f8a87c]/25 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
                                     }`}
                                   >
                                     {emoji}
@@ -7489,7 +7489,7 @@ const handleBatchDeleteSelectedChats = () => {
                         </div>
                       )}
 
-                      {/* Reply Button (Both User & Agent) */}
+                      {/* 2. Reply Button (Both User & Agent) */}
                       <Tooltip content="Trả lời" placement="top" minWidth={90}>
                         <button
                           data-ux-target-min="24"
@@ -7506,130 +7506,7 @@ const handleBatchDeleteSelectedChats = () => {
                         </button>
                       </Tooltip>
 
-                      {/* Copy Button (Both User & Agent) */}
-                      <Tooltip content={copiedResponseMsgId === msg.id ? "Đã chép!" : "Sao chép"} placement="top" minWidth={95}>
-                        <button
-                          data-ux-target-min="24"
-                          data-testid="msg-copy-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(cleanContent);
-                            setCopiedResponseMsgId(msg.id);
-                            setTimeout(() => setCopiedResponseMsgId(null), 1800);
-                          }}
-                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                          aria-label="Sao chép"
-                        >
-                          {copiedResponseMsgId === msg.id ? (
-                            <Check size={13} className="text-emerald-400" />
-                          ) : (
-                            <Copy size={13} />
-                          )}
-                        </button>
-                      </Tooltip>
-
-                      {/* Edit Button: User only */}
-                      {isUser && (
-                        <Tooltip content="Chỉnh sửa" placement="top" minWidth={95}>
-                          <button
-                            data-ux-target-min="24"
-                            data-testid="msg-edit-btn"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setInputText(cleanContent);
-                              if (textareaRef.current) {
-                                textareaRef.current.style.height = "auto";
-                                textareaRef.current.focus();
-                                setTimeout(() => {
-                                  if (textareaRef.current) {
-                                    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
-                                    textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
-                                  }
-                                }, 0);
-                              }
-                            }}
-                            className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                            aria-label="Chỉnh sửa"
-                          >
-                            <Edit2 size={13} className="text-cyan-400" />
-                          </button>
-                        </Tooltip>
-                      )}
-
-                      {/* TTS Voice Readout Button: Agent only */}
-                      {!isUser && (
-                        <Tooltip content={speakingMsgId === msg.id ? "Dừng đọc" : "Đọc to"} placement="top" minWidth={90}>
-                          <button
-                            data-ux-target-min="24"
-                            data-testid="msg-tts-btn"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (speakingMsgId === msg.id) {
-                                stopSpeaking();
-                                setSpeakingMsgId(null);
-                              } else {
-                                setSpeakingMsgId(msg.id);
-                                speakText(cleanContent, {
-                                  onSegmentChange: (seg) => setSpeakingSentence(seg),
-                                  onEnd: () => {
-                                    setSpeakingMsgId(null);
-                                    setSpeakingSentence(null);
-                                  },
-                                  onError: () => {
-                                    setSpeakingMsgId(null);
-                                    setSpeakingSentence(null);
-                                  },
-                                });
-                              }
-                            }}
-                            className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                            aria-label="Đọc thoại"
-                          >
-                            <Volume2 size={13} className={speakingMsgId === msg.id ? "text-[#f8a87c] animate-pulse" : ""} />
-                          </button>
-                        </Tooltip>
-                      )}
-
-                      {/* Thinking Button (Icon Sparkles): Agent only, when message has thinking */}
-                      {!isUser && hasThinking && (
-                        <Tooltip content="Thinking & Tool Execution" placement="top" minWidth={160}>
-                          <button
-                            data-ux-target-min="24"
-                            data-testid="msg-thinking-btn"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveThinkingModalMsg(msg);
-                            }}
-                            className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-emerald-500 hover:text-emerald-400 flex items-center justify-center transition-colors cursor-pointer"
-                            aria-label="Thinking & Tool Execution"
-                          >
-                            <Sparkles size={13} />
-                          </button>
-                        </Tooltip>
-                      )}
-
-                      {/* Star Button (Both User & Agent) */}
-                      <Tooltip content={starredMsgIds.includes(msg.id) ? "Bỏ sao" : "Đánh dấu sao"} placement="top" minWidth={110}>
-                        <button
-                          data-ux-target-min="24"
-                          data-testid="msg-star-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleStarMessage(msg.id);
-                          }}
-                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                          aria-label="Đánh dấu sao"
-                        >
-                          <Star size={13} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400" : ""} />
-                        </button>
-                      </Tooltip>
-
-                      {/* Extend Menu Trigger (...) */}
+                      {/* 3. Extend Menu Button (...) */}
                       <div className="relative">
                         <Tooltip content="Mở rộng" placement="top" minWidth={85}>
                           <button
@@ -7663,34 +7540,142 @@ const handleBatchDeleteSelectedChats = () => {
                           </button>
                         </Tooltip>
 
-                        {/* Desktop Compact Extend Popover */}
+                        {/* Desktop Vertical Extend Dropdown Menu */}
                         {isExtendOpen && (
                           <div
                             data-testid="msg-extend-menu"
                             onClick={(e) => e.stopPropagation()}
-                            className={`absolute bottom-full mb-1.5 z-50 py-1 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-2xl animate-in zoom-in-95 duration-100 flex items-center gap-1 px-1.5 ${
+                            className={`absolute bottom-full mb-1.5 z-50 w-52 py-1.5 rounded-2xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-xs font-sans text-left ${
                               isUser ? "right-0" : "left-0"
                             }`}
                           >
-                            {/* Fork */}
-                            <Tooltip content="Tách nhánh phiên" placement="top" minWidth={130}>
+                            <div className="space-y-0.5 pb-1">
+                              {/* Reply */}
                               <button
                                 type="button"
-                                data-testid="extend-fork-btn"
+                                data-testid="extend-reply-btn"
                                 onClick={() => {
                                   setActiveExtendPopoverMsgId(null);
-                                  handleForkSession(mIdx);
+                                  handleStartReply(msg);
                                 }}
-                                className="h-7 w-7 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-cyan-400 flex items-center justify-center cursor-pointer transition-colors"
-                                aria-label="Tách nhánh phiên"
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
                               >
-                                <GitFork size={14} />
+                                <CornerUpLeft size={14} className="text-neutral-400 shrink-0" />
+                                <span>Reply</span>
                               </button>
-                            </Tooltip>
 
-                            {/* Forward (Agent only) */}
-                            {!isUser && (
-                              <Tooltip content="Chuyển tiếp" placement="top" minWidth={100}>
+                              {/* Copy */}
+                              <button
+                                type="button"
+                                data-testid="extend-copy-btn"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(cleanContent);
+                                  setCopiedResponseMsgId(msg.id);
+                                  setActiveExtendPopoverMsgId(null);
+                                  setTimeout(() => setCopiedResponseMsgId(null), 1800);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                              >
+                                {copiedResponseMsgId === msg.id ? (
+                                  <Check size={14} className="text-emerald-400 shrink-0" />
+                                ) : (
+                                  <Copy size={14} className="text-neutral-400 shrink-0" />
+                                )}
+                                <span>{copiedResponseMsgId === msg.id ? "Đã chép!" : "Copy"}</span>
+                              </button>
+
+                              {/* Thinking (Agent only, when has thinking) */}
+                              {!isUser && hasThinking && (
+                                <button
+                                  type="button"
+                                  data-testid="extend-thinking-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    setActiveThinkingModalMsg(msg);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-emerald-500 dark:text-emerald-400 transition-colors cursor-pointer font-medium"
+                                >
+                                  <Sparkles size={14} className="text-emerald-400 shrink-0" />
+                                  <span>Thinking & Tools</span>
+                                </button>
+                              )}
+
+                              {/* Edit (User only) */}
+                              {isUser && (
+                                <button
+                                  type="button"
+                                  data-testid="extend-edit-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    setInputText(cleanContent);
+                                    if (textareaRef.current) {
+                                      textareaRef.current.style.height = "auto";
+                                      textareaRef.current.focus();
+                                      setTimeout(() => {
+                                        if (textareaRef.current) {
+                                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                                          textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
+                                        }
+                                      }, 0);
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-cyan-500 dark:text-cyan-400 transition-colors cursor-pointer"
+                                >
+                                  <Edit2 size={14} className="text-cyan-400 shrink-0" />
+                                  <span>Edit</span>
+                                </button>
+                              )}
+
+                              {/* TTS Read Aloud (Agent only) */}
+                              {!isUser && (
+                                <button
+                                  type="button"
+                                  data-testid="extend-tts-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    if (speakingMsgId === msg.id) {
+                                      stopSpeaking();
+                                      setSpeakingMsgId(null);
+                                    } else {
+                                      setSpeakingMsgId(msg.id);
+                                      speakText(cleanContent, {
+                                        onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                        onEnd: () => {
+                                          setSpeakingMsgId(null);
+                                          setSpeakingSentence(null);
+                                        },
+                                        onError: () => {
+                                          setSpeakingMsgId(null);
+                                          setSpeakingSentence(null);
+                                        },
+                                      });
+                                    }
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                >
+                                  <Volume2 size={14} className="text-neutral-400 shrink-0" />
+                                  <span>Read Aloud</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="space-y-0.5 pt-1">
+                              {/* Pin / Star */}
+                              <button
+                                type="button"
+                                data-testid="extend-star-btn"
+                                onClick={() => {
+                                  toggleStarMessage(msg.id);
+                                  setActiveExtendPopoverMsgId(null);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                              >
+                                <Star size={14} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-400 shrink-0"} />
+                                <span>{starredMsgIds.includes(msg.id) ? "Unstar" : "Pin / Star"}</span>
+                              </button>
+
+                              {/* Forward (Agent only) */}
+                              {!isUser && (
                                 <button
                                   type="button"
                                   data-testid="extend-forward-btn"
@@ -7698,13 +7683,27 @@ const handleBatchDeleteSelectedChats = () => {
                                     setActiveExtendPopoverMsgId(null);
                                     setForwardModalMsg(cleanContent);
                                   }}
-                                  className="h-7 w-7 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-purple-400 flex items-center justify-center cursor-pointer transition-colors"
-                                  aria-label="Chuyển tiếp"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
                                 >
-                                  <Share2 size={14} />
+                                  <Share2 size={14} className="text-neutral-400 shrink-0" />
+                                  <span>Forward</span>
                                 </button>
-                              </Tooltip>
-                            )}
+                              )}
+
+                              {/* Fork */}
+                              <button
+                                type="button"
+                                data-testid="extend-fork-btn"
+                                onClick={() => {
+                                  setActiveExtendPopoverMsgId(null);
+                                  handleForkSession(mIdx);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                              >
+                                <GitFork size={14} className="text-neutral-400 shrink-0" />
+                                <span>Fork Session</span>
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -7712,7 +7711,6 @@ const handleBatchDeleteSelectedChats = () => {
                   )}
                 </div>
               );
-
               return (
                 <div
                   key={msg.id}
@@ -12443,50 +12441,36 @@ ${chat.id}`);
       )}
 
       {/* ========================================================= */}
-      {/* MOBILE HOLD-TOUCH COMPACT FLOATING ICON-ONLY MENU */}
+      {/* MOBILE TELEGRAM-STYLE POPUP: REACTION PILL + VERTICAL MENU */}
       {/* ========================================================= */}
       {mobileActionMsg && (
         <div
           onClick={() => setMobileActionMsg(null)}
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 select-none p-4 duration-100"
+          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/45 select-none p-4 duration-100"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-auto max-w-[290px] rounded-2xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] shadow-2xl p-2.5 space-y-2 text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-100 text-left"
+            className="flex flex-col items-center gap-2.5 w-full max-w-[270px] animate-in zoom-in-95 duration-150 select-none"
           >
-            {/* Header: Short Snippet + Close button */}
-            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80 dark:border-[#22222e]">
-              <span className="text-[11px] text-neutral-400 italic truncate max-w-[220px]">
-                "{mobileActionMsg.content.slice(0, 42)}..."
-              </span>
-              <button
-                type="button"
-                onClick={() => setMobileActionMsg(null)}
-                className="p-1 rounded-md text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                aria-label="Đóng"
-              >
-                <X size={13} />
-              </button>
-            </div>
-
-            {/* Quick Reactions Bar: ONLY FOR AGENT MESSAGE (User message has NO reaction) */}
+            {/* 1. TOP HORIZONTAL REACTION PILL (Telegram style): ONLY FOR AGENT MESSAGE */}
             {mobileActionMsg.role !== "user" && (
               <div
                 data-testid="mobile-quick-react-bar"
-                className="flex items-center justify-around py-1 px-1 rounded-xl bg-slate-100/80 dark:bg-[#12121c] border border-slate-200/60 dark:border-[#242434]"
+                className="flex items-center justify-between px-3 py-1.5 rounded-full bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl w-full"
               >
-                {QUICK_REACTIONS.map((emoji) => {
+                {["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"].map((emoji) => {
                   const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
                   return (
                     <button
                       key={emoji}
                       type="button"
+                      data-testid={`mobile-react-option-${emoji}`}
                       onClick={() => {
                         toggleMessageReaction(mobileActionMsg.id, emoji);
                         setMobileActionMsg(null);
                       }}
-                      className={`h-8 w-8 rounded-full flex items-center justify-center text-base transition-transform active:scale-90 cursor-pointer ${
-                        isSelected ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]" : "hover:bg-black/5 dark:hover:bg-white/10"
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-base transition-transform active:scale-75 cursor-pointer ${
+                        isSelected ? "bg-[#f8a87c]/30 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
                       }`}
                       aria-label={`Thả ${emoji}`}
                     >
@@ -12497,183 +12481,182 @@ ${chat.id}`);
               </div>
             )}
 
-            {/* Action Icons Grid: Lean, No Text, Icon-Only, Mobile-Like */}
-            <div className="flex items-center justify-center flex-wrap gap-1.5 pt-0.5">
-              {/* Reply */}
-              <button
-                type="button"
-                data-testid="mobile-reply-btn"
-                onClick={() => {
-                  if (mobileActionMsg.rawMsg) {
-                    handleStartReply(mobileActionMsg.rawMsg);
-                  } else {
-                    setReplyingToMsg({
-                      id: mobileActionMsg.id,
-                      role: mobileActionMsg.role || "assistant",
-                      authorName: mobileActionMsg.role === "user" ? "Bạn" : (selectedAgent?.name || "Agent"),
-                      snippet: mobileActionMsg.content.slice(0, 140),
-                    });
-                    setMobileActionMsg(null);
-                    setTimeout(() => textareaRef.current?.focus(), 50);
-                  }
-                }}
-                className="h-9 w-9 rounded-xl flex items-center justify-center text-[#f8a87c] bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 border border-[#f8a87c]/30 active:scale-95 transition-transform cursor-pointer"
-                title="Trả lời (Reply)"
-                aria-label="Trả lời"
-              >
-                <CornerUpLeft size={16} />
-              </button>
-
-              {/* Copy */}
-              <button
-                type="button"
-                data-testid="mobile-copy-btn"
-                onClick={() => {
-                  navigator.clipboard.writeText(mobileActionMsg.content);
-                  setCopiedResponseMsgId(mobileActionMsg.id);
-                  setMobileActionMsg(null);
-                  setTimeout(() => setCopiedResponseMsgId(null), 1800);
-                }}
-                className="h-9 w-9 rounded-xl flex items-center justify-center text-neutral-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
-                title="Sao chép"
-                aria-label="Sao chép"
-              >
-                {copiedResponseMsgId === mobileActionMsg.id ? (
-                  <Check size={16} className="text-emerald-400" />
-                ) : (
-                  <Copy size={16} />
-                )}
-              </button>
-
-              {/* Edit (User only) */}
-              {mobileActionMsg.role === "user" && (
+            {/* 2. TELEGRAM-STYLE VERTICAL ACTION MENU LIST */}
+            <div
+              data-testid="mobile-vertical-menu"
+              className="w-full rounded-2xl bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl overflow-hidden py-1 divide-y divide-white/5 text-xs text-neutral-100 font-sans text-left"
+            >
+              <div className="space-y-0.5 pb-1">
+                {/* Reply */}
                 <button
                   type="button"
-                  data-testid="mobile-edit-btn"
+                  data-testid="mobile-reply-btn"
                   onClick={() => {
-                    const text = mobileActionMsg.content;
-                    setMobileActionMsg(null);
-                    setInputText(text);
-                    if (textareaRef.current) {
-                      textareaRef.current.style.height = "auto";
-                      textareaRef.current.focus();
-                      setTimeout(() => {
-                        if (textareaRef.current) {
-                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
-                          textareaRef.current.setSelectionRange(text.length, text.length);
-                        }
-                      }, 0);
-                    }
-                  }}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-cyan-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
-                  title="Chỉnh sửa câu hỏi"
-                  aria-label="Chỉnh sửa"
-                >
-                  <Edit2 size={16} />
-                </button>
-              )}
-
-              {/* TTS Voice Readout (Agent only) */}
-              {mobileActionMsg.role !== "user" && (
-                <button
-                  type="button"
-                  data-testid="mobile-tts-btn"
-                  onClick={() => {
-                    const content = mobileActionMsg.content;
-                    const id = mobileActionMsg.id;
-                    setMobileActionMsg(null);
-                    if (speakingMsgId === id) {
-                      stopSpeaking();
-                      setSpeakingMsgId(null);
+                    if (mobileActionMsg.rawMsg) {
+                      handleStartReply(mobileActionMsg.rawMsg);
                     } else {
-                      setSpeakingMsgId(id);
-                      speakText(content, {
-                        onSegmentChange: (seg) => setSpeakingSentence(seg),
-                        onEnd: () => {
-                          setSpeakingMsgId(null);
-                          setSpeakingSentence(null);
-                        },
-                        onError: () => {
-                          setSpeakingMsgId(null);
-                          setSpeakingSentence(null);
-                        },
+                      setReplyingToMsg({
+                        id: mobileActionMsg.id,
+                        role: mobileActionMsg.role || "assistant",
+                        authorName: mobileActionMsg.role === "user" ? "Bạn" : (selectedAgent?.name || "Agent"),
+                        snippet: mobileActionMsg.content.slice(0, 140),
                       });
+                      setMobileActionMsg(null);
+                      setTimeout(() => textareaRef.current?.focus(), 50);
                     }
                   }}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-[#f8a87c] bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
-                  title="Đọc thoại"
-                  aria-label="Đọc thoại"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-neutral-100 transition-colors cursor-pointer"
                 >
-                  <Volume2 size={16} />
+                  <CornerUpLeft size={16} className="text-neutral-400 shrink-0" />
+                  <span className="font-medium text-xs">Reply</span>
                 </button>
-              )}
 
-              {/* Thinking Modal (Agent only, when message has thinking) */}
-              {mobileActionMsg.role !== "user" && mobileActionMsg.hasThinking && mobileActionMsg.rawMsg && (
+                {/* Copy */}
                 <button
                   type="button"
-                  data-testid="mobile-thinking-btn"
+                  data-testid="mobile-copy-btn"
                   onClick={() => {
-                    const raw = mobileActionMsg.rawMsg;
+                    navigator.clipboard.writeText(mobileActionMsg.content);
+                    setCopiedResponseMsgId(mobileActionMsg.id);
                     setMobileActionMsg(null);
-                    if (raw) setActiveThinkingModalMsg(raw);
+                    setTimeout(() => setCopiedResponseMsgId(null), 1800);
                   }}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 active:scale-95 transition-transform cursor-pointer"
-                  title="Thinking & Công cụ"
-                  aria-label="Thinking & Công cụ"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-neutral-100 transition-colors cursor-pointer"
                 >
-                  <Sparkles size={16} />
+                  {copiedResponseMsgId === mobileActionMsg.id ? (
+                    <Check size={16} className="text-emerald-400 shrink-0" />
+                  ) : (
+                    <Copy size={16} className="text-neutral-400 shrink-0" />
+                  )}
+                  <span className="font-medium text-xs">{copiedResponseMsgId === mobileActionMsg.id ? "Đã chép!" : "Copy"}</span>
                 </button>
-              )}
 
-              {/* Star */}
-              <button
-                type="button"
-                data-testid="mobile-star-btn"
-                onClick={() => {
-                  toggleStarMessage(mobileActionMsg.id);
-                  setMobileActionMsg(null);
-                }}
-                className="h-9 w-9 rounded-xl flex items-center justify-center text-amber-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
-                title="Đánh dấu sao"
-                aria-label="Đánh dấu sao"
-              >
-                <Star size={16} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400" : ""} />
-              </button>
+                {/* Thinking (Agent only, when has thinking) */}
+                {mobileActionMsg.role !== "user" && mobileActionMsg.hasThinking && mobileActionMsg.rawMsg && (
+                  <button
+                    type="button"
+                    data-testid="mobile-thinking-btn"
+                    onClick={() => {
+                      const raw = mobileActionMsg.rawMsg;
+                      setMobileActionMsg(null);
+                      if (raw) setActiveThinkingModalMsg(raw);
+                    }}
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-emerald-400 transition-colors cursor-pointer font-medium"
+                  >
+                    <Sparkles size={16} className="text-emerald-400 shrink-0" />
+                    <span className="text-xs">Thinking & Tools</span>
+                  </button>
+                )}
 
-              {/* Fork */}
-              <button
-                type="button"
-                data-testid="mobile-fork-btn"
-                onClick={() => {
-                  const turnIdx = mobileActionMsg.turnIdx;
-                  setMobileActionMsg(null);
-                  handleForkSession(turnIdx);
-                }}
-                className="h-9 w-9 rounded-xl flex items-center justify-center text-cyan-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
-                title="Tách nhánh phiên"
-                aria-label="Tách nhánh phiên"
-              >
-                <GitFork size={16} />
-              </button>
+                {/* Edit (User only) */}
+                {mobileActionMsg.role === "user" && (
+                  <button
+                    type="button"
+                    data-testid="mobile-edit-btn"
+                    onClick={() => {
+                      const text = mobileActionMsg.content;
+                      setMobileActionMsg(null);
+                      setInputText(text);
+                      if (textareaRef.current) {
+                        textareaRef.current.style.height = "auto";
+                        textareaRef.current.focus();
+                        setTimeout(() => {
+                          if (textareaRef.current) {
+                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                            textareaRef.current.setSelectionRange(text.length, text.length);
+                          }
+                        }, 0);
+                      }
+                    }}
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-cyan-400 transition-colors cursor-pointer"
+                  >
+                    <Edit2 size={16} className="text-cyan-400 shrink-0" />
+                    <span className="font-medium text-xs">Edit</span>
+                  </button>
+                )}
 
-              {/* Forward (Agent only) */}
-              {mobileActionMsg.role !== "user" && (
+                {/* Read Aloud TTS (Agent only) */}
+                {mobileActionMsg.role !== "user" && (
+                  <button
+                    type="button"
+                    data-testid="mobile-tts-btn"
+                    onClick={() => {
+                      const content = mobileActionMsg.content;
+                      const id = mobileActionMsg.id;
+                      setMobileActionMsg(null);
+                      if (speakingMsgId === id) {
+                        stopSpeaking();
+                        setSpeakingMsgId(null);
+                      } else {
+                        setSpeakingMsgId(id);
+                        speakText(content, {
+                          onSegmentChange: (seg) => setSpeakingSentence(seg),
+                          onEnd: () => {
+                            setSpeakingMsgId(null);
+                            setSpeakingSentence(null);
+                          },
+                          onError: () => {
+                            setSpeakingMsgId(null);
+                            setSpeakingSentence(null);
+                          },
+                        });
+                      }
+                    }}
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-neutral-100 transition-colors cursor-pointer"
+                  >
+                    <Volume2 size={16} className="text-neutral-400 shrink-0" />
+                    <span className="font-medium text-xs">Read Aloud</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-0.5 pt-1">
+                {/* Pin / Star */}
                 <button
                   type="button"
-                  data-testid="mobile-forward-btn"
+                  data-testid="mobile-star-btn"
                   onClick={() => {
-                    const content = mobileActionMsg.content;
+                    toggleStarMessage(mobileActionMsg.id);
                     setMobileActionMsg(null);
-                    setForwardModalMsg(content);
                   }}
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-purple-400 bg-slate-100 dark:bg-[#1a1a26] border border-slate-200 dark:border-[#282838] active:scale-95 transition-transform cursor-pointer"
-                  title="Chuyển tiếp"
-                  aria-label="Chuyển tiếp"
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-neutral-100 transition-colors cursor-pointer"
                 >
-                  <Share2 size={16} />
+                  <Star size={16} className={starredMsgIds.includes(mobileActionMsg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-400 shrink-0"} />
+                  <span className="font-medium text-xs">{starredMsgIds.includes(mobileActionMsg.id) ? "Unpin" : "Pin / Star"}</span>
                 </button>
-              )}
+
+                {/* Forward (Agent only) */}
+                {mobileActionMsg.role !== "user" && (
+                  <button
+                    type="button"
+                    data-testid="mobile-forward-btn"
+                    onClick={() => {
+                      const content = mobileActionMsg.content;
+                      setMobileActionMsg(null);
+                      setForwardModalMsg(content);
+                    }}
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-neutral-100 transition-colors cursor-pointer"
+                  >
+                    <Share2 size={16} className="text-neutral-400 shrink-0" />
+                    <span className="font-medium text-xs">Forward</span>
+                  </button>
+                )}
+
+                {/* Fork */}
+                <button
+                  type="button"
+                  data-testid="mobile-fork-btn"
+                  onClick={() => {
+                    const turnIdx = mobileActionMsg.turnIdx;
+                    setMobileActionMsg(null);
+                    handleForkSession(turnIdx);
+                  }}
+                  className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-white/5 text-neutral-100 transition-colors cursor-pointer"
+                >
+                  <GitFork size={16} className="text-neutral-400 shrink-0" />
+                  <span className="font-medium text-xs">Fork Session</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
