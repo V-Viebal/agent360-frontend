@@ -34,7 +34,8 @@ export class TurnAccumulator {
         let text = typeof event.content === "string"
           ? event.content.trim()
           : (event.content || []).map((c: any) => c?.text || "").join("\n").trim();
-        const roomCtxIdx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
+        let roomCtxIdx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
+        if (roomCtxIdx < 0) roomCtxIdx = text.indexOf("[AGENTTEAMS COLLABORATION ROOM");
         if (roomCtxIdx >= 0) {
           text = text.slice(0, roomCtxIdx).trimEnd();
         }

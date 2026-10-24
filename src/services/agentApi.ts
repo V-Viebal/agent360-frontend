@@ -653,7 +653,8 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           .map((c: any) => c.text || "")
           .join("\n");
       }
-      const roomCtxIdx = userContent.indexOf("[SHARED SESSION ROOM CONTEXT]");
+      let roomCtxIdx = userContent.indexOf("[SHARED SESSION ROOM CONTEXT]");
+      if (roomCtxIdx < 0) roomCtxIdx = userContent.indexOf("[AGENTTEAMS COLLABORATION ROOM");
       if (roomCtxIdx >= 0) {
         userContent = userContent.slice(0, roomCtxIdx).trimEnd();
       }

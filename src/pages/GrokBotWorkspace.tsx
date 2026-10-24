@@ -206,7 +206,8 @@ const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "👀", "🚀"];
 
 function stripSharedRoomContext(text: string): string {
   if (!text) return "";
-  const idx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
+  let idx = text.indexOf("[SHARED SESSION ROOM CONTEXT]");
+  if (idx < 0) idx = text.indexOf("[AGENTTEAMS COLLABORATION ROOM");
   return idx >= 0 ? text.slice(0, idx).trimEnd() : text;
 }
 
@@ -8225,21 +8226,22 @@ export function GrokBotWorkspace() {
 
                       {msg.content && (
                         <>
-                          {/* Subtle Collaborator Header matching reference UI ("Message from <Agent>") */}
-                          {msg.senderAgentId && (
-                            <div
-                              data-testid={`room-msg-badge-${msg.senderAgentId}`}
-                              className="flex items-center justify-end w-full max-w-[85%] sm:max-w-[80%] gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-0.5 px-1 select-none"
-                            >
-                              <span>Message from</span>
-                              <span className="inline-flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
-                                <Bot size={12} className="shrink-0" />
-                                <span>{(msg.senderAgentName || msg.senderAgentId).split(" (")[0]}</span>
-                              </span>
-                            </div>
-                          )}
-                          {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                          <div className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
+                            {/* Subtle Collaborator Header matching reference UI ("Message from <Agent>") */}
+                            {msg.senderAgentId && (
+                              <div
+                                data-testid={`room-msg-badge-${msg.senderAgentId}`}
+                                className="flex items-center justify-end self-end gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-1 px-1 select-none"
+                              >
+                                <span>Message from</span>
+                                <span className="inline-flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
+                                  <Bot size={12} className="shrink-0" />
+                                  <span>{(msg.senderAgentName || msg.senderAgentId).split(" (")[0]}</span>
+                                </span>
+                              </div>
+                            )}
+                            {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
+                            <div className={`inline-block w-auto max-w-full rounded-2xl px-3.5 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
@@ -8282,6 +8284,7 @@ export function GrokBotWorkspace() {
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                                 </span>
                               )}
+                            </div>
                             </div>
                           </div>
                           {/* Visual Karaoke sentence pill indicator during TTS readout */}
