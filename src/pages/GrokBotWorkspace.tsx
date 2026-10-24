@@ -7523,38 +7523,37 @@ const handleBatchDeleteSelectedChats = () => {
               };
 
               const renderMessageReactionsAndActions = () => (
-                <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} w-full relative`}>
-                  {/* Reaction Badges: Only for assistant messages */}
-                  {!isUser && currentReactions.length > 0 && (
-                    <div
-                      data-testid={`msg-reactions-${msg.id}`}
-                      className="flex items-center flex-wrap gap-1 mt-1 select-none justify-start"
-                    >
-                      {currentReactions.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/15 dark:bg-[#f8a87c]/15 border border-amber-500/30 dark:border-[#f8a87c]/35 text-slate-800 dark:text-neutral-100 hover:scale-110 active:scale-90 transition-transform cursor-pointer shadow-2xs animate-in zoom-in-75 duration-150"
-                          title="Bạn đã phản hồi cảm xúc này. Bấm để gỡ bỏ."
-                        >
-                          <span className="inline-block transform active:scale-125 transition-transform">{emoji}</span>
-                          <span className="text-[10px] font-mono text-[#f8a87c] font-semibold">1</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Desktop Hover Bar: ONLY React, Reply, and Extend (...) - Hidden completely on mobile */}
+                <div className={`flex flex-row items-center gap-1.5 mt-0.5 w-full relative ${isUser ? "justify-end" : "justify-start"}`}>
+                  {/* Unified Action Bar: Reaction Badge(s) integrated directly alongside React, Reply, Extend */}
                   {!(isStreaming && isLastTurn && !isUser) && (
                     <div
                       data-testid={`msg-action-bar-${msg.id}`}
-                      className={`relative hidden sm:flex items-center gap-0.5 p-0.5 mt-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-opacity duration-150 ${
-                        speakingMsgId === msg.id || isReactOpen || isExtendOpen
-                          ? "opacity-100"
-                          : "opacity-0 group-hover/msg:opacity-100"
-                      } ${isUser ? "justify-end" : "justify-start"}`}
+                      className={`relative flex items-center gap-1 p-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-all duration-150 ${
+                        speakingMsgId === msg.id || isReactOpen || isExtendOpen || (!isUser && currentReactions.length > 0)
+                          ? "opacity-100 flex"
+                          : "hidden sm:flex sm:opacity-0 sm:group-hover/msg:opacity-100"
+                      }`}
                     >
+                      {/* Integrated Reaction Badge(s) inside the pill */}
+                      {!isUser && currentReactions.length > 0 && (
+                        <div data-testid={`msg-reactions-${msg.id}`} className="flex items-center gap-0.5 pl-0.5 pr-1 border-r border-slate-200 dark:border-white/10">
+                          {currentReactions.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMessageReaction(msg.id, emoji, msg);
+                              }}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] bg-amber-500/15 dark:bg-[#f8a87c]/15 text-slate-800 dark:text-neutral-100 hover:scale-110 active:scale-90 transition-transform cursor-pointer"
+                              title="Bạn đã phản hồi cảm xúc này. Bấm để gỡ bỏ."
+                            >
+                              <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
+                              <span className="text-[10px] font-mono text-[#f8a87c] font-semibold leading-none">1</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {/* 1. React Button: ONLY for Agent message - No Tooltip */}
                       {!isUser && (
                         <div className="relative">
