@@ -7555,42 +7555,40 @@ const handleBatchDeleteSelectedChats = () => {
                           : "opacity-0 group-hover/msg:opacity-100"
                       } ${isUser ? "justify-end" : "justify-start"}`}
                     >
-                      {/* 1. React Button: ONLY for Agent message */}
+                      {/* 1. React Button: ONLY for Agent message - No Tooltip */}
                       {!isUser && (
                         <div className="relative">
-                          <Tooltip content="Thả cảm xúc" placement="top" minWidth={100}>
-                            <button
-                              data-ux-target-min="24"
-                              data-testid="msg-react-btn"
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                                const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                                const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                                setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
-                                setActiveExtendPopoverMsgId(null);
-                                setShowFullEmojiPicker(false);
-                                setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                              }}
-                              className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                                isReactOpen
-                                  ? "bg-[#f8a87c]/20 text-[#f8a87c]"
-                                  : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                              }`}
-                              aria-label="Thả cảm xúc"
-                            >
-                              <Smile size={13} />
-                            </button>
-                          </Tooltip>
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-react-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                              const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                              const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                              setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
+                              setActiveExtendPopoverMsgId(null);
+                              setShowFullEmojiPicker(false);
+                              setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                            }}
+                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                              isReactOpen
+                                ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                                : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                            }`}
+                            aria-label="Thả cảm xúc"
+                          >
+                            <Smile size={13} />
+                          </button>
 
                           {/* Quick Emoji Reaction Popover */}
                           {isReactOpen && (
                             <div
                               data-testid="msg-react-popover"
                               onClick={(e) => e.stopPropagation()}
-                              className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-[#1c2430] border border-white/10 shadow-xl animate-in zoom-in-95 duration-100 select-none left-0 ${
+                              className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl animate-in zoom-in-95 duration-100 select-none left-0 text-slate-700 dark:text-neutral-200 ${
                                 reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
                               }`}
                             >
@@ -7619,8 +7617,8 @@ const handleBatchDeleteSelectedChats = () => {
                                     triggerHaptic(10);
                                     setShowFullEmojiPicker((prev) => !prev);
                                   }}
-                                  className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer ${
-                                    showFullEmojiPicker ? "bg-white/20 text-white" : "hover:bg-white/10"
+                                  className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer ${
+                                    showFullEmojiPicker ? "bg-slate-200 dark:bg-white/20 text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/10"
                                   }`}
                                   title="Mở thêm biểu tượng cảm xúc"
                                 >
@@ -7654,22 +7652,20 @@ const handleBatchDeleteSelectedChats = () => {
                         </div>
                       )}
 
-                      {/* 2. Reply Button (Both User & Agent) */}
-                      <Tooltip content="Trả lời" placement="top" minWidth={90}>
-                        <button
-                          data-ux-target-min="24"
-                          data-testid="msg-reply-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartReply(msg);
-                          }}
-                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                          aria-label="Trả lời"
-                        >
-                          <CornerUpLeft size={13} />
-                        </button>
-                      </Tooltip>
+                      {/* 2. Reply Button (Both User & Agent) - No Tooltip */}
+                      <button
+                        data-ux-target-min="24"
+                        data-testid="msg-reply-btn"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartReply(msg);
+                        }}
+                        className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                        aria-label="Trả lời"
+                      >
+                        <CornerUpLeft size={13} />
+                      </button>
 
                       {/* 3. Extend Menu Button (...) - No Tooltip */}
                       <div className="relative">
@@ -7893,12 +7889,22 @@ const handleBatchDeleteSelectedChats = () => {
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onClick={(e) => {
-                        if (window.innerWidth < 640 && !longPressPreventClickRef.current) {
-                          const target = e.target as HTMLElement;
-                          if (!target.closest("button") && !target.closest("a") && !target.closest("input")) {
-                            triggerHaptic(15);
+                        const target = e.target as HTMLElement;
+                        if (target.closest("button") || target.closest("a") || target.closest("input")) return;
+                        if (window.getSelection()?.toString().trim()) return;
+                        triggerHaptic(12);
+                        if (window.innerWidth < 640) {
+                          if (!longPressPreventClickRef.current) {
                             setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
                           }
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                          const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                          const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                          setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
+                          setActiveReactPopoverMsgId(null);
+                          setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                         }
                       }}
                       onContextMenu={(e) => {
@@ -7940,10 +7946,12 @@ const handleBatchDeleteSelectedChats = () => {
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onClick={(e) => {
-                        if (window.innerWidth < 640 && !longPressPreventClickRef.current) {
-                          const target = e.target as HTMLElement;
-                          if (!target.closest("button") && !target.closest("a") && !target.closest("input") && !target.closest("pre")) {
-                            triggerHaptic(15);
+                        const target = e.target as HTMLElement;
+                        if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("pre")) return;
+                        if (window.getSelection()?.toString().trim()) return;
+                        triggerHaptic(12);
+                        if (window.innerWidth < 640) {
+                          if (!longPressPreventClickRef.current) {
                             setMobileActionMsg({
                               id: msg.id,
                               content: cleanContent,
@@ -7953,6 +7961,14 @@ const handleBatchDeleteSelectedChats = () => {
                               rawMsg: msg,
                             });
                           }
+                        } else {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                          const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                          const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                          setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
+                          setActiveReactPopoverMsgId(null);
+                          setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                         }
                       }}
                       onContextMenu={(e) => {
@@ -10059,8 +10075,8 @@ const handleBatchDeleteSelectedChats = () => {
           mobileChatsOpen
             ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl pointer-events-auto"
             : isChatListCollapsed
-            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0"
-            : "flex lg:w-[320px] translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
+            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0 invisible lg:visible"
+            : "hidden lg:flex lg:w-[320px] translate-x-full max-lg:invisible lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
         }`}
       >
         {/* Subtle, Slim Resizer Splitter between Chat / Virtual Computer and Session Chats */}
@@ -10117,11 +10133,8 @@ const handleBatchDeleteSelectedChats = () => {
               <Tooltip content="Đóng danh sách cuộc hội thoại" placement="bottom" minWidth={160}>
                 <button aria-label="Close Conversations list" data-ux-target-min="24"
                   onClick={() => {
-                    if (window.innerWidth >= 1024) {
-                      handleToggleChatList(true);
-                    } else {
-                      setMobileChatsOpen(false);
-                    }
+                    handleToggleChatList(true);
+                    setMobileChatsOpen(false);
                   }}
                   className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
@@ -10961,8 +10974,8 @@ ${chat.id}`);
         style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
         className={`fixed xl:static inset-y-0 right-0 z-[60] xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok mobile-drawer-panel relative ${
           isBotInfoCollapsed
-            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0"
-            : "w-full sm:w-[380px] xl:w-[380px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none pointer-events-auto"
+            ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0 invisible xl:visible"
+            : "w-full sm:w-[380px] xl:w-[380px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none pointer-events-auto"
         }`}
       >
         {/* Right Pane Draggable Resizer Splitter */}
