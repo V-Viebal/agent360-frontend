@@ -3171,6 +3171,8 @@ export function GrokBotWorkspace() {
     role?: "user" | "assistant";
     hasThinking?: boolean;
     rawMsg?: ChatMessage;
+    anchorRect?: { top: number; bottom: number; left: number; right: number; width: number; height: number };
+    clickY?: number;
   } | null>(null);
   const [activeThinkingModalMsg, setActiveThinkingModalMsg] = useState<ChatMessage | null>(null);
   const [isLiveThinkingModalOpen, setIsLiveThinkingModalOpen] = useState<boolean>(false);
@@ -3357,6 +3359,8 @@ export function GrokBotWorkspace() {
       role?: "user" | "assistant";
       hasThinking?: boolean;
       rawMsg?: ChatMessage;
+      anchorRect?: { top: number; bottom: number; left: number; right: number; width: number; height: number };
+      clickY?: number;
     }
   ) => {
     if (e.touches.length > 0) {
@@ -3364,13 +3368,19 @@ export function GrokBotWorkspace() {
     }
     longPressPreventClickRef.current = false;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    const currentTarget = e.currentTarget as HTMLElement;
     longPressTimerRef.current = setTimeout(() => {
       longPressPreventClickRef.current = true;
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(25); } catch {}
       }
       setIsMobileActionExtended(false);
-      setMobileActionMsg(msgData);
+      const rect = currentTarget?.getBoundingClientRect();
+      setMobileActionMsg({
+        ...msgData,
+        anchorRect: rect ? { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height } : undefined,
+        clickY: touchStartPosRef.current?.y,
+      });
     }, 380);
   };
 
@@ -8156,7 +8166,7 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
-                      <div className={`inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words ${
+                      <div className={`inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto break-words ${
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
