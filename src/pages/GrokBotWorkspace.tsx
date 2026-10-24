@@ -6266,6 +6266,66 @@ export function GrokBotWorkspace() {
 
   // Keep live references updated for global keyboard navigation
   filteredAgentsRef.current = filteredAgents;
+
+  // Helper to calculate smart popup positioning close to the clicked message bubble while staying safely in viewport
+  const getSmartMessageMenuCoords = (
+    anchorRect?: { top: number; bottom: number; left: number; right: number; width: number; height: number },
+    role?: 'user' | 'assistant',
+    isExpandedEmoji?: boolean,
+    clickY?: number
+  ) => {
+    if (typeof window === 'undefined') return { top: '50%', left: '50%' };
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const menuWidth = 230;
+    const isUser = role === 'user';
+    const menuHeight = isExpandedEmoji ? 360 : 255;
+    const margin = 10;
+    const topMargin = 52;
+    const bottomMargin = 60;
+
+    if (!anchorRect) {
+      return {
+        top: Math.round(Math.max(topMargin, (vh - menuHeight) / 2)) + 'px',
+        left: Math.round(Math.max(margin, (vw - menuWidth) / 2)) + 'px',
+      };
+    }
+
+    let refTop = anchorRect.top;
+    let refBottom = anchorRect.bottom;
+    if (anchorRect.height > vh * 0.55 && clickY !== undefined) {
+      refTop = Math.max(anchorRect.top, clickY - 45);
+      refBottom = Math.min(anchorRect.bottom, clickY + 45);
+    }
+
+    const spaceBelow = vh - refBottom - bottomMargin;
+    const spaceAbove = refTop - topMargin;
+
+    let top: number;
+    if (spaceBelow >= menuHeight) {
+      top = refBottom + 6;
+    } else if (spaceAbove >= menuHeight) {
+      top = refTop - menuHeight - 6;
+    } else if (spaceBelow >= spaceAbove) {
+      top = refBottom + 6;
+    } else {
+      top = refTop - menuHeight - 6;
+    }
+
+    top = Math.max(topMargin, Math.min(vh - menuHeight - bottomMargin, top));
+
+    let left: number;
+    if (isUser) {
+      left = anchorRect.right - menuWidth;
+    } else {
+      left = anchorRect.left;
+    }
+
+    left = Math.max(margin, Math.min(vw - menuWidth - margin, left));
+
+    return { top: Math.round(top) + 'px', left: Math.round(left) + 'px' };
+  };
+
   filteredChatsRef.current = filteredChats;
 
   return (
@@ -7932,6 +7992,10 @@ export function GrokBotWorkspace() {
                             setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
                             setActiveReactPopoverMsgId(null);
                             if (typeof window !== "undefined" && window.innerWidth < 640) {
+                              const turnEl = document.getElementById(`chat-msg-${msg.id}`);
+                              const bubbleEl = (turnEl?.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                              const bubbleRect = bubbleEl.getBoundingClientRect();
+                              const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
                               setMobileActionMsg({
                                 id: msg.id,
                                 content: cleanContent,
@@ -7939,6 +8003,7 @@ export function GrokBotWorkspace() {
                                 role: isUser ? "user" : "assistant",
                                 hasThinking,
                                 rawMsg: msg,
+                                anchorRect: anchor,
                               });
                             } else {
                               setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
@@ -8143,9 +8208,12 @@ export function GrokBotWorkspace() {
                         if (target.closest("button") || target.closest("a") || target.closest("input")) return;
                         if (window.getSelection()?.toString().trim()) return;
                         triggerHaptic(12);
+                        const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                        const bubbleRect = bubbleEl.getBoundingClientRect();
+                        const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
                         if (window.innerWidth < 640) {
                           if (!longPressPreventClickRef.current) {
-                            setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
+                            setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg, anchorRect: anchor, clickY: e.clientY });
                           }
                         } else {
                           const rect = e.currentTarget.getBoundingClientRect();
@@ -8161,7 +8229,10 @@ export function GrokBotWorkspace() {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
                           triggerHaptic(15);
-                          setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
+                          const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                          const bubbleRect = bubbleEl.getBoundingClientRect();
+                          const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
+                          setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg, anchorRect: anchor, clickY: e.clientY });
                         }
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
@@ -8212,6 +8283,9 @@ export function GrokBotWorkspace() {
                           handleOpenActiveThinkingModal(msg);
                           return;
                         }
+                        const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                        const bubbleRect = bubbleEl.getBoundingClientRect();
+                        const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
                         if (window.innerWidth < 640) {
                           if (!longPressPreventClickRef.current) {
                             setMobileActionMsg({
@@ -8221,6 +8295,8 @@ export function GrokBotWorkspace() {
                               role: "assistant",
                               hasThinking,
                               rawMsg: msg,
+                              anchorRect: anchor,
+                              clickY: e.clientY,
                             });
                           }
                         } else {
@@ -8243,6 +8319,9 @@ export function GrokBotWorkspace() {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
                           triggerHaptic(15);
+                          const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                          const bubbleRect = bubbleEl.getBoundingClientRect();
+                          const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
                           setMobileActionMsg({
                             id: msg.id,
                             content: cleanContent,
@@ -8250,6 +8329,8 @@ export function GrokBotWorkspace() {
                             role: "assistant",
                             hasThinking,
                             rawMsg: msg,
+                            anchorRect: anchor,
+                            clickY: e.clientY,
                           });
                         }
                       }}
@@ -13120,15 +13201,29 @@ ${chat.id}`);
       {/* ========================================================= */}
       {/* MOBILE TELEGRAM-STYLE POPUP: REACTION PILL + VERTICAL MENU */}
       {/* ========================================================= */}
-      {mobileActionMsg && (
-        <div
-          onClick={() => { setShowFullEmojiPicker(false); setMobileActionMsg(null); }}
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/30 select-none p-4 duration-100 overflow-y-auto"
-        >
+      {mobileActionMsg && (() => {
+        const coords = getSmartMessageMenuCoords(
+          mobileActionMsg.anchorRect,
+          mobileActionMsg.role,
+          showFullEmojiPicker,
+          mobileActionMsg.clickY
+        );
+
+        return (
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex flex-col items-center gap-2 w-full max-w-[225px] max-h-[85vh] animate-in zoom-in-95 duration-150 select-none my-auto"
+            onClick={() => { setShowFullEmojiPicker(false); setMobileActionMsg(null); }}
+            className="fixed inset-0 z-[80] bg-black/30 select-none duration-100 overflow-hidden"
           >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: coords.top,
+                left: coords.left,
+                width: "225px",
+              }}
+              className="flex flex-col items-center gap-2 max-h-[85vh] animate-in zoom-in-95 duration-150 select-none"
+            >
             {/* 1. TOP HORIZONTAL REACTION PILL (Telegram style): ONLY FOR AGENT MESSAGE */}
             {mobileActionMsg.role !== "user" && (
               <div className="flex flex-col items-center gap-1.5 w-full">
@@ -13390,7 +13485,8 @@ ${chat.id}`);
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Global Shared Thinking Modal (Supports static turns & live in-progress streaming turns) */}
       {(activeThinkingModalMsg || isLiveThinkingModalOpen) && (() => {
