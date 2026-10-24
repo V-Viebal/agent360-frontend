@@ -80,10 +80,19 @@ export interface SessionCollaborationRoom {
   room_title?: string | null;
 }
 
+export interface ReplyToMessageInfo {
+  id?: string;
+  role?: "user" | "assistant" | "system";
+  authorName: string;
+  snippet: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  replyTo?: ReplyToMessageInfo;
+  reactions?: string[];
   reasoning?: string;
   timestamp: string;
   evidenceStatus?: "observed" | "inferred" | "unknown";

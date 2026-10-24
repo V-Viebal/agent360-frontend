@@ -161,13 +161,38 @@ import {
   ArrowUp,
   Bookmark,
   MoreHorizontal,
+  CornerUpLeft,
+  Smile,
 } from "lucide-react";
-import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom } from "../types/agent";
+import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, ReplyToMessageInfo } from "../types/agent";
 
 /** Short haptic tick on supporting devices; silently ignored elsewhere. */
 const triggerHaptic = (ms = 10) => {
   try { navigator.vibrate?.(ms); } catch { /* unsupported */ }
 };
+
+const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "👀", "🚀"];
+
+function parseQuotedReplyFromContent(
+  rawContent: string,
+  explicitReplyTo?: ReplyToMessageInfo
+): { replyTo?: ReplyToMessageInfo; cleanContent: string } {
+  const text = rawContent || "";
+  const match = text.match(/^\[Replying to ([^:\]]+):\s*"([^"]*)"\]\s*\n\n?([\s\S]*)$/);
+  if (match) {
+    return {
+      replyTo: explicitReplyTo || {
+        authorName: match[1].trim(),
+        snippet: match[2].trim(),
+      },
+      cleanContent: match[3],
+    };
+  }
+  return {
+    replyTo: explicitReplyTo,
+    cleanContent: text,
+  };
+}
 import {
   fetchInfraAgents,
   AgentListAuthError,
@@ -3093,6 +3118,81 @@ export function GrokBotWorkspace() {
     rawMsg?: ChatMessage;
   } | null>(null);
   const [activeThinkingModalMsg, setActiveThinkingModalMsg] = useState<ChatMessage | null>(null);
+  const [replyingToMsg, setReplyingToMsg] = useState<ReplyToMessageInfo | null>(null);
+  const [highlightedReplyMsgId, setHighlightedReplyMsgId] = useState<string | null>(null);
+  const [activeReactPopoverMsgId, setActiveReactPopoverMsgId] = useState<string | null>(null);
+  const [activeExtendPopoverMsgId, setActiveExtendPopoverMsgId] = useState<string | null>(null);
+  const [isMobileActionExtended, setIsMobileActionExtended] = useState<boolean>(false);
+  const [msgReactions, setMsgReactions] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem("agent360_msg_reactions");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleMessageReaction = (msgId: string, emoji: string) => {
+    triggerHaptic(12);
+    setMsgReactions((prev) => {
+      const current = prev[msgId] || [];
+      const exists = current.includes(emoji);
+      const nextList = exists ? current.filter((e) => e !== emoji) : [...current, emoji];
+      const next = { ...prev, [msgId]: nextList };
+      if (nextList.length === 0) delete next[msgId];
+      try {
+        localStorage.setItem("agent360_msg_reactions", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setActiveReactPopoverMsgId(null);
+  };
+
+  const handleStartReply = (msg: ChatMessage) => {
+    triggerHaptic(15);
+    const parsed = parseQuotedReplyFromContent(msg.content, msg.replyTo);
+    const authorName = msg.role === "user"
+      ? "Bạn"
+      : (msg.senderAgentName || msg.senderAgentId || selectedAgent?.name || "Agent");
+    const snippet = parsed.cleanContent.replace(/\s+/g, " ").trim().slice(0, 140);
+    setReplyingToMsg({
+      id: msg.id,
+      role: msg.role,
+      authorName,
+      snippet,
+    });
+    setActiveReactPopoverMsgId(null);
+    setActiveExtendPopoverMsgId(null);
+    setMobileActionMsg(null);
+    setIsMobileActionExtended(false);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 50);
+  };
+
+  const scrollToOriginalMessage = (targetMsgId?: string, snippet?: string) => {
+    let targetEl: HTMLElement | null = null;
+    if (targetMsgId) {
+      targetEl = document.getElementById(`chat-msg-${targetMsgId}`);
+    }
+    if (!targetEl && snippet) {
+      const matchingMsg = displayMessages.find((m) =>
+        m.content && m.content.replace(/\s+/g, " ").includes(snippet.slice(0, 40))
+      );
+      if (matchingMsg) {
+        targetEl = document.getElementById(`chat-msg-${matchingMsg.id}`);
+        targetMsgId = matchingMsg.id;
+      }
+    }
+    if (targetEl && targetMsgId) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedReplyMsgId(targetMsgId);
+      setTimeout(() => {
+        setHighlightedReplyMsgId((prev) => (prev === targetMsgId ? null : prev));
+      }, 1800);
+    }
+  };
+
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressPreventClickRef = useRef<boolean>(false);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -3156,6 +3256,7 @@ export function GrokBotWorkspace() {
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         try { navigator.vibrate(25); } catch {}
       }
+      setIsMobileActionExtended(false);
       setMobileActionMsg(msgData);
     }, 380);
   };
@@ -5678,6 +5779,12 @@ const handleBatchDeleteSelectedChats = () => {
     }
 
     let userText = inputText.trim();
+    if (replyingToMsg) {
+      const safeAuthor = (replyingToMsg.authorName || "Agent").replace(/[\]:"]/g, "");
+      const safeSnippet = (replyingToMsg.snippet || "").replace(/"/g, "'").replace(/\s+/g, " ").trim().slice(0, 140);
+      userText = `[Replying to ${safeAuthor}: "${safeSnippet}"]\n\n${userText}`;
+      setReplyingToMsg(null);
+    }
     if (attachedFiles.length > 0) {
       const filesSummary = attachedFiles.map(f => `[Attached File: ${f.file_name} (${f.url})]`).join("\n");
       userText = userText ? `${userText}\n\n${filesSummary}` : filesSummary;
@@ -7268,8 +7375,320 @@ const handleBatchDeleteSelectedChats = () => {
             .map((msg, mIdx) => {
               const isLastTurn = mIdx === displayMessages.length - 1;
               const isUser = msg.role === "user";
-              const hasSteps = msg.steps && msg.steps.length > 0;
-              const hasTools = msg.toolCalls && msg.toolCalls.length > 0;
+              const hasSteps = Boolean(msg.steps && msg.steps.length > 0);
+              const hasTools = Boolean(msg.toolCalls && msg.toolCalls.length > 0);
+              const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning);
+              const { replyTo: parsedReplyTo, cleanContent } = parseQuotedReplyFromContent(msg.content, msg.replyTo);
+              const currentReactions = msgReactions[msg.id] || [];
+              const isReactOpen = activeReactPopoverMsgId === msg.id;
+              const isExtendOpen = activeExtendPopoverMsgId === msg.id;
+              const isHighlighted = highlightedReplyMsgId === msg.id;
+
+              const renderQuotedReplyBox = () => {
+                if (!parsedReplyTo) return null;
+                return (
+                  <div
+                    data-testid="quoted-reply-card"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToOriginalMessage(parsedReplyTo.id, parsedReplyTo.snippet);
+                    }}
+                    className="mb-2 pl-2.5 pr-2 py-1.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border-l-2 border-[#f8a87c] cursor-pointer hover:bg-black/[0.08] dark:hover:bg-white/[0.1] transition-colors text-left select-none"
+                  >
+                    <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-[#f8a87c]">
+                      <CornerUpLeft size={10} className="shrink-0" />
+                      <span className="truncate">{parsedReplyTo.authorName}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-neutral-300 line-clamp-2 italic break-words mt-0.5">
+                      "{parsedReplyTo.snippet}"
+                    </p>
+                  </div>
+                );
+              };
+
+              const renderMessageReactionsAndActions = () => (
+                <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} w-full relative`}>
+                  {/* Displayed Reaction Badges under bubble */}
+                  {currentReactions.length > 0 && (
+                    <div
+                      data-testid={`msg-reactions-${msg.id}`}
+                      className={`flex items-center flex-wrap gap-1 mt-1 select-none ${isUser ? "justify-end" : "justify-start"}`}
+                    >
+                      {currentReactions.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => toggleMessageReaction(msg.id, emoji)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/15 dark:bg-[#f8a87c]/15 border border-amber-500/30 dark:border-[#f8a87c]/35 text-slate-800 dark:text-neutral-100 hover:scale-105 active:scale-95 transition-transform cursor-pointer shadow-2xs"
+                          title="Bấm để gỡ cảm xúc"
+                        >
+                          <span>{emoji}</span>
+                          <span className="text-[10px] font-mono text-[#f8a87c] font-semibold">1</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Minimalist 3-Button Hover / Touch Bar: React + Reply + Extend Icon */}
+                  {!(isStreaming && isLastTurn && !isUser) && (
+                    <div
+                      data-testid={`msg-action-bar-${msg.id}`}
+                      className={`relative flex items-center gap-1 pt-1 mt-0.5 select-none transition-opacity duration-150 ${
+                        speakingMsgId === msg.id || isReactOpen || isExtendOpen
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100"
+                      } ${isUser ? "justify-end" : "justify-start"}`}
+                    >
+                      {/* 1. React Button */}
+                      <div className="relative">
+                        <Tooltip content="Thả cảm xúc (React)" placement="top" minWidth={120}>
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-react-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveExtendPopoverMsgId(null);
+                              setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                            }}
+                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
+                              isReactOpen
+                                ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c]"
+                                : "hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
+                            }`}
+                            aria-label="Thả cảm xúc"
+                          >
+                            <Smile size={14} />
+                          </button>
+                        </Tooltip>
+
+                        {/* Quick Emoji Reaction Bar Popover */}
+                        {isReactOpen && (
+                          <div
+                            data-testid="msg-react-popover"
+                            onClick={(e) => e.stopPropagation()}
+                            className={`absolute bottom-full mb-1.5 z-50 flex items-center gap-1 px-2 py-1 rounded-full bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-xl animate-in fade-in zoom-in-95 duration-150 ${
+                              isUser ? "right-0" : "left-0"
+                            }`}
+                          >
+                            {QUICK_REACTIONS.map((emoji) => {
+                              const active = currentReactions.includes(emoji);
+                              return (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  data-testid={`react-option-${emoji}`}
+                                  onClick={() => toggleMessageReaction(msg.id, emoji)}
+                                  className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-95 transition-transform cursor-pointer ${
+                                    active ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]/50" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                                  }`}
+                                >
+                                  {emoji}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 2. Reply Button */}
+                      <Tooltip content="Trả lời tin nhắn (Reply)" placement="top" minWidth={135}>
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-reply-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartReply(msg);
+                          }}
+                          className="h-7 w-7 rounded-lg hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
+                          aria-label="Trả lời tin nhắn"
+                        >
+                          <CornerUpLeft size={14} />
+                        </button>
+                      </Tooltip>
+
+                      {/* 3. Extend Icon (...) */}
+                      <div className="relative">
+                        <Tooltip content="Mở rộng tùy chọn" placement="top" minWidth={125}>
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-extend-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveReactPopoverMsgId(null);
+                              if (typeof window !== "undefined" && window.innerWidth < 640) {
+                                setIsMobileActionExtended(false);
+                                setMobileActionMsg({
+                                  id: msg.id,
+                                  content: cleanContent,
+                                  turnIdx: mIdx,
+                                  role: isUser ? "user" : "assistant",
+                                  hasThinking,
+                                  rawMsg: msg,
+                                });
+                              } else {
+                                setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                              }
+                            }}
+                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
+                              isExtendOpen
+                                ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c]"
+                                : "hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
+                            }`}
+                            aria-label={isUser ? "Tùy chọn câu hỏi" : "Tùy chọn tin nhắn"}
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+                        </Tooltip>
+
+                        {/* Desktop Extend Menu Popover grouping secondary CTAs */}
+                        {isExtendOpen && (
+                          <div
+                            data-testid="msg-extend-menu"
+                            onClick={(e) => e.stopPropagation()}
+                            className={`absolute bottom-full mb-1.5 z-50 w-52 py-1.5 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#2a2a3c] shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-xs font-sans ${
+                              isUser ? "right-0" : "left-0"
+                            }`}
+                          >
+                            {/* Copy */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(cleanContent);
+                                setCopiedResponseMsgId(msg.id);
+                                setActiveExtendPopoverMsgId(null);
+                                setTimeout(() => setCopiedResponseMsgId(null), 1800);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                            >
+                              {copiedResponseMsgId === msg.id ? (
+                                <Check size={14} className="text-emerald-400 shrink-0" />
+                              ) : (
+                                <Copy size={14} className="text-neutral-400 shrink-0" />
+                              )}
+                              <span>{copiedResponseMsgId === msg.id ? "Đã sao chép!" : "Sao chép nội dung"}</span>
+                            </button>
+
+                            {/* Star / Bookmark */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                toggleStarMessage(msg.id);
+                                setActiveExtendPopoverMsgId(null);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                            >
+                              <Star size={14} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-400 shrink-0"} />
+                              <span>{starredMsgIds.includes(msg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao"}</span>
+                            </button>
+
+                            {/* Edit Prompt (User only) */}
+                            {isUser && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveExtendPopoverMsgId(null);
+                                  setInputText(cleanContent);
+                                  if (textareaRef.current) {
+                                    textareaRef.current.style.height = "auto";
+                                    textareaRef.current.focus();
+                                    setTimeout(() => {
+                                      if (textareaRef.current) {
+                                        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                                        textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
+                                      }
+                                    }, 0);
+                                  }
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                              >
+                                <Edit2 size={14} className="text-cyan-400 shrink-0" />
+                                <span>Chỉnh sửa câu hỏi</span>
+                              </button>
+                            )}
+
+                            {/* Read Aloud TTS (Assistant only) */}
+                            {!isUser && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveExtendPopoverMsgId(null);
+                                  if (speakingMsgId === msg.id) {
+                                    stopSpeaking();
+                                    setSpeakingMsgId(null);
+                                  } else {
+                                    setSpeakingMsgId(msg.id);
+                                    speakText(cleanContent, {
+                                      onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                      onEnd: () => {
+                                        setSpeakingMsgId(null);
+                                        setSpeakingSentence(null);
+                                      },
+                                      onError: () => {
+                                        setSpeakingMsgId(null);
+                                        setSpeakingSentence(null);
+                                      },
+                                    });
+                                  }
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                              >
+                                <Volume2 size={14} className={speakingMsgId === msg.id ? "text-[#f8a87c] animate-pulse shrink-0" : "text-[#f8a87c] shrink-0"} />
+                                <span>{speakingMsgId === msg.id ? "Dừng đọc thoại" : "Đọc to bằng giọng nói (TTS)"}</span>
+                              </button>
+                            )}
+
+                            {/* Fork Session */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveExtendPopoverMsgId(null);
+                                handleForkSession(mIdx);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                            >
+                              <GitFork size={14} className="text-cyan-400 shrink-0" />
+                              <span>Tách nhánh phiên mới</span>
+                            </button>
+
+                            {/* Forward to Another Agent (Assistant only) */}
+                            {!isUser && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveExtendPopoverMsgId(null);
+                                  setForwardModalMsg(cleanContent);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer text-left"
+                              >
+                                <Share2 size={14} className="text-purple-400 shrink-0" />
+                                <span>Chuyển tiếp cho Agent khác</span>
+                              </button>
+                            )}
+
+                            {/* View Thinking & Tools */}
+                            {hasThinking && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveExtendPopoverMsgId(null);
+                                  setActiveThinkingModalMsg(msg);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-[#202030] text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer text-left border-t border-slate-100 dark:border-white/5 mt-1 pt-2"
+                              >
+                                <Sparkles size={14} className="text-emerald-400 shrink-0" />
+                                <span>Xem Thinking & Công cụ</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
 
               return (
                 <div
@@ -7280,20 +7699,24 @@ const handleBatchDeleteSelectedChats = () => {
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
                     <div
-                      onTouchStart={(e) => handleTouchStartMsg(e, { id: msg.id, content: msg.content, turnIdx: mIdx, role: "user", rawMsg: msg })}
+                      onTouchStart={(e) => handleTouchStartMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg })}
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
-                          setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx, role: "user", rawMsg: msg });
+                          setIsMobileActionExtended(false);
+                          setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg });
                         }
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
-                      <div className="inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words">
-                        <p className="whitespace-pre-wrap select-text break-words break-all">{msg.content}</p>
+                      <div className={`inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto overflow-hidden break-words transition-all ${
+                        isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
+                      }`}>
+                        {renderQuotedReplyBox()}
+                        <p className="whitespace-pre-wrap select-text break-words break-all">{cleanContent}</p>
                         {msg.metadata?.isOfflineQueued && (
                           <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
@@ -7302,102 +7725,17 @@ const handleBatchDeleteSelectedChats = () => {
                         )}
                       </div>
 
-                      {/* User Request Action CTAs: Desktop hover toolbar, hidden on mobile */}
-                      <div className="hidden sm:flex items-center gap-1 pt-1 mt-0.5 select-none transition-opacity duration-150 opacity-0 group-hover/msg:opacity-100 justify-end">
-                        {/* 0. Star / Bookmark Prompt CTA */}
-                        <Tooltip content={starredMsgIds.includes(msg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao (Star)"} placement="top" minWidth={130}>
-                          <button data-ux-target-min="24"
-                            type="button"
-                            onClick={() => toggleStarMessage(msg.id)}
-                            className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
-                              starredMsgIds.includes(msg.id)
-                                ? "bg-amber-400/10 border-amber-400/30 text-amber-400"
-                                : "hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
-                            }`}
-                            aria-label={starredMsgIds.includes(msg.id) ? "Unstar message" : "Star message"}
-                          >
-                            <Star size={13} className={starredMsgIds.includes(msg.id) ? "fill-amber-400" : ""} />
-                          </button>
-                        </Tooltip>
-
-                        {/* 1. Edit / Reuse Prompt CTA */}
-                        <Tooltip content="Chỉnh sửa câu hỏi" placement="top" minWidth={140}>
-                          <button data-ux-target-min="24"
-                            type="button"
-                            onClick={() => {
-                              setInputText(msg.content);
-                              if (textareaRef.current) {
-                                textareaRef.current.style.height = "auto";
-                                textareaRef.current.focus();
-                                setTimeout(() => {
-                                  if (textareaRef.current) {
-                                    textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
-                                    textareaRef.current.setSelectionRange(msg.content.length, msg.content.length);
-                                  }
-                                }, 0);
-                              }
-                            }}
-                            className="h-7 w-7 rounded-lg hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
-                            aria-label="Edit or reuse prompt"
-                          >
-                            <Edit2 size={13} className="text-cyan-400" />
-                          </button>
-                        </Tooltip>
-
-                        {/* 2. Fork Session Branch CTA */}
-                        <Tooltip content="Tách nhánh phiên mới" placement="top" minWidth={150}>
-                          <button data-ux-target-min="24"
-                            type="button"
-                            onClick={() => handleForkSession(mIdx)}
-                            className="h-7 w-7 rounded-lg hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
-                            aria-label="Fork session from here"
-                          >
-                            <GitFork size={13} className="text-cyan-400" />
-                          </button>
-                        </Tooltip>
-
-                        {/* 3. Copy Prompt CTA */}
-                        <Tooltip content={copiedResponseMsgId === msg.id ? "Đã sao chép!" : "Sao chép câu hỏi"} placement="top" minWidth={130}>
-                          <button data-ux-target-min="24"
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(msg.content);
-                              setCopiedResponseMsgId(msg.id);
-                              setTimeout(() => setCopiedResponseMsgId(null), 1800);
-                            }}
-                            className="h-7 w-7 rounded-lg hover:bg-slate-200/60 dark:hover:bg-[#181822] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-[#282836]"
-                            aria-label="Copy prompt"
-                          >
-                            {copiedResponseMsgId === msg.id ? (
-                              <Check size={13} className="text-emerald-400" />
-                            ) : (
-                              <Copy size={13} />
-                            )}
-                          </button>
-                        </Tooltip>
-                      </div>
-
-                      {/* Mobile Action Menu Button for User Message */}
-                      <div className="sm:hidden flex items-center justify-end pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setMobileActionMsg({ id: msg.id, content: msg.content, turnIdx: mIdx, role: "user", rawMsg: msg })}
-                          className="p-1 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                          aria-label="Tùy chọn câu hỏi"
-                        >
-                          <MoreHorizontal size={14} />
-                        </button>
-                      </div>
+                      {renderMessageReactionsAndActions()}
                     </div>
                   ) : (
                     /* Assistant Turn: Structured Content Blocks + Agent Tool Cards */
                     <div
                       onTouchStart={(e) => handleTouchStartMsg(e, {
                         id: msg.id,
-                        content: msg.content,
+                        content: cleanContent,
                         turnIdx: mIdx,
                         role: "assistant",
-                        hasThinking: Boolean(hasSteps || hasTools || msg.reasoning),
+                        hasThinking,
                         rawMsg: msg,
                       })}
                       onTouchEnd={handleTouchEndMsg}
@@ -7406,12 +7744,13 @@ const handleBatchDeleteSelectedChats = () => {
                       onContextMenu={(e) => {
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
+                          setIsMobileActionExtended(false);
                           setMobileActionMsg({
                             id: msg.id,
-                            content: msg.content,
+                            content: cleanContent,
                             turnIdx: mIdx,
                             role: "assistant",
-                            hasThinking: Boolean(hasSteps || hasTools || msg.reasoning),
+                            hasThinking,
                             rawMsg: msg,
                           });
                         }
@@ -7446,48 +7785,48 @@ const handleBatchDeleteSelectedChats = () => {
                               }`}>
                                 @{msg.senderAgentId} ({msg.senderAgentName || msg.senderAgentId})
                               </span>
-
                             </div>
                           )}
-                          {/* Assistant Response Bubble: Bọc trong background clean card cho cả light và dark mode, co giãn đúng nội dung (fit-content) */}
-                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs transition-colors ${
+                          {/* Assistant Response Bubble */}
+                          <div className={`inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2 shadow-xs transition-all ${
                             msg.senderAgentId
                               ? "bg-emerald-500/[0.06] border border-emerald-500/30 text-slate-800 dark:bg-[#111c1a]/90 dark:border-emerald-500/25 dark:text-neutral-100"
                               : "bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200"
-                          }`}>
+                          } ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                            {renderQuotedReplyBox()}
                             <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
-                              content={msg.content}
-                              agentNode={selectedAgent.node}
-                              onImageClick={(url, name) => {
-                                setLightboxRotation(0);
-                                setLightboxZoom(1);
-                                setLightboxMeta(null);
-                                setShowLightboxMeta(false);
-                                setLightboxImageUrl({ url, name });
-                              }}
-                              onRunCode={(codeSnippet) => {
-                                sendConsoleChatMessageStream(
-                                  selectedChatId || "default",
-                                  "Execute shell verification:\n```bash\n" + codeSnippet + "\n```",
-                                  selectedAgent.slug
-                                );
-                              }}
-                              onSpeakSentence={(sentence) => {
-                                setSpeakingMsgId(msg.id);
-                                speakText(sentence, {
-                                  onSegmentChange: (seg) => setSpeakingSentence(seg),
-                                  onEnd: () => {
-                                    setSpeakingMsgId(null);
-                                    setSpeakingSentence(null);
-                                  },
-                                  onError: () => {
-                                    setSpeakingMsgId(null);
-                                    setSpeakingSentence(null);
-                                  },
-                                });
-                              }}
-                            />
+                                content={cleanContent}
+                                agentNode={selectedAgent.node}
+                                onImageClick={(url, name) => {
+                                  setLightboxRotation(0);
+                                  setLightboxZoom(1);
+                                  setLightboxMeta(null);
+                                  setShowLightboxMeta(false);
+                                  setLightboxImageUrl({ url, name });
+                                }}
+                                onRunCode={(codeSnippet) => {
+                                  sendConsoleChatMessageStream(
+                                    selectedChatId || "default",
+                                    "Execute shell verification:\n```bash\n" + codeSnippet + "\n```",
+                                    selectedAgent.slug
+                                  );
+                                }}
+                                onSpeakSentence={(sentence) => {
+                                  setSpeakingMsgId(msg.id);
+                                  speakText(sentence, {
+                                    onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                    onEnd: () => {
+                                      setSpeakingMsgId(null);
+                                      setSpeakingSentence(null);
+                                    },
+                                    onError: () => {
+                                      setSpeakingMsgId(null);
+                                      setSpeakingSentence(null);
+                                    },
+                                  });
+                                }}
+                              />
                               {/* Inline pulsing bullet cursor if currently streaming active tokens */}
                               {isStreaming && isLastTurn && (
                                 <span className="inline-flex items-center gap-1 ml-1.5 align-middle select-none">
@@ -7499,7 +7838,7 @@ const handleBatchDeleteSelectedChats = () => {
                             </div>
 
                             {/* Detail mở rộng ở sau cùng tin nhắn: Thinking & Tool Execution trace (Hình 2) */}
-                            {(hasSteps || hasTools || Boolean(msg.reasoning)) && (
+                            {hasThinking && (
                               <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-white/10">
                                 <TurnExecutionAccordion
                                   msg={msg}
@@ -7519,123 +7858,7 @@ const handleBatchDeleteSelectedChats = () => {
                             </div>
                           )}
 
-                          {/* Message Turn Action CTAs: Desktop hover toolbar, hidden on mobile */}
-                          {!(isStreaming && isLastTurn) && (
-                          <div className={`hidden sm:flex items-center gap-1 pt-1 mt-1 select-none transition-opacity duration-150 ${
-                            speakingMsgId === msg.id ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100"
-                          }`}>
-                            {/* 0. Star / Bookmark Turn CTA */}
-                            <Tooltip content={starredMsgIds.includes(msg.id) ? "Bỏ đánh dấu sao" : "Đánh dấu sao câu trả lời"} placement="top" minWidth={150}>
-                              <button data-ux-target-min="24"
-                                type="button"
-                                onClick={() => toggleStarMessage(msg.id)}
-                                className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer border ${
-                                  starredMsgIds.includes(msg.id)
-                                    ? "bg-amber-400/10 border-amber-400/30 text-amber-400"
-                                    : "hover:bg-[#181822] text-neutral-400 hover:text-white border-transparent hover:border-[#282836]"
-                                }`}
-                                aria-label={starredMsgIds.includes(msg.id) ? "Unstar message" : "Star message"}
-                              >
-                                <Star size={13} className={starredMsgIds.includes(msg.id) ? "fill-amber-400" : ""} />
-                              </button>
-                            </Tooltip>
-
-                            {/* Fork Session Branch CTA */}
-                            <Tooltip content="Tách nhánh phiên mới từ đây" placement="top" minWidth={160}>
-                              <button data-ux-target-min="24"
-                                type="button"
-                                onClick={() => handleForkSession(mIdx)}
-                                className="h-7 w-7 rounded-lg hover:bg-[#181822] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#282836]"
-                                aria-label="Fork session from here"
-                              >
-                                <GitFork size={13} className="text-cyan-400" />
-                              </button>
-                            </Tooltip>
-
-                            {/* 1. Copy Response CTA */}
-                            <Tooltip content={copiedResponseMsgId === msg.id ? "Đã sao chép vào bộ nhớ tạm!" : "Sao chép câu trả lời"} placement="top" minWidth={150}>
-                              <button data-ux-target-min="24"
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(msg.content);
-                                  setCopiedResponseMsgId(msg.id);
-                                  setTimeout(() => setCopiedResponseMsgId(null), 1800);
-                                }}
-                                className="h-7 w-7 rounded-lg hover:bg-[#181822] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#282836]"
-                                aria-label="Copy response"
-                              >
-                                {copiedResponseMsgId === msg.id ? (
-                                  <Check size={13} className="text-emerald-400" />
-                                ) : (
-                                  <Copy size={13} />
-                                )}
-                              </button>
-                            </Tooltip>
-
-                            {/* 2. Text-to-Speech Voice Playback CTA */}
-                            <Tooltip content={speakingMsgId === msg.id ? "Dừng đọc thoại" : "Đọc to câu trả lời (TTS)"} placement="top" minWidth={160}>
-                              <button data-ux-target-min="24"
-                                type="button"
-                                onClick={() => {
-                                  if (speakingMsgId === msg.id) {
-                                    stopSpeaking();
-                                    setSpeakingMsgId(null);
-                                  } else {
-                                    setSpeakingMsgId(msg.id);
-                                    speakText(msg.content, {
-                                      onSegmentChange: (seg) => setSpeakingSentence(seg),
-                                      onEnd: () => {
-                                        setSpeakingMsgId(null);
-                                        setSpeakingSentence(null);
-                                      },
-                                      onError: () => {
-                                        setSpeakingMsgId(null);
-                                        setSpeakingSentence(null);
-                                      },
-                                    });
-                                  }
-                                }}
-                                className="h-7 w-7 rounded-lg hover:bg-[#181822] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#282836]"
-                                aria-label={speakingMsgId === msg.id ? "Stop voice playback" : "Read aloud with Text-to-Speech"}
-                              >
-                                <Volume2 size={13} className={speakingMsgId === msg.id ? "text-[#f8a87c] animate-pulse" : ""} />
-                              </button>
-                            </Tooltip>
-
-                            {/* 3. Forward to Another Agent CTA */}
-                            <Tooltip content="Chuyển tiếp cho Agent khác" placement="top" minWidth={160}>
-                              <button data-ux-target-min="24"
-                                type="button"
-                                onClick={() => setForwardModalMsg(msg.content)}
-                                className="h-7 w-7 rounded-lg hover:bg-[#181822] text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-transparent hover:border-[#282836]"
-                                aria-label="Forward response to another Agent"
-                              >
-                                <Share2 size={13} className="text-cyan-400" />
-                              </button>
-                            </Tooltip>
-                          </div>
-                          )}
-
-                          {/* Mobile Action Menu Button for Assistant Message */}
-                          {!(isStreaming && isLastTurn) && (
-                            <div className="sm:hidden flex items-center pt-1">
-                              <button
-                                type="button"
-                                onClick={() => setMobileActionMsg({
-                                  id: msg.id,
-                                  content: msg.content,
-                                  turnIdx: mIdx,
-                                  role: "assistant",
-                                  hasThinking: Boolean(hasSteps || hasTools || msg.reasoning),
-                                  rawMsg: msg,
-                                })}
-                                className="p-1 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                                aria-label="Tùy chọn tin nhắn"
-                              >
-                                <MoreHorizontal size={14} />
-                              </button>
-                            </div>
-                          )}
+                          {renderMessageReactionsAndActions()}
                         </>
                       )}
                     </div>
@@ -9032,6 +9255,34 @@ const handleBatchDeleteSelectedChats = () => {
                 </div>
             )}
 
+            {replyingToMsg && (
+              <div
+                data-testid="composer-reply-banner"
+                className="mb-2 px-3.5 py-2 rounded-xl bg-slate-100/95 dark:bg-[#161622]/95 border border-slate-200 dark:border-[#2a2a3c] border-l-4 border-l-[#f8a87c] flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-150 shadow-xs text-left select-none"
+              >
+                <div
+                  onClick={() => scrollToOriginalMessage(replyingToMsg.id, replyingToMsg.snippet)}
+                  className="min-w-0 flex-1 cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#f8a87c]">
+                    <CornerUpLeft size={12} className="shrink-0" />
+                    <span className="truncate">Đang trả lời {replyingToMsg.authorName}</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-neutral-300 truncate mt-0.5 italic">
+                    "{replyingToMsg.snippet}"
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  data-testid="cancel-reply-btn"
+                  onClick={() => setReplyingToMsg(null)}
+                  className="p-1 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                  aria-label="Hủy trả lời"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
 
             {(() => {
               const isMultiline = inputText.includes("\n");
@@ -12187,7 +12438,10 @@ ${chat.id}`);
       {/* ========================================================= */}
       {mobileActionMsg && (
         <div
-          onClick={() => setMobileActionMsg(null)}
+          onClick={() => {
+            setMobileActionMsg(null);
+            setIsMobileActionExtended(false);
+          }}
           className="fixed inset-0 z-[80] flex flex-col justify-end bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150 select-none"
         >
           <div
@@ -12206,15 +12460,86 @@ ${chat.id}`);
               </div>
               <button
                 type="button"
-                onClick={() => setMobileActionMsg(null)}
+                onClick={() => {
+                  setMobileActionMsg(null);
+                  setIsMobileActionExtended(false);
+                }}
                 className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-400 hover:text-slate-900 dark:hover:text-white"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Quick Actions List */}
-            <div className="space-y-1">
+            {/* 1. Quick Emoji Reactions Row */}
+            <div
+              data-testid="mobile-quick-react-bar"
+              className="flex items-center justify-between px-2 py-1.5 rounded-xl bg-slate-100/80 dark:bg-[#1a1a26] border border-slate-200/70 dark:border-[#282838]"
+            >
+              {QUICK_REACTIONS.map((emoji) => {
+                const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
+                return (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      toggleMessageReaction(mobileActionMsg.id, emoji);
+                      setMobileActionMsg(null);
+                      setIsMobileActionExtended(false);
+                    }}
+                    className={`h-9 w-9 rounded-full flex items-center justify-center text-lg transition-transform active:scale-90 cursor-pointer ${
+                      isSelected ? "bg-[#f8a87c]/20 ring-1 ring-[#f8a87c]" : "hover:bg-black/5 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 2. Primary Compact Bar: Reply + Extend (...) */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                data-testid="mobile-reply-btn"
+                onClick={() => {
+                  if (mobileActionMsg.rawMsg) {
+                    handleStartReply(mobileActionMsg.rawMsg);
+                  } else {
+                    setReplyingToMsg({
+                      id: mobileActionMsg.id,
+                      role: mobileActionMsg.role || "assistant",
+                      authorName: mobileActionMsg.role === "user" ? "Bạn" : (selectedAgent?.name || "Agent"),
+                      snippet: mobileActionMsg.content.slice(0, 140),
+                    });
+                    setMobileActionMsg(null);
+                    setIsMobileActionExtended(false);
+                    setTimeout(() => textareaRef.current?.focus(), 50);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 border border-[#f8a87c]/30 text-xs font-semibold text-[#f8a87c] transition-colors cursor-pointer"
+              >
+                <CornerUpLeft size={15} />
+                <span>Trả lời (Reply)</span>
+              </button>
+
+              <button
+                type="button"
+                data-testid="mobile-extend-btn"
+                onClick={() => setIsMobileActionExtended((prev) => !prev)}
+                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
+                  isMobileActionExtended
+                    ? "bg-slate-200 dark:bg-[#242436] border-slate-300 dark:border-[#383850] text-slate-900 dark:text-white"
+                    : "bg-slate-100 dark:bg-[#1a1a26] hover:bg-slate-200 dark:hover:bg-[#222232] border-slate-200 dark:border-[#2a2a3c] text-slate-700 dark:text-neutral-200"
+                }`}
+              >
+                <MoreHorizontal size={15} />
+                <span>{isMobileActionExtended ? "Thu gọn tùy chọn" : "Mở rộng"}</span>
+              </button>
+            </div>
+
+            {/* 3. Extended Secondary CTAs List (shown when user taps Extend) */}
+            {isMobileActionExtended && (
+            <div data-testid="mobile-extended-cta-list" className="space-y-1 pt-2 border-t border-slate-200 dark:border-[#22222e] animate-in fade-in duration-150">
               {/* Star / Bookmark */}
               <button
                 type="button"
@@ -12348,6 +12673,7 @@ ${chat.id}`);
                 </button>
               )}
             </div>
+            )}
           </div>
         </div>
       )}
