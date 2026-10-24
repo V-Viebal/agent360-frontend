@@ -1082,3 +1082,19 @@ html.light [role="tooltip"] kbd,
   mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
 }
+
+/* Mobile Drawer Dedicated Overlay & Panel Transitions */
+.mobile-drawer-backdrop {
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+.mobile-drawer-panel {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}

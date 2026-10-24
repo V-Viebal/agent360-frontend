@@ -173,6 +173,12 @@ const triggerHaptic = (ms = 10) => {
 
 const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"];
 
+const FULL_EMOJI_PALETTE = [
+  "❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀",
+  "🎉", "👏", "💯", "🎯", "💡", "🤖", "🤝", "☕",
+  "⚡", "💪", "🙌", "😍", "🤩", "🫡", "🙏", "👀"
+];
+
 function getStoredRecentReactions(): string[] {
   try {
     const raw = typeof window !== "undefined" ? localStorage.getItem("agent360_recent_reactions") : null;
@@ -255,6 +261,7 @@ import {
   toggleAgentEnabled,
   fetchChatSessionRoom,
   pullAgentIntoChatRoom,
+  postChatRoomMessage,
   updateChatRoomTitle,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
@@ -3147,6 +3154,7 @@ export function GrokBotWorkspace() {
   const [activeReactPopoverMsgId, setActiveReactPopoverMsgId] = useState<string | null>(null);
   const [activeExtendPopoverMsgId, setActiveExtendPopoverMsgId] = useState<string | null>(null);
   const [isMobileActionExtended, setIsMobileActionExtended] = useState<boolean>(false);
+  const [showFullEmojiPicker, setShowFullEmojiPicker] = useState<boolean>(false);
   const [recentReactions, setRecentReactions] = useState<string[]>(() => getStoredRecentReactions());
   const [msgReactions, setMsgReactions] = useState<Record<string, string[]>>(() => {
     try {
@@ -3157,13 +3165,15 @@ export function GrokBotWorkspace() {
     }
   });
 
-  const toggleMessageReaction = (msgId: string, emoji: string) => {
+  const toggleMessageReaction = (msgId: string, emoji: string, targetMsg?: ChatMessage) => {
     triggerHaptic(12);
     saveStoredRecentReaction(emoji);
     setRecentReactions(getStoredRecentReactions());
+    let isAdded = false;
     setMsgReactions((prev) => {
       const current = prev[msgId] || [];
       const exists = current.includes(emoji);
+      isAdded = !exists;
       const nextList = exists ? current.filter((e) => e !== emoji) : [...current, emoji];
       const next = { ...prev, [msgId]: nextList };
       if (nextList.length === 0) delete next[msgId];
@@ -3172,6 +3182,49 @@ export function GrokBotWorkspace() {
       } catch {}
       return next;
     });
+
+    // Update in-memory messages state and cache so reactions persist
+    setMessages((prev) => {
+      const updated = prev.map((m) => {
+        if (m.id === msgId) {
+          const cur = m.reactions || [];
+          const exists = cur.includes(emoji);
+          const nextReactions = exists ? cur.filter((e) => e !== emoji) : [...cur, emoji];
+          return { ...m, reactions: nextReactions };
+        }
+        return m;
+      });
+      if (selectedChatId) {
+        setCachedChatMessages(selectedChatId, updated, selectedAgent?.id);
+      }
+      return updated;
+    });
+
+    // Ghi nhận reaction như 1 hình thức reply đến tin nhắn
+    const foundMsg = targetMsg || messages.find((m) => m.id === msgId);
+    if (foundMsg) {
+      const author = foundMsg.role === "user"
+        ? "Bạn"
+        : (foundMsg.senderAgentName || foundMsg.senderAgentId || selectedAgent?.name || "Agent");
+      const snippet = (foundMsg.content || "").slice(0, 36).replace(/\s+/g, " ");
+
+      if (isAdded) {
+        // Gửi ghi nhận reaction reply đến Session Room (AgentTeams backend)
+        if (selectedAgent?.id && selectedChatId) {
+          postChatRoomMessage(selectedAgent.id, selectedChatId, {
+            author_id: "user",
+            author_role: "user",
+            kind: "reaction",
+            text: `[Reaction Reply ${emoji}]`,
+            target_agent_id: foundMsg.senderAgentId,
+          }).catch(() => {});
+        }
+        setForkToast(`Đã phản hồi cảm xúc ${emoji} đến ${author}: "${snippet}..."`);
+      } else {
+        setForkToast(`Đã gỡ phản hồi cảm xúc ${emoji}`);
+      }
+      setTimeout(() => setForkToast(null), 2500);
+    }
     setActiveReactPopoverMsgId(null);
   };
 
@@ -6034,19 +6087,37 @@ const handleBatchDeleteSelectedChats = () => {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors">
       {/* ========================================================= */}
-      {/* BACKDROP OVERLAY FOR MOBILE DRAWERS (Click-outside catcher: transparent, no backdrop dimming or blur filter) */}
+      {/* DEDICATED OVERLAY BACKDROPS FOR MOBILE RESPONSIVE DRAWERS */}
       {/* ========================================================= */}
-      {(mobileAgentsOpen || mobileChatsOpen || (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth < 1280)) && (
-        <div
-          onClick={() => {
-            setMobileAgentsOpen(false);
-            setMobileChatsOpen(false);
-            setMobileBotInfoOpen(false);
-            handleToggleBotInfo(true);
-          }}
-          className="fixed inset-0 bg-transparent z-40 xl:hidden"
-        />
-      )}
+      {/* Left Agent Selector Mobile Overlay Backdrop */}
+      <div
+        onClick={() => setMobileAgentsOpen(false)}
+        className={`lg:hidden fixed inset-0 z-50 mobile-drawer-backdrop transition-all duration-300 ${
+          mobileAgentsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!mobileAgentsOpen}
+      />
+
+      {/* Right Chat Sessions Mobile Overlay Backdrop */}
+      <div
+        onClick={() => setMobileChatsOpen(false)}
+        className={`lg:hidden fixed inset-0 z-50 mobile-drawer-backdrop transition-all duration-300 ${
+          mobileChatsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={!mobileChatsOpen}
+      />
+
+      {/* Rightmost Agent Detail Pane Mobile Overlay Backdrop */}
+      <div
+        onClick={() => {
+          setMobileBotInfoOpen(false);
+          handleToggleBotInfo(true);
+        }}
+        className={`xl:hidden fixed inset-0 z-50 mobile-drawer-backdrop transition-all duration-300 ${
+          !isBotInfoCollapsed ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden={isBotInfoCollapsed}
+      />
 
       {/* ========================================================= */}
       {/* 1. LEFT SIDEBAR: Real Agents Loaded From Infra */}
@@ -6059,14 +6130,14 @@ const handleBatchDeleteSelectedChats = () => {
               ? (isLeftSidebarCollapsed ? "64px" : `${leftSidebarWidth}px`)
               : undefined,
         }}
-        className={`fixed lg:static inset-y-0 left-0 z-50 lg:z-40 h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform ${
+        className={`fixed lg:static inset-y-0 left-0 z-[60] lg:z-40 h-full flex flex-col border-r border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 transition-grok-transform mobile-drawer-panel ${
           mobileAgentsOpen
-            ? "w-full sm:w-[380px] translate-x-0 shadow-2xl"
+            ? "w-full sm:w-[380px] translate-x-0 shadow-2xl pointer-events-auto"
             : isCompactMode
-            ? "w-full sm:w-[380px] -translate-x-full invisible"
+            ? "w-full sm:w-[380px] -translate-x-full invisible pointer-events-none"
             : isLeftSidebarCollapsed
-            ? "w-full sm:w-[380px] lg:w-[64px] -translate-x-full max-lg:invisible lg:translate-x-0"
-            : "w-full sm:w-[380px] -translate-x-full max-lg:invisible lg:translate-x-0"
+            ? "w-full sm:w-[380px] lg:w-[64px] -translate-x-full max-lg:invisible max-lg:pointer-events-none lg:translate-x-0 lg:pointer-events-auto"
+            : "w-full sm:w-[380px] -translate-x-full max-lg:invisible max-lg:pointer-events-none lg:translate-x-0 lg:pointer-events-auto"
         }`}
         aria-hidden={!mobileAgentsOpen && isCompactMode ? true : undefined}
       >
@@ -7407,7 +7478,9 @@ const handleBatchDeleteSelectedChats = () => {
               const hasTools = Boolean(msg.toolCalls && msg.toolCalls.length > 0);
               const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning);
               const { replyTo: parsedReplyTo, cleanContent } = parseQuotedReplyFromContent(msg.content, msg.replyTo);
-              const currentReactions = isUser ? [] : (msgReactions[msg.id] || []);
+              const currentReactions = isUser
+                ? []
+                : Array.from(new Set([...(msg.reactions || []), ...(msgReactions[msg.id] || [])]));
               const isReactOpen = activeReactPopoverMsgId === msg.id;
               const isExtendOpen = activeExtendPopoverMsgId === msg.id;
               const isHighlighted = highlightedReplyMsgId === msg.id;
@@ -7446,11 +7519,11 @@ const handleBatchDeleteSelectedChats = () => {
                         <button
                           key={emoji}
                           type="button"
-                          onClick={() => toggleMessageReaction(msg.id, emoji)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/15 dark:bg-[#f8a87c]/15 border border-amber-500/30 dark:border-[#f8a87c]/35 text-slate-800 dark:text-neutral-100 hover:scale-105 active:scale-95 transition-transform cursor-pointer shadow-2xs"
-                          title="Bấm để gỡ cảm xúc"
+                          onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/15 dark:bg-[#f8a87c]/15 border border-amber-500/30 dark:border-[#f8a87c]/35 text-slate-800 dark:text-neutral-100 hover:scale-110 active:scale-90 transition-transform cursor-pointer shadow-2xs animate-in zoom-in-75 duration-150"
+                          title="Bạn đã phản hồi cảm xúc này. Bấm để gỡ bỏ."
                         >
-                          <span>{emoji}</span>
+                          <span className="inline-block transform active:scale-125 transition-transform">{emoji}</span>
                           <span className="text-[10px] font-mono text-[#f8a87c] font-semibold">1</span>
                         </button>
                       ))}
@@ -7496,24 +7569,63 @@ const handleBatchDeleteSelectedChats = () => {
                             <div
                               data-testid="msg-react-popover"
                               onClick={(e) => e.stopPropagation()}
-                              className="absolute bottom-full mb-1.5 left-0 z-50 flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 select-none"
+                              className="absolute bottom-full mb-1.5 left-0 z-50 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-[#1c2430] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-100 select-none"
                             >
-                              {recentReactions.map((emoji) => {
-                                const active = currentReactions.includes(emoji);
-                                return (
-                                  <button
-                                    key={emoji}
-                                    type="button"
-                                    data-testid={`react-option-${emoji}`}
-                                    onClick={() => toggleMessageReaction(msg.id, emoji)}
-                                    className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
-                                      active ? "bg-[#f8a87c]/25 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
-                                    }`}
-                                  >
-                                    {emoji}
-                                  </button>
-                                );
-                              })}
+                              <div className="flex items-center gap-1 px-1.5 py-0.5">
+                                {recentReactions.slice(0, 7).map((emoji) => {
+                                  const active = currentReactions.includes(emoji);
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      data-testid={`react-option-${emoji}`}
+                                      onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
+                                      className={`h-7 w-7 rounded-full flex items-center justify-center text-sm hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
+                                        active ? "bg-[#f8a87c]/25 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
+                                      }`}
+                                      aria-label={`Thả ${emoji}`}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  );
+                                })}
+                                <button
+                                  type="button"
+                                  data-testid="desktop-more-emoji-btn"
+                                  onClick={() => {
+                                    triggerHaptic(10);
+                                    setShowFullEmojiPicker((prev) => !prev);
+                                  }}
+                                  className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer ${
+                                    showFullEmojiPicker ? "bg-white/20 text-white" : "hover:bg-white/10"
+                                  }`}
+                                  title="Mở thêm biểu tượng cảm xúc"
+                                >
+                                  <Plus size={13} className="shrink-0" />
+                                </button>
+                              </div>
+
+                              {showFullEmojiPicker && (
+                                <div
+                                  data-testid="desktop-full-emoji-picker-grid"
+                                  className="grid grid-cols-6 gap-1 p-1.5 rounded-xl bg-[#141a24] border border-white/10 w-full text-sm"
+                                >
+                                  {FULL_EMOJI_PALETTE.map((emoji) => (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      data-testid={`full-emoji-${emoji}`}
+                                      onClick={() => {
+                                        toggleMessageReaction(msg.id, emoji, msg);
+                                        setShowFullEmojiPicker(false);
+                                      }}
+                                      className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -9917,9 +10029,9 @@ const handleBatchDeleteSelectedChats = () => {
                 : `${chatSessionsWidth}px`
               : undefined,
         }}
-        className={`fixed lg:static inset-y-0 right-0 z-50 lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok relative ${
+        className={`fixed lg:static inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok mobile-drawer-panel relative ${
           mobileChatsOpen
-            ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl"
+            ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl pointer-events-auto"
             : isChatListCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full lg:w-0"
             : "hidden lg:flex lg:w-[320px] translate-x-full lg:translate-x-0 shadow-none border-l border-neutral-200 dark:border-[#1e1e24]"
@@ -10821,10 +10933,10 @@ ${chat.id}`);
       {/* ========================================================= */}
       <aside
         style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
-        className={`fixed xl:static inset-y-0 right-0 z-50 xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok relative ${
+        className={`fixed xl:static inset-y-0 right-0 z-[60] xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok mobile-drawer-panel relative ${
           isBotInfoCollapsed
             ? "w-0 overflow-hidden border-none pointer-events-none translate-x-full xl:w-0"
-            : "w-full sm:w-[380px] xl:w-[380px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none"
+            : "w-full sm:w-[380px] xl:w-[380px] border-l border-[#1e1e24] translate-x-0 xl:translate-x-0 shadow-2xl xl:shadow-none pointer-events-auto"
         }`}
       >
         {/* Right Pane Draggable Resizer Splitter */}
@@ -12502,7 +12614,7 @@ ${chat.id}`);
       {/* ========================================================= */}
       {mobileActionMsg && (
         <div
-          onClick={() => setMobileActionMsg(null)}
+          onClick={() => { setShowFullEmojiPicker(false); setMobileActionMsg(null); }}
           className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/45 select-none p-4 duration-100"
         >
           <div
@@ -12511,30 +12623,74 @@ ${chat.id}`);
           >
             {/* 1. TOP HORIZONTAL REACTION PILL (Telegram style): ONLY FOR AGENT MESSAGE */}
             {mobileActionMsg.role !== "user" && (
-              <div
-                data-testid="mobile-quick-react-bar"
-                className="flex items-center justify-between px-3 py-1.5 rounded-full bg-[#1c2430] dark:bg-[#18202c] border border-white/10 shadow-2xl w-full"
-              >
-                {recentReactions.map((emoji) => {
-                  const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      data-testid={`mobile-react-option-${emoji}`}
-                      onClick={() => {
-                        toggleMessageReaction(mobileActionMsg.id, emoji);
-                        setMobileActionMsg(null);
-                      }}
-                      className={`h-8 w-8 rounded-full flex items-center justify-center text-base transition-transform active:scale-75 cursor-pointer ${
-                        isSelected ? "bg-[#f8a87c]/30 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
-                      }`}
-                      aria-label={`Thả ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col items-center gap-1.5 w-full">
+                <div
+                  data-testid="mobile-quick-react-bar"
+                  className="flex items-center justify-between px-2.5 py-1.5 rounded-full bg-[#1c2430] border border-white/10 shadow-2xl w-full"
+                >
+                  <div className="flex items-center justify-between flex-1 gap-1">
+                    {recentReactions.slice(0, 7).map((emoji) => {
+                      const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
+                      return (
+                        <button
+                          key={emoji}
+                          type="button"
+                          data-testid={`mobile-react-option-${emoji}`}
+                          onClick={() => {
+                            toggleMessageReaction(mobileActionMsg.id, emoji, mobileActionMsg.rawMsg);
+                            setShowFullEmojiPicker(false);
+                            setMobileActionMsg(null);
+                          }}
+                          className={`h-8 w-8 rounded-full flex items-center justify-center text-base transition-transform active:scale-125 hover:scale-110 cursor-pointer ${
+                            isSelected ? "bg-[#f8a87c]/30 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
+                          }`}
+                          aria-label={`Thả ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Plus button to toggle full emoji palette */}
+                  <button
+                    type="button"
+                    data-testid="mobile-more-emoji-btn"
+                    onClick={() => {
+                      triggerHaptic(10);
+                      setShowFullEmojiPicker((prev) => !prev);
+                    }}
+                    className={`h-7 w-7 ml-1 rounded-full flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer ${
+                      showFullEmojiPicker ? "bg-white/20 text-white" : "hover:bg-white/10"
+                    }`}
+                    title="Mở thêm biểu tượng cảm xúc"
+                  >
+                    <Plus size={14} className="shrink-0" />
+                  </button>
+                </div>
+
+                {/* Full Emoji Picker Palette (When plus is clicked) */}
+                {showFullEmojiPicker && (
+                  <div
+                    data-testid="full-emoji-picker-grid"
+                    className="w-full grid grid-cols-6 gap-1 p-2 rounded-2xl bg-[#1c2430] border border-white/10 shadow-2xl animate-in fade-in zoom-in-95 duration-150 text-base"
+                  >
+                    {FULL_EMOJI_PALETTE.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        data-testid={`full-emoji-${emoji}`}
+                        onClick={() => {
+                          toggleMessageReaction(mobileActionMsg.id, emoji, mobileActionMsg.rawMsg);
+                          setShowFullEmojiPicker(false);
+                          setMobileActionMsg(null);
+                        }}
+                        className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

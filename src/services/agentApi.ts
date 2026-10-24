@@ -639,7 +639,8 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         id: m.id || `${chatId}-${mIdx}-user`,
         role: "user",
         content: userContent || "(Empty user message)",
-        timestamp: ts
+        timestamp: ts,
+        reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
       });
     } else if (role === "assistant") {
       const msgSenderAgentId = m.metadata?.sender_agent_id || undefined;
@@ -664,6 +665,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           roomId: msgRoomId,
           matrixRoomId: m.metadata?.matrix_room_id || undefined,
           elementRoomUrl: m.metadata?.element_room_url || undefined,
+          reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
           metadata: m.metadata || undefined
         };
         turns.push(currentAsst);
