@@ -655,7 +655,9 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
       }
       let roomCtxIdx = userContent.indexOf("[SHARED SESSION ROOM CONTEXT]");
       if (roomCtxIdx < 0) roomCtxIdx = userContent.indexOf("[AGENTTEAMS COLLABORATION ROOM");
+      let sharedCtxBlock = "";
       if (roomCtxIdx >= 0) {
+        sharedCtxBlock = userContent.slice(roomCtxIdx);
         userContent = userContent.slice(0, roomCtxIdx).trimEnd();
       }
       turns.push({
@@ -665,6 +667,86 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         timestamp: ts,
         reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
       });
+
+      // Recover embedded collaborator turns from [SHARED SESSION ROOM CONTEXT] if backend room turns were not yet injected into rawList
+      if (sharedCtxBlock) {
+        const markers = [
+          "Các chuyên viên AI trong phiên đã lần lượt đóng góp ý kiến chuyên môn",
+          "Các chuyên viên AI trong Room đã lần lượt đóng góp ý kiến chuyên môn",
+          "Các chuyên viên trong phiên đã lần lượt phản hồi:"
+        ];
+        let secIdx = -1;
+        for (const mk of markers) {
+          const found = sharedCtxBlock.indexOf(mk);
+          if (found >= 0) {
+            const colon = sharedCtxBlock.indexOf(":", found);
+            secIdx = colon >= 0 ? colon + 1 : found + mk.length;
+            break;
+          }
+        }
+        if (secIdx >= 0) {
+          let bodyAfter = sharedCtxBlock.slice(secIdx);
+          const endMatch = bodyAfter.match(/\r?\n\s*(?:Với vai trò Chủ phòng|Hãy dựa trên ngữ cảnh chung)/i);
+          if (endMatch && typeof endMatch.index === "number") {
+            bodyAfter = bodyAfter.slice(0, endMatch.index);
+          }
+          const entryRegex = /(?:^|\r?\n)- @([a-zA-Z0-9_-]+)\s*\((.+?)\):\s*([\s\S]*?)(?=(?:\r?\n- @[a-zA-Z0-9_-]+\s*\(.+?\):)|$)/g;
+          let match: RegExpExecArray | null;
+          let cIdx = 0;
+          while ((match = entryRegex.exec(bodyAfter)) !== null) {
+            const agId = match[1].trim().toLowerCase();
+            const agName = match[2].trim();
+            let repText = match[3].trim();
+            if (!repText) continue;
+            const alreadyInRaw = rawList.some(
+              (rm: any) =>
+                rm?.metadata?.sender_agent_id &&
+                String(rm.metadata.sender_agent_id).toLowerCase() === agId &&
+                (typeof rm.content === "string"
+                  ? rm.content.includes(repText.slice(0, 40))
+                  : Array.isArray(rm.content) && rm.content.some((p: any) => String(p?.text || "").includes(repText.slice(0, 40))))
+            );
+            if (!alreadyInRaw) {
+              cIdx++;
+              turns.push({
+                id: `${m.id || chatId}-collab-${agId}-${mIdx}-${cIdx}`,
+                role: "assistant",
+                content: repText,
+                timestamp: ts,
+                senderAgentId: agId,
+                senderAgentName: agName,
+                authorRole: "collaborator",
+                steps: [
+                  {
+                    kind: "reasoning",
+                    id: `step-r-${agId}-${mIdx}`,
+                    text: `Phân tích chuyên môn từ @${agId} (${agName}) trong Room.`
+                  },
+                  {
+                    kind: "tool_call",
+                    id: `step-t-${agId}-${mIdx}`,
+                    call_id: `call-${agId}-${mIdx}`,
+                    tool: "session_room_collaborate",
+                    args: JSON.stringify({ collaborator: agId, session: chatId }),
+                    result: "completed",
+                    state: "success"
+                  }
+                ],
+                toolCalls: [
+                  {
+                    id: `step-t-${agId}-${mIdx}`,
+                    call_id: `call-${agId}-${mIdx}`,
+                    tool: "session_room_collaborate",
+                    args: JSON.stringify({ collaborator: agId, session: chatId }),
+                    result: "completed",
+                    state: "success"
+                  }
+                ]
+              });
+            }
+          }
+        }
+      }
     } else if (role === "assistant") {
       const msgSenderAgentId = m.metadata?.sender_agent_id || undefined;
       const msgRoomId = m.metadata?.room_id || undefined;
