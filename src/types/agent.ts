@@ -78,6 +78,7 @@ export interface SessionCollaborationRoom {
   created_at: string;
   updated_at: string;
   room_title?: string | null;
+  triage_policy?: "auto" | "manual" | string | null;
 }
 
 export interface ReplyToMessageInfo {
