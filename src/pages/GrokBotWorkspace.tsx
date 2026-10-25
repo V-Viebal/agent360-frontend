@@ -2217,7 +2217,7 @@ export function GrokBotWorkspace() {
         setAgents((prev) =>
           prev.map((a) => (a.id === targetAgentId ? { ...a, model: newModelId } : a))
         );
-        try {
+                try {
           const fresh = await fetchInfraAgents();
           if (fresh && fresh.length > 0) setAgents(fresh);
         } catch {}
@@ -6322,7 +6322,12 @@ export function GrokBotWorkspace() {
                   const selectedNames = Array.isArray(ev.selected_collaborators) && ev.selected_collaborators.length > 0
                     ? ev.selected_collaborators.map((s: string) => `@${s}`).join(", ")
                     : `@${collabId}`;
-                  nextStatusText = `AgentTeams Manager (@agentteams-manager) phân định giao ${selectedNames} trong Room xử lý...`;
+                  const recruitedNames = Array.isArray(ev.auto_recruited_collaborators) && ev.auto_recruited_collaborators.length > 0
+                    ? ev.auto_recruited_collaborators.map((s: string) => `@${s}`).join(", ")
+                    : "";
+                  nextStatusText = recruitedNames
+                    ? `AgentTeams Manager (@agentteams-manager) mời bổ sung ${recruitedNames} vào Room & giao ${selectedNames} xử lý...`
+                    : `AgentTeams Manager (@agentteams-manager) phân định giao ${selectedNames} trong Room xử lý...`;
                 } else if (ev.status === "synthesizing") {
                   nextStatusText = `${dispName} đang tổng hợp kết quả cuối từ Room...`;
                 } else if (ev.execution_strategy === "parallel" && totalCollabs > 1) {
