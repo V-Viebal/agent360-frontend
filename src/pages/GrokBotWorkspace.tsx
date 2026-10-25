@@ -300,7 +300,6 @@ import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState }
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { AgentSettingsModal, AgentSettingsTab } from "../components/AgentSettingsModal";
-import { AgentIam360MiniCard } from "../components/AgentIam360MiniCard";
 import { PermissionsModal } from "../components/PermissionsModal";
 import { OnboardingChecklistWidget, recordMilestone } from "../components/OnboardingChecklistWidget";
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
@@ -1851,53 +1850,6 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
   );
 }
 
-// Component to render enhanced rich links with favicons and subtle badge styling
-function InlineSmartLink({ href, label }: { href: string; label?: string }) {
-  const [imgFailed, setImgFailed] = useState(false);
-
-  let hostname = "";
-  try {
-    const parsed = new URL(href);
-    hostname = parsed.hostname.replace(/^www\./, "");
-  } catch {
-    hostname = href.replace(/^https?:\/\//, "").split("/")[0];
-  }
-
-  const faviconUrl = hostname
-    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=32`
-    : "";
-
-  const displayLabel = label?.trim() || hostname || href;
-
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 my-0.5 mx-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-[#181824] dark:hover:bg-[#222234] border border-slate-200/80 dark:border-[#28283a] text-slate-800 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-all text-[12px] font-sans no-underline group shrink-0 max-w-full align-middle select-none shadow-2xs"
-      title={`${displayLabel} (${href})`}
-    >
-      <span className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center overflow-hidden bg-white/20 dark:bg-black/20">
-        {!imgFailed && faviconUrl ? (
-          <img
-            src={faviconUrl}
-            alt=""
-            loading="lazy"
-            onError={() => setImgFailed(true)}
-            className="w-3.5 h-3.5 object-contain"
-          />
-        ) : (
-          <Globe size={11} className="text-[#f8a87c] shrink-0" />
-        )}
-      </span>
-      <span className="font-medium truncate max-w-[240px] text-slate-900 dark:text-slate-100 group-hover:underline underline-offset-2">
-        {displayLabel}
-      </span>
-      <ExternalLink size={10} className="text-slate-400 dark:text-neutral-500 group-hover:text-[#f8a87c] shrink-0 transition-colors" />
-    </a>
-  );
-}
-
 // Markdown & Structured Content Formatter with support for links, bold, italics, code, and bare URLs
 function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (!rawText) return "";
@@ -1912,11 +1864,21 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (parts.length === 1 && !rawText.match(tokenRegex)) return rawText;
 
   return parts.filter(Boolean).map((part, pIdx) => {
-    // 1. Markdown link: [label](url) -> rendered with smart favicon pill badge
+    // 1. Markdown link: [label](url)
     if (part.startsWith("[") && part.includes("](") && part.endsWith(")")) {
       const match = part.match(/^\[([^\]]+)\]\(([^\s)]+)\)$/);
       if (match) {
-        return <InlineSmartLink key={pIdx} href={match[2]} label={match[1]} />;
+        return (
+          <a
+            key={pIdx}
+            href={match[2]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#f8a87c] hover:underline underline-offset-2 font-medium break-words"
+          >
+            {match[1]}
+          </a>
+        );
       }
     }
     // 2. Bold: **text**
@@ -1943,7 +1905,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
         </em>
       );
     }
-    // 5. Bare URL: https?://... -> rendered with smart favicon pill badge
+    // 5. Bare URL: https?://...
     if (part.startsWith("http://") || part.startsWith("https://")) {
       let url = part;
       let trailing = "";
@@ -1953,7 +1915,14 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
       }
       return (
         <React.Fragment key={pIdx}>
-          <InlineSmartLink href={url} />
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#f8a87c] hover:underline underline-offset-2 break-all"
+          >
+            {url}
+          </a>
           {trailing}
         </React.Fragment>
       );
@@ -9645,7 +9614,7 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Responding Indicator with Agent Blob Avatar + Animation */}
+                      {/* Minimalist 3-Dots Animated Responding Indicator (Focus / Click opens Room Orchestration & Tool Execution Modal) */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (
                         <button
                           type="button"
@@ -9658,29 +9627,13 @@ export function GrokBotWorkspace() {
                           onFocus={() => {
                             handleOpenActiveThinkingModal(msg);
                           }}
-                          className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100/80 dark:bg-[#14141c]/90 border border-slate-200/70 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group"
                           title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
                           aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
                         >
-                          <div className="relative shrink-0 flex items-center justify-center">
-                            <AgentAvatar
-                              agent={
-                                (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
-                                (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
-                                selectedAgent
-                              }
-                              size="2xs"
-                              interactive={false}
-                              forcedAnimation="thinking.2"
-                              className="ring-1 ring-[#f8a87c]/40 animate-pulse"
-                            />
-                            <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
-                          </div>
-                          <span className="flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                          </span>
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                         </button>
                       )}
 
@@ -9733,7 +9686,7 @@ export function GrokBotWorkspace() {
                                   });
                                 }}
                               />
-                              {/* Inline pulsing button with small animated Agent Blob Avatar */}
+                              {/* Inline pulsing 3-dots button if currently streaming active tokens (Click/Focus opens unified Thinking & In-Progress Modal) */}
                               {isStreaming && isLastTurn && (
                                 <button
                                   type="button"
@@ -9744,19 +9697,9 @@ export function GrokBotWorkspace() {
                                     handleOpenActiveThinkingModal(msg);
                                   }}
                                   onFocus={() => handleOpenActiveThinkingModal(msg)}
-                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
+                                  className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
                                   title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem Thinking & tiến trình đang chạy"}
                                 >
-                                  <AgentAvatar
-                                    agent={
-                                      (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
-                                      selectedAgent
-                                    }
-                                    size="2xs"
-                                    interactive={false}
-                                    forcedAnimation="thinking.2"
-                                    className="ring-1 ring-[#f8a87c]/30"
-                                  />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
@@ -9809,7 +9752,7 @@ export function GrokBotWorkspace() {
           </>
           )}
 
-          {/* Responding Indicator with Agent Blob Avatar + Animation */}
+          {/* Minimalist 3-Dots Animated Responding Indicator (Focus / Click opens Room Orchestration & Tool Execution Modal) */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
               <button
@@ -9823,28 +9766,13 @@ export function GrokBotWorkspace() {
                 onFocus={() => {
                   handleOpenActiveThinkingModal();
                 }}
-                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100/80 dark:bg-[#14141c]/90 border border-slate-200/70 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group"
                 title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
                 aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
               >
-                <div className="relative shrink-0 flex items-center justify-center">
-                  <AgentAvatar
-                    agent={
-                      (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
-                      selectedAgent
-                    }
-                    size="2xs"
-                    interactive={false}
-                    forcedAnimation="thinking.2"
-                    className="ring-1 ring-[#f8a87c]/40 animate-pulse"
-                  />
-                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
-                </div>
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                </span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
               </button>
             </div>
           )}
@@ -12978,16 +12906,6 @@ ${chat.id}`);
                       )}
                     </div>
                   </div>
-
-                  {/* 1B. IAM360 Identity Cell & Organization Cell Mini Tree Card */}
-                  <AgentIam360MiniCard
-                    agentId={selectedAgent.id}
-                    agentSlug={selectedAgent.slug}
-                    onOpenFullWorkbench={() => {
-                      setAgentSettingsModalTab("iam360_cells");
-                      setIsAgentSettingsModalOpen(true);
-                    }}
-                  />
 
                   {/* 2. Routines (Automated Schedules) Section with clean card toggle matching user reference */}
                   <div className="space-y-2">
