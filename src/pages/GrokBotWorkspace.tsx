@@ -5938,6 +5938,19 @@ export function GrokBotWorkspace() {
       targetChatListForStart.find((c) => c.session_id === originChatId);
     const startSessionId = activeChatForStart?.session_id || originChatId;
     registerSessionAgent(originChatId, startSessionId, targetAgent?.slug || originAgentId);
+    if (
+      selectedChatIdRef.current === originChatId &&
+      activeSessionRoom &&
+      (activeSessionRoom.host_chat_id === originChatId || activeSessionRoom.host_session_id === originChatId || activeSessionRoom.host_session_id === startSessionId) &&
+      Array.isArray(activeSessionRoom.participants) &&
+      activeSessionRoom.participants.some((p: any) => p.role === "collaborator")
+    ) {
+      setActiveRespondingAgent({
+        id: targetAgent?.slug || originAgentId,
+        name: targetAgent?.name || originAgentId,
+        statusText: `${targetAgent?.name || "Chủ phòng"} đang phân tích và điều phối Room...`,
+      });
+    }
     setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
     setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
     updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, startSessionId], true);
@@ -6000,20 +6013,40 @@ export function GrokBotWorkspace() {
           signal: abortController.signal,
           channel: activeTargetChannel,
           onEvent: (ev) => {
-            if (ev?.object === "room_event" && ev.room) {
+            if (ev?.object === "room_event") {
               if (selectedChatIdRef.current === originChatId) {
-                setActiveSessionRoom(ev.room);
-                const collabId = ev.collaborator_id || ev.room.active_collaborator_id || targetAgent.slug || originAgentId;
-                const matchedParticipant = ev.room.participants?.find((p: any) => p.agent_id === collabId);
-                const dispName = matchedParticipant?.display_name || collabId;
+                if (ev.room) {
+                  setActiveSessionRoom(ev.room);
+                }
+                const roomRef = ev.room || activeSessionRoom;
+                const collabId = ev.collaborator_id || roomRef?.active_collaborator_id || targetAgent.slug || originAgentId;
+                const matchedParticipant = roomRef?.participants?.find((p: any) => p.agent_id === collabId);
+                const matchedAgent = agents.find((a) => a.slug === collabId || a.id === collabId || a.id === `bot:agent360:${collabId}`);
+                const dispName = matchedParticipant?.display_name || matchedAgent?.name || collabId;
+                const totalCollabs = typeof ev.total_collaborators === "number" ? ev.total_collaborators : (Array.isArray(ev.selected_collaborators) ? ev.selected_collaborators.length : 1);
+                const stepIdx = typeof ev.step_index === "number" ? ev.step_index : 1;
+                const stepBadgeText = totalCollabs > 1 ? ` (${stepIdx}/${totalCollabs})` : "";
+
+                let nextStatusText = `${dispName} đang xử lý và phản hồi...`;
+                if (ev.status === "host_triage") {
+                  const selectedNames = Array.isArray(ev.selected_collaborators) && ev.selected_collaborators.length > 0
+                    ? ev.selected_collaborators.map((s: string) => `@${s}`).join(", ")
+                    : `@${collabId}`;
+                  nextStatusText = ev.triage_mode && ev.triage_mode !== "explicit_mention"
+                    ? `Chủ phòng tự động kéo ${selectedNames} từ Room cùng giải quyết...`
+                    : `Chủ phòng điều phối ${selectedNames} trong Room...`;
+                } else if (ev.status === "synthesizing") {
+                  nextStatusText = `${dispName} đang tổng hợp kết quả cuối từ Room...`;
+                } else if (ev.triage_mode && ev.triage_mode !== "explicit_mention") {
+                  nextStatusText = `Chủ phòng điều phối ${dispName}${stepBadgeText} xử lý...`;
+                } else {
+                  nextStatusText = `${dispName}${stepBadgeText} đang xử lý và phản hồi...`;
+                }
+
                 setActiveRespondingAgent({
                   id: collabId,
                   name: dispName,
-                  statusText: ev.status === "synthesizing"
-                    ? `${dispName} đang tổng hợp phản hồi...`
-                    : ev.triage_mode && ev.triage_mode !== "explicit_mention"
-                    ? `Chủ phòng điều phối ${dispName} xử lý...`
-                    : `${dispName} đang xử lý và phản hồi...`,
+                  statusText: nextStatusText,
                 });
               }
               return;
