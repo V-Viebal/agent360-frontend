@@ -665,20 +665,93 @@ function AgentThinkingModal({
 
   const visibleCollaboratorBranches = useMemo(() => {
     if (!activeWave) return [];
-    const turns = activeWave.collaboratorTurns;
+    const completedTurns = [...activeWave.collaboratorTurns];
+    const completedSlugs = new Set(completedTurns.map((t) => t.author_id.toLowerCase()));
+    const isLatestWave = activeWaveIndex === executionWaves.length - 1;
+
+    // Proposal 4: Synthesize live in-progress branch nodes for assigned/running collaborators that haven't emitted their completed turn yet
+    if (isLatestWave && isCurrentlyRunning) {
+      const pendingSlugs = new Set<string>();
+      for (const s of activeWave.triageMeta.selectedCollaborators) {
+        if (s && s.toLowerCase() !== hostSlug && !completedSlugs.has(s.toLowerCase())) {
+          pendingSlugs.add(s.toLowerCase());
+        }
+      }
+      if (room && Array.isArray(room.participants)) {
+        for (const p of room.participants) {
+          const pSlug = p.agent_id.toLowerCase();
+          if (
+            p.role === "collaborator" &&
+            pSlug !== hostSlug &&
+            !completedSlugs.has(pSlug) &&
+            (p.status === "running" || room.active_collaborator_id?.toLowerCase() === pSlug || activeRespondingAgent?.id?.toLowerCase() === pSlug)
+          ) {
+            pendingSlugs.add(pSlug);
+          }
+        }
+      }
+      Array.from(pendingSlugs).forEach((slug, idx) => {
+        const part = room?.participants?.find((p) => p.agent_id.toLowerCase() === slug);
+        const matchedAg = allAgents.find((a) => (a.slug || "").toLowerCase() === slug || a.id.toLowerCase() === slug);
+        const dispName = part?.display_name || matchedAg?.name || slug;
+        completedTurns.push({
+          id: `live-branch-${slug}-${idx}`,
+          turn_no: (activeWave.requestTurn?.turn_no || 1) + completedTurns.length + 1,
+          author_id: slug,
+          author_name: dispName,
+          author_role: "collaborator",
+          kind: "collaborator_progress",
+          text: "",
+          target_agent_id: hostSlug,
+          created_at: new Date().toISOString(),
+          reasoning:
+            activeRespondingAgent?.id?.toLowerCase() === slug
+              ? activeRespondingAgent.statusText
+              : `Đang phân tích ngữ cảnh Room & thực thi nhiệm vụ chuyên môn của @${slug}...`,
+          steps: [
+            {
+              kind: "tool_call",
+              id: `live_tool_${slug}`,
+              tool: "session_room_collaborate",
+              args: JSON.stringify({ room_id: room?.matrix_room_id || room?.room_id, host_agent: hostSlug, collaborator: slug, status: "running" }),
+              result: "in_progress",
+              state: "calling",
+            },
+          ],
+          manager_audit: null,
+        });
+      });
+    }
+
     if (
       selectedParticipantFilter === "all" ||
       selectedParticipantFilter === "agentteams-manager" ||
       selectedParticipantFilter === hostSlug
     ) {
-      return turns;
+      return completedTurns;
     }
-    return turns.filter(
+    return completedTurns.filter(
       (t) =>
         t.author_id.toLowerCase() === selectedParticipantFilter ||
         (t.target_agent_id && t.target_agent_id.toLowerCase() === selectedParticipantFilter)
     );
-  }, [activeWave, selectedParticipantFilter, hostSlug]);
+  }, [activeWave, activeWaveIndex, executionWaves.length, isCurrentlyRunning, room, activeRespondingAgent, allAgents, selectedParticipantFilter, hostSlug]);
+
+  const completedCollabCount = activeWave ? activeWave.collaboratorTurns.length : 0;
+  const totalExpectedCollabCount = activeWave
+    ? Math.max(visibleCollaboratorBranches.length, activeWave.triageMeta.selectedCollaborators.length)
+    : 0;
+  const hostToolsInWave = useMemo(() => {
+    if (!activeWave?.synthesisTurn?.steps) return [];
+    return activeWave.synthesisTurn.steps.filter((s) => s.kind === "tool_call");
+  }, [activeWave]);
+  const showHostCoExecBranch = Boolean(
+    activeWave &&
+    activeWave.isMultiAgentWave &&
+    (activeWave.triageMeta.hostShouldSelfExecute || hostToolsInWave.length > 0) &&
+    (selectedParticipantFilter === "all" || selectedParticipantFilter === hostSlug)
+  );
+  const totalRenderedBranches = visibleCollaboratorBranches.length + (showHostCoExecBranch ? 1 : 0);
 
   return (
     <div
@@ -864,29 +937,40 @@ function AgentThinkingModal({
                     const isDone = p.status === "completed";
                     const isSelected = selectedParticipantFilter === p.agent_id;
                     const isMsgAuthor = focusedAgentSlug === p.agent_id.toLowerCase();
+                    const participantAg = allAgents.find((a: InfraAgent) => (a.slug || "").toLowerCase() === p.agent_id.toLowerCase() || a.id.toLowerCase() === p.agent_id.toLowerCase());
+                    const pTheme = getAgentColorTheme(p.agent_id, participantAg?.name || p.agent_id, participantAg?.roleTag);
                     return (
                       <button
                         key={p.agent_id}
                         type="button"
                         data-testid={`room-flow-agent-chip-${p.agent_id}`}
                         onClick={() => setSelectedParticipantFilter(isSelected ? "all" : p.agent_id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                        style={isSelected ? {
+                          backgroundColor: pTheme.bgLight,
+                          borderColor: pTheme.light,
+                          color: pTheme.light,
+                        } : {
+                          color: isRunning || isDone ? undefined : pTheme.light,
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer dark:!text-[var(--p-dark-col)] ${
                           isSelected
-                            ? "bg-[#f8a87c]/15 border-[#f8a87c] text-slate-900 dark:text-white font-semibold"
+                            ? "font-semibold shadow-2xs"
                             : isRunning
                             ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-300"
                             : isDone
                             ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                            : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-slate-600 dark:text-neutral-300"
+                            : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-slate-700 dark:text-neutral-200"
                         } ${isMsgAuthor && !isSelected ? "ring-1 ring-[#f8a87c]/60" : ""}`}
                       >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            isRunning ? "bg-amber-400 animate-ping" : isDone ? "bg-emerald-400" : "bg-neutral-400"
-                          }`}
+                        <style>{`[data-testid=\"room-flow-agent-chip-${p.agent_id}\"] { --p-dark-col: ${pTheme.dark}; }`}</style>
+                        <AgentAvatar
+                          agent={participantAg || { id: p.agent_id, name: p.agent_id, roleTag: p.role }}
+                          size="2xs"
+                          interactive={false}
+                          className="shrink-0 scale-90 ring-1 ring-black/5 dark:ring-white/10"
                         />
-                        <span>@{p.agent_id}</span>
-                        <span className="opacity-70">
+                        <span className="font-semibold">@{p.agent_id}</span>
+                        <span className="opacity-70 text-[9px]">
                           ({p.role === "host" ? "Chủ room" : p.role === "manager" ? "Manager" : "Chuyên viên"})
                         </span>
                       </button>
@@ -1000,6 +1084,25 @@ function AgentThinkingModal({
                           : "🔗 Tuần tự (Sequential)"
                         : "🎯 Trực tiếp (Direct)"}
                     </span>
+                    {activeWave.isMultiAgentWave && totalExpectedCollabCount > 0 && (
+                      <span
+                        data-testid="flow-tree-step-counter"
+                        className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                          isCurrentlyRunning && completedCollabCount < totalExpectedCollabCount
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/35"
+                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                        }`}
+                      >
+                        {isCurrentlyRunning && completedCollabCount < totalExpectedCollabCount ? (
+                          <Loader2 size={10} className="animate-spin" />
+                        ) : (
+                          <Check size={10} />
+                        )}
+                        <span>
+                          Tiến độ Room: {completedCollabCount}/{totalExpectedCollabCount} nhánh{showHostCoExecBranch ? " + Chủ session tự chạy" : ""}
+                        </span>
+                      </span>
+                    )}
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                       Tin cậy {Math.round((activeWave.triageMeta.confidence || 0.95) * 100)}%
                     </span>
@@ -1041,6 +1144,7 @@ function AgentThinkingModal({
                     const hostTheme = getAgentColorTheme(hostSlug, hostDisplayName);
                     return (
                       <span
+                        data-testid="flow-tree-host-role-badge"
                         style={{
                           backgroundColor: hostTheme.bgLight,
                           borderColor: hostTheme.borderLight,
@@ -1055,7 +1159,13 @@ function AgentThinkingModal({
                           className="scale-90 shrink-0"
                         />
                         <span>@{hostSlug}</span>
-                        <span className="opacity-75 text-[9px]">({ activeWave.isMultiAgentWave ? "Chủ room tổng hợp" : "Xử lý chính" })</span>
+                        <span className="opacity-85 text-[9px]">
+                          ({activeWave.isMultiAgentWave
+                            ? activeWave.triageMeta.hostShouldSelfExecute
+                              ? "Chủ session: Tự chạy + Đại diện Room tổng hợp cuối"
+                              : "Chủ session: Đại diện Room tổng hợp cuối (Sau khi Room Done)"
+                            : "Chủ session: Tự chạy & Phản hồi trực tiếp"})
+                        </span>
                       </span>
                     );
                   })()}
@@ -1082,14 +1192,14 @@ function AgentThinkingModal({
                 ))}
               </div>
 
-              {/* Tree Split Connector (Brain -> Collaborator Branches or Solo Execution) */}
-              {visibleCollaboratorBranches.length > 1 ? (
+              {/* Tree Split Connector (Brain -> Collaborator & Host Co-Exec Branches or Solo Execution) */}
+              {totalRenderedBranches > 1 ? (
                 <div className="w-full max-w-3xl flex flex-col items-center my-0.5">
                   <div className="relative h-4 w-0.5 bg-[#f8a87c] overflow-hidden">
                     <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
                   </div>
                   <div className="relative w-2/3 h-3.5 border-t-2 border-x-2 border-[#f8a87c]/75 dark:border-[#f8a87c]/60 rounded-t-xl bg-transparent">
-                    {visibleCollaboratorBranches.length >= 3 && (
+                    {totalRenderedBranches >= 3 && (
                       <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-[#f8a87c]/75 dark:bg-[#f8a87c]/60" />
                     )}
                   </div>
@@ -1100,14 +1210,14 @@ function AgentThinkingModal({
                 </div>
               )}
 
-              {/* LEVEL 2: COLLABORATOR EXECUTION BRANCHES (OR SMART SOLO EXECUTION BRANCH) */}
+              {/* LEVEL 2: COLLABORATOR EXECUTION BRANCHES + OPTIONAL HOST CO-EXECUTION BRANCH */}
               <div
                 data-testid="flow-tree-branches-container"
                 style={{ animationDelay: "110ms" }}
                 className={`w-full grid gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${
-                  visibleCollaboratorBranches.length >= 3
+                  totalRenderedBranches >= 3
                     ? "grid-cols-1 md:grid-cols-3"
-                    : visibleCollaboratorBranches.length === 2
+                    : totalRenderedBranches === 2
                     ? "grid-cols-1 md:grid-cols-2"
                     : "grid-cols-1 max-w-2xl"
                 }`}
@@ -1122,13 +1232,23 @@ function AgentThinkingModal({
                     const cleanBranchReply = stripSharedRoomContext(branchTurn.text || "");
                     const audit = branchTurn.manager_audit;
                     const qaScore = Math.round(((audit?.quality_score ?? 0.94) as number) * 100);
+                    const isBranchRunning = Boolean(
+                      branchTurn.kind === "collaborator_progress" ||
+                      (isCurrentlyRunning &&
+                        activeWaveIndex === executionWaves.length - 1 &&
+                        (room?.active_collaborator_id?.toLowerCase() === branchTurn.author_id.toLowerCase() ||
+                          activeRespondingAgent?.id?.toLowerCase() === branchTurn.author_id.toLowerCase()))
+                    );
 
                     return (
                       <div
                         key={branchTurn.id || bIdx}
                         data-testid={`flow-tree-branch-${branchTurn.author_id}`}
+                        data-branch-status={isBranchRunning ? "running" : "completed"}
                         className={`rounded-xl bg-white dark:bg-[#171723] border p-3 flex flex-col justify-between space-y-2.5 shadow-xs transition-all ${
-                          isFocusedBranch
+                          isBranchRunning
+                            ? "border-amber-400/80 dark:border-amber-500/60 ring-2 ring-amber-400/20"
+                            : isFocusedBranch
                             ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30"
                             : "border-slate-200 dark:border-[#29293d]"
                         }`}
@@ -1172,10 +1292,17 @@ function AgentThinkingModal({
                                 </div>
                               );
                             })()}
-                            <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0">
-                              <Check size={10} />
-                              <span>Hoàn tất</span>
-                            </span>
+                            {isBranchRunning ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/35 shrink-0 font-semibold">
+                                <Loader2 size={10} className="animate-spin" />
+                                <span>Đang thực thi...</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0">
+                                <Check size={10} />
+                                <span>Hoàn tất</span>
+                              </span>
+                            )}
                           </div>
 
                           {/* Sub-node 2.2: Reasoning & Tool Execution inside Branch */}
@@ -1212,15 +1339,21 @@ function AgentThinkingModal({
                               <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
                                 Bước 2.{bIdx + 1}b · Trạm Kiểm Định Manager QA
                               </span>
-                              <span
-                                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
-                                  audit?.passed !== false
-                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
-                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
-                                }`}
-                              >
-                                QA {qaScore}% · {audit?.auto_retried ? "Auto-Corrected" : (audit?.verdict || "approved")}
-                              </span>
+                              {isBranchRunning && !audit ? (
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30">
+                                  ⏳ Chờ nghiệm thu QA...
+                                </span>
+                              ) : (
+                                <span
+                                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                                    audit?.passed !== false
+                                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
+                                      : "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                                  }`}
+                                >
+                                  QA {qaScore}% · {audit?.auto_retried ? "Auto-Corrected" : (audit?.verdict || "approved")}
+                                </span>
+                              )}
                             </div>
                             {audit?.checklist_passed && audit.checklist_passed.length > 0 && (
                               <div className="flex flex-wrap gap-1">
@@ -1291,13 +1424,93 @@ function AgentThinkingModal({
                     </p>
                   </div>
                 )}
+
+                {/* Proposal 1: Dedicated Host Self-Execution Co-Branch when Manager decides Host also self-executes alongside Room collaborators */}
+                {showHostCoExecBranch && (
+                  <div
+                    data-testid="flow-tree-host-coexec-branch"
+                    className="rounded-xl bg-white dark:bg-[#171723] border border-[#f8a87c]/65 dark:border-[#f8a87c]/50 ring-1 ring-[#f8a87c]/20 p-3 flex flex-col justify-between space-y-2.5 shadow-xs"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#232334] pb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AgentAvatar
+                            agent={allAgents.find((a) => (a.slug || "").toLowerCase() === hostSlug || a.id.toLowerCase() === hostSlug) || { id: hostSlug, name: hostDisplayName, roleTag: "Host" }}
+                            size="xs"
+                            interactive={false}
+                            className="shrink-0 shadow-2xs ring-1 ring-[#f8a87c]/40"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-mono font-bold text-[#e0682b] dark:text-[#f8a87c] truncate">
+                                👑 @{hostSlug}
+                              </span>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
+                                Chủ session tự chạy
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                              {hostDisplayName} · Thực thi nhánh chuyên môn riêng
+                            </p>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 shrink-0 font-semibold">
+                          <Sparkles size={10} />
+                          <span>Co-Execute</span>
+                        </span>
+                      </div>
+
+                      <div className="pl-2.5 border-l-2 border-dashed border-[#f8a87c]/50 space-y-1.5">
+                        <div className="text-[10px] font-mono font-semibold text-[#e0682b] dark:text-[#f8a87c]">
+                          Nhánh Tự Thực Thi Của Chủ Session (Do Manager Quyết Định)
+                        </div>
+                        <div className="text-[11px] text-slate-600 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-[#13131c] p-2 rounded-lg border border-slate-200/60 dark:border-[#242436]">
+                          {activeWave.triageMeta.hostExecutionFocus}
+                        </div>
+                        {hostToolsInWave.length > 0 && (
+                          <div className="space-y-1">
+                            {hostToolsInWave.map((tStep, tIdx) => (
+                              <AgentToolCard
+                                key={tStep.id || tIdx}
+                                agentId={hostSlug}
+                                toolCall={{
+                                  tool: tStep.tool || "Tool",
+                                  args: tStep.args,
+                                  result: tStep.result,
+                                  state: (tStep.state as any) || "success",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-[#232334] text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                      ↳ Hội tụ kết quả tự chạy của @{hostSlug} cùng các nhánh chuyên viên xuống Tầng 4 (Đại diện Room tổng hợp cuối)
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Proposal 1: When Manager decides synthesize_only (Host does not self-execute), show explicit priority routing pill */}
+              {activeWave.isMultiAgentWave && !showHostCoExecBranch && (
+                <div
+                  data-testid="flow-tree-host-synth-only-pill"
+                  className="mt-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1a1a28] border border-slate-200 dark:border-[#2c2c42] text-[10px] font-mono text-slate-600 dark:text-neutral-300 flex items-center gap-1.5"
+                >
+                  <span>👑</span>
+                  <span>
+                    Manager định tuyến ưu tiên: Chủ session <strong>@{hostSlug}</strong> không cần tự chạy nhánh lặp lại — chờ cả Room chạy Done ({completedCollabCount}/{totalExpectedCollabCount}) để đại diện tổng hợp cuối
+                  </span>
+                </div>
+              )}
+
               {/* Tree Convergence Connector (Branches -> Host Final Synthesis) */}
-              {visibleCollaboratorBranches.length > 1 ? (
+              {totalRenderedBranches > 1 ? (
                 <div className="w-full max-w-3xl flex flex-col items-center my-0.5">
                   <div className="relative w-2/3 h-3.5 border-b-2 border-x-2 border-emerald-500/75 dark:border-emerald-500/60 rounded-b-xl bg-transparent">
-                    {visibleCollaboratorBranches.length >= 3 && (
+                    {totalRenderedBranches >= 3 && (
                       <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-emerald-500/75 dark:bg-emerald-500/60" />
                     )}
                   </div>
@@ -3081,6 +3294,17 @@ export function GrokBotWorkspace() {
     }
     return email && !isInternalSubEmail ? email : "Authorized Session";
   })();
+
+    // User profile represented as an Agent profile for unified Blob Avatar rendering
+  const userAsAgent = useMemo(() => ({
+    id: currentUser?.sub || 'user-account',
+    slug: 'user',
+    name: cleanDisplayName,
+    roleTag: currentUser?.roles?.[0] || 'User',
+    avatar: currentUser?.picture,
+    status: 'idle',
+    enabled: true,
+  }), [currentUser?.sub, currentUser?.roles, currentUser?.picture, cleanDisplayName]);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -7200,6 +7424,83 @@ export function GrokBotWorkspace() {
               if (selectedChatIdRef.current === originChatId) {
                 if (ev.room) {
                   setActiveSessionRoom(ev.room);
+                } else if (ev.status === "host_triage" && Array.isArray(ev.selected_collaborators) && ev.selected_collaborators.length > 0) {
+                  const hostNorm = (targetAgent.slug || originAgentId).replace(/^bot:agent360:/i, "").toLowerCase();
+                  setActiveSessionRoom((prev) => {
+                    const baseParticipants = prev?.participants ? [...prev.participants] : [
+                      { agent_id: hostNorm, display_name: targetAgent.name || hostNorm, role: "host", matrix_user_id: `@${hostNorm}:agentteams`, status: "idle", joined_at: new Date().toISOString() },
+                      { agent_id: "agentteams-manager", display_name: "AgentTeams Manager", role: "manager", matrix_user_id: "@manager:agentteams", status: "idle", joined_at: new Date().toISOString() },
+                    ];
+                    for (const sc of ev.selected_collaborators) {
+                      const scLow = String(sc).toLowerCase();
+                      const exIdx = baseParticipants.findIndex((p) => p.agent_id.toLowerCase() === scLow);
+                      if (exIdx >= 0) {
+                        baseParticipants[exIdx] = { ...baseParticipants[exIdx], status: "running" };
+                      } else {
+                        const mAg = agents.find((a) => (a.slug || "").toLowerCase() === scLow || a.id.toLowerCase() === scLow);
+                        baseParticipants.push({
+                          agent_id: scLow,
+                          display_name: mAg?.name || scLow,
+                          role: "collaborator",
+                          matrix_user_id: `@${scLow}:agentteams`,
+                          status: "running",
+                          joined_at: new Date().toISOString(),
+                        });
+                      }
+                    }
+                    const baseTurns = prev?.turns ? [...prev.turns] : [];
+                    const hasOptReq = baseTurns.some((t) => t.kind === "request" && stripSharedRoomContext(t.text).trim() === stripSharedRoomContext(userText).trim());
+                    if (!hasOptReq) {
+                      baseTurns.push({
+                        id: `rt_live_req_${Date.now()}`,
+                        turn_no: baseTurns.length + 1,
+                        author_id: hostNorm,
+                        author_name: targetAgent.name || hostNorm,
+                        author_role: "host",
+                        kind: "request",
+                        text: userText,
+                        target_agent_id: ev.selected_collaborators.join(", @"),
+                        created_at: new Date().toISOString(),
+                        reasoning: ev.triage_reason || "",
+                        steps: [
+                          {
+                            kind: "tool_call",
+                            id: `step_live_triage_${Date.now()}`,
+                            tool: "agentteams_manager_triage",
+                            state: "success",
+                            result: JSON.stringify({
+                              mode: ev.triage_mode || "specialty_triage",
+                              confidence: ev.triage_confidence || 0.95,
+                              reason: ev.triage_reason || "",
+                              selected_collaborators: ev.selected_collaborators,
+                              assigned_agents: ev.assigned_agents || [...ev.selected_collaborators, hostNorm],
+                              synthesis_owner_id: ev.synthesis_owner_id || hostNorm,
+                              host_should_self_execute: Boolean(ev.host_should_self_execute),
+                              host_execution_role: ev.host_execution_role || (ev.host_should_self_execute ? "co_execute_and_synthesize" : "synthesize_only"),
+                              host_execution_focus: ev.host_execution_focus || "",
+                            }),
+                          },
+                        ],
+                      });
+                    }
+                    return {
+                      room_id: prev?.room_id || `room_${hostNorm}_live`,
+                      matrix_room_id: prev?.matrix_room_id || `!room_${hostNorm}_live:agentteams`,
+                      element_room_url: prev?.element_room_url || "",
+                      host_agent_id: hostNorm,
+                      host_chat_id: originChatId,
+                      host_session_id: startSessionId,
+                      participants: baseParticipants,
+                      status: "collaborator_running",
+                      active_collaborator_id: ev.collaborator_id || ev.selected_collaborators[0],
+                      max_room_turns: prev?.max_room_turns || 4,
+                      current_turn_count: baseTurns.length,
+                      turns: baseTurns,
+                      created_at: prev?.created_at || new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                      triage_policy: prev?.triage_policy || "auto",
+                    };
+                  });
                 }
                 const roomRef = ev.room || activeSessionRoom;
                 const collabId = ev.collaborator_id || roomRef?.active_collaborator_id || targetAgent.slug || originAgentId;
@@ -7970,15 +8271,17 @@ export function GrokBotWorkspace() {
             <div ref={userMenuRef} className="p-2 border-t border-[#1c1c22] flex flex-col items-center relative select-none shrink-0">
               <div
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="h-8 w-8 rounded-full bg-[#2a2a34] text-[#f8a87c] border border-[#3a3a4c] hover:border-[#f8a87c] flex items-center justify-center text-xs font-semibold shadow-xs cursor-pointer transition-colors relative overflow-hidden"
+                className="h-8 w-8 rounded-full flex items-center justify-center shadow-xs cursor-pointer transition-all relative overflow-visible group/userav"
                 title={`${currentUser?.name || "User"} (${currentUser?.roles?.[0] || "Operator"}) - Cài đặt`}
               >
                 {currentUser?.picture ? (
-                  <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                  <div className="h-8 w-8 rounded-full overflow-hidden border border-[#3a3a4c] hover:border-[#f8a87c] bg-[#2a2a34]">
+                    <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                  </div>
                 ) : (
-                  (currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : "US")
+                  <AgentAvatar agent={userAsAgent} size="sm" interactive={false} className="rounded-full ring-1 ring-[#3a3a4c] group-hover/userav:ring-[#f8a87c] transition-all" />
                 )}
-                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-[#0c0c0e]" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
               </div>
 
               {/* User Profile Dropdown Menu in Collapsed State */}
@@ -8654,11 +8957,13 @@ export function GrokBotWorkspace() {
                 className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors group/user"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-7 w-7 rounded-full bg-[#2a2a34] text-[#f8a87c] border border-[#3a3a4c] flex items-center justify-center text-xs font-semibold shadow-xs shrink-0 overflow-hidden">
+                  <div className="h-7 w-7 rounded-full flex items-center justify-center shadow-xs shrink-0 relative overflow-visible">
                     {currentUser?.picture ? (
-                      <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                      <div className="h-7 w-7 rounded-full overflow-hidden border border-[#3a3a4c] bg-[#2a2a34]">
+                        <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
+                      </div>
                     ) : (
-                      (currentUser?.name ? currentUser.name.slice(0, 2).toUpperCase() : "US")
+                      <AgentAvatar agent={userAsAgent} size="xs" interactive={false} className="rounded-full ring-1 ring-[#3a3a4c]" />
                     )}
                   </div>
                   <div className="flex flex-col truncate">
@@ -9190,19 +9495,32 @@ export function GrokBotWorkspace() {
                   });
                 };
 
+                const agentTheme = getAgentColorTheme(matchedAg?.id || cleanSlug, fullName, roleLabel);
+
                 return (
                   <span
                     data-testid={`agent-mention-chip-${cleanSlug}`}
                     onClick={openCollabHistory}
                     title={`Bấm để xem lịch sử phối hợp với ${shortName}`}
-                    className={`relative inline-flex items-center gap-1 group/agchip cursor-pointer select-none ${
+                    style={{
+                      color: agentTheme.light,
+                      backgroundColor: variant === "inline" ? agentTheme.bgLight : undefined,
+                      borderColor: variant === "inline" ? agentTheme.borderLight : undefined,
+                    }}
+                    className={`relative inline-flex items-center gap-1.5 group/agchip cursor-pointer select-none dark:!text-[var(--dark-theme-color)] ${
                       variant === "inline"
-                        ? "px-1.5 py-0.2 mx-0.5 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-medium text-[12px] align-baseline hover:bg-blue-500/25"
-                        : "font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                        ? "px-2 py-0.5 mx-0.5 rounded-full border text-[12px] font-medium align-baseline shadow-2xs hover:brightness-105"
+                        : "font-semibold hover:underline"
                     }`}
                   >
-                    <Bot size={variant === "inline" ? 11 : 12} className="shrink-0" />
-                    <span>{shortName}</span>
+                    <style>{`[data-testid=\"agent-mention-chip-${cleanSlug}\"] { --dark-theme-color: ${agentTheme.dark}; }`}</style>
+                    <AgentAvatar
+                      agent={matchedAg || { id: cleanSlug, name: fullName, roleTag: roleLabel }}
+                      size="2xs"
+                      interactive={false}
+                      className="shrink-0 scale-95 shadow-2xs ring-1 ring-black/5 dark:ring-white/10"
+                    />
+                    <span className="font-semibold">{shortName}</span>
 
                     {/* Hover / Focus Popover Card showing Bot Role, Model, Live Status & Click to Open Shared History */}
                     <span
@@ -9752,7 +10070,7 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Minimalist 3-Dots Animated Responding Indicator (Focus / Click opens Room Orchestration & Tool Execution Modal) */}
+                      {/* Responding Indicator with Agent Avatar + Animation alongside 3-dots */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (
                         <button
                           type="button"
@@ -9765,13 +10083,29 @@ export function GrokBotWorkspace() {
                           onFocus={() => {
                             handleOpenActiveThinkingModal(msg);
                           }}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100/80 dark:bg-[#14141c]/90 border border-slate-200/70 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group"
+                          className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
                           title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
                           aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
                         >
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                          <div className="relative shrink-0 flex items-center justify-center">
+                            <AgentAvatar
+                              agent={
+                                (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
+                                (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
+                                selectedAgent
+                              }
+                              size="2xs"
+                              interactive={false}
+                              forcedAnimation="thinking.2"
+                              className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                            />
+                            <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                          </div>
+                          <span className="flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                          </span>
                         </button>
                       )}
 
@@ -9824,7 +10158,7 @@ export function GrokBotWorkspace() {
                                   });
                                 }}
                               />
-                              {/* Inline pulsing 3-dots button if currently streaming active tokens (Click/Focus opens unified Thinking & In-Progress Modal) */}
+                              {/* Inline pulsing button with small animated Agent Blob Avatar alongside dots */}
                               {isStreaming && isLastTurn && (
                                 <button
                                   type="button"
@@ -9835,9 +10169,19 @@ export function GrokBotWorkspace() {
                                     handleOpenActiveThinkingModal(msg);
                                   }}
                                   onFocus={() => handleOpenActiveThinkingModal(msg)}
-                                  className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
+                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
                                   title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem Thinking & tiến trình đang chạy"}
                                 >
+                                  <AgentAvatar
+                                    agent={
+                                      (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
+                                      selectedAgent
+                                    }
+                                    size="2xs"
+                                    interactive={false}
+                                    forcedAnimation="thinking.2"
+                                    className="ring-1 ring-[#f8a87c]/30"
+                                  />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
@@ -9890,7 +10234,7 @@ export function GrokBotWorkspace() {
           </>
           )}
 
-          {/* Minimalist 3-Dots Animated Responding Indicator (Focus / Click opens Room Orchestration & Tool Execution Modal) */}
+          {/* Responding Indicator with Agent Avatar + Animation alongside 3-dots */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
               <button
@@ -9904,13 +10248,28 @@ export function GrokBotWorkspace() {
                 onFocus={() => {
                   handleOpenActiveThinkingModal();
                 }}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100/80 dark:bg-[#14141c]/90 border border-slate-200/70 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group"
+                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
                 title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
                 aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                <div className="relative shrink-0 flex items-center justify-center">
+                  <AgentAvatar
+                    agent={
+                      (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
+                      selectedAgent
+                    }
+                    size="2xs"
+                    interactive={false}
+                    forcedAnimation="thinking.2"
+                    className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                </div>
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                </span>
               </button>
             </div>
           )}
