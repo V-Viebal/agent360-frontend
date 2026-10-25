@@ -316,13 +316,14 @@ import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBro
 
 
 
-// Shared Modal Thinking, Multi-Agent Room Orchestration Flow & Tool Execution Detail
+// Unified Modal for Live In-Progress Execution, Multi-Agent Room Flow & Message Thinking Blocks
 function AgentThinkingModal({
   msg,
   agentLabel,
   agentId,
   room,
   activeRespondingAgent,
+  isLiveInProgress = false,
   onClose,
 }: {
   msg: ChatMessage;
@@ -330,9 +331,20 @@ function AgentThinkingModal({
   agentId?: string;
   room?: SessionCollaborationRoom | null;
   activeRespondingAgent?: { id: string; name: string; statusText: string } | null;
+  isLiveInProgress?: boolean;
   onClose: () => void;
 }) {
-  const [selectedParticipantFilter, setSelectedParticipantFilter] = useState<string>("all");
+  const initialFilter = msg.senderAgentId
+    ? msg.senderAgentId.replace(/^bot:agent360:/i, "").toLowerCase()
+    : "all";
+  const [selectedParticipantFilter, setSelectedParticipantFilter] = useState<string>(initialFilter);
+
+  useEffect(() => {
+    setSelectedParticipantFilter(
+      msg.senderAgentId ? msg.senderAgentId.replace(/^bot:agent360:/i, "").toLowerCase() : "all"
+    );
+  }, [msg.id, msg.senderAgentId]);
+
   const steps = msg.steps || [];
   const toolCalls = msg.toolCalls || [];
   const allToolItems = steps.filter((s) => s.kind === "tool_call").length > 0
@@ -349,13 +361,17 @@ function AgentThinkingModal({
     room.participants.some((p) => p.role === "collaborator")
   );
 
-  // Extract latest wave turns from room.turns (since the last non-manager request turn)
+  // Extract room turns (excluding manager init turn)
   const roomWaveTurns = useMemo(() => {
     if (!room || !Array.isArray(room.turns)) return [];
     const sorted = [...room.turns].sort((a, b) => (a.turn_no || 0) - (b.turn_no || 0));
-    const nonManagerTurns = sorted.filter((t) => !(t.kind === "request" && t.author_role === "manager"));
-    return nonManagerTurns;
+    return sorted.filter((t) => !(t.kind === "request" && t.author_role === "manager"));
   }, [room]);
+
+  // Avoid duplicating msg's own steps if msg itself is already one of the roomWaveTurns
+  const msgIsRoomTurn = useMemo(() => {
+    return roomWaveTurns.some((t) => t.id === msg.id);
+  }, [roomWaveTurns, msg.id]);
 
   const roomToolCount = useMemo(() => {
     return roomWaveTurns.reduce((acc, t) => {
@@ -364,8 +380,22 @@ function AgentThinkingModal({
     }, 0);
   }, [roomWaveTurns]);
 
-  const totalToolCount = allToolItems.length + roomToolCount;
+  const roomReasonCount = useMemo(() => {
+    return roomWaveTurns.reduce((acc, t) => {
+      const rSteps = Array.isArray(t.steps) ? t.steps.filter((s) => s.kind === "reasoning").length : (t.reasoning ? 1 : 0);
+      return acc + rSteps;
+    }, 0);
+  }, [roomWaveTurns]);
+
+  const totalToolCount = (msgIsRoomTurn ? 0 : allToolItems.length) + roomToolCount;
+  const totalReasonCount = (msgIsRoomTurn ? 0 : reasoningItems.length) + roomReasonCount;
   const displayAgent = msg.senderAgentName || msg.senderAgentId || agentLabel || "Agent";
+  const isCurrentlyRunning = Boolean(
+    isLiveInProgress ||
+    activeRespondingAgent ||
+    room?.status === "collaborator_running" ||
+    room?.status === "synthesizing"
+  );
 
   return (
     <div
@@ -377,26 +407,38 @@ function AgentThinkingModal({
         className="w-full max-w-3xl max-h-[86vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
+        {/* Unified Modal Header (Consistent for both In-Progress & Completed Message Thinking Blocks) */}
         <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#f8a87c]/15 border border-[#f8a87c]/30 shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-              <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-              <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-            </span>
+            {isCurrentlyRunning ? (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#f8a87c]/15 border border-[#f8a87c]/30 shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+              </span>
+            ) : (
+              <span className="h-7 w-7 rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center shrink-0">
+                <Sparkles size={14} className="text-[#f8a87c]" />
+              </span>
+            )}
             <div className="min-w-0">
-              <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
-                {hasMultiAgentRoom
-                  ? `Luồng Điều Phối Room & Thực Thi Công Cụ — ${displayAgent}`
-                  : `Thinking & Tool Execution — ${displayAgent}`}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
+                  Thinking & Tool Execution — {displayAgent}
+                </h3>
+                <span
+                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full border shrink-0 ${
+                    isCurrentlyRunning
+                      ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                      : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                  }`}
+                >
+                  {isCurrentlyRunning ? "In Progress" : "Completed"}
+                </span>
+              </div>
               <p className="text-[10px] font-mono text-neutral-500 truncate">
-                {activeRespondingAgent?.statusText
-                  ? `${activeRespondingAgent.statusText} · `
-                  : ""}
-                {totalToolCount} tool calls · {reasoningItems.length + roomWaveTurns.filter((t) => Boolean(t.reasoning)).length} bước suy luận
-                {room?.matrix_room_id ? ` · Room ${room.room_id}` : ""}
+                {totalToolCount} công cụ thực thi · {totalReasonCount} bước suy luận
+                {room?.room_id ? ` · Room ${room.room_id}` : ""}
               </p>
             </div>
           </div>
@@ -411,26 +453,51 @@ function AgentThinkingModal({
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto space-y-3.5 flex-1">
-          {/* 1. Multi-Agent Room Orchestration & Information Flow Section */}
+        {/* Unified Thinking Blocks & In-Progress Body */}
+        <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
+          {/* 1. In-Progress Live Status Banner (Merged directly into the Thinking Blocks stream) */}
+          {isCurrentlyRunning && (
+            <div
+              data-testid="inprogress-thinking-status-block"
+              className="rounded-xl bg-[#f8a87c]/[0.07] dark:bg-[#181622] border border-[#f8a87c]/35 p-3 text-xs font-sans space-y-1.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-[#f8a87c] font-mono text-[11px] font-semibold">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                  </span>
+                  <span>Tiến trình đang thực thi (Realtime)</span>
+                </div>
+                {room?.triage_policy && (
+                  <span className="text-[10px] font-mono text-neutral-400">
+                    Triage: {room.triage_policy.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-800 dark:text-neutral-200 font-medium">
+                {activeRespondingAgent?.statusText || `${displayAgent} đang phân tích suy luận và thực thi công cụ...`}
+              </p>
+            </div>
+          )}
+
+          {/* 2. Multi-Agent Room Filter Bar (Consistent across In-Progress & Message Thinking Modal) */}
           {hasMultiAgentRoom && room && (
             <div
               data-testid="room-orchestration-flow-section"
-              className="rounded-xl bg-slate-50/90 dark:bg-[#151520] border border-slate-200 dark:border-[#252536] p-3.5 space-y-3"
+              className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2.5"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 dark:border-[#232334] pb-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={13} className="text-[#f8a87c]" />
-                  <span className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Luồng Điều Phối & Dòng Chảy Thông Tin Trong Room
-                  </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-700 dark:text-neutral-300 font-semibold">
+                  <Sparkles size={12} className="text-[#f8a87c]" />
+                  <span>Luồng Điều Phối & Dòng Chảy Thông Tin Room</span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#f8a87c] border border-[#f8a87c]/25">
                   Chế độ: {(room.triage_policy || "auto").toUpperCase()} · {room.status}
                 </span>
               </div>
 
-              {/* Participant Status Filter Chips */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -476,92 +543,141 @@ function AgentThinkingModal({
                     );
                   })}
               </div>
-
-              {/* Step-by-Step Information Flow Pipeline */}
-              <div className="space-y-2 pt-1">
-                {roomWaveTurns
-                  .filter((t) => selectedParticipantFilter === "all" || t.author_id === selectedParticipantFilter || t.target_agent_id === selectedParticipantFilter)
-                  .map((rt, idx) => {
-                    const rtSteps = Array.isArray(rt.steps) ? rt.steps : [];
-                    const rtTools = rtSteps.filter((s) => s.kind === "tool_call");
-                    const rtReasons = rtSteps.filter((s) => s.kind === "reasoning");
-                    const flowBadge =
-                      rt.kind === "request"
-                        ? `Chủ room (@${rt.author_id}) → Điều phối tới @${rt.target_agent_id || "room"}`
-                        : rt.kind === "synthesis"
-                        ? `Chủ room (@${rt.author_id}) → Tổng hợp kết quả cuối cho người dùng`
-                        : rt.kind === "manager_guard"
-                        ? `Manager (@${rt.author_id}) → Kiểm soát vòng lặp & chất lượng`
-                        : `Chuyên viên (@${rt.author_id}) → Phản hồi chuyên môn về Chủ room (@${rt.target_agent_id || room.host_agent_id})`;
-
-                    return (
-                      <div
-                        key={rt.id || idx}
-                        data-testid={`room-flow-turn-${rt.kind}-${rt.author_id}`}
-                        className="rounded-xl bg-white dark:bg-[#111118] border border-slate-200/80 dark:border-[#222230] p-3 space-y-2"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#1c1c28] text-[#f8a87c] font-semibold">
-                              #{rt.turn_no || idx + 1}
-                            </span>
-                            <span className="font-semibold text-slate-900 dark:text-neutral-100">
-                              {flowBadge}
-                            </span>
-                          </div>
-                          {rt.manager_audit && (
-                            <span
-                              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                                rt.manager_audit.passed
-                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                                  : "bg-amber-500/10 text-amber-500 border-amber-500/30"
-                              }`}
-                            >
-                              Manager QA: {Math.round((rt.manager_audit.quality_score || 0.92) * 100)}% ({rt.manager_audit.verdict || "verified"})
-                            </span>
-                          )}
-                        </div>
-
-                        {rt.reasoning && (
-                          <div className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-[#161622] px-2.5 py-1.5 rounded-lg border border-slate-200/60 dark:border-[#242434]">
-                            {rt.reasoning}
-                          </div>
-                        )}
-
-                        {rtReasons.map((rStep, rIdx) => (
-                          <div
-                            key={rStep.id || rIdx}
-                            className="text-[11px] text-slate-600 dark:text-neutral-300 pl-2 border-l-2 border-[#f8a87c]/50"
-                          >
-                            {rStep.text}
-                          </div>
-                        ))}
-
-                        {/* Expandable Tool Execution Cards for this Agent Turn */}
-                        {rtTools.length > 0 && (
-                          <div className="space-y-1 pt-0.5">
-                            {rtTools.map((tStep, tIdx) => (
-                              <AgentToolCard
-                                key={tStep.id || tIdx}
-                                agentId={rt.author_id}
-                                toolCall={{
-                                  tool: tStep.tool || "Tool",
-                                  args: tStep.args,
-                                  result: tStep.result,
-                                  state: (tStep.state as any) || "success",
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-              </div>
             </div>
           )}
 
-          {/* 2. Current Turn Reasoning & Tool Call Execution Blocks */}
+          {/* 3. Unified Thinking & Tool Call Blocks for Room Turns */}
+          {hasMultiAgentRoom &&
+            room &&
+            roomWaveTurns
+              .filter(
+                (t) =>
+                  selectedParticipantFilter === "all" ||
+                  t.author_id === selectedParticipantFilter ||
+                  t.target_agent_id === selectedParticipantFilter
+              )
+              .map((rt, idx) => {
+                const rtSteps = Array.isArray(rt.steps) ? rt.steps : [];
+                const rtTools = rtSteps.filter((s) => s.kind === "tool_call");
+                const rtReasons = rtSteps.filter((s) => s.kind === "reasoning");
+                const flowTitle =
+                  rt.kind === "request"
+                    ? `Suy luận & Điều phối · Chủ room (@${rt.author_id}) → @${rt.target_agent_id || "room"}`
+                    : rt.kind === "synthesis"
+                    ? `Suy luận & Tổng hợp cuối · Chủ room (@${rt.author_id})`
+                    : rt.kind === "manager_guard"
+                    ? `Kiểm soát vòng lặp · Manager (@${rt.author_id})`
+                    : `Suy luận & Thực thi · @${rt.author_id} (${rt.author_name}) → Chủ room (@${rt.target_agent_id || room.host_agent_id})`;
+
+                const combinedReasonText = [
+                  rt.reasoning,
+                  ...rtReasons.map((r) => r.text),
+                  rt.kind === "request" ? `Yêu cầu điều phối: "${stripSharedRoomContext(rt.text)}"` : null,
+                ]
+                  .filter(Boolean)
+                  .join("\n");
+                const wordCount = combinedReasonText.split(/\s+/).filter(Boolean).length;
+                const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+
+                return (
+                  <div
+                    key={rt.id || idx}
+                    data-testid={`room-flow-turn-${rt.kind}-${rt.author_id}`}
+                    className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-200 font-mono text-[11px]">
+                        <Sparkles size={12} className="text-[#f8a87c] shrink-0" />
+                        <span className="px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-[#1e1e2c] text-[#f8a87c] font-semibold">
+                          #{rt.turn_no || idx + 1}
+                        </span>
+                        <span className="font-semibold">{flowTitle}</span>
+                        {wordCount > 0 && (
+                          <span className="text-neutral-400 font-normal">(~{estimatedSec}s · {wordCount} từ)</span>
+                        )}
+                      </div>
+                      {rt.manager_audit && (
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                            rt.manager_audit.passed
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                              : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                          }`}
+                        >
+                          Manager QA: {Math.round((rt.manager_audit.quality_score || 0.92) * 100)}% ({rt.manager_audit.verdict || "approved"})
+                        </span>
+                      )}
+                    </div>
+
+                    {combinedReasonText && (
+                      <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                        {renderInlineMarkdown(combinedReasonText)}
+                      </div>
+                    )}
+
+                    {rtTools.length > 0 && (
+                      <div className="space-y-1 pt-0.5">
+                        {rtTools.map((tStep, tIdx) => (
+                          <AgentToolCard
+                            key={tStep.id || tIdx}
+                            agentId={rt.author_id}
+                            toolCall={{
+                              tool: tStep.tool || "Tool",
+                              args: tStep.args,
+                              result: tStep.result,
+                              state: (tStep.state as any) || "success",
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+          {/* 4. Direct Message Thinking & Tool Call Blocks (When message has its own reasoning/tool steps not already rendered above) */}
+          {!msgIsRoomTurn &&
+            (selectedParticipantFilter === "all" ||
+              (msg.senderAgentId && msg.senderAgentId.toLowerCase() === selectedParticipantFilter) ||
+              (!msg.senderAgentId && room?.host_agent_id?.toLowerCase() === selectedParticipantFilter)) && (
+              <>
+                {reasoningItems.map((r, rIdx) => {
+                  const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
+                  const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+                  return (
+                    <div
+                      key={rIdx}
+                      className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
+                    >
+                      <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
+                        <Sparkles size={12} className="text-[#f8a87c]" />
+                        <span className="font-semibold">
+                          Suy luận · {displayAgent} (~{estimatedSec}s · {wordCount} từ)
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                        {renderInlineMarkdown(r.text || "")}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {allToolItems.map((step, sIdx) => (
+                  <AgentToolCard
+                    key={sIdx}
+                    agentId={msg.senderAgentId || agentId || agentLabel}
+                    toolCall={{
+                      tool: step.tool || "Tool",
+                      args: step.args,
+                      result: step.result,
+                      state: step.state,
+                    }}
+                  />
+                ))}
+              </>
+            )}
+
+          {/* Empty / Initializing Fallback */}
           {reasoningItems.length === 0 && allToolItems.length === 0 && roomWaveTurns.length === 0 && (
             <div className="p-8 flex flex-col items-center justify-center text-center space-y-3">
               <Loader2 size={24} className="text-[#f8a87c] animate-spin" />
@@ -570,43 +686,11 @@ function AgentThinkingModal({
                   {activeRespondingAgent?.statusText || `${displayAgent} đang khởi tạo suy luận & công cụ...`}
                 </p>
                 <p className="text-[11px] font-mono text-neutral-500">
-                  Luồng điều phối Room và các bước gọi công cụ (tool call execution) sẽ hiển thị thời gian thực tại đây.
+                  Các khối suy luận (thinking blocks), luồng điều phối Room và tool call execution sẽ hiển thị thời gian thực tại đây.
                 </p>
               </div>
             </div>
           )}
-
-          {reasoningItems.map((r, rIdx) => {
-            const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
-            const estimatedSec = Math.max(1, Math.round(wordCount / 18));
-            return (
-              <div
-                key={rIdx}
-                className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
-              >
-                <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
-                  <Sparkles size={12} className="text-[#f8a87c]" />
-                  <span className="font-semibold">Suy luận của {displayAgent} (~{estimatedSec}s · {wordCount} từ)</span>
-                </div>
-                <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                  {renderInlineMarkdown(r.text || "")}
-                </div>
-              </div>
-            );
-          })}
-
-          {allToolItems.map((step, sIdx) => (
-            <AgentToolCard
-              key={sIdx}
-              agentId={msg.senderAgentId || agentId || agentLabel}
-              toolCall={{
-                tool: step.tool || "Tool",
-                args: step.args,
-                result: step.result,
-                state: step.state,
-              }}
-            />
-          ))}
         </div>
       </div>
     </div>
@@ -8209,7 +8293,17 @@ export function GrokBotWorkspace() {
               const isUser = msg.role === "user";
               const hasSteps = Boolean(msg.steps && msg.steps.length > 0);
               const hasTools = Boolean(msg.toolCalls && msg.toolCalls.length > 0);
-              const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning);
+              const hasRoomTurns = Boolean(
+                activeSessionRoom &&
+                (activeSessionRoom.host_chat_id === selectedChatId ||
+                 activeSessionRoom.host_session_id === selectedChatId ||
+                 (selectedChat?.session_id &&
+                  (activeSessionRoom.host_chat_id === selectedChat.session_id ||
+                   activeSessionRoom.host_session_id === selectedChat.session_id))) &&
+                Array.isArray(activeSessionRoom.turns) &&
+                activeSessionRoom.turns.length > 0
+              );
+              const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning || msg.roomId || msg.senderAgentId || hasRoomTurns);
               const { replyTo: parsedReplyTo, cleanContent } = parseQuotedReplyFromContent(msg.content, msg.replyTo);
               const currentReactions = isUser
                 ? []
@@ -8555,8 +8649,7 @@ export function GrokBotWorkspace() {
                                   type="button"
                                   data-testid="extend-thinking-btn"
                                   onClick={() => {
-                                    setActiveExtendPopoverMsgId(null);
-                                    setActiveThinkingModalMsg(msg);
+                                    handleOpenActiveThinkingModal(msg);
                                   }}
                                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-emerald-500 dark:text-emerald-400 transition-colors cursor-pointer font-medium"
                                 >
@@ -8894,13 +8987,24 @@ export function GrokBotWorkspace() {
                                   });
                                 }}
                               />
-                              {/* Inline pulsing bullet cursor if currently streaming active tokens */}
+                              {/* Inline pulsing 3-dots button if currently streaming active tokens (Click/Focus opens unified Thinking & In-Progress Modal) */}
                               {isStreaming && isLastTurn && (
-                                <span className="inline-flex items-center gap-1 ml-1.5 align-middle select-none">
+                                <button
+                                  type="button"
+                                  data-testid="inline-streaming-dots-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(12);
+                                    handleOpenActiveThinkingModal(msg);
+                                  }}
+                                  onFocus={() => handleOpenActiveThinkingModal(msg)}
+                                  className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
+                                  title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem Thinking & tiến trình đang chạy"}
+                                >
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                                </span>
+                                </button>
                               )}
                             </div>
                             </div>
@@ -13840,8 +13944,7 @@ ${chat.id}`);
                     onClick={() => {
                       triggerHaptic(10);
                       const raw = mobileActionMsg.rawMsg;
-                      setMobileActionMsg(null);
-                      if (raw) setActiveThinkingModalMsg(raw);
+                      handleOpenActiveThinkingModal(raw);
                     }}
                     className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer font-medium"
                   >
@@ -13987,7 +14090,11 @@ ${chat.id}`);
             steps: [],
             toolCalls: [],
           };
-        const modalMsg = (isLiveThinkingModalOpen ? (dynamicMatch || liveBotMsg) : (dynamicMatch || activeThinkingModalMsg)) || liveBotMsg;
+        const modalMsg = (dynamicMatch || activeThinkingModalMsg || liveBotMsg);
+        const isModalTurnLive = Boolean(
+          (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) &&
+          (!activeThinkingModalMsg || modalMsg.id === liveBotMsg.id)
+        );
         return (
           <AgentThinkingModal
             msg={modalMsg}
@@ -13995,6 +14102,7 @@ ${chat.id}`);
             agentId={selectedAgent?.slug || selectedAgent?.id || selectedAgentId}
             room={activeSessionRoom}
             activeRespondingAgent={activeRespondingAgent}
+            isLiveInProgress={isModalTurnLive}
             onClose={() => {
               setActiveThinkingModalMsg(null);
               setIsLiveThinkingModalOpen(false);
