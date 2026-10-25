@@ -4441,10 +4441,12 @@ export function GrokBotWorkspace() {
       return next;
     });
 
-    // Load Session-Sticky Collaboration Room if bound to this chat session
-    fetchChatSessionRoom(selectedAgentId, selectedChatId).then((r) => {
-      if (mounted) setActiveSessionRoom(r);
-    }).catch(() => {});
+    // Load Session-Sticky Collaboration Room if bound to this chat session (read-only on switch; avoid creating stub room during route agent transition)
+    if (!agentParam || normalizeAgentKey(selectedAgentId) === normalizeAgentKey(agentParam)) {
+      fetchChatSessionRoom(selectedAgentId, selectedChatId, false).then((r) => {
+        if (mounted && r) setActiveSessionRoom(r);
+      }).catch(() => {});
+    }
 
     // 2. Background Revalidation from API
     fetchChatMessages(selectedChatId, selectedAgentId).then((loadedMsgs) => {
@@ -5057,16 +5059,20 @@ export function GrokBotWorkspace() {
           elementRoomUrl: activeSessionRoom.element_room_url,
         };
         if (!isSynth) {
-          // If the last message in base is an active/completed Host synthesis turn for this room batch, insert collaborator reply BEFORE the Host synthesis turn so Host is always LAST!
-          const lastIdx = base.length - 1;
-          const lastItem = lastIdx >= 0 ? base[lastIdx] : null;
-          if (
-            lastItem &&
-            lastItem.role === "assistant" &&
-            !lastItem.senderAgentId &&
-            (lastItem.id.startsWith("bot-") || (lastIdx > 0 && (base[lastIdx - 1].senderAgentId || /@[a-zA-Z0-9_-]+/.test(base[lastIdx - 1].content))))
-          ) {
-            base.splice(lastIdx, 0, turnMsg);
+          // Find the matching Host synthesis message for this wave (or active streaming bot-* message at tail) so Collaborator replies always appear BEFORE Host synthesis!
+          const matchingSynthIdx = base.findIndex(
+            (m, idx) =>
+              idx > 0 &&
+              m.role === "assistant" &&
+              !m.senderAgentId &&
+              (m.id.startsWith("bot-") ||
+                sortedRoomTurns.some(
+                  (st) => st.kind === "synthesis" && (st.turn_no || 0) > (rt.turn_no || 0) && m.content.trim() === (st.text || "").trim()
+                ) ||
+                (idx === base.length - 1 && (base[idx - 1].senderAgentId || /@[a-zA-Z0-9_-]+/.test(base[idx - 1].content))))
+          );
+          if (matchingSynthIdx >= 0) {
+            base.splice(matchingSynthIdx, 0, turnMsg);
             continue;
           }
         }
@@ -6005,6 +6011,8 @@ export function GrokBotWorkspace() {
                   name: dispName,
                   statusText: ev.status === "synthesizing"
                     ? `${dispName} đang tổng hợp phản hồi...`
+                    : ev.triage_mode && ev.triage_mode !== "explicit_mention"
+                    ? `Chủ phòng điều phối ${dispName} xử lý...`
                     : `${dispName} đang xử lý và phản hồi...`,
                 });
               }
@@ -10087,7 +10095,7 @@ export function GrokBotWorkspace() {
                 const totalActiveItems = activeMentionsCount + activeToolsCount;
 
                 return (
-                  <div className="relative shrink-0 flex items-center">
+                  <div className="relative shrink-0 flex items-center gap-1">
                     <button aria-label="Add files, apps, or agents" data-ux-target-min="24"
                       type="button"
                       onClick={() => {
@@ -10117,6 +10125,7 @@ export function GrokBotWorkspace() {
                         {totalActiveItems}
                       </span>
                     )}
+                    {renderRecipesButton()}
                   </div>
                 );
               };
@@ -10458,8 +10467,6 @@ export function GrokBotWorkspace() {
 
                 return (
                   <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
-                    {renderRecipesButton()}
-
                     <AudioVisualizerWaveform
                       isRecording={isRecording}
                       agentId={selectedAgent?.id}
@@ -10469,7 +10476,7 @@ export function GrokBotWorkspace() {
                       }}
                     />
 
-                    {/* Voice button: shown when input is empty or when actively recording */}
+                    {/* Single Action Slot: Voice button when empty, Send button when text/files entered */}
                     {(!hasInputContent || isRecording) ? (
                       <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
                         type="button"
@@ -10512,7 +10519,7 @@ export function GrokBotWorkspace() {
                         }`}
                         title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
                       >
-                        {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={15} />}
+                        {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={16} />}
                       </button>
                     ) : (
                       /* Send button: replaces Voice button when user inputs text or attachments */
