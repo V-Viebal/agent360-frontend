@@ -6854,41 +6854,39 @@ export function GrokBotWorkspace() {
           /* EXPANDED VIEW: Full Agent List with Selector & Details   */
           /* ========================================================= */
           <>
-            {/* Top Header: Vertical Layout (Logo, Typography, Dropdown Infra) */}
-            <div className="px-3 py-2 border-b border-neutral-200 dark:border-[#1c1c22] flex flex-col gap-1.5 shrink-0 bg-[var(--bg-sidebar)]">
-              {/* Row 1: Logo & Brand Typography + Collapse Button */}
-              <div className="flex items-center justify-between">
-                <a aria-label="Return to Skyer Home" href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity" title="Return to Skyer Home">
-                  <SkyerLogo size={28} showText={true} showBotBadge={false} />
-                </a>
+            {/* Top Header: Standardized h-12 Header Bar (Aligned with Chat and Workspace Headers) */}
+            <div className="h-12 px-3 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
+              <a aria-label="Return to Skyer Home" href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity" title="Return to Skyer Home">
+                <SkyerLogo size={28} showText={true} showBotBadge={false} />
+              </a>
 
-                <div className="flex items-center gap-1">
-                  {/* Collapse trigger button on desktop */}
-                  <button
-                    aria-label="Collapse Agents Sidebar"
-                    data-ux-target-min="24"
-                    onClick={() => handleToggleLeftSidebar(true)}
-                    className="hidden lg:flex h-7 w-7 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer shrink-0"
-                    title="Collapse Agents Sidebar (Ctrl+B)"
-                  >
-                    <PanelLeftClose size={14} />
-                  </button>
-                  {/* Close drawer button on mobile */}
-                  <button
-                    aria-label="Close drawer"
-                    data-ux-target-min="24"
-                    onClick={() => setMobileAgentsOpen(false)}
-                    className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white shrink-0"
-                    title="Close drawer"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
+              <div className="flex items-center gap-1">
+                {/* Collapse trigger button on desktop */}
+                <button
+                  aria-label="Collapse Agents Sidebar"
+                  data-ux-target-min="24"
+                  onClick={() => handleToggleLeftSidebar(true)}
+                  className="hidden lg:flex h-7 w-7 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                  title="Collapse Agents Sidebar (Ctrl+B)"
+                >
+                  <PanelLeftClose size={14} />
+                </button>
+                {/* Close drawer button on mobile */}
+                <button
+                  aria-label="Close drawer"
+                  data-ux-target-min="24"
+                  onClick={() => setMobileAgentsOpen(false)}
+                  className="lg:hidden h-7 w-7 rounded-lg bg-[#181820] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white shrink-0"
+                  title="Close drawer"
+                >
+                  <X size={14} />
+                </button>
               </div>
+            </div>
 
-              {/* Row 2: Dropdown Infra Instances stacked vertically under Logo & Typography (Admin only) */}
-              {isAdmin && (
-                <div className="w-full">
+            {/* Sub-bar: Dropdown Infra Instances (Admin only, positioned neatly below standardized h-12 header) */}
+            {isAdmin && (
+              <div className="px-3 py-1.5 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)]">
                 <CustomSelect
                   value={selectedInstance}
                   onChange={(val) => {
@@ -6924,7 +6922,6 @@ export function GrokBotWorkspace() {
                 />
               </div>
             )}
-            </div>
 
             
 
