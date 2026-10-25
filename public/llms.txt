@@ -1,0 +1,16 @@
+# Skyer — Autonomous AI Teammates & AgentCore Workforce Platform
+
+> Skyer (https://agent360.antares.vn) is an enterprise AI workforce platform built on the AgentCore Kernel. Unlike text-only chat wrappers, each Skyer AI teammate owns a persistent Linux container (`/app/working`), isolated headless Chromium CDP browser, MCP tool drivers, and dual-tier ReMe vector memory (`MEMORY.md`), operating 24/7 in parallel with cryptographic verification receipts.
+
+## Core Capabilities & Architecture
+- **Dedicated Agent OS Container**: Rootless Linux sandbox per AI employee with shell execution, file I/O, and eBPF network boundaries.
+- **Multi-Agent ACP Supervision Tree**: Manager Lead agents (e.g. Chief of Staff) decompose company objectives, delegate sub-tasks to specialist department bots (Finance, B2B Sales, Customer Success, HR, Legal), and verify execution receipts before human sign-off.
+- **No Fake Done (Strict Verification Receipts)**: Agents cannot mark tasks complete without verifiable proof (exit code 0, HTTP 200 OK, ERPNext invoice ID, or visual DOM capture hash).
+- **Hybrid Sovereign Deployment**: Available as instant turnkey Managed Cloud or 100% Air-Gapped On-Premise via the App360 Sovereign Platform (compliant with Vietnam Decree 13/2023/ND-CP, HIPAA, GDPR, ISO-27001).
+
+## Key Public Pages
+- [Home & Interactive Workbench](https://agent360.antares.vn/): Live interactive simulations of AI teammates, hybrid topology switcher, and human approval gates.
+- [AI Employee Marketplace](https://agent360.antares.vn/marketplace): Pre-built enterprise role templates (Chief of Staff, Financial Controller, B2B Sales Executive, Customer Success Lead, HR & Talent Partner, Legal & Compliance).
+- [Architecture & ACP Documentation](https://agent360.antares.vn/docs): Technical manual covering AgentCore Kernel, Task Contracts, ReMe 6-stage memory lifecycle, and Multi-Channel bridges (Telegram, Matrix/Element, Slack).
+- [Kernel Telemetry & Load Analytics](https://agent360.antares.vn/analytics): Live token usage, tool latency, and local vs cloud inference cost benchmarks.
+- [Enterprise Whitepaper](https://agent360.antares.vn/skyer-enterprise-whitepaper.md): Sovereign On-Premise architecture & App360 deployment specification.

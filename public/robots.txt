@@ -1,5 +1,6 @@
 # ==============================================================================
 # Robots.txt for Skyer AI Workforce Platform (https://agent360.antares.vn)
+# Optimized for Organic Search (SEO), Answer Engines (AEO), and Generative AI (GEO)
 # ==============================================================================
 
 User-agent: *
@@ -8,11 +9,33 @@ Allow: /app
 Allow: /marketplace
 Allow: /analytics
 Allow: /docs
+Allow: /llms.txt
+Allow: /skyer-enterprise-whitepaper.md
 
-# Disallow private runtime APIs and debug artifacts from search indexing
+# Explicit Answer Engine & AI Crawler Allowances (GEO / AEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Disallow private runtime APIs and admin paths
 Disallow: /api/
 Disallow: /admin/
-Disallow: /*.json$
 
-# Sitemaps
 Sitemap: https://agent360.antares.vn/sitemap.xml

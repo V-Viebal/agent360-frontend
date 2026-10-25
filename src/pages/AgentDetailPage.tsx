@@ -1,219 +1,328 @@
+import { SeoHead } from "../components/SeoHead";
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
-  ArrowLeft,
-  CheckCircle2,
-  Play,
-  Terminal,
-  Workflow,
-  Sparkles,
-  Bot,
   ShieldCheck,
   Cpu,
+  Terminal,
+  Play,
+  ArrowLeft,
+  Sparkles,
   Layers,
-  ArrowUpRight,
-  BookOpen,
-  Check,
-  Lock,
-  GitBranch,
+  Database,
+  ExternalLink,
+  Users,
+  CheckCircle2,
+  Workflow,
+  Wrench,
+  Boxes,
 } from "lucide-react";
 import { MARKETPLACE_AGENTS } from "../data/mockMarketplaceAgents";
 import { AgentMarketplaceItem } from "../types/marketplace";
-import { useTranslation } from "../i18n/LanguageContext";
 
 export function AgentDetailPage() {
-  const { agentId } = useParams<{ agentId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const [deployed, setDeployed] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "team" | "terminal" | "spec">("overview");
 
-  const agent = MARKETPLACE_AGENTS.find((a) => a.id === agentId) || MARKETPLACE_AGENTS[0];
+  const agent: AgentMarketplaceItem | undefined = MARKETPLACE_AGENTS.find((a) => a.id === id);
 
-  const handleDeploy = () => {
-    setDeployed(true);
-    setTimeout(() => {
-      navigate(`/app?agent=${agent.id}`);
-    }, 1200);
+  if (!agent) {
+    return (
+      <div className="pt-32 pb-24 min-h-screen text-[var(--text-primary)] text-center px-4">
+        <h2 className="text-2xl font-semibold mb-2">Agent Template Not Found</h2>
+        <p className="text-[var(--text-muted)] text-sm mb-6">
+          The requested agent specification does not exist or has been retired.
+        </p>
+        <Link
+          to="/marketplace"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-sm font-medium hover:border-[#ff7a00]/40 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Marketplace
+        </Link>
+      </div>
+    );
+  }
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(agent.samplePrompt);
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2000);
+  };
+
+  const handleLaunchChat = () => {
+    navigate(`/app?template=${agent.id}&prompt=${encodeURIComponent(agent.samplePrompt)}`);
   };
 
   return (
     <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
+      <SeoHead
+        title={`${agent.name} (${agent.roleTitle}) — Skyer AI Employee Specification`}
+        description={`${agent.description} Equipped with ${agent.tools.join(", ")} on the Skyer AgentCore runtime.`}
+        keywords={`${agent.name}, ${agent.roleTitle}, ${agent.department}, Skyer AI Employee, ${agent.tools.join(", ")}`}
+        canonicalPath={`/marketplace/${agent.id}`}
+        ogType="product"
+        breadcrumbs={[
+          { name: "Skyer Home", url: "/" },
+          { name: "Marketplace", url: "/marketplace" },
+          { name: agent.name, url: `/marketplace/${agent.id}` },
+        ]}
+        softwareSpec={{
+          name: `${agent.name} — ${agent.roleTitle}`,
+          category: agent.department,
+          role: agent.roleTitle,
+          tools: agent.tools,
+        }}
+        aeoSummary={{
+          question: `What does the ${agent.name} (${agent.roleTitle}) AI employee do in Skyer?`,
+          directAnswer: `${agent.name} is a specialized ${agent.department} AI teammate on Skyer (${agent.roleTitle}). ${agent.description}`,
+          keyFacts: [
+            `Department: ${agent.department}`,
+            `Authorized Toolchain: ${agent.tools.join(", ")}`,
+            `Routines: ${agent.routines.join("; ")}`,
+          ],
+        }}
+      />
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Back Link */}
         <Link
           to="/marketplace"
-          className="inline-flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors mb-6 font-mono"
+          className="inline-flex items-center gap-2 text-xs font-mono text-[var(--text-muted)] hover:text-[#ff7a00] mb-8 transition-colors"
         >
-          <ArrowLeft size={14} />
-          <span>{t("detail.back")}</span>
+          <ArrowLeft className="w-3.5 h-3.5" /> BACK TO MARKETPLACE
         </Link>
 
-        {/* Main Agent Header Card */}
-        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#f8a87c]/5 blur-3xl pointer-events-none -z-10" />
+        {/* Hero Card */}
+        <div className="relative rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 sm:p-8 backdrop-blur-xl shadow-2xl overflow-hidden mb-8">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#ff7a00]/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-[var(--border-subtle)]">
-            <div className="flex items-start gap-5">
-              {/* Large Geometry Avatar */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-[#f8a87c] to-amber-300 text-black flex items-center justify-center font-bold shadow-xl shadow-[#f8a87c]/20 shrink-0">
-                <Bot size={36} />
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff7a00]/20 to-transparent border border-[#ff7a00]/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-8 h-8 text-[#ff7a00]" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">{agent.name}</h1>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+                    {agent.name}
+                  </h1>
                   {agent.verified && (
-                    <span title="Verified Skyer Core Template">
-                      <CheckCircle2 size={20} className="text-[#f8a87c]" />
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400">
+                      <ShieldCheck className="w-3 h-3" /> VERIFIED
                     </span>
                   )}
-                </div>
-                <div className="text-sm sm:text-base text-neutral-800 dark:text-neutral-700 dark:text-neutral-300 font-medium mt-1">
-                  {agent.roleTitle}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-neutral-600 dark:text-neutral-400 font-mono">
-                  <span>Created by {agent.creatorName}</span>
-                  <span>•</span>
-                  <span className="text-[#f8a87c]">@{agent.handle}</span>
-                  <span>•</span>
-                  <span>{agent.installCount} active instances</span>
-                  <span>•</span>
-                  <span className="text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">
+                  <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-[var(--text-muted)]">
                     {agent.department}
                   </span>
                 </div>
+                <p className="text-sm font-mono text-[#ff7a00] mb-2">{agent.roleTitle}</p>
+                <p className="text-xs text-[var(--text-muted)] max-w-2xl">{agent.summary}</p>
               </div>
             </div>
 
-            <button
-              onClick={handleDeploy}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[#f8a87c] hover:bg-[#f5935f] text-black px-7 py-3 text-sm font-semibold transition-all shadow-[0_0_24px_rgba(248,168,124,0.35)] cursor-pointer active:scale-95 shrink-0"
-            >
-              {deployed ? <Check size={16} /> : <Play size={16} fill="currentColor" />}
-              <span>{deployed ? t("detail.deploying") : t("detail.deploy")}</span>
-            </button>
+            <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+              <button
+                onClick={handleLaunchChat}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ea580c] text-white font-medium text-sm transition-all shadow-lg shadow-[#ff7a00]/20"
+              >
+                <Play className="w-4 h-4 fill-white" /> Launch AI Teammate
+              </button>
+            </div>
           </div>
 
-          {/* Description & AI Teammates Core Specifications */}
-          <div className="mt-8 space-y-8">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-[var(--border-subtle)] text-xs">
             <div>
-              <h2 className="text-xs font-mono uppercase tracking-widest text-[#f8a87c] mb-2">
-                {t("detail.overview")}
-              </h2>
-              <p className="text-sm sm:text-base text-neutral-800 dark:text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                {agent.description}
+              <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
+                Active Deploys
+              </span>
+              <span className="font-semibold text-sm">{agent.installCount.toLocaleString()}</span>
+            </div>
+            <div>
+              <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
+                Memory Layer
+              </span>
+              <span className="font-semibold text-sm">{agent.memoryType}</span>
+            </div>
+            <div>
+              <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
+                Authority Gate
+              </span>
+              <span className="font-semibold text-sm">{agent.authorityGate}</span>
+            </div>
+            <div>
+              <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
+                Team Topology
+              </span>
+              <span className="font-semibold text-sm">{agent.teamConfig.collaborationMode}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] mb-8 overflow-x-auto pb-px">
+          {(
+            [
+              { id: "overview", label: "Overview & Mission", icon: Sparkles },
+              { id: "team", label: "Team Pipeline (ACP)", icon: Workflow },
+              { id: "terminal", label: "Sandboxed Terminal Execution", icon: Terminal },
+              { id: "spec", label: "Tools & Integrations", icon: Wrench },
+            ] as const
+          ).map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  active
+                    ? "border-[#ff7a00] text-[#ff7a00]"
+                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab Contents */}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+              <h3 className="text-sm font-semibold mb-2">Backstory & Objective</h3>
+              <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-4">
+                {agent.backstory}
               </p>
-            </div>
-
-            {/* AI Teammates Role, Goal & Backstory */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
-                <div className="text-xs font-mono text-[#f8a87c] uppercase tracking-wider flex items-center gap-1.5">
-                  <Workflow size={14} />
-                  <span>{t("detail.roleGoal")}</span>
-                </div>
-                <p className="text-xs sm:text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed font-sans">
-                  {agent.goal}
-                </p>
-              </div>
-
-              <div className="p-5 rounded-xl bg-white/[0.03] border border-white/5 space-y-2">
-                <div className="text-xs font-mono text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <ShieldCheck size={14} />
-                  <span>{t("detail.backstory")}</span>
-                </div>
-                <p className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-800 dark:text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans">
-                  {agent.backstory}
-                </p>
+              <div className="p-4 rounded-lg bg-black/20 border border-white/5 font-mono text-xs text-[var(--text-primary)]">
+                <span className="text-[#ff7a00] font-semibold">Goal: </span>
+                {agent.goal}
               </div>
             </div>
 
-            {/* Multi-Agent AI Team Configuration */}
-            <div className="p-5 rounded-xl bg-black/50 border border-[var(--border-subtle)] space-y-3 font-mono text-xs">
-              <div className="flex items-center justify-between text-white font-semibold">
-                <span className="flex items-center gap-2">
-                  <Cpu size={14} className="text-[#f8a87c]" />
-                  {t("detail.orchestration")}
-                </span>
-                <span className="text-neutral-400">Mode: {agent.teamConfig.collaborationMode}</span>
+            <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold">Standard Kickoff Prompt</h3>
+                <button
+                  onClick={handleCopyPrompt}
+                  className="text-xs font-mono text-[#ff7a00] hover:underline"
+                >
+                  {copiedPrompt ? "✓ Copied to clipboard" : "Copy Prompt"}
+                </button>
               </div>
-              <div className="text-neutral-700 dark:text-neutral-300">
-                <span className="text-neutral-500">{t("detail.teammatePipeline")} </span>
-                {agent.teamConfig.teammateRoles.join(" ⇄ ")}
-              </div>
-              <div className="text-neutral-400">
-                <span className="text-neutral-500">{t("detail.expectedOutput")} </span>
-                {agent.teamConfig.expectedOutput}
+              <div className="p-4 rounded-lg bg-black/40 border border-white/10 font-mono text-xs text-[var(--text-muted)] overflow-x-auto whitespace-pre-wrap">
+                {agent.samplePrompt}
               </div>
             </div>
 
-            {/* Toolchain & Routines */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs">
-              <div>
-                <h3 className="text-neutral-400 font-semibold mb-3 flex items-center gap-1.5">
-                  <Lock size={13} className="text-[#f8a87c]" />
-                  {t("detail.toolchain")}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {agent.tools.map((t) => (
-                    <span
-                      key={t}
-                      className="bg-white/5 border border-[var(--border-subtle)] px-3 py-1.5 rounded-lg text-neutral-200"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-neutral-400 font-semibold mb-3 flex items-center gap-1.5">
-                  <GitBranch size={13} className="text-emerald-400" />
-                  {t("detail.routines")}
-                </h3>
-                <ul className="space-y-2 text-neutral-700 dark:text-neutral-300">
-                  {agent.routines.map((r, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs">
-                      <span className="text-[#f8a87c] font-bold">↳</span>
-                      <span>{r}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+              <h3 className="text-sm font-semibold mb-3">Core Operating Routines</h3>
+              <ul className="space-y-2">
+                {agent.routines.map((routine, idx) => (
+                  <li key={idx} className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{routine}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
+          </div>
+        )}
 
-            {/* Sample Request & Terminal Preview */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-neutral-400 font-mono text-xs">
-                <span className="flex items-center gap-1.5 text-white font-semibold">
-                  <Terminal size={14} className="text-[#f8a87c]" />
-                  {t("detail.terminalTrace")}
-                </span>
-                <span className="text-emerald-400">{t("detail.exitCodePass")}</span>
-              </div>
+        {activeTab === "team" && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#ff7a00]" />
+                Collaborative Team Mode: {agent.teamConfig.collaborationMode}
+              </h3>
+              <p className="text-xs text-[var(--text-muted)] mb-6">
+                When assigned a large initiative, this agent collaborates over the Skyer ACP
+                protocol with the following peer agents:
+              </p>
 
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-black/80 p-5 font-mono text-xs space-y-2 text-neutral-700 dark:text-neutral-300 shadow-inner">
-                {agent.terminalPreview.map((line, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <span className="text-neutral-600 select-none">{idx + 1}</span>
-                    <span
-                      className={
-                        line.includes("pass") ||
-                        line.includes("healthy") ||
-                        line.includes("MATCH") ||
-                        line.includes("OBSERVED")
-                          ? "text-emerald-400 font-medium"
-                          : "text-neutral-700 dark:text-neutral-300"
-                      }
-                    >
-                      {line}
-                    </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                {agent.teamConfig.teammateRoles.map((role, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] flex items-center gap-2 text-xs font-mono"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-[#ff7a00]" />
+                    <span>{role}</span>
                   </div>
+                ))}
+              </div>
+
+              <div className="p-4 rounded-lg bg-black/20 border border-white/5 text-xs">
+                <span className="font-semibold text-[#ff7a00] block mb-1">Expected Output Deliverable:</span>
+                <span className="text-[var(--text-muted)] font-mono">
+                  {agent.teamConfig.expectedOutput}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "terminal" && (
+          <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] font-mono">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4 text-xs text-[var(--text-muted)]">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span>Sandbox Container Console (/app/working)</span>
+              </div>
+              <span className="text-[10px] text-emerald-400">STATUS: READY</span>
+            </div>
+            <div className="bg-black/60 p-4 rounded-lg text-xs leading-relaxed overflow-x-auto space-y-1.5 text-zinc-300">
+              {agent.terminalPreview.map((line, idx) => (
+                <div key={idx} className={line.startsWith("$") ? "text-emerald-400" : ""}>
+                  {line}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "spec" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-[#ff7a00]" />
+                MCP Tools Bound
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {agent.tools.map((tool, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-xs font-mono text-zinc-300"
+                  >
+                    {tool}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-[#ff7a00]" />
+                Connected Integrations
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {agent.integrations.map((integration, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-1 rounded-md bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-xs font-mono text-[#ff7a00]"
+                  >
+                    {integration}
+                  </span>
                 ))}
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

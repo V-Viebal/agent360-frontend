@@ -1,3 +1,4 @@
+import { SeoHead } from "../components/SeoHead";
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -217,6 +218,27 @@ export function DocsPage() {
 
   return (
     <div className="pt-20 min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans">
+      <SeoHead
+        title={`${activeDoc.title} — Skyer Architecture & AgentCore Documentation`}
+        description={activeDoc.summary}
+        keywords={`Skyer Docs, ${activeDoc.title}, ${activeDoc.category}, AgentCore Kernel, ACP Protocol, ReMe Memory`}
+        canonicalPath="/docs"
+        ogType="article"
+        breadcrumbs={[
+          { name: "Skyer Home", url: "/" },
+          { name: "Documentation", url: "/docs" },
+          { name: activeDoc.title, url: `/docs#${activeDoc.id}` },
+        ]}
+        howToSteps={activeDoc.keyTakeaways.map((k, i) => ({
+          name: `Architectural Guarantee ${i + 1}`,
+          text: k,
+        }))}
+        aeoSummary={{
+          question: `How does ${activeDoc.title} work in Skyer AgentCore?`,
+          directAnswer: activeDoc.summary,
+          keyFacts: activeDoc.keyTakeaways,
+        }}
+      />
       {/* Top Banner */}
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">

@@ -1,3 +1,4 @@
+import { SeoHead } from "../components/SeoHead";
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -149,6 +150,26 @@ export function MarketplacePage() {
 
   return (
     <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
+      <SeoHead
+        title="Skyer Marketplace — Pre-Built Enterprise AI Employees & Role Templates"
+        description="Browse and deploy verified AI employees for Executive Ops, Finance (ERPNext & TT99), B2B Sales, 24/7 Customer Support, Marketing, HR, Legal, and IT Operations."
+        keywords="Skyer Marketplace, AI Employee Templates, Chief of Staff AI, Financial Controller Bot, B2B Sales Agent, ERPNext Bot, Chợ nhân viên AI"
+        canonicalPath="/marketplace"
+        breadcrumbs={[
+          { name: "Skyer Home", url: "/" },
+          { name: "AI Employee Marketplace", url: "/marketplace" },
+        ]}
+        aeoSummary={{
+          question: "What AI employee roles are available in the Skyer Marketplace?",
+          directAnswer:
+            "The Skyer Marketplace offers pre-configured, production-ready AI employees across 8 corporate departments: Executive & Ops (Chief of Staff), Finance & Accounting (Financial Controller with TT99 & ERPNext matching), Sales & BizDev, Customer Support, Marketing & Growth, HR & People, Legal & Compliance, and IT & Systems Ops.",
+          keyFacts: [
+            "Every marketplace template includes pre-bound MCP tool drivers, role persona, and verification rubrics.",
+            "Supports 1-click deployment to Skyer Managed Cloud or On-Premise App360 clusters.",
+            "Includes interactive AI Organization Chart (ACP Supervision Tree) simulation.",
+          ],
+        }}
+      />
       {/* Top Header Banner matching x.ai and ai-teammates style */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-[var(--border-subtle)]">

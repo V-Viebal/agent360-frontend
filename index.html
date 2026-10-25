@@ -3,10 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Immediate Theme & Language Initialization (Zero FOUC) -->
+
+    <!-- Preload Self-Hosted Native Variable WOFF2 Fonts (Zero Network Latency / Zero Layout Shift) -->
+    <link rel="preload" href="/fonts/inter-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-normal-vietnamese.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/newsreader-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/newsreader-normal-vietnamese.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/jetbrains-mono-normal-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+    <!-- Immediate Theme & Language Initialization (Zero FOUC & Zero Hydration Flicker) -->
+    <style>
+      :root {
+        --bg-page: #080a0f;
+        --text-primary: #eef0f4;
+      }
+      :root.light, [data-theme="light"] {
+        --bg-page: #f8fafc;
+        --text-primary: #0f172a;
+      }
+      html, body {
+        background-color: var(--bg-page);
+        color: var(--text-primary);
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      /* Disable transitions during initial bootstrap frame so colors never flash */
+      html.no-transitions *, html.no-transitions *::before, html.no-transitions *::after {
+        transition: none !important;
+      }
+    </style>
     <script>
       (function() {
         try {
+          var root = document.documentElement;
+          root.classList.add('no-transitions');
+
           // 1. Theme state recovery
           var mode = localStorage.getItem('skyer_theme_mode') || 'system';
           var resolved = 'dark';
@@ -15,15 +49,10 @@
           } else {
             resolved = mode;
           }
-          var root = document.documentElement;
           root.classList.remove('light', 'dark');
           root.classList.add(resolved);
           root.setAttribute('data-theme', resolved);
           root.style.colorScheme = resolved;
-          var themeColorMeta = document.querySelector('meta[name="theme-color"]');
-          if (themeColorMeta) {
-            themeColorMeta.setAttribute('content', resolved === 'dark' ? '#07090E' : '#FFFFFF');
-          }
 
           // 2. Language state recovery
           var savedLang = localStorage.getItem('skyer_lang_selection') || 'auto';
@@ -36,46 +65,102 @@
             activeLang = isVN ? 'vi' : 'en';
           }
           root.setAttribute('lang', activeLang);
+
+          // Re-enable smooth transitions after first paint
+          window.requestAnimationFrame(function() {
+            window.requestAnimationFrame(function() {
+              root.classList.remove('no-transitions');
+            });
+          });
         } catch (e) {}
       })();
     </script>
 
-    <!-- Primary SEO Meta Tags -->
-    <title>Skyer — Autonomous AI Teammates That Finish The Work</title>
-    <meta name="title" content="Skyer — Autonomous AI Teammates That Finish The Work" />
-    <meta name="description" content="Skyer gives each AI teammate its own computer, Linux environment, real tools, and persistent memory. Deploy parallel bots 24/7 with verifiable execution receipts." />
-    <meta name="keywords" content="Skyer, AI Teammates, Autonomous Agents, AI Workforce, Multi-Agent Architecture, ACP Protocol, Agent Kernel" />
+    <!-- Primary SEO, AEO (Answer Engine Optimization) & GEO (Generative Engine Optimization) Meta Suite -->
+    <title>Skyer — Autonomous AI Teammates & AgentCore Workforce Platform</title>
+    <meta name="title" content="Skyer — Autonomous AI Teammates & AgentCore Workforce Platform" />
+    <meta name="description" content="Skyer provisions autonomous AI employees with dedicated Linux containers, headless Chromium browsers, MCP tool drivers, and ReMe vector memory. Deploy on Managed Cloud or 100% Air-Gapped On-Premise via App360." />
+    <meta name="keywords" content="Skyer, AI Teammates, Autonomous AI Employees, AgentCore Kernel, Multi-Agent ACP, On-Premise AI Workforce, App360 Sovereign AI, Nhân viên AI tự hành" />
     <meta name="author" content="Skyer AI" />
-    <meta name="robots" content="index, follow" />
+    <meta name="application-name" content="Skyer" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <link rel="canonical" href="https://agent360.antares.vn/" />
+    <link rel="alternate" hreflang="vi" href="https://agent360.antares.vn/" />
+    <link rel="alternate" hreflang="en" href="https://agent360.antares.vn/" />
+    <link rel="alternate" hreflang="x-default" href="https://agent360.antares.vn/" />
+    <link rel="help" type="text/markdown" href="/llms.txt" title="LLM & Generative Engine Specification" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook / LinkedIn -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Skyer AI Workforce" />
     <meta property="og:url" content="https://agent360.antares.vn/" />
-    <meta property="og:title" content="Skyer — Autonomous AI Teammates That Finish The Work" />
-    <meta property="og:description" content="Skyer gives each AI teammate its own computer, Linux environment, real tools, and persistent memory. Deploy parallel bots 24/7 with verifiable execution receipts." />
+    <meta property="og:title" content="Skyer — Autonomous AI Teammates & AgentCore Workforce Platform" />
+    <meta property="og:description" content="Every Skyer Bot gets its own Linux computer, headless browser, and persistent memory. Working 24/7 in parallel on Cloud or 100% Air-Gapped On-Premise." />
     <meta property="og:image" content="https://agent360.antares.vn/logo.svg" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:locale:alternate" content="en_US" />
 
     <!-- Twitter / X -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://agent360.antares.vn/" />
-    <meta property="twitter:title" content="Skyer — Autonomous AI Teammates That Finish The Work" />
-    <meta property="twitter:description" content="Skyer gives each AI teammate its own computer, Linux environment, real tools, and persistent memory. Deploy parallel bots 24/7 with verifiable execution receipts." />
-    <meta property="twitter:image" content="https://agent360.antares.vn/logo.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://agent360.antares.vn/" />
+    <meta name="twitter:title" content="Skyer — Autonomous AI Teammates & AgentCore Workforce Platform" />
+    <meta name="twitter:description" content="Every Skyer Bot gets its own Linux computer, headless browser, and persistent memory. Working 24/7 in parallel with verifiable execution receipts." />
+    <meta name="twitter:image" content="https://agent360.antares.vn/logo.svg" />
 
-    <!-- Favicon & Touch Icons (Multi-Resolution & Legacy Support) -->
+    <!-- Favicon & Touch Icons (Multi-Resolution & Adaptive Theme Support) -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#07090E" />
+    <meta name="theme-color" content="#080A0F" />
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Baseline Structured Data (JSON-LD Organization + SoftwareApplication + WebSite) for AEO & GEO -->
+    <script type="application/ld+json" id="skyer-jsonld-schema">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://agent360.antares.vn/#organization",
+            "name": "Skyer AI",
+            "url": "https://agent360.antares.vn/",
+            "logo": "https://agent360.antares.vn/logo.svg",
+            "description": "Enterprise Autonomous AI Teammates & AgentCore Workforce Platform with Managed Cloud and 100% Air-Gapped On-Premise deployment."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://agent360.antares.vn/#website",
+            "url": "https://agent360.antares.vn/",
+            "name": "Skyer — Autonomous AI Workforce",
+            "publisher": { "@id": "https://agent360.antares.vn/#organization" },
+            "inLanguage": ["vi-VN", "en-US"]
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://agent360.antares.vn/#software",
+            "name": "Skyer AgentCore Platform",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Linux, Web, macOS, Windows, Docker, Kubernetes",
+            "offers": {
+              "@type": "AggregateOffer",
+              "lowPrice": "30",
+              "highPrice": "200",
+              "priceCurrency": "USD",
+              "offerCount": "4"
+            },
+            "featureList": [
+              "Dedicated rootless Linux container (/app/working) per AI employee",
+              "Isolated headless Chromium CDP browser automation",
+              "Multi-Agent ACP hierarchical supervision tree",
+              "Cryptographic Human Approval Gates and strict verification receipts",
+              "100% Air-Gapped On-Premise deployment via App360 Sovereign Platform"
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
-  <body class="bg-[#07090e] text-[#f0f2f5] antialiased selection:bg-[#ff7a00]/30 selection:text-white min-h-screen">
+  <body class="bg-[var(--bg-page)] text-[var(--text-primary)] antialiased selection:bg-[#f8a87c]/30 selection:text-white min-h-screen">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

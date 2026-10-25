@@ -34,11 +34,19 @@ function detectMachineLocationLanguage(): { language: LanguageCode; timezone: st
       tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     }
 
+    // Check pre-initialized html[lang] from index.html synchronous bootstrap first (Zero hydration language flip)
+    if (typeof document !== "undefined" && document.documentElement.lang) {
+      const rootLang = document.documentElement.lang.toLowerCase();
+      if (rootLang === "vi" || rootLang === "en") {
+        return { language: rootLang as LanguageCode, timezone: tz };
+      }
+    }
+
     // Timezones strongly indicative of Vietnam: Asia/Ho_Chi_Minh, Asia/Saigon, Asia/Bangkok
     const isVietnamTimezone =
       tz === "Asia/Ho_Chi_Minh" ||
       tz === "Asia/Saigon" ||
-      (tz === "Asia/Bangkok" && (navigator.language?.toLowerCase().includes("vi") || navigator.languages?.some(l => l.toLowerCase().includes("vi"))));
+      tz === "Asia/Bangkok";
 
     // Navigator languages: e.g. ["vi-VN", "vi", "en-US"]
     const navLangs = navigator.languages || [navigator.language];

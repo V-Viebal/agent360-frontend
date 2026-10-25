@@ -1,3 +1,4 @@
+import { SeoHead } from "../components/SeoHead";
 import { initiateSkyerSignIn } from "../services/pkceAuth";
 import { authConfig } from "../config/authConfig";
 import { useState, useEffect, useRef } from "react";
@@ -351,6 +352,38 @@ export function LandingPage() {
 
   return (
     <div className="pt-16 overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#f8a87c]/30 selection:text-white">
+      <SeoHead
+        title={
+          isVi
+            ? "Skyer — Nhân viên AI Tự hành & Nền tảng AgentCore (Cloud & On-Premise)"
+            : "Skyer — Autonomous AI Teammates & AgentCore Workforce Platform"
+        }
+        description={
+          isVi
+            ? "Mỗi nhân viên AI Skyer sở hữu máy trạm Linux độc lập (/app/working), trình duyệt Chromium CDP, công cụ MCP và bộ nhớ ReMe dài hạn. Triển khai Cloud hoặc 100% On-Premise qua App360."
+            : "Every Skyer AI teammate owns a dedicated Linux container, headless Chromium browser, MCP tool drivers, and ReMe vector memory. Deploy on Managed Cloud or 100% Air-Gapped On-Premise via App360."
+        }
+        keywords="Skyer, AI Teammates, Nhân viên AI, AgentCore Kernel, Multi-Agent ACP, On-Premise AI, App360 Sovereign Platform, ERPNext AI Agent"
+        canonicalPath="/"
+        faqs={FAQS}
+        breadcrumbs={[{ name: "Skyer Home", url: "/" }]}
+        howToSteps={[
+          { name: "Select or Assign Role", text: "Choose a specialized corporate AI role (Chief of Staff, Financial Controller, B2B Sales, Support, HR) or enter a natural language task." },
+          { name: "Autonomous Sandbox Execution", text: "Skyer provisions an isolated Linux container (/app/working) and headless Chromium CDP browser to execute the workflow." },
+          { name: "Cryptographic Human Approval Gate", text: "Sensitive mutations pause at a Human Approval Gate before production write, returning verifiable execution receipts." },
+        ]}
+        aeoSummary={{
+          question: "What is Skyer and how does it work?",
+          directAnswer:
+            "Skyer is an enterprise AI workforce platform built on the AgentCore Kernel. It provisions autonomous AI employees—each equipped with a rootless Linux computer (/app/working), headless Chromium CDP browser, MCP tool integrations, and dual-tier ReMe vector memory—capable of collaborating 24/7 on Managed Cloud or 100% Air-Gapped On-Premise via App360.",
+          keyFacts: [
+            "Architecture: AgentCore Kernel v2.4 with rootless Linux containers and eBPF network isolation.",
+            "Roles: Chief of Staff, Financial Controller (TT99 & ERPNext 3-way matching), B2B Sales Executive, Customer Success Lead, HR & Talent Partner.",
+            "Deployment: Turnkey Managed Cloud ($30-$200/mo) or 100% Sovereign Air-Gapped On-Premise via App360 (compliant with Decree 13/ND-CP, HIPAA, GDPR).",
+            "Verification: Strict No-Fake-Done policy requiring exit code 0, HTTP 200 OK, or visual DOM receipt hashes.",
+          ],
+        }}
+      />
       <LandingCommandPalette roles={AGENT_ROLES} onSelectRole={selectRoleById} />
 
       {/* 1. Compact Status Telemetry Bar */}

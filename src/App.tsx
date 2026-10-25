@@ -33,7 +33,7 @@ export default function App() {
       <ThemeProvider>
         <LanguageProvider>
           <OfflineBanner />
-        <Suspense fallback={<div className="min-h-screen bg-[#07090E] flex items-center justify-center text-xs font-mono text-neutral-400">Loading...</div>}>
+        <Suspense fallback={<div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-secondary)] flex items-center justify-center text-xs font-mono">Loading...</div>}>
       <Routes>
       {/* 1. Public Marketing Landing Page at "/" */}
       <Route

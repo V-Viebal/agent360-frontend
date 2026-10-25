@@ -1,3 +1,4 @@
+import { SeoHead } from "../components/SeoHead";
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -333,6 +334,25 @@ export function AgentStatsDashboardPage() {
 
   return (
     <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
+      <SeoHead
+        title="Skyer Telemetry & Load Analytics — AgentCore Token & Latency Benchmarks"
+        description="Real-time kernel telemetry, token consumption analytics, MCP tool call latency, and local vs cloud LLM cost calculator for Skyer AI teammates."
+        keywords="Skyer Analytics, AgentCore Telemetry, LLM Token Usage, AI Workforce Cost Calculator, MCP Latency"
+        canonicalPath="/analytics"
+        breadcrumbs={[
+          { name: "Skyer Home", url: "/" },
+          { name: "Telemetry & Analytics", url: "/analytics" },
+        ]}
+        aeoSummary={{
+          question: "How does Skyer monitor AI employee performance, token usage, and cost?",
+          directAnswer:
+            "Skyer provides real-time AgentCore Kernel telemetry tracking prompt and completion tokens, tool invocation latency, active session counts, and cost comparisons across local on-premise GPUs (0 API cost) and cloud frontier models.",
+          keyFacts: [
+            "Tracks daily token consumption, tool execution counts, and error rates per agent.",
+            "Includes interactive FinOps budget simulator comparing Qwen 72B, DeepSeek V3, and GPT-4o.",
+          ],
+        }}
+      />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header Banner */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[var(--border-subtle)]">
