@@ -386,11 +386,11 @@ export interface ModelOption {
 export async function fetchAvailableModels(): Promise<ModelOption[]> {
   try {
     // compact view: ids/names only (~a few KB) instead of the ~820 KB raw provider catalog
-    let res = await fetch(`${API_BASE_URL}/agents/models?view=compact`, {
+    let res = await authorizedFetch(`${API_BASE_URL}/agents/models?view=compact`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {
-      res = await fetch(`${API_BASE_URL}/models`, {
+      res = await authorizedFetch(`${API_BASE_URL}/models`, {
         headers: { Accept: "application/json" }
       });
     }
@@ -398,7 +398,16 @@ export async function fetchAvailableModels(): Promise<ModelOption[]> {
     const providers = await res.json();
     const list: ModelOption[] = [];
     if (Array.isArray(providers)) {
-      for (const p of providers) {
+      // Prioritize llm360 providers so active gateway models are matched first
+      const sortedProviders = [...providers].sort((a, b) => {
+        const aIsLlm = (a.id || "").toLowerCase().startsWith("llm360");
+        const bIsLlm = (b.id || "").toLowerCase().startsWith("llm360");
+        if (aIsLlm && !bIsLlm) return -1;
+        if (!aIsLlm && bIsLlm) return 1;
+        return 0;
+      });
+
+      for (const p of sortedProviders) {
         const pModels = [
           ...(p.discovered_models || []),
           ...(p.extra_models || []),
@@ -414,9 +423,9 @@ export async function fetchAvailableModels(): Promise<ModelOption[]> {
             if (!list.some(x => x.model === cleanId)) {
               list.push({
                 providerId: p.id,
-                providerName: "",
+                providerName: p.name || p.id,
                 model: cleanId,
-                name: cleanId,
+                name: m.name || cleanId,
               });
             }
           }

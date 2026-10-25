@@ -1140,7 +1140,7 @@ function AgentThinkingModal({
                             className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#232334] pb-2"
                           >
                             {(() => {
-                              const bAg = agents.find((a) => (a.slug || "").toLowerCase() === branchTurn.author_id.toLowerCase() || a.id.toLowerCase() === branchTurn.author_id.toLowerCase());
+                              const bAg = allAgents.find((a) => (a.slug || "").toLowerCase() === branchTurn.author_id.toLowerCase() || a.id.toLowerCase() === branchTurn.author_id.toLowerCase());
                               const bTheme = getAgentColorTheme(branchTurn.author_id, branchTurn.author_name || branchTurn.author_id, bAg?.roleTag);
                               return (
                                 <div className="flex items-center gap-2 min-w-0">
@@ -3092,12 +3092,13 @@ export function GrokBotWorkspace() {
     });
   }, []);
 
-  const handleSelectModel = async (newModelId: string) => {
+  const handleSelectModel = async (newModelId: string, explicitProviderId?: string) => {
     if (!selectedAgent) return;
     const targetAgentId = selectedAgent.id;
     const agentName = selectedAgent.name;
-    const found = availableModels.find((m) => m.model === newModelId);
-    const providerId = found ? found.providerId : "llm360coding";
+    const cleanModel = newModelId.includes("/") ? newModelId.split("/").pop()! : newModelId;
+    const found = availableModels.find((m) => m.model === cleanModel || m.model === newModelId);
+    const providerId = explicitProviderId || (found ? found.providerId : "llm360coding");
     setIsChangingModel(true);
     setIsModelDropdownOpen(false);
     triggerHaptic(15);
