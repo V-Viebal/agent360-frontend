@@ -614,9 +614,38 @@ export function ConnectAppsModal({
           // Open OAuth consent in new tab
           window.open(connData.redirect_url, "_blank", "noopener,noreferrer");
           setFeedbackMsg({
-            text: `Opening OAuth for ${app.name}. Hot-patched MCP tool into ${targetAgentName}!`,
+            text: `Opening OAuth for ${app.name}. Đang tự động theo dõi xác thực ngầm...`,
             type: "success",
           });
+
+          // Short-term auto-poll worker: checks every 4s for up to 3 minutes
+          let attempts = 0;
+          const maxAttempts = 45; // 45 * 4s = 180s = 3 minutes
+          const pollInterval = setInterval(async () => {
+            attempts++;
+            if (attempts > maxAttempts) {
+              clearInterval(pollInterval);
+              return;
+            }
+            try {
+              const statusRes = await fetch(`/api/integrations/composio/status?appSlug=${encodeURIComponent(app.id)}`, {
+                headers: { "X-Agent-Id": targetAgentId }
+              });
+              if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData.status === "active") {
+                  clearInterval(pollInterval);
+                  setFeedbackMsg({
+                    text: `✓ Xác thực OAuth ${app.name} hoàn tất thành công! Đã kích hoạt cho ${targetAgentName}.`,
+                    type: "success",
+                  });
+                  onAppConnected?.(app.id);
+                }
+              }
+            } catch (pollErr) {
+              // silent poll retry
+            }
+          }, 4000);
         } else {
           setFeedbackMsg({
             text: `Successfully hot-patched ${app.name} into ${targetAgentName}`,
