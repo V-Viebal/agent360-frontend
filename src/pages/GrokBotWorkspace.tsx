@@ -225,24 +225,44 @@ function stripSharedRoomContext(text: string): string {
   return idx >= 0 ? cleaned.slice(0, idx).trimEnd() : cleaned;
 }
 
+export interface ParsedChatAttachmentItem {
+  fileName: string;
+  rawUrl: string;
+  previewUrl: string;
+  isImage: boolean;
+}
+
 function parseQuotedReplyFromContent(
   rawContent: string,
-  explicitReplyTo?: ReplyToMessageInfo
-): { replyTo?: ReplyToMessageInfo; cleanContent: string } {
-  const text = stripSharedRoomContext(rawContent || "");
+  explicitReplyTo?: ReplyToMessageInfo,
+  agentIdForUrl: string = "default"
+): { replyTo?: ReplyToMessageInfo; cleanContent: string; attachments: ParsedChatAttachmentItem[] } {
+  let text = stripSharedRoomContext(rawContent || "");
+  let resolvedReplyTo = explicitReplyTo;
   const match = text.match(/^\[Replying to ([^:\]]+):\s*"([^"]*)"\]\s*\n\n?([\s\S]*)$/);
   if (match) {
-    return {
-      replyTo: explicitReplyTo || {
-        authorName: match[1].trim(),
-        snippet: match[2].trim(),
-      },
-      cleanContent: stripSharedRoomContext(match[3]),
+    resolvedReplyTo = explicitReplyTo || {
+      authorName: match[1].trim(),
+      snippet: match[2].trim(),
     };
+    text = stripSharedRoomContext(match[3]);
   }
+
+  const attachments: ParsedChatAttachmentItem[] = [];
+  const attachRegex = /\[Attached File:\s*([^\n\r()]+?)\s*\(([^)\n\r]+)\)\]/gi;
+  text = text.replace(attachRegex, (_full, rawName: string, rawUrl: string) => {
+    const fileName = (rawName || "attachment").trim();
+    const url = (rawUrl || "").trim();
+    const previewUrl = resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
+    const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico)$/i.test(fileName) || /\.(png|jpe?g|webp|gif|svg|bmp|ico)(\?|$)/i.test(url);
+    attachments.push({ fileName, rawUrl: url, previewUrl, isImage });
+    return "";
+  });
+
   return {
-    replyTo: explicitReplyTo,
-    cleanContent: text,
+    replyTo: resolvedReplyTo,
+    cleanContent: text.trim(),
+    attachments,
   };
 }
 import {
@@ -293,7 +313,7 @@ import {
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
-import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
+import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPreviewUrl } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
 import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState } from "../components/ui";
@@ -9461,7 +9481,7 @@ export function GrokBotWorkspace() {
                 activeSessionRoom.turns.length > 0
               );
               const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning || msg.roomId || msg.senderAgentId || hasRoomTurns);
-              const { replyTo: parsedReplyTo, cleanContent } = parseQuotedReplyFromContent(msg.content, msg.replyTo);
+              const { replyTo: parsedReplyTo, cleanContent, attachments: parsedAttachments } = parseQuotedReplyFromContent(msg.content, msg.replyTo, msg.senderAgentId || selectedAgent?.slug || selectedAgent?.id || "default");
               const currentReactions = isUser
                 ? []
                 : Array.from(new Set([...(msg.reactions || []), ...(msgReactions[msg.id] || [])]));
@@ -9579,6 +9599,81 @@ export function GrokBotWorkspace() {
                     <p className="text-[11px] text-slate-600 dark:text-neutral-300 line-clamp-2 italic break-words mt-0.5">
                       "{parsedReplyTo.snippet}"
                     </p>
+                  </div>
+                );
+              };
+
+              const renderMessageAttachmentsBox = () => {
+                if (!parsedAttachments || parsedAttachments.length === 0) return null;
+                const imageItems = parsedAttachments.filter((a) => a.isImage);
+                const fileItems = parsedAttachments.filter((a) => !a.isImage);
+                return (
+                  <div data-testid="chat-message-attachments" className={`flex flex-col gap-2 ${cleanContent ? "mb-2" : ""}`}>
+                    {imageItems.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {imageItems.map((att, aIdx) => (
+                          <div
+                            key={att.rawUrl + aIdx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLightboxZoom(1);
+                              setLightboxPan({ x: 0, y: 0 });
+                              setLightboxRotation(0);
+                              setLightboxMeta(null);
+                              setShowLightboxMeta(false);
+                              setLightboxImageUrl({ url: att.previewUrl, name: att.fileName });
+                            }}
+                            className="group/attimg relative rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black/10 dark:bg-black/30 max-w-[260px] sm:max-w-[320px] cursor-zoom-in shadow-xs hover:border-[#f8a87c]/60 transition-all"
+                            title={`Xem ảnh: ${att.fileName}`}
+                          >
+                            <img
+                              src={att.previewUrl}
+                              alt={att.fileName}
+                              className="max-h-56 w-auto max-w-full object-contain block rounded-lg transition-transform duration-200 group-hover/attimg:scale-[1.02]"
+                              loading="lazy"
+                            />
+                            <div className="px-2.5 py-1 bg-slate-900/75 text-white text-[10px] font-mono truncate flex items-center justify-between gap-2">
+                              <span className="truncate">{att.fileName}</span>
+                              <Maximize2 size={10} className="shrink-0 opacity-80" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {fileItems.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {fileItems.map((att, fIdx) => {
+                          const ext = (att.fileName.split(".").pop() || "FILE").toUpperCase().slice(0, 6);
+                          const downloadHref = `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`;
+                          return (
+                            <a
+                              key={att.rawUrl + fIdx}
+                              href={downloadHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={att.fileName}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2d2d42] hover:border-[#f8a87c]/60 text-left shadow-2xs transition-all group/attfile max-w-full"
+                              title={`Tải hoặc mở tệp: ${att.fileName}`}
+                            >
+                              <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 text-[#e0682b] dark:text-[#f8a87c] flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
+                                {ext}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-medium text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[220px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[#f8a87c] transition-colors">
+                                  {att.fileName}
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1">
+                                  <Paperclip size={10} className="shrink-0" />
+                                  <span>Đính kèm trong phiên</span>
+                                </div>
+                              </div>
+                              <Download size={13} className="text-slate-400 group-hover/attfile:text-[#f8a87c] shrink-0 transition-colors" />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               };
@@ -9987,14 +10082,17 @@ export function GrokBotWorkspace() {
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
-                        <p className="whitespace-pre-wrap select-text break-words">
-                          {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
-                            if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
-                              return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
-                            }
-                            return <span key={pIdx}>{part}</span>;
-                          })}
-                        </p>
+                        {renderMessageAttachmentsBox()}
+                        {cleanContent && (
+                          <p className="whitespace-pre-wrap select-text break-words">
+                            {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
+                              if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
+                                return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
+                              }
+                              return <span key={pIdx}>{part}</span>;
+                            })}
+                          </p>
+                        )}
                         {msg.metadata?.isOfflineQueued && (
                           <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
@@ -10125,6 +10223,7 @@ export function GrokBotWorkspace() {
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
                             <div className={`inline-block w-auto max-w-full rounded-2xl px-3.5 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
+                            {renderMessageAttachmentsBox()}
                             <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
                                 content={cleanContent}
@@ -10482,13 +10581,14 @@ export function GrokBotWorkspace() {
           {attachedFiles.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap pb-1 px-1">
               {attachedFiles.map((f, i) => {
-                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp)$/i.test(f.file_name);
+                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico)$/i.test(f.file_name);
+                const previewSrc = f.preview_url || resolveUploadedAttachmentPreviewUrl(f.url, selectedAgent?.slug || selectedAgent?.id || "default");
                 return (
                   <div
                     key={f.url + i}
                     className="inline-flex items-center gap-2 bg-slate-100 dark:bg-[#1c1c28] border border-slate-200 dark:border-[#2e2e42] text-xs font-mono px-2.5 py-1.5 rounded-xl text-slate-800 dark:text-neutral-200 shadow-sm animate-in zoom-in-95 fade-in duration-150 group/filechip"
                   >
-                    {isImage && f.url ? (
+                    {isImage && previewSrc ? (
                       <button
                         type="button"
                         onClick={() => {
@@ -10497,13 +10597,13 @@ export function GrokBotWorkspace() {
                           setLightboxRotation(0);
                           setLightboxMeta(null);
                           setShowLightboxMeta(false);
-                          setLightboxImageUrl({ url: f.url, name: f.file_name });
+                          setLightboxImageUrl({ url: previewSrc, name: f.file_name });
                         }}
                         className="relative h-6 w-6 rounded-md overflow-hidden bg-slate-200 dark:bg-black/40 border border-slate-300 dark:border-white/10 shrink-0 cursor-zoom-in group-hover/filechip:ring-2 group-hover/filechip:ring-[#f8a87c]/50 transition-all"
                         title="Click to view full image preview"
                       >
                         <img
-                          src={f.url}
+                          src={previewSrc}
                           alt={f.file_name}
                           className="h-full w-full object-cover"
                           onError={(e) => {

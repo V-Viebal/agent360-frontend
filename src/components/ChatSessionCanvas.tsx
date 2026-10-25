@@ -5,7 +5,7 @@ import { PendingApproval } from "../services/approvalApi";
 import { ApprovalCardModal } from "./ApprovalCardModal";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { AgentAvatar, getAgentColorTheme } from "./AgentAvatar";
-import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
+import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPreviewUrl } from "../services/uploadApi";
 import {
   Send,
   Terminal,
@@ -222,13 +222,64 @@ export function ChatSessionCanvas({
                 )}
 
                 {/* Body Text with Markdown Artifact Rendering */}
-                {isUser ? (
-                  <div className="whitespace-pre-wrap leading-relaxed text-[13px] text-neutral-200">
-                    {msg.content}
-                  </div>
-                ) : (
-                  <MarkdownRenderer content={msg.content} />
-                )}
+                {(() => {
+                  const attItems: { fileName: string; rawUrl: string; previewUrl: string; isImage: boolean }[] = [];
+                  const cleanedBody = (msg.content || "").replace(
+                    /\[Attached File:\s*([^\n\r()]+?)\s*\(([^)\n\r]+)\)\]/gi,
+                    (_full, rName: string, rUrl: string) => {
+                      const fName = (rName || "attachment").trim();
+                      const u = (rUrl || "").trim();
+                      const pUrl = resolveUploadedAttachmentPreviewUrl(u, agentId);
+                      const isImg = /\.(png|jpe?g|webp|gif|svg|bmp|ico)$/i.test(fName);
+                      attItems.push({ fileName: fName, rawUrl: u, previewUrl: pUrl, isImage: isImg });
+                      return "";
+                    }
+                  ).trim();
+
+                  return (
+                    <div className="space-y-2">
+                      {attItems.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {attItems.map((att, aIdx) =>
+                            att.isImage ? (
+                              <a
+                                key={att.rawUrl + aIdx}
+                                href={att.previewUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block rounded-xl overflow-hidden border border-[#382f28] bg-black/30 max-w-[260px]"
+                              >
+                                <img src={att.previewUrl} alt={att.fileName} className="max-h-48 w-auto object-contain block" />
+                                <div className="px-2 py-1 text-[10px] font-mono text-neutral-300 truncate bg-black/60">{att.fileName}</div>
+                              </a>
+                            ) : (
+                              <a
+                                key={att.rawUrl + aIdx}
+                                href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={att.fileName}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1a1410] border border-[#d86f4c]/40 text-xs font-mono text-[#d86f4c] hover:bg-[#261d17]"
+                              >
+                                <FileText size={13} />
+                                <span className="truncate max-w-[180px]">{att.fileName}</span>
+                              </a>
+                            )
+                          )}
+                        </div>
+                      )}
+                      {cleanedBody && (
+                        isUser ? (
+                          <div className="whitespace-pre-wrap leading-relaxed text-[13px] text-neutral-200">
+                            {cleanedBody}
+                          </div>
+                        ) : (
+                          <MarkdownRenderer content={cleanedBody} />
+                        )
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Evidence Receipt Badge if present */}
                 {msg.evidenceStatus && (
