@@ -230,12 +230,84 @@ export interface ParsedChatAttachmentItem {
   rawUrl: string;
   previewUrl: string;
   isImage: boolean;
+  kind: AttachmentFormatKind;
+  ext: string;
+  badgeColor: string;
+  caption?: string;
+}
+
+function extractToolSentAttachments(
+  toolCalls?: ChatMessage["toolCalls"],
+  steps?: ChatMessage["steps"],
+  agentIdForUrl: string = "default"
+): ParsedChatAttachmentItem[] {
+  const results: ParsedChatAttachmentItem[] = [];
+  const seen = new Set<string>();
+
+  const addCandidate = (rawPath: string, rawFileName?: string, caption?: string) => {
+    const cleanPath = (rawPath || "").trim();
+    const cleanName = (rawFileName || cleanPath.replace(/\\/g, "/").split("/").pop() || "attachment").trim();
+    if (!cleanPath && !cleanName) return;
+    const effectiveUrl = cleanPath || `media/${cleanName}`;
+    const key = (effectiveUrl.replace(/\\/g, "/").split("/").pop() || cleanName).toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const previewUrl = resolveUploadedAttachmentPreviewUrl(effectiveUrl, agentIdForUrl);
+    const fmt = classifyAttachmentFormat(cleanName || effectiveUrl);
+    results.push({
+      fileName: cleanName,
+      rawUrl: effectiveUrl,
+      previewUrl,
+      isImage: fmt.kind === "image",
+      kind: fmt.kind,
+      ext: fmt.ext,
+      badgeColor: fmt.badgeColor,
+      caption: caption?.trim() || undefined,
+    });
+  };
+
+  const inspectList = [...(toolCalls || []), ...(steps || []).filter((s) => s.kind === "tool_call")];
+  for (const tc of inspectList) {
+    const toolName = (tc.tool || "").toLowerCase();
+    if (
+      toolName.includes("send_telegram_file") ||
+      toolName.includes("send_file") ||
+      toolName.includes("send_document") ||
+      toolName.includes("send_photo") ||
+      toolName.includes("send_video") ||
+      toolName.includes("send_audio") ||
+      toolName.includes("deliver_file") ||
+      toolName.includes("media_send")
+    ) {
+      try {
+        const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
+        const filePath = argsObj.file_path || argsObj.path || argsObj.url || argsObj.media_url || "";
+        const fileName = argsObj.filename || argsObj.file_name || argsObj.name || "";
+        const caption = typeof argsObj.caption === "string" ? argsObj.caption : undefined;
+        if (filePath || fileName) {
+          addCandidate(filePath, fileName, caption);
+        }
+      } catch {}
+    }
+
+    if (tc.result && typeof tc.result === "string") {
+      const fileOutMatch = tc.result.match(/FILE\s+(\/app\/working\/workspaces\/[^\s"']+)/i);
+      if (fileOutMatch && (toolName.includes("send") || inspectList.some((x) => (x.tool || "").toLowerCase().includes("send")))) {
+        addCandidate(fileOutMatch[1]);
+      }
+    }
+  }
+
+  return results;
 }
 
 function parseQuotedReplyFromContent(
   rawContent: string,
   explicitReplyTo?: ReplyToMessageInfo,
-  agentIdForUrl: string = "default"
+  agentIdForUrl: string = "default",
+  toolCalls?: ChatMessage["toolCalls"],
+  steps?: ChatMessage["steps"]
 ): { replyTo?: ReplyToMessageInfo; cleanContent: string; attachments: ParsedChatAttachmentItem[] } {
   let text = stripSharedRoomContext(rawContent || "");
   let resolvedReplyTo = explicitReplyTo;
@@ -249,15 +321,81 @@ function parseQuotedReplyFromContent(
   }
 
   const attachments: ParsedChatAttachmentItem[] = [];
-  const attachRegex = /\[Attached File:\s*([^\n\r()]+?)\s*\(([^)\n\r]+)\)\]/gi;
-  text = text.replace(attachRegex, (_full, rawName: string, rawUrl: string) => {
-    const fileName = (rawName || "attachment").trim();
-    const url = (rawUrl || "").trim();
+  const seenKeys = new Set<string>();
+
+  const pushAttachment = (rawName: string, rawUrl: string, caption?: string) => {
+    const url = (rawUrl || "").trim().replace(/^file:\/\/+/, "/");
+    const fallbackFile = url.replace(/\\/g, "/").split("/").pop() || "attachment";
+    const fileName = (rawName || fallbackFile).trim();
+    const dedupeKey = (url.replace(/\\/g, "/").split("/").pop() || fileName).toLowerCase();
+    if (seenKeys.has(dedupeKey)) return;
+    seenKeys.add(dedupeKey);
+
     const previewUrl = resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
-    const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico)$/i.test(fileName) || /\.(png|jpe?g|webp|gif|svg|bmp|ico)(\?|$)/i.test(url);
-    attachments.push({ fileName, rawUrl: url, previewUrl, isImage });
+    const fmt = classifyAttachmentFormat(fileName || url);
+    attachments.push({
+      fileName,
+      rawUrl: url,
+      previewUrl,
+      isImage: fmt.kind === "image",
+      kind: fmt.kind,
+      ext: fmt.ext,
+      badgeColor: fmt.badgeColor,
+      caption,
+    });
+  };
+
+  // Look for friendly display name in Telegram/Zalo history header: "[Đính kèm: <name>]"
+  const friendlyNames: string[] = [];
+  const friendlyRegex = /\[(?:Đính kèm|Attachment|File):\s*([^\]\n\r]+)\]/gi;
+  let fm: RegExpExecArray | null;
+  while ((fm = friendlyRegex.exec(text)) !== null) {
+    if (fm[1]) friendlyNames.push(fm[1].trim());
+  }
+
+  // 1. Standard [Attached File: name (url)] (allows parentheses inside filename)
+  const attachRegex = /\[Attached File:\s*([^\n\r]+?)\s*\(([^()\n\r]+)\)\]/gi;
+  text = text.replace(attachRegex, (_full, rawName: string, rawUrl: string) => {
+    pushAttachment(rawName, rawUrl);
     return "";
   });
+
+  // 2. QwenPaw <system-reminder>An attached file is saved into file:///app/working/workspaces/...</system-reminder>
+  const sysReminderRegex = /<system-reminder>\s*An attached file is saved into\s*(?:file:\/\/)?([^<\s]+?)\.?\s*<\/system-reminder>/gi;
+  text = text.replace(sysReminderRegex, (_full, rawPath: string) => {
+    const cleanPath = rawPath.replace(/\.$/, "");
+    const friendly = friendlyNames.length > 0 ? friendlyNames[friendlyNames.length - 1] : "";
+    pushAttachment(friendly, cleanPath);
+    return "";
+  });
+
+  // 3. QwenPaw "User uploaded a file, downloaded to /app/working/workspaces/..."
+  const uploadedLineRegex = /(?:^|\n)\s*User uploaded a file,\s*downloaded to\s*([^\s\n\r]+)\s*/gi;
+  text = text.replace(uploadedLineRegex, (_full, rawPath: string) => {
+    const friendly = friendlyNames.length > 0 ? friendlyNames[friendlyNames.length - 1] : "";
+    pushAttachment(friendly, rawPath.trim());
+    return "\n";
+  });
+
+  // 4. Strip Telegram/Zalo backlog wrapper if present so user bubble shows only the actual user message
+  const currentMsgMarker = "[Tin nhắn hiện tại cần xử lý]:";
+  const markerIdx = text.indexOf(currentMsgMarker);
+  if (markerIdx >= 0 && text.includes("[Ngữ cảnh hội thoại gần đây")) {
+    text = text.slice(markerIdx + currentMsgMarker.length);
+  }
+
+  // 5. Strip [Telegram replied-message context ...] block if embedded in user content
+  text = text.replace(/\[Telegram replied-message context[^\]]*\]\s*\n\{[\s\S]*?\}(?=\n|$)/gi, "");
+
+  // 6. Include any files sent by the assistant via tool calls (e.g. send_telegram_file)
+  const toolSent = extractToolSentAttachments(toolCalls, steps, agentIdForUrl);
+  for (const ts of toolSent) {
+    const dedupeKey = (ts.rawUrl.replace(/\\/g, "/").split("/").pop() || ts.fileName).toLowerCase();
+    if (!seenKeys.has(dedupeKey)) {
+      seenKeys.add(dedupeKey);
+      attachments.push(ts);
+    }
+  }
 
   return {
     replyTo: resolvedReplyTo,
@@ -313,7 +451,7 @@ import {
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
-import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPreviewUrl } from "../services/uploadApi";
+import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPreviewUrl, classifyAttachmentFormat, AttachmentFormatKind } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
 import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
 import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState } from "../components/ui";
@@ -4072,6 +4210,39 @@ export function GrokBotWorkspace() {
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFileResult[]>([]);
   const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string } | null>(null);
+  const [previewModalFile, setPreviewModalFile] = useState<ParsedChatAttachmentItem | null>(null);
+  const [previewModalText, setPreviewModalText] = useState<string | null>(null);
+  const [isLoadingPreviewModalText, setIsLoadingPreviewModalText] = useState<boolean>(false);
+
+  const handleOpenAttachmentPreview = async (att: ParsedChatAttachmentItem) => {
+    if (att.isImage || att.kind === "image") {
+      setLightboxZoom(1);
+      setLightboxPan({ x: 0, y: 0 });
+      setLightboxRotation(0);
+      setLightboxMeta(null);
+      setShowLightboxMeta(false);
+      setLightboxImageUrl({ url: att.previewUrl, name: att.fileName });
+      return;
+    }
+    setPreviewModalFile(att);
+    setPreviewModalText(null);
+    if (att.kind === "code" || att.kind === "data" || /^(CSV|TSV|MD|MDX|TXT|JSON|YAML|YML|XML|LOG|SQL|PY|TS|TSX|JS|JSX|SH|HTML|CSS)$/i.test(att.ext)) {
+      setIsLoadingPreviewModalText(true);
+      try {
+        const res = await fetch(att.previewUrl);
+        if (res.ok) {
+          const txt = await res.text();
+          setPreviewModalText(txt.slice(0, 120000));
+        } else {
+          setPreviewModalText(null);
+        }
+      } catch {
+        setPreviewModalText(null);
+      } finally {
+        setIsLoadingPreviewModalText(false);
+      }
+    }
+  };
   const [lightboxZoom, setLightboxZoom] = useState<number>(1);
   const [lightboxPan, setLightboxPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [lightboxRotation, setLightboxRotation] = useState<number>(0);
@@ -9481,7 +9652,7 @@ export function GrokBotWorkspace() {
                 activeSessionRoom.turns.length > 0
               );
               const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning || msg.roomId || msg.senderAgentId || hasRoomTurns);
-              const { replyTo: parsedReplyTo, cleanContent, attachments: parsedAttachments } = parseQuotedReplyFromContent(msg.content, msg.replyTo, msg.senderAgentId || selectedAgent?.slug || selectedAgent?.id || "default");
+              const { replyTo: parsedReplyTo, cleanContent, attachments: parsedAttachments } = parseQuotedReplyFromContent(msg.content, msg.replyTo, msg.senderAgentId || selectedAgent?.slug || selectedAgent?.id || "default", msg.toolCalls, msg.steps);
               const currentReactions = isUser
                 ? []
                 : Array.from(new Set([...(msg.reactions || []), ...(msgReactions[msg.id] || [])]));
@@ -9605,8 +9776,11 @@ export function GrokBotWorkspace() {
 
               const renderMessageAttachmentsBox = () => {
                 if (!parsedAttachments || parsedAttachments.length === 0) return null;
-                const imageItems = parsedAttachments.filter((a) => a.isImage);
-                const fileItems = parsedAttachments.filter((a) => !a.isImage);
+                const imageItems = parsedAttachments.filter((a) => a.isImage || a.kind === "image");
+                const videoItems = parsedAttachments.filter((a) => a.kind === "video");
+                const audioItems = parsedAttachments.filter((a) => a.kind === "audio");
+                const fileItems = parsedAttachments.filter((a) => !a.isImage && a.kind !== "image" && a.kind !== "video" && a.kind !== "audio");
+
                 return (
                   <div data-testid="chat-message-attachments" className={`flex flex-col gap-2 ${cleanContent ? "mb-2" : ""}`}>
                     {imageItems.length > 0 && (
@@ -9616,12 +9790,7 @@ export function GrokBotWorkspace() {
                             key={att.rawUrl + aIdx}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setLightboxZoom(1);
-                              setLightboxPan({ x: 0, y: 0 });
-                              setLightboxRotation(0);
-                              setLightboxMeta(null);
-                              setShowLightboxMeta(false);
-                              setLightboxImageUrl({ url: att.previewUrl, name: att.fileName });
+                              handleOpenAttachmentPreview(att);
                             }}
                             className="group/attimg relative rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black/10 dark:bg-black/30 max-w-[260px] sm:max-w-[320px] cursor-zoom-in shadow-xs hover:border-[#f8a87c]/60 transition-all"
                             title={`Xem ảnh: ${att.fileName}`}
@@ -9632,44 +9801,114 @@ export function GrokBotWorkspace() {
                               className="max-h-56 w-auto max-w-full object-contain block rounded-lg transition-transform duration-200 group-hover/attimg:scale-[1.02]"
                               loading="lazy"
                             />
-                            <div className="px-2.5 py-1 bg-slate-900/75 text-white text-[10px] font-mono truncate flex items-center justify-between gap-2">
+                            <div className="px-2.5 py-1 bg-slate-900/80 text-white text-[10px] font-mono truncate flex items-center justify-between gap-2">
                               <span className="truncate">{att.fileName}</span>
-                              <Maximize2 size={10} className="shrink-0 opacity-80" />
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <a
+                                  href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
+                                  download={att.fileName}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="hover:text-[#f8a87c] p-0.5"
+                                  title="Tải ảnh"
+                                >
+                                  <Download size={10} />
+                                </a>
+                                <Maximize2 size={10} className="opacity-80" />
+                              </div>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
+
+                    {videoItems.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {videoItems.map((att, vIdx) => (
+                          <div
+                            key={att.rawUrl + vIdx}
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black max-w-[320px] shadow-xs"
+                          >
+                            <video src={att.previewUrl} controls preload="metadata" className="max-h-56 w-full object-contain" />
+                            <div className="px-2.5 py-1 bg-slate-900/90 text-white text-[10px] font-mono flex items-center justify-between gap-2">
+                              <span className="truncate">{att.fileName}</span>
+                              <a
+                                href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
+                                download={att.fileName}
+                                className="text-neutral-300 hover:text-[#f8a87c] shrink-0"
+                                title="Tải video"
+                              >
+                                <Download size={11} />
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {audioItems.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
+                        {audioItems.map((att, auIdx) => (
+                          <div
+                            key={att.rawUrl + auIdx}
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2.5 rounded-xl bg-white/85 dark:bg-[#14141f] border border-slate-200 dark:border-[#2d2d42] max-w-[320px] space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
+                              <span className="truncate font-medium text-slate-800 dark:text-neutral-200">{att.fileName}</span>
+                              <a
+                                href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
+                                download={att.fileName}
+                                className="text-slate-400 hover:text-[#f8a87c] shrink-0"
+                                title="Tải audio"
+                              >
+                                <Download size={12} />
+                              </a>
+                            </div>
+                            <audio src={att.previewUrl} controls preload="metadata" className="w-full h-8" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     {fileItems.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {fileItems.map((att, fIdx) => {
-                          const ext = (att.fileName.split(".").pop() || "FILE").toUpperCase().slice(0, 6);
                           const downloadHref = `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`;
                           return (
-                            <a
+                            <div
                               key={att.rawUrl + fIdx}
-                              href={downloadHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download={att.fileName}
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/80 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2d2d42] hover:border-[#f8a87c]/60 text-left shadow-2xs transition-all group/attfile max-w-full"
-                              title={`Tải hoặc mở tệp: ${att.fileName}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenAttachmentPreview(att);
+                              }}
+                              className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/90 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2d2d42] hover:border-[#f8a87c]/60 text-left shadow-2xs transition-all group/attfile max-w-full cursor-pointer"
+                              title={`Bấm để xem trước hoặc tải về: ${att.fileName}`}
                             >
-                              <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 text-[#e0682b] dark:text-[#f8a87c] flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
-                                {ext}
+                              <div className={`h-8 min-w-8 px-1.5 rounded-lg border flex items-center justify-center font-mono text-[10px] font-bold shrink-0 ${att.badgeColor}`}>
+                                {att.ext}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="text-xs font-medium text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[220px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[#f8a87c] transition-colors">
+                                <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[240px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[#f8a87c] transition-colors">
                                   {att.fileName}
                                 </div>
-                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1">
+                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1 truncate max-w-[220px]">
                                   <Paperclip size={10} className="shrink-0" />
-                                  <span>Đính kèm trong phiên</span>
+                                  <span className="truncate">{att.caption || (isUser ? "Tệp đã gửi" : "Tệp phản hồi từ Agent")}</span>
                                 </div>
                               </div>
-                              <Download size={13} className="text-slate-400 group-hover/attfile:text-[#f8a87c] shrink-0 transition-colors" />
-                            </a>
+                              <a
+                                href={downloadHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={att.fileName}
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[#f8a87c] shrink-0 transition-colors"
+                                title={`Tải xuống ${att.fileName}`}
+                              >
+                                <Download size={13} />
+                              </a>
+                            </div>
                           );
                         })}
                       </div>
@@ -10207,7 +10446,7 @@ export function GrokBotWorkspace() {
                         </button>
                       )}
 
-                      {msg.content && (
+                      {(msg.content || parsedAttachments.length > 0) && (
                         <>
                           <div className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
                             {/* Subtle Collaborator Header matching reference UI ("Message from <Agent>") */}
@@ -10612,9 +10851,29 @@ export function GrokBotWorkspace() {
                         />
                       </button>
                     ) : (
-                      <Paperclip size={13} className="text-[#f8a87c] shrink-0" />
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border ${classifyAttachmentFormat(f.file_name).badgeColor}`}>
+                        {classifyAttachmentFormat(f.file_name).ext}
+                      </span>
                     )}
-                    <span className="max-w-[160px] truncate text-[11px] font-medium">{f.file_name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const fmt = classifyAttachmentFormat(f.file_name);
+                        handleOpenAttachmentPreview({
+                          fileName: f.file_name,
+                          rawUrl: f.url,
+                          previewUrl: previewSrc,
+                          isImage: fmt.kind === "image",
+                          kind: fmt.kind,
+                          ext: fmt.ext,
+                          badgeColor: fmt.badgeColor,
+                        });
+                      }}
+                      className="max-w-[160px] truncate text-[11px] font-medium hover:text-[#f8a87c] cursor-pointer text-left"
+                      title={`Xem trước: ${f.file_name}`}
+                    >
+                      {f.file_name}
+                    </button>
                     <span className="text-[9px] text-slate-500 dark:text-neutral-500 font-mono">({Math.round(f.size / 1024) || 1} KB)</span>
                     <button aria-label="Remove attachment" data-ux-target-min="24"
                       type="button"
@@ -14408,6 +14667,105 @@ ${chat.id}`);
         }}
         isPwaInstallable={Boolean(deferredPrompt)}
       />
+
+      {/* Universal File & Media Attachment Preview Modal */}
+      {previewModalFile && (
+        <div
+          onClick={() => setPreviewModalFile(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#161622]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border shrink-0 ${previewModalFile.badgeColor}`}>
+                  {previewModalFile.ext}
+                </span>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                  {previewModalFile.fileName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`${previewModalFile.previewUrl}${previewModalFile.previewUrl.includes("?") ? "&" : "?"}download=1`}
+                  download={previewModalFile.fileName}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 transition-opacity"
+                >
+                  <Download size={13} />
+                  <span>Tải xuống</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModalFile(null)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 cursor-pointer"
+                  aria-label="Đóng xem trước"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 bg-slate-100/50 dark:bg-[#0d0d14] min-h-[260px] flex flex-col">
+              {previewModalFile.kind === "pdf" ? (
+                <iframe
+                  src={previewModalFile.previewUrl}
+                  title={previewModalFile.fileName}
+                  className="w-full h-[65vh] rounded-xl border border-slate-200 dark:border-white/10 bg-white"
+                />
+              ) : previewModalFile.kind === "video" ? (
+                <video src={previewModalFile.previewUrl} controls autoPlay className="w-full max-h-[65vh] rounded-xl bg-black m-auto" />
+              ) : previewModalFile.kind === "audio" ? (
+                <div className="m-auto w-full max-w-md p-6 rounded-2xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-white/10 space-y-3 text-center">
+                  <div className="text-xs font-mono text-slate-700 dark:text-neutral-300 truncate">{previewModalFile.fileName}</div>
+                  <audio src={previewModalFile.previewUrl} controls autoPlay className="w-full" />
+                </div>
+              ) : isLoadingPreviewModalText ? (
+                <div className="m-auto flex items-center gap-2 text-xs font-mono text-neutral-400">
+                  <Loader2 size={15} className="animate-spin text-[#f8a87c]" />
+                  <span>Đang tải nội dung tệp...</span>
+                </div>
+              ) : previewModalText !== null ? (
+                <pre className="w-full flex-1 p-3.5 rounded-xl bg-white dark:bg-[#111118] border border-slate-200 dark:border-[#242434] text-xs font-mono text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words overflow-auto max-h-[65vh]">
+                  {previewModalText || "(Tệp trống)"}
+                </pre>
+              ) : (
+                <div className="m-auto text-center max-w-md space-y-3 py-8 px-4">
+                  <div className={`mx-auto h-12 w-12 rounded-2xl border flex items-center justify-center font-mono text-xs font-bold ${previewModalFile.badgeColor}`}>
+                    {previewModalFile.ext}
+                  </div>
+                  <div className="text-sm font-semibold text-slate-900 dark:text-white break-all">
+                    {previewModalFile.fileName}
+                  </div>
+                  {previewModalFile.caption && (
+                    <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
+                      {previewModalFile.caption}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500 dark:text-neutral-400">
+                    Định dạng .{previewModalFile.ext} sẵn sàng tải về máy để xem hoặc chỉnh sửa đầy đủ.
+                  </p>
+                  <div className="pt-2">
+                    <a
+                      href={`${previewModalFile.previewUrl}${previewModalFile.previewUrl.includes("?") ? "&" : "?"}download=1`}
+                      download={previewModalFile.fileName}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 transition-opacity shadow-sm"
+                    >
+                      <Download size={14} />
+                      <span>Tải xuống {previewModalFile.fileName}</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Fullscreen Image Lightbox Modal */}
       {lightboxImageUrl && (

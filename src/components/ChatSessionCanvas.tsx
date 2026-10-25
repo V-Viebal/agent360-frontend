@@ -225,7 +225,7 @@ export function ChatSessionCanvas({
                 {(() => {
                   const attItems: { fileName: string; rawUrl: string; previewUrl: string; isImage: boolean }[] = [];
                   const cleanedBody = (msg.content || "").replace(
-                    /\[Attached File:\s*([^\n\r()]+?)\s*\(([^)\n\r]+)\)\]/gi,
+                    /\[Attached File:\s*([^\n\r]+?)\s*\(([^()\n\r]+)\)\]/gi,
                     (_full, rName: string, rUrl: string) => {
                       const fName = (rName || "attachment").trim();
                       const u = (rUrl || "").trim();
