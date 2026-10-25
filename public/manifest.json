@@ -8,18 +8,34 @@
   "orientation": "portrait-primary",
   "background_color": "#07090E",
   "theme_color": "#07090E",
-  "categories": ["productivity", "utilities", "developer tools"],
+  "categories": [
+    "productivity",
+    "utilities",
+    "developer tools"
+  ],
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
       "purpose": "any"
     }
   ],
@@ -29,7 +45,12 @@
       "short_name": "Chat",
       "description": "Start dialogue with your active autonomous agent",
       "url": "/app",
-      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "any"
+        }
+      ]
     }
   ]
 }

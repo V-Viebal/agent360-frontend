@@ -1,5 +1,6 @@
 import { SeoHead } from "../components/SeoHead";
 import { useState } from "react";
+import { useTranslation } from "../i18n/LanguageContext";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
@@ -22,6 +23,8 @@ import { MARKETPLACE_AGENTS } from "../data/mockMarketplaceAgents";
 import { AgentMarketplaceItem } from "../types/marketplace";
 
 export function AgentDetailPage() {
+  const { t, language } = useTranslation();
+  const isVi = language === "vi";
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [copiedPrompt, setCopiedPrompt] = useState(false);
@@ -32,15 +35,15 @@ export function AgentDetailPage() {
   if (!agent) {
     return (
       <div className="pt-32 pb-24 min-h-screen text-[var(--text-primary)] text-center px-4">
-        <h2 className="text-2xl font-semibold mb-2">Agent Template Not Found</h2>
+        <h2 className="text-2xl font-semibold mb-2">{isVi ? "Không tìm thấy hồ sơ nhân viên AI" : "Agent Template Not Found"}</h2>
         <p className="text-[var(--text-muted)] text-sm mb-6">
-          The requested agent specification does not exist or has been retired.
+          {isVi ? "Hồ sơ vị trí nhân viên AI được yêu cầu không tồn tại hoặc đã ngừng cung cấp." : "The requested agent specification does not exist or has been retired."}
         </p>
         <Link
           to="/marketplace"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-sm font-medium hover:border-[#ff7a00]/40 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Marketplace
+          <ArrowLeft className="w-4 h-4" /> {isVi ? "Quay lại Chợ Nhân viên" : "Back to Marketplace"}
         </Link>
       </div>
     );
@@ -91,7 +94,7 @@ export function AgentDetailPage() {
           to="/marketplace"
           className="inline-flex items-center gap-2 text-xs font-mono text-[var(--text-muted)] hover:text-[#ff7a00] mb-8 transition-colors"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> BACK TO MARKETPLACE
+          <ArrowLeft className="w-3.5 h-3.5" /> {isVi ? "QUAY LẠI CHỢ NHÂN VIÊN" : "BACK TO MARKETPLACE"}
         </Link>
 
         {/* Hero Card */}
@@ -110,7 +113,7 @@ export function AgentDetailPage() {
                   </h1>
                   {agent.verified && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400">
-                      <ShieldCheck className="w-3 h-3" /> VERIFIED
+                      <ShieldCheck className="w-3 h-3" /> {isVi ? "ĐÃ KIỂM ĐỊNH" : "VERIFIED"}
                     </span>
                   )}
                   <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-[var(--text-muted)]">
@@ -127,7 +130,7 @@ export function AgentDetailPage() {
                 onClick={handleLaunchChat}
                 className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ea580c] text-white font-medium text-sm transition-all shadow-lg shadow-[#ff7a00]/20"
               >
-                <Play className="w-4 h-4 fill-white" /> Launch AI Teammate
+                <Play className="w-4 h-4 fill-white" /> {isVi ? "Bắt đầu làm việc cùng Bot" : "Launch AI Teammate"}
               </button>
             </div>
           </div>
@@ -136,25 +139,25 @@ export function AgentDetailPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-[var(--border-subtle)] text-xs">
             <div>
               <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
-                Active Deploys
+                {isVi ? "Đang hoạt động" : "Active Deploys"}
               </span>
               <span className="font-semibold text-sm">{agent.installCount.toLocaleString()}</span>
             </div>
             <div>
               <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
-                Memory Layer
+                {isVi ? "Tầng bộ nhớ" : "Memory Layer"}
               </span>
               <span className="font-semibold text-sm">{agent.memoryType}</span>
             </div>
             <div>
               <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
-                Authority Gate
+                {isVi ? "Cổng kiểm soát" : "Authority Gate"}
               </span>
               <span className="font-semibold text-sm">{agent.authorityGate}</span>
             </div>
             <div>
               <span className="block text-[var(--text-muted)] font-mono text-[10px] uppercase">
-                Team Topology
+                {isVi ? "Mô hình phối hợp" : "Team Topology"}
               </span>
               <span className="font-semibold text-sm">{agent.teamConfig.collaborationMode}</span>
             </div>
@@ -165,10 +168,10 @@ export function AgentDetailPage() {
         <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] mb-8 overflow-x-auto pb-px">
           {(
             [
-              { id: "overview", label: "Overview & Mission", icon: Sparkles },
-              { id: "team", label: "Team Pipeline (ACP)", icon: Workflow },
-              { id: "terminal", label: "Sandboxed Terminal Execution", icon: Terminal },
-              { id: "spec", label: "Tools & Integrations", icon: Wrench },
+              { id: "overview", label: isVi ? "Tổng quan & Nhiệm vụ" : "Overview & Mission", icon: Sparkles },
+              { id: "team", label: isVi ? "Phối hợp Đội ngũ (ACP)" : "Team Pipeline (ACP)", icon: Workflow },
+              { id: "terminal", label: isVi ? "Thực thi Terminal Sandbox" : "Sandboxed Terminal Execution", icon: Terminal },
+              { id: "spec", label: isVi ? "Công cụ & Tích hợp" : "Tools & Integrations", icon: Wrench },
             ] as const
           ).map((tab) => {
             const Icon = tab.icon;
@@ -194,24 +197,24 @@ export function AgentDetailPage() {
         {activeTab === "overview" && (
           <div className="space-y-6">
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
-              <h3 className="text-sm font-semibold mb-2">Backstory & Objective</h3>
+              <h3 className="text-sm font-semibold mb-2">{isVi ? "Bối cảnh & Mục tiêu Chuyên trách" : "Backstory & Objective"}</h3>
               <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-4">
                 {agent.backstory}
               </p>
               <div className="p-4 rounded-lg bg-black/20 border border-white/5 font-mono text-xs text-[var(--text-primary)]">
-                <span className="text-[#ff7a00] font-semibold">Goal: </span>
+                <span className="text-[#ff7a00] font-semibold">{isVi ? "Mục tiêu: " : "Goal: "}</span>
                 {agent.goal}
               </div>
             </div>
 
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold">Standard Kickoff Prompt</h3>
+                <h3 className="text-sm font-semibold">{isVi ? "Câu lệnh Giao việc Mẫu" : "Standard Kickoff Prompt"}</h3>
                 <button
                   onClick={handleCopyPrompt}
                   className="text-xs font-mono text-[#ff7a00] hover:underline"
                 >
-                  {copiedPrompt ? "✓ Copied to clipboard" : "Copy Prompt"}
+                  {copiedPrompt ? (isVi ? "✓ Đã sao chép" : "✓ Copied to clipboard") : (isVi ? "Sao chép câu lệnh" : "Copy Prompt")}
                 </button>
               </div>
               <div className="p-4 rounded-lg bg-black/40 border border-white/10 font-mono text-xs text-[var(--text-muted)] overflow-x-auto whitespace-pre-wrap">
@@ -220,7 +223,7 @@ export function AgentDetailPage() {
             </div>
 
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
-              <h3 className="text-sm font-semibold mb-3">Core Operating Routines</h3>
+              <h3 className="text-sm font-semibold mb-3">{isVi ? "Các Quy trình Định kỳ Chủ đạo" : "Core Operating Routines"}</h3>
               <ul className="space-y-2">
                 {agent.routines.map((routine, idx) => (
                   <li key={idx} className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -238,11 +241,10 @@ export function AgentDetailPage() {
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#ff7a00]" />
-                Collaborative Team Mode: {agent.teamConfig.collaborationMode}
+                {isVi ? "Phương thức Phối hợp Đội ngũ:" : "Collaborative Team Mode:"} {agent.teamConfig.collaborationMode}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mb-6">
-                When assigned a large initiative, this agent collaborates over the Skyer ACP
-                protocol with the following peer agents:
+                {isVi ? "Khi đảm nhận một dự án lớn, nhân viên AI này sẽ tự động phối hợp qua giao thức Skyer ACP với các vị trí sau:" : "When assigned a large initiative, this agent collaborates over the Skyer ACP protocol with the following peer agents:"}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
@@ -258,7 +260,7 @@ export function AgentDetailPage() {
               </div>
 
               <div className="p-4 rounded-lg bg-black/20 border border-white/5 text-xs">
-                <span className="font-semibold text-[#ff7a00] block mb-1">Expected Output Deliverable:</span>
+                <span className="font-semibold text-[#ff7a00] block mb-1">{isVi ? "Kết quả Bàn giao Kỳ vọng:" : "Expected Output Deliverable:"}</span>
                 <span className="text-[var(--text-muted)] font-mono">
                   {agent.teamConfig.expectedOutput}
                 </span>
@@ -272,9 +274,9 @@ export function AgentDetailPage() {
             <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4 text-xs text-[var(--text-muted)]">
               <div className="flex items-center gap-2">
                 <Terminal className="w-4 h-4 text-emerald-400" />
-                <span>Sandbox Container Console (/app/working)</span>
+                <span>{isVi ? "Cửa sổ Điều khiển Container Sandbox (/app/working)" : "Sandbox Container Console (/app/working)"}</span>
               </div>
-              <span className="text-[10px] text-emerald-400">STATUS: READY</span>
+              <span className="text-[10px] text-emerald-400">{isVi ? "TRẠNG THÁI: SẴN SÀNG" : "STATUS: READY"}</span>
             </div>
             <div className="bg-black/60 p-4 rounded-lg text-xs leading-relaxed overflow-x-auto space-y-1.5 text-zinc-300">
               {agent.terminalPreview.map((line, idx) => (
@@ -291,7 +293,7 @@ export function AgentDetailPage() {
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-[#ff7a00]" />
-                MCP Tools Bound
+                {isVi ? "Công cụ MCP Được Gán" : "MCP Tools Bound"}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {agent.tools.map((tool, idx) => (
@@ -308,7 +310,7 @@ export function AgentDetailPage() {
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
                 <Boxes className="w-4 h-4 text-[#ff7a00]" />
-                Connected Integrations
+                {isVi ? "Hệ thống Tích hợp Kết nối" : "Connected Integrations"}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {agent.integrations.map((integration, idx) => (

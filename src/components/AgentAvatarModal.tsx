@@ -42,7 +42,7 @@ const COMMON_EMOJIS = [
 ];
 
 export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalProps) {
-  const [activeTab, setActiveTab] = useState<"role" | "icon" | "emoji" | "image">("icon");
+  const [activeTab, setActiveTab] = useState<"blob" | "role" | "icon" | "emoji" | "image">("blob");
 
   const [selectedIcon, setSelectedIcon] = useState<string>("Bot");
   const [selectedColor, setSelectedColor] = useState<string>("blue");
@@ -54,13 +54,13 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     if (!isOpen) return;
     const current = getAgentAvatarConfig(agent.id);
     if (current) {
-      setActiveTab(current.type);
+      setActiveTab(current.type === "role" ? "blob" : current.type);
       if (current.iconName) setSelectedIcon(current.iconName);
       if (current.colorPreset) setSelectedColor(current.colorPreset);
       if (current.emoji) setSelectedEmoji(current.emoji);
       if (current.imageUrl) setImageUrl(current.imageUrl);
     } else {
-      setActiveTab("role");
+      setActiveTab("blob");
       setSelectedIcon("Bot");
       setSelectedColor("blue");
       setSelectedEmoji("🤖");
@@ -72,7 +72,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
   // Build temporary preview config
   const previewConfig: CustomAvatarConfig | null = (() => {
-    if (activeTab === "role") return null;
+    if (activeTab === "blob" || activeTab === "role") return null;
     if (activeTab === "icon") {
       return { type: "icon", iconName: selectedIcon, colorPreset: selectedColor };
     }
@@ -86,7 +86,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   })();
 
   const handleSave = () => {
-    if (activeTab === "role") {
+    if (activeTab === "blob" || activeTab === "role") {
       resetAgentAvatarConfig(agent.id);
     } else if (previewConfig) {
       saveAgentAvatarConfig(agent.id, previewConfig);
@@ -96,7 +96,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
   const handleReset = () => {
     resetAgentAvatarConfig(agent.id);
-    setActiveTab("role");
+    setActiveTab("blob");
     setImageUrl("");
   };
 
@@ -176,15 +176,15 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
         {/* Style Selector Tabs */}
         <div className="flex border-b border-slate-100 dark:border-[#20202e] px-6 bg-white dark:bg-[#14141e]">
           <button
-            onClick={() => setActiveTab("role")}
+            onClick={() => setActiveTab("blob")}
             className={`py-3 px-3.5 text-xs font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "role"
+              (activeTab === "blob" || activeTab === "role")
                 ? "border-[#f8a87c] text-[#f8a87c]"
                 : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
             <Sparkles size={13} />
-            <span>Mặc định vai trò</span>
+            <span>Blob Mascot (Mặc định)</span>
           </button>
           <button
             onClick={() => setActiveTab("icon")}
@@ -224,7 +224,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
         {/* Tab Body */}
         <div className="p-6 overflow-y-auto max-h-[340px] space-y-5">
           {/* TAB 1: Role Default */}
-          {activeTab === "role" && (
+          {(activeTab === "blob" || activeTab === "role") && (
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#272738] flex items-start gap-3">
               <Info size={18} className="text-[#f8a87c] shrink-0 mt-0.5" />
               <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-1">

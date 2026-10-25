@@ -39,7 +39,7 @@ export function Footer() {
               <li><a href="https://kb.hmz.one" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">KB Single Source of Truth <ArrowUpRight size={11} /></a></li>
               <li><a href="https://github.com/v-viebal/agent360" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">Skyer Upstream <ArrowUpRight size={11} /></a></li>
               <li><a href="https://iam360-api-gm.hmz.one" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">IAM360 Authority Gateway <ArrowUpRight size={11} /></a></li>
-              <li><a href="https://cloud.giamoc.com" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">Nextcloud Deck Projection <ArrowUpRight size={11} /></a></li>
+              <li><a href="https://cloud.giamoc.com" target="_blank" rel="noreferrer" className="hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-1">BaseCore Deck Projection <ArrowUpRight size={11} /></a></li>
             </ul>
           </div>
 

@@ -127,7 +127,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
     uptime: "19d 04h 12m",
     activeSessionId: "sess-kb-401",
     memoryUsageMb: 184,
-    description: "Reads live repositories, synthesizes technical documentation into canonical KB Hub articles, and projects verified state to Nextcloud Deck.",
+    description: "Reads live repositories, synthesizes technical documentation into canonical KB Hub articles, and projects verified state to BaseCore Deck.",
     tools: [
       { name: "KB MCP Server", type: "Outline API", description: "Single Source of Truth document authoring and revisioning" },
       { name: "Exa Web Search", type: "Semantic Engine", description: "Real-time industry and library research" },

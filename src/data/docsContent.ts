@@ -61,6 +61,13 @@ curl -s http://localhost:5290/api/v1/agents/skills | jq .`,
   },
   {
     id: "core-concepts",
+    sandboxPrompt: "skyer acp verify-topology --profile corporate-mesh",
+    sandboxOutput: [
+      "[topology.inspect] Khởi tạo sơ đồ giám sát cây điều phối đa tác nhân ACP...",
+      "[topology.roles] Đã phát hiện 5 vai trò chuyên trách trực thuộc workspace",
+      "[topology.contract] Giao thức ACP: Xác thực chữ ký số Ed25519 cho mỗi lượt giao việc",
+      "[topology.status] Trạng thái: PASS (100% các nút trực tuyến, sẵn sàng nhận nhiệm vụ)",
+    ],
     title: "Core Concepts",
     category: "Getting Started",
     badge: "Architecture",
@@ -74,7 +81,7 @@ curl -s http://localhost:5290/api/v1/agents/skills | jq .`,
    - *Quy trình tuần tự (Sequential):* Luồng nghiệp vụ chuyển giao lần lượt từ chuyên viên này sang chuyên viên kế tiếp.
    - *Quy trình phân cấp (Hierarchical):* Tác nhân Trưởng phòng giám sát, phân bổ chỉ tiêu công việc, thẩm định biên bản và yêu cầu làm lại nếu chưa đạt.
 3. **Nhiệm vụ & Mục tiêu (Task & Objective):** Đơn vị công việc cụ thể bao gồm dữ liệu đầu vào, tiêu chí nghiệm thu định lượng và tài liệu bàn giao bắt buộc.
-4. **Cổng công cụ MCP (Model Context Protocol Gateway):** Cầu nối an toàn kết nối nhân viên AI với hệ điều hành Linux, cơ sở dữ liệu nội bộ, Google Workspace, ERPNext và trình duyệt headless.
+4. **Cổng công cụ MCP (Model Context Protocol Gateway):** Cầu nối an toàn kết nối nhân viên AI với hệ điều hành Linux, cơ sở dữ liệu nội bộ, Google Workspace, ERPCore và trình duyệt headless.
 5. **Hệ thống bộ nhớ ReMe (Dual-tier Memory):** Kết hợp các tệp chỉ dẫn chuẩn (\`MEMORY.md\`, \`AGENTS.md\`, \`SOUL.md\`) cho ngữ cảnh tức thời với cơ chế vector ReMe cho truy xuất dài hạn.
 6. **Biên nhận nghiệm thu (Execution Receipt):** Bằng chứng thực nghiệm chứng minh tác vụ đã được hoàn thành (Exit code 0, HTTP 200 OK, mã hóa đơn ERP, ảnh chụp đối soát).
     `,
@@ -88,6 +95,13 @@ curl -s http://localhost:5290/api/v1/agents/skills | jq .`,
   // 2. Core Components
   {
     id: "agents",
+    sandboxPrompt: "skyer agent inspect --role financial-controller",
+    sandboxOutput: [
+      "[agent.manifest] Đang đọc hồ sơ năng lực: Kiểm Soát Viên Tài Chính (ERPCore)",
+      "[agent.tools] Đã gắn 4 công cụ MCP: ERPCore, Bank Feed API, Excel AST, PayOS",
+      "[agent.memory] Nạp hồ sơ ký ức /app/working/MEMORY.md (TT99 Standard)",
+      "[agent.ready] Trạng thái: ONLINE (Container rootless ID #fc-9022, 200 OK)",
+    ],
     title: "Agents & Roles",
     category: "Core Components",
     badge: "Specialization",
@@ -110,7 +124,7 @@ backend:
   temperature: 0.1
 tools:
   - "google_workspace_mcp"
-  - "erpnext_operations"
+  - "erpcore_operations"
   - "plan_ledger_engine"
   - "slack_telegram_bridge"
 memory:
@@ -127,7 +141,7 @@ export const chiefOfStaffAgent = new Agent({
   name: "Alex - Chánh Văn Phòng",
   role: "Executive Operations",
   goal: "Tổng hợp báo cáo tuần từ Tài chính, Bán hàng và Vận hành",
-  tools: ["erpnext", "google_workspace", "telegram"],
+  tools: ["erpcore", "google_workspace", "telegram"],
   allowDelegation: true,
   verbose: true,
 });`,
@@ -136,14 +150,6 @@ export const chiefOfStaffAgent = new Agent({
       "Mỗi nhân viên AI có Persona, Mục tiêu và Không gian làm việc riêng biệt",
       "Giới hạn quyền công cụ theo đúng ma trận chức năng của phòng ban",
       "Hỗ trợ cấu hình linh hoạt mô hình ngôn ngữ cho từng vai trò",
-    ],
-    sandboxPrompt: "agent360 agent run chief-of-staff --prompt 'Tổng hợp báo cáo tuần 42'",
-    sandboxOutput: [
-      "[chief-of-staff] Đã nạp danh tính: Alex (Chánh Văn Phòng Điều Hành)",
-      "[chief-of-staff] Đang đọc chỉ số từ phân hệ ERPNext và Google Sheets...",
-      "[chief-of-staff] Phát hiện 2 nút thắt công nợ quá hạn từ phòng Kinh doanh",
-      "[chief-of-staff] Đã tạo bản thảo báo cáo tóm tắt: .tmp/executive-sync-w42.pdf",
-      "[chief-of-staff] Biên nhận hoàn tất: Báo cáo đã gửi vào kênh kiểm duyệt nội bộ",
     ],
   },
   {
@@ -161,7 +167,7 @@ Trong mô hình phân cấp, **Nhân viên Quản lý (Lead Manager)** nhận ch
 [ Chỉ đạo của Ban Giám Đốc ]
              ↓
 [ Manager Lead (Chánh Văn Phòng) ]
-             ├── [ Tác vụ 1: Đối soát 48 hóa đơn ] → Nhân viên Kế toán (ERPNext)
+             ├── [ Tác vụ 1: Đối soát 48 hóa đơn ] → Nhân viên Kế toán (ERPCore)
              ├── [ Tác vụ 2: Kiểm tra điều khoản pháp lý ] → Nhân viên Pháp chế
              └── [ Tác vụ 3: Đóng gói hồ sơ chi ] → Nhân viên Thanh toán
              ↓ (Tổng hợp biên nhận thực thi)
@@ -198,13 +204,20 @@ result = financial_team.kickoff(inputs={
     sandboxPrompt: "agent360 team kickoff --team financial-audit --task 'Duyệt chi hóa đơn T10'",
     sandboxOutput: [
       "[manager] Tiếp nhận mục tiêu: 'Đối soát 48 hóa đơn và lập hồ sơ duyệt chi'",
-      "[accountant] Đã đối soát 48/48 hóa đơn trên ERPNext: 0 sai lệch",
+      "[accountant] Đã đối soát 48/48 hóa đơn trên ERPCore: 0 sai lệch",
       "[legal] Thẩm định điều khoản hợp đồng TT99: Hợp lệ 100%",
       "[manager] Đóng gói biên bản nghiệm thu: Hồ sơ số #402 sẵn sàng cho CFO",
     ],
   },
   {
     id: "tasks",
+    sandboxPrompt: "skyer task execute --id TASK-991 --dry-run",
+    sandboxOutput: [
+      "[task.init] Nhận lệnh: 'Kiểm tra chênh lệch 48 hóa đơn nhà cung cấp'",
+      "[task.read] Quét bảng kê hóa đơn và phiếu kho: Không phát hiện sai lệch (0.00 VNĐ)",
+      "[task.gate] Gặp lệnh duyệt chi $14,200 -> Kích hoạt Cổng Phê Duyệt Human Gate",
+      "[task.receipt] Xuất biên nhận nghiệm thu hash #8f2a1b9c (Exit Code 0)",
+    ],
     title: "Tasks & Verification",
     category: "Core Components",
     badge: "No Fake Done",
@@ -221,10 +234,10 @@ Mỗi nhiệm vụ trong Skyer là một cam kết thực thi có cấu trúc r�
 \`\`\`yaml
 task_id: "task-fin-402"
 assigned_to: "accountant-bot"
-description: "Đối soát danh sách 48 hóa đơn đầu vào tuần 42 so với đơn mua hàng PO trên ERPNext."
+description: "Đối soát danh sách 48 hóa đơn đầu vào tuần 42 so với đơn mua hàng PO trên ERPCore."
 expected_output: "Bảng cân đối thanh toán đối soát và biên bản TT99 sẵn sàng trình duyệt."
 verification_requirements:
-  - "Exit code 0 từ kiểm tra đối soát ERPNext API"
+  - "Exit code 0 từ kiểm tra đối soát ERPCore API"
   - "Tổng chênh lệch công nợ bằng $0.00"
   - "File biên nhận đối soát hợp lệ tại: .tmp/reconciliation-w42.json"
 \`\`\`
@@ -239,6 +252,13 @@ verification_requirements:
   // 3. AgentCore Runtime Architecture
   {
     id: "agentcore-sandbox",
+    sandboxPrompt: "skyer sandbox audit --container-id sandbox-cos-01",
+    sandboxOutput: [
+      "[sandbox.audit] Kiểm tra cô lập hạ tầng: Linux Rootless Container (UID 1000)",
+      "[sandbox.ebpf] Mạng nội bộ: eBPF Network Firewall bật, chặn toàn bộ kết nối ra ngoài",
+      "[sandbox.volume] Phân vùng /app/working được mã hóa AES-256",
+      "[sandbox.verdict] Đánh giá an toàn: Đạt chuẩn tuân thủ Nghị định 13/NĐ-CP & ISO-27001",
+    ],
     title: "Kernel Sandbox & Security",
     category: "AgentCore Runtime",
     badge: "Security",
@@ -272,6 +292,13 @@ docker run -d \\
   },
   {
     id: "agentcore-memory",
+    sandboxPrompt: "skyer memory query --query 'Chính sách duyệt chi tài chính'",
+    sandboxOutput: [
+      "[memory.search] Tìm kiếm trong đồ thị tri thức ReMe Vector DB...",
+      "[memory.hit] Khớp 1 quy tắc bắt buộc: [[QuyĐịnhNhàCungCấp]] đối soát 3 bên PO/GRN",
+      "[memory.hit] Khớp 1 ngưỡng duyệt: [[SLAThanhToán]] Báo CFO khi chi tiêu > $5,000",
+      "[memory.sync] Đồng bộ thành công 2 chiều với Knowledge Base KB (Độ trễ 8ms)",
+    ],
     title: "ReMe & Long-Term Memory",
     category: "AgentCore Runtime",
     badge: "Memory",
@@ -296,6 +323,13 @@ Skyer không phụ thuộc vào lịch sử chat tạm bợ. Hệ thống xây d
   },
   {
     id: "multi-channel",
+    sandboxPrompt: "skyer gateway probe --channels 'web,telegram,slack'",
+    sandboxOutput: [
+      "[gateway.probe] Kiểm tra kết nối đa kênh theo thời gian thực...",
+      "[gateway.web] Kênh Web Workspace: SSE streaming 60 FPS (Độ trễ 18ms)",
+      "[gateway.telegram] Kênh Telegram Bot Webhook: 200 OK (Đã kết nối nhóm Điều hành)",
+      "[gateway.auth] Bảo mật: JWT Token xác thực đa tầng, không lưu trữ thông tin nhạy cảm",
+    ],
     title: "Multi-Channel Connectivity",
     category: "Enterprise Integration",
     badge: "Channels",

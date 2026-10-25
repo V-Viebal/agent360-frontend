@@ -32,6 +32,61 @@ import {
   Search,
 } from "lucide-react";
 import { getAgentAvatarConfig, CustomAvatarConfig } from "../services/avatarService";
+import { BlobAvatar } from "blob-avatar";
+
+export const BLOB_SHAPES = [
+  "circle", "pebble", "squircle", "capsule", "triangle", "diamond", "hexagon",
+  "star", "cloud", "droplet", "heart", "ghost", "cat", "bear", "bunny",
+  "amoeba", "flower", "clover", "leaf", "gem", "bubble",
+] as const;
+
+export const BLOB_EXPRESSIONS = [
+  "happy", "laughing", "wink", "content", "dreamy", "proud", "smug",
+  "excited", "attentive", "focused", "curious", "neutral", "shy",
+] as const;
+
+export const BLOB_COLORS = [
+  "#f8a87c", // Skyer Orange
+  "#38bdf8", // Sky Blue
+  "#34d399", // Emerald Mint
+  "#a78bfa", // Lavender Violet
+  "#fb7185", // Rose Pink
+  "#fbbf24", // Amber Gold
+  "#2dd4bf", // Teal
+  "#a3e635", // Lime Green
+  "#f472b6", // Hot Pink
+  "#60a5fa", // Royal Blue
+  "#c084fc", // Purple
+  "#4ade80", // Fresh Green
+] as const;
+
+export const BLOB_ANIMATIONS = [
+  "idle.2.4,wink.1.6",
+  "idle.2.4,nod.1.4",
+  "idle.2.4,happy.2",
+  "idle.2.4,thinking.2.6",
+  "idle.2.4,wave.1.6",
+  "idle.2.4,love.2",
+  "idle.2.4,play.2",
+] as const;
+
+export function getAgentBlobProfile(agentId: string = "", name: string = "", roleTag: string = "") {
+  const seedStr = `${agentId || ""}-${name || ""}-${roleTag || ""}`.toLowerCase();
+  let h = 0;
+  for (let i = 0; i < seedStr.length; i++) {
+    h = ((h << 5) - h) + seedStr.charCodeAt(i);
+    h |= 0;
+  }
+  const pos = Math.abs(h);
+  return {
+    shape: BLOB_SHAPES[pos % BLOB_SHAPES.length],
+    expression: BLOB_EXPRESSIONS[(pos >> 3) % BLOB_EXPRESSIONS.length],
+    color: BLOB_COLORS[(pos >> 6) % BLOB_COLORS.length],
+    animation: BLOB_ANIMATIONS[(pos >> 9) % BLOB_ANIMATIONS.length],
+    seed: (pos % 999) + 1,
+  };
+}
+
 
 export const AVATAR_ICON_MAP: Record<string, React.ElementType> = {
   Code,
@@ -274,6 +329,7 @@ interface AgentAvatarProps {
   className?: string;
   overrideConfig?: CustomAvatarConfig | null;
   interactive?: boolean;
+  forcedAnimation?: string;
 }
 
 export function AgentAvatar({
@@ -282,6 +338,7 @@ export function AgentAvatar({
   className = "",
   overrideConfig,
   interactive = true,
+  forcedAnimation,
 }: AgentAvatarProps) {
   const [customConfig, setCustomConfig] = useState<CustomAvatarConfig | null>(
     overrideConfig !== undefined ? overrideConfig : getAgentAvatarConfig(agent.id)
@@ -343,6 +400,37 @@ export function AgentAvatar({
   const hoverEffects = interactive
     ? "transition-all duration-300 ease-out hover:scale-110 hover:shadow-md cursor-pointer group/avatar"
     : "";
+
+  const blobPixelSize = {
+    xs: 20,
+    sm: 24,
+    md: 28,
+    lg: 38,
+    xl: 48,
+  }[size];
+
+  // 0. Custom Blob or Default Blob Avatar (from c0le0ni/blob-avatar)
+  const isDefaultBlob = !customConfig || customConfig.type === "blob" || customConfig.type === "role";
+  if (isDefaultBlob) {
+    const defaultBlob = getAgentBlobProfile(agent.id || agent.slug, agent.name, agent.roleTag);
+    const blobProps = customConfig?.blob || defaultBlob;
+    return (
+      <div
+        className={`relative flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-white/10 shadow-xs select-none bg-slate-50 dark:bg-[#161622] overflow-hidden ${sizeBox} ${hoverEffects} ${className}`}
+      >
+        <BlobAvatar
+          shape={blobProps.shape as any || defaultBlob.shape}
+          expression={blobProps.expression as any || defaultBlob.expression}
+          color={blobProps.color || defaultBlob.color}
+          animation={forcedAnimation || blobProps.animation || defaultBlob.animation}
+          seed={blobProps.seed || defaultBlob.seed}
+          size={blobPixelSize}
+          gaze={interactive}
+          reaction={interactive}
+        />
+      </div>
+    );
+  }
 
   // 1. Emoji Type
   if (customConfig?.type === "emoji" && customConfig.emoji) {

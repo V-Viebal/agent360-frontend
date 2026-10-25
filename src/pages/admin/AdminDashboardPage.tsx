@@ -135,7 +135,7 @@ export function AdminDashboardPage() {
                 { node: "2nd Server (App & API)", role: "Agent360 API, Nginx, Temporal, VectorDB", status: "Online" },
                 { node: "3rd Server (Core Workers)", role: "AgentCore Runtime, Browser CDP Proxy", status: "Online" },
                 { node: "4th Server (IAM & S3)", role: "Logto Dedicated OIDC, MinIO Dedicated S3", status: "Online" },
-                { node: "6th Server (GM Enterprise)", role: "AgentCore GM Enterprise Runtime, ERPNext", status: "Online" },
+                { node: "6th Server (GM Enterprise)", role: "AgentCore GM Enterprise Runtime, ERPCore", status: "Online" },
                 { node: "7th Server (Planthy Cluster)", role: "Planthy AI Agent Node, Browser CDP", status: "Online" },
               ].map((n, i) => (
                 <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#262634]">

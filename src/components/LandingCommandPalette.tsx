@@ -73,27 +73,27 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
     const base: Item[] = [
       ...roles.map((r) => ({
         id: `role-${r.id}`,
-        group: "Bots",
-        label: `Preview ${r.title}`,
+        group: t("cmdPalette.groupBots"),
+        label: `${t("cmdPalette.preview")} ${r.title}`,
         hint: r.promptExample,
         run: () => {
           onSelectRole(r.id);
           scrollTo("bots")();
         },
       })),
-      { id: "nav-pricing", group: "Navigate", label: "Pricing", hint: "Compare plans", run: scrollTo("pricing") },
-      { id: "nav-faq", group: "Navigate", label: "FAQ", hint: "Security, data and collaboration", run: scrollTo("faq") },
-      { id: "nav-app", group: "Navigate", label: "Open workspace", hint: "/app", run: () => { close(); navigate("/app"); } },
-      { id: "nav-docs", group: "Navigate", label: "Read docs", hint: "/docs", run: () => { close(); navigate("/docs"); } },
+      { id: "nav-pricing", group: t("cmdPalette.groupNav"), label: t("cmdPalette.navPricing"), hint: t("cmdPalette.navPricingHint"), run: scrollTo("pricing") },
+      { id: "nav-faq", group: t("cmdPalette.groupNav"), label: t("cmdPalette.navFaq"), hint: t("cmdPalette.navFaqHint"), run: scrollTo("faq") },
+      { id: "nav-app", group: t("cmdPalette.groupNav"), label: t("cmdPalette.navApp"), hint: t("cmdPalette.navAppHint"), run: () => { close(); navigate("/app"); } },
+      { id: "nav-docs", group: t("cmdPalette.groupNav"), label: t("cmdPalette.navDocs"), hint: t("cmdPalette.navDocsHint"), run: () => { close(); navigate("/docs"); } },
     ];
     const q = query.trim().toLowerCase();
     const filtered = q ? base.filter((i) => `${i.label} ${i.hint}`.toLowerCase().includes(q)) : base;
     if (q) {
       filtered.unshift({
         id: "delegate",
-        group: "Delegate",
-        label: `Give this task to a Bot: “${query.trim()}”`,
-        hint: "Opens /app with the task prefilled",
+        group: t("cmdPalette.groupDelegate"),
+        label: `${t("cmdPalette.delegatePrefix")} “${query.trim()}”`,
+        hint: t("cmdPalette.delegateHint"),
         run: () => { close(); navigate(appTaskUrl(query)); },
       });
     }
@@ -133,7 +133,7 @@ export function LandingCommandPalette({ roles, onSelectRole }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onListKey}
-            placeholder="Describe a task, or jump to a Bot…"
+            placeholder={t("cmdPalette.placeholder")}
             className="flex-1 bg-transparent text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 outline-none"
             aria-activedescendant={items[cursor]?.id}
           />

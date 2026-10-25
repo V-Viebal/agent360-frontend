@@ -408,33 +408,33 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white py-2 px-1"
             >
-              Marketplace Catalog
+              {t("nav.marketplaceCatalog")}
             </Link>
             <a
               href="/#pricing"
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-neutral-800 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-white py-2 px-1"
             >
-              Pricing Tiers
+              {t("nav.pricingTiers")}
             </a>
           </div>
 
           {/* Section 2: Resources & Docs */}
           <div className="pt-3 border-t border-white/10 space-y-1">
-            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">Resources</span>
+            <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest px-1">{t("nav.resourcesHeader")}</span>
             <Link
               to="/docs"
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-neutral-300 hover:text-white py-2 px-1"
             >
-              Documentation & Guides
+              {t("nav.docsGuides")}
             </Link>
             <Link
               to="/analytics"
               onClick={() => setMobileMenuOpen(false)}
               className="block text-sm text-neutral-300 hover:text-white py-2 px-1"
             >
-              Fleet Telemetry Radar
+              {t("nav.telemetryRadar")}
             </Link>
             <a
               href="https://community-agent360.antares.vn"

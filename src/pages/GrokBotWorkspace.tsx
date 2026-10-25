@@ -1095,6 +1095,53 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
   );
 }
 
+// Component to render enhanced rich links with favicons and subtle badge styling
+function InlineSmartLink({ href, label }: { href: string; label?: string }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  let hostname = "";
+  try {
+    const parsed = new URL(href);
+    hostname = parsed.hostname.replace(/^www\./, "");
+  } catch {
+    hostname = href.replace(/^https?:\/\//, "").split("/")[0];
+  }
+
+  const faviconUrl = hostname
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=32`
+    : "";
+
+  const displayLabel = label?.trim() || hostname || href;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 my-0.5 mx-0.5 rounded-md bg-slate-100 hover:bg-slate-200/80 dark:bg-[#181824] dark:hover:bg-[#222234] border border-slate-200/80 dark:border-[#28283a] text-slate-800 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-all text-[12px] font-sans no-underline group shrink-0 max-w-full align-middle select-none shadow-2xs"
+      title={`${displayLabel} (${href})`}
+    >
+      <span className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center overflow-hidden bg-white/20 dark:bg-black/20">
+        {!imgFailed && faviconUrl ? (
+          <img
+            src={faviconUrl}
+            alt=""
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+            className="w-3.5 h-3.5 object-contain"
+          />
+        ) : (
+          <Globe size={11} className="text-[#f8a87c] shrink-0" />
+        )}
+      </span>
+      <span className="font-medium truncate max-w-[240px] text-slate-900 dark:text-slate-100 group-hover:underline underline-offset-2">
+        {displayLabel}
+      </span>
+      <ExternalLink size={10} className="text-slate-400 dark:text-neutral-500 group-hover:text-[#f8a87c] shrink-0 transition-colors" />
+    </a>
+  );
+}
+
 // Markdown & Structured Content Formatter with support for links, bold, italics, code, and bare URLs
 function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (!rawText) return "";
@@ -1109,21 +1156,11 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (parts.length === 1 && !rawText.match(tokenRegex)) return rawText;
 
   return parts.filter(Boolean).map((part, pIdx) => {
-    // 1. Markdown link: [label](url)
+    // 1. Markdown link: [label](url) -> rendered with smart favicon pill badge
     if (part.startsWith("[") && part.includes("](") && part.endsWith(")")) {
       const match = part.match(/^\[([^\]]+)\]\(([^\s)]+)\)$/);
       if (match) {
-        return (
-          <a
-            key={pIdx}
-            href={match[2]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#f8a87c] hover:underline underline-offset-2 font-medium break-words"
-          >
-            {match[1]}
-          </a>
-        );
+        return <InlineSmartLink key={pIdx} href={match[2]} label={match[1]} />;
       }
     }
     // 2. Bold: **text**
@@ -1150,7 +1187,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
         </em>
       );
     }
-    // 5. Bare URL: https?://...
+    // 5. Bare URL: https?://... -> rendered with smart favicon pill badge
     if (part.startsWith("http://") || part.startsWith("https://")) {
       let url = part;
       let trailing = "";
@@ -1160,14 +1197,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
       }
       return (
         <React.Fragment key={pIdx}>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#f8a87c] hover:underline underline-offset-2 break-all"
-          >
-            {url}
-          </a>
+          <InlineSmartLink href={url} />
           {trailing}
         </React.Fragment>
       );

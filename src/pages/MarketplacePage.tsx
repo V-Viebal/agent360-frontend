@@ -37,15 +37,15 @@ const COMPANY_SCALES = [
   { id: "enterprise", label: "Enterprise (250+)", desc: "Air-Gapped & Compliance" },
 ];
 
-const CATEGORIES: { label: string; filter: (item: AgentMarketplaceItem) => boolean }[] = [
-  { label: "All Positions", filter: () => true },
-  { label: "Executive & Ops", filter: (item) => item.department === "Executive & Ops" },
-  { label: "Finance & Accounting", filter: (item) => item.department === "Finance & Accounting" },
-  { label: "Sales & BizDev", filter: (item) => item.department === "Sales & BizDev" },
-  { label: "Customer Support", filter: (item) => item.department === "Customer Support & Success" },
-  { label: "Marketing & Growth", filter: (item) => item.department === "Marketing & Creative" },
-  { label: "HR & Legal", filter: (item) => item.department === "HR & People" || item.department === "Legal & Compliance" },
-  { label: "IT & Tech", filter: (item) => item.department === "Engineering & Tech" },
+const CATEGORY_DEFS: { id: string; en: string; vi: string; filter: (item: AgentMarketplaceItem) => boolean }[] = [
+  { id: "all", en: "All Positions", vi: "Tất cả vị trí", filter: () => true },
+  { id: "exec", en: "Executive & Ops", vi: "Điều hành & Vận hành", filter: (item) => item.department === "Executive & Ops" },
+  { id: "finance", en: "Finance & Accounting", vi: "Tài chính & Kế toán", filter: (item) => item.department === "Finance & Accounting" },
+  { id: "sales", en: "Sales & BizDev", vi: "Kinh doanh & B2B", filter: (item) => item.department === "Sales & BizDev" },
+  { id: "cx", en: "Customer Support", vi: "Chăm sóc Khách hàng", filter: (item) => item.department === "Customer Support & Success" },
+  { id: "marketing", en: "Marketing & Growth", vi: "Marketing & Tăng trưởng", filter: (item) => item.department === "Marketing & Creative" },
+  { id: "hr", en: "HR & Legal", vi: "Nhân sự & Pháp chế", filter: (item) => item.department === "HR & People" || item.department === "Legal & Compliance" },
+  { id: "tech", en: "IT & Tech", vi: "CNTT & Kỹ thuật", filter: (item) => item.department === "Engineering & Tech" },
 ];
 
 // Helper to render geometrical shapes like x.ai/bot/marketplace
@@ -95,10 +95,10 @@ function GeometricAvatar({
 }
 
 export function MarketplacePage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<"catalog" | "orgchart">("catalog");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All Positions");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [selectedScale, setSelectedScale] = useState<string>("all");
   const [selectedCompanyScale, setSelectedCompanyScale] = useState<"All" | "Startup" | "SME" | "Enterprise">("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -107,16 +107,14 @@ export function MarketplacePage() {
 
   // Filter logic: Default to All Agents (no restrictive filter)
   const filteredAgents = useMemo(() => {
-    const categoryConfig = CATEGORIES.find((c) => c.label === selectedCategory);
+    const categoryConfig = CATEGORY_DEFS.find((c) => c.id === selectedCategoryId);
     return MARKETPLACE_AGENTS.filter((agent) => {
       const matchesCategory =
-        !selectedCategory ||
-        selectedCategory === "All" ||
-        selectedCategory === "All Positions"
+        selectedCategoryId === "all"
           ? true
           : categoryConfig
           ? categoryConfig.filter(agent)
-          : agent.department === selectedCategory || agent.categories.includes(selectedCategory);
+          : true;
 
       const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -137,7 +135,7 @@ export function MarketplacePage() {
 
       return matchesCategory && matchesSearch && matchesScale;
     });
-  }, [selectedCategory, searchQuery, selectedCompanyScale]);
+  }, [selectedCategoryId, searchQuery, selectedCompanyScale]);
 
   const handleDeployAgent = (agent: AgentMarketplaceItem) => {
     setDeployedSuccess(agent.name);
@@ -152,8 +150,8 @@ export function MarketplacePage() {
     <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
       <SeoHead
         title="Skyer Marketplace — Pre-Built Enterprise AI Employees & Role Templates"
-        description="Browse and deploy verified AI employees for Executive Ops, Finance (ERPNext & TT99), B2B Sales, 24/7 Customer Support, Marketing, HR, Legal, and IT Operations."
-        keywords="Skyer Marketplace, AI Employee Templates, Chief of Staff AI, Financial Controller Bot, B2B Sales Agent, ERPNext Bot, Chợ nhân viên AI"
+        description="Browse and deploy verified AI employees for Executive Ops, Finance (ERPCore & TT99), B2B Sales, 24/7 Customer Support, Marketing, HR, Legal, and IT Operations."
+        keywords="Skyer Marketplace, AI Employee Templates, Chief of Staff AI, Financial Controller Bot, B2B Sales Agent, ERPCore Bot, Chợ nhân viên AI"
         canonicalPath="/marketplace"
         breadcrumbs={[
           { name: "Skyer Home", url: "/" },
@@ -162,7 +160,7 @@ export function MarketplacePage() {
         aeoSummary={{
           question: "What AI employee roles are available in the Skyer Marketplace?",
           directAnswer:
-            "The Skyer Marketplace offers pre-configured, production-ready AI employees across 8 corporate departments: Executive & Ops (Chief of Staff), Finance & Accounting (Financial Controller with TT99 & ERPNext matching), Sales & BizDev, Customer Support, Marketing & Growth, HR & People, Legal & Compliance, and IT & Systems Ops.",
+            "The Skyer Marketplace offers pre-configured, production-ready AI employees across 8 corporate departments: Executive & Ops (Chief of Staff), Finance & Accounting (Financial Controller with TT99 & ERPCore matching), Sales & BizDev, Customer Support, Marketing & Growth, HR & People, Legal & Compliance, and IT & Systems Ops.",
           keyFacts: [
             "Every marketplace template includes pre-bound MCP tool drivers, role persona, and verification rubrics.",
             "Supports 1-click deployment to Skyer Managed Cloud or On-Premise App360 clusters.",
@@ -302,19 +300,20 @@ export function MarketplacePage() {
 
           {/* Categories Pill Navigation matching x.ai UI */}
           <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORIES.map((cat) => {
-              const active = selectedCategory === cat.label;
+            {CATEGORY_DEFS.map((cat) => {
+              const active = selectedCategoryId === cat.id;
+              const label = language === "vi" ? cat.vi : cat.en;
               return (
                 <button
-                  key={cat.label}
-                  onClick={() => setSelectedCategory(cat.label)}
+                  key={cat.id}
+                  onClick={() => setSelectedCategoryId(cat.id)}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer border ${
                     active
                       ? "bg-[#f8a87c] text-black font-semibold border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25"
                       : "bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08] hover:text-white border-white/[0.06]"
                   }`}
                 >
-                  {cat.label}
+                  {label}
                 </button>
               );
             })}
@@ -439,17 +438,17 @@ export function MarketplacePage() {
             <Bot size={40} className="mx-auto text-neutral-600 mb-3" />
             <h3 className="text-base font-semibold text-white">{t("marketplace.noResultsTitle")}</h3>
             <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-              Try searching for "Finance", "Sales", "Support", "Marketing", or "HR".
+              {language === "vi" ? "Thử tìm kiếm theo từ khóa \"Tài chính\", \"Kinh doanh\", \"CSKH\", \"Marketing\" hoặc \"Nhân sự\"." : "Try searching for \"Finance\", \"Sales\", \"Support\", \"Marketing\", or \"HR\"."}
             </p>
             <button
               onClick={() => {
-                setSelectedCategory("All Positions");
+                setSelectedCategoryId("all");
                 setSelectedCompanyScale("All");
                 setSearchQuery("");
               }}
               className="mt-4 px-4 py-1.5 rounded-full bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition-colors"
             >
-              Reset Filters
+              {t("marketplace.resetFilters")}
             </button>
           </div>
         )}
@@ -510,7 +509,7 @@ export function MarketplacePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-white/[0.03] border border-[var(--border-subtle)] space-y-1.5">
                     <div className="text-[11px] font-mono text-[#f8a87c] uppercase tracking-wider">
-                      Role & Goal (AI Teammates Pattern)
+                      {language === "vi" ? "Vai trò & Mục tiêu Chuyên trách (Mô hình Đồng nghiệp AI)" : "Role & Goal (AI Teammates Pattern)"}
                     </div>
                     <p className="text-neutral-200 leading-relaxed font-sans text-xs">
                       {activeAgentModal.goal}

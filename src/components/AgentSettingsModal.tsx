@@ -243,14 +243,14 @@ export function AgentSettingsModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:w-[900px] md:w-[960px] h-[90vh] max-h-[680px] bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full sm:w-[900px] md:w-[960px] h-[94dvh] sm:h-[90vh] max-h-[100dvh] sm:max-h-[680px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
-        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
+        <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <AgentAvatar agent={agent} size="md" />
@@ -288,7 +288,7 @@ export function AgentSettingsModal({
         {/* Modal Body: 2-Column Split Design Pattern */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Left Navigation Rail */}
-          <div className="w-full md:w-64 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto shrink-0">
+          <div className="w-full md:w-64 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2 sm:p-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto shrink-0 no-scrollbar">
             {/* Quick Filter in Left Nav */}
             <div className="hidden md:flex items-center gap-1.5 bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#242432] rounded-xl px-2.5 py-1.5 mb-2">
               <Search size={13} className="text-neutral-400 shrink-0" />
@@ -356,7 +356,7 @@ export function AgentSettingsModal({
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 p-5 overflow-y-auto space-y-5 bg-white dark:bg-[#121218]">
+          <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5 bg-white dark:bg-[#121218]">
             {/* TAB 1: GENERAL (Identity, LLM Model, Governance, Status) */}
             {activeTab === "general" && (
               <div className="space-y-5 max-w-2xl">

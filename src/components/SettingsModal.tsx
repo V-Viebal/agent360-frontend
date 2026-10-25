@@ -26,6 +26,8 @@ import {
   Sparkles,
   ExternalLink,
   Laptop,
+  Star,
+  Command,
 } from "lucide-react";
 import { useTheme, ThemeMode } from "../context/ThemeContext";
 import { useTranslation, LanguageSelection } from "../i18n/LanguageContext";
@@ -62,6 +64,8 @@ interface SettingsModalProps {
   onExportCertificate?: () => void;
   onInstallPwa?: () => void;
   isPwaInstallable?: boolean;
+  onOpenStarredAndShortcuts?: () => void;
+  starredCount?: number;
   // Voice Recording props
   sttLang?: "vi-VN" | "en-US";
   onSttLangChange?: (lang: "vi-VN" | "en-US") => void;
@@ -83,6 +87,8 @@ export function SettingsModal({
   onExportCertificate,
   onInstallPwa,
   isPwaInstallable,
+  onOpenStarredAndShortcuts,
+  starredCount = 0,
   sttLang = "vi-VN",
   onSttLangChange,
   agentId,
@@ -465,24 +471,89 @@ export function SettingsModal({
     },
   ];
 
+  const navItems: {
+    id: SettingsTab;
+    label: string;
+    subtitle: string;
+    icon: React.ReactNode;
+    group: string;
+  }[] = [
+    {
+      id: "profile",
+      label: t("settings.tabProfile") || "Hồ sơ người dùng",
+      subtitle: "Tài khoản & Xác thực",
+      icon: <User size={15} />,
+      group: t("settings.groupAccount") || "Tài khoản",
+    },
+    {
+      id: "appearance",
+      label: t("settings.tabAppearance") || "Giao diện",
+      subtitle: "Chủ đề & Mật độ hiển thị",
+      icon: <Palette size={15} />,
+      group: t("settings.groupSystem") || "Hệ thống",
+    },
+    {
+      id: "language",
+      label: t("settings.tabLanguage") || "Ngôn ngữ",
+      subtitle: "Tiếng Việt / English",
+      icon: <Globe size={15} />,
+      group: t("settings.groupSystem") || "Hệ thống",
+    },
+    {
+      id: "audio",
+      label: t("settings.tabAudio") || "Âm thanh",
+      subtitle: "Chuông báo & TTS",
+      icon: <Volume2 size={15} />,
+      group: t("settings.groupSystem") || "Hệ thống",
+    },
+    {
+      id: "privacy_export",
+      label: t("settings.tabPrivacy") || "Bảo mật & Tiện ích",
+      subtitle: "Quyền riêng tư & Sao lưu",
+      icon: <ShieldCheck size={15} />,
+      group: t("settings.groupSystem") || "Hệ thống",
+    },
+    {
+      id: "voice_record",
+      label: t("settings.tabVoiceRecord") || "Thu âm & Micro",
+      subtitle: "Micro, VAD & Khử ồn",
+      icon: <Mic size={15} />,
+      group: t("settings.groupVoice") || "Giọng nói & Thu âm",
+    },
+  ];
+
+  const visibleNavItems = navItems.filter(
+    (item) =>
+      !tabSearchQuery.trim() ||
+      item.label.toLowerCase().includes(tabSearchQuery.toLowerCase()) ||
+      item.subtitle.toLowerCase().includes(tabSearchQuery.toLowerCase()) ||
+      item.group.toLowerCase().includes(tabSearchQuery.toLowerCase())
+  );
+
+  const groups = [
+    t("settings.groupAccount") || "Tài khoản",
+    t("settings.groupSystem") || "Hệ thống",
+    t("settings.groupVoice") || "Giọng nói & Thu âm",
+  ];
+
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:w-[880px] md:w-[920px] sm:h-[620px] h-[92vh] max-h-[660px] bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full sm:w-[880px] md:w-[920px] h-[94dvh] sm:h-[620px] max-h-[100dvh] sm:max-h-[680px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/10 border border-[#f8a87c]/20 flex items-center justify-center text-[#f8a87c]">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-lg bg-[#f8a87c]/10 border border-[#f8a87c]/20 flex items-center justify-center text-[#f8a87c] shrink-0">
               <Settings size={18} />
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">{t("settings.title") || "Cài đặt"}</h3>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{t("settings.title") || "Cài đặt"}</h3>
+              <p className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">
                 Tuỳ chỉnh hệ thống, giao diện và thiết bị thu âm giọng nói
               </p>
             </div>
@@ -490,7 +561,8 @@ export function SettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c28] hover:bg-slate-200 dark:hover:bg-[#252536] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shrink-0 ml-2"
+            aria-label="Đóng cài đặt"
           >
             <X size={15} />
           </button>
@@ -499,122 +571,69 @@ export function SettingsModal({
         {/* Modal Body: Left Tab Nav & Right Content Panel */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           {/* Navigation Tabs (Grouped into System vs Voice Recording) */}
-          <div className="w-full md:w-56 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2.5 space-y-1 shrink-0 flex md:flex-col overflow-x-auto">
-                      {/* Mobile Swipe / Dismiss Handle */}
-          <div className="md:hidden w-10 h-1 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto my-1.5 shrink-0" />
-
-          {/* Quick Filter Search in Sidebar */}
-          <div className="hidden md:block px-2 pb-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#222230] text-xs">
-              <Search size={12} className="text-slate-400 dark:text-neutral-500 shrink-0" />
-              <input
-                type="text"
-                value={tabSearchQuery}
-                onChange={(e) => setTabSearchQuery(e.target.value)}
-                placeholder="Lọc cài đặt..."
-                className="w-full bg-transparent border-0 text-slate-800 dark:text-neutral-200 placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none text-[11px]"
-              />
-              {tabSearchQuery && (
-                <button type="button" onClick={() => setTabSearchQuery("")} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* GROUP 1: USER PROFILE */}
-            <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
-              {t("settings.groupAccount") || "Tài khoản"}
+          <div className="w-full md:w-56 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2 sm:p-2.5 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto shrink-0 no-scrollbar">
+            {/* Quick Filter Search in Sidebar */}
+            <div className="hidden md:block px-1 pb-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#222230] text-xs">
+                <Search size={12} className="text-slate-400 dark:text-neutral-500 shrink-0" />
+                <input
+                  type="text"
+                  value={tabSearchQuery}
+                  onChange={(e) => setTabSearchQuery(e.target.value)}
+                  placeholder="Lọc cài đặt..."
+                  className="w-full bg-transparent border-0 text-slate-800 dark:text-neutral-200 placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none text-[11px]"
+                />
+                {tabSearchQuery && (
+                  <button type="button" onClick={() => setTabSearchQuery("")} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("profile")}
-              className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "profile"
-                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
-                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <User size={15} className={activeTab === "profile" ? "text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
-              <span>{t("settings.tabProfile") || "Hồ sơ người dùng"}</span>
-            </button>
-
-            {/* GROUP 1: SYSTEM SETTINGS */}
-            <div className="hidden md:block px-2.5 pt-1.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold select-none">
-              {t("settings.groupSystem") || "Hệ thống"}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("appearance")}
-              className={`flex-1 md:flex-initial flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "appearance"
-                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
-                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <Palette size={15} className={activeTab === "appearance" ? "text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white"} />
-              <span>{t("settings.tabAppearance")}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("language")}
-              className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                activeTab === "language"
-                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
-                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <Globe size={15} />
-              <span>{t("settings.tabLanguage")}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("audio")}
-              className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                activeTab === "audio"
-                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
-                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <Volume2 size={15} />
-              <span>{t("settings.tabAudio")}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("privacy_export")}
-              className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                activeTab === "privacy_export"
-                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
-                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <ShieldCheck size={15} />
-              <span>{t("settings.tabPrivacy")}</span>
-            </button>
-
-            {/* GROUP 2: VOICE RECORDING SETTINGS */}
-            <div className="hidden md:block px-2.5 pt-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-neutral-500 font-semibold border-t border-slate-200 dark:border-[#1e1e28] mt-2 select-none">
-              {t("settings.groupVoice") || "Giọng nói & Thu âm"}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("voice_record")}
-              className={`flex-1 md:flex-initial flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                activeTab === "voice_record"
-                  ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold shadow-xs"
-                  : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              <Mic size={15} className={activeTab === "voice_record" ? "text-[#f8a87c]" : "text-cyan-400"} />
-              <span>{t("settings.tabVoiceRecord") || "Cài đặt Thu âm & Micro"}</span>
-            </button>
+            {/* Render groups cleanly */}
+            {groups.map((grp) => {
+              const items = visibleNavItems.filter((i) => i.group === grp);
+              if (items.length === 0) return null;
+              return (
+                <div key={grp} className="flex md:flex-col gap-1 md:mb-2 shrink-0">
+                  <div className="hidden md:block px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-neutral-500 font-semibold select-none">
+                    {grp}
+                  </div>
+                  {items.map((item) => {
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setActiveTab(item.id)}
+                        className={`flex items-center justify-between gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 md:w-full ${
+                          isActive
+                            ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold shadow-xs"
+                            : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={isActive ? "text-[#e0682b] dark:text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400"}>
+                            {item.icon}
+                          </span>
+                          <div className="truncate text-left">
+                            <div className="text-xs leading-tight truncate">{item.label}</div>
+                            <div className="hidden md:block text-[10px] text-slate-400 dark:text-neutral-500 font-normal truncate mt-0.5">
+                              {item.subtitle}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
 
           {/* Right Panel Content */}
-          <div className="flex-1 p-5 overflow-y-auto space-y-5 bg-white dark:bg-[#121218]">
+          <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5 bg-white dark:bg-[#121218]">
             {/* 0. PROFILE TAB */}
             {activeTab === "profile" && (
               <div className="space-y-5 animate-in fade-in duration-150">
@@ -725,49 +744,49 @@ export function SettingsModal({
                 {/* Detailed Metadata Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <User size={12} className="text-[#f8a87c]" />
                       {t("settings.profileFullName")}
                     </span>
-                    <div className="text-xs font-semibold text-slate-800 dark:text-white">
+                    <div className="text-[13px] font-semibold text-slate-800 dark:text-white">
                       {cleanDisplayName}
                     </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <Mail size={12} className="text-cyan-400" />
                       {t("settings.profileEmail")}
                     </span>
-                    <div className="text-xs font-semibold text-slate-800 dark:text-white truncate">
+                    <div className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">
                       {cleanDisplayEmail}
                     </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <Key size={12} className="text-emerald-400" />
                       {t("settings.profileRoles")}
                     </span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {currentUser?.roles && currentUser.roles.length > 0 ? (
                         currentUser.roles.map((r) => (
-                          <span key={r} className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono">
+                          <span key={r} className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
                             {r}
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-neutral-400 font-mono">member</span>
+                        <span className="text-[13px] text-neutral-400 font-mono">member</span>
                       )}
                     </div>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-1">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono uppercase text-slate-500 dark:text-neutral-400 flex items-center gap-1.5">
                       <ShieldCheck size={12} className="text-blue-400" />
                       {t("settings.profileSsoSession")}
                     </span>
-                    <div className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
+                    <div className="text-[13px] font-medium text-emerald-400 flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
                       <span>{t("settings.profileSsoValid")}</span>
                     </div>
@@ -789,10 +808,10 @@ export function SettingsModal({
                         <Key size={18} />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-xs font-semibold text-slate-800 dark:text-blue-300">
+                        <h4 className="text-[13px] font-semibold text-slate-800 dark:text-blue-300">
                           {t("settings.password_change") || "Đổi mật khẩu"}
                         </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">
+                        <p className="text-xs text-slate-500 dark:text-neutral-400 truncate">
                           {t("settings.password_change_desc") || "Cập nhật mật khẩu bảo mật tài khoản Skyer"}
                         </p>
                       </div>
@@ -945,7 +964,7 @@ export function SettingsModal({
             {activeTab === "appearance" && (
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
                     {t("settings.themeHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -971,8 +990,8 @@ export function SettingsModal({
                             {opt.icon}
                           </div>
                           <div>
-                            <div className="text-xs font-semibold text-slate-900 dark:text-white">{opt.label}</div>
-                            <div className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">{opt.desc}</div>
+                            <div className="text-[13px] font-semibold text-slate-900 dark:text-white">{opt.label}</div>
+                            <div className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">{opt.desc}</div>
                           </div>
                         </div>
                         {isSelected && (
@@ -987,14 +1006,14 @@ export function SettingsModal({
               
                 {/* Layout Density Switcher (Compact / Normal / Comfortable) */}
                 <div className="pt-2 border-t border-slate-200 dark:border-[#222230]">
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
                     Độ Giãn Bố Cục (Layout Density)
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                     Tối ưu mật độ thông tin hiển thị cho màn hình và cường độ làm việc:
                   </p>
 
-                  <div className="grid grid-cols-3 gap-2.5 mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3">
                     {[
                       { id: "compact", label: "Compact", desc: "Mật độ cao, hiển thị >30 agents" },
                       { id: "normal", label: "Normal", desc: "Cân bằng tối ưu mặc định" },
@@ -1012,14 +1031,14 @@ export function SettingsModal({
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold">{d.label}</span>
+                            <span className="text-[13px] font-semibold">{d.label}</span>
                             {isSel && (
                               <div className="h-4 w-4 rounded-full bg-[#f8a87c] text-black flex items-center justify-center">
                                 <Check size={10} className="stroke-[3]" />
                               </div>
                             )}
                           </div>
-                          <span className="text-[10px] text-neutral-400 mt-1">{d.desc}</span>
+                          <span className="text-[11px] text-neutral-400 mt-1">{d.desc}</span>
                         </div>
                       );
                     })}
@@ -1032,7 +1051,7 @@ export function SettingsModal({
             {activeTab === "language" && (
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
                     {t("settings.langHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -1056,8 +1075,8 @@ export function SettingsModal({
                         <div className="flex items-center gap-3">
                           <div className="text-xl shrink-0">{opt.flag}</div>
                           <div>
-                            <div className="text-xs font-semibold text-slate-900 dark:text-white">{opt.label}</div>
-                            <div className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">{opt.desc}</div>
+                            <div className="text-[13px] font-semibold text-slate-900 dark:text-white">{opt.label}</div>
+                            <div className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">{opt.desc}</div>
                           </div>
                         </div>
                         {isSelected && (
@@ -1079,7 +1098,7 @@ export function SettingsModal({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-[#222230]">
                     <div>
-                      <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                      <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
                         <Bell size={14} className="text-[#f8a87c]" />
                         <span>{t("settings.audioChimeTitle")}</span>
                       </h4>
@@ -1124,8 +1143,8 @@ export function SettingsModal({
                               <Volume2 size={14} />
                             </div>
                             <div className="min-w-0 truncate">
-                              <div className="text-xs font-semibold text-white truncate">{preset.name}</div>
-                              <div className="text-[10px] text-slate-500 dark:text-neutral-400 truncate">{preset.description}</div>
+                              <div className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{preset.name}</div>
+                              <div className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">{preset.description}</div>
                             </div>
                           </div>
 
@@ -1156,7 +1175,7 @@ export function SettingsModal({
                 {/* 3B. Voice Dynamics (Text-to-Speech Synthesis Studio) */}
                 <div className="space-y-4 pt-4 border-t border-[#222230]">
                   <div>
-                    <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
                       <Mic size={14} className="text-cyan-400" />
                       <span>{t("settings.ttsTitle")}</span>
                     </h4>
@@ -1187,7 +1206,7 @@ export function SettingsModal({
                         })),
                       ]}
                       className="w-full"
-                      triggerClassName="w-full bg-white dark:bg-[#121218] text-xs text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] hover:border-[#f8a87c] rounded-lg px-2.5 py-2"
+                      triggerClassName="w-full bg-white dark:bg-[#121218] text-[13px] text-slate-800 dark:text-neutral-200 border border-[#2a2a3c] hover:border-[#f8a87c] rounded-lg px-2.5 py-2"
                       searchable={true}
                     />
                   </div>
@@ -1306,7 +1325,7 @@ export function SettingsModal({
             {activeTab === "privacy_export" && (
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div>
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
                     {t("settings.permsHeader")}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -1315,6 +1334,37 @@ export function SettingsModal({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {onOpenStarredAndShortcuts && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenStarredAndShortcuts();
+                      }}
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-amber-400/50 text-left transition-all cursor-pointer flex items-center justify-between gap-2.5 group shadow-xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-lg bg-amber-400/15 text-amber-400 shrink-0">
+                          <Star size={16} className={starredCount > 0 ? "fill-amber-400" : ""} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-semibold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+                            <span>Tin nhắn đã gắn sao & Phím tắt</span>
+                            {starredCount > 0 && (
+                              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-400/20 text-amber-400 font-bold">
+                                {starredCount}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">
+                            Quản lý tin nhắn đánh dấu sao và tra cứu phím tắt (Ctrl+/)
+                          </div>
+                        </div>
+                      </div>
+                      <Command size={14} className="text-neutral-400 group-hover:text-amber-400 shrink-0 transition-colors" />
+                    </button>
+                  )}
+
                   {onOpenPermissions && (
                     <button
                       type="button"
@@ -1322,14 +1372,14 @@ export function SettingsModal({
                         onClose();
                         onOpenPermissions();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5 shadow-xs"
                     >
-                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c]">
+                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c] shrink-0">
                         <ShieldCheck size={16} />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-white">{t("settings.permMicTitle")}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.permMicDesc")}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{t("settings.permMicTitle")}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">{t("settings.permMicDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -1341,14 +1391,14 @@ export function SettingsModal({
                         onClose();
                         onStartTour();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5 shadow-xs"
                     >
-                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c]">
+                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c] shrink-0">
                         <Sparkles size={16} />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-white">{t("settings.tourTitle")}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.tourDesc")}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{t("settings.tourTitle")}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">{t("settings.tourDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -1359,14 +1409,14 @@ export function SettingsModal({
                       onClick={() => {
                         onResetChecklist();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-amber-500/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-amber-500/50 text-left transition-all cursor-pointer flex items-center gap-2.5 shadow-xs"
                     >
-                      <div className="p-2 rounded-lg bg-amber-500/15 text-amber-400">
+                      <div className="p-2 rounded-lg bg-amber-500/15 text-amber-400 shrink-0">
                         <Sparkles size={16} />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-white">{t("settings.checklistTitle")}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.checklistDesc")}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{t("settings.checklistTitle")}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">{t("settings.checklistDesc")}</div>
                       </div>
                     </button>
                   )}
@@ -1378,21 +1428,21 @@ export function SettingsModal({
                         onClose();
                         onInstallPwa();
                       }}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] hover:border-[#f8a87c]/50 text-left transition-all cursor-pointer flex items-center gap-2.5 shadow-xs"
                     >
-                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c]">
+                      <div className="p-2 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c] shrink-0">
                         <Smartphone size={16} />
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-white">{t("settings.pwaTitle")}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-neutral-400">{t("settings.pwaDesc")}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{t("settings.pwaTitle")}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-neutral-400 truncate">{t("settings.pwaDesc")}</div>
                       </div>
                     </button>
                   )}
                 </div>
 
                 <div className="pt-2 border-t border-[#222230]">
-                  <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono">
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
                     Tải về nhật ký trò chuyện
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
@@ -1400,7 +1450,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportMarkdown}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-[13px] text-slate-800 dark:text-neutral-200"
                       >
                         <Download size={14} className="text-[#f8a87c] shrink-0" />
                         <span className="truncate">Tệp văn bản (.md)</span>
@@ -1410,7 +1460,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportJson}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-[13px] text-slate-800 dark:text-neutral-200"
                       >
                         <FileText size={14} className="text-cyan-400 shrink-0" />
                         <span className="truncate">Dữ liệu gốc (.json)</span>
@@ -1420,7 +1470,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={onExportCertificate}
-                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-xs text-slate-800 dark:text-neutral-200"
+                        className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161622] hover:bg-[#20202e] border border-slate-200 dark:border-[#262634] text-left transition-all cursor-pointer flex items-center gap-2 text-[13px] text-slate-800 dark:text-neutral-200"
                       >
                         <Shield size={14} className="text-emerald-400 shrink-0" />
                         <span className="truncate">Chứng chỉ kiểm định (.html)</span>
@@ -1436,7 +1486,7 @@ export function SettingsModal({
               <div className="space-y-4 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between pb-2 border-b border-[#222230]">
                   <div>
-                    <h4 className="text-xs font-semibold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
                       <Mic size={14} className="text-[#f8a87c]" />
                       <span>{t("settings.tabVoiceRecord") || "Cài đặt Thu âm & Micro"}</span>
                     </h4>
@@ -1456,16 +1506,16 @@ export function SettingsModal({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Globe size={15} className="text-[#f8a87c]" />
-                      <span className="text-xs font-semibold text-white">Input Language Accent (STT)</span>
+                      <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Input Language Accent (STT)</span>
                     </div>
-                    <span className="text-[10px] font-mono text-[#f8a87c] font-bold">
+                    <span className="text-[11px] font-mono text-[#f8a87c] font-bold">
                       {sttLang === "vi-VN" ? "Tiếng Việt" : "English"}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed">
                     Select the primary speech-to-text recognition model for best transcription accuracy:
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
                     <button
                       type="button"
                       onClick={() => onSttLangChange?.("vi-VN")}
@@ -1496,7 +1546,7 @@ export function SettingsModal({
                 {/* 2. Microphone Hardware Device */}
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2">
                   <div className="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-neutral-300">
-                    <span className="font-semibold text-white">Target Microphone Hardware:</span>
+                    <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Target Microphone Hardware:</span>
                     <span className="text-[10px] text-neutral-500 font-sans">
                       {audioDevices.length > 0 ? `${audioDevices.length} connected` : "Default"}
                     </span>
@@ -1519,13 +1569,13 @@ export function SettingsModal({
                 {/* 3. Voice Activity Detection (VAD) Mode & Silence Threshold */}
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-white">Interaction Mode</span>
+                    <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Interaction Mode</span>
                     <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
                       {vadMode === "continuous" ? "Hands-Free VAD" : vadMode === "push_to_talk" ? "Push-to-Talk" : "Manual"}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
                     <button
                       type="button"
                       onClick={() => handleVadModeChange("continuous")}
@@ -1589,7 +1639,7 @@ export function SettingsModal({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Wifi size={14} className="text-cyan-400" />
-                      <span className="text-xs font-semibold text-white">Network & Low-Latency Profile</span>
+                      <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Network & Low-Latency Profile</span>
                     </div>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                       WebRTC Optimized
@@ -1631,7 +1681,7 @@ export function SettingsModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[10px] font-mono">
                     <button
                       type="button"
                       onClick={() => handleProfileChange({ noiseSuppression: !voiceProfile.noiseSuppression })}
@@ -1673,7 +1723,7 @@ export function SettingsModal({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Activity size={14} className="text-[#f8a87c]" />
-                      <span className="text-xs font-semibold text-white">Frequency Bands Equalizer</span>
+                      <span className="text-[13px] font-semibold text-slate-900 dark:text-white">Frequency Bands Equalizer</span>
                     </div>
                     <button
                       type="button"
@@ -1691,7 +1741,7 @@ export function SettingsModal({
                     Live acoustic frequency breakdown for current microphone input:
                   </p>
 
-                  <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono pt-1">
                     {/* Bass Band */}
                     <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                       <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
@@ -1744,12 +1794,12 @@ export function SettingsModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
-          <span>Skyer Không Gian Đồng Đội AI</span>
+        <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-slate-50 dark:bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-neutral-500 shrink-0">
+          <span className="truncate">Skyer Không Gian Đồng Đội AI</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-800 dark:text-neutral-200 hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium"
+            className="px-3.5 py-1.5 rounded-lg bg-slate-200/60 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer text-xs font-sans font-medium shrink-0 ml-2"
           >
             Đóng bảng
           </button>

@@ -1,6 +1,6 @@
 import { SeoHead } from "../components/SeoHead";
 import { useTranslation } from "../i18n/LanguageContext";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   BookOpen,
@@ -192,19 +192,44 @@ export function DocsPage() {
     return DOCS_SECTIONS.find((d) => d.id === selectedDocId) || DOCS_SECTIONS[0];
   }, [selectedDocId]);
 
+  const sandboxTimerRef = useRef<number | null>(null);
+
+  // Clean up running sandbox when activeDoc changes
+  useEffect(() => {
+    if (sandboxTimerRef.current) {
+      window.clearInterval(sandboxTimerRef.current);
+      sandboxTimerRef.current = null;
+    }
+    setIsSandboxRunning(false);
+    setSandboxLogs(activeDoc.sandboxOutput || []);
+  }, [activeDoc.id]);
+
   const handleRunSandbox = () => {
-    if (!activeDoc.sandboxOutput) return;
+    const outputs = activeDoc.sandboxOutput;
+    if (!outputs || outputs.length === 0) return;
+
+    if (sandboxTimerRef.current) {
+      window.clearInterval(sandboxTimerRef.current);
+      sandboxTimerRef.current = null;
+    }
+
     setIsSandboxRunning(true);
     setSandboxLogs([]);
     setActiveTab("sandbox");
 
     let current = 0;
-    const interval = setInterval(() => {
-      if (current < activeDoc.sandboxOutput!.length) {
-        setSandboxLogs((prev) => [...prev, activeDoc.sandboxOutput![current]]);
+    sandboxTimerRef.current = window.setInterval(() => {
+      if (current < outputs.length) {
+        const nextLog = outputs[current];
+        if (typeof nextLog === "string") {
+          setSandboxLogs((prev) => [...prev, nextLog]);
+        }
         current++;
       } else {
-        clearInterval(interval);
+        if (sandboxTimerRef.current) {
+          window.clearInterval(sandboxTimerRef.current);
+          sandboxTimerRef.current = null;
+        }
         setIsSandboxRunning(false);
       }
     }, 450);
@@ -243,7 +268,7 @@ export function DocsPage() {
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3">
         <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
-            <Link to="/" className="hover:text-neutral-900 dark:text-white transition-colors">Skyer</Link>
+            <Link to="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Skyer</Link>
             <ChevronRight size={12} />
             <span className="text-neutral-900 dark:text-white font-medium">{t("docs.breadcrumb")}</span>
             <ChevronRight size={12} />
@@ -255,7 +280,7 @@ export function DocsPage() {
               href="/docs"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
               <span>{t("docs.specsLink")}</span>
               <ExternalLink size={12} />
@@ -265,7 +290,7 @@ export function DocsPage() {
               href="https://docs.ai-teammates.com/"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
             >
               <span>{t("docs.aiTeammatesLink")}</span>
               <ExternalLink size={12} />
@@ -313,7 +338,7 @@ export function DocsPage() {
                           className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
                             isSelected
                               ? "bg-[#f8a87c]/15 text-[#f8a87c] font-semibold border border-[#f8a87c]/30"
-                              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-900 dark:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.04]"
+                              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/[0.06]"
                           }`}
                         >
                           <span className="truncate">{doc.title}</span>
@@ -323,7 +348,7 @@ export function DocsPage() {
                               className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
                                 isSelected
                                   ? "bg-[#f8a87c] text-black font-semibold"
-                                  : "bg-white/5 text-neutral-500 hover:text-neutral-300"
+                                  : "bg-neutral-200/70 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"
                               }`}
                             >
                               {doc.badge}
@@ -482,7 +507,7 @@ export function DocsPage() {
           )}
 
           {/* Interactive Code & Live Sandbox Execution Area */}
-          <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-slate-50 dark:bg-[#04060a] overflow-hidden shadow-xs">
+          <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#080b11] overflow-hidden shadow-xs">
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2.5 text-xs font-mono">
               {/* Tab Switcher */}
               <div className="flex items-center gap-1 bg-neutral-200/60 dark:bg-white/5 p-0.5 rounded-lg border border-neutral-300/50 dark:border-white/5">
@@ -492,7 +517,7 @@ export function DocsPage() {
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "code"
                         ? "bg-[#f8a87c] text-black font-semibold shadow"
-                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/40 dark:hover:bg-white/[0.04]"
                     }`}
                   >
                     <Code2 size={12} />
@@ -505,7 +530,7 @@ export function DocsPage() {
                     className={`px-3 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
                       activeTab === "sandbox"
                         ? "bg-[#f8a87c] text-black font-semibold shadow"
-                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                        : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/40 dark:hover:bg-white/[0.04]"
                     }`}
                   >
                     <Terminal size={12} />
@@ -529,7 +554,7 @@ export function DocsPage() {
                 {activeDoc.codeSnippet && activeTab === "code" && (
                   <button
                     onClick={() => handleCopyCode(activeDoc.codeSnippet!.code)}
-                    className="hover:text-neutral-900 dark:text-white text-neutral-400 transition-colors flex items-center gap-1 cursor-pointer text-xs"
+                    className="hover:text-neutral-900 dark:hover:text-white text-neutral-400 transition-colors flex items-center gap-1 cursor-pointer text-xs"
                   >
                     {copiedCode ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                     <span>{copiedCode ? "Copied" : "Copy"}</span>
@@ -564,7 +589,7 @@ export function DocsPage() {
                   </div>
                 )}
 
-                <div className="space-y-1.5 min-h-[140px] bg-white dark:bg-black/40 p-3 rounded-lg border border-neutral-200 dark:border-white/5 shadow-xs">
+                <div className="space-y-1.5 min-h-[140px] bg-slate-50 dark:bg-black/50 p-3 rounded-lg border border-neutral-200 dark:border-white/5 shadow-xs">
                   <div className="text-neutral-500 dark:text-neutral-400 text-[11px] flex items-center justify-between border-b border-neutral-200 dark:border-white/5 pb-1 mb-2">
                     <span>{t("docs.sandboxedTrace")}</span>
                     <span className="text-emerald-400 flex items-center gap-1">
@@ -579,20 +604,25 @@ export function DocsPage() {
                     </div>
                   )}
 
-                  {sandboxLogs.map((log, idx) => (
-                    <div key={idx} className="flex items-start text-[11px] leading-relaxed">
-                      <span className="text-neutral-600 mr-2 select-none">{idx + 1}</span>
-                      <span className={
-                        log.includes("PASS") || log.includes("200 OK") || log.includes("verified")
-                          ? "text-emerald-400 font-semibold"
-                          : log.includes("error") || log.includes("Forbidden")
-                          ? "text-amber-400 font-medium"
-                          : "text-neutral-300"
-                      }>
-                        {log}
-                      </span>
-                    </div>
-                  ))}
+                  {sandboxLogs.map((log, idx) => {
+                    const strLog = String(log || "");
+                    const isSuccess = strLog.includes("PASS") || strLog.includes("200 OK") || strLog.includes("verified") || strLog.includes("ONLINE") || strLog.includes("HOÀN TẤT");
+                    const isWarn = strLog.includes("error") || strLog.includes("Forbidden") || strLog.includes("cảnh báo") || strLog.includes("Cổng");
+                    return (
+                      <div key={idx} className="flex items-start text-[11px] leading-relaxed">
+                        <span className="text-neutral-500 mr-2 select-none font-mono">{idx + 1}</span>
+                        <span className={
+                          isSuccess
+                            ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                            : isWarn
+                            ? "text-amber-600 dark:text-amber-400 font-medium"
+                            : "text-neutral-800 dark:text-neutral-300"
+                        }>
+                          {strLog}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -602,7 +632,7 @@ export function DocsPage() {
           <div className="border-t border-[var(--border-subtle)] pt-6 flex flex-wrap items-center justify-between gap-4">
             <Link
               to="/marketplace"
-              className="text-xs font-medium text-neutral-400 hover:text-neutral-900 dark:text-white flex items-center gap-1.5"
+              className="text-xs font-medium text-neutral-400 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1.5"
             >
               <span>{t("docs.exploreMarketplace")}</span>
             </Link>

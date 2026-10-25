@@ -1,7 +1,16 @@
-export type AvatarType = "role" | "icon" | "emoji" | "image";
+export type AvatarType = "blob" | "role" | "icon" | "emoji" | "image";
+
+export interface BlobAvatarOptions {
+  shape?: string;
+  expression?: string;
+  color?: string;
+  animation?: string;
+  seed?: number | string;
+}
 
 export interface CustomAvatarConfig {
   type: AvatarType;
+  blob?: BlobAvatarOptions;
   iconName?: string;
   colorPreset?: string;
   emoji?: string;
