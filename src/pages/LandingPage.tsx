@@ -389,30 +389,38 @@ export function LandingPage() {
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 text-[11px] font-mono text-neutral-600 dark:text-neutral-300 mb-6"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>QWENPAW KERNEL v2.4</span>
+            <span>AGENTCORE KERNEL v2.4</span>
             <span className="text-neutral-300 dark:text-neutral-600">|</span>
             <span className="text-[#f8a87c] font-semibold">NO FAKE DONE</span>
           </motion.div>
 
-          <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.06] max-w-4xl mx-auto text-balance">
-            {(() => {
-              const title = isVi
-                ? "Gặp gỡ Skyer. Nhân viên AI thực sự hoàn thành công việc."
-                : "Meet Skyer. AI teammates that finish the work.";
-              const parts = title.split("Skyer");
-              return (
+          <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.12] max-w-4xl mx-auto">
+            <span className="block sm:inline">
+              {isVi ? "Gặp gỡ " : "Meet "}
+              <span className="relative inline-block font-semibold">
+                <span className="absolute -inset-1 rounded-2xl bg-[#f8a87c]/25 blur-xl pointer-events-none -z-10" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 drop-shadow-[0_0_30px_rgba(248,168,124,0.4)]">
+                  Skyer
+                </span>
+              </span>
+              .
+            </span>{" "}
+            <span className="block mt-1 sm:mt-1.5 text-balance">
+              {isVi ? (
                 <>
-                  {parts[0]}
-                  <span className="relative inline-block font-semibold">
-                    <span className="absolute -inset-1 rounded-2xl bg-[#f8a87c]/25 blur-xl pointer-events-none -z-10" />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 drop-shadow-[0_0_30px_rgba(248,168,124,0.4)]">
-                      Skyer
-                    </span>
-                  </span>
-                  {parts.slice(1).join("Skyer")}
+                  <span className="whitespace-nowrap">Nhân viên AI</span>{" "}
+                  <span className="whitespace-nowrap">thực sự</span>{" "}
+                  <span className="whitespace-nowrap">hoàn thành</span>{" "}
+                  <span className="whitespace-nowrap">công việc.</span>
                 </>
-              );
-            })()}
+              ) : (
+                <>
+                  <span className="whitespace-nowrap">AI teammates</span>{" "}
+                  <span>that finish</span>{" "}
+                  <span className="whitespace-nowrap">the work.</span>
+                </>
+              )}
+            </span>
           </h1>
 
           <p className="mt-4 sm:mt-5 max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed">
@@ -794,8 +802,17 @@ export function LandingPage() {
                 <Server size={12} />
                 <span>{isVi ? "KIẾN TRÚC TRIỂN KHAI KÉP" : "HYBRID DEPLOYMENT TOPOLOGY"}</span>
               </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-                {isVi ? "100% On-Premise qua App360 hoặc Skyer Cloud." : "100% Air-Gapped On-Premise or Instant Cloud."}
+              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal text-balance leading-[1.15]">
+                {isVi ? (
+                  <>
+                    <span className="whitespace-nowrap">100% On-Premise</span>{" "}
+                    <span className="whitespace-nowrap">qua App360</span>{" "}
+                    <span>hoặc </span>
+                    <span className="whitespace-nowrap">Skyer Cloud.</span>
+                  </>
+                ) : (
+                  "100% Air-Gapped On-Premise or Instant Cloud."
+                )}
               </h2>
             </div>
 
@@ -870,7 +887,7 @@ export function LandingPage() {
                       <div className="text-[11px] text-neutral-500">1-Click Helm / Docker rollout, health guardian & eBPF isolation</div>
                     </div>
 
-                    {/* Node 2: QwenPaw Agent Runtime + Local GPU */}
+                    {/* Node 2: AgentCore Runtime + Local GPU */}
                     <div className="p-4 rounded-xl border-2 border-[#f8a87c]/50 bg-[#f8a87c]/[0.05] space-y-2 relative">
                       <div className="flex items-center justify-between text-xs font-mono text-[#f8a87c]">
                         <span>02. LOCAL INFERENCE</span>
@@ -1467,12 +1484,25 @@ export function LandingPage() {
       {/* 9. Final CTA */}
       <section id="deploy" className="py-20 text-center relative overflow-hidden">
         <div className="mx-auto max-w-3xl px-4 relative z-10">
-          <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal text-balance">
-            {isVi ? "Khởi chạy Nhân viên AI " : "Deploy your first "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 font-semibold">
-              Skyer
-            </span>
-            {isVi ? " ngay hôm nay." : " teammate today."}
+          <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal leading-[1.15] text-balance">
+            {isVi ? (
+              <>
+                <span className="whitespace-nowrap">Khởi chạy</span>{" "}
+                <span className="whitespace-nowrap">Nhân viên AI</span>{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 font-semibold whitespace-nowrap">
+                  Skyer
+                </span>{" "}
+                <span className="whitespace-nowrap">ngay hôm nay.</span>
+              </>
+            ) : (
+              <>
+                <span>Deploy your first </span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 font-semibold">
+                  Skyer
+                </span>
+                <span> teammate today.</span>
+              </>
+            )}
           </h2>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link

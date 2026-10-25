@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  Smile,
   X,
   Bot,
   Settings,
@@ -27,7 +28,7 @@ import { AgentConnectedAppsTab } from "./AgentConnectedAppsTab";
 import { AgentSubAgentsTab } from "./AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "./ExternalSubAgentsTab";
 import { AgentMemoryTab } from "./AgentMemoryTab";
-import { AgentChannelConfig, AgentScheduleJob } from "../services/agentApi";
+import { AgentChannelConfig, AgentScheduleJob, fetchAgentReactionSummary, MessageReactionSummaryDto } from "../services/agentApi";
 
 export type AgentSettingsTab =
   | "general"
@@ -113,6 +114,13 @@ export function AgentSettingsModal({
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
   const [modelSearch, setModelSearch] = useState("");
   const [navSearch, setNavSearch] = useState("");
+  const [reactionSummary, setReactionSummary] = useState<MessageReactionSummaryDto | null>(null);
+
+  useEffect(() => {
+    if (isOpen && agent?.id) {
+      fetchAgentReactionSummary(agent.id).then((summary) => setReactionSummary(summary));
+    }
+  }, [isOpen, agent?.id]);
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -253,7 +261,7 @@ export function AgentSettingsModal({
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-neutral-400 font-mono truncate">
-                {agent.node} • {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer")}
+                {agent.node} • {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}
               </p>
             </div>
           </div>
@@ -492,7 +500,7 @@ export function AgentSettingsModal({
                     <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230]">
                       <div className="text-[10px] text-neutral-500">Runtime Engine</div>
                       <div className="text-slate-800 dark:text-neutral-200 font-semibold truncate mt-0.5">
-                        {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer")}
+                        {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}
                       </div>
                     </div>
                     <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230]">
@@ -535,6 +543,33 @@ export function AgentSettingsModal({
                       <span className="text-[#e0682b] dark:text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || agent.model}>
                         {(turnTelemetry?.model || agent.model).split("/").pop()}
                       </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reaction Satisfaction & Implicit Evaluation Summary */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Smile size={15} className="text-[#f8a87c]" />
+                      <span>Đánh giá Phản hồi & Mức độ Hài lòng (Reactions Telemetry)</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
+                      Tổng {reactionSummary?.total_reactions || 0} lượt đánh giá
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col gap-0.5">
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Tích cực (Khen / Tốt)</span>
+                      <span className="text-emerald-500 text-sm font-bold">{reactionSummary?.positive_count || 0}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex flex-col gap-0.5">
+                      <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold">Cần cải thiện (Chưa hài lòng)</span>
+                      <span className="text-rose-500 text-sm font-bold">{reactionSummary?.negative_count || 0}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col gap-0.5">
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Trung tính / Góp ý</span>
+                      <span className="text-amber-500 text-sm font-bold">{reactionSummary?.neutral_count || 0}</span>
                     </div>
                   </div>
                 </div>

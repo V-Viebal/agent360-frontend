@@ -114,7 +114,7 @@ export async function sendConsoleChatMessageStream(
 
       let response: Response | null = null;
       if (attempt > 0 && payload.session_id) {
-        // Reconnect to the in-flight QwenPaw turn first instead of re-sending a duplicate user prompt
+        // Reconnect to the in-flight AgentCore turn first instead of re-sending a duplicate user prompt
         response = await fetch(`/api/agents/${encodeURIComponent(targetAgent)}/chats/${encodeURIComponent(payload.session_id)}/live`, {
           method: "GET",
           headers: authHeaders,
@@ -175,7 +175,7 @@ export async function sendConsoleChatMessageStream(
               const parsed = JSON.parse(rawData);
               options.onEvent?.(parsed);
 
-              // 1. Text Delta Streaming (QwenPaw native chunk format)
+              // 1. Text Delta Streaming (AgentCore native chunk format)
               if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {
                 if (parsed.delta && parsed.text) {
                   accumulatedText += parsed.text;

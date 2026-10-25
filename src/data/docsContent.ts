@@ -22,10 +22,10 @@ export const DOCS_SECTIONS: DocSection[] = [
     category: "Getting Started",
     badge: "Core",
     summary:
-      "Khởi chạy Skyer Agent Workstation: nền tảng vận hành Nhân viên AI độc lập trên hạ tầng QwenPaw kết hợp điều phối đa tác nhân tự hành.",
+      "Khởi chạy Skyer Agent Workstation: nền tảng vận hành Nhân viên AI độc lập trên hạ tầng AgentCore kết hợp điều phối đa tác nhân tự hành.",
     content: `
-### Tổng quan về Skyer (QwenPaw Kernel)
-Skyer là nền tảng máy trạm nhân viên AI doanh nghiệp được xây dựng trên hạt nhân **QwenPaw Agent Kernel**. 
+### Tổng quan về Skyer (AgentCore Kernel)
+Skyer là nền tảng máy trạm nhân viên AI doanh nghiệp được xây dựng trên hạt nhân **AgentCore Kernel**. 
 Không giống như các ứng dụng wrapper LLM thông thường chỉ đơn thuần phản hồi văn bản, mỗi nhân viên AI trong Skyer sở hữu một không gian làm việc máy trạm Linux hoàn chỉnh (\`/app/working\`), lưu trữ dữ liệu bền vững, trình điều khiển công cụ MCP và khả năng kết nối đa kênh tức thì.
 
 ### Các trụ cột kiến trúc cốt lõi
@@ -36,7 +36,7 @@ Không giống như các ứng dụng wrapper LLM thông thường chỉ đơn t
     `,
     codeSnippet: {
       language: "bash",
-      code: `# 1. Khởi động môi trường Skyer Core với QwenPaw Kernel
+      code: `# 1. Khởi động môi trường Skyer với AgentCore Kernel
 git clone https://github.com/V-Viebal/agent360.git
 cd agent360
 
@@ -53,7 +53,7 @@ curl -s http://localhost:5290/api/v1/agents/skills | jq .`,
     ],
     sandboxPrompt: "curl -s http://localhost:5290/api/v1/agents/skills | jq .",
     sandboxOutput: [
-      "[sandbox.connect] Đang kết nối QwenPaw kernel @ localhost:5290...",
+      "[sandbox.connect] Đang kết nối AgentCore kernel @ localhost:5290...",
       "[sandbox.skills] Đã kích hoạt 18 kỹ năng nghiệp vụ doanh nghiệp",
       "[sandbox.check] Trạng thái Kernel: Up (healthy) - Phân vùng /app/working đã gắn kết",
       "[sandbox.receipt] Phản hồi kiểm tra: HTTP 200 OK (độ trễ 12ms)",
@@ -105,7 +105,7 @@ role: "Executive Operations & OKR Synthesis"
 goal: "Tổng hợp chỉ số KPI các phòng ban, theo dõi điểm nghẽn và soạn thảo báo cáo ban điều hành."
 backstory: "Trợ lý điều hành cấp cao với chuyên môn phân tích dữ liệu, quản trị tiến độ dự án và phối hợp liên phòng ban."
 backend:
-  runtime: "qwenpaw-native"
+  runtime: "agentcore-native"
   model: "qwen-2.5-72b-instruct"
   temperature: 0.1
 tools:
@@ -236,17 +236,17 @@ verification_requirements:
     ],
   },
 
-  // 3. QwenPaw Runtime Architecture
+  // 3. AgentCore Runtime Architecture
   {
-    id: "qwenpaw-sandbox",
+    id: "agentcore-sandbox",
     title: "Kernel Sandbox & Security",
-    category: "QwenPaw Runtime",
+    category: "AgentCore Runtime",
     badge: "Security",
     summary:
-      "Cơ chế bảo mật sâu của QwenPaw: Container không quyền root, phân vùng làm việc độc lập và bộ lọc lệnh an toàn.",
+      "Cơ chế bảo mật sâu của AgentCore: Container không quyền root, phân vùng làm việc độc lập và bộ lọc lệnh an toàn.",
     content: `
 ### Kiến trúc bảo mật & Cách ly máy trạm
-Skyer kế thừa mô hình bảo vệ tài nguyên đa lớp của QwenPaw:
+Skyer kế thừa mô hình bảo vệ tài nguyên đa lớp của AgentCore:
 
 - **Phân vùng làm việc cô lập (\`/app/working\`):** Nhân viên AI chỉ có toàn quyền đọc ghi trong thư mục phân bổ riêng, không can thiệp vào máy chủ chủ quản.
 - **Bộ lọc kiểm soát thao tác phá hủy (Tool Guards):** Các câu lệnh có nguy cơ cao (xóa dữ liệu, sửa đổi cấu hình hệ thống, tải file lạ) tự động kích hoạt cảnh báo phê duyệt.
@@ -271,15 +271,15 @@ docker run -d \\
     ],
   },
   {
-    id: "qwenpaw-memory",
+    id: "agentcore-memory",
     title: "ReMe & Long-Term Memory",
-    category: "QwenPaw Runtime",
+    category: "AgentCore Runtime",
     badge: "Memory",
     summary:
       "Quy trình 6 bước nạp và duy trì ký ức doanh nghiệp của công nghệ ReMe, biến tương tác thành tri thức vĩnh viễn.",
     content: `
 ### Vòng đời 6 giai đoạn của bộ nhớ ReMe
-Skyer không phụ thuộc vào lịch sử chat tạm bợ. Hệ thống xây dựng tri thức theo kiến trúc ReMe của QwenPaw:
+Skyer không phụ thuộc vào lịch sử chat tạm bợ. Hệ thống xây dựng tri thức theo kiến trúc ReMe của AgentCore:
 
 1. **Ghi nhận (Record):** Lắng nghe và ghi lại quy chuẩn công việc, chính sách công ty và kết quả đã được xác nhận.
 2. **Tiếp nhận (Ingest):** Đọc và phân tích tài liệu nội bộ, thông báo chính sách và báo cáo tài chính.

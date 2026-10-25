@@ -139,7 +139,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         enabled: a.enabled ?? (a.status !== "disabled" && a.startup_status !== "disabled"),
         status: (a.enabled === false || a.status === "disabled" || a.startup_status === "disabled") ? "disabled" : (a.status || (a.startup_status === "running" ? "active" : "idle")),
         model: cleanModelDisplayName((typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna"),
-        runtimeVersion: (a.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw/gi, "Skyer"),
+        runtimeVersion: (a.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore"),
         uptime: a.uptime || "Online (Private)",
         memoryUsageMb: a.memoryUsageMb || 256,
         description: a.description || "Active autonomous infrastructure agent",
@@ -1717,4 +1717,34 @@ export async function submitMessageReaction(
     headers: authHeaders,
     body: JSON.stringify(payload),
   });
+}
+
+
+export interface MessageReactionSummaryDto {
+  agent_id: string;
+  total_reactions: number;
+  positive_count: number;
+  negative_count: number;
+  neutral_count: number;
+  top_emojis: Record<string, number>;
+}
+
+export async function fetchAgentReactionSummary(
+  agentId: string
+): Promise<MessageReactionSummaryDto | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/reactions/summary`,
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }

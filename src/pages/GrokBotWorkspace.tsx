@@ -215,6 +215,7 @@ const QUICK_REACTIONS = ["👍", "❤️", "🔥", "🎉", "👀", "🚀"];
 function stripSharedRoomContext(text: string): string {
   if (!text) return "";
   let cleaned = text.replace(/^\s*QUESTION_FOR_PARENT:\s*/i, "");
+  cleaned = cleaned.replace(/\[IMPLICIT_REACTION_FEEDBACK[^\]]*\][\s\S]*?\[\/IMPLICIT_REACTION_FEEDBACK\]/gi, "").trim();
   let idx = cleaned.indexOf("[SHARED SESSION ROOM CONTEXT]");
   if (idx < 0) idx = cleaned.indexOf("[AGENTTEAMS COLLABORATION ROOM");
   return idx >= 0 ? cleaned.slice(0, idx).trimEnd() : cleaned;
@@ -469,7 +470,7 @@ function TurnExecutionAccordion({
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
       >
         {isStreamingThisTurn ? (
-          <Loader2 size={12} className="text-[#f8a87c] animate-spin shrink-0" />
+          <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-pulse shrink-0" />
         ) : (
           <Sparkles size={12} className="text-emerald-400 shrink-0" />
         )}
@@ -3260,7 +3261,7 @@ export function GrokBotWorkspace() {
       return updated;
     });
 
-    // Ghi nhận reaction và kích hoạt Implicit Evaluation Turn trực tiếp xuống QwenPaw
+    // Ghi nhận reaction và kích hoạt Implicit Evaluation Turn trực tiếp xuống AgentCore
     const foundMsg = targetMsg || messages.find((m) => m.id === msgId);
     if (foundMsg && selectedAgent?.id && selectedChatId) {
       const isAgentResponse = foundMsg.role === "assistant";
@@ -3700,7 +3701,7 @@ export function GrokBotWorkspace() {
     const isCurrentlyEnabled = agent.enabled !== false && agent.status !== "disabled";
     const nextEnabled = !isCurrentlyEnabled;
 
-    // Prevent disabling core node root agents which cannot be disabled on QwenPaw runtime
+    // Prevent disabling core node root agents which cannot be disabled on AgentCore runtime
     if (!nextEnabled && (isRootDefault || agent.canToggle === false)) {
       setActiveAgentMenuId(null);
       setForkToast(`Agent ${agent.name} là Core Root Agent của cụm hạ tầng, không thể vô hiệu hóa.`);
@@ -4895,7 +4896,7 @@ export function GrokBotWorkspace() {
   };
 
   // Live turn of the open chat when it runs on another channel (Telegram, Zalo, cron, other console tab).
-  // Uses the same QwenPaw event stream as a console send, so reasoning and every executed tool render identically.
+  // Uses the same AgentCore event stream as a console send, so reasoning and every executed tool render identically.
   const [liveTurn, setLiveTurn] = useState<{ chatId: string; userText: string | null; msg: ChatMessage } | null>(null);
   const liveAttachRef = useRef<{ key: string; controller: AbortController; active: boolean } | null>(null);
   useEffect(() => {
@@ -8508,7 +8509,7 @@ export function GrokBotWorkspace() {
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
                       {/* Loading & Responding Indicator showing which Agent is currently responding (Compact & Clickable throughout the entire active turn) */}
-                      {(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (() => {
+                      {!msg.content && (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (() => {
                         const liveToolCount = (msg.toolCalls?.length || msg.steps?.filter((s) => s.kind === "tool_call").length || 0);
                         const liveReasonCount = (msg.steps?.filter((s) => s.kind === "reasoning").length || (msg.reasoning ? 1 : 0));
                         const stepBadge = (liveToolCount > 0 || liveReasonCount > 0)
@@ -8527,7 +8528,7 @@ export function GrokBotWorkspace() {
                             title="Bấm để xem chi tiết tool call và suy luận thời gian thực"
                             aria-label="Xem chi tiết tool call và suy luận"
                           >
-                            <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+                            <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-pulse shrink-0" />
                             <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white">
                               {(activeRespondingAgent?.statusText || `${msg.senderAgentName || selectedAgent.name} đang phản hồi...`) + stepBadge}
                             </span>
@@ -8655,7 +8656,7 @@ export function GrokBotWorkspace() {
                 title="Bấm để xem chi tiết tool call và suy luận thời gian thực"
                 aria-label="Xem chi tiết tool call và suy luận"
               >
-                <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+                <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-pulse shrink-0" />
                 <span className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-white">
                   {activeRespondingAgent?.statusText || `${selectedAgent.name} đang phản hồi...`}
                 </span>
@@ -10452,101 +10453,81 @@ export function GrokBotWorkspace() {
               );
 
               // Common Right Controls
-              const renderRightControls = () => (
-                <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
-                  {renderRecipesButton()}
+              const renderRightControls = () => {
+                const hasInputContent = Boolean(inputText.trim() || attachedFiles.length > 0);
 
-                  <AudioVisualizerWaveform
-                    isRecording={isRecording}
-                    agentId={selectedAgent?.id}
-                    onAudioLevel={(lvl) => {
-                      audioEnergyLevelRef.current = lvl;
-                      setLiveVoiceEnergy(lvl);
-                    }}
-                  />
+                return (
+                  <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
+                    {renderRecipesButton()}
 
-{/* Command button moved to left tools next to [+] as requested */}
+                    <AudioVisualizerWaveform
+                      isRecording={isRecording}
+                      agentId={selectedAgent?.id}
+                      onAudioLevel={(lvl) => {
+                        audioEnergyLevelRef.current = lvl;
+                        setLiveVoiceEnergy(lvl);
+                      }}
+                    />
 
-                  <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
-                    type="button"
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setSettingsModalTab("voice_record");
-                      setIsSettingsModalOpen(true);
-                    }}
-                    onClick={() => {
-                      if (vadModeRef.current !== "push_to_talk") {
-                        if (isRecording) stopVoiceRecording(true);
-                        else startVoiceRecording();
-                      }
-                    }}
-                    onPointerDown={() => {
-                      if (vadModeRef.current === "push_to_talk" && !isRecording) {
-                        startVoiceRecording();
-                      }
-                    }}
-                    onPointerUp={() => {
-                      if (vadModeRef.current === "push_to_talk" && isRecording) {
-                        stopVoiceRecording();
-                        setTimeout(() => {
-                          composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                        }, 200);
-                      }
-                    }}
-                    style={{
-                      boxShadow: isRecording
-                        ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
-                          (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : "rgba(248, 168, 124, 0.65)")
-                        : undefined,
-                    }}
-                    className={`p-1.5 rounded-full cursor-pointer transition-all ${
-                      isRecording
-                        ? liveVoiceEnergy > 45
-                          ? "bg-gradient-to-r from-[#ff3366] to-[#f8a87c] text-white"
-                          : "bg-[#f8a87c] text-black"
-                        : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
-                    }`}
-                    title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
-                  >
-                    {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={15} />}
-                  </button>
-
-                  {isStreaming && (
-                    <div className="flex items-center gap-1.5">
-                      <button
+                    {/* Voice button: shown when input is empty or when actively recording */}
+                    {(!hasInputContent || isRecording) ? (
+                      <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
                         type="button"
-                        onClick={handleStopStreaming}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 hover:text-red-300 text-[11px] font-mono transition-colors cursor-pointer select-none"
-                        title="Stop generation"
-                        aria-label="Stop response stream"
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setSettingsModalTab("voice_record");
+                          setIsSettingsModalOpen(true);
+                        }}
+                        onClick={() => {
+                          if (vadModeRef.current !== "push_to_talk") {
+                            if (isRecording) stopVoiceRecording(true);
+                            else startVoiceRecording();
+                          }
+                        }}
+                        onPointerDown={() => {
+                          if (vadModeRef.current === "push_to_talk" && !isRecording) {
+                            startVoiceRecording();
+                          }
+                        }}
+                        onPointerUp={() => {
+                          if (vadModeRef.current === "push_to_talk" && isRecording) {
+                            stopVoiceRecording();
+                            setTimeout(() => {
+                              composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                            }, 200);
+                          }
+                        }}
+                        style={{
+                          boxShadow: isRecording
+                            ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
+                              (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : "rgba(248, 168, 124, 0.65)")
+                            : undefined,
+                        }}
+                        className={`p-1.5 rounded-full cursor-pointer transition-all ${
+                          isRecording
+                            ? liveVoiceEnergy > 45
+                              ? "bg-gradient-to-r from-[#ff3366] to-[#f8a87c] text-white"
+                              : "bg-[#f8a87c] text-black"
+                            : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
+                        }`}
+                        title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
                       >
-                        <Square size={10} className="fill-current" />
-                        <span>Stop</span>
+                        {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={15} />}
                       </button>
-                      {requestQueue.length > 0 && (
-                        <span className="text-[10px] font-mono text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-full border border-[#f8a87c]/20">
-                          Queued: {requestQueue.length}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Circular Send Button (Grok/ChatGPT Style) */}
-                  <button
-                    type="submit"
-                    disabled={!inputText.trim() && attachedFiles.length === 0}
-                    className={`transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                      inputText.trim() || attachedFiles.length > 0
-                        ? "h-7 w-7 rounded-full bg-[#f8a87c] text-black hover:bg-[#ffb48a] shadow-xs active:scale-95"
-                        : "h-7 w-7 rounded-full bg-black/5 dark:bg-white/[0.06] text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
-                    }`}
-                    title={isStreaming ? "Add to request queue" : "Send Message"}
-                    aria-label={isStreaming ? "Add to request queue" : "Send Message"}
-                  >
-                    <ArrowUp size={15} className="stroke-[2.5]" />
-                  </button>
-                </div>
-              );
+                    ) : (
+                      /* Send button: replaces Voice button when user inputs text or attachments */
+                      <button
+                        type="submit"
+                        className="h-7 w-7 rounded-full bg-[#f8a87c] text-black hover:bg-[#ffb48a] shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        title={isStreaming ? "Add to request queue" : "Send Message"}
+                        aria-label={isStreaming ? "Add to request queue" : "Send Message"}
+                      >
+                        <ArrowUp size={15} className="stroke-[2.5]" />
+                      </button>
+                    )}
+                  </div>
+                );
+              };
 
               return (
                 <form
@@ -10778,7 +10759,7 @@ export function GrokBotWorkspace() {
                       return (
                         <>
                           {isCRunning ? (
-                            <Loader2 size={13} className="text-blue-400 animate-spin shrink-0" />
+                            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
                           ) : c.channel && c.channel.toLowerCase() !== "console" ? (
                             <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
                           ) : (
@@ -11034,7 +11015,7 @@ export function GrokBotWorkspace() {
                       {/* Channel icon OR Running Spin inside icon box */}
                       <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden flex items-center justify-center"}>
                         {isChatRunning ? (
-                          <Loader2 size={12} className="text-blue-400 animate-spin shrink-0" />
+                          <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
                         ) : (
                           <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
                         )}

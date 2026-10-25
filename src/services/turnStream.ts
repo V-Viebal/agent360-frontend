@@ -2,7 +2,7 @@ import type { ChatMessage, ChatStep, ToolCallItem } from "../types/agent";
 import { API_BASE_URL, getAuthHeaders } from "./agentApi";
 
 /**
- * Folds QwenPaw turn events (the same SSE protocol used by console/chat and by reconnect attach for any
+ * Folds AgentCore turn events (the same SSE protocol used by console/chat and by reconnect attach for any
  * channel) into one assistant ChatMessage. Console sends and live-attached channel turns share this reducer
  * so reasoning, every executed tool call, and the streamed answer render identically.
  */
