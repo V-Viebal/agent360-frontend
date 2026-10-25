@@ -80,7 +80,7 @@ jobs:
         run: |
           corepack enable >/dev/null 2>&1 || true
           npm install --force --no-audit --no-fund
-          npx tsc --noEmit -p .
+          ./node_modules/.bin/tsc --noEmit -p . || npx typescript --noEmit -p .
 
       - name: Build
         env:
