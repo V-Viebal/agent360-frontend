@@ -176,8 +176,12 @@ Trash2,
 import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, ReplyToMessageInfo } from "../types/agent";
 
 /** Short haptic tick on supporting devices; silently ignored elsewhere. */
-const triggerHaptic = (ms = 10) => {
-  try { navigator.vibrate?.(ms); } catch { /* unsupported */ }
+const triggerHaptic = (ms = 8) => {
+  try {
+    // Ultra-soft micro-vibration: scale down duration to subtle tactile tick (2ms - 6ms)
+    const gentleMs = Math.max(2, Math.min(Math.round(ms * 0.35), 6));
+    navigator.vibrate?.(gentleMs);
+  } catch { /* unsupported */ }
 };
 
 const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"];
@@ -554,7 +558,9 @@ function AgentThinkingModal({
                 (t) =>
                   selectedParticipantFilter === "all" ||
                   t.author_id === selectedParticipantFilter ||
-                  t.target_agent_id === selectedParticipantFilter
+                  t.target_agent_id === selectedParticipantFilter ||
+                  (selectedParticipantFilter === "agentteams-manager" &&
+                    (t.kind === "request" || t.kind === "manager_guard" || Boolean(t.manager_audit)))
               )
               .map((rt, idx) => {
                 const rtSteps = Array.isArray(rt.steps) ? rt.steps : [];
@@ -562,7 +568,7 @@ function AgentThinkingModal({
                 const rtReasons = rtSteps.filter((s) => s.kind === "reasoning");
                 const flowTitle =
                   rt.kind === "request"
-                    ? `Suy luận & Điều phối · Chủ room (@${rt.author_id}) → @${rt.target_agent_id || "room"}`
+                    ? `Tiếp nhận & Phân công · AgentTeams Manager (@agentteams-manager) → @${rt.target_agent_id || "room"}`
                     : rt.kind === "synthesis"
                     ? `Suy luận & Tổng hợp cuối · Chủ room (@${rt.author_id})`
                     : rt.kind === "manager_guard"
@@ -1791,8 +1797,8 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
   const name = (agent?.name || "").toLowerCase();
   const tools = (agent?.tools || []).map((t: any) => (typeof t === "string" ? t : t.name || "").toLowerCase());
 
-  // Business & Accounting / ERP (GM Bốc, Gạo, Lúa, Sales, ERPNext)
-  const isErp = tools.some((t: string) => t.includes("erpnext") || t.includes("invoice") || t.includes("order")) ||
+  // Business & Accounting / ERP (GM Bốc, Gạo, Lúa, Sales, ERPCore)
+  const isErp = tools.some((t: string) => t.includes("erpcore") || t.includes("invoice") || t.includes("order")) ||
     id.includes("gm-") || slug.includes("gm-") || name.includes("bốc") || name.includes("gạo") || name.includes("lúa") || name.includes("gm") || role.includes("finance");
   if (isErp) {
     return [
@@ -2604,11 +2610,14 @@ export function GrokBotWorkspace() {
       try {
         localStorage.setItem("agent360_bot_info_collapsed", next ? "true" : "false");
       } catch {}
+      if (next) {
+        setMobileBotInfoOpen(false);
+      }
       return next;
     });
   };
 
-  // Listen to parent Nextcloud postMessage toggle events and window resize
+  // Listen to parent BaseCore postMessage toggle events and window resize
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.data && e.data.type === 'AGENT360_SET_MODE') {
@@ -3723,7 +3732,7 @@ export function GrokBotWorkspace() {
     longPressTimerRef.current = setTimeout(() => {
       longPressPreventClickRef.current = true;
       if (typeof window !== "undefined" && "vibrate" in navigator) {
-        try { navigator.vibrate(25); } catch {}
+        triggerHaptic(12);
       }
       setMobileActionAgent(ag);
     }, 400);
@@ -3742,7 +3751,7 @@ export function GrokBotWorkspace() {
     longPressTimerRef.current = setTimeout(() => {
       longPressPreventClickRef.current = true;
       if (typeof window !== "undefined" && "vibrate" in navigator) {
-        try { navigator.vibrate(25); } catch {}
+        triggerHaptic(12);
       }
       setMobileActionChat(chat);
     }, 400);
@@ -3777,7 +3786,7 @@ export function GrokBotWorkspace() {
     longPressTimerRef.current = setTimeout(() => {
       longPressPreventClickRef.current = true;
       if (typeof window !== "undefined" && "vibrate" in navigator) {
-        try { navigator.vibrate(25); } catch {}
+        triggerHaptic(12);
       }
       setIsMobileActionExtended(false);
       const rect = currentTarget?.getBoundingClientRect();
@@ -4119,14 +4128,14 @@ export function GrokBotWorkspace() {
         // Swipe right from screen edge (startX <= 40px) opens agents drawer
         if (touchStartXRef.current <= 40 && deltaX > 60) {
           if (typeof window !== "undefined" && "vibrate" in navigator) {
-            try { navigator.vibrate(12); } catch {}
+            triggerHaptic(8);
           }
           setMobileAgentsOpen(true);
         }
         // Swipe left when drawer is open closes it
         else if (mobileAgentsOpen && deltaX < -60) {
           if (typeof window !== "undefined" && "vibrate" in navigator) {
-            try { navigator.vibrate(8); } catch {}
+            triggerHaptic(6);
           }
           setMobileAgentsOpen(false);
         }
@@ -5470,9 +5479,10 @@ export function GrokBotWorkspace() {
 
   // Switch chat session
   const handleSelectChat = (chat: AgentSession) => {
-    if (!chat?.id || chat.id === selectedChatId) return;
-    setSelectedChatId(chat.id);
+    if (!chat?.id) return;
     setMobileChatsOpen(false);
+    if (chat.id === selectedChatId) return;
+    setSelectedChatId(chat.id);
     try {
       localStorage.setItem("agent360_last_chat_id", chat.id);
       if (selectedAgentId) {
@@ -6226,9 +6236,9 @@ export function GrokBotWorkspace() {
       activeSessionRoom.participants.some((p: any) => p.role === "collaborator")
     ) {
       setActiveRespondingAgent({
-        id: targetAgent?.slug || originAgentId,
-        name: targetAgent?.name || originAgentId,
-        statusText: `${targetAgent?.name || "Chủ phòng"} đang phân tích và điều phối Room...`,
+        id: "agentteams-manager",
+        name: "AgentTeams Manager",
+        statusText: "AgentTeams Manager (@agentteams-manager) đang tiếp nhận yêu cầu và phân định agent xử lý trong Room...",
       });
     }
     setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
@@ -6312,18 +6322,16 @@ export function GrokBotWorkspace() {
                   const selectedNames = Array.isArray(ev.selected_collaborators) && ev.selected_collaborators.length > 0
                     ? ev.selected_collaborators.map((s: string) => `@${s}`).join(", ")
                     : `@${collabId}`;
-                  nextStatusText = ev.triage_mode && ev.triage_mode !== "explicit_mention"
-                    ? `Chủ phòng tự động kéo ${selectedNames} từ Room cùng giải quyết...`
-                    : `Chủ phòng điều phối ${selectedNames} trong Room...`;
+                  nextStatusText = `AgentTeams Manager (@agentteams-manager) phân định giao ${selectedNames} trong Room xử lý...`;
                 } else if (ev.status === "synthesizing") {
                   nextStatusText = `${dispName} đang tổng hợp kết quả cuối từ Room...`;
                 } else if (ev.execution_strategy === "parallel" && totalCollabs > 1) {
                   const selectedNames = Array.isArray(ev.selected_collaborators) && ev.selected_collaborators.length > 0
                     ? ev.selected_collaborators.map((s: string) => `@${s}`).join(", ")
                     : `${totalCollabs} chuyên viên`;
-                  nextStatusText = `Chủ phòng đang điều phối song song ${selectedNames} trong Room...`;
+                  nextStatusText = `AgentTeams Manager đang điều phối song song ${selectedNames} trong Room...`;
                 } else if (ev.triage_mode && ev.triage_mode !== "explicit_mention") {
-                  nextStatusText = `Chủ phòng điều phối ${dispName}${stepBadgeText} xử lý...`;
+                  nextStatusText = `AgentTeams Manager phân công ${dispName}${stepBadgeText} xử lý...`;
                 } else {
                   nextStatusText = `${dispName}${stepBadgeText} đang xử lý và phản hồi...`;
                 }
@@ -7096,6 +7104,7 @@ export function GrokBotWorkspace() {
                     setIsUserMenuOpen(false);
                     setSettingsModalTab("appearance");
                     setIsSettingsModalOpen(true);
+                    setMobileAgentsOpen(false);
                   }}
                 />
                 <DropdownMenuItem
@@ -7106,6 +7115,7 @@ export function GrokBotWorkspace() {
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     setIsCommandPaletteOpen(true);
+                    setMobileAgentsOpen(false);
                   }}
                 />
                 <DropdownMenuSection label="Hệ thống">
@@ -7139,6 +7149,7 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       setIsSignOutConfirmOpen(true);
+                    setMobileAgentsOpen(false);
                     }}
                   />
                 </DropdownMenuSection>
@@ -7423,6 +7434,7 @@ export function GrokBotWorkspace() {
                                       handleSelectAgent(ag);
                                       setTimeout(() => handleNewChat(), 50);
                                       setActiveAgentMenuId(null);
+                                      setMobileAgentsOpen(false);
                                     }}
                                   />
                                   <DropdownMenuItem
@@ -7433,6 +7445,7 @@ export function GrokBotWorkspace() {
                                       setAgentSettingsModalTab("general");
                                       setIsAgentSettingsModalOpen(true);
                                       setActiveAgentMenuId(null);
+                                      setMobileAgentsOpen(false);
                                     }}
                                   />
                                   <DropdownMenuItem
@@ -7442,6 +7455,7 @@ export function GrokBotWorkspace() {
                                       handleSelectAgent(ag);
                                       handleToggleBotInfo(false);
                                       setActiveAgentMenuId(null);
+                                      setMobileAgentsOpen(false);
                                     }}
                                   />
                                   <DropdownMenuItem
@@ -7661,6 +7675,7 @@ export function GrokBotWorkspace() {
                                       handleSelectAgent(ag);
                                       setTimeout(() => handleNewChat(), 50);
                                       setActiveAgentMenuId(null);
+                                      setMobileAgentsOpen(false);
                                     }}
                                   />
                                   <DropdownMenuItem
@@ -7671,6 +7686,7 @@ export function GrokBotWorkspace() {
                                       setAgentSettingsModalTab("general");
                                       setIsAgentSettingsModalOpen(true);
                                       setActiveAgentMenuId(null);
+                                      setMobileAgentsOpen(false);
                                     }}
                                   />
                                   <DropdownMenuItem
@@ -7680,6 +7696,7 @@ export function GrokBotWorkspace() {
                                       handleSelectAgent(ag);
                                       handleToggleBotInfo(false);
                                       setActiveAgentMenuId(null);
+                                      setMobileAgentsOpen(false);
                                     }}
                                   />
                                   <DropdownMenuItem
@@ -7795,6 +7812,7 @@ export function GrokBotWorkspace() {
                     setIsUserMenuOpen(false);
                     setSettingsModalTab("appearance");
                     setIsSettingsModalOpen(true);
+                    setMobileAgentsOpen(false);
                   }}
                 />
                 <DropdownMenuItem
@@ -7805,6 +7823,7 @@ export function GrokBotWorkspace() {
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     setIsCommandPaletteOpen(true);
+                    setMobileAgentsOpen(false);
                   }}
                 />
                 <DropdownMenuSection label="Hệ thống">
@@ -7838,6 +7857,7 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       setIsSignOutConfirmOpen(true);
+                    setMobileAgentsOpen(false);
                     }}
                   />
                 </DropdownMenuSection>
@@ -8720,15 +8740,12 @@ export function GrokBotWorkspace() {
                         const target = e.target as HTMLElement;
                         if (target.closest("button") || target.closest("a") || target.closest("input")) return;
                         if (window.getSelection()?.toString().trim()) return;
-                        triggerHaptic(12);
-                        const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
-                        const bubbleRect = bubbleEl.getBoundingClientRect();
-                        const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
-                        if (window.innerWidth < 640) {
-                          if (!longPressPreventClickRef.current) {
-                            setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg, anchorRect: anchor, clickY: e.clientY });
-                          }
-                        } else {
+                        if (longPressPreventClickRef.current) {
+                          longPressPreventClickRef.current = false;
+                          return;
+                        }
+                        // On mobile, short tap does not open action menu - only hold touch (long-press) opens it
+                        if (window.innerWidth >= 1024) {
                           const rect = e.currentTarget.getBoundingClientRect();
                           const containerRect = messagesContainerRef.current?.getBoundingClientRect();
                           const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
@@ -8790,29 +8807,17 @@ export function GrokBotWorkspace() {
                         const target = e.target as HTMLElement;
                         if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("pre")) return;
                         if (window.getSelection()?.toString().trim()) return;
-                        triggerHaptic(12);
+                        if (longPressPreventClickRef.current) {
+                          longPressPreventClickRef.current = false;
+                          return;
+                        }
                         // When this assistant turn is actively in-progress, clicking it ONLY opens the realtime thinking & tool calls modal
                         if ((isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn) {
                           handleOpenActiveThinkingModal(msg);
                           return;
                         }
-                        const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
-                        const bubbleRect = bubbleEl.getBoundingClientRect();
-                        const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
-                        if (window.innerWidth < 640) {
-                          if (!longPressPreventClickRef.current) {
-                            setMobileActionMsg({
-                              id: msg.id,
-                              content: cleanContent,
-                              turnIdx: mIdx,
-                              role: "assistant",
-                              hasThinking,
-                              rawMsg: msg,
-                              anchorRect: anchor,
-                              clickY: e.clientY,
-                            });
-                          }
-                        } else {
+                        // On mobile, short tap does not open action menu - only hold touch (long-press) opens it
+                        if (window.innerWidth >= 1024) {
                           const rect = e.currentTarget.getBoundingClientRect();
                           const containerRect = messagesContainerRef.current?.getBoundingClientRect();
                           const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
@@ -9503,7 +9508,7 @@ export function GrokBotWorkspace() {
                       const deltaY = e.changedTouches[0].clientY - plusMenuTouchStartYRef.current;
                       if (deltaY > 60) {
                         if (typeof window !== "undefined" && "vibrate" in navigator) {
-                          try { navigator.vibrate(10); } catch {}
+                          triggerHaptic(6);
                         }
                         setIsPlusMenuOpen(false);
                       }
@@ -10464,7 +10469,7 @@ export function GrokBotWorkspace() {
                         {totalActiveItems}
                       </span>
                     )}
-                    {renderRecipesButton()}
+                    {/* Starred & Shortcuts moved to Settings Modal */}
                   </div>
                 );
               };
@@ -11579,6 +11584,7 @@ ${chat.id}`);
                                 onClick={() => {
                                   handleSelectChat(chat);
                                   setInSessionSearchOpen(true);
+                                  setMobileChatsOpen(false);
                                   setActiveChatMenuId(null);
                                 }}
                               />
@@ -12038,7 +12044,13 @@ ${chat.id}`);
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button aria-label="Mở Computer Workspace" data-ux-target-min="24"
                             type="button"
-                            onClick={() => handleToggleComputerSplit(true)}
+                            onClick={() => {
+                              handleToggleComputerSplit(true);
+                              if (typeof window !== "undefined" && window.innerWidth < 1280) {
+                                handleToggleBotInfo(true);
+                                setMobileBotInfoOpen(false);
+                              }
+                            }}
                             className="p-1 text-neutral-400 hover:text-[#f8a87c] hover:bg-[#232330] rounded transition-colors cursor-pointer"
                             title="Mở Computer Workspace (Tỉ lệ 3:7)"
                           >
@@ -12059,7 +12071,13 @@ ${chat.id}`);
 
                       {/* Embedded Live Iframe Viewport: Fixed 190px responsive height with hover action */}
                       <div 
-                        onClick={() => handleToggleComputerSplit(true)}
+                        onClick={() => {
+                          handleToggleComputerSplit(true);
+                          if (typeof window !== "undefined" && window.innerWidth < 1280) {
+                            handleToggleBotInfo(true);
+                            setMobileBotInfoOpen(false);
+                          }
+                        }}
                         style={{ height: "190px", width: "100%", position: "relative", overflow: "hidden", flexShrink: 0 }}
                         className="cursor-pointer group flex items-center justify-center rounded-b-2xl bg-white dark:bg-black transition-colors"
                         title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
@@ -12997,6 +13015,11 @@ ${chat.id}`);
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsModalTab}
         onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+        onOpenStarredAndShortcuts={() => {
+          setIsSettingsModalOpen(false);
+          setIsStarredShortcutsOpen(true);
+        }}
+        starredCount={starredMsgIds.length}
         sttLang={sttLang}
         onSttLangChange={setSttLang}
         agentId={selectedAgent?.id}
