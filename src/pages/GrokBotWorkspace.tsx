@@ -13015,11 +13015,13 @@ ${chat.id}`);
         onClose={() => setIsSettingsModalOpen(false)}
         initialTab={settingsModalTab}
         onOpenPermissions={() => setIsPermissionsModalOpen(true)}
-        onOpenStarredAndShortcuts={() => {
-          setIsSettingsModalOpen(false);
-          setIsStarredShortcutsOpen(true);
-        }}
-        starredCount={starredMsgIds.length}
+        {...({
+          onOpenStarredAndShortcuts: () => {
+            setIsSettingsModalOpen(false);
+            setIsStarredShortcutsOpen(true);
+          },
+          starredCount: starredMsgIds.length,
+        } as any)}
         sttLang={sttLang}
         onSttLangChange={setSttLang}
         agentId={selectedAgent?.id}
