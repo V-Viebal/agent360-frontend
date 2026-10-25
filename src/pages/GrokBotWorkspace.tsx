@@ -173,7 +173,7 @@ Trash2,
   CornerUpLeft,
   Smile,
 } from "lucide-react";
-import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, ReplyToMessageInfo } from "../types/agent";
+import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, SessionRoomTurn, ReplyToMessageInfo } from "../types/agent";
 
 /** Short haptic tick on supporting devices; silently ignored elsewhere. */
 const triggerHaptic = (ms = 8) => {
@@ -300,6 +300,7 @@ import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState }
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { SettingsModal } from "../components/SettingsModal";
 import { AgentSettingsModal, AgentSettingsTab } from "../components/AgentSettingsModal";
+import { AgentIam360MiniCard } from "../components/AgentIam360MiniCard";
 import { PermissionsModal } from "../components/PermissionsModal";
 import { OnboardingChecklistWidget, recordMilestone } from "../components/OnboardingChecklistWidget";
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
@@ -338,15 +339,18 @@ function AgentThinkingModal({
   isLiveInProgress?: boolean;
   onClose: () => void;
 }) {
-  const initialFilter = msg.senderAgentId
+  const focusedAgentSlug = msg.senderAgentId
     ? msg.senderAgentId.replace(/^bot:agent360:/i, "").toLowerCase()
-    : "all";
-  const [selectedParticipantFilter, setSelectedParticipantFilter] = useState<string>(initialFilter);
+    : null;
+  // Default filter to "all" so multi-agent Flow Tree is always visible in full context
+  const [selectedParticipantFilter, setSelectedParticipantFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"tree" | "timeline">("tree");
+  const [selectedWaveIdx, setSelectedWaveIdx] = useState<number>(-1);
+  const [expandedBranchIds, setExpandedBranchIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    setSelectedParticipantFilter(
-      msg.senderAgentId ? msg.senderAgentId.replace(/^bot:agent360:/i, "").toLowerCase() : "all"
-    );
+    setSelectedParticipantFilter("all");
+    setSelectedWaveIdx(-1);
   }, [msg.id, msg.senderAgentId]);
 
   const steps = msg.steps || [];
@@ -393,6 +397,9 @@ function AgentThinkingModal({
 
   const totalToolCount = (msgIsRoomTurn ? 0 : allToolItems.length) + roomToolCount;
   const totalReasonCount = (msgIsRoomTurn ? 0 : reasoningItems.length) + roomReasonCount;
+  const hostSlug = (room?.host_agent_id || agentId || "mons").replace(/^bot:agent360:/i, "").toLowerCase();
+  const hostParticipant = room?.participants?.find((p) => p.role === "host" || p.agent_id === hostSlug);
+  const hostDisplayName = hostParticipant?.display_name || agentLabel || hostSlug;
   const displayAgent = msg.senderAgentName || msg.senderAgentId || agentLabel || "Agent";
   const isCurrentlyRunning = Boolean(
     isLiveInProgress ||
@@ -401,18 +408,278 @@ function AgentThinkingModal({
     room?.status === "synthesizing"
   );
 
+  // Group roomWaveTurns into hierarchical Execution Waves for the Flow Tree
+  const executionWaves = useMemo(() => {
+    type WaveGroup = {
+      waveNo: number;
+      requestTurn: SessionRoomTurn | null;
+      collaboratorTurns: SessionRoomTurn[];
+      managerGuardTurns: SessionRoomTurn[];
+      synthesisTurn: SessionRoomTurn | null;
+      triageMeta: {
+        mode: string;
+        confidence: number;
+        reason: string;
+        executionStrategy: string;
+        assignedAgents: string[];
+        selectedCollaborators: string[];
+        suggestedCollaborators: string[];
+      };
+      isMultiAgentWave: boolean;
+    };
+
+    const parseTriageFromTurn = (req: SessionRoomTurn | null, collabs: SessionRoomTurn[]) => {
+      let mode = collabs.length > 0 ? "specialty_triage" : "host_solo";
+      let confidence = 0.95;
+      let reason = req?.reasoning || "";
+      let executionStrategy = collabs.length > 1 ? "parallel" : "sequential";
+      let assignedAgents: string[] = [];
+      let selectedCollaborators: string[] = collabs.map((c) => c.author_id);
+      let suggestedCollaborators: string[] = [];
+
+      const triageStep = req?.steps?.find((s) => s.tool === "agentteams_manager_triage");
+      if (triageStep?.result) {
+        try {
+          const parsed = JSON.parse(triageStep.result);
+          if (parsed.mode) mode = parsed.mode;
+          if (typeof parsed.confidence === "number") confidence = parsed.confidence;
+          if (parsed.reason) reason = parsed.reason;
+          if (parsed.execution_strategy) executionStrategy = parsed.execution_strategy;
+          if (Array.isArray(parsed.assigned_agents)) assignedAgents = parsed.assigned_agents;
+          if (Array.isArray(parsed.selected_collaborators) && parsed.selected_collaborators.length > 0) {
+            selectedCollaborators = parsed.selected_collaborators;
+          }
+          if (Array.isArray(parsed.suggested_collaborators)) {
+            suggestedCollaborators = parsed.suggested_collaborators;
+          }
+        } catch {}
+      }
+      if (!reason) {
+        reason = collabs.length > 0
+          ? `AgentTeams Manager (@agentteams-manager) phân công ${selectedCollaborators.map((c) => `@${c}`).join(", ")} thực thi chuyên môn và Chủ phòng (@${hostSlug}) tổng hợp kết quả cuối.`
+          : `Phân tích thông minh độc lập (Smart Solo) bởi Chủ phòng @${hostSlug} (${hostDisplayName}).`;
+      }
+      return {
+        mode,
+        confidence,
+        reason,
+        executionStrategy,
+        assignedAgents: assignedAgents.length > 0 ? assignedAgents : [...selectedCollaborators, hostSlug],
+        selectedCollaborators,
+        suggestedCollaborators,
+      };
+    };
+
+    if (roomWaveTurns.length === 0) {
+      // Fallback wave for pure solo message when roomWaveTurns is empty
+      const synthTurn: SessionRoomTurn = {
+        id: msg.id,
+        turn_no: 1,
+        author_id: hostSlug,
+        author_name: displayAgent,
+        author_role: "host",
+        kind: "synthesis",
+        text: msg.content || "",
+        created_at: new Date().toISOString(),
+        reasoning: reasoningItems.map((r) => r.text).filter(Boolean).join("\n") || msg.reasoning || null,
+        steps: [
+          ...reasoningItems.map((r, idx) => ({
+            kind: "reasoning" as const,
+            id: `solo_r_${idx}`,
+            text: r.text,
+          })),
+          ...allToolItems.map((t, idx) => ({
+            kind: "tool_call" as const,
+            id: t.id || `solo_t_${idx}`,
+            tool: t.tool || "Tool",
+            args: t.args,
+            result: t.result,
+            state: t.state || "success",
+          })),
+        ],
+      };
+      return [
+        {
+          waveNo: 1,
+          requestTurn: null,
+          collaboratorTurns: [],
+          managerGuardTurns: [],
+          synthesisTurn: synthTurn,
+          triageMeta: parseTriageFromTurn(null, []),
+          isMultiAgentWave: false,
+        },
+      ];
+    }
+
+    const waves: WaveGroup[] = [];
+    let curReq: SessionRoomTurn | null = null;
+    let curCollabs: SessionRoomTurn[] = [];
+    let curGuards: SessionRoomTurn[] = [];
+    let curSynth: SessionRoomTurn | null = null;
+
+    const flushWave = () => {
+      if (!curReq && curCollabs.length === 0 && !curSynth) return;
+      const meta = parseTriageFromTurn(curReq, curCollabs);
+      waves.push({
+        waveNo: waves.length + 1,
+        requestTurn: curReq,
+        collaboratorTurns: curCollabs,
+        managerGuardTurns: curGuards,
+        synthesisTurn: curSynth,
+        triageMeta: meta,
+        isMultiAgentWave: curCollabs.length > 0 || meta.selectedCollaborators.length > 0,
+      });
+      curReq = null;
+      curCollabs = [];
+      curGuards = [];
+      curSynth = null;
+    };
+
+    for (const turn of roomWaveTurns) {
+      if (turn.kind === "request") {
+        if (
+          curReq &&
+          curCollabs.length === 0 &&
+          !curSynth &&
+          stripSharedRoomContext(curReq.text).trim().toLowerCase() === stripSharedRoomContext(turn.text).trim().toLowerCase()
+        ) {
+          continue;
+        }
+        if (curReq || curCollabs.length > 0 || curSynth) {
+          flushWave();
+        }
+        curReq = turn;
+      } else if (turn.kind === "manager_guard") {
+        curGuards.push(turn);
+      } else if (turn.kind === "synthesis") {
+        curSynth = turn;
+        flushWave();
+      } else {
+        if (curSynth) {
+          flushWave();
+        }
+        curCollabs.push(turn);
+      }
+    }
+    flushWave();
+
+    // Attach msg's own direct steps/reasoning into the latest wave's synthesisTurn if not already present
+    if (waves.length > 0 && !msgIsRoomTurn && (reasoningItems.length > 0 || allToolItems.length > 0)) {
+      const lastW = waves[waves.length - 1];
+      if (!lastW.synthesisTurn) {
+        lastW.synthesisTurn = {
+          id: msg.id,
+          turn_no: roomWaveTurns.length + 1,
+          author_id: hostSlug,
+          author_name: hostDisplayName,
+          author_role: "host",
+          kind: "synthesis",
+          text: msg.content || "",
+          created_at: new Date().toISOString(),
+          reasoning: reasoningItems.map((r) => r.text).filter(Boolean).join("\n") || null,
+          steps: [
+            ...reasoningItems.map((r, idx) => ({ kind: "reasoning" as const, id: `msg_r_${idx}`, text: r.text })),
+            ...allToolItems.map((t, idx) => ({
+              kind: "tool_call" as const,
+              id: t.id || `msg_t_${idx}`,
+              tool: t.tool || "Tool",
+              args: t.args,
+              result: t.result,
+              state: t.state || "success",
+            })),
+          ],
+        };
+      }
+    }
+
+    return waves;
+  }, [roomWaveTurns, msg, msgIsRoomTurn, reasoningItems, allToolItems, hostSlug, hostDisplayName, displayAgent]);
+
+  // Determine which wave to display in the Flow Tree (match msg.id or default to latest wave)
+  const activeWaveIndex = useMemo(() => {
+    if (selectedWaveIdx >= 0 && selectedWaveIdx < executionWaves.length) {
+      return selectedWaveIdx;
+    }
+    const matchedIdx = executionWaves.findIndex(
+      (w) =>
+        w.requestTurn?.id === msg.id ||
+        w.synthesisTurn?.id === msg.id ||
+        w.collaboratorTurns.some((c) => c.id === msg.id)
+    );
+    return matchedIdx >= 0 ? matchedIdx : Math.max(0, executionWaves.length - 1);
+  }, [executionWaves, selectedWaveIdx, msg.id]);
+
+  const activeWave = executionWaves[activeWaveIndex] || executionWaves[executionWaves.length - 1];
+
+  const getModeLabel = (mode: string, isMulti: boolean) => {
+    switch (mode) {
+      case "explicit_mention":
+        return "Chỉ định trực tiếp (@mention)";
+      case "specialty_triage":
+        return "Tự động phân công chuyên môn";
+      case "manager_specialist_recruitment":
+        return "Tự động chiêu mộ chuyên viên mới";
+      case "reply_or_named":
+        return "Phản hồi nối tiếp chuyên viên";
+      case "continuity_followup":
+      case "active_collaborator_affinity":
+        return "Duy trì mạch hội thoại chuyên sâu";
+      case "manual_policy_host_solo":
+        return "Chế độ Thủ công (Chủ phòng xử lý)";
+      default:
+        return isMulti ? "Điều phối Đa Tác Tử (Room)" : "Xử lý Cá nhân Thông minh (Smart Solo)";
+    }
+  };
+
+  const visibleCollaboratorBranches = useMemo(() => {
+    if (!activeWave) return [];
+    const turns = activeWave.collaboratorTurns;
+    if (
+      selectedParticipantFilter === "all" ||
+      selectedParticipantFilter === "agentteams-manager" ||
+      selectedParticipantFilter === hostSlug
+    ) {
+      return turns;
+    }
+    return turns.filter(
+      (t) =>
+        t.author_id.toLowerCase() === selectedParticipantFilter ||
+        (t.target_agent_id && t.target_agent_id.toLowerCase() === selectedParticipantFilter)
+    );
+  }, [activeWave, selectedParticipantFilter, hostSlug]);
+
   return (
     <div
       data-testid="agent-thinking-modal"
       className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-3 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
+      <style>{`
+        @keyframes flowPulseDown {
+          0% { transform: translateY(-100%); opacity: 0; }
+          30% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { transform: translateY(220%); opacity: 0; }
+        }
+        @keyframes flowBeamHorizontal {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+        .flow-tree-pulse-dot {
+          animation: flowPulseDown 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        .flow-tree-bus-animated {
+          background: linear-gradient(90deg, rgba(248,168,124,0.25) 0%, rgba(16,185,129,0.65) 50%, rgba(248,168,124,0.25) 100%);
+          background-size: 200% 100%;
+          animation: flowBeamHorizontal 2.6s linear infinite;
+        }
+      `}</style>
       <div
-        className="w-full max-w-3xl max-h-[86vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
+        className="w-full max-w-4xl max-h-[88vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Unified Modal Header (Consistent for both In-Progress & Completed Message Thinking Blocks) */}
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
+        {/* Unified Modal Header */}
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5 min-w-0">
             {isCurrentlyRunning ? (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#f8a87c]/15 border border-[#f8a87c]/30 shrink-0">
@@ -428,7 +695,7 @@ function AgentThinkingModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
-                  Thinking & Tool Execution — {displayAgent}
+                  Thinking & Smart Flow Tree — {displayAgent}
                 </h3>
                 <span
                   className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full border shrink-0 ${
@@ -446,20 +713,53 @@ function AgentThinkingModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            data-testid="close-thinking-modal-btn"
-            aria-label="Đóng modal thinking"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-          >
-            <X size={15} />
-          </button>
+
+          <div className="flex items-center gap-1.5">
+            {/* View Mode Toggle: Flow Tree vs Timeline Log */}
+            <div className="inline-flex items-center rounded-xl bg-slate-200/70 dark:bg-[#1d1d2b] p-0.5 border border-slate-300/60 dark:border-[#2c2c40]">
+              <button
+                type="button"
+                data-testid="thinking-view-mode-tree"
+                onClick={() => setViewMode("tree")}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  viewMode === "tree"
+                    ? "bg-white dark:bg-[#12121a] text-[#e0682b] dark:text-[#f8a87c] shadow-2xs"
+                    : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <GitFork size={11} className="rotate-180" />
+                <span>Sơ đồ Flow Tree</span>
+              </button>
+              <button
+                type="button"
+                data-testid="thinking-view-mode-timeline"
+                onClick={() => setViewMode("timeline")}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                  viewMode === "timeline"
+                    ? "bg-white dark:bg-[#12121a] text-[#e0682b] dark:text-[#f8a87c] shadow-2xs"
+                    : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                <Terminal size={11} />
+                <span>Chi tiết Log</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              data-testid="close-thinking-modal-btn"
+              aria-label="Đóng modal thinking"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
-        {/* Unified Thinking Blocks & In-Progress Body */}
-        <div className="p-4 overflow-y-auto space-y-2.5 flex-1">
-          {/* 1. In-Progress Live Status Banner (Merged directly into the Thinking Blocks stream) */}
+        {/* Unified Thinking Blocks & Flow Tree Body */}
+        <div className="p-4 overflow-y-auto space-y-3 flex-1">
+          {/* 1. In-Progress Live Status Banner */}
           {isCurrentlyRunning && (
             <div
               data-testid="inprogress-thinking-status-block"
@@ -472,7 +772,7 @@ function AgentThinkingModal({
                     <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                     <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                   </span>
-                  <span>Tiến trình đang thực thi (Realtime)</span>
+                  <span>Tiến trình đang thực thi (Realtime Flow)</span>
                 </div>
                 {room?.triage_policy && (
                   <span className="text-[10px] font-mono text-neutral-400">
@@ -486,7 +786,7 @@ function AgentThinkingModal({
             </div>
           )}
 
-          {/* 2. Multi-Agent Room Filter Bar (Consistent across In-Progress & Message Thinking Modal) */}
+          {/* 2. Multi-Agent Room Participants & Wave Selector Bar */}
           {hasMultiAgentRoom && room && (
             <div
               data-testid="room-orchestration-flow-section"
@@ -495,13 +795,21 @@ function AgentThinkingModal({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-700 dark:text-neutral-300 font-semibold">
                   <Sparkles size={12} className="text-[#f8a87c]" />
-                  <span>Luồng Điều Phối & Dòng Chảy Thông Tin Room</span>
+                  <span>Luồng Điều Phối & Phối Hợp Thông Minh Trong Room</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#f8a87c] border border-[#f8a87c]/25">
-                  Chế độ: {(room.triage_policy || "auto").toUpperCase()} · {room.status}
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {focusedAgentSlug && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25">
+                      Tin nhắn từ: @{focusedAgentSlug}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/25">
+                    Chế độ: {(room.triage_policy || "auto").toUpperCase()} · {room.status}
+                  </span>
+                </div>
               </div>
 
+              {/* Participant Filter Chips */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
@@ -512,14 +820,18 @@ function AgentThinkingModal({
                       : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-neutral-500 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  Tất cả
+                  Tất cả ({room.participants.filter((p) => p.role === "host" || p.role === "collaborator" || p.role === "manager").length})
                 </button>
                 {room.participants
                   .filter((p) => p.role === "host" || p.role === "collaborator" || p.role === "manager")
                   .map((p) => {
-                    const isRunning = p.status === "running" || room.active_collaborator_id === p.agent_id || activeRespondingAgent?.id === p.agent_id;
+                    const isRunning =
+                      p.status === "running" ||
+                      room.active_collaborator_id === p.agent_id ||
+                      activeRespondingAgent?.id === p.agent_id;
                     const isDone = p.status === "completed";
                     const isSelected = selectedParticipantFilter === p.agent_id;
+                    const isMsgAuthor = focusedAgentSlug === p.agent_id.toLowerCase();
                     return (
                       <button
                         key={p.agent_id}
@@ -534,7 +846,7 @@ function AgentThinkingModal({
                             : isDone
                             ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
                             : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-slate-600 dark:text-neutral-300"
-                        }`}
+                        } ${isMsgAuthor && !isSelected ? "ring-1 ring-[#f8a87c]/60" : ""}`}
                       >
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
@@ -542,91 +854,439 @@ function AgentThinkingModal({
                           }`}
                         />
                         <span>@{p.agent_id}</span>
-                        <span className="opacity-70">({p.role === "host" ? "Chủ room" : p.role === "manager" ? "Manager" : "Chuyên viên"})</span>
+                        <span className="opacity-70">
+                          ({p.role === "host" ? "Chủ room" : p.role === "manager" ? "Manager" : "Chuyên viên"})
+                        </span>
                       </button>
                     );
                   })}
               </div>
+
+              {/* Session Evolution Wave Selector (Shows smooth Solo <-> Multi-Agent transitions across turns) */}
+              {executionWaves.length > 1 && (
+                <div className="pt-1.5 border-t border-slate-200/70 dark:border-[#222230] flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] font-mono text-neutral-400 mr-1">Mạch phiên chat:</span>
+                  {executionWaves.map((w, wIdx) => {
+                    const isWaveActive = wIdx === activeWaveIndex;
+                    return (
+                      <button
+                        key={w.waveNo}
+                        type="button"
+                        data-testid={`flow-tree-wave-btn-${w.waveNo}`}
+                        onClick={() => setSelectedWaveIdx(wIdx)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                          isWaveActive
+                            ? "bg-[#f8a87c]/15 border-[#f8a87c] text-slate-900 dark:text-white font-semibold shadow-2xs"
+                            : "bg-white dark:bg-[#181824] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#2a2a3a] hover:border-[#f8a87c]/50"
+                        }`}
+                      >
+                        <span>Đợt #{w.waveNo}</span>
+                        <span className="opacity-75">
+                          ({w.isMultiAgentWave ? `Room: ${w.collaboratorTurns.length || w.triageMeta.selectedCollaborators.length} agent` : "Smart Solo"})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
-          {/* 3. Unified Thinking & Tool Call Blocks for Room Turns */}
-          {hasMultiAgentRoom &&
-            room &&
-            roomWaveTurns
-              .filter(
-                (t) =>
-                  selectedParticipantFilter === "all" ||
-                  t.author_id === selectedParticipantFilter ||
-                  t.target_agent_id === selectedParticipantFilter ||
-                  (selectedParticipantFilter === "agentteams-manager" &&
-                    (t.kind === "request" || t.kind === "manager_guard" || Boolean(t.manager_audit)))
-              )
-              .map((rt, idx) => {
-                const rtSteps = Array.isArray(rt.steps) ? rt.steps : [];
-                const rtTools = rtSteps.filter((s) => s.kind === "tool_call");
-                const rtReasons = rtSteps.filter((s) => s.kind === "reasoning");
-                const flowTitle =
-                  rt.kind === "request"
-                    ? `Tiếp nhận & Phân công · AgentTeams Manager (@agentteams-manager) → @${rt.target_agent_id || "room"}`
-                    : rt.kind === "synthesis"
-                    ? `Suy luận & Tổng hợp cuối · Chủ room (@${rt.author_id})`
-                    : rt.kind === "manager_guard"
-                    ? `Kiểm soát vòng lặp · Manager (@${rt.author_id})`
-                    : `Suy luận & Thực thi · @${rt.author_id} (${rt.author_name}) → Chủ room (@${rt.target_agent_id || room.host_agent_id})`;
+          {/* ===================================================================== */}
+          {/* VIEW MODE 1: INTERACTIVE ANIMATED FLOW TREE (DEFAULT)                 */}
+          {/* ===================================================================== */}
+          {viewMode === "tree" && activeWave && (
+            <div
+              data-testid="agent-execution-flow-tree"
+              className="rounded-2xl bg-slate-50/70 dark:bg-[#13131c] border border-slate-200/90 dark:border-[#232334] p-3.5 sm:p-4 flex flex-col items-center"
+            >
+              {/* LEVEL 0: ROOT NODE — User Request & Session Continuity Context */}
+              <div
+                data-testid="flow-tree-root-node"
+                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-slate-200 dark:border-[#29293d] p-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
+                    <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                    <span>1. Yêu cầu Đầu vào & Ngữ cảnh Phiên (Root Intent)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {activeWaveIndex > 0 && (
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25">
+                        🔄 Kế thừa {activeWaveIndex} lượt ngữ cảnh trước
+                      </span>
+                    )}
+                    <span
+                      className={`text-[9px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                        activeWave.isMultiAgentWave
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                      }`}
+                    >
+                      {activeWave.isMultiAgentWave ? "🤝 Multi-Agent Room Mode" : "🧠 Smart Solo Agent Mode"}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-800 dark:text-neutral-100 font-medium leading-relaxed break-words">
+                  {activeWave.requestTurn?.text
+                    ? `"${stripSharedRoomContext(activeWave.requestTurn.text)}"`
+                    : `Phân tích & xử lý yêu cầu trực tiếp trên phiên của @${hostSlug} (${hostDisplayName})`}
+                </p>
+              </div>
 
-                const combinedReasonText = [
-                  rt.reasoning,
-                  ...rtReasons.map((r) => r.text),
-                  rt.kind === "request" ? `Yêu cầu điều phối: "${stripSharedRoomContext(rt.text)}"` : null,
-                ]
-                  .filter(Boolean)
-                  .join("\n");
-                const wordCount = combinedReasonText.split(/\s+/).filter(Boolean).length;
-                const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+              {/* Animated Vertical Trunk Connector (Root -> Triage Brain) */}
+              <div className="relative h-6 w-0.5 bg-gradient-to-b from-cyan-400/60 via-[#f8a87c] to-[#f8a87c] overflow-hidden my-0.5">
+                <span className="absolute inset-x-0 h-2.5 bg-white dark:bg-[#f8a87c] rounded-full flow-tree-pulse-dot" />
+              </div>
 
-                return (
-                  <div
-                    key={rt.id || idx}
-                    data-testid={`room-flow-turn-${rt.kind}-${rt.author_id}`}
-                    className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-2"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-200 font-mono text-[11px]">
-                        <Sparkles size={12} className="text-[#f8a87c] shrink-0" />
-                        <span className="px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-[#1e1e2c] text-[#f8a87c] font-semibold">
-                          #{rt.turn_no || idx + 1}
-                        </span>
-                        <span className="font-semibold">{flowTitle}</span>
-                        {wordCount > 0 && (
-                          <span className="text-neutral-400 font-normal">(~{estimatedSec}s · {wordCount} từ)</span>
+              {/* LEVEL 1: TRIAGE & ORCHESTRATION BRAIN NODE (@agentteams-manager / Smart Solo Triage) */}
+              <div
+                data-testid="flow-tree-triage-node"
+                style={{ animationDelay: "50ms" }}
+                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-[#f8a87c]/45 dark:border-[#f8a87c]/35 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-2"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-slate-900 dark:text-white">
+                    <span className="h-5 w-5 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/40 flex items-center justify-center text-[#e0682b] dark:text-[#f8a87c] shrink-0">
+                      <Sparkles size={11} />
+                    </span>
+                    <span>
+                      2. Tầng Phân Định Thông Minh ·{" "}
+                      {activeWave.isMultiAgentWave
+                        ? "AgentTeams Manager (@agentteams-manager)"
+                        : `Smart Triage & Grounding (@${hostSlug})`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold">
+                      {getModeLabel(activeWave.triageMeta.mode, activeWave.isMultiAgentWave)}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#222232] text-slate-700 dark:text-neutral-300 border border-slate-200 dark:border-[#323248]">
+                      {activeWave.isMultiAgentWave && visibleCollaboratorBranches.length > 1
+                        ? activeWave.triageMeta.executionStrategy === "parallel"
+                          ? "⚡ Song song (Parallel)"
+                          : "🔗 Tuần tự (Sequential)"
+                        : "🎯 Trực tiếp (Direct)"}
+                    </span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                      Tin cậy {Math.round((activeWave.triageMeta.confidence || 0.95) * 100)}%
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
+                  {activeWave.triageMeta.reason}
+                </p>
+
+                {/* Assigned or Suggested Agents in Triage Node */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[10px] font-mono text-neutral-400">Luồng phân công:</span>
+                  {activeWave.triageMeta.selectedCollaborators.map((collabSlug) => (
+                    <span
+                      key={collabSlug}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-semibold"
+                    >
+                      <span>🤖 @{collabSlug}</span>
+                      <span className="opacity-70">(Chuyên viên)</span>
+                    </span>
+                  ))}
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/35 text-[10px] font-mono font-semibold">
+                    <span>👑 @{hostSlug}</span>
+                    <span className="opacity-75">({ activeWave.isMultiAgentWave ? "Chủ room tổng hợp" : "Xử lý chính" })</span>
+                  </span>
+                  {activeWave.triageMeta.suggestedCollaborators.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25 text-[10px] font-mono">
+                      <span>💡 Gợi ý mở rộng Room: {activeWave.triageMeta.suggestedCollaborators.map((s) => `@${s}`).join(", ")}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Triage Tool Call Receipt inside Brain Node */}
+                {activeWave.requestTurn?.steps?.filter((s) => s.kind === "tool_call").map((tStep, tIdx) => (
+                  <div key={tStep.id || tIdx} className="pt-1">
+                    <AgentToolCard
+                      agentId="agentteams-manager"
+                      toolCall={{
+                        tool: tStep.tool || "agentteams_manager_triage",
+                        args: tStep.args,
+                        result: tStep.result,
+                        state: (tStep.state as any) || "success",
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Tree Split Connector (Brain -> Collaborator Branches or Solo Execution) */}
+              {visibleCollaboratorBranches.length > 1 ? (
+                <div className="w-full max-w-3xl flex flex-col items-center my-0.5">
+                  <div className="relative h-4 w-0.5 bg-[#f8a87c] overflow-hidden">
+                    <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
+                  </div>
+                  <div className="relative w-2/3 h-3.5 border-t-2 border-x-2 border-[#f8a87c]/75 dark:border-[#f8a87c]/60 rounded-t-xl bg-transparent">
+                    {visibleCollaboratorBranches.length >= 3 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-[#f8a87c]/75 dark:bg-[#f8a87c]/60" />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative h-6 w-0.5 bg-[#f8a87c] overflow-hidden my-0.5">
+                  <span className="absolute inset-x-0 h-2.5 bg-white dark:bg-[#f8a87c] rounded-full flow-tree-pulse-dot" />
+                </div>
+              )}
+
+              {/* LEVEL 2: COLLABORATOR EXECUTION BRANCHES (OR SMART SOLO EXECUTION BRANCH) */}
+              <div
+                data-testid="flow-tree-branches-container"
+                style={{ animationDelay: "110ms" }}
+                className={`w-full grid gap-3 animate-in fade-in slide-in-from-top-2 duration-200 ${
+                  visibleCollaboratorBranches.length >= 3
+                    ? "grid-cols-1 md:grid-cols-3"
+                    : visibleCollaboratorBranches.length === 2
+                    ? "grid-cols-1 md:grid-cols-2"
+                    : "grid-cols-1 max-w-2xl"
+                }`}
+              >
+                {visibleCollaboratorBranches.length > 0 ? (
+                  visibleCollaboratorBranches.map((branchTurn, bIdx) => {
+                    const bSteps = Array.isArray(branchTurn.steps) ? branchTurn.steps : [];
+                    const bTools = bSteps.filter((s) => s.kind === "tool_call");
+                    const bReasons = bSteps.filter((s) => s.kind === "reasoning");
+                    const isFocusedBranch = focusedAgentSlug === branchTurn.author_id.toLowerCase();
+                    const isBranchExpanded = Boolean(expandedBranchIds[branchTurn.id]);
+                    const cleanBranchReply = stripSharedRoomContext(branchTurn.text || "");
+                    const audit = branchTurn.manager_audit;
+                    const qaScore = Math.round(((audit?.quality_score ?? 0.94) as number) * 100);
+
+                    return (
+                      <div
+                        key={branchTurn.id || bIdx}
+                        data-testid={`flow-tree-branch-${branchTurn.author_id}`}
+                        className={`rounded-xl bg-white dark:bg-[#171723] border p-3 flex flex-col justify-between space-y-2.5 shadow-xs transition-all ${
+                          isFocusedBranch
+                            ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30"
+                            : "border-slate-200 dark:border-[#29293d]"
+                        }`}
+                      >
+                        <div className="space-y-2.5">
+                          {/* Sub-node 2.1: Collaborator Branch Header */}
+                          <div
+                            data-testid={`room-flow-turn-${branchTurn.kind}-${branchTurn.author_id}`}
+                            className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#232334] pb-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="h-6 w-6 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-500 font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
+                                {bIdx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate">
+                                    @{branchTurn.author_id}
+                                  </span>
+                                  {isFocusedBranch && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
+                                      Đang chọn
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                                  {branchTurn.author_name} → @{branchTurn.target_agent_id || hostSlug}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0">
+                              <Check size={10} />
+                              <span>Hoàn tất</span>
+                            </span>
+                          </div>
+
+                          {/* Sub-node 2.2: Reasoning & Tool Execution inside Branch */}
+                          <div className="pl-2.5 border-l-2 border-dashed border-slate-300 dark:border-[#323248] space-y-1.5">
+                            <div className="text-[10px] font-mono font-semibold text-slate-500 dark:text-neutral-400">
+                              Bước 2.{bIdx + 1}a · Suy luận & Thực thi Chuyên môn
+                            </div>
+                            {(branchTurn.reasoning || bReasons.length > 0) && (
+                              <div className="text-[11px] text-slate-600 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-[#13131c] p-2 rounded-lg border border-slate-200/60 dark:border-[#242436]">
+                                {branchTurn.reasoning || bReasons.map((r) => r.text).join("\n")}
+                              </div>
+                            )}
+                            {bTools.length > 0 && (
+                              <div className="space-y-1">
+                                {bTools.map((tStep, tIdx) => (
+                                  <AgentToolCard
+                                    key={tStep.id || tIdx}
+                                    agentId={branchTurn.author_id}
+                                    toolCall={{
+                                      tool: tStep.tool || "Tool",
+                                      args: tStep.args,
+                                      result: tStep.result,
+                                      state: (tStep.state as any) || "success",
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Sub-node 2.3: Manager Quality Gate inside Branch */}
+                          <div className="pl-2.5 border-l-2 border-dashed border-emerald-500/40 space-y-1">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                Bước 2.{bIdx + 1}b · Trạm Kiểm Định Manager QA
+                              </span>
+                              <span
+                                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                                  audit?.passed !== false
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
+                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                                }`}
+                              >
+                                QA {qaScore}% · {audit?.auto_retried ? "Auto-Corrected" : (audit?.verdict || "approved")}
+                              </span>
+                            </div>
+                            {audit?.checklist_passed && audit.checklist_passed.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {audit.checklist_passed.map((ck) => (
+                                  <span
+                                    key={ck}
+                                    className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#1e1e2d] text-slate-600 dark:text-neutral-400"
+                                  >
+                                    ✓ {ck}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Sub-node 2.4: Collapsible Specialist Output Contribution Preview */}
+                        {cleanBranchReply && (
+                          <div className="pt-2 border-t border-slate-100 dark:border-[#232334]">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-mono text-neutral-400">
+                                Đóng góp chuyên môn của @{branchTurn.author_id}:
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedBranchIds((prev) => ({
+                                    ...prev,
+                                    [branchTurn.id]: !prev[branchTurn.id],
+                                  }))
+                                }
+                                className="text-[10px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline cursor-pointer"
+                              >
+                                {isBranchExpanded ? "Thu gọn" : "Xem chi tiết"}
+                              </button>
+                            </div>
+                            <div
+                              className={`text-[11px] text-slate-700 dark:text-neutral-300 leading-relaxed bg-slate-50/80 dark:bg-[#13131c] p-2 rounded-lg border border-slate-200/60 dark:border-[#222232] whitespace-pre-wrap break-words ${
+                                isBranchExpanded ? "max-h-60 overflow-y-auto" : "line-clamp-2"
+                              }`}
+                            >
+                              {renderInlineMarkdown(cleanBranchReply)}
+                            </div>
+                          </div>
                         )}
                       </div>
-                      {rt.manager_audit && (
-                        <span
-                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                            rt.manager_audit.passed
-                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                              : "bg-amber-500/10 text-amber-500 border-amber-500/30"
-                          }`}
-                        >
-                          Manager QA: {Math.round((rt.manager_audit.quality_score || 0.92) * 100)}% ({rt.manager_audit.verdict || "approved"})
+                    );
+                  })
+                ) : (
+                  /* SMART SOLO EXECUTION BRANCH (When no external collaborators were needed in this wave) */
+                  <div
+                    data-testid="flow-tree-solo-branch"
+                    className="rounded-xl bg-white dark:bg-[#171723] border border-slate-200 dark:border-[#29293d] p-3 space-y-2 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-900 dark:text-white">
+                        <span className="h-5 w-5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-500 flex items-center justify-center">
+                          ⚡
                         </span>
-                      )}
+                        <span>3. Thực thi Độc lập Thông minh (Smart Solo Execution) · @{hostSlug}</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
+                        Direct Zero-Latency
+                      </span>
                     </div>
+                    <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
+                      @{hostSlug} ({hostDisplayName}) trực tiếp phân tích ngữ cảnh phiên chat, suy luận đa chiều và thực thi công cụ mà không cần chờ vòng điều phối phụ.
+                    </p>
+                  </div>
+                )}
+              </div>
 
-                    {combinedReasonText && (
-                      <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                        {renderInlineMarkdown(combinedReasonText)}
+              {/* Tree Convergence Connector (Branches -> Host Final Synthesis) */}
+              {visibleCollaboratorBranches.length > 1 ? (
+                <div className="w-full max-w-3xl flex flex-col items-center my-0.5">
+                  <div className="relative w-2/3 h-3.5 border-b-2 border-x-2 border-emerald-500/75 dark:border-emerald-500/60 rounded-b-xl bg-transparent">
+                    {visibleCollaboratorBranches.length >= 3 && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-emerald-500/75 dark:bg-emerald-500/60" />
+                    )}
+                  </div>
+                  <div className="relative h-4 w-0.5 bg-emerald-500 overflow-hidden">
+                    <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
+                  </div>
+                </div>
+              ) : (
+                <div className="relative h-6 w-0.5 bg-emerald-500/80 overflow-hidden my-0.5">
+                  <span className="absolute inset-x-0 h-2.5 bg-white dark:bg-emerald-300 rounded-full flow-tree-pulse-dot" />
+                </div>
+              )}
+
+              {/* LEVEL 3: CONVERGENCE & HOST FINAL SYNTHESIS NODE */}
+              <div
+                data-testid="flow-tree-synthesis-node"
+                style={{ animationDelay: "170ms" }}
+                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-emerald-500/45 dark:border-emerald-500/35 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-2"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-slate-900 dark:text-white">
+                    <span className="h-5 w-5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-500 shrink-0">
+                      <Check size={12} />
+                    </span>
+                    <span>
+                      {activeWave.isMultiAgentWave
+                        ? `4. Tầng Hội Tụ & Tổng Hợp Cuối · Chủ phòng @${hostSlug} (${hostDisplayName})`
+                        : `4. Kết Quả Phản Hồi Cuối · @${hostSlug} (${hostDisplayName})`}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                      isCurrentlyRunning
+                        ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                        : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                    }`}
+                  >
+                    {isCurrentlyRunning ? "Đang tổng hợp..." : "Đã tổng hợp hoàn tất"}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
+                  {activeWave.isMultiAgentWave
+                    ? `Chủ phòng @${hostSlug} hội tụ kết quả đã qua kiểm định Manager QA từ ${
+                        activeWave.collaboratorTurns.map((c) => `@${c.author_id}`).join(", ") || "các chuyên viên"
+                      } để đưa ra phản hồi thống nhất cuối cùng cho người dùng.`
+                    : `Phản hồi đã được @${hostSlug} hoàn thiện và lưu vào mạch ngữ cảnh của phiên chat (sẵn sàng chuyển tiếp mượt sang chế độ Đa Tác Tử bất cứ lúc nào).`}
+                </p>
+
+                {/* Host Synthesis Reasoning & Tool Call Steps */}
+                {activeWave.synthesisTurn && (
+                  <div
+                    data-testid={`room-flow-turn-synthesis-${activeWave.synthesisTurn.author_id}`}
+                    className="space-y-1.5 pt-1"
+                  >
+                    {activeWave.synthesisTurn.reasoning && (
+                      <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-[#13131c] p-2.5 rounded-lg border border-slate-200/70 dark:border-[#232334] whitespace-pre-wrap break-words">
+                        {renderInlineMarkdown(activeWave.synthesisTurn.reasoning)}
                       </div>
                     )}
-
-                    {rtTools.length > 0 && (
-                      <div className="space-y-1 pt-0.5">
-                        {rtTools.map((tStep, tIdx) => (
+                    {Array.isArray(activeWave.synthesisTurn.steps) &&
+                      activeWave.synthesisTurn.steps
+                        .filter((s) => s.kind === "tool_call")
+                        .map((tStep, tIdx) => (
                           <AgentToolCard
                             key={tStep.id || tIdx}
-                            agentId={rt.author_id}
+                            agentId={activeWave.synthesisTurn?.author_id || hostSlug}
                             toolCall={{
                               tool: tStep.tool || "Tool",
                               args: tStep.args,
@@ -635,56 +1295,152 @@ function AgentThinkingModal({
                             }}
                           />
                         ))}
-                      </div>
-                    )}
                   </div>
-                );
-              })}
+                )}
+              </div>
+            </div>
+          )}
 
-          {/* 4. Direct Message Thinking & Tool Call Blocks (When message has its own reasoning/tool steps not already rendered above) */}
-          {!msgIsRoomTurn &&
-            (selectedParticipantFilter === "all" ||
-              (msg.senderAgentId && msg.senderAgentId.toLowerCase() === selectedParticipantFilter) ||
-              (!msg.senderAgentId && room?.host_agent_id?.toLowerCase() === selectedParticipantFilter)) && (
-              <>
-                {reasoningItems.map((r, rIdx) => {
-                  const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
-                  const estimatedSec = Math.max(1, Math.round(wordCount / 18));
-                  return (
-                    <div
-                      key={rIdx}
-                      className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
-                    >
-                      <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
-                        <Sparkles size={12} className="text-[#f8a87c]" />
-                        <span className="font-semibold">
-                          Suy luận · {displayAgent} (~{estimatedSec}s · {wordCount} từ)
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                        {renderInlineMarkdown(r.text || "")}
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* ===================================================================== */}
+          {/* VIEW MODE 2: CHRONOLOGICAL TIMELINE LOG VIEW                          */}
+          {/* ===================================================================== */}
+          {viewMode === "timeline" && (
+            <div className="space-y-2.5">
+              {hasMultiAgentRoom &&
+                room &&
+                roomWaveTurns
+                  .filter(
+                    (t) =>
+                      selectedParticipantFilter === "all" ||
+                      t.author_id === selectedParticipantFilter ||
+                      t.target_agent_id === selectedParticipantFilter ||
+                      (selectedParticipantFilter === "agentteams-manager" &&
+                        (t.kind === "request" || t.kind === "manager_guard" || Boolean(t.manager_audit)))
+                  )
+                  .map((rt, idx) => {
+                    const rtSteps = Array.isArray(rt.steps) ? rt.steps : [];
+                    const rtTools = rtSteps.filter((s) => s.kind === "tool_call");
+                    const rtReasons = rtSteps.filter((s) => s.kind === "reasoning");
+                    const flowTitle =
+                      rt.kind === "request"
+                        ? `Tiếp nhận & Phân công · AgentTeams Manager (@agentteams-manager) → @${rt.target_agent_id || "room"}`
+                        : rt.kind === "synthesis"
+                        ? `Suy luận & Tổng hợp cuối · Chủ room (@${rt.author_id})`
+                        : rt.kind === "manager_guard"
+                        ? `Kiểm soát vòng lặp · Manager (@${rt.author_id})`
+                        : `Suy luận & Thực thi · @${rt.author_id} (${rt.author_name}) → Chủ room (@${rt.target_agent_id || room.host_agent_id})`;
 
-                {allToolItems.map((step, sIdx) => (
-                  <AgentToolCard
-                    key={sIdx}
-                    agentId={msg.senderAgentId || agentId || agentLabel}
-                    toolCall={{
-                      tool: step.tool || "Tool",
-                      args: step.args,
-                      result: step.result,
-                      state: step.state,
-                    }}
-                  />
-                ))}
-              </>
-            )}
+                    const combinedReasonText = [
+                      rt.reasoning,
+                      ...rtReasons.map((r) => r.text),
+                      rt.kind === "request" ? `Yêu cầu điều phối: "${stripSharedRoomContext(rt.text)}"` : null,
+                    ]
+                      .filter(Boolean)
+                      .join("\n");
+                    const wordCount = combinedReasonText.split(/\s+/).filter(Boolean).length;
+                    const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+
+                    return (
+                      <div
+                        key={rt.id || idx}
+                        data-testid={`room-flow-turn-${rt.kind}-${rt.author_id}`}
+                        className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-2"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-200 font-mono text-[11px]">
+                            <Sparkles size={12} className="text-[#f8a87c] shrink-0" />
+                            <span className="px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-[#1e1e2c] text-[#f8a87c] font-semibold">
+                              #{rt.turn_no || idx + 1}
+                            </span>
+                            <span className="font-semibold">{flowTitle}</span>
+                            {wordCount > 0 && (
+                              <span className="text-neutral-400 font-normal">(~{estimatedSec}s · {wordCount} từ)</span>
+                            )}
+                          </div>
+                          {rt.manager_audit && (
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                                rt.manager_audit.passed
+                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                                  : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                              }`}
+                            >
+                              Manager QA: {Math.round((rt.manager_audit.quality_score || 0.92) * 100)}% ({rt.manager_audit.verdict || "approved"})
+                            </span>
+                          )}
+                        </div>
+
+                        {combinedReasonText && (
+                          <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                            {renderInlineMarkdown(combinedReasonText)}
+                          </div>
+                        )}
+
+                        {rtTools.length > 0 && (
+                          <div className="space-y-1 pt-0.5">
+                            {rtTools.map((tStep, tIdx) => (
+                              <AgentToolCard
+                                key={tStep.id || tIdx}
+                                agentId={rt.author_id}
+                                toolCall={{
+                                  tool: tStep.tool || "Tool",
+                                  args: tStep.args,
+                                  result: tStep.result,
+                                  state: (tStep.state as any) || "success",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+              {!msgIsRoomTurn &&
+                (selectedParticipantFilter === "all" ||
+                  (msg.senderAgentId && msg.senderAgentId.toLowerCase() === selectedParticipantFilter) ||
+                  (!msg.senderAgentId && room?.host_agent_id?.toLowerCase() === selectedParticipantFilter)) && (
+                  <>
+                    {reasoningItems.map((r, rIdx) => {
+                      const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
+                      const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+                      return (
+                        <div
+                          key={rIdx}
+                          className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
+                        >
+                          <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
+                            <Sparkles size={12} className="text-[#f8a87c]" />
+                            <span className="font-semibold">
+                              Suy luận · {displayAgent} (~{estimatedSec}s · {wordCount} từ)
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                            {renderInlineMarkdown(r.text || "")}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {allToolItems.map((step, sIdx) => (
+                      <AgentToolCard
+                        key={sIdx}
+                        agentId={msg.senderAgentId || agentId || agentLabel}
+                        toolCall={{
+                          tool: step.tool || "Tool",
+                          args: step.args,
+                          result: step.result,
+                          state: step.state,
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+            </div>
+          )}
 
           {/* Empty / Initializing Fallback */}
-          {reasoningItems.length === 0 && allToolItems.length === 0 && roomWaveTurns.length === 0 && (
+          {reasoningItems.length === 0 && allToolItems.length === 0 && roomWaveTurns.length === 0 && !activeWave && (
             <div className="p-8 flex flex-col items-center justify-center text-center space-y-3">
               <Loader2 size={24} className="text-[#f8a87c] animate-spin" />
               <div className="space-y-1">
@@ -692,7 +1448,7 @@ function AgentThinkingModal({
                   {activeRespondingAgent?.statusText || `${displayAgent} đang khởi tạo suy luận & công cụ...`}
                 </p>
                 <p className="text-[11px] font-mono text-neutral-500">
-                  Các khối suy luận (thinking blocks), luồng điều phối Room và tool call execution sẽ hiển thị thời gian thực tại đây.
+                  Sơ đồ Flow Tree điều phối Room và tool call execution sẽ hiển thị thời gian thực tại đây.
                 </p>
               </div>
             </div>
@@ -8889,7 +9645,7 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Minimalist 3-Dots Animated Responding Indicator (Focus / Click opens Room Orchestration & Tool Execution Modal) */}
+                      {/* Responding Indicator with Agent Blob Avatar + Animation */}
                       {!msg.content && (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (
                         <button
                           type="button"
@@ -8902,13 +9658,29 @@ export function GrokBotWorkspace() {
                           onFocus={() => {
                             handleOpenActiveThinkingModal(msg);
                           }}
-                          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100/80 dark:bg-[#14141c]/90 border border-slate-200/70 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group"
+                          className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
                           title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
                           aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
                         >
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                          <div className="relative shrink-0 flex items-center justify-center">
+                            <AgentAvatar
+                              agent={
+                                (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
+                                (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
+                                selectedAgent
+                              }
+                              size="2xs"
+                              interactive={false}
+                              forcedAnimation="thinking.2"
+                              className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                            />
+                            <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                          </div>
+                          <span className="flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                          </span>
                         </button>
                       )}
 
@@ -8961,7 +9733,7 @@ export function GrokBotWorkspace() {
                                   });
                                 }}
                               />
-                              {/* Inline pulsing 3-dots button if currently streaming active tokens (Click/Focus opens unified Thinking & In-Progress Modal) */}
+                              {/* Inline pulsing button with small animated Agent Blob Avatar */}
                               {isStreaming && isLastTurn && (
                                 <button
                                   type="button"
@@ -8972,9 +9744,19 @@ export function GrokBotWorkspace() {
                                     handleOpenActiveThinkingModal(msg);
                                   }}
                                   onFocus={() => handleOpenActiveThinkingModal(msg)}
-                                  className="inline-flex items-center gap-1 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
+                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
                                   title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem Thinking & tiến trình đang chạy"}
                                 >
+                                  <AgentAvatar
+                                    agent={
+                                      (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
+                                      selectedAgent
+                                    }
+                                    size="2xs"
+                                    interactive={false}
+                                    forcedAnimation="thinking.2"
+                                    className="ring-1 ring-[#f8a87c]/30"
+                                  />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
@@ -9027,7 +9809,7 @@ export function GrokBotWorkspace() {
           </>
           )}
 
-          {/* Minimalist 3-Dots Animated Responding Indicator (Focus / Click opens Room Orchestration & Tool Execution Modal) */}
+          {/* Responding Indicator with Agent Blob Avatar + Animation */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
               <button
@@ -9041,13 +9823,28 @@ export function GrokBotWorkspace() {
                 onFocus={() => {
                   handleOpenActiveThinkingModal();
                 }}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100/80 dark:bg-[#14141c]/90 border border-slate-200/70 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group"
+                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
                 title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
                 aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                <div className="relative shrink-0 flex items-center justify-center">
+                  <AgentAvatar
+                    agent={
+                      (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
+                      selectedAgent
+                    }
+                    size="2xs"
+                    interactive={false}
+                    forcedAnimation="thinking.2"
+                    className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                </div>
+                <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                </span>
               </button>
             </div>
           )}
@@ -12181,6 +12978,16 @@ ${chat.id}`);
                       )}
                     </div>
                   </div>
+
+                  {/* 1B. IAM360 Identity Cell & Organization Cell Mini Tree Card */}
+                  <AgentIam360MiniCard
+                    agentId={selectedAgent.id}
+                    agentSlug={selectedAgent.slug}
+                    onOpenFullWorkbench={() => {
+                      setAgentSettingsModalTab("iam360_cells");
+                      setIsAgentSettingsModalOpen(true);
+                    }}
+                  />
 
                   {/* 2. Routines (Automated Schedules) Section with clean card toggle matching user reference */}
                   <div className="space-y-2">
