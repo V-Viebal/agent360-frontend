@@ -508,7 +508,7 @@ function AgentThinkingModal({
                       : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-neutral-500 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
-                  Tất cả ({room.participants.filter((p) => p.role === "host" || p.role === "collaborator" || p.role === "manager").length})
+                  Tất cả
                 </button>
                 {room.participants
                   .filter((p) => p.role === "host" || p.role === "collaborator" || p.role === "manager")
@@ -8006,72 +8006,6 @@ export function GrokBotWorkspace() {
                 )}
               </div>
             </Tooltip>
-
-            {(() => {
-              const roomCollabs = activeSessionRoom &&
-                (activeSessionRoom.host_chat_id === selectedChatId ||
-                 activeSessionRoom.host_session_id === selectedChatId ||
-                 (selectedChat?.session_id &&
-                  (activeSessionRoom.host_chat_id === selectedChat.session_id ||
-                   activeSessionRoom.host_session_id === selectedChat.session_id))) &&
-                Array.isArray(activeSessionRoom.participants)
-                  ? activeSessionRoom.participants.filter((p) => p.role === "collaborator")
-                  : [];
-              if (roomCollabs.length === 0 || !activeSessionRoom) return null;
-              const isManualPolicy = (activeSessionRoom.triage_policy || "auto").toLowerCase() === "manual";
-              return (
-                <Tooltip
-                  placement="bottom"
-                  minWidth={240}
-                  maxWidth={300}
-                  className="flex-col !items-stretch gap-1.5 p-2.5 text-left !whitespace-normal"
-                  content={
-                    <div className="space-y-1.5 text-left font-mono text-[10px]">
-                      <div className="flex items-center justify-between gap-2 border-b border-neutral-100 dark:border-white/10 pb-1">
-                        <span className="text-[#f8a87c] font-semibold">Room Cộng Tác (1 Phiên = 1 Room)</span>
-                        <span className={`px-1.5 py-0.2 rounded border text-[9px] ${isManualPolicy ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"}`}>
-                          {isManualPolicy ? "Thủ công (@mention)" : "Tự động (Auto Triage)"}
-                        </span>
-                      </div>
-                      <div className="text-neutral-600 dark:text-neutral-300 space-y-0.5">
-                        <div>Chuyên viên trong Room: {roomCollabs.map((c) => `@${c.agent_id}`).join(", ")}</div>
-                        <div className="text-neutral-400 dark:text-neutral-500">
-                          {isManualPolicy
-                            ? "Chủ phòng chỉ kéo chuyên viên khi bạn gắn thẻ @mention hoặc Reply trực tiếp."
-                            : "Chủ phòng tự động phân tích yêu cầu mới và điều phối song song các chuyên viên phù hợp trong Room."}
-                        </div>
-                      </div>
-                      <div className="pt-0.5 text-[9px] text-[#f8a87c] text-center font-sans">
-                        Bấm để chuyển sang chế độ {isManualPolicy ? "Tự động (Auto)" : "Thủ công (Manual)"}
-                      </div>
-                    </div>
-                  }
-                >
-                  <button
-                    type="button"
-                    data-testid="room-triage-policy-pill"
-                    aria-label="Chuyển đổi chế độ điều phối Room Tự động hoặc Thủ công"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      triggerHaptic(12);
-                      const nextPolicy = isManualPolicy ? "auto" : "manual";
-                      setActiveSessionRoom((prev) => (prev ? { ...prev, triage_policy: nextPolicy } : prev));
-                      const updated = await updateChatRoomTriagePolicy(selectedAgentId, selectedChatId, nextPolicy);
-                      if (updated) setActiveSessionRoom(updated);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-mono transition-all cursor-pointer select-none shadow-2xs ${
-                      isManualPolicy
-                        ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15"
-                        : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
-                    }`}
-                  >
-                    <Sparkles size={11} className="shrink-0" />
-                    <span>+{roomCollabs.length}</span>
-                    <span className="hidden sm:inline text-[10px] opacity-90">{isManualPolicy ? "Manual" : "Auto"}</span>
-                  </button>
-                </Tooltip>
-              );
-            })()}
           </div>
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
