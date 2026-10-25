@@ -1014,7 +1014,7 @@ function AgentThinkingModal({
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <span className="text-[10px] font-mono text-neutral-400">Luồng phân công:</span>
                   {activeWave.triageMeta.selectedCollaborators.map((collabSlug) => {
-                    const cAg = agents.find((a) => (a.slug || "").toLowerCase() === collabSlug.toLowerCase() || a.id.toLowerCase() === collabSlug.toLowerCase());
+                    const cAg = allAgents.find((a) => (a.slug || "").toLowerCase() === collabSlug.toLowerCase() || a.id.toLowerCase() === collabSlug.toLowerCase());
                     const cTheme = getAgentColorTheme(collabSlug, cAg?.name || collabSlug, cAg?.roleTag);
                     return (
                       <span
@@ -1049,7 +1049,7 @@ function AgentThinkingModal({
                         className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-mono font-semibold shadow-2xs"
                       >
                         <AgentAvatar
-                          agent={selectedAgent || { id: hostSlug, name: hostDisplayName }}
+                          agent={allAgents.find((a) => (a.slug || "").toLowerCase() === hostSlug.toLowerCase() || a.id.toLowerCase() === hostSlug.toLowerCase()) || { id: hostSlug, name: hostDisplayName }}
                           size="2xs"
                           interactive={false}
                           className="scale-90 shrink-0"

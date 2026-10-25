@@ -4,7 +4,7 @@ import { ChatMessage, AgentSession } from "../types/agent";
 import { PendingApproval } from "../services/approvalApi";
 import { ApprovalCardModal } from "./ApprovalCardModal";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { AgentAvatar } from "./AgentAvatar";
+import { AgentAvatar, getAgentColorTheme } from "./AgentAvatar";
 import { uploadFileToGateway, UploadedFileResult } from "../services/uploadApi";
 import {
   Send,
@@ -88,7 +88,7 @@ export function ChatSessionCanvas({
     setUploading(true);
     setUploadError(null);
     try {
-      const res = await uploadFileToGateway(file);
+      const res = await uploadFileToGateway(file, agentId);
       setAttachedFile(res);
     } catch (err: any) {
       setUploadError(err.message || "Failed to upload file");
@@ -183,9 +183,20 @@ export function ChatSessionCanvas({
               >
                 {/* Author & Timestamp */}
                 <div className="flex items-center justify-between gap-4 font-mono text-[10px] text-neutral-500 select-none pb-1 border-b border-white/5">
-                  <span className="font-semibold text-neutral-400">
-                    {isUser ? "You" : agentName}
-                  </span>
+                  {isUser ? (
+                    <span className="font-semibold text-neutral-400">You</span>
+                  ) : (() => {
+                    const aTheme = getAgentColorTheme(agentId, agentName, roleTag);
+                    return (
+                      <span
+                        style={{ color: aTheme.dark }}
+                        className="font-semibold flex items-center gap-1.5"
+                      >
+                        <AgentAvatar agent={{ id: agentId, name: agentName, roleTag: roleTag as any }} size="2xs" interactive={false} />
+                        <span>{agentName}</span>
+                      </span>
+                    );
+                  })()}
                   <span>{msg.timestamp}</span>
                 </div>
 

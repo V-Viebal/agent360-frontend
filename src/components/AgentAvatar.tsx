@@ -88,6 +88,41 @@ export function getAgentBlobProfile(agentId: string = "", name: string = "", rol
 }
 
 
+export const BLOB_COLOR_THEMES: Record<
+  string,
+  {
+    light: string;
+    dark: string;
+    bgLight: string;
+    bgDark: string;
+    borderLight: string;
+    borderDark: string;
+  }
+> = {
+  "#f8a87c": { light: "#b44808", dark: "#f8a87c", bgLight: "rgba(248,168,124,0.15)", bgDark: "rgba(248,168,124,0.20)", borderLight: "rgba(248,168,124,0.40)", borderDark: "rgba(248,168,124,0.30)" },
+  "#38bdf8": { light: "#0369a1", dark: "#38bdf8", bgLight: "rgba(56,189,248,0.15)", bgDark: "rgba(56,189,248,0.20)", borderLight: "rgba(56,189,248,0.40)", borderDark: "rgba(56,189,248,0.30)" },
+  "#34d399": { light: "#047857", dark: "#34d399", bgLight: "rgba(52,211,153,0.15)", bgDark: "rgba(52,211,153,0.20)", borderLight: "rgba(52,211,153,0.40)", borderDark: "rgba(52,211,153,0.30)" },
+  "#a78bfa": { light: "#6d28d9", dark: "#a78bfa", bgLight: "rgba(167,139,250,0.15)", bgDark: "rgba(167,139,250,0.20)", borderLight: "rgba(167,139,250,0.40)", borderDark: "rgba(167,139,250,0.30)" },
+  "#fb7185": { light: "#be123c", dark: "#fb7185", bgLight: "rgba(251,113,133,0.15)", bgDark: "rgba(251,113,133,0.20)", borderLight: "rgba(251,113,133,0.40)", borderDark: "rgba(251,113,133,0.30)" },
+  "#fbbf24": { light: "#b45309", dark: "#fbbf24", bgLight: "rgba(251,191,36,0.15)", bgDark: "rgba(251,191,36,0.20)", borderLight: "rgba(251,191,36,0.40)", borderDark: "rgba(251,191,36,0.30)" },
+  "#2dd4bf": { light: "#0f766e", dark: "#2dd4bf", bgLight: "rgba(45,212,191,0.15)", bgDark: "rgba(45,212,191,0.20)", borderLight: "rgba(45,212,191,0.40)", borderDark: "rgba(45,212,191,0.30)" },
+  "#a3e635": { light: "#4d7c0f", dark: "#a3e635", bgLight: "rgba(163,230,53,0.15)", bgDark: "rgba(163,230,53,0.20)", borderLight: "rgba(163,230,53,0.40)", borderDark: "rgba(163,230,53,0.30)" },
+  "#f472b6": { light: "#be185d", dark: "#f472b6", bgLight: "rgba(244,114,182,0.15)", bgDark: "rgba(244,114,182,0.20)", borderLight: "rgba(244,114,182,0.40)", borderDark: "rgba(244,114,182,0.30)" },
+  "#60a5fa": { light: "#1d4ed8", dark: "#60a5fa", bgLight: "rgba(96,165,250,0.15)", bgDark: "rgba(96,165,250,0.20)", borderLight: "rgba(96,165,250,0.40)", borderDark: "rgba(96,165,250,0.30)" },
+  "#c084fc": { light: "#7e22ce", dark: "#c084fc", bgLight: "rgba(192,132,252,0.15)", bgDark: "rgba(192,132,252,0.20)", borderLight: "rgba(192,132,252,0.40)", borderDark: "rgba(192,132,252,0.30)" },
+  "#4ade80": { light: "#15803d", dark: "#4ade80", bgLight: "rgba(74,222,128,0.15)", bgDark: "rgba(74,222,128,0.20)", borderLight: "rgba(74,222,128,0.40)", borderDark: "rgba(74,222,128,0.30)" },
+};
+
+export function getAgentColorTheme(agentId: string = "", name: string = "", roleTag: string = "") {
+  const cfg = getAgentAvatarConfig(agentId);
+  if (cfg?.blob?.color && BLOB_COLOR_THEMES[cfg.blob.color]) {
+    return BLOB_COLOR_THEMES[cfg.blob.color];
+  }
+  const defaultBlob = getAgentBlobProfile(agentId, name, roleTag);
+  return BLOB_COLOR_THEMES[defaultBlob.color] || BLOB_COLOR_THEMES["#f8a87c"];
+}
+
+
 export const AVATAR_ICON_MAP: Record<string, React.ElementType> = {
   Code,
   Terminal,
@@ -325,7 +360,7 @@ interface AgentAvatarProps {
     name?: string;
     roleTag?: string;
   };
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "2xs" | "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   overrideConfig?: CustomAvatarConfig | null;
   interactive?: boolean;
@@ -374,6 +409,7 @@ export function AgentAvatar({
   }
 
   const sizeBox = {
+    "2xs": "h-4 w-4 rounded-md",
     xs: "h-6 w-6 rounded-lg",
     sm: "h-7 w-7 rounded-xl",
     md: "h-8 w-8 rounded-xl",
@@ -382,6 +418,7 @@ export function AgentAvatar({
   }[size];
 
   const iconSize = {
+    "2xs": 10,
     xs: 12,
     sm: 14,
     md: 16,
@@ -390,6 +427,7 @@ export function AgentAvatar({
   }[size];
 
   const emojiSizeClass = {
+    "2xs": "text-[10px]",
     xs: "text-xs",
     sm: "text-sm",
     md: "text-base",
@@ -402,6 +440,7 @@ export function AgentAvatar({
     : "";
 
   const blobPixelSize = {
+    "2xs": 15,
     xs: 20,
     sm: 24,
     md: 28,
@@ -422,6 +461,7 @@ export function AgentAvatar({
           shape={blobProps.shape as any || defaultBlob.shape}
           expression={blobProps.expression as any || defaultBlob.expression}
           color={blobProps.color || defaultBlob.color}
+          paused={!forcedAnimation}
           animation={forcedAnimation || blobProps.animation || defaultBlob.animation}
           seed={blobProps.seed || defaultBlob.seed}
           size={blobPixelSize}
