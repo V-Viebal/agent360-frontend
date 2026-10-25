@@ -305,7 +305,7 @@ import { OnboardingChecklistWidget, recordMilestone } from "../components/Onboar
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
 import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
-import { AgentAvatar } from "../components/AgentAvatar";
+import { AgentAvatar, getAgentColorTheme } from "../components/AgentAvatar";
 import { AgentAvatarModal } from "../components/AgentAvatarModal";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
@@ -327,6 +327,7 @@ function AgentThinkingModal({
   agentId,
   room,
   activeRespondingAgent,
+  allAgents = [],
   isLiveInProgress = false,
   onClose,
 }: {
@@ -335,6 +336,7 @@ function AgentThinkingModal({
   agentId?: string;
   room?: SessionCollaborationRoom | null;
   activeRespondingAgent?: { id: string; name: string; statusText: string } | null;
+  allAgents?: InfraAgent[];
   isLiveInProgress?: boolean;
   onClose: () => void;
 }) {
@@ -980,19 +982,52 @@ function AgentThinkingModal({
                 {/* Assigned or Suggested Agents in Triage Node */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <span className="text-[10px] font-mono text-neutral-400">Luồng phân công:</span>
-                  {activeWave.triageMeta.selectedCollaborators.map((collabSlug) => (
-                    <span
-                      key={collabSlug}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-semibold"
-                    >
-                      <span>🤖 @{collabSlug}</span>
-                      <span className="opacity-70">(Chuyên viên)</span>
-                    </span>
-                  ))}
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/35 text-[10px] font-mono font-semibold">
-                    <span>👑 @{hostSlug}</span>
-                    <span className="opacity-75">({ activeWave.isMultiAgentWave ? "Chủ room tổng hợp" : "Xử lý chính" })</span>
-                  </span>
+                  {activeWave.triageMeta.selectedCollaborators.map((collabSlug) => {
+                    const cAg = agents.find((a) => (a.slug || "").toLowerCase() === collabSlug.toLowerCase() || a.id.toLowerCase() === collabSlug.toLowerCase());
+                    const cTheme = getAgentColorTheme(collabSlug, cAg?.name || collabSlug, cAg?.roleTag);
+                    return (
+                      <span
+                        key={collabSlug}
+                        style={{
+                          backgroundColor: cTheme.bgLight,
+                          borderColor: cTheme.borderLight,
+                          color: cTheme.light,
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-mono font-semibold shadow-2xs"
+                      >
+                        <AgentAvatar
+                          agent={cAg || { id: collabSlug, name: collabSlug }}
+                          size="2xs"
+                          interactive={false}
+                          className="scale-90 shrink-0"
+                        />
+                        <span>@{collabSlug}</span>
+                        <span className="opacity-70 text-[9px]">(Chuyên viên)</span>
+                      </span>
+                    );
+                  })}
+                  {(() => {
+                    const hostTheme = getAgentColorTheme(hostSlug, hostDisplayName);
+                    return (
+                      <span
+                        style={{
+                          backgroundColor: hostTheme.bgLight,
+                          borderColor: hostTheme.borderLight,
+                          color: hostTheme.light,
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-mono font-semibold shadow-2xs"
+                      >
+                        <AgentAvatar
+                          agent={selectedAgent || { id: hostSlug, name: hostDisplayName }}
+                          size="2xs"
+                          interactive={false}
+                          className="scale-90 shrink-0"
+                        />
+                        <span>@{hostSlug}</span>
+                        <span className="opacity-75 text-[9px]">({ activeWave.isMultiAgentWave ? "Chủ room tổng hợp" : "Xử lý chính" })</span>
+                      </span>
+                    );
+                  })()}
                   {activeWave.triageMeta.suggestedCollaborators.length > 0 && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25 text-[10px] font-mono">
                       <span>💡 Gợi ý mở rộng Room: {activeWave.triageMeta.suggestedCollaborators.map((s) => `@${s}`).join(", ")}</span>
@@ -1073,26 +1108,39 @@ function AgentThinkingModal({
                             data-testid={`room-flow-turn-${branchTurn.kind}-${branchTurn.author_id}`}
                             className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#232334] pb-2"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="h-6 w-6 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-500 font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
-                                {bIdx + 1}
-                              </span>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-mono font-bold text-slate-900 dark:text-white truncate">
-                                    @{branchTurn.author_id}
-                                  </span>
-                                  {isFocusedBranch && (
-                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
-                                      Đang chọn
-                                    </span>
-                                  )}
+                            {(() => {
+                              const bAg = agents.find((a) => (a.slug || "").toLowerCase() === branchTurn.author_id.toLowerCase() || a.id.toLowerCase() === branchTurn.author_id.toLowerCase());
+                              const bTheme = getAgentColorTheme(branchTurn.author_id, branchTurn.author_name || branchTurn.author_id, bAg?.roleTag);
+                              return (
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <AgentAvatar
+                                    agent={bAg || { id: branchTurn.author_id, name: branchTurn.author_name, roleTag: "Collaborator" }}
+                                    size="xs"
+                                    interactive={false}
+                                    className="shrink-0 shadow-2xs ring-1 ring-black/5 dark:ring-white/10"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        style={{ color: bTheme.light }}
+                                        className="text-xs font-mono font-bold truncate dark:!text-[var(--b-dark-col)]"
+                                      >
+                                        <style>{`[data-testid="room-flow-turn-${branchTurn.kind}-${branchTurn.author_id}"] { --b-dark-col: ${bTheme.dark}; }`}</style>
+                                        @{branchTurn.author_id}
+                                      </span>
+                                      {isFocusedBranch && (
+                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
+                                          Đang chọn
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
+                                      {branchTurn.author_name} → @{branchTurn.target_agent_id || hostSlug}
+                                    </p>
+                                  </div>
                                 </div>
-                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">
-                                  {branchTurn.author_name} → @{branchTurn.target_agent_id || hostSlug}
-                                </p>
-                              </div>
-                            </div>
+                              );
+                            })()}
                             <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0">
                               <Check size={10} />
                               <span>Hoàn tất</span>
@@ -1850,6 +1898,72 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
   );
 }
 
+// Component to render enhanced rich links with favicons and clean domain pill badge matching user reference
+function InlineSmartLink({ href, label }: { href: string; label?: string }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  let hostname = "";
+  try {
+    const parsed = new URL(href);
+    hostname = parsed.hostname.replace(/^www\./, "");
+  } catch {
+    hostname = href.replace(/^https?:\/\//, "").split("/")[0];
+  }
+
+  // Known friendly domain names
+  const getDomainLabel = (host: string) => {
+    const lower = host.toLowerCase();
+    if (lower.includes("github.com")) return "GitHub";
+    if (lower.includes("cnbc.com")) return "CNBC";
+    if (lower.includes("reuters.com")) return "Reuters";
+    if (lower.includes("yahoo.com")) return "Yahoo Finance";
+    if (lower.includes("theverge.com")) return "The Verge";
+    if (lower.includes("capcom.com")) return "Capcom";
+    if (lower.includes("channelnewsasia.com") || lower.includes("cna.asia")) return "CNA";
+    if (lower.includes("dicebear.com")) return "DiceBear";
+    if (lower.includes("openai.com")) return "OpenAI";
+    if (lower.includes("anthropic.com")) return "Anthropic";
+    const parts = host.split(".");
+    const main = parts.length >= 2 ? parts[parts.length - 2] : host;
+    return main.charAt(0).toUpperCase() + main.slice(1);
+  };
+
+  const domainLabel = getDomainLabel(hostname);
+  const displayLabel = label?.trim() || domainLabel || hostname || href;
+
+  const faviconUrl = hostname
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`
+    : "";
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 my-0.5 mx-1 rounded-md bg-slate-100/90 hover:bg-slate-200/90 dark:bg-[#181824] dark:hover:bg-[#232336] border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-medium no-underline group shrink-0 max-w-full align-middle select-none shadow-2xs hover:border-[#f8a87c]/40"
+      title={`${displayLabel} (${href})`}
+    >
+      <span className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center overflow-hidden bg-white/40 dark:bg-black/30">
+        {!imgFailed && faviconUrl ? (
+          <img
+            src={faviconUrl}
+            alt=""
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+            className="w-3.5 h-3.5 object-contain"
+          />
+        ) : (
+          <Globe size={11} className="text-[#f8a87c] shrink-0" />
+        )}
+      </span>
+      <span className="truncate max-w-[220px] text-slate-900 dark:text-slate-100 group-hover:underline underline-offset-2">
+        {displayLabel}
+      </span>
+      <ExternalLink size={10} className="text-slate-400 dark:text-neutral-500 group-hover:text-[#f8a87c] shrink-0 transition-colors opacity-70 group-hover:opacity-100" />
+    </a>
+  );
+}
+
 // Markdown & Structured Content Formatter with support for links, bold, italics, code, and bare URLs
 function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (!rawText) return "";
@@ -1864,21 +1978,11 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
   if (parts.length === 1 && !rawText.match(tokenRegex)) return rawText;
 
   return parts.filter(Boolean).map((part, pIdx) => {
-    // 1. Markdown link: [label](url)
+    // 1. Markdown link: [label](url) -> rendered with smart favicon pill badge
     if (part.startsWith("[") && part.includes("](") && part.endsWith(")")) {
       const match = part.match(/^\[([^\]]+)\]\(([^\s)]+)\)$/);
       if (match) {
-        return (
-          <a
-            key={pIdx}
-            href={match[2]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#f8a87c] hover:underline underline-offset-2 font-medium break-words"
-          >
-            {match[1]}
-          </a>
-        );
+        return <InlineSmartLink key={pIdx} href={match[2]} label={match[1]} />;
       }
     }
     // 2. Bold: **text**
@@ -1905,7 +2009,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
         </em>
       );
     }
-    // 5. Bare URL: https?://...
+    // 5. Bare URL: https?://... -> rendered with smart favicon pill badge
     if (part.startsWith("http://") || part.startsWith("https://")) {
       let url = part;
       let trailing = "";
@@ -1915,14 +2019,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
       }
       return (
         <React.Fragment key={pIdx}>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#f8a87c] hover:underline underline-offset-2 break-all"
-          >
-            {url}
-          </a>
+          <InlineSmartLink href={url} />
           {trailing}
         </React.Fragment>
       );
@@ -14821,6 +14918,7 @@ ${chat.id}`);
             agentId={selectedAgent?.slug || selectedAgent?.id || selectedAgentId}
             room={activeSessionRoom}
             activeRespondingAgent={activeRespondingAgent}
+            allAgents={agents}
             isLiveInProgress={isModalTurnLive}
             onClose={() => {
               setActiveThinkingModalMsg(null);
