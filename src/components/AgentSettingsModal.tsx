@@ -28,6 +28,7 @@ import { AgentConnectedAppsTab } from "./AgentConnectedAppsTab";
 import { AgentSubAgentsTab } from "./AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "./ExternalSubAgentsTab";
 import { AgentMemoryTab } from "./AgentMemoryTab";
+import { AgentIam360CellTab } from "./AgentIam360CellTab";
 import { AgentChannelConfig, AgentScheduleJob, fetchAgentReactionSummary, MessageReactionSummaryDto } from "../services/agentApi";
 
 export type AgentSettingsTab =
@@ -36,7 +37,8 @@ export type AgentSettingsTab =
   | "subagents"
   | "channels_cron"
   | "memory_skills"
-  | "webhooks_a2a";
+  | "webhooks_a2a"
+  | "iam360_cells";
 
 export interface AgentModelOption {
   providerId: string;
@@ -54,7 +56,7 @@ interface AgentSettingsModalProps {
   // Model switching
   availableModels: AgentModelOption[];
   isChangingModel: boolean;
-  onSelectModel: (modelId: string) => void;
+  onSelectModel: (modelId: string, providerId?: string) => void;
   // Avatar customization
   onOpenAvatarModal: () => void;
   // Enable / Disable agent
@@ -190,6 +192,14 @@ export function AgentSettingsModal({
       subtitle: "Identity, LLM Model & Governance",
       icon: <Bot size={15} />,
       group: "Cấu hình Cốt lõi",
+    },
+    {
+      id: "iam360_cells",
+      label: "IAM360 Cells & Cây quyền",
+      subtitle: "Identity Cell, Org Cell & ReBAC Tree",
+      icon: <ShieldCheck size={15} />,
+      group: "Cấu hình Cốt lõi",
+      badge: "2-Cell",
     },
     {
       id: "apps_mcp",
@@ -470,7 +480,7 @@ export function AgentSettingsModal({
                           key={m.model}
                           type="button"
                           disabled={isChangingModel}
-                          onClick={() => onSelectModel(m.model)}
+                          onClick={() => onSelectModel(m.model, m.providerId)}
                           className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-all cursor-pointer border text-left ${
                             isCurrent
                               ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold shadow-xs"
@@ -582,6 +592,17 @@ export function AgentSettingsModal({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB 1B: IAM360 IDENTITY CELL & ORGANIZATION CELL WORKBENCH */}
+            {activeTab === "iam360_cells" && (
+              <div className="space-y-4 max-w-3xl">
+                <AgentIam360CellTab
+                  agentId={agent.id}
+                  agentSlug={agent.slug}
+                  agentName={agent.name}
+                />
               </div>
             )}
 
