@@ -195,7 +195,8 @@ export function getCachedAgentChats(agentId?: string): AgentSession[] | null {
     return cached.data;
   }
   try {
-    const raw = sessionStorage.getItem(`agent360_chats_cache_${cleanAgentId}`);
+    const raw = sessionStorage.getItem(`agent360_chats_cache_${cleanAgentId}`)
+      || localStorage.getItem(`agent360_chats_cache_${cleanAgentId}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -324,18 +325,26 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
       };
     });
 
-    // Populate SWR in-memory and sessionStorage cache
+    // Populate SWR in-memory, sessionStorage, and localStorage fallback cache
     if (result && result.length > 0) {
       const cacheKey = cleanAgentId || "default";
       _agentChatsCache.set(cacheKey, { data: result, timestamp: Date.now() });
       try {
-        sessionStorage.setItem(`agent360_chats_cache_${cacheKey}`, JSON.stringify(result.slice(0, 100)));
+        const serialized = JSON.stringify(result.slice(0, 100));
+        sessionStorage.setItem(`agent360_chats_cache_${cacheKey}`, serialized);
+        localStorage.setItem(`agent360_chats_cache_${cacheKey}`, serialized);
       } catch {}
     }
 
     return result;
   } catch (err) {
-    console.warn("fetchAgentChats error, returning empty list instead of stale mocks", err);
+    const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+    const fallbackCached = getCachedAgentChats(cleanAgentId);
+    if (fallbackCached && fallbackCached.length > 0) {
+      console.warn("fetchAgentChats error, preserving cached chat list for", cleanAgentId, err);
+      return fallbackCached;
+    }
+    console.warn("fetchAgentChats error, returning empty list", err);
     return [];
   }
 }
