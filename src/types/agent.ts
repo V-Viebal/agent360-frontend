@@ -60,6 +60,17 @@ export interface SessionRoomTurn {
   text: string;
   target_agent_id?: string | null;
   created_at: string;
+  reasoning?: string | null;
+  steps?: ChatStep[] | null;
+  manager_audit?: {
+    passed?: boolean;
+    quality_score?: number;
+    verdict?: string;
+    checklist_passed?: string[];
+    issues_detected?: string[];
+    manager_directive?: string | null;
+    auto_retried?: boolean;
+  } | null;
 }
 
 export interface SessionCollaborationRoom {
