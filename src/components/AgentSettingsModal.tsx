@@ -35,7 +35,8 @@ export type AgentSettingsTab =
   | "apps_mcp"
   | "subagents"
   | "channels_cron"
-  | "memory_skills";
+  | "memory_skills"
+  | "webhooks_a2a";
 
 export interface AgentModelOption {
   providerId: string;
@@ -211,6 +212,14 @@ export function AgentSettingsModal({
       icon: <Radio size={15} />,
       group: "Tri thức & Tự động hóa",
       badge: channels.filter((c) => c.enabled).length + schedules.length || undefined,
+    },
+    {
+      id: "webhooks_a2a",
+      label: "Webhooks & Matrix",
+      subtitle: "Inbound HMAC & Event Telemetry",
+      icon: <Activity size={15} />,
+      group: "Mạng lưới & Tích hợp",
+      badge: "Realtime",
     },
     {
       id: "memory_skills",
