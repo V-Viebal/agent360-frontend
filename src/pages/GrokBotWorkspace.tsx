@@ -425,6 +425,10 @@ function AgentThinkingModal({
         assignedAgents: string[];
         selectedCollaborators: string[];
         suggestedCollaborators: string[];
+        synthesisOwnerId: string;
+        hostShouldSelfExecute: boolean;
+        hostExecutionRole: string;
+        hostExecutionFocus: string;
       };
       isMultiAgentWave: boolean;
     };
@@ -437,6 +441,10 @@ function AgentThinkingModal({
       let assignedAgents: string[] = [];
       let selectedCollaborators: string[] = collabs.map((c) => c.author_id);
       let suggestedCollaborators: string[] = [];
+      let synthesisOwnerId = hostSlug;
+      let hostShouldSelfExecute = collabs.length === 0;
+      let hostExecutionRole = collabs.length === 0 ? "solo_execute_and_respond" : "synthesize_only";
+      let hostExecutionFocus = "";
 
       const triageStep = req?.steps?.find((s) => s.tool === "agentteams_manager_triage");
       if (triageStep?.result) {
@@ -453,12 +461,31 @@ function AgentThinkingModal({
           if (Array.isArray(parsed.suggested_collaborators)) {
             suggestedCollaborators = parsed.suggested_collaborators;
           }
+          if (parsed.synthesis_owner_id) synthesisOwnerId = parsed.synthesis_owner_id;
+          if (typeof parsed.host_should_self_execute === "boolean") {
+            hostShouldSelfExecute = parsed.host_should_self_execute;
+          }
+          if (parsed.host_execution_role) {
+            hostExecutionRole = parsed.host_execution_role;
+          } else if (selectedCollaborators.length > 0) {
+            hostExecutionRole = hostShouldSelfExecute ? "co_execute_and_synthesize" : "synthesize_only";
+          }
+          if (parsed.host_execution_focus) {
+            hostExecutionFocus = parsed.host_execution_focus;
+          }
         } catch {}
+      }
+      if (!hostExecutionFocus) {
+        hostExecutionFocus = selectedCollaborators.length > 0
+          ? hostShouldSelfExecute
+            ? `Manager phân định Chủ session @${hostSlug} vừa tự chạy nhánh chuyên môn riêng vừa đại diện Room tổng hợp kết quả cuối sau khi cả Room đã chạy done.`
+            : `Manager phân định Chủ session @${hostSlug} không cần tự chạy nhánh riêng mà ưu tiên làm Người đại diện Room tổng hợp câu phản hồi cuối cùng sau khi cả Room đã chạy done.`
+          : `Chủ session @${hostSlug} trực tiếp tự thực thi và đại diện phiên đưa ra câu trả lời cuối cùng.`;
       }
       if (!reason) {
         reason = collabs.length > 0
-          ? `AgentTeams Manager (@agentteams-manager) phân công ${selectedCollaborators.map((c) => `@${c}`).join(", ")} thực thi chuyên môn và Chủ phòng (@${hostSlug}) tổng hợp kết quả cuối.`
-          : `Phân tích thông minh độc lập (Smart Solo) bởi Chủ phòng @${hostSlug} (${hostDisplayName}).`;
+          ? `AgentTeams Manager (@agentteams-manager) phân công ${selectedCollaborators.map((c) => `@${c}`).join(", ")} thực thi chuyên môn và ưu tiên Chủ session (@${hostSlug}) làm Người đại diện Room tổng hợp kết quả cuối sau khi cả Room đã chạy done.`
+          : `Phân tích thông minh độc lập (Smart Solo) bởi Chủ session @${hostSlug} (${hostDisplayName}).`;
       }
       return {
         mode,
@@ -468,6 +495,10 @@ function AgentThinkingModal({
         assignedAgents: assignedAgents.length > 0 ? assignedAgents : [...selectedCollaborators, hostSlug],
         selectedCollaborators,
         suggestedCollaborators,
+        synthesisOwnerId,
+        hostShouldSelfExecute,
+        hostExecutionRole,
+        hostExecutionFocus,
       };
     };
 
@@ -1293,27 +1324,36 @@ function AgentThinkingModal({
                     </span>
                     <span>
                       {activeWave.isMultiAgentWave
-                        ? `4. Tầng Hội Tụ & Tổng Hợp Cuối · Chủ phòng @${hostSlug} (${hostDisplayName})`
-                        : `4. Kết Quả Phản Hồi Cuối · @${hostSlug} (${hostDisplayName})`}
+                        ? `4. Đại Diện Room Tổng Hợp Cuối (Sau Khi Room Done) · Chủ session @${hostSlug} (${hostDisplayName})`
+                        : `4. Đại Diện Phiên Phản Hồi Cuối · Chủ session @${hostSlug} (${hostDisplayName})`}
                     </span>
                   </div>
-                  <span
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
-                      isCurrentlyRunning
-                        ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
-                        : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                    }`}
-                  >
-                    {isCurrentlyRunning ? "Đang tổng hợp..." : "Đã tổng hợp hoàn tất"}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold">
+                      {activeWave.isMultiAgentWave
+                        ? activeWave.triageMeta.hostShouldSelfExecute
+                          ? "Manager: Tự chạy + Đại diện tổng hợp"
+                          : "Manager: Chỉ đại diện tổng hợp từ Room"
+                        : "Manager: Tự chạy & Phản hồi"}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
+                        isCurrentlyRunning
+                          ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                          : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                      }`}
+                    >
+                      {isCurrentlyRunning ? "Đang tổng hợp..." : "Đã tổng hợp hoàn tất"}
+                    </span>
+                  </div>
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
                   {activeWave.isMultiAgentWave
-                    ? `Chủ phòng @${hostSlug} hội tụ kết quả đã qua kiểm định Manager QA từ ${
+                    ? `${activeWave.triageMeta.hostExecutionFocus} Sau khi toàn bộ nhánh trong Room (${
                         activeWave.collaboratorTurns.map((c) => `@${c.author_id}`).join(", ") || "các chuyên viên"
-                      } để đưa ra phản hồi thống nhất cuối cùng cho người dùng.`
-                    : `Phản hồi đã được @${hostSlug} hoàn thiện và lưu vào mạch ngữ cảnh của phiên chat (sẵn sàng chuyển tiếp mượt sang chế độ Đa Tác Tử bất cứ lúc nào).`}
+                      }) đã chạy xong (done) và qua kiểm định Manager QA, Chủ session @${hostSlug} đại diện Room đưa ra câu phản hồi tổng hợp cuối cùng cho người dùng.`
+                    : `Phản hồi đã được Chủ session @${hostSlug} hoàn thiện và lưu vào mạch ngữ cảnh của phiên chat (sẵn sàng chuyển tiếp mượt sang chế độ Đa Tác Tử bất cứ lúc nào).`}
                 </p>
 
                 {/* Host Synthesis Reasoning & Tool Call Steps */}
