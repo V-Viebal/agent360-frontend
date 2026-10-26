@@ -27,12 +27,23 @@ export interface ActiveSessionsSnapshot {
   timestamp?: string;
 }
 
-export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot;
+export interface ComposioConnectionEvent {
+  type: "composio_connection_activated";
+  app_slug: string;
+  agent_id: string;
+  status: string;
+  event_id?: string;
+  message?: string;
+  timestamp?: string;
+}
+
+export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot | ComposioConnectionEvent;
 
 export interface MultiplexerHandlers {
   onSnapshot?: (snapshot: ActiveSessionsSnapshot) => void;
   onTurnUpdate?: (update: SessionTurnUpdate) => void;
   onUnreadUpdate?: (update: SessionUnreadUpdate) => void;
+  onComposioConnection?: (ev: ComposioConnectionEvent) => void;
 }
 
 /**
@@ -79,6 +90,11 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             handlers.onTurnUpdate(data);
           } else if (data.type === "session_unread_update" && handlers.onUnreadUpdate) {
             handlers.onUnreadUpdate(data);
+          } else if (data.type === "composio_connection_activated") {
+            if (handlers.onComposioConnection) handlers.onComposioConnection(data);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("composio:connection_activated", { detail: data }));
+            }
           }
         } catch {}
       };
@@ -125,6 +141,11 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             handlers.onTurnUpdate(update);
           } else if (update.type === "session_unread_update" && handlers.onUnreadUpdate) {
             handlers.onUnreadUpdate(update);
+          } else if (update.type === "composio_connection_activated") {
+            if (handlers.onComposioConnection) handlers.onComposioConnection(update);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("composio:connection_activated", { detail: update }));
+            }
           }
         } catch {}
       });

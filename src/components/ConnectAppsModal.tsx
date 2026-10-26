@@ -1,5 +1,5 @@
 import { useTranslation } from "../i18n/LanguageContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   X,
@@ -565,6 +565,32 @@ export function ConnectAppsModal({
     "Code",
     "Data",
   ];
+
+    // Realtime WebSocket event listener for instant OAuth activation
+  useEffect(() => {
+    const handleWsActivation = (event: Event) => {
+      const customEv = event as CustomEvent;
+      const detail = customEv.detail;
+      if (detail && detail.app_slug) {
+        const cleanSlug = detail.app_slug.toLowerCase();
+        const cleanTargetAgent = targetAgentId.replace(/^bot:agent360:/, "").toLowerCase();
+        const incomingAgent = (detail.agent_id || "").toLowerCase();
+
+        if (incomingAgent === cleanTargetAgent || incomingAgent === "all" || !incomingAgent) {
+          onAppConnected?.(cleanSlug);
+          setFeedbackMsg({
+            text: `✓ WebSocket: ${detail.message || `Đã kết nối thành công ứng dụng ${cleanSlug}!`}`,
+            type: "success",
+          });
+        }
+      }
+    };
+
+    window.addEventListener("composio:connection_activated", handleWsActivation);
+    return () => {
+      window.removeEventListener("composio:connection_activated", handleWsActivation);
+    };
+  }, [targetAgentId, onAppConnected]);
 
   const handleToggleApp = async (app: ConnectedAppItem) => {
     const isCurrentlyConnected = connectedAppIds.includes(app.id);
