@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Code,
   Terminal,
@@ -61,13 +61,13 @@ export const BLOB_COLORS = [
 ] as const;
 
 export const BLOB_ANIMATIONS = [
-  "idle.2.4,wink.1.6",
-  "idle.2.4,nod.1.4",
-  "idle.2.4,happy.2",
-  "idle.2.4,thinking.2.6",
-  "idle.2.4,wave.1.6",
-  "idle.2.4,love.2",
-  "idle.2.4,play.2",
+  "wink.1.6,nod.1.4,idle.1.2",
+  "nod.1.4,jump.1.4,idle.1.2",
+  "jump.1.5,wink.1.4,idle.1.2",
+  "thinking.2.0,nod.1.4,idle.1.2",
+  "love.1.8,wink.1.4,idle.1.2",
+  "party.1.8,nod.1.4,idle.1.2",
+  "play.1.8,wink.1.4,idle.1.2",
 ] as const;
 
 export function getAgentBlobProfile(agentId: string = "", name: string = "", roleTag: string = "") {
@@ -365,6 +365,7 @@ interface AgentAvatarProps {
   overrideConfig?: CustomAvatarConfig | null;
   interactive?: boolean;
   forcedAnimation?: string;
+  alwaysAnimate?: boolean;
 }
 
 export function AgentAvatar({
@@ -374,7 +375,24 @@ export function AgentAvatar({
   overrideConfig,
   interactive = true,
   forcedAnimation,
+  alwaysAnimate = false,
 }: AgentAvatarProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const parentTarget = el.closest("button, a, [role=\"button\"], [data-testid^=\"agent-mention-chip\"], .group") || el;
+    const onEnter = () => setIsHovered(true);
+    const onLeave = () => setIsHovered(false);
+    parentTarget.addEventListener("pointerenter", onEnter);
+    parentTarget.addEventListener("pointerleave", onLeave);
+    return () => {
+      parentTarget.removeEventListener("pointerenter", onEnter);
+      parentTarget.removeEventListener("pointerleave", onLeave);
+    };
+  }, []);
   const [customConfig, setCustomConfig] = useState<CustomAvatarConfig | null>(
     overrideConfig !== undefined ? overrideConfig : getAgentAvatarConfig(agent.id)
   );
@@ -453,19 +471,23 @@ export function AgentAvatar({
   if (isDefaultBlob) {
     const defaultBlob = getAgentBlobProfile(agent.id || agent.slug, agent.name, agent.roleTag);
     const blobProps = customConfig?.blob || defaultBlob;
+    const shouldAnimate = Boolean(forcedAnimation || alwaysAnimate || isHovered);
     return (
       <div
+        ref={containerRef}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         className={`relative flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-white/10 shadow-xs select-none bg-slate-50 dark:bg-[#161622] overflow-hidden ${sizeBox} ${hoverEffects} ${className}`}
       >
         <BlobAvatar
           shape={blobProps.shape as any || defaultBlob.shape}
           expression={blobProps.expression as any || defaultBlob.expression}
           color={blobProps.color || defaultBlob.color}
-          paused={!forcedAnimation}
+          paused={!shouldAnimate}
           animation={forcedAnimation || blobProps.animation || defaultBlob.animation}
           seed={blobProps.seed || defaultBlob.seed}
           size={blobPixelSize}
-          gaze={interactive}
+          gaze={shouldAnimate || interactive}
           reaction={interactive}
         />
       </div>
