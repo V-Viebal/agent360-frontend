@@ -481,7 +481,7 @@ import { AgentAvatar, getAgentColorTheme } from "../components/AgentAvatar";
 import { AgentAvatarModal } from "../components/AgentAvatarModal";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
-import { PromptRecipesModal } from "../components/PromptRecipesModal";
+import { PromptRecipesModal, getSavedTeamRecipes, saveTeamRecipe, PromptRecipe } from "../components/PromptRecipesModal";
 import { MermaidDiagram } from "../components/MermaidDiagram";
 import { requestPermission, queryPermissionStatus } from "../services/permissionService";
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
@@ -5818,6 +5818,91 @@ export function GrokBotWorkspace() {
   const [inSessionSearchOpen, setInSessionSearchOpen] = useState(false);
   const [inSessionSearchQuery, setInSessionSearchQuery] = useState("");
   const [isRecipesModalOpen, setIsRecipesModalOpen] = useState(false);
+  const [savedTeamRecipes, setSavedTeamRecipes] = useState<PromptRecipe[]>(() => getSavedTeamRecipes());
+
+  useEffect(() => {
+    const syncTeamRecipes = () => setSavedTeamRecipes(getSavedTeamRecipes());
+    window.addEventListener("agent360_team_recipes_updated", syncTeamRecipes);
+    return () => window.removeEventListener("agent360_team_recipes_updated", syncTeamRecipes);
+  }, []);
+
+  const handleSaveChatAsTeamRecipe = (targetChat?: AgentSession) => {
+    const chatObj = targetChat || selectedChat || chats.find((c) => c.id === selectedChatId);
+    const targetId = chatObj?.id || selectedChatId;
+    const isCurrentChat = !targetId || targetId === selectedChatId;
+    const sourceMsgs = isCurrentChat
+      ? displayMessages
+      : (getCachedChatMessages(targetId, selectedAgentId) || []);
+
+    const roomForRecipe =
+      isCurrentChat &&
+      activeSessionRoom &&
+      (activeSessionRoom.host_chat_id === targetId || activeSessionRoom.host_session_id === targetId)
+        ? activeSessionRoom
+        : null;
+
+    const collabSet = new Set<string>();
+    if (roomForRecipe && Array.isArray(roomForRecipe.participants)) {
+      for (const p of roomForRecipe.participants) {
+        if (p.role === "collaborator" && p.agent_id) {
+          collabSet.add(p.agent_id.toLowerCase());
+        }
+      }
+    }
+    for (const m of sourceMsgs) {
+      if (m.role === "user" && m.content) {
+        const matches = Array.from(m.content.matchAll(/(?:^|\s)@([a-zA-Z0-9_-]{2,32})/g));
+        for (const mt of matches) {
+          const slug = mt[1].toLowerCase();
+          if (slug !== (selectedAgent?.slug || selectedAgentId || "").toLowerCase()) {
+            collabSet.add(slug);
+          }
+        }
+      }
+    }
+
+    const userPrompts = sourceMsgs
+      .filter((m) => m.role === "user" && m.content && !m.content.includes("[IMPLICIT_REACTION_FEEDBACK"))
+      .map((m) => stripSharedRoomContext(m.content).trim())
+      .filter(Boolean);
+
+    const bestUserPrompt =
+      [...userPrompts].reverse().find((p) => /@[a-zA-Z0-9_-]{2,32}/.test(p)) ||
+      userPrompts[userPrompts.length - 1] ||
+      chatObj?.lastMessageSnippet ||
+      chatObj?.title ||
+      "Phối hợp nhóm thực thi yêu cầu chuyên sâu";
+
+    const collabs = Array.from(collabSet);
+    const missingMentions = collabs.filter(
+      (c) => !new RegExp(`(?:^|\\s)@${c}\\b`, "i").test(bestUserPrompt)
+    );
+    const finalPrompt =
+      missingMentions.length > 0
+        ? `${missingMentions.map((c) => `@${c}`).join(" ")} ${bestUserPrompt}`.trim()
+        : bestUserPrompt;
+
+    const recipeTitle =
+      (chatObj?.title && chatObj.title !== "New Conversation" && chatObj.title !== "Cuộc trò chuyện mới"
+        ? chatObj.title
+        : roomForRecipe?.room_title) ||
+      bestUserPrompt.replace(/(?:^|\s)@[a-zA-Z0-9_-]{2,32}/g, "").trim().slice(0, 56) ||
+      "Team Workflow Recipe";
+
+    const saved = saveTeamRecipe({
+      title: recipeTitle,
+      description:
+        collabs.length > 0
+          ? `Team Recipe (${collabs.map((c) => `@${c}`).join(", ")}) lưu từ phiên "${recipeTitle}"`
+          : `Quy trình làm việc lưu từ phiên "${recipeTitle}"`,
+      prompt: finalPrompt,
+      collaborators: collabs,
+    });
+
+    triggerHaptic(15);
+    setForkToast(`Đã lưu thành Team Recipe: "${saved.title}" (Gõ / để dùng lại)`);
+    setTimeout(() => setForkToast(null), 3500);
+  };
   const [isTopologyModalOpen, setIsTopologyModalOpen] = useState(false);
   const [forkToast, setForkToast] = useState<string | null>(null);
   const [starredMsgIds, setStarredMsgIds] = useState<string[]>(() => {
@@ -11930,7 +12015,51 @@ export function GrokBotWorkspace() {
                       const maxContext = 128000;
                       const usagePercent = Math.round((currentTokens / maxContext) * 100);
 
+                      const dynamicRecipeCommands = savedTeamRecipes.slice(0, 6).map((rec) => ({
+                        id: `cmd-team-recipe-${rec.id}`,
+                        title: `Recipe: ${rec.title}`,
+                        description: `${rec.collaborators && rec.collaborators.length > 0 ? rec.collaborators.map((c) => `@${c}`).join(" ") + " · " : ""}${rec.prompt.slice(0, 72)}`,
+                        icon: <Sparkles size={14} className="text-amber-400" />,
+                        action: () => {
+                          setIsPlusMenuOpen(false);
+                          setInputText(rec.prompt);
+                          if (rec.collaborators && rec.collaborators.length > 0 && selectedChatId && selectedAgentId) {
+                            for (const cSlug of rec.collaborators) {
+                              pullAgentIntoChatRoom(selectedAgentId, selectedChatId, cSlug, {
+                                hostSessionId: selectedChat?.session_id || selectedChatId,
+                              }).then((res) => {
+                                if (res?.room) setActiveSessionRoom(res.room);
+                              });
+                            }
+                          }
+                          textareaRef.current?.focus();
+                        },
+                      }));
+
                       const sessionCommands = [
+                        {
+                          id: "cmd-save-team-recipe",
+                          title: "Lưu thành Team Recipe",
+                          description: "Đóng gói đội hình & quy trình của phiên chat này thành Team Recipe tái sử dụng",
+                          icon: <Sparkles size={14} className="text-[#f8a87c]" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText((prev) => prev.replace(/(\/[a-zA-Z0-9_-]*)$/, "").trim());
+                            handleSaveChatAsTeamRecipe();
+                          },
+                        },
+                        {
+                          id: "cmd-open-team-recipes",
+                          title: "Team Recipes Library",
+                          description: `Mở thư viện Team Recipes & mẫu quy trình phối hợp (${savedTeamRecipes.length} đã lưu)`,
+                          icon: <Layers size={14} className="text-cyan-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText((prev) => prev.replace(/(\/[a-zA-Z0-9_-]*)$/, "").trim());
+                            setIsRecipesModalOpen(true);
+                          },
+                        },
+                        ...dynamicRecipeCommands,
                         {
                           id: "cmd-attach-files",
                           title: "Attach files",
@@ -12028,6 +12157,7 @@ export function GrokBotWorkspace() {
                                   <button
                                     key={cmd.id}
                                     type="button"
+                                    data-testid={cmd.id}
                                     data-popover-nav-idx={idx}
                                     onClick={cmd.action}
                                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-colors cursor-pointer group border ${
@@ -13925,6 +14055,16 @@ ${chat.id}`);
                                 onClick={() => {
                                   setEditingChatId(chat.id);
                                   setEditingChatTitle(chat.title);
+                                  setActiveChatMenuId(null);
+                                }}
+                              />
+
+                              <DropdownMenuItem
+                                data-testid={`chat-menu-save-team-recipe-${chat.id}`}
+                                icon={<Sparkles size={13} className="text-[#f8a87c]" />}
+                                label="Lưu thành Team Recipe"
+                                onClick={() => {
+                                  handleSaveChatAsTeamRecipe(chat);
                                   setActiveChatMenuId(null);
                                 }}
                               />
@@ -15952,8 +16092,18 @@ ${chat.id}`);
       <PromptRecipesModal
         isOpen={isRecipesModalOpen}
         onClose={() => setIsRecipesModalOpen(false)}
-        onSelectRecipe={(prompt) => {
+        onSelectRecipe={(prompt, recipe) => {
           setInputText(prompt);
+          if (recipe?.collaborators && recipe.collaborators.length > 0 && selectedChatId && selectedAgentId) {
+            for (const cSlug of recipe.collaborators) {
+              pullAgentIntoChatRoom(selectedAgentId, selectedChatId, cSlug, {
+                hostSessionId: selectedChat?.session_id || selectedChatId,
+              }).then((res) => {
+                if (res?.room) setActiveSessionRoom(res.room);
+              });
+            }
+          }
+          setTimeout(() => textareaRef.current?.focus(), 50);
         }}
       />
 
@@ -16142,6 +16292,20 @@ ${chat.id}`);
               >
                 <Edit2 size={15} className="text-cyan-400" />
                 <span>Đổi tên phiên hội thoại (Rename)</span>
+              </button>
+
+              {/* 2b. Save as Team Recipe */}
+              <button
+                type="button"
+                data-testid="mobile-chat-save-team-recipe"
+                onClick={() => {
+                  handleSaveChatAsTeamRecipe(mobileActionChat);
+                  setMobileActionChat(null);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <Sparkles size={15} className="text-[#f8a87c]" />
+                <span>Lưu thành Team Recipe (Save Team Recipe)</span>
               </button>
 
               {/* 3. Export Markdown */}
