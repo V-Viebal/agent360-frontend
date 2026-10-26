@@ -11,6 +11,7 @@ import {
   Sparkles,
   CheckCircle2,
   Loader2,
+  Activity,
 } from "lucide-react";
 import { AgentMcpClient, fetchAgentMcpClients, authorizedFetch } from "../services/agentApi";
 import { APPS_CATALOG } from "./ConnectAppsModal";
@@ -35,6 +36,7 @@ export function AgentConnectedAppsTab({
   const [loading, setLoading] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [refreshingKey, setRefreshingKey] = useState<string | null>(null);
+  const [probingKey, setProbingKey] = useState<string | null>(null);
   const [refreshToast, setRefreshToast] = useState<string | null>(null);
   const [inspectorModal, setInspectorModal] = useState<{ open: boolean; appName: string; appSlug: string; tools: DiscoveredToolItem[] }>({ open: false, appName: '', appSlug: '', tools: [] });
   const [filter, setFilter] = useState<"all" | "composio" | "native">("all");
@@ -86,6 +88,33 @@ export function AgentConnectedAppsTab({
       });
     } catch (err: any) {
       alert(`Could not inspect schema: ${err.message}`);
+    }
+  };
+
+  const handleProbeConnection = async (client: AgentMcpClient, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const appSlug = client.key.replace(/^composio_/, "");
+    setProbingKey(client.key);
+    try {
+      const res = await authorizedFetch(
+        `/api/integrations/composio/status?appSlug=${encodeURIComponent(appSlug)}&agentIdQuery=${encodeURIComponent(agentId)}`,
+        {
+          headers: { "X-Agent-Id": agentId },
+        },
+        agentId
+      );
+      const data = await res.json();
+      if (res.ok && data.status === "active") {
+        setRefreshToast(`✓ Kiểm tra kết nối ${client.name || appSlug}: Trạng thái ACTIVE (đã xác thực OAuth hợp lệ)`);
+        setTimeout(() => setRefreshToast(null), 4000);
+      } else {
+        setRefreshToast(`⚠ Kết nối ${client.name || appSlug} đang ở trạng thái: ${data.status || "pending"} (${data.message || "Chờ cấp quyền"})`);
+        setTimeout(() => setRefreshToast(null), 5000);
+      }
+    } catch (err: any) {
+      alert(`Lỗi kiểm tra kết nối: ${err.message}`);
+    } finally {
+      setProbingKey(null);
     }
   };
 
@@ -383,6 +412,22 @@ export function AgentConnectedAppsTab({
                     <CheckCircle2 size={10} />
                     <span>{t("connectedApps.statusActive")}</span>
                   </span>
+
+                  {meta.isComposio && (
+                    <button
+                      disabled={probingKey === client.key}
+                      onClick={(e) => handleProbeConnection(client, e)}
+                      className="p-1 rounded-md text-slate-500 dark:text-neutral-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                      title={`Kiểm tra kết nối trực tiếp (Connection Test Probe) cho ${meta.name}`}
+                      aria-label={`Test connection for ${meta.name}`}
+                    >
+                      {probingKey === client.key ? (
+                        <Loader2 size={12} className="animate-spin text-emerald-400" />
+                      ) : (
+                        <Activity size={12} />
+                      )}
+                    </button>
+                  )}
 
                   {meta.isComposio && (
                     <button

@@ -70,23 +70,22 @@ export default defineConfig({
     hmr: {
       overlay: true,
     },
-    // Local dev: AGENT360_API_TARGET=http://127.0.0.1:5290 runs against a local backend (paths are mapped to
-    // /api/v1 like the production nginx). Without it the dev server proxies to the production frontend origin.
+    // Unified local dev proxy: defaults to local backend http://127.0.0.1:5290 (paths mapped to /api/v1 like production nginx).
+    // Override with AGENT360_API_TARGET=https://agent360.antares.vn when intentionally testing against remote.
     proxy: {
-      "/api": process.env.AGENT360_API_TARGET
-        ? {
-            target: process.env.AGENT360_API_TARGET,
-            changeOrigin: true,
-            ws: true,
-            rewrite: (p) => p.replace(/^\/api\/(v\d+\/)?/, "/api/v1/"),
-          }
-        : {
-            target: "https://agent360.antares.vn",
-            changeOrigin: true,
-            ws: true,
-            secure: false,
-            rewrite: (p) => p.replace(/^\/api\/v1\//, "/api/"),
-          },
+      "/api": (() => {
+        const apiTarget = process.env.AGENT360_API_TARGET || "http://127.0.0.1:5290";
+        const isLocalBackend = apiTarget.includes(":5290") || apiTarget.includes(":8080") || apiTarget.includes("127.0.0.1") || apiTarget.includes("localhost");
+        return {
+          target: apiTarget,
+          changeOrigin: true,
+          ws: true,
+          secure: false,
+          rewrite: isLocalBackend
+            ? (p: string) => p.replace(/^\/api\/(v\d+\/)?/, "/api/v1/")
+            : (p: string) => p.replace(/^\/api\/v1\//, "/api/"),
+        };
+      })(),
     },
   },
 });
