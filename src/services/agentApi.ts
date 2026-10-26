@@ -1087,8 +1087,14 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
       throw new Error(`Failed to fetch messages for chat ${chatId}`);
     }
     const data = await res.json();
-    if (data && !Array.isArray(data) && data.collaboration_room && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("agent360_room_synced", { detail: { chatId, room: data.collaboration_room } }));
+    if (typeof window !== "undefined") {
+      const candidateRoom = data && !Array.isArray(data) ? data.collaboration_room : null;
+      const isMultiAgent = Boolean(
+        candidateRoom &&
+        ((Array.isArray(candidateRoom.participants) && candidateRoom.participants.some((p: any) => p.role === "collaborator")) ||
+         (Array.isArray(candidateRoom.turns) && candidateRoom.turns.some((t: any) => t.kind === "collaborator_reply" || t.kind === "collaborator_progress" || t.kind === "host_kickoff" || t.kind === "host_progress")))
+      );
+      window.dispatchEvent(new CustomEvent("agent360_room_synced", { detail: { chatId, room: isMultiAgent ? candidateRoom : null } }));
     }
     const isRunningOnServer = Boolean(data && !Array.isArray(data) && (data.status === "running" || data.status === "in_progress" || data.is_running));
     const rawList = Array.isArray(data) ? data : (data.messages || []);
@@ -1618,7 +1624,7 @@ export async function stopConsoleChat(sessionId: string, agentId?: string): Prom
 }
 
 
-export async function fetchChatSessionRoom(agentId: string, chatId: string, ensure: boolean = true): Promise<SessionCollaborationRoom | null> {
+export async function fetchChatSessionRoom(agentId: string, chatId: string, ensure: boolean = false): Promise<SessionCollaborationRoom | null> {
   if (!agentId || !chatId) return null;
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
@@ -1629,7 +1635,14 @@ export async function fetchChatSessionRoom(agentId: string, chatId: string, ensu
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return data?.room || null;
+    const room = data?.room || null;
+    if (!ensure && room) {
+      const hasCollab =
+        (Array.isArray(room.participants) && room.participants.some((p: any) => p.role === "collaborator")) ||
+        (Array.isArray(room.turns) && room.turns.some((t: any) => t.kind === "collaborator_reply" || t.kind === "collaborator_progress" || t.kind === "host_kickoff" || t.kind === "host_progress"));
+      if (!hasCollab) return null;
+    }
+    return room;
   } catch {
     return null;
   }

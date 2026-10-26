@@ -520,8 +520,16 @@ function AgentThinkingModal({
     ? msg.senderAgentId.replace(/^bot:agent360:/i, "").toLowerCase()
     : null;
   // Default filter to "all" so multi-agent Flow Tree is always visible in full context
+  const hasMultiAgentRoom = Boolean(
+    room &&
+    ((Array.isArray(room.participants) && room.participants.some((p) => p.role === "collaborator")) ||
+     (Array.isArray(room.turns) && room.turns.some((t) => t.kind === "collaborator_reply" || t.kind === "collaborator_progress" || t.kind === "host_kickoff" || t.kind === "host_progress")))
+  );
   const [selectedParticipantFilter, setSelectedParticipantFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"tree" | "timeline">("tree");
+  const [viewMode, setViewMode] = useState<"tree" | "timeline">(() => (hasMultiAgentRoom ? "tree" : "timeline"));
+  useEffect(() => {
+    setViewMode(hasMultiAgentRoom ? "tree" : "timeline");
+  }, [hasMultiAgentRoom]);
   const [selectedWaveIdx, setSelectedWaveIdx] = useState<number>(-1);
   const [expandedBranchIds, setExpandedBranchIds] = useState<Record<string, boolean>>({});
   const [flowSearchQuery, setFlowSearchQuery] = useState<string>("");
@@ -605,15 +613,9 @@ function AgentThinkingModal({
     reasoningItems.push({ kind: "reasoning", text: msg.reasoning });
   }
 
-  const hasMultiAgentRoom = Boolean(
-    room &&
-    Array.isArray(room.participants) &&
-    room.participants.some((p) => p.role === "collaborator")
-  );
-
-  // Extract room turns (excluding manager init turn)
+  // Extract room turns ONLY when this session is a true multi-agent room
   const roomWaveTurns = useMemo(() => {
-    if (!room || !Array.isArray(room.turns)) return [];
+    if (!hasMultiAgentRoom || !room || !Array.isArray(room.turns)) return [];
     const sorted = [...room.turns].sort((a, b) => (a.turn_no || 0) - (b.turn_no || 0));
     return sorted.filter((t) => !(t.kind === "request" && t.author_role === "manager"));
   }, [room]);
@@ -1181,7 +1183,8 @@ function AgentThinkingModal({
               </button>
             )}
 
-            {/* View Mode Toggle: Flow Tree vs Timeline Log */}
+            {/* View Mode Toggle: Flow Tree vs Timeline Log (only shown when session has a Multi-Agent Room) */}
+            {hasMultiAgentRoom && (
             <div className="inline-flex items-center rounded-lg sm:rounded-xl bg-slate-200/70 dark:bg-[#1d1d2b] p-0.5 border border-slate-300/60 dark:border-[#2c2c40]">
               <button
                 type="button"
@@ -1210,6 +1213,7 @@ function AgentThinkingModal({
                 <span><span className="hidden xs:inline">Chi tiết </span>Log</span>
               </button>
             </div>
+            )}
 
             <button
               type="button"
@@ -2962,7 +2966,7 @@ function FormattedMessageContent({
   const parts = content.split(codeBlockRegex);
 
   return (
-    <div className="space-y-2 text-[13px] leading-relaxed select-text min-w-0 max-w-full break-words">
+    <div className="space-y-2.5 text-[14.5px] sm:text-[15px] leading-relaxed select-text min-w-0 max-w-full break-words">
       {parts.map((part, idx) => {
         if (part.startsWith("```") && part.endsWith("```")) {
           const match = part.match(/^```(\w+)?\s*\n([\s\S]*?)```$/);
@@ -4024,8 +4028,8 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     const onRoomSynced = (e: Event) => {
       const detail = (e as CustomEvent)?.detail;
-      if (detail?.chatId === selectedChatId && detail?.room) {
-        setActiveSessionRoom(detail.room);
+      if (detail?.chatId === selectedChatId) {
+        setActiveSessionRoom(detail?.room || null);
       }
     };
     window.addEventListener("agent360_room_synced", onRoomSynced);
@@ -4587,6 +4591,7 @@ export function GrokBotWorkspace() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isTextareaFocusedRef = useRef<boolean>(false);
   const textareaCursorPosRef = useRef<{ start: number; end: number } | null>(null);
+  const isComposingRef = useRef<boolean>(false);
 
   const handleStopStreaming = () => {
     if (!selectedChatId) return;
@@ -6495,10 +6500,11 @@ export function GrokBotWorkspace() {
       return next;
     });
 
-    // Load Session-Sticky Collaboration Room if bound to this chat session (read-only on switch; avoid creating stub room during route agent transition)
+    // Load Session-Sticky Collaboration Room ONLY if this chat session actually has a multi-agent Room
+    setActiveSessionRoom(null);
     if (!agentParam || normalizeAgentKey(selectedAgentId) === normalizeAgentKey(agentParam)) {
       fetchChatSessionRoom(selectedAgentId, selectedChatId, false).then((r) => {
-        if (mounted && r) setActiveSessionRoom(r);
+        if (mounted) setActiveSessionRoom(r || null);
       }).catch(() => {});
     }
 
@@ -7632,11 +7638,7 @@ export function GrokBotWorkspace() {
     setChats((prev) => [newSession, ...prev.filter((c) => c.id !== newChatId)]);
     setSelectedChatId(newChatId);
     setMessages([]);
-    fetchChatSessionRoom(selectedAgent.slug || selectedAgent.id || selectedAgentId, newChatId, true)
-      .then((r) => {
-        if (r) setActiveSessionRoom(r);
-      })
-      .catch(() => {});
+    setActiveSessionRoom(null);
     try {
       localStorage.setItem("agent360_last_chat_id", newChatId);
       localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, newChatId);
@@ -9242,7 +9244,7 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-xs font-medium truncate block transition-all ${
+                            <span className={`text-[13.5px] sm:text-[14px] font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
                                 ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
                                 : "text-neutral-900 dark:text-white"
@@ -9385,7 +9387,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[10px] leading-tight font-sans truncate block mt-0 transition-all ${
+                          <span className={`text-[11.5px] sm:text-[12px] leading-tight font-sans truncate block mt-0.5 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -9483,7 +9485,7 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-xs font-medium truncate block transition-all ${
+                            <span className={`text-[13.5px] sm:text-[14px] font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
                                 ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
                                 : "text-neutral-900 dark:text-white"
@@ -9626,7 +9628,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[10px] leading-tight font-sans truncate block mt-0 transition-all ${
+                          <span className={`text-[11.5px] sm:text-[12px] leading-tight font-sans truncate block mt-0.5 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -10802,23 +10804,9 @@ export function GrokBotWorkspace() {
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
-                      onClick={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target.closest("button") || target.closest("a") || target.closest("input")) return;
-                        if (window.getSelection()?.toString().trim()) return;
+                      onClick={() => {
                         if (longPressPreventClickRef.current) {
                           longPressPreventClickRef.current = false;
-                          return;
-                        }
-                        // On mobile, short tap does not open action menu - only hold touch (long-press) opens it
-                        if (window.innerWidth >= 1024) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                          const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                          const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                          setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
-                          setActiveReactPopoverMsgId(null);
-                          setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                         }
                       }}
                       onContextMenu={(e) => {
@@ -10833,7 +10821,7 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
-                      <div className={`inline-block rounded-2xl px-4 py-2 text-[13px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto break-words ${
+                      <div className={`inline-block rounded-2xl px-4 py-2.5 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto break-words ${
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
@@ -10895,28 +10883,14 @@ export function GrokBotWorkspace() {
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
-                      onClick={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("pre")) return;
-                        if (window.getSelection()?.toString().trim()) return;
+                      onClick={() => {
                         if (longPressPreventClickRef.current) {
                           longPressPreventClickRef.current = false;
                           return;
                         }
-                        // When this assistant turn is actively in-progress, clicking it ONLY opens the realtime thinking & tool calls modal
+                        // When this assistant turn is actively in-progress, clicking it opens the realtime thinking & tool calls modal
                         if ((isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn) {
                           handleOpenActiveThinkingModal(msg);
-                          return;
-                        }
-                        // On mobile, short tap does not open action menu - only hold touch (long-press) opens it
-                        if (window.innerWidth >= 1024) {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                          const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                          const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                          setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
-                          setActiveReactPopoverMsgId(null);
-                          setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                         }
                       }}
                       onContextMenu={(e) => {
@@ -10999,10 +10973,10 @@ export function GrokBotWorkspace() {
                               </div>
                             )}
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                            <div className={`inline-block w-auto max-w-full rounded-2xl px-3.5 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                            <div className={`inline-block w-auto max-w-full rounded-2xl px-4 py-2.5 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             {renderMessageAttachmentsBox()}
-                            <div className="text-[13px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
+                            <div className="text-[14.5px] sm:text-[15px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
                                 content={cleanContent}
                                 agentNode={selectedAgent.node}
@@ -12627,6 +12601,12 @@ export function GrokBotWorkspace() {
                   ref={textareaRef}
                   rows={isMultiline ? 2 : 1}
                   value={inputText}
+                  onCompositionStart={() => {
+                    isComposingRef.current = true;
+                  }}
+                  onCompositionEnd={() => {
+                    isComposingRef.current = false;
+                  }}
                   onFocus={() => {
                     isTextareaFocusedRef.current = true;
                     if (textareaRef.current) {
@@ -12700,6 +12680,11 @@ export function GrokBotWorkspace() {
                         return;
                       }
                     }
+                    // If IME is composing on macOS, do not trigger dropdown navigation, prompt history or deletions
+                    if (isComposingRef.current || e.nativeEvent.isComposing || (e as any).keyCode === 229) {
+                      return;
+                    }
+
                     if (isPlusMenuOpen) {
                       const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
                       if (triggerMatch) {
@@ -12888,6 +12873,11 @@ export function GrokBotWorkspace() {
                     }
 
                     if (e.key === "Enter" && !e.shiftKey) {
+                      // Guard against macOS / IME composition (Telex, VNI, Japanese, Chinese, etc.)
+                      // When typing and pressing Enter to commit IME text, nativeEvent.isComposing is true or keyCode is 229
+                      if (isComposingRef.current || e.nativeEvent.isComposing || (e as any).keyCode === 229) {
+                        return;
+                      }
                       e.preventDefault();
                       composerFormRef.current?.requestSubmit();
                       if (textareaRef.current) {
@@ -12906,8 +12896,8 @@ export function GrokBotWorkspace() {
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
-                    isMultiline ? "min-h-[40px] max-h-[210px] pt-0.5 pb-1 px-0.5" : "flex-1 max-h-[210px] py-1"
+                  className={`w-full bg-transparent border-0 text-[14px] sm:text-[15px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
+                    isMultiline ? "min-h-[44px] max-h-[210px] pt-1 pb-1.5 px-0.5" : "flex-1 max-h-[210px] py-1.5"
                   }`}
                 />
               );
@@ -13514,6 +13504,7 @@ export function GrokBotWorkspace() {
                             onChange={(e) => setEditingChatTitle(e.target.value)}
                             onBlur={() => handleSaveChatTitle(chat.id)}
                             onKeyDown={(e) => {
+                              if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
                               if (e.key === "Enter") handleSaveChatTitle(chat.id);
                               if (e.key === "Escape") setEditingChatId(null);
                             }}
@@ -13524,7 +13515,7 @@ export function GrokBotWorkspace() {
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
-                              className={`text-xs chat-title-marquee inline-block whitespace-nowrap ${
+                              className={`text-[13px] sm:text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
                                 (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
                               } ${
                                 isSelected
