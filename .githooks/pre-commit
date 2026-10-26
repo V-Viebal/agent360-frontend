@@ -1,7 +1,10 @@
 #!/bin/sh
 # Versioned commit gate (enable once per checkout: git config core.hooksPath .githooks).
-# Blocks commits that break the TypeScript build. Bypass only with --no-verify.
+# Blocks commits that break the TypeScript build or violate React Rules of Hooks.
 if git diff --cached --name-only | grep -qE '\.(ts|tsx)$|^package\.json$|^tsconfig'; then
+  echo "pre-commit: checking React Rules of Hooks ..."
+  node scripts/check-react-hooks.mjs || { echo "pre-commit: React Rules of Hooks violation detected, commit blocked"; exit 1; }
+
   echo "pre-commit: tsc --noEmit ..."
   TSC=./node_modules/.bin/tsc; [ -x "$TSC" ] || TSC="npx --no-install tsc"
   $TSC --noEmit -p . || { echo "pre-commit: typecheck failed, commit blocked"; exit 1; }

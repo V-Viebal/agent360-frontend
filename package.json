@@ -8,7 +8,8 @@
     "build": "vite build && node scripts/verify-bundle.mjs",
     "typecheck": "tsc --noEmit -p .",
     "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks',{stdio:'ignore'})}catch{}\"",
-    "verify-bundle": "node scripts/verify-bundle.mjs"
+    "verify-bundle": "node scripts/verify-bundle.mjs",
+    "lint:hooks": "node scripts/check-react-hooks.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
