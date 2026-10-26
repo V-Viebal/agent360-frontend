@@ -2539,7 +2539,7 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
       {/* Embedded Browser View Screen Preview Card for Screen Actions */}
       {(isScreenAction || screenImage) && (
         <div className="p-2.5 bg-[#09090d] border-t border-[#1e1e28] flex flex-col space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 select-none px-1">
+          <div className="flex items-center justify-between text-xs font-sans text-neutral-400 select-none px-1">
             <div className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-neutral-200 font-semibold tracking-tight">
@@ -2966,7 +2966,7 @@ function FormattedMessageContent({
   const parts = content.split(codeBlockRegex);
 
   return (
-    <div className="space-y-2.5 text-[14.5px] sm:text-[15px] leading-relaxed select-text min-w-0 max-w-full break-words">
+    <div className="space-y-2.5 text-[15.5px] sm:text-[16px] leading-relaxed select-text min-w-0 max-w-full break-words">
       {parts.map((part, idx) => {
         if (part.startsWith("```") && part.endsWith("```")) {
           const match = part.match(/^```(\w+)?\s*\n([\s\S]*?)```$/);
@@ -3592,6 +3592,16 @@ function getDynamicSuggestionsForAgent(agent?: InfraAgent): QuickSuggestion[] {
       badge: "Kế hoạch"
     }
   ];
+}
+
+// Helper to accurately distinguish between mobile touch screens and laptops (including touch laptops / trackpads)
+function isCoarseTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  // Primary pointer is coarse (finger) or no fine pointer (mouse/trackpad) and screen width < 1024
+  const hasCoarse = window.matchMedia("(pointer: coarse)").matches;
+  const hasFine = window.matchMedia("(pointer: fine)").matches;
+  const isSmallScreen = window.innerWidth < 1024;
+  return isSmallScreen || (hasCoarse && !hasFine);
 }
 
 export function GrokBotWorkspace() {
@@ -5475,6 +5485,8 @@ export function GrokBotWorkspace() {
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStartAgent = (ag: InfraAgent) => {
+    // Only engage mobile bottom-sheet long-press on actual mobile/coarse touch screens
+    if (!isCoarseTouchDevice()) return;
     longPressPreventClickRef.current = false;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
@@ -5494,6 +5506,8 @@ export function GrokBotWorkspace() {
   };
 
   const handleTouchStartChat = (chat: AgentSession) => {
+    // Only engage mobile bottom-sheet long-press on actual mobile/coarse touch screens
+    if (!isCoarseTouchDevice()) return;
     longPressPreventClickRef.current = false;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
@@ -5525,6 +5539,8 @@ export function GrokBotWorkspace() {
       clickY?: number;
     }
   ) => {
+    // Only engage mobile bottom-sheet long-press on actual mobile/coarse touch screens
+    if (!isCoarseTouchDevice()) return;
     if (e.touches.length > 0) {
       touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
@@ -9171,7 +9187,7 @@ export function GrokBotWorkspace() {
             </div>
 
             {/* Agents List */}
-            <div className="flex-1 overflow-y-auto px-1.5 py-1 space-y-0.5 scrollbar-hover">
+            <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1.5 scrollbar-hover">
               {isLoadingAgents ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -9218,10 +9234,10 @@ export function GrokBotWorkspace() {
                         }}
                         className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
-                            ? "px-2 py-1 gap-1.5"
-                            : layoutDensity === "comfortable"
                             ? "px-2.5 py-1.5 gap-2"
-                            : "px-2 py-1 gap-1.5"
+                            : layoutDensity === "comfortable"
+                            ? "px-3 py-2.5 gap-2.5"
+                            : "px-2.5 py-2 gap-2"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
                             ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
@@ -9244,7 +9260,7 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[13.5px] sm:text-[14px] font-medium truncate block transition-all ${
+                            <span className={`text-[15.5px] sm:text-[16px] font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
                                 ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
                                 : "text-neutral-900 dark:text-white"
@@ -9387,7 +9403,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[11.5px] sm:text-[12px] leading-tight font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[12.5px] sm:text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -9415,7 +9431,7 @@ export function GrokBotWorkspace() {
                             return next;
                           });
                         }}
-                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-neutral-200/50 dark:hover:bg-white/[0.04] text-[11px] font-mono text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors cursor-pointer select-none group/dis"
+                        className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-neutral-200/50 dark:hover:bg-white/[0.04] text-xs font-sans text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors cursor-pointer select-none group/dis"
                         title={disabledAgentsExpanded ? "Thu gọn danh sách agent đã tắt" : "Mở rộng danh sách agent đã tắt"}
                       >
                         <div className="flex items-center gap-1.5">
@@ -9459,10 +9475,10 @@ export function GrokBotWorkspace() {
                         }}
                         className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
-                            ? "px-2 py-1 gap-1.5"
-                            : layoutDensity === "comfortable"
                             ? "px-2.5 py-1.5 gap-2"
-                            : "px-2 py-1 gap-1.5"
+                            : layoutDensity === "comfortable"
+                            ? "px-3 py-2.5 gap-2.5"
+                            : "px-2.5 py-2 gap-2"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
                             ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
@@ -9485,7 +9501,7 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[13.5px] sm:text-[14px] font-medium truncate block transition-all ${
+                            <span className={`text-[15.5px] sm:text-[16px] font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
                                 ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
                                 : "text-neutral-900 dark:text-white"
@@ -9628,7 +9644,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[11.5px] sm:text-[12px] leading-tight font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[12.5px] sm:text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -9909,7 +9925,7 @@ export function GrokBotWorkspace() {
                   </>
                 ) : (
                   <>
-                    <AgentAvatar agent={selectedAgent} size="sm" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
+                    <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
                       <ChevronRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
@@ -10821,7 +10837,7 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
-                      <div className={`inline-block rounded-2xl px-4 py-2.5 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto break-words ${
+                      <div className={`inline-block rounded-2xl px-4 py-2.5 text-[15.5px] sm:text-[16px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto break-words ${
                         isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
                       }`}>
                         {renderQuotedReplyBox()}
@@ -10976,7 +10992,7 @@ export function GrokBotWorkspace() {
                             <div className={`inline-block w-auto max-w-full rounded-2xl px-4 py-2.5 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             {renderMessageAttachmentsBox()}
-                            <div className="text-[14.5px] sm:text-[15px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
+                            <div className="text-[15.5px] sm:text-[16px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               <FormattedMessageContent
                                 content={cleanContent}
                                 agentNode={selectedAgent.node}
@@ -12896,7 +12912,7 @@ export function GrokBotWorkspace() {
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-0 text-[14px] sm:text-[15px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
+                  className={`w-full bg-transparent border-0 text-[15px] sm:text-[16px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
                     isMultiline ? "min-h-[44px] max-h-[210px] pt-1 pb-1.5 px-0.5" : "flex-1 max-h-[210px] py-1.5"
                   }`}
                 />
@@ -13121,10 +13137,10 @@ export function GrokBotWorkspace() {
         ) : (
           <div className="h-12 px-3 border-b border-slate-200 dark:border-[#1c1c22] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
             <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden whitespace-nowrap" title={selectedAgent.name ? `Chats của ${selectedAgent.name} (${chats.length})` : `Chats (${chats.length})`}>
-              <span className="text-xs font-mono text-slate-800 dark:text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span className="text-sm font-sans text-slate-800 dark:text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}
               </span>
-              <span className="text-xs font-mono text-slate-500 dark:text-neutral-400 font-normal shrink-0" style={{ whiteSpace: "nowrap", textWrap: "nowrap" }}>
+              <span className="text-xs font-sans text-slate-500 dark:text-neutral-400 font-normal shrink-0" style={{ whiteSpace: "nowrap", textWrap: "nowrap" }}>
                 ({chats.length})
               </span>
             </div>
@@ -13515,7 +13531,7 @@ export function GrokBotWorkspace() {
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
-                              className={`text-[13px] sm:text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
+                              className={`text-[14px] sm:text-[14.5px] chat-title-marquee inline-block whitespace-nowrap ${
                                 (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
                               } ${
                                 isSelected
@@ -14012,7 +14028,7 @@ ${chat.id}`);
           <>
             {/* Clean Header with Agent Settings Trigger & Mobile Close Button */}
             <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] flex items-center justify-between px-3 shrink-0 bg-[var(--bg-sidebar)]">
-              <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">Agent Detail</span>
+              <span className="text-sm font-sans font-semibold text-slate-800 dark:text-neutral-200">Agent Detail</span>
               <div className="flex items-center gap-1">
                 {!hasNoAgents && selectedAgent.id && (
                   <Tooltip content="Cài đặt Agent (Model, Apps, Sub-Agents, Channels, Memory)" shortcut="Alt+," placement="bottom">
@@ -14065,18 +14081,16 @@ ${chat.id}`);
                 className="relative mb-2 transition-transform hover:scale-105 cursor-pointer group"
                 title="Bấm để mở Cài đặt Agent"
               >
-                <AgentAvatar agent={selectedAgent} size="lg" className="shadow-lg" />
-                <span
-                  className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1.5 ring-white dark:ring-[#0c0c0e] ${
-                    selectedAgent.status === "degraded"
-                      ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse"
-                      : "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
-                  }`}
-                />
+                <AgentAvatar agent={selectedAgent} size="2xl" className="shadow-2xl" />
+                {selectedAgent.status === "degraded" && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1.5 ring-white dark:ring-[#0c0c0e] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse"
+                  />
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 justify-center">
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
                   {selectedAgent.name}
                 </h2>
                 {activeLoopMode !== "default" && (
@@ -14093,7 +14107,7 @@ ${chat.id}`);
                 )}
               </div>
 
-              <div className="mt-1 flex items-center gap-2 text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+              <div className="mt-1 flex items-center gap-2 text-xs font-mono text-neutral-500 dark:text-neutral-400">
                 <span>{selectedAgent.roleTag || "Agent"}</span>
                 <span>•</span>
                 <button
@@ -14111,7 +14125,7 @@ ${chat.id}`);
             </div>
 
             {/* 3 Streamlined Tabs: Computer | Details | Library */}
-            <div className="flex items-center justify-around border-b border-neutral-200 dark:border-[#1c1c22] text-xs font-medium text-neutral-500 dark:text-neutral-400 px-2 shrink-0">
+            <div className="flex items-center justify-around border-b border-neutral-200 dark:border-[#1c1c22] text-sm font-medium text-neutral-500 dark:text-neutral-400 px-2 shrink-0">
               {(["Details", "Computer", "Library"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -14121,7 +14135,7 @@ ${chat.id}`);
                       loadWorkspaceTree();
                     }
                   }}
-                  className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-mono ${
+                  className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-sans ${
                     rightTab === tab
                       ? "text-neutral-900 dark:text-white border-[#f8a87c] font-semibold"
                       : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
@@ -14219,8 +14233,8 @@ ${chat.id}`);
                 <div className="space-y-4 text-xs text-slate-700 dark:text-neutral-300 font-sans pb-4">
                   {/* 1. Concise Description: 2-3 lines by default, collapsed */}
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400">
-                      <span className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">
+                    <div className="flex items-center justify-between text-xs font-sans text-neutral-400">
+                      <span className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-xs">
                         Giới thiệu & Vai trò
                       </span>
                       <span className="text-[10px] uppercase text-[#e0682b] dark:text-[#f8a87c]">
@@ -14266,7 +14280,7 @@ ${chat.id}`);
                           setSelectedJobForConfig(null);
                           setIsScheduleModalOpen(true);
                         }}
-                        className="text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-xs font-sans font-medium text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer"
                         title="Thêm routine mới"
                       >
                         <Plus size={11} />
@@ -15383,7 +15397,7 @@ ${chat.id}`);
                 </button>
               </div>
             </div>
-            <div className="w-full flex items-center justify-between px-3.5 py-1.5 bg-[#0e0e14] border-b border-white/5 text-[11px] font-mono text-neutral-400">
+            <div className="w-full flex items-center justify-between px-3.5 py-1.5 bg-[#0e0e14] border-b border-white/5 text-xs font-sans text-neutral-400">
               <div className="flex items-center gap-1">
                 <button
                   type="button"

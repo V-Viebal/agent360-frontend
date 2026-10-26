@@ -78,7 +78,7 @@ export type SettingsTab = "profile" | "appearance" | "language" | "audio" | "pri
 export function SettingsModal({
   isOpen,
   onClose,
-  initialTab = "appearance",
+  initialTab = "profile",
   onOpenPermissions,
   onStartTour,
   onResetChecklist,
@@ -543,7 +543,7 @@ export function SettingsModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:w-[880px] md:w-[920px] h-[94dvh] sm:h-[620px] max-h-[100dvh] sm:max-h-[680px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full sm:w-[95vw] md:w-[1100px] lg:w-[1240px] xl:w-[1360px] max-w-[96vw] h-[94dvh] sm:h-[92vh] max-h-[100dvh] sm:max-h-[820px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
         <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
@@ -793,150 +793,36 @@ export function SettingsModal({
                   </div>
                 </div>
 
-                {/* Security & Password Management Center - Inspired by app360 collapsible form & secure verification */}
-                <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 overflow-hidden transition-all duration-200">
+                {/* Direct Password Reset Link to Skyer Auth Authority */}
+                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 overflow-hidden transition-all duration-200">
                   <div
                     onClick={() => {
-                      setShowPasswordForm(!showPasswordForm);
-                      setPasswordError(null);
-                      setPasswordSuccess(null);
+                      onClose();
+                      initiatePasswordReset(authConfig);
                     }}
-                    className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-blue-500/10 transition-colors select-none"
+                    className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-blue-500/10 transition-colors select-none group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-105 transition-transform">
                         <Key size={18} />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-[13px] font-semibold text-slate-800 dark:text-blue-300">
-                          {t("settings.password_change") || "Đổi mật khẩu"}
+                        <h4 className="text-[13px] font-semibold text-slate-800 dark:text-blue-300 flex items-center gap-2">
+                          <span>{t("settings.password_change") || "Đổi mật khẩu"}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 font-normal">
+                            Cổng xác thực Skyer
+                          </span>
                         </h4>
-                        <p className="text-xs text-slate-500 dark:text-neutral-400 truncate">
-                          {t("settings.password_change_desc") || "Cập nhật mật khẩu bảo mật tài khoản Skyer"}
+                        <p className="text-xs text-slate-500 dark:text-neutral-400 truncate mt-0.5">
+                          {t("settings.password_change_desc") || "Mở màn hình đặt lại mật khẩu an toàn trên cổng xác thực tài khoản Skyer"}
                         </p>
                       </div>
                     </div>
-                    <div className="text-neutral-400 shrink-0 p-1 rounded-lg hover:text-white transition-colors">
-                      {showPasswordForm ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <div className="text-blue-400 group-hover:text-blue-300 shrink-0 px-3 py-1.5 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 border border-blue-500/30 flex items-center gap-1.5 text-xs font-semibold transition-all group-hover:translate-x-0.5">
+                      <span>Đặt lại mật khẩu</span>
+                      <ArrowRight size={13} />
                     </div>
                   </div>
-
-                  {/* Collapsible Form - app360 UX Pattern */}
-                  {showPasswordForm && (
-                    <div className="p-4 border-t border-blue-500/20 bg-slate-50/50 dark:bg-[#12121c]/70 space-y-3.5 animate-in fade-in duration-150">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-medium text-slate-600 dark:text-neutral-300 flex items-center gap-1.5">
-                            <Lock size={12} className="text-blue-400" />
-                            <span>{t("settings.new_password") || "Mật khẩu mới"}</span>
-                          </label>
-                          <input
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => {
-                              setNewPassword(e.target.value);
-                              setPasswordError(null);
-                            }}
-                            placeholder={t("settings.new_password") || "Mật khẩu mới (tối thiểu 8 ký tự)"}
-                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white placeholder:text-neutral-500 focus:outline-none focus:border-blue-500 transition-colors"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[11px] font-medium text-slate-600 dark:text-neutral-300 flex items-center gap-1.5">
-                            <Lock size={12} className="text-blue-400" />
-                            <span>{t("settings.confirm_password") || "Xác nhận mật khẩu"}</span>
-                          </label>
-                          <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => {
-                              setConfirmPassword(e.target.value);
-                              setPasswordError(null);
-                            }}
-                            placeholder={t("settings.confirm_password") || "Nhập lại mật khẩu mới"}
-                            className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#2a2a38] text-xs text-slate-900 dark:text-white placeholder:text-neutral-500 focus:outline-none focus:border-blue-500 transition-colors"
-                          />
-                        </div>
-                      </div>
-
-                      {passwordError && (
-                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
-                          <span>{passwordError}</span>
-                        </div>
-                      )}
-
-                      {passwordSuccess && (
-                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
-                          <Check size={14} />
-                          <span>{passwordSuccess}</span>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onClose();
-                            initiatePasswordReset(authConfig);
-                          }}
-                          className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer transition-colors self-start sm:self-auto"
-                        >
-                          <span>{t("settings.password_portal_redirect") || "Mở màn hình đặt lại mật khẩu Skyer"}</span>
-                          <ArrowRight size={11} />
-                        </button>
-
-                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowPasswordForm(false);
-                              setNewPassword("");
-                              setConfirmPassword("");
-                              setPasswordError(null);
-                            }}
-                            className="px-3 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white cursor-pointer transition-colors"
-                          >
-                            {t("settings.profileEditCancel") || "Hủy"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={savingPassword || !newPassword}
-                            onClick={async () => {
-                              if (!newPassword || savingPassword) return;
-                              if (newPassword.length < 8) {
-                                setPasswordError(t("settings.password_min_length") || "Mật khẩu phải có độ dài tối thiểu 8 ký tự!");
-                                return;
-                              }
-                              if (newPassword !== confirmPassword) {
-                                setPasswordError(t("settings.password_mismatch") || "Mật khẩu xác nhận không khớp!");
-                                return;
-                              }
-                              setSavingPassword(true);
-                              setPasswordError(null);
-                              try {
-                                setPasswordSuccess(t("settings.password_update_success") || "Đang chuyển đến cổng xác thực Skyer để hoàn tất cập nhật mật khẩu...");
-                                setTimeout(() => {
-                                  onClose();
-                                  initiatePasswordReset(authConfig);
-                                }, 700);
-                              } catch (err: any) {
-                                setPasswordError(err?.message || "Cập nhật mật khẩu thất bại");
-                                setSavingPassword(false);
-                              }
-                            }}
-                            className="px-3.5 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
-                          >
-                            {savingPassword ? (
-                              <Loader2 size={13} className="animate-spin" />
-                            ) : (
-                              <Lock size={13} />
-                            )}
-                            <span>{savingPassword ? "Updating..." : (t("settings.change_password_btn") || "Cập nhật mật khẩu")}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Sign Out Action in Profile */}

@@ -360,7 +360,7 @@ interface AgentAvatarProps {
     name?: string;
     roleTag?: string;
   };
-  size?: "2xs" | "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
   overrideConfig?: CustomAvatarConfig | null;
   interactive?: boolean;
@@ -430,27 +430,30 @@ export function AgentAvatar({
     "2xs": "h-4.5 w-4.5 rounded-md",
     xs: "h-6 w-6 rounded-lg",
     sm: "h-7 w-7 rounded-xl",
-    md: "h-9 w-9 rounded-xl",
-    lg: "h-13 w-13 rounded-2xl",
-    xl: "h-16 w-16 rounded-2xl",
+    md: "h-12 w-12 rounded-xl",
+    lg: "h-18 w-18 rounded-2xl",
+    xl: "h-24 w-24 rounded-3xl",
+    "2xl": "h-32 w-32 rounded-3xl",
   }[size];
 
   const iconSize = {
-    "2xs": 11,
-    xs: 13,
-    sm: 16,
-    md: 20,
-    lg: 28,
-    xl: 36,
+    "2xs": 10,
+    xs: 12,
+    sm: 15,
+    md: 24,
+    lg: 32,
+    xl: 44,
+    "2xl": 56,
   }[size];
 
   const emojiSizeClass = {
-    "2xs": "text-xs",
-    xs: "text-sm",
-    sm: "text-base",
-    md: "text-lg",
+    "2xs": "text-[10px]",
+    xs: "text-xs",
+    sm: "text-sm",
+    md: "text-xl",
     lg: "text-3xl",
-    xl: "text-4xl",
+    xl: "text-5xl",
+    "2xl": "text-6xl",
   }[size];
 
   const hoverEffects = interactive
@@ -461,9 +464,10 @@ export function AgentAvatar({
     "2xs": 18,
     xs: 24,
     sm: 28,
-    md: 38,
-    lg: 54,
-    xl: 68,
+    md: 52,
+    lg: 76,
+    xl: 104,
+    "2xl": 136,
   }[size];
 
   // 0. Custom Blob or Default Blob Avatar (from c0le0ni/blob-avatar)

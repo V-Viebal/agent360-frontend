@@ -11,15 +11,13 @@ import {
   Search,
   Maximize2,
   Minimize2,
-  CheckCircle2,
-  XCircle,
-  Sparkles,
   X,
   AlertTriangle,
   Users,
   Network,
 } from "lucide-react";
 import { Iam360PermissionTreeNode } from "../services/iam360CellsApi";
+import { ToggleSwitch } from "./ui/ToggleSwitch";
 
 interface Iam360PermissionTreeViewProps {
   rootNode: Iam360PermissionTreeNode;
@@ -75,8 +73,8 @@ function filterTree(node: Iam360PermissionTreeNode, q: string): Iam360Permission
 
 export function Iam360PermissionTreeView({
   rootNode,
-  title = "Sơ đồ Cây Phân Quyền 5 Nhánh (Personal → Organization Cell Hierarchy)",
-  subtitle = "Cấu trúc phân cấp từ Identity Cell cá nhân của Agent tới Organization Cell, ReBAC Role Tuples, Cerbos ABAC, MCP/Tools Inline Toggle, A2A Topology và Observed Principals.",
+  title = "Cây Phân Quyền (Permission Tree)",
+  subtitle,
   defaultExpandDepth = 2,
   onSelectNode,
   selectedNodeId,
@@ -125,43 +123,35 @@ export function Iam360PermissionTreeView({
     });
   };
 
-  const getAccentBadgeClasses = (accent: string, effect: string) => {
-    if (effect === "DENY" || accent === "rose") {
-      return "bg-rose-500/15 text-rose-500 dark:text-[#fda4af] border-rose-500/30";
+  const getBadgeStyle = (effect: string) => {
+    if (effect === "DENY") {
+      return "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20";
     }
-    switch (accent) {
-      case "peach":
-        return "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/35";
-      case "mint":
-        return "bg-emerald-500/15 text-emerald-600 dark:text-[#86efac] border-emerald-500/30";
-      case "lavender":
-        return "bg-purple-500/15 text-purple-600 dark:text-[#c4b5fd] border-purple-500/30";
-      case "sky":
-        return "bg-sky-500/15 text-sky-600 dark:text-[#93c5fd] border-sky-500/30";
-      default:
-        return "bg-slate-500/15 text-slate-600 dark:text-neutral-300 border-slate-500/30";
-    }
+    return "bg-slate-100 text-slate-600 border-slate-200 dark:bg-[#1a1d2b] dark:text-neutral-300 dark:border-[#282d42]";
   };
 
   const getLevelIcon = (level: string, effect: string) => {
+    const cls = effect === "DENY"
+      ? "text-rose-500 dark:text-rose-400 shrink-0"
+      : "text-slate-400 dark:text-neutral-400 shrink-0";
     if (effect === "DENY" || level === "guardrail") {
-      return <Lock size={14} className="text-rose-400 shrink-0" />;
+      return <Lock size={14} className={cls} />;
     }
     switch (level) {
       case "identity":
-        return <Bot size={14} className="text-[#f8a87c] shrink-0" />;
+        return <Bot size={14} className={cls} />;
       case "organization_cell":
-        return <Building2 size={14} className="text-emerald-400 shrink-0" />;
+        return <Building2 size={14} className={cls} />;
       case "role_authority":
-        return <ShieldCheck size={14} className="text-purple-400 shrink-0" />;
+        return <ShieldCheck size={14} className={cls} />;
       case "capability_group":
-        return <Layers size={14} className="text-sky-400 shrink-0" />;
+        return <Layers size={14} className={cls} />;
       case "principal_leaf":
-        return <Users size={13} className="text-sky-400 shrink-0" />;
+        return <Users size={13} className={cls} />;
       case "a2a_leaf":
-        return <Network size={13} className="text-emerald-400 shrink-0" />;
+        return <Network size={13} className={cls} />;
       default:
-        return <Wrench size={13} className="text-emerald-400 shrink-0" />;
+        return <Wrench size={13} className={cls} />;
     }
   };
 
@@ -181,59 +171,54 @@ export function Iam360PermissionTreeView({
               toggleNode(node.id, e);
             }
           }}
-          className={`group flex items-start justify-between gap-2.5 rounded-xl px-2.5 py-2 transition-all cursor-pointer border ${
+          className={`group flex items-start justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors cursor-pointer border ${
             node.drift
-              ? "bg-[#f8a87c]/10 border-[#f8a87c]/45 shadow-xs"
+              ? "bg-amber-50/60 border-amber-300 dark:bg-amber-500/5 dark:border-amber-500/30"
               : isSelected
-                ? "bg-[#f8a87c]/15 border-[#f8a87c]/45 shadow-xs"
-                : "bg-white/60 dark:bg-[#14141d]/90 hover:bg-slate-100/90 dark:hover:bg-[#1b1b27] border-slate-200/70 dark:border-[#222230]"
+                ? "bg-slate-100/90 border-slate-300 dark:bg-[#1c1f2e] dark:border-[#323850]"
+                : "bg-white hover:bg-slate-50/90 border-slate-200/90 shadow-2xs dark:bg-[#141620] dark:hover:bg-[#191c28] dark:border-[#222534] dark:shadow-none"
           }`}
         >
-          <div className="flex items-start gap-2 min-w-0 flex-1">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
             {hasChildren ? (
               <button
                 type="button"
                 onClick={(e) => toggleNode(node.id, e)}
-                className="mt-0.5 h-4 w-4 rounded flex items-center justify-center text-neutral-400 hover:text-[#f8a87c] hover:bg-white/10 transition-colors shrink-0"
-                aria-label={isExpanded ? "Collapse branch" : "Expand branch"}
+                className="mt-0.5 h-4 w-4 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors shrink-0"
+                aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}
               >
                 {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               </button>
             ) : (
-              <span className="mt-1.5 ml-1.5 mr-1 h-1.5 w-1.5 rounded-full bg-neutral-400/50 dark:bg-neutral-600 shrink-0" />
+              <span
+                className={`mt-2 ml-1 mr-0.5 h-1.5 w-1.5 rounded-full shrink-0 ${
+                  node.effect === "DENY"
+                    ? "bg-rose-500"
+                    : node.enabled === false
+                      ? "bg-slate-300 dark:bg-neutral-600"
+                      : "bg-emerald-500"
+                }`}
+              />
             )}
 
             <div className="mt-0.5">{getLevelIcon(node.level, node.effect)}</div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white leading-snug">
+                <span className="text-xs font-semibold text-slate-900 dark:text-neutral-100 leading-snug">
                   {node.label}
                 </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${getAccentBadgeClasses(
-                    node.accent,
-                    node.effect
-                  )}`}
-                >
-                  {node.badge}
-                </span>
+                {node.badge && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${getBadgeStyle(node.effect)}`}
+                  >
+                    {node.badge}
+                  </span>
+                )}
                 {node.drift && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/40">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/25">
                     <AlertTriangle size={10} />
-                    <span>DRIFT DETECTED</span>
-                  </span>
-                )}
-                {node.effect === "ALLOW" && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-emerald-500 dark:text-[#86efac]">
-                    <CheckCircle2 size={11} />
-                    <span>ALLOW</span>
-                  </span>
-                )}
-                {node.effect === "DENY" && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-rose-500 dark:text-[#fda4af]">
-                    <XCircle size={11} />
-                    <span>DENY</span>
+                    <span>Lệch chuẩn</span>
                   </span>
                 )}
               </div>
@@ -245,33 +230,24 @@ export function Iam360PermissionTreeView({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 pt-0.5">
+          <div className="flex items-center gap-2 shrink-0 pt-0.5" onClick={(e) => e.stopPropagation()}>
             {node.can_toggle && onToggleCapabilityNode && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleCapabilityNode(node, !(node.enabled ?? true));
-                }}
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-semibold border transition-all cursor-pointer ${
-                  node.enabled
-                    ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-[#86efac] border-emerald-500/35"
-                    : "bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 dark:text-[#fda4af] border-rose-500/35"
-                }`}
-                title="Bấm để bật/tắt trực tiếp quyền thực thi này trên cây và ký Signed Intent"
-              >
-                {node.enabled ? "Toggle OFF" : "Toggle ON"}
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 hidden sm:inline">
+                  {node.enabled ? "Active" : "Disabled"}
+                </span>
+                <ToggleSwitch
+                  checked={node.enabled ?? true}
+                  onChange={(next) => onToggleCapabilityNode(node, next)}
+                  size="sm"
+                />
+              </div>
             )}
-
-            <span className="hidden sm:inline-block text-[10px] font-mono text-neutral-400 dark:text-neutral-500 bg-slate-100 dark:bg-[#101017] px-2 py-0.5 rounded border border-slate-200/70 dark:border-[#222230]">
-              {node.source}
-            </span>
           </div>
         </div>
 
         {hasChildren && isExpanded && (
-          <div className="ml-4 pl-3 mt-1.5 space-y-1.5 border-l border-dashed border-slate-300 dark:border-[#2a2a3a]">
+          <div className="ml-4 pl-3 mt-1.5 space-y-1.5 border-l border-slate-200 dark:border-[#252838]">
             {node.children.map((child) => renderTreeNode(child, depth + 1))}
           </div>
         )}
@@ -280,99 +256,61 @@ export function Iam360PermissionTreeView({
   };
 
   return (
-    <div className="rounded-2xl bg-slate-50 dark:bg-[#11141d] border border-slate-200 dark:border-[#222533] p-3.5 sm:p-4 space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Sparkles size={14} className="text-[#f8a87c] shrink-0" />
-            <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
-              {title}
-            </h4>
-            {rootNode.drift && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/40">
-                Visual Drift Active
-              </span>
-            )}
-          </div>
-          {subtitle && (
-            <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-              {subtitle}
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-          {rootNode.drift && onReconcileDrift && (
-            <button
-              type="button"
-              disabled={reconciling}
-              onClick={onReconcileDrift}
-              className="px-2.5 py-1 rounded-lg bg-[#f8a87c] hover:bg-[#f8a87c]/90 text-neutral-950 font-semibold text-[11px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
-              title="Đồng bộ hoá lại cấu hình gốc của Node (Xoá Drift)"
-            >
-              <AlertTriangle size={11} />
-              <span>{reconciling ? "Reconciling..." : "Reconcile Node"}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleExpandAll}
-            className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#181b26] hover:bg-slate-100 dark:hover:bg-[#222636] border border-slate-200 dark:border-[#282c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 flex items-center gap-1 cursor-pointer transition-colors"
-            title="Mở rộng toàn bộ nhánh quyền"
-          >
-            <Maximize2 size={11} className="text-[#f8a87c]" />
-            <span>Mở hết</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleCollapseAll}
-            className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#181b26] hover:bg-slate-100 dark:hover:bg-[#222636] border border-slate-200 dark:border-[#282c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 flex items-center gap-1 cursor-pointer transition-colors"
-            title="Thu gọn cây quyền"
-          >
-            <Minimize2 size={11} />
-            <span>Thu gọn</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Tree Filter & Legend Bar */}
+    <div className="rounded-2xl bg-slate-50/70 dark:bg-[#11131c] border border-slate-200 dark:border-[#222533] p-3.5 space-y-3">
+      {/* Compact Toolbar: Search + Expand/Collapse */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-2 bg-white dark:bg-[#0d0f17] border border-slate-200 dark:border-[#242838] rounded-xl px-3 py-1.5 flex-1">
-          <Search size={13} className="text-neutral-400 shrink-0" />
+        <div className="flex items-center gap-2 bg-white dark:bg-[#161924] border border-slate-200 dark:border-[#242838] rounded-xl px-3 py-1.5 flex-1 shadow-2xs dark:shadow-none">
+          <Search size={13} className="text-slate-400 shrink-0" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Lọc nhanh nhánh quyền (vd: owner, cell:gm, erpnext, principal, a2a, baseline)..."
-            className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none"
+            placeholder={`Tìm trong ${title.toLowerCase()} (vd: mcp, erpnext, owner, a2a)...`}
+            className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="text-neutral-400 hover:text-white cursor-pointer"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              aria-label="Xoá tìm kiếm"
             >
               <X size={12} />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
-          <span className="px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30">
-            👑 Owner / Drift
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-[#86efac] border border-emerald-500/30">
-            ✓ Allowed / MCP / A2A
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-[#c4b5fd] border border-purple-500/30">
-            ◆ ReBAC / Tools
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-[#93c5fd] border border-sky-500/30">
-            ● Principals & Topics
-          </span>
-          <span className="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500 dark:text-[#fda4af] border border-rose-500/30">
-            ✕ Baseline Deny
-          </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {rootNode.drift && onReconcileDrift && (
+            <button
+              type="button"
+              disabled={reconciling}
+              onClick={onReconcileDrift}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-medium text-xs flex items-center gap-1.5 cursor-pointer transition-opacity hover:opacity-90 shadow-2xs"
+              title="Đồng bộ lại cấu hình chuẩn"
+            >
+              <AlertTriangle size={12} />
+              <span>{reconciling ? "Đang đồng bộ..." : "Khôi phục chuẩn"}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleExpandAll}
+            className="p-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 dark:bg-[#161924] dark:hover:bg-[#1f2332] dark:border-[#262a3b] text-slate-700 dark:text-neutral-300 cursor-pointer transition-colors shadow-2xs dark:shadow-none"
+            title="Mở rộng toàn bộ"
+            aria-label="Mở rộng toàn bộ"
+          >
+            <Maximize2 size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={handleCollapseAll}
+            className="p-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 dark:bg-[#161924] dark:hover:bg-[#1f2332] dark:border-[#262a3b] text-slate-700 dark:text-neutral-300 cursor-pointer transition-colors shadow-2xs dark:shadow-none"
+            title="Thu gọn toàn bộ"
+            aria-label="Thu gọn toàn bộ"
+          >
+            <Minimize2 size={13} />
+          </button>
         </div>
       </div>
 
@@ -381,8 +319,8 @@ export function Iam360PermissionTreeView({
         {filteredRoot ? (
           renderTreeNode(filteredRoot, 0)
         ) : (
-          <div className="py-8 text-center text-xs font-mono text-neutral-500">
-            Không tìm thấy nhánh quyền nào khớp với từ khoá "{searchQuery}".
+          <div className="py-8 text-center text-xs text-slate-500 dark:text-neutral-500">
+            Không tìm thấy nhánh quyền nào khớp với "{searchQuery}".
           </div>
         )}
       </div>

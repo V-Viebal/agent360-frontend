@@ -315,12 +315,73 @@
   --scrollbar-thumb: #cbd5e1;
   --scrollbar-thumb-hover: #94a3b8;
 }
+html {
+  font-size: 16px;
+}
+
 body {
   font-family: var(--font-sans);
+  font-size: 14.5px;
   background-color: var(--bg-page);
   color: var(--text-primary);
   transition: background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* ========================================================================== */
+/* UNIFIED TYPOGRAPHY NORMALIZATION ACROSS ALL SURFACES                       */
+/* Standardizes font sizes across chat, sidebars, modals, tabs, cards & forms */
+/* ========================================================================== */
+.text-\[8px\],
+.text-\[9px\] {
+  font-size: 11.5px !important;
+  line-height: 1.4 !important;
+}
+
+.text-\[10px\],
+.text-\[11px\] {
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+}
+
+.text-\[12px\],
+.text-\[12\.5px\] {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.text-\[13px\],
+.text-\[13\.5px\] {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.text-\[14px\],
+.text-\[14\.5px\],
+.text-\[15px\],
+.text-\[15\.5px\],
+.text-\[16px\] {
+  font-size: 14.5px !important;
+  line-height: 1.55 !important;
+}
+
+/* Ensure text-xs throughout all sidebars and modals is legible (12.5px) */
+.text-xs {
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+}
+
+/* Standardize text-sm to 14px */
+.text-sm {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+/* Standardize text-base to 15px */
+.text-base {
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+}
+
 
 /* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */
 .badge-theme-transition {

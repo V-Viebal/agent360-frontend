@@ -120,6 +120,10 @@ export function ContextUsageBar({
             }
           }}
           onTouchStart={() => {
+            // Only trigger mobile tooltip on mobile/coarse touch screens (< 1024 or coarse pointer)
+            if (typeof window !== "undefined" && window.innerWidth >= 1024 && window.matchMedia("(pointer: fine)").matches) {
+              return;
+            }
             if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
             touchTimerRef.current = setTimeout(() => {
               if (typeof window !== "undefined" && "vibrate" in navigator) {

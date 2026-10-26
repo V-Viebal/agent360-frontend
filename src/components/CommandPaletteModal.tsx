@@ -251,7 +251,12 @@ export function CommandPaletteModal({
     ...(q ? actionItems.filter((a) => a.title.toLowerCase().includes(q)) : []),
   ];
 
+  const isComposingRef = useRef(false);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (isComposingRef.current || e.nativeEvent.isComposing || (e as any).keyCode === 229) {
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedIndex((prev) => (prev + 1) % Math.max(1, combinedItems.length));
@@ -284,6 +289,12 @@ export function CommandPaletteModal({
             ref={inputRef}
             type="text"
             value={query}
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false;
+            }}
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedIndex(0);

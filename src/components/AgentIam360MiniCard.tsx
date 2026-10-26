@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ShieldCheck, Building2, GitBranch, ChevronRight, ChevronDown, CheckCircle2, Lock, Users, Network } from "lucide-react";
+import { ShieldCheck, GitBranch, ChevronRight, ChevronDown } from "lucide-react";
 import { fetchAgentIam360Cell, Iam360AgentCellInspection } from "../services/iam360CellsApi";
 
 interface AgentIam360MiniCardProps {
@@ -10,7 +10,7 @@ interface AgentIam360MiniCardProps {
 
 export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }: AgentIam360MiniCardProps) {
   const [data, setData] = useState<Iam360AgentCellInspection | null>(null);
-  const [treeExpanded, setTreeExpanded] = useState(true);
+  const [treeExpanded, setTreeExpanded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -24,7 +24,7 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
 
   if (!data) {
     return (
-      <div className="h-28 w-full rounded-2xl skeleton-shimmer border border-slate-200/80 dark:border-[#22222e]" />
+      <div className="h-24 w-full rounded-xl skeleton-shimmer border border-slate-200/80 dark:border-[#22222e]" />
     );
   }
 
@@ -33,44 +33,45 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
   const a2aAllowed = (identity.a2a_delegation_targets || []).filter((t) => t.allowed);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-          <ShieldCheck size={12} className="text-[#f8a87c]" />
-          <span>IAM360 Identity & Org Cell</span>
+        <span className="text-[11px] font-medium text-slate-700 dark:text-neutral-300 flex items-center gap-1.5">
+          <ShieldCheck size={13} className="text-slate-400" />
+          <span>Phân quyền IAM360</span>
         </span>
         <button
           type="button"
           onClick={onOpenFullWorkbench}
-          className="text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-0.5 cursor-pointer"
+          className="text-[11px] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-0.5 cursor-pointer"
         >
-          <span>Quản lý & Cây 5 nhánh</span>
+          <span>Chi tiết</span>
           <ChevronRight size={12} />
         </button>
       </div>
 
-      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] space-y-2.5 text-xs">
+      <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] space-y-2 text-xs">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[10px] font-mono text-neutral-400">Personal Identity Cell (1:1)</div>
-            <div className="font-mono font-semibold text-slate-900 dark:text-white truncate text-[11px]">
-              {identity.identity_cell_id}
+            <div className="text-[10px] text-slate-400">Identity Cell</div>
+            <div className="font-mono font-medium text-slate-900 dark:text-white truncate text-[11px] flex items-center gap-1.5">
+              <span className={`h-1.5 w-1.5 rounded-full ${identity.status === "active" ? "bg-emerald-500" : "bg-rose-500"}`} />
+              <span>{identity.identity_cell_id}</span>
             </div>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/15 text-emerald-600 dark:text-[#86efac] border border-emerald-500/30 shrink-0">
-            {identity.assurance}
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-200/70 dark:bg-white/5 text-slate-700 dark:text-neutral-300 shrink-0 uppercase">
+            {identity.cell_role}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-[#20202c]">
           <div className="min-w-0">
-            <div className="text-[10px] font-mono text-neutral-400">Organization Cell (Tenant)</div>
-            <div className="font-mono font-semibold text-[#e0682b] dark:text-[#f8a87c] truncate text-[11px]">
-              {org.cell_id} • {org.organization.toUpperCase()}
+            <div className="text-[10px] text-slate-400">Organization Cell</div>
+            <div className="font-mono font-medium text-slate-800 dark:text-neutral-200 truncate text-[11px]">
+              {org.cell_id} ({org.organization.toUpperCase()})
             </div>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 uppercase shrink-0">
-            {identity.cell_role === "owner" ? "👑 Owner" : identity.cell_role === "manager" ? "◆ Manager" : "● Employee"}
+          <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 shrink-0">
+            {identity.enabled_mcp_count}/{identity.mcp_count} MCP • {identity.enabled_tool_count}/{identity.tool_count} Tools
           </span>
         </div>
 
@@ -78,70 +79,25 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
           <button
             type="button"
             onClick={() => setTreeExpanded((prev) => !prev)}
-            className="w-full flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-[#f8a87c] cursor-pointer"
+            className="w-full flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
           >
             <span className="flex items-center gap-1.5">
-              <GitBranch size={12} className="text-purple-400" />
-              <span>Cây 5 nhánh ({identity.memberships.length} Org • {a2aAllowed.length} A2A • {principals.length} Principals)</span>
+              <GitBranch size={12} className="text-slate-400" />
+              <span>Tóm tắt ({identity.memberships.length} Org • {a2aAllowed.length} A2A • {principals.length} Kênh)</span>
             </span>
             {treeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
 
           {treeExpanded && (
-            <div className="mt-2 pl-2.5 border-l border-dashed border-slate-300 dark:border-[#2c2c3c] space-y-1.5 font-mono text-[10px]">
-              <div className="space-y-1">
-                <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
-                  <Building2 size={11} className="text-[#f8a87c]" />
-                  <span>1. Tổ chức ({identity.memberships.length} Cells):</span>
-                </div>
-                <div className="pl-3 flex flex-wrap gap-1">
-                  {identity.memberships.map((m) => (
-                    <span
-                      key={m.cell_id}
-                      className="px-1.5 py-0.5 rounded bg-white dark:bg-[#1b1b26] border border-slate-200 dark:border-[#282838] text-slate-700 dark:text-neutral-300"
-                    >
-                      {m.cell_id} ({m.role})
-                    </span>
-                  ))}
-                </div>
+            <div className="mt-2 pl-2.5 border-l border-slate-200 dark:border-[#282838] space-y-1 font-mono text-[10px] text-slate-500 dark:text-neutral-400">
+              <div>• Tổ chức: {identity.memberships.map((m) => `${m.cell_id} (${m.role})`).join(", ")}</div>
+              <div>
+                • Ủy quyền A2A:{" "}
+                {a2aAllowed.length > 0
+                  ? `${a2aAllowed.slice(0, 3).map((a) => a.target_slug).join(", ")}${a2aAllowed.length > 3 ? "..." : ""}`
+                  : "Giới hạn nội bộ"}
               </div>
-
-              <div className="space-y-0.5">
-                <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
-                  <CheckCircle2 size={11} className="text-emerald-400" />
-                  <span>2-3. MCP & Builtin Tools:</span>
-                </div>
-                <div className="pl-3 text-neutral-500 dark:text-neutral-400">
-                  {identity.enabled_mcp_count}/{identity.mcp_count} MCP • {identity.enabled_tool_count}/{identity.tool_count} Tools
-                </div>
-              </div>
-
-              <div className="space-y-0.5">
-                <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
-                  <Network size={11} className="text-purple-400" />
-                  <span>4. ReBAC A2A Delegation:</span>
-                </div>
-                <div className="pl-3 text-neutral-500 dark:text-neutral-400 truncate">
-                  {a2aAllowed.length > 0
-                    ? `Allow: ${a2aAllowed.slice(0, 3).map((a) => a.target_slug).join(", ")}${a2aAllowed.length > 3 ? "..." : ""}`
-                    : "Employee role (Scoped execution)"}
-                </div>
-              </div>
-
-              <div className="space-y-0.5">
-                <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
-                  <Users size={11} className="text-sky-400" />
-                  <span>5. Observed Principals ({principals.length}):</span>
-                </div>
-                <div className="pl-3 text-sky-500 dark:text-[#93c5fd] truncate">
-                  {principals.map((p) => p.user_id).join(" • ")}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1 text-rose-500 dark:text-[#fda4af]">
-                <Lock size={11} />
-                <span className="truncate">Baseline: Isolated {identity.workspace_dir}</span>
-              </div>
+              <div>• Người dùng: {principals.map((p) => p.user_id).join(", ")}</div>
             </div>
           )}
         </div>
