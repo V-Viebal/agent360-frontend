@@ -257,7 +257,7 @@ export function AgentSettingsModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:w-[900px] md:w-[960px] h-[94dvh] sm:h-[90vh] max-h-[100dvh] sm:max-h-[680px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
+        className="w-full sm:w-[95vw] md:w-[1100px] lg:w-[1240px] xl:w-[1360px] max-w-[96vw] h-[94dvh] sm:h-[92vh] max-h-[100dvh] sm:max-h-[820px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
         <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
@@ -369,7 +369,7 @@ export function AgentSettingsModal({
           <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5 bg-white dark:bg-[#121218]">
             {/* TAB 1: GENERAL (Identity, LLM Model, Governance, Status) */}
             {activeTab === "general" && (
-              <div className="space-y-5 max-w-2xl">
+              <div className="space-y-5 max-w-4xl">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Hồ sơ & Mô hình Trí tuệ (Identity & LLM)</h4>
                   <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -597,7 +597,7 @@ export function AgentSettingsModal({
 
             {/* TAB 1B: IAM360 IDENTITY CELL & ORGANIZATION CELL WORKBENCH */}
             {activeTab === "iam360_cells" && (
-              <div className="space-y-4 max-w-3xl">
+              <div className="space-y-4 max-w-5xl">
                 <AgentIam360CellTab
                   agentId={agent.id}
                   agentSlug={agent.slug}
@@ -608,7 +608,7 @@ export function AgentSettingsModal({
 
             {/* TAB 2: APPS & MCP */}
             {activeTab === "apps_mcp" && (
-              <div className="space-y-4 max-w-2xl">
+              <div className="space-y-4 max-w-4xl">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Ứng dụng Kết nối & Máy chủ MCP</h4>
                   <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -626,7 +626,7 @@ export function AgentSettingsModal({
 
             {/* TAB 3: SUB-AGENTS & A2A TOPOLOGY */}
             {activeTab === "subagents" && (
-              <div className="space-y-4 max-w-2xl">
+              <div className="space-y-4 max-w-4xl">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Đội ngũ Sub-Agents & Mạng lưới A2A</h4>
@@ -662,7 +662,7 @@ export function AgentSettingsModal({
 
             {/* TAB 4: CHANNELS & CRON SCHEDULES */}
             {activeTab === "channels_cron" && (
-              <div className="space-y-5 max-w-2xl">
+              <div className="space-y-5 max-w-4xl">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Kênh Giao tiếp & Lịch trình Tự động (Cron)</h4>
                   <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -800,7 +800,7 @@ export function AgentSettingsModal({
 
             {/* TAB 5: MEMORY & LIVE SKILLS */}
             {activeTab === "memory_skills" && (
-              <div className="space-y-6 max-w-2xl">
+              <div className="space-y-6 max-w-4xl">
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Bộ nhớ Dài hạn & Kỹ năng (Memory & Skills)</h4>
                   <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
