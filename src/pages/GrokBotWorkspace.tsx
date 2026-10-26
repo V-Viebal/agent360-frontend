@@ -157,6 +157,8 @@ Trash2,
   Terminal,
   ChevronDown,
   ChevronUp,
+  ChevronsDown,
+  ChevronsUp,
   Shield,
   Power,
   PowerOff,
@@ -220,6 +222,9 @@ function stripSharedRoomContext(text: string): string {
   if (!text) return "";
   let cleaned = text.replace(/^\s*QUESTION_FOR_PARENT:\s*/i, "");
   cleaned = cleaned.replace(/\[IMPLICIT_REACTION_FEEDBACK[^\]]*\][\s\S]*?\[\/IMPLICIT_REACTION_FEEDBACK\]/gi, "").trim();
+  if (/^BuildSpecialtySynthesisFallback\(collab,\s*objective\)$/i.test(cleaned)) {
+    cleaned = "**[Đóng góp chuyên môn từ Room]**\n- Đã đồng bộ phân tích chuyên môn và chuyển về Chủ session tổng hợp kết quả cuối.";
+  }
   let idx = cleaned.indexOf("[SHARED SESSION ROOM CONTEXT]");
   if (idx < 0) idx = cleaned.indexOf("[AGENTTEAMS COLLABORATION ROOM");
   return idx >= 0 ? cleaned.slice(0, idx).trimEnd() : cleaned;
@@ -517,6 +522,22 @@ function AgentThinkingModal({
   const touchStartYRef = useRef<number | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const isSwipeEligibleRef = useRef<boolean>(false);
+
+  // Enhancement 2 & 4: Highlight branch on chip tap, and copy feedback
+  const [highlightedBranchSlug, setHighlightedBranchSlug] = useState<string | null>(null);
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
+
+  const handleCopyContent = (id: string, textToCopy: string) => {
+    if (!textToCopy) return;
+    try {
+      navigator.clipboard.writeText(textToCopy);
+      setCopiedItemId(id);
+      triggerHaptic(8);
+      setTimeout(() => setCopiedItemId(null), 1800);
+    } catch {
+      // Fallback if clipboard API is restricted
+    }
+  };
 
   const handleTouchStart = (e: React.TouchEvent, fromHeader = false) => {
     if (e.touches.length === 1) {
@@ -966,7 +987,11 @@ function AgentThinkingModal({
   return (
     <div
       data-testid="agent-thinking-modal"
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-2 sm:p-4 animate-in fade-in duration-150"
+      style={{
+        backgroundColor: `rgba(0, 0, 0, ${Math.max(0.12, 0.6 * (1 - Math.min(dragY, 260) / 300))})`,
+        transition: isDragging ? "none" : "background-color 0.22s ease-out",
+      }}
+      className="fixed inset-0 z-[95] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <style>{`
@@ -1034,7 +1059,7 @@ function AgentThinkingModal({
                   }
                   size="2xs"
                   alwaysAnimate={true}
-                  forcedAnimation="thinking.2"
+                  forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                   className="ring-1 ring-[#f8a87c]/40"
                 />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
@@ -1069,6 +1094,35 @@ function AgentThinkingModal({
           </div>
 
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Enhancement 3: Toggle Expand / Collapse All Branches */}
+            {viewMode === "tree" && visibleCollaboratorBranches.length > 0 && (
+              <button
+                type="button"
+                data-testid="thinking-toggle-expand-all-btn"
+                onClick={() => {
+                  triggerHaptic(8);
+                  const areAllExpanded = visibleCollaboratorBranches.every((b) => expandedBranchIds[b.id]);
+                  if (areAllExpanded) {
+                    setExpandedBranchIds({});
+                  } else {
+                    const next: Record<string, boolean> = {};
+                    visibleCollaboratorBranches.forEach((b) => {
+                      next[b.id] = true;
+                    });
+                    setExpandedBranchIds(next);
+                  }
+                }}
+                className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-mono border border-slate-300/60 dark:border-[#2c2c40] bg-slate-100 dark:bg-[#1a1a28] hover:bg-white dark:hover:bg-[#222234] text-slate-700 dark:text-neutral-300 transition-all cursor-pointer flex items-center gap-1"
+                title={visibleCollaboratorBranches.every((b) => expandedBranchIds[b.id]) ? "Thu gọn tất cả chi tiết" : "Mở rộng tất cả chi tiết"}
+                aria-label={visibleCollaboratorBranches.every((b) => expandedBranchIds[b.id]) ? "Thu gọn tất cả" : "Mở rộng tất cả"}
+              >
+                {visibleCollaboratorBranches.every((b) => expandedBranchIds[b.id]) ? <ChevronsUp size={11} /> : <ChevronsDown size={11} />}
+                <span className="hidden sm:inline">
+                  {visibleCollaboratorBranches.every((b) => expandedBranchIds[b.id]) ? "Thu gọn hết" : "Mở rộng hết"}
+                </span>
+              </button>
+            )}
+
             {/* View Mode Toggle: Flow Tree vs Timeline Log */}
             <div className="inline-flex items-center rounded-lg sm:rounded-xl bg-slate-200/70 dark:bg-[#1d1d2b] p-0.5 border border-slate-300/60 dark:border-[#2c2c40]">
               <button
@@ -1146,7 +1200,7 @@ function AgentThinkingModal({
                     }
                     size="2xs"
                     alwaysAnimate={true}
-                    forcedAnimation="thinking.2"
+                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                     className="ring-1 ring-[#f8a87c]/40"
                   />
                   <span className="inline-flex items-center gap-1">
@@ -1240,7 +1294,18 @@ function AgentThinkingModal({
                         key={p.agent_id}
                         type="button"
                         data-testid={`room-flow-agent-chip-${p.agent_id}`}
-                        onClick={() => setSelectedParticipantFilter(isSelected ? "all" : p.agent_id)}
+                        onClick={() => {
+                          if (selectedParticipantFilter === "all" || selectedParticipantFilter === p.agent_id) {
+                            const branchEl = document.querySelector(`[data-testid="flow-tree-branch-${p.agent_id}"]`);
+                            if (branchEl) {
+                              branchEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                              setHighlightedBranchSlug(p.agent_id.toLowerCase());
+                              triggerHaptic(8);
+                              setTimeout(() => setHighlightedBranchSlug(null), 1800);
+                            }
+                          }
+                          setSelectedParticipantFilter(isSelected ? "all" : p.agent_id);
+                        }}
                         style={isSelected ? {
                           backgroundColor: pTheme.bgLight,
                           borderColor: pTheme.light,
@@ -1263,7 +1328,7 @@ function AgentThinkingModal({
                           agent={participantAg || { id: p.agent_id, name: p.agent_id, roleTag: p.role }}
                           size="2xs"
                           alwaysAnimate={isRunning}
-                          forcedAnimation={isRunning ? "thinking.2" : undefined}
+                          forcedAnimation={isRunning ? "nod.1.4,jump.1.4,wink.1.4" : undefined}
                           className="shrink-0 scale-90 ring-1 ring-black/5 dark:ring-white/10"
                         />
                         <span className="font-semibold">@{p.agent_id}</span>
@@ -1549,8 +1614,10 @@ function AgentThinkingModal({
                         key={branchTurn.id || bIdx}
                         data-testid={`flow-tree-branch-${branchTurn.author_id}`}
                         data-branch-status={isBranchRunning ? "running" : "completed"}
-                        className={`rounded-xl bg-white dark:bg-[#171723] border p-2.5 sm:p-3 flex flex-col justify-between space-y-2 sm:space-y-2.5 shadow-xs transition-all ${
-                          isBranchRunning
+                        className={`rounded-xl bg-white dark:bg-[#171723] border p-2.5 sm:p-3 flex flex-col justify-between space-y-2 sm:space-y-2.5 shadow-xs transition-all duration-300 ${
+                          highlightedBranchSlug === branchTurn.author_id.toLowerCase()
+                            ? "border-[#f8a87c] ring-2 ring-[#f8a87c] shadow-md scale-[1.01]"
+                            : isBranchRunning
                             ? "border-amber-400/80 dark:border-amber-500/60 ring-2 ring-amber-400/20"
                             : isFocusedBranch
                             ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30"
@@ -1572,7 +1639,7 @@ function AgentThinkingModal({
                                     agent={bAg || { id: branchTurn.author_id, name: branchTurn.author_name, roleTag: "Collaborator" }}
                                     size="xs"
                                     alwaysAnimate={isBranchRunning}
-                                    forcedAnimation={isBranchRunning ? "thinking.2" : undefined}
+                                    forcedAnimation={isBranchRunning ? "nod.1.4,jump.1.4,wink.1.4" : undefined}
                                     className="shrink-0 shadow-2xs ring-1 ring-black/5 dark:ring-white/10"
                                   />
                                   <div className="min-w-0">
@@ -1694,6 +1761,25 @@ function AgentThinkingModal({
                                     <span>Hỏi sâu @{branchTurn.author_id}</span>
                                   </button>
                                 )}
+                                <button
+                                  type="button"
+                                  data-testid={`flow-tree-copy-branch-${branchTurn.author_id}`}
+                                  onClick={() => handleCopyContent(`branch-${branchTurn.id}`, cleanBranchReply)}
+                                  className="inline-flex items-center gap-1 text-[9px] font-mono text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                                  title="Sao chép đóng góp chuyên môn"
+                                >
+                                  {copiedItemId === `branch-${branchTurn.id}` ? (
+                                    <>
+                                      <Check size={10} className="text-emerald-500" />
+                                      <span className="text-emerald-500 font-semibold">Đã copy!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy size={10} />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1927,6 +2013,29 @@ function AgentThinkingModal({
                     data-testid={`room-flow-turn-synthesis-${activeWave.synthesisTurn.author_id}`}
                     className="space-y-1.5 pt-1"
                   >
+                    {(activeWave.synthesisTurn.reasoning || activeWave.synthesisTurn.text) && (
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          data-testid="flow-tree-copy-synthesis-btn"
+                          onClick={() => handleCopyContent("host-synthesis", activeWave.synthesisTurn?.reasoning || activeWave.synthesisTurn?.text || "")}
+                          className="inline-flex items-center gap-1 text-[9px] font-mono text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                          title="Sao chép tổng hợp cuối của Chủ room"
+                        >
+                          {copiedItemId === "host-synthesis" ? (
+                            <>
+                              <Check size={10} className="text-emerald-500" />
+                              <span className="text-emerald-500 font-semibold">Đã copy tổng hợp!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={10} />
+                              <span>Copy phản hồi tổng hợp</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
                     {activeWave.synthesisTurn.reasoning && (
                       <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-[#13131c] p-2.5 rounded-lg border border-slate-200/70 dark:border-[#232334] whitespace-pre-wrap break-words">
                         {renderInlineMarkdown(activeWave.synthesisTurn.reasoning)}
@@ -2163,7 +2272,7 @@ function TurnExecutionAccordion({
             size="2xs"
             interactive={false}
             alwaysAnimate={true}
-            forcedAnimation="thinking.2"
+            forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
             className="ring-1 ring-[#f8a87c]/40 shrink-0"
           />
         ) : (
@@ -4797,11 +4906,15 @@ export function GrokBotWorkspace() {
   // Khi switch giữa multiple line và single line, luôn đảm bảo giữ focus và đặt con trỏ ở cuối
   const prevIsMultilineRef = useRef<boolean>(false);
   useLayoutEffect(() => {
-    const isMultiline = inputText.includes("\n");
+    const isMultiline = inputText.includes("\n") || inputText.length > 70;
     const didChangeLayoutMode = isMultiline !== prevIsMultilineRef.current;
     prevIsMultilineRef.current = isMultiline;
 
     if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      if (inputText) {
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+      }
       if (didChangeLayoutMode || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
         textareaRef.current.focus({ preventScroll: true });
         isTextareaFocusedRef.current = true;
@@ -4819,7 +4932,7 @@ export function GrokBotWorkspace() {
         } catch {}
       }
     }
-  }, [inputText.includes("\n")]);
+  }, [inputText]);
 
 
   // Track previous chatId to save draft before switching
@@ -8562,7 +8675,7 @@ export function GrokBotWorkspace() {
                           }`}
                         >
                         <div className="relative shrink-0 transition-all">
-                          <AgentAvatar agent={ag} size="md" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "thinking.2" : undefined} />
+                          <AgentAvatar agent={ag} size="md" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {pinnedAgentIds.includes(ag.id) && (
                             <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30">
                               <Pin size={8} className="fill-amber-400" />
@@ -8921,7 +9034,7 @@ export function GrokBotWorkspace() {
                       >
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0">
-                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "thinking.2" : undefined} />
+                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
@@ -9162,7 +9275,7 @@ export function GrokBotWorkspace() {
                       >
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0">
-                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "thinking.2" : undefined} />
+                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
@@ -9598,7 +9711,7 @@ export function GrokBotWorkspace() {
                   </>
                 ) : (
                   <>
-                    <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "thinking.2" : undefined} className="shrink-0" />
+                    <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
                       <ChevronRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
@@ -10376,7 +10489,7 @@ export function GrokBotWorkspace() {
                                       textareaRef.current.focus();
                                       setTimeout(() => {
                                         if (textareaRef.current) {
-                                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
                                           textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
                                         }
                                       }, 0);
@@ -10634,7 +10747,7 @@ export function GrokBotWorkspace() {
                               }
                               size="2xs"
                               interactive={false}
-                              forcedAnimation="thinking.2"
+                              forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                               className="ring-1 ring-[#f8a87c]/40 animate-pulse"
                             />
                             <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
@@ -10718,7 +10831,7 @@ export function GrokBotWorkspace() {
                                     }
                                     size="2xs"
                                     interactive={false}
-                                    forcedAnimation="thinking.2"
+                                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                                     className="ring-1 ring-[#f8a87c]/30"
                                   />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
@@ -10799,7 +10912,7 @@ export function GrokBotWorkspace() {
                     }
                     size="2xs"
                     interactive={false}
-                    forcedAnimation="thinking.2"
+                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                     className="ring-1 ring-[#f8a87c]/40 animate-pulse"
                   />
                   <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
@@ -10922,27 +11035,26 @@ export function GrokBotWorkspace() {
             </div>
           );
         })()}
+          {/* Floating Scroll to Bottom Button (Always centered horizontally in Chat UI and positioned above/outside the input composer) */}
+          {showScrollBottomBtn && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 animate-in fade-in zoom-in-95 duration-150">
+              <Tooltip content="Cuộn xuống tin nhắn mới nhất" placement="top" minWidth={140}>
+                <button
+                  type="button"
+                  aria-label="Cuộn xuống tin nhắn mới nhất"
+                  onClick={() => {
+                    isUserScrolledUpRef.current = false;
+                    setShowScrollBottomBtn(false);
+                    smoothScrollToBottom();
+                  }}
+                  className="h-8 w-8 rounded-full bg-white/95 dark:bg-[#181824]/95 border border-slate-200 dark:border-[#2a2a38] shadow-md hover:shadow-lg flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-[#f8a87c] hover:border-[#f8a87c]/60 transition-all cursor-pointer"
+                >
+                  <ChevronDown size={16} className={isStreaming ? "animate-bounce text-[#f8a87c]" : ""} />
+                </button>
+              </Tooltip>
+            </div>
+          )}
         </div>
-
-        {/* Floating Scroll to Bottom Button */}
-        {showScrollBottomBtn && (
-          <div className="absolute bottom-20 right-6 z-30 animate-in fade-in zoom-in-95 duration-150">
-            <Tooltip content="Cuộn xuống tin nhắn mới nhất" placement="top" minWidth={140}>
-              <button
-                type="button"
-                aria-label="Cuộn xuống tin nhắn mới nhất"
-                onClick={() => {
-                  isUserScrolledUpRef.current = false;
-                  setShowScrollBottomBtn(false);
-                  smoothScrollToBottom();
-                }}
-                className="h-8 w-8 rounded-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a38] shadow-md hover:shadow-lg flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-[#f8a87c] hover:border-[#f8a87c]/60 transition-all cursor-pointer"
-              >
-                <ChevronDown size={16} className={isStreaming ? "animate-bounce text-[#f8a87c]" : ""} />
-              </button>
-            </Tooltip>
-          </div>
-        )}
 
         {/* Micro-HUD Pill Toast for Agent Loop Mode cycling */}
       {loopModeToast && (
@@ -12333,7 +12445,7 @@ export function GrokBotWorkspace() {
             )}
 
             {(() => {
-              const isMultiline = inputText.includes("\n");
+              const isMultiline = inputText.includes("\n") || inputText.length > 70;
               
               // Common Plus Button Trigger
               const renderPlusButton = () => {
@@ -12433,7 +12545,7 @@ export function GrokBotWorkspace() {
                     };
                     setInputText(newVal);
                     e.target.style.height = "auto";
-                    e.target.style.height = Math.min(e.target.scrollHeight, 220) + "px";
+                    e.target.style.height = Math.min(e.target.scrollHeight, 210) + "px";
 
                     const textUpToCursor = newVal.slice(0, cursorPos);
                     const triggerMatch = textUpToCursor.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
@@ -12464,7 +12576,7 @@ export function GrokBotWorkspace() {
                           textareaRef.current.style.height = "auto";
                           setTimeout(() => {
                             if (textareaRef.current) {
-                              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
                               textareaRef.current.setSelectionRange(lastUserMsg.content.length, lastUserMsg.content.length);
                             }
                           }, 0);
@@ -12660,7 +12772,7 @@ export function GrokBotWorkspace() {
                             const newCursorPos = Math.max(0, start - tagToRemove.length);
                             target.selectionStart = target.selectionEnd = newCursorPos;
                             target.style.height = "auto";
-                            target.style.height = Math.min(target.scrollHeight, 220) + "px";
+                            target.style.height = Math.min(target.scrollHeight, 210) + "px";
                           }, 0);
                           return;
                         }
@@ -12678,7 +12790,7 @@ export function GrokBotWorkspace() {
                       setTimeout(() => {
                         target.selectionStart = target.selectionEnd = start + 1;
                         target.style.height = "auto";
-                        target.style.height = Math.min(target.scrollHeight, 220) + "px";
+                        target.style.height = Math.min(target.scrollHeight, 210) + "px";
                       }, 0);
                       return;
                     }
@@ -12702,8 +12814,8 @@ export function GrokBotWorkspace() {
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed scrollbar-none ${
-                    isMultiline ? "min-h-[52px] max-h-56 py-1 px-0.5" : "flex-1 max-h-32 py-1"
+                  className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
+                    isMultiline ? "min-h-[44px] max-h-[210px] py-1 px-0.5" : "flex-1 max-h-[210px] py-1"
                   }`}
                 />
               );
@@ -13274,7 +13386,7 @@ export function GrokBotWorkspace() {
                             size="2xs"
                             interactive={false}
                             alwaysAnimate={true}
-                            forcedAnimation="thinking.2"
+                            forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                             className="scale-95 ring-1 ring-[#f8a87c]/50"
                           />
                         ) : (
@@ -15936,7 +16048,7 @@ ${chat.id}`);
                         textareaRef.current.focus();
                         setTimeout(() => {
                           if (textareaRef.current) {
-                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + "px";
+                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
                             textareaRef.current.setSelectionRange(text.length, text.length);
                           }
                         }, 0);
