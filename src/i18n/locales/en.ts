@@ -831,4 +831,26 @@ export const en = {
   "nav.telemetryRadar": "Fleet Telemetry Radar",
   "nav.resourcesHeader": "Resources",
 
+
+  // IAM360 Identity & Organization Cells Localization
+  "iam360.title": "IAM360 Identity Cells & Organization Cells Architecture",
+  "iam360.subtitle": "Manage cryptographic identities, ReBAC roles, 5-branch permission trees, and Ed25519 Signed Intents ledger",
+  "iam360.identityCell": "Identity Cell",
+  "iam360.orgCell": "Organization Cell",
+  "iam360.permissionTree": "5-Branch Permission Tree",
+  "iam360.signedIntents": "Signed Intents Ledger",
+  "iam360.signedIntentsSubtitle": "Cryptographic Ed25519 ledger logging all permission mutations and cross-cell directives",
+  "iam360.liveAudit": "Fleet Live Test (All 30 Agents)",
+  "iam360.twoPersonRule": "Two-Person Approval Gate",
+  "iam360.driftDetected": "Drift Detected",
+  "iam360.reconcile": "1-Click Reconcile",
+  "iam360.exportCsv": "Export CSV",
+  "iam360.exportJson": "Export JSON",
+  "iam360.rebacRole": "ReBAC Role",
+  "iam360.roleOwner": "👑 Owner",
+  "iam360.roleManager": "◆ Manager",
+  "iam360.roleEmployee": "● Employee",
+  "iam360.a2aDelegation": "A2A Delegation Matrix",
+  "iam360.crossCellDeny": "Cross-Cell Default Deny",
+  "iam360.persistenceDualSource": "Dual-Source Persistence (PostgreSQL + Persistent Volume)",
 };

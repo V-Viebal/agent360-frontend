@@ -15,6 +15,9 @@ import {
   XCircle,
   Sparkles,
   X,
+  AlertTriangle,
+  Users,
+  Network,
 } from "lucide-react";
 import { Iam360PermissionTreeNode } from "../services/iam360CellsApi";
 
@@ -26,6 +29,9 @@ interface Iam360PermissionTreeViewProps {
   onSelectNode?: (node: Iam360PermissionTreeNode) => void;
   selectedNodeId?: string;
   compact?: boolean;
+  onToggleCapabilityNode?: (node: Iam360PermissionTreeNode, nextEnabled: boolean) => void;
+  onReconcileDrift?: () => void;
+  reconciling?: boolean;
 }
 
 function collectDefaultExpanded(node: Iam360PermissionTreeNode, depth: number, maxDepth: number, acc: Set<string>) {
@@ -69,12 +75,15 @@ function filterTree(node: Iam360PermissionTreeNode, q: string): Iam360Permission
 
 export function Iam360PermissionTreeView({
   rootNode,
-  title = "Sơ đồ Cây Phân Quyền (Personal → Organization Cell Hierarchy)",
-  subtitle = "Cấu trúc phân cấp từ Identity Cell cá nhân của Agent tới Organization Cell, ReBAC Role Tuples, Cerbos ABAC và Baseline Guardrails.",
+  title = "Sơ đồ Cây Phân Quyền 5 Nhánh (Personal → Organization Cell Hierarchy)",
+  subtitle = "Cấu trúc phân cấp từ Identity Cell cá nhân của Agent tới Organization Cell, ReBAC Role Tuples, Cerbos ABAC, MCP/Tools Inline Toggle, A2A Topology và Observed Principals.",
   defaultExpandDepth = 2,
   onSelectNode,
   selectedNodeId,
   compact = false,
+  onToggleCapabilityNode,
+  onReconcileDrift,
+  reconciling = false,
 }: Iam360PermissionTreeViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
@@ -83,7 +92,6 @@ export function Iam360PermissionTreeView({
     return set;
   });
 
-  // Ensure root is expanded when rootNode changes
   React.useEffect(() => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -148,6 +156,10 @@ export function Iam360PermissionTreeView({
         return <ShieldCheck size={14} className="text-purple-400 shrink-0" />;
       case "capability_group":
         return <Layers size={14} className="text-sky-400 shrink-0" />;
+      case "principal_leaf":
+        return <Users size={13} className="text-sky-400 shrink-0" />;
+      case "a2a_leaf":
+        return <Network size={13} className="text-emerald-400 shrink-0" />;
       default:
         return <Wrench size={13} className="text-emerald-400 shrink-0" />;
     }
@@ -170,9 +182,11 @@ export function Iam360PermissionTreeView({
             }
           }}
           className={`group flex items-start justify-between gap-2.5 rounded-xl px-2.5 py-2 transition-all cursor-pointer border ${
-            isSelected
-              ? "bg-[#f8a87c]/15 border-[#f8a87c]/45 shadow-xs"
-              : "bg-white/60 dark:bg-[#14141d]/90 hover:bg-slate-100/90 dark:hover:bg-[#1b1b27] border-slate-200/70 dark:border-[#222230]"
+            node.drift
+              ? "bg-[#f8a87c]/10 border-[#f8a87c]/45 shadow-xs"
+              : isSelected
+                ? "bg-[#f8a87c]/15 border-[#f8a87c]/45 shadow-xs"
+                : "bg-white/60 dark:bg-[#14141d]/90 hover:bg-slate-100/90 dark:hover:bg-[#1b1b27] border-slate-200/70 dark:border-[#222230]"
           }`}
         >
           <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -204,6 +218,12 @@ export function Iam360PermissionTreeView({
                 >
                   {node.badge}
                 </span>
+                {node.drift && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/40">
+                    <AlertTriangle size={10} />
+                    <span>DRIFT DETECTED</span>
+                  </span>
+                )}
                 {node.effect === "ALLOW" && (
                   <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-emerald-500 dark:text-[#86efac]">
                     <CheckCircle2 size={11} />
@@ -225,8 +245,26 @@ export function Iam360PermissionTreeView({
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 shrink-0 pt-0.5">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 bg-slate-100 dark:bg-[#101017] px-2 py-0.5 rounded border border-slate-200/70 dark:border-[#222230]">
+          <div className="flex items-center gap-2 shrink-0 pt-0.5">
+            {node.can_toggle && onToggleCapabilityNode && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleCapabilityNode(node, !(node.enabled ?? true));
+                }}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-semibold border transition-all cursor-pointer ${
+                  node.enabled
+                    ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-[#86efac] border-emerald-500/35"
+                    : "bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 dark:text-[#fda4af] border-rose-500/35"
+                }`}
+                title="Bấm để bật/tắt trực tiếp quyền thực thi này trên cây và ký Signed Intent"
+              >
+                {node.enabled ? "Toggle OFF" : "Toggle ON"}
+              </button>
+            )}
+
+            <span className="hidden sm:inline-block text-[10px] font-mono text-neutral-400 dark:text-neutral-500 bg-slate-100 dark:bg-[#101017] px-2 py-0.5 rounded border border-slate-200/70 dark:border-[#222230]">
               {node.source}
             </span>
           </div>
@@ -245,11 +283,16 @@ export function Iam360PermissionTreeView({
     <div className="rounded-2xl bg-slate-50 dark:bg-[#11141d] border border-slate-200 dark:border-[#222533] p-3.5 sm:p-4 space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Sparkles size={14} className="text-[#f8a87c] shrink-0" />
             <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
               {title}
             </h4>
+            {rootNode.drift && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/40">
+                Visual Drift Active
+              </span>
+            )}
           </div>
           {subtitle && (
             <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
@@ -258,7 +301,19 @@ export function Iam360PermissionTreeView({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+          {rootNode.drift && onReconcileDrift && (
+            <button
+              type="button"
+              disabled={reconciling}
+              onClick={onReconcileDrift}
+              className="px-2.5 py-1 rounded-lg bg-[#f8a87c] hover:bg-[#f8a87c]/90 text-neutral-950 font-semibold text-[11px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+              title="Đồng bộ hoá lại cấu hình gốc của Node (Xoá Drift)"
+            >
+              <AlertTriangle size={11} />
+              <span>{reconciling ? "Reconciling..." : "Reconcile Node"}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleExpandAll}
@@ -288,7 +343,7 @@ export function Iam360PermissionTreeView({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Lọc nhanh nhánh quyền (vd: owner, cell:gm, erpnext, read_file, baseline)..."
+            placeholder="Lọc nhanh nhánh quyền (vd: owner, cell:gm, erpnext, principal, a2a, baseline)..."
             className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none"
           />
           {searchQuery && (
@@ -304,13 +359,16 @@ export function Iam360PermissionTreeView({
 
         <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
           <span className="px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30">
-            👑 Owner / Root
+            👑 Owner / Drift
           </span>
           <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-[#86efac] border border-emerald-500/30">
-            ✓ Allowed / MCP
+            ✓ Allowed / MCP / A2A
           </span>
           <span className="px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-[#c4b5fd] border border-purple-500/30">
             ◆ ReBAC / Tools
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-[#93c5fd] border border-sky-500/30">
+            ● Principals & Topics
           </span>
           <span className="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-500 dark:text-[#fda4af] border border-rose-500/30">
             ✕ Baseline Deny
@@ -319,7 +377,7 @@ export function Iam360PermissionTreeView({
       </div>
 
       {/* Tree Viewport */}
-      <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
+      <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
         {filteredRoot ? (
           renderTreeNode(filteredRoot, 0)
         ) : (

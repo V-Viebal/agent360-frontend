@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      blob-avatar:
+        specifier: ^2.2.0
+        version: 2.2.0(react@18.3.1)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -766,6 +769,14 @@ packages:
     resolution: {integrity: sha512-br0LOmjJqr6Rt4AEkadbcNf67Zpo7EPwKsWbjnRrJIa1QYFHQBqM4C7F2WTbV8ahTEcg1Eo+Y0aWjjORInYFyA==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  blob-avatar@2.2.0:
+    resolution: {integrity: sha512-ukybv/6LqT/IwDlJMoUreq3i2Z1cywwttVOPIugzNIdSUlKeN3rt9mslp+USGPSurWQBXP/f3h2LfKiuIskTgg==}
+    peerDependencies:
+      react: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   browserslist@4.29.3:
     resolution: {integrity: sha512-1R4kiYKXGViqEN0CnoDrXc1StD9niAwu+j2dukWzrD4bJgsD4lDmEp0CRbc6E/vYJIfTHwPmwyaKtVSudICdPA==}
@@ -1622,6 +1633,10 @@ snapshots:
       - supports-color
 
   baseline-browser-mapping@2.11.28: {}
+
+  blob-avatar@2.2.0(react@18.3.1):
+    optionalDependencies:
+      react: 18.3.1
 
   browserslist@4.29.3:
     dependencies:

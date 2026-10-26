@@ -831,4 +831,26 @@ export const vi = {
   "nav.telemetryRadar": "Radar Giám sát Tài nguyên",
   "nav.resourcesHeader": "Tài nguyên & Tài liệu",
 
+
+  // IAM360 Identity & Organization Cells Localization
+  "iam360.title": "Kiến Trúc IAM360 Identity Cells & Organization Cells",
+  "iam360.subtitle": "Quản lý danh tính mật mã học, vai trò ReBAC, cây phân quyền 5 nhánh và sổ cái Signed Intents Ed25519",
+  "iam360.identityCell": "Tế Bào Danh Tính (Identity Cell)",
+  "iam360.orgCell": "Tế Bào Tổ Chức (Organization Cell)",
+  "iam360.permissionTree": "Cây Phân Quyền 5 Nhánh",
+  "iam360.signedIntents": "Sổ Cái Signed Intents",
+  "iam360.signedIntentsSubtitle": "Sổ cái mật mã Ed25519 lưu vết toàn bộ đột biến quyền hạn và chỉ thị liên tổ chức",
+  "iam360.liveAudit": "Kiểm Thử Sống Toàn Đội Ngũ (Fleet Live Test)",
+  "iam360.twoPersonRule": "Quy Tắc Hai Người (Two-Person Approval Gate)",
+  "iam360.driftDetected": "Phát Hiện Lệch Chuẩn (Drift Detected)",
+  "iam360.reconcile": "Khắc Phục Lệch Chuẩn (1-Click Reconcile)",
+  "iam360.exportCsv": "Xuất CSV",
+  "iam360.exportJson": "Xuất JSON",
+  "iam360.rebacRole": "Vai Trò ReBAC",
+  "iam360.roleOwner": "👑 Chủ Sở Hữu (Owner)",
+  "iam360.roleManager": "◆ Quản Lý (Manager)",
+  "iam360.roleEmployee": "● Thành Viên (Employee)",
+  "iam360.a2aDelegation": "Ma Trận Ủy Quyền A2A",
+  "iam360.crossCellDeny": "Cấm Ủy Thác Khác Tổ Chức Mặc Định (Cross-Cell Deny)",
+  "iam360.persistenceDualSource": "Lưu Trữ Song Song (PostgreSQL + Persistent Volume)",
 };

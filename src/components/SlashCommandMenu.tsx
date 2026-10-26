@@ -1,6 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import React from "react";
-import { Terminal, Shield, RefreshCw, Trash2, Cpu, FileText, CheckCircle, Sparkles } from "lucide-react";
+import { Terminal, Shield, RefreshCw, Trash2, Cpu, FileText, CheckCircle, Sparkles, ShieldCheck } from "lucide-react";
 
 export interface SlashCommand {
   command: string;
@@ -38,6 +38,13 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     description: "Audit and purge transient files under .tmp/ directory",
     prompt: "Inspect the `.tmp/` directory and list old build/log artifacts eligible for safe rotation without touching repository state.",
     icon: <Trash2 size={14} className="text-red-400" />,
+  },
+  {
+    command: "/cells",
+    label: "Inspect IAM360 Identity & Organization Cells",
+    description: "Audit agent Identity Cell, 5-branch permission tree, and Ed25519 intents",
+    prompt: "Vui lòng mở và đối soát IAM360 Identity Cell của Agent hiện tại: kiểm tra vai trò ReBAC, cây phân quyền 5 nhánh và chữ ký mật mã Ed25519.",
+    icon: <ShieldCheck size={14} className="text-[#f8a87c]" />,
   },
   {
     command: "/spec",

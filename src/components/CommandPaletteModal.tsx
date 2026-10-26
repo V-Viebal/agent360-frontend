@@ -1,7 +1,7 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { startOnboardingTour } from "../services/onboardingService";
 import React, { useState, useEffect, useRef } from "react";
-import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic, Settings, Layers, Network, Radio, Brain } from "lucide-react";
+import { Search, Bot, Server, MessageSquare, Volume2, Sparkles, X, HelpCircle, ArrowRight, CornerDownLeft, ShieldCheck, Mic, Settings, Layers, Network, Radio, Brain, ShieldAlert } from "lucide-react";
 import { AgentSettingsTab } from "./AgentSettingsModal";
 import { InfraAgent, AgentSession } from "../types/agent";
 import { SOUND_PRESETS, SoundPreset, playNotificationChime } from "../services/notificationService";
@@ -59,6 +59,17 @@ export function CommandPaletteModal({
 
   const actionItems = [
     ...(onOpenAgentSettings ? [
+      {
+        id: "act-agent-settings-iam360-cells",
+        type: "action",
+        title: "Cài đặt Agent: IAM360 Identity & Org Cells (Cây Phân Quyền)",
+        subtitle: "Xem & Quản lý Cây 5 Nhánh Quyền hạn, Ed25519 Signed Intents & A2A Delegation",
+        icon: <ShieldAlert size={14} className="text-[#f8a87c]" />,
+        action: () => {
+          onOpenAgentSettings("iam360_cells");
+          onClose();
+        },
+      },
       {
         id: "act-agent-settings-general",
         type: "action",

@@ -1,29 +1,32 @@
 import React, { useState, useEffect } from "react";
 import {
-  ShieldCheck,
   Building2,
   Bot,
   Layers,
-  Lock,
   RefreshCw,
   CheckCircle2,
   XCircle,
   Play,
   SlidersHorizontal,
   GitBranch,
-  KeyRound,
   Terminal,
-  Radio,
-  Sparkles,
+  Network,
+  Users,
+  ShieldAlert,
+  AlertTriangle,
 } from "lucide-react";
 import {
   fetchAgentIam360Cell,
   mutateIam360IdentityStatus,
   mutateIam360OrgMemberRole,
   mutateIam360OrgEnforcement,
+  toggleIam360Capability,
+  reconcileIam360IdentityDrift,
+  decideIam360Approval,
   evaluateIam360Access,
   Iam360AgentCellInspection,
   Iam360EvaluateAccessResponse,
+  Iam360PermissionTreeNode,
 } from "../services/iam360CellsApi";
 import { Iam360PermissionTreeView } from "./Iam360PermissionTreeView";
 
@@ -36,16 +39,18 @@ interface AgentIam360CellTabProps {
 export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam360CellTabProps) {
   const [inspection, setInspection] = useState<Iam360AgentCellInspection | null>(null);
   const [loading, setLoading] = useState(true);
-  const [subView, setSubView] = useState<"tree" | "identity" | "org" | "simulator">("tree");
+  const [subView, setSubView] = useState<"tree" | "identity" | "org" | "a2a_principals" | "simulator">("tree");
   const [selectedOrgCellId, setSelectedOrgCellId] = useState<string>("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingRole, setUpdatingRole] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   // Access Simulator state
   const [simAction, setSimAction] = useState("read_file");
   const [simOrgId, setSimOrgId] = useState("");
   const [simPath, setSimPath] = useState("/app/working/workspaces/default/README.md");
+  const [simTargetAgent, setSimTargetAgent] = useState("");
   const [simResult, setSimResult] = useState<Iam360EvaluateAccessResponse | null>(null);
   const [simRunning, setSimRunning] = useState(false);
 
@@ -80,6 +85,46 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
 
   const { identity_cell: identity, member_organization_cells: memberOrgs, primary_organization_cell: primaryOrg } = inspection;
   const activeOrg = memberOrgs.find((o) => o.cell_id === selectedOrgCellId) || primaryOrg;
+  const pendingApprovals = (inspection.pending_approvals || []).filter((a) => a.status === "pending");
+
+  const handleToggleTreeCapability = async (node: Iam360PermissionTreeNode, nextEnabled: boolean) => {
+    if (!node.capability_kind || !node.capability_key) return;
+    setReconciling(true);
+    try {
+      await toggleIam360Capability(identity.slug, node.capability_kind, node.capability_key, nextEnabled);
+      await loadInspection(true);
+      setFeedback(
+        `Đã ${nextEnabled ? "BẬT" : "TẮT"} quyền ${node.capability_kind.toUpperCase()}:${node.capability_key} trên cây và ký Signed Intent!`
+      );
+      setTimeout(() => setFeedback(null), 4000);
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  const handleReconcileDrift = async () => {
+    setReconciling(true);
+    try {
+      await reconcileIam360IdentityDrift(identity.slug);
+      await loadInspection(true);
+      setFeedback(`Đã đồng bộ hoá (Reconcile) cấu hình Node cho ${identity.slug} và xoá toàn bộ trạng thái Drift!`);
+      setTimeout(() => setFeedback(null), 4000);
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  const handleDecideApproval = async (approvalId: string, approve: boolean) => {
+    setUpdatingRole(true);
+    try {
+      await decideIam360Approval(approvalId, approve, approve ? "Approved by Human Controller" : "Denied by Human Controller");
+      await loadInspection(true);
+      setFeedback(`Đã ${approve ? "PHÊ DUYỆT (Approve)" : "TỪ CHỐI (Deny)"} yêu cầu Step-Up/Two-Person ${approvalId}!`);
+      setTimeout(() => setFeedback(null), 4000);
+    } finally {
+      setUpdatingRole(false);
+    }
+  };
 
   const handleStatusChange = async (action: "activate" | "suspend" | "revoke") => {
     setUpdatingStatus(true);
@@ -122,12 +167,16 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
     setSimRunning(true);
     try {
       const res = await evaluateIam360Access({
-        identity_cell_id: identity.identity_cell_id,
+        identity_cell_id: identity.slug,
         organization_cell_id: simOrgId || primaryOrg.cell_id,
         action: simAction,
         resource_path: simPath,
+        target_agent_slug: simTargetAgent || undefined,
       });
       setSimResult(res);
+      if (res.step_up_approval) {
+        await loadInspection(true);
+      }
     } finally {
       setSimRunning(false);
     }
@@ -158,20 +207,22 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
 
   return (
     <div className="space-y-4">
-      {/* Top Summary Banner: Two-Cell Architecture Overview (Personal -> Organization) */}
+      {/* Top Summary Banner */}
       <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#151824] border border-slate-200 dark:border-[#24283b] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold">
-                IAM360 Two-Cell Governance
+                IAM360 Two-Cell Governance • 5-Branch Tree
               </span>
-              <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                Định danh Cá nhân (Identity Cell) & Tổ chức (Organization Cell)
-              </h4>
+              {inspection.reconciliation && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-500 dark:text-[#86efac] border border-emerald-500/30">
+                  Worker Sync: {inspection.reconciliation.passed_agents}/{inspection.reconciliation.total_agents_checked} PASS (15m Cron)
+                </span>
+              )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-              Tổng quan liền mạch từ danh tính tự chủ 1:1 của {agentName} tới ranh giới Tenant, ReBAC Role Tuples và Cerbos ABAC Policy.
+            <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
+              Tổng quan từ danh tính tự chủ 1:1 của {agentName} tới ranh giới Tenant, ReBAC Role Tuples, Inline Capability Toggle, A2A Topology và Observed Principals.
             </p>
           </div>
 
@@ -202,7 +253,11 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
               >
                 {identity.status}
               </span>
-              <span className="text-[10px] text-neutral-400">{identity.assurance}</span>
+              {identity.drift && (
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] uppercase font-bold bg-[#f8a87c]/20 text-[#f8a87c]">
+                  DRIFT
+                </span>
+              )}
             </div>
           </div>
 
@@ -211,25 +266,23 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
             <div className="text-[#e0682b] dark:text-[#f8a87c] font-semibold truncate mt-0.5">
               {primaryOrg.cell_id} ({primaryOrg.organization.toUpperCase()})
             </div>
-            <div className="mt-1 flex items-center gap-1.5">
-              {getRoleBadge(identity.cell_role)}
-            </div>
+            <div className="mt-1 flex items-center gap-1.5">{getRoleBadge(identity.cell_role)}</div>
           </div>
 
           <div className="p-2.5 rounded-xl bg-white dark:bg-[#10121b] border border-slate-200/80 dark:border-[#222638]">
-            <div className="text-[10px] text-neutral-500">3. CROSS-ORG MEMBERSHIPS</div>
+            <div className="text-[10px] text-neutral-500">3. REBAC A2A & PRINCIPALS</div>
             <div className="text-slate-900 dark:text-white font-semibold mt-0.5">
-              {identity.memberships.length} Organization Cells
+              {(identity.a2a_delegation_targets || []).filter((t) => t.allowed).length} A2A • {(identity.observed_principals || []).length} Principals
             </div>
             <div className="text-[10px] text-emerald-500 dark:text-[#86efac] truncate mt-1">
-              {identity.memberships.map((m) => `${m.cell_id} (${m.role})`).join(" • ")}
+              {identity.memberships.length} Org Cells Bound
             </div>
           </div>
 
           <div className="p-2.5 rounded-xl bg-white dark:bg-[#10121b] border border-slate-200/80 dark:border-[#222638]">
             <div className="text-[10px] text-neutral-500">4. ATTESTED CAPABILITIES</div>
             <div className="text-purple-600 dark:text-[#c4b5fd] font-semibold mt-0.5">
-              {identity.enabled_mcp_count} MCP • {identity.enabled_tool_count} Tools
+              {identity.enabled_mcp_count}/{identity.mcp_count} MCP • {identity.enabled_tool_count}/{identity.tool_count} Tools
             </div>
             <div className="text-[10px] text-sky-500 dark:text-[#93c5fd] truncate mt-1">
               Channels: {identity.enabled_channels.join(", ")}
@@ -237,6 +290,50 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
           </div>
         </div>
       </div>
+
+      {/* Pending Step-Up / Two-Person Approval Banner (Upgrade #2 & #5) */}
+      {pendingApprovals.length > 0 && (
+        <div className="p-3.5 rounded-2xl bg-[#f8a87c]/15 border border-[#f8a87c]/40 space-y-2.5 font-mono text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-[#e0682b] dark:text-[#f8a87c] flex items-center gap-1.5">
+              <ShieldAlert size={15} />
+              <span>STEP-UP / TWO-PERSON APPROVAL REQUIRED ({pendingApprovals.length} Pending)</span>
+            </span>
+            <span className="text-[10px] text-neutral-400">Controller: {identity.controller_subject_id}</span>
+          </div>
+          {pendingApprovals.map((app) => (
+            <div
+              key={app.approval_id}
+              className="p-2.5 rounded-xl bg-white dark:bg-[#12141e] border border-slate-200 dark:border-[#252a3d] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+            >
+              <div>
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  [{app.kind.toUpperCase()}] {app.action} — <span className="text-[#f8a87c]">{app.approval_id}</span>
+                </div>
+                <div className="text-[11px] text-neutral-400">{app.reason}</div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  disabled={updatingRole}
+                  onClick={() => handleDecideApproval(app.approval_id, true)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 dark:text-[#86efac] border border-emerald-500/40 font-semibold cursor-pointer"
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  disabled={updatingRole}
+                  onClick={() => handleDecideApproval(app.approval_id, false)}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 dark:text-[#fda4af] border border-rose-500/40 font-semibold cursor-pointer"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {feedback && (
         <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-600 dark:text-[#86efac] flex items-center justify-between font-mono">
@@ -250,13 +347,14 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
         </div>
       )}
 
-      {/* Sub-navigation Switcher: Tree | Identity Cell | Organization Cell | Simulator */}
+      {/* Sub-navigation Switcher */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-slate-200 dark:border-[#222533] pb-2">
         {[
-          { id: "tree" as const, label: "Cây Phân Quyền (Permission Tree)", icon: <GitBranch size={13} /> },
+          { id: "tree" as const, label: "Cây Phân Quyền 5 Nhánh (Inline Toggle)", icon: <GitBranch size={13} /> },
           { id: "identity" as const, label: "Lớp Cá Nhân (Identity Cell)", icon: <Bot size={13} /> },
           { id: "org" as const, label: `Lớp Tổ Chức (${identity.memberships.length} Org Cells)`, icon: <Building2 size={13} /> },
-          { id: "simulator" as const, label: "Kiểm thử Quyền (Policy Simulator)", icon: <SlidersHorizontal size={13} /> },
+          { id: "a2a_principals" as const, label: "A2A Topology & Observed Principals", icon: <Network size={13} /> },
+          { id: "simulator" as const, label: "Kiểm thử Quyền & Step-Up Gate", icon: <SlidersHorizontal size={13} /> },
         ].map((tab) => {
           const active = subView === tab.id;
           return (
@@ -277,19 +375,22 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
         })}
       </div>
 
-      {/* VIEW 1: HIERARCHICAL PERMISSION TREE (PERSONAL -> ORGANIZATION) */}
+      {/* VIEW 1: 5-BRANCH INTERACTIVE PERMISSION TREE */}
       {subView === "tree" && (
         <div className="space-y-3">
           <Iam360PermissionTreeView
             rootNode={inspection.permission_tree}
-            title={`Cây Phân Quyền Đa Tầng: ${identity.display_name} (${identity.identity_cell_id})`}
-            subtitle="Mở rộng từng nhánh để xem chi tiết từ Identity Cell cá nhân → Tư cách trong các Organization Cells → ReBAC Tuples → Cerbos ABAC → MCP/Tools & Baseline Guardrails."
+            title={`Cây Phân Quyền 5 Nhánh: ${identity.display_name} (${identity.identity_cell_id})`}
+            subtitle="Bấm Toggle ON/OFF trực tiếp trên các nút lá MCP/Tools để cấp/thu hồi quyền thực thi và phát hành Signed Intent; hoặc bấm Reconcile Node để khôi phục cấu hình chuẩn."
             defaultExpandDepth={3}
+            onToggleCapabilityNode={handleToggleTreeCapability}
+            onReconcileDrift={handleReconcileDrift}
+            reconciling={reconciling}
           />
         </div>
       )}
 
-      {/* VIEW 2: PERSONAL IDENTITY CELL MANAGEMENT */}
+      {/* VIEW 2: PERSONAL IDENTITY CELL */}
       {subView === "identity" && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#141722] border border-slate-200 dark:border-[#232738] space-y-4">
@@ -303,7 +404,6 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                 </h5>
               </div>
 
-              {/* Lifecycle Controls */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
@@ -332,7 +432,6 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
               </div>
             </div>
 
-            {/* Metadata Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
               <div className="p-2.5 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200/80 dark:border-[#222636]">
                 <div className="text-[10px] text-neutral-500">Owner Identity Cell (Self-Owned)</div>
@@ -352,86 +451,14 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                   {identity.machine_identity_ref}
                 </div>
               </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200/80 dark:border-[#222636]">
-                <div className="text-[10px] text-neutral-500">Isolated Workspace Path</div>
-                <div className="text-slate-800 dark:text-neutral-200 truncate mt-0.5" title={identity.workspace_dir}>
-                  {identity.workspace_dir}
-                </div>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200/80 dark:border-[#222636]">
-                <div className="text-[10px] text-neutral-500">Assurance & Attestation</div>
-                <div className="text-sky-600 dark:text-[#93c5fd] font-semibold truncate mt-0.5">
-                  {identity.assurance_level} • rev {identity.revision}
-                </div>
-              </div>
-              <div className="p-2.5 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200/80 dark:border-[#222636]">
-                <div className="text-[10px] text-neutral-500">Constitution Files</div>
-                <div className="text-purple-600 dark:text-[#c4b5fd] truncate mt-0.5">
-                  {identity.system_prompt_files.join(", ")}
-                </div>
-              </div>
-            </div>
-
-            {/* Attested MCP Clients & Builtin Tools */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div className="p-3 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200/80 dark:border-[#222636] space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-900 dark:text-white">
-                  <span className="flex items-center gap-1.5">
-                    <Layers size={13} className="text-emerald-400" />
-                    <span>Attested MCP Clients ({identity.mcp_clients.length})</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-500">Runtime Verified</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {identity.mcp_clients.map((m) => (
-                    <span
-                      key={m.id}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-mono border ${
-                        m.enabled
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-[#86efac] border-emerald-500/25"
-                          : "bg-rose-500/10 text-rose-500 border-rose-500/25"
-                      }`}
-                      title={`${m.name} (${m.transport})`}
-                    >
-                      {m.key} ({m.transport})
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200/80 dark:border-[#222636] space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-900 dark:text-white">
-                  <span className="flex items-center gap-1.5">
-                    <Terminal size={13} className="text-purple-400" />
-                    <span>Attested Builtin Tools ({identity.builtin_tools.length})</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-purple-400">Scoped</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {identity.builtin_tools.map((t) => (
-                    <span
-                      key={t.id}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-mono border ${
-                        t.enabled
-                          ? "bg-purple-500/10 text-purple-600 dark:text-[#c4b5fd] border-purple-500/25"
-                          : "bg-slate-500/10 text-neutral-500 border-slate-500/25 line-through"
-                      }`}
-                      title={t.description}
-                    >
-                      {t.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* VIEW 3: ORGANIZATION CELL BOUNDARY & ROLE MANAGEMENT */}
+      {/* VIEW 3: ORGANIZATION CELL BOUNDARY */}
       {subView === "org" && (
         <div className="space-y-4">
-          {/* Selector for which Org Cell to inspect if agent belongs to multiple cells (e.g. Mons) */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono text-neutral-400">Chọn Organization Cell:</span>
             {memberOrgs.map((org) => (
@@ -453,23 +480,14 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#141722] border border-slate-200 dark:border-[#232738] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-[#222636] pb-3">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase text-emerald-400">
-                    LEVEL 2 • IMMUTABLE TENANT ORGANIZATION CELL
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-500 dark:text-[#86efac] border border-emerald-500/30">
-                    {activeOrg.lifecycle}
-                  </span>
-                </div>
-                <h5 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
+                <h5 className="text-sm font-semibold text-slate-900 dark:text-white">
                   {activeOrg.display_name} <span className="font-mono text-xs text-neutral-400">({activeOrg.cell_id})</span>
                 </h5>
                 <p className="text-[11px] font-mono text-neutral-400 mt-0.5">
-                  Owner Identity Cell: <strong className="text-[#f8a87c]">{activeOrg.owner_identity_cell_id}</strong> ({activeOrg.owner_name}) • Node {activeOrg.cluster_node} ({activeOrg.domain})
+                  Owner: <strong className="text-[#f8a87c]">{activeOrg.owner_identity_cell_id}</strong> ({activeOrg.owner_name})
                 </p>
               </div>
 
-              {/* Enforcement & Role Controls */}
               <div className="flex flex-col sm:items-end gap-2">
                 <div className="flex items-center gap-1.5 text-[11px] font-mono">
                   <span className="text-neutral-400">Enforcement:</span>
@@ -489,35 +507,9 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                     </button>
                   ))}
                 </div>
-
-                <div className="flex items-center gap-1.5 text-[11px] font-mono">
-                  <span className="text-neutral-400">Vai trò của {agentSlug}:</span>
-                  {(["owner", "manager", "employee"] as const).map((r) => {
-                    const currentRole =
-                      activeOrg.owner_identity_cell_id === identity.identity_cell_id
-                        ? "owner"
-                        : activeOrg.members[identity.identity_cell_id]?.role || "employee";
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        disabled={updatingRole || (r === "owner" && activeOrg.owner_identity_cell_id === identity.identity_cell_id)}
-                        onClick={() => handleRoleChange(activeOrg.cell_id, r)}
-                        className={`px-2 py-0.5 rounded-lg uppercase cursor-pointer border ${
-                          currentRole === r
-                            ? "bg-purple-500/20 text-purple-600 dark:text-[#c4b5fd] border-purple-500/40 font-bold"
-                            : "bg-white dark:bg-[#0f111a] text-neutral-400 border-slate-200 dark:border-[#222636]"
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             </div>
 
-            {/* Organization Permission Tree */}
             <Iam360PermissionTreeView
               rootNode={activeOrg.permission_tree}
               title={`Cây Phân Quyền Cấp Tổ Chức: ${activeOrg.display_name} (${activeOrg.cell_id})`}
@@ -529,28 +521,95 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
         </div>
       )}
 
-      {/* VIEW 4: INTERACTIVE ACCESS SIMULATOR */}
+      {/* VIEW 4: REBAC A2A TOPOLOGY & OBSERVED PRINCIPALS (Upgrades #3 & #4) */}
+      {subView === "a2a_principals" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#141722] border border-slate-200 dark:border-[#232738] space-y-3">
+            <div className="flex items-center justify-between">
+              <h5 className="text-xs font-mono uppercase font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Network size={14} className="text-emerald-400" />
+                <span>ReBAC A2A Delegation Matrix ({(identity.a2a_delegation_targets || []).length})</span>
+              </h5>
+              <span className="text-[10px] font-mono text-emerald-400">Role: {identity.cell_role.toUpperCase()}</span>
+            </div>
+            <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1 font-mono text-xs">
+              {(identity.a2a_delegation_targets || []).map((t) => (
+                <div
+                  key={`${t.organization_cell_id}:${t.target_slug}`}
+                  className="p-2.5 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#222636] flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900 dark:text-white truncate">
+                      {t.target_name} ({t.target_slug})
+                    </div>
+                    <div className="text-[10px] text-neutral-400 truncate">
+                      {t.organization_cell_id} • {t.caller_role.toUpperCase()} → {t.target_role.toUpperCase()}
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      t.allowed
+                        ? "bg-emerald-500/15 text-emerald-500 dark:text-[#86efac]"
+                        : "bg-rose-500/15 text-rose-500 dark:text-[#fda4af]"
+                    }`}
+                  >
+                    {t.allowed ? "ALLOW A2A" : "DENY A2A"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#141722] border border-slate-200 dark:border-[#232738] space-y-3">
+            <div className="flex items-center justify-between">
+              <h5 className="text-xs font-mono uppercase font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Users size={14} className="text-sky-400" />
+                <span>Observed Channel Principals & Topics ({(identity.observed_principals || []).length})</span>
+              </h5>
+              <span className="text-[10px] font-mono text-sky-400">Session Bound</span>
+            </div>
+            <div className="space-y-2 font-mono text-xs">
+              {(identity.observed_principals || []).map((p) => (
+                <div
+                  key={p.id}
+                  className="p-3 rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#222636] space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-900 dark:text-white">{p.display_name}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30 uppercase">
+                      {p.channel}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[#f8a87c]">{p.topic_title}</div>
+                  <div className="text-[10px] text-neutral-400">
+                    Principal: {p.user_id} • Session: {p.session_id}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 5: POLICY SIMULATOR + STEP-UP TRIGGER */}
       {subView === "simulator" && (
         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#141722] border border-slate-200 dark:border-[#232738] space-y-4">
           <div>
             <div className="text-[10px] font-mono uppercase text-purple-400">
-              REALTIME REBAC + CERBOS ABAC POLICY SIMULATOR
+              REALTIME REBAC + CERBOS ABAC + STEP-UP APPROVAL SIMULATOR
             </div>
             <h5 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-              Kiểm thử Quyết định Phân quyền của {identity.identity_cell_id}
+              Kiểm thử Quyết định Phân quyền & Step-Up Gate của {identity.identity_cell_id}
             </h5>
-            <p className="text-xs text-slate-500 dark:text-neutral-400">
-              Mô phỏng luồng đánh giá quyền từ Identity Cell → Tư cách thành viên Organization Cell → Cerbos Rule → Baseline Path Guardrail.
-            </p>
           </div>
 
-          <form onSubmit={handleRunSimulation} className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+          <form onSubmit={handleRunSimulation} className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
             <label className="space-y-1">
               <span className="text-[10px] text-neutral-400">Target Organization Cell</span>
               <select
                 value={simOrgId}
                 onChange={(e) => setSimOrgId(e.target.value)}
-                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
+                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white"
               >
                 <option value="cell:core">cell:core (Antares Core)</option>
                 <option value="cell:gm">cell:gm (Gia Mộc Operations)</option>
@@ -563,19 +622,19 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
             </label>
 
             <label className="space-y-1">
-              <span className="text-[10px] text-neutral-400">Tool / Capability Action</span>
+              <span className="text-[10px] text-neutral-400">Tool / Capability / Step-Up Action</span>
               <select
                 value={simAction}
                 onChange={(e) => setSimAction(e.target.value)}
-                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
+                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white"
               >
                 <option value="read_file">read_file (Workspace Read)</option>
                 <option value="write_file">write_file (Workspace Write)</option>
-                <option value="chat_with_agent">chat_with_agent (A2A Collaboration)</option>
-                <option value="submit_to_agent">submit_to_agent (Sub-Agent Delegation)</option>
-                <option value="iam360_submit_intent">iam360_submit_intent (Owner Policy Intent)</option>
-                <option value="mcp:erpnext">mcp:erpnext (ERPNext Operations)</option>
-                <option value="mcp:kb">mcp:kb (Outline Knowledge Base)</option>
+                <option value="submit_to_agent">submit_to_agent (A2A Delegation)</option>
+                <option value="erpnext.quotation.create">erpnext.quotation.create (High-Risk Step-Up Gate)</option>
+                <option value="erpnext.invoice.write">erpnext.invoice.write (High-Risk Step-Up Gate)</option>
+                <option value="mcp:erpnext">mcp:erpnext (ERPNext MCP)</option>
+                <option value="mcp:kb">mcp:kb (Outline KB MCP)</option>
               </select>
             </label>
 
@@ -585,31 +644,22 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                 type="text"
                 value={simPath}
                 onChange={(e) => setSimPath(e.target.value)}
-                placeholder="/app/working/workspaces/..."
-                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#f8a87c]"
+                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white"
               />
             </label>
 
-            <div className="sm:col-span-3 flex items-center justify-between pt-1">
-              <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-                <span>Gợi ý test Baseline Deny:</span>
-                <button
-                  type="button"
-                  onClick={() => setSimPath("/app/working.secret/keys.json")}
-                  className="text-rose-400 hover:underline cursor-pointer"
-                >
-                  /app/working.secret
-                </button>
-                <span>•</span>
-                <button
-                  type="button"
-                  onClick={() => setSimPath("$workspace/credentials.yaml")}
-                  className="text-rose-400 hover:underline cursor-pointer"
-                >
-                  $workspace/credentials.yaml
-                </button>
-              </div>
+            <label className="space-y-1">
+              <span className="text-[10px] text-neutral-400">Target Agent Slug (Optional for A2A Check)</span>
+              <input
+                type="text"
+                value={simTargetAgent}
+                onChange={(e) => setSimTargetAgent(e.target.value)}
+                placeholder="vd: gm-lua, gm-boc, ken..."
+                className="w-full rounded-xl bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-[#252a3d] px-3 py-2 text-xs text-slate-900 dark:text-white"
+              />
+            </label>
 
+            <div className="sm:col-span-2 flex items-center justify-end pt-1">
               <button
                 type="submit"
                 disabled={simRunning}
@@ -626,12 +676,14 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
               className={`p-3.5 rounded-xl border font-mono text-xs space-y-2 ${
                 simResult.allowed
                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-[#86efac]"
-                  : "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-[#fda4af]"
+                  : simResult.effect === "STEP_UP_APPROVAL_REQUIRED"
+                    ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#e0682b] dark:text-[#f8a87c]"
+                    : "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-[#fda4af]"
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold">
-                  {simResult.allowed ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
+                  {simResult.allowed ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}
                   <span>
                     {simResult.effect} — {simResult.reason_code}
                   </span>
@@ -640,9 +692,7 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                   Role in {simResult.organization_cell_id}: {simResult.role_in_cell.toUpperCase()}
                 </span>
               </div>
-              <div className="text-[11px] opacity-90">Matched Rule: {simResult.matched_rule}</div>
               <div className="pt-1 border-t border-current/15 space-y-1">
-                <div className="text-[10px] uppercase opacity-75">Decision Trace Path:</div>
                 {simResult.trace_path.map((step, idx) => (
                   <div key={idx} className="text-[11px] flex items-center gap-1.5">
                     <span className="opacity-60">{idx + 1}.</span>

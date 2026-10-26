@@ -18,6 +18,7 @@ import { EnterpriseDataTable, Column } from "../../components/ui/EnterpriseDataT
 import { SlideOverDrawer } from "../../components/ui/SlideOverDrawer";
 import { Modal } from "../../components/ui/Modal";
 import { CustomSelect, SelectOption } from "../../components/ui/CustomSelect";
+import { AgentIam360CellTab } from "../../components/AgentIam360CellTab";
 
 interface AgentItem {
   id: string;
@@ -319,6 +320,15 @@ export function AdminAgentsPage() {
                 <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{selectedAgent.description || "Containerized Autonomous Agent"}</div>
                 <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Runtime: {selectedAgent.node || "3rd-server"}</div>
               </div>
+            </div>
+
+            {/* IAM360 Identity Cell & Organization Cell Hierarchy Tree */}
+            <div className="pt-2 border-t border-slate-200 dark:border-[#242434]">
+              <AgentIam360CellTab
+                agentId={selectedAgent.id}
+                agentSlug={selectedAgent.slug}
+                agentName={selectedAgent.name}
+              />
             </div>
 
             {/* Assigned Users Section */}

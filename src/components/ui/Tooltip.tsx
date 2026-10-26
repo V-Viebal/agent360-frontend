@@ -135,7 +135,7 @@ export function Tooltip({
               minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
               maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
             }}
-            className={`whitespace-nowrap text-nowrap [text-wrap:nowrap] rounded-lg bg-white/95 dark:bg-[#101016]/95 border border-slate-200 dark:border-white/15 px-3.5 py-1.5 text-[11px] font-sans text-slate-800 dark:text-white shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-2 select-none w-max min-w-[130px] sm:min-w-[150px] max-w-sm ${className}`}
+            className={`whitespace-nowrap text-nowrap [text-wrap:nowrap] rounded-lg bg-white/95 dark:bg-[#101016]/95 border border-slate-200 dark:border-white/15 px-2.5 py-0.5 text-[11px] leading-snug font-sans text-slate-800 dark:text-white shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-1.5 select-none w-max min-w-[110px] sm:min-w-[130px] max-w-sm ${className}`}
           >
             <span>{content}</span>
             {shortcut && (

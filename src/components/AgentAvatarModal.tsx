@@ -15,7 +15,13 @@ import {
   AVATAR_ICON_MAP,
   AVATAR_COLOR_PRESETS,
   getAgentVisualProfile,
+  BLOB_SHAPES,
+  BLOB_EXPRESSIONS,
+  BLOB_COLORS,
+  BLOB_ANIMATIONS,
+  getAgentBlobProfile,
 } from "./AgentAvatar";
+import { BlobAvatar } from "blob-avatar";
 import {
   CustomAvatarConfig,
   getAgentAvatarConfig,
@@ -44,6 +50,13 @@ const COMMON_EMOJIS = [
 export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalProps) {
   const [activeTab, setActiveTab] = useState<"blob" | "role" | "icon" | "emoji" | "image">("blob");
 
+  const defaultBlob = getAgentBlobProfile(agent.id || agent.slug, agent.name, agent.roleTag);
+  const [selectedBlobShape, setSelectedBlobShape] = useState<string>(defaultBlob.shape);
+  const [selectedBlobExpression, setSelectedBlobExpression] = useState<string>(defaultBlob.expression);
+  const [selectedBlobColor, setSelectedBlobColor] = useState<string>(defaultBlob.color);
+  const [selectedBlobAnimation, setSelectedBlobAnimation] = useState<string>(defaultBlob.animation);
+  const [isCustomBlob, setIsCustomBlob] = useState<boolean>(false);
+
   const [selectedIcon, setSelectedIcon] = useState<string>("Bot");
   const [selectedColor, setSelectedColor] = useState<string>("blue");
   const [selectedEmoji, setSelectedEmoji] = useState<string>("🤖");
@@ -55,12 +68,30 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     const current = getAgentAvatarConfig(agent.id);
     if (current) {
       setActiveTab(current.type === "role" ? "blob" : current.type);
+      if (current.type === "blob" && current.blob) {
+        setIsCustomBlob(true);
+        if (current.blob.shape) setSelectedBlobShape(current.blob.shape);
+        if (current.blob.expression) setSelectedBlobExpression(current.blob.expression);
+        if (current.blob.color) setSelectedBlobColor(current.blob.color);
+        if (current.blob.animation) setSelectedBlobAnimation(current.blob.animation);
+      } else {
+        setIsCustomBlob(false);
+        setSelectedBlobShape(defaultBlob.shape);
+        setSelectedBlobExpression(defaultBlob.expression);
+        setSelectedBlobColor(defaultBlob.color);
+        setSelectedBlobAnimation(defaultBlob.animation);
+      }
       if (current.iconName) setSelectedIcon(current.iconName);
       if (current.colorPreset) setSelectedColor(current.colorPreset);
       if (current.emoji) setSelectedEmoji(current.emoji);
       if (current.imageUrl) setImageUrl(current.imageUrl);
     } else {
       setActiveTab("blob");
+      setIsCustomBlob(false);
+      setSelectedBlobShape(defaultBlob.shape);
+      setSelectedBlobExpression(defaultBlob.expression);
+      setSelectedBlobColor(defaultBlob.color);
+      setSelectedBlobAnimation(defaultBlob.animation);
       setSelectedIcon("Bot");
       setSelectedColor("blue");
       setSelectedEmoji("🤖");
@@ -72,7 +103,19 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
   // Build temporary preview config
   const previewConfig: CustomAvatarConfig | null = (() => {
-    if (activeTab === "blob" || activeTab === "role") return null;
+    if (activeTab === "blob" || activeTab === "role") {
+      if (!isCustomBlob) return null;
+      return {
+        type: "blob",
+        blob: {
+          shape: selectedBlobShape,
+          expression: selectedBlobExpression,
+          color: selectedBlobColor,
+          animation: selectedBlobAnimation,
+          seed: defaultBlob.seed,
+        },
+      };
+    }
     if (activeTab === "icon") {
       return { type: "icon", iconName: selectedIcon, colorPreset: selectedColor };
     }
@@ -86,7 +129,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   })();
 
   const handleSave = () => {
-    if (activeTab === "blob" || activeTab === "role") {
+    if ((activeTab === "blob" || activeTab === "role") && !isCustomBlob) {
       resetAgentAvatarConfig(agent.id);
     } else if (previewConfig) {
       saveAgentAvatarConfig(agent.id, previewConfig);
@@ -97,6 +140,11 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   const handleReset = () => {
     resetAgentAvatarConfig(agent.id);
     setActiveTab("blob");
+    setIsCustomBlob(false);
+    setSelectedBlobShape(defaultBlob.shape);
+    setSelectedBlobExpression(defaultBlob.expression);
+    setSelectedBlobColor(defaultBlob.color);
+    setSelectedBlobAnimation(defaultBlob.animation);
     setImageUrl("");
   };
 
@@ -160,6 +208,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
               size="xl"
               className="shadow-xl"
               overrideConfig={previewConfig}
+              alwaysAnimate={true}
             />
             <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#101018] shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
           </div>
@@ -223,17 +272,153 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
         {/* Tab Body */}
         <div className="p-6 overflow-y-auto max-h-[340px] space-y-5">
-          {/* TAB 1: Role Default */}
+          {/* TAB 1: Blob Mascot Studio */}
           {(activeTab === "blob" || activeTab === "role") && (
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#272738] flex items-start gap-3">
-              <Info size={18} className="text-[#f8a87c] shrink-0 mt-0.5" />
-              <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-1">
-                <p className="font-semibold text-neutral-900 dark:text-white">
-                  Đang sử dụng nhận diện AI tự động
-                </p>
-                <p>
-                  Hệ thống tự động đồng bộ màu sắc và icon dựa trên vai trò kỹ thuật của agent (Fullstack, SRE, QA, KB, Swarm...). Khi chọn các tab bên cạnh, bạn có thể tự chọn icon hoặc emoji độc quyền.
-                </p>
+            <div className="space-y-4">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#272738] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Info size={16} className="text-[#f8a87c] shrink-0" />
+                  <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-snug truncate">
+                    {isCustomBlob
+                      ? "Đang áp dụng cấu hình Blob Mascot thủ công cho agent này."
+                      : "Đang áp dụng thuật toán phân phối Blob Mascot tự động theo ID."}
+                  </p>
+                </div>
+                {isCustomBlob && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomBlob(false);
+                      setSelectedBlobShape(defaultBlob.shape);
+                      setSelectedBlobExpression(defaultBlob.expression);
+                      setSelectedBlobColor(defaultBlob.color);
+                      setSelectedBlobAnimation(defaultBlob.animation);
+                    }}
+                    className="text-[11px] font-mono text-[#f8a87c] hover:underline shrink-0 font-medium cursor-pointer"
+                  >
+                    Về ngẫu nhiên
+                  </button>
+                )}
+              </div>
+
+              {/* Color Palette */}
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-2 font-semibold">
+                  Màu sắc Blob (Body Color)
+                </label>
+                <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
+                  {BLOB_COLORS.map((c) => {
+                    const isSelected = (isCustomBlob ? selectedBlobColor : defaultBlob.color) === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomBlob(true);
+                          setSelectedBlobColor(c);
+                        }}
+                        style={{ backgroundColor: c }}
+                        className={`h-7 rounded-lg border transition-all cursor-pointer flex items-center justify-center ${
+                          isSelected
+                            ? "border-white dark:border-black ring-2 ring-[#f8a87c] scale-110 shadow-sm"
+                            : "border-black/10 hover:scale-105 opacity-85 hover:opacity-100"
+                        }`}
+                        title={c}
+                      >
+                        {isSelected && <Check size={12} className="text-white drop-shadow" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Shape Selection */}
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-2 font-semibold">
+                  Hình dạng hình học & sinh vật (Shape)
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                  {BLOB_SHAPES.map((sh) => {
+                    const isSelected = (isCustomBlob ? selectedBlobShape : defaultBlob.shape) === sh;
+                    return (
+                      <button
+                        key={sh}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomBlob(true);
+                          setSelectedBlobShape(sh);
+                        }}
+                        className={`px-2 py-1.5 rounded-lg border text-xs capitalize transition-all cursor-pointer truncate ${
+                          isSelected
+                            ? "border-[#f8a87c] bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
+                            : "border-slate-200 dark:border-[#272738] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1f1f2e]"
+                        }`}
+                      >
+                        {sh}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Expression Selection */}
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-2 font-semibold">
+                  Biểu cảm khuôn mặt (Expression)
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                  {BLOB_EXPRESSIONS.map((expr) => {
+                    const isSelected = (isCustomBlob ? selectedBlobExpression : defaultBlob.expression) === expr;
+                    return (
+                      <button
+                        key={expr}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomBlob(true);
+                          setSelectedBlobExpression(expr);
+                        }}
+                        className={`px-2 py-1.5 rounded-lg border text-xs capitalize transition-all cursor-pointer truncate ${
+                          isSelected
+                            ? "border-[#f8a87c] bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
+                            : "border-slate-200 dark:border-[#272738] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1f1f2e]"
+                        }`}
+                      >
+                        {expr}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Animation Cycle */}
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-2 font-semibold">
+                  Hoạt cảnh chuyển động (Animation Cycle)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {BLOB_ANIMATIONS.map((anim, idx) => {
+                    const isSelected = (isCustomBlob ? selectedBlobAnimation : defaultBlob.animation) === anim;
+                    const cleanName = anim.replace(/idle\.2\.4,/g, "").split(".")[0];
+                    return (
+                      <button
+                        key={anim}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomBlob(true);
+                          setSelectedBlobAnimation(anim);
+                        }}
+                        className={`px-2 py-1.5 rounded-lg border text-xs capitalize transition-all cursor-pointer truncate flex items-center justify-between ${
+                          isSelected
+                            ? "border-[#f8a87c] bg-[#f8a87c]/15 text-[#f8a87c] font-semibold"
+                            : "border-slate-200 dark:border-[#272738] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1f1f2e]"
+                        }`}
+                      >
+                        <span>{cleanName}</span>
+                        <span className="text-[9px] font-mono opacity-60">#{idx + 1}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ShieldCheck, Building2, GitBranch, ChevronRight, ChevronDown, CheckCircle2, Lock } from "lucide-react";
+import { ShieldCheck, Building2, GitBranch, ChevronRight, ChevronDown, CheckCircle2, Lock, Users, Network } from "lucide-react";
 import { fetchAgentIam360Cell, Iam360AgentCellInspection } from "../services/iam360CellsApi";
 
 interface AgentIam360MiniCardProps {
@@ -29,6 +29,8 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
   }
 
   const { identity_cell: identity, primary_organization_cell: org } = data;
+  const principals = identity.observed_principals || [];
+  const a2aAllowed = (identity.a2a_delegation_targets || []).filter((t) => t.allowed);
 
   return (
     <div className="space-y-2">
@@ -42,13 +44,12 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
           onClick={onOpenFullWorkbench}
           className="text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-0.5 cursor-pointer"
         >
-          <span>Quản lý & Cây quyền</span>
+          <span>Quản lý & Cây 5 nhánh</span>
           <ChevronRight size={12} />
         </button>
       </div>
 
       <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] space-y-2.5 text-xs">
-        {/* Personal Identity Cell Pill */}
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[10px] font-mono text-neutral-400">Personal Identity Cell (1:1)</div>
@@ -61,7 +62,6 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
           </span>
         </div>
 
-        {/* Organization Cell & Role */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-[#20202c]">
           <div className="min-w-0">
             <div className="text-[10px] font-mono text-neutral-400">Organization Cell (Tenant)</div>
@@ -74,7 +74,6 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
           </span>
         </div>
 
-        {/* Collapsible Mini Permission Tree */}
         <div className="pt-2 border-t border-slate-200/70 dark:border-[#20202c]">
           <button
             type="button"
@@ -83,18 +82,17 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
           >
             <span className="flex items-center gap-1.5">
               <GitBranch size={12} className="text-purple-400" />
-              <span>Cây phân quyền ({identity.memberships.length} Org • {identity.enabled_mcp_count} MCP • {identity.enabled_tool_count} Tools)</span>
+              <span>Cây 5 nhánh ({identity.memberships.length} Org • {a2aAllowed.length} A2A • {principals.length} Principals)</span>
             </span>
             {treeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
 
           {treeExpanded && (
             <div className="mt-2 pl-2.5 border-l border-dashed border-slate-300 dark:border-[#2c2c3c] space-y-1.5 font-mono text-[10px]">
-              {/* Node 1: Identity -> Org Memberships */}
               <div className="space-y-1">
                 <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
                   <Building2 size={11} className="text-[#f8a87c]" />
-                  <span>Tổ chức ({identity.memberships.length} Cells):</span>
+                  <span>1. Tổ chức ({identity.memberships.length} Cells):</span>
                 </div>
                 <div className="pl-3 flex flex-wrap gap-1">
                   {identity.memberships.map((m) => (
@@ -108,19 +106,38 @@ export function AgentIam360MiniCard({ agentId, agentSlug, onOpenFullWorkbench }:
                 </div>
               </div>
 
-              {/* Node 2: Capabilities */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
                   <CheckCircle2 size={11} className="text-emerald-400" />
-                  <span>Quyền thực thi (Cerbos ABAC):</span>
+                  <span>2-3. MCP & Builtin Tools:</span>
                 </div>
                 <div className="pl-3 text-neutral-500 dark:text-neutral-400">
-                  {identity.mcp_clients.slice(0, 3).map((m) => m.key).join(", ")}
-                  {identity.mcp_clients.length > 3 ? ` +${identity.mcp_clients.length - 3} MCP` : ""} • {identity.enabled_tool_count} Builtin Tools
+                  {identity.enabled_mcp_count}/{identity.mcp_count} MCP • {identity.enabled_tool_count}/{identity.tool_count} Tools
                 </div>
               </div>
 
-              {/* Node 3: Baseline Guardrail */}
+              <div className="space-y-0.5">
+                <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
+                  <Network size={11} className="text-purple-400" />
+                  <span>4. ReBAC A2A Delegation:</span>
+                </div>
+                <div className="pl-3 text-neutral-500 dark:text-neutral-400 truncate">
+                  {a2aAllowed.length > 0
+                    ? `Allow: ${a2aAllowed.slice(0, 3).map((a) => a.target_slug).join(", ")}${a2aAllowed.length > 3 ? "..." : ""}`
+                    : "Employee role (Scoped execution)"}
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <div className="text-slate-800 dark:text-neutral-200 font-semibold flex items-center gap-1">
+                  <Users size={11} className="text-sky-400" />
+                  <span>5. Observed Principals ({principals.length}):</span>
+                </div>
+                <div className="pl-3 text-sky-500 dark:text-[#93c5fd] truncate">
+                  {principals.map((p) => p.user_id).join(" • ")}
+                </div>
+              </div>
+
               <div className="flex items-center gap-1 text-rose-500 dark:text-[#fda4af]">
                 <Lock size={11} />
                 <span className="truncate">Baseline: Isolated {identity.workspace_dir}</span>

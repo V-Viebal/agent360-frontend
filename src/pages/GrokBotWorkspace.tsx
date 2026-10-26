@@ -11155,7 +11155,7 @@ export function GrokBotWorkspace() {
       )}
 
       {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
-        <div className={`${isCompactMode ? "px-2.5 pt-1.5 pb-3" : "px-4 pt-2 pb-4"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-2`}>
+        <div className={`${isCompactMode ? "px-2.5 pt-1 pb-3" : "px-4 pt-1 pb-3.5"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-1.5`}>
           {/* Request Queue Indicator */}
           {requestQueue.length > 0 && (
             <div className="flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-[#14141c]/95 border border-[#2a2a38] text-[11px] font-mono text-neutral-300 shadow-md animate-in fade-in duration-100">
@@ -12317,7 +12317,7 @@ export function GrokBotWorkspace() {
             {replyingToMsg && (
               <div
                 data-testid="composer-reply-banner"
-                className="mb-2 px-3.5 py-2 rounded-xl bg-slate-100/95 dark:bg-[#161622]/95 border border-slate-200 dark:border-[#2a2a3c] border-l-4 border-l-[#f8a87c] flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-150 shadow-xs text-left select-none"
+                className="mb-1 px-3 py-1.5 rounded-xl bg-slate-100/95 dark:bg-[#161622]/95 border border-slate-200 dark:border-[#2a2a3c] border-l-4 border-l-[#f8a87c] flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-150 shadow-xs text-left select-none"
               >
                 <div
                   onClick={() => scrollToOriginalMessage(replyingToMsg.id, replyingToMsg.snippet)}

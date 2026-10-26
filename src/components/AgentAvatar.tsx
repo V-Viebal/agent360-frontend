@@ -64,8 +64,8 @@ export const BLOB_ANIMATIONS = [
   "wink.1.6,nod.1.4,idle.1.2",
   "nod.1.4,jump.1.4,idle.1.2",
   "jump.1.5,wink.1.4,idle.1.2",
-  "thinking.2.0,nod.1.4,idle.1.2",
-  "love.1.8,wink.1.4,idle.1.2",
+  "shake.1.4,nod.1.4,idle.1.2",
+  "spin.1.6,wink.1.4,idle.1.2",
   "party.1.8,nod.1.4,idle.1.2",
   "play.1.8,wink.1.4,idle.1.2",
 ] as const;
@@ -427,43 +427,43 @@ export function AgentAvatar({
   }
 
   const sizeBox = {
-    "2xs": "h-4 w-4 rounded-md",
+    "2xs": "h-4.5 w-4.5 rounded-md",
     xs: "h-6 w-6 rounded-lg",
     sm: "h-7 w-7 rounded-xl",
-    md: "h-8 w-8 rounded-xl",
-    lg: "h-11 w-11 rounded-2xl",
-    xl: "h-14 w-14 rounded-2xl",
+    md: "h-9 w-9 rounded-xl",
+    lg: "h-13 w-13 rounded-2xl",
+    xl: "h-16 w-16 rounded-2xl",
   }[size];
 
   const iconSize = {
-    "2xs": 10,
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 22,
-    xl: 28,
+    "2xs": 11,
+    xs: 13,
+    sm: 16,
+    md: 20,
+    lg: 28,
+    xl: 36,
   }[size];
 
   const emojiSizeClass = {
-    "2xs": "text-[10px]",
-    xs: "text-xs",
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-2xl",
-    xl: "text-3xl",
+    "2xs": "text-xs",
+    xs: "text-sm",
+    sm: "text-base",
+    md: "text-lg",
+    lg: "text-3xl",
+    xl: "text-4xl",
   }[size];
 
   const hoverEffects = interactive
-    ? "transition-all duration-300 ease-out hover:scale-110 hover:shadow-md cursor-pointer group/avatar"
-    : "";
+    ? "transition-transform duration-300 ease-out hover:scale-110 cursor-pointer group/avatar"
+    : "transition-transform duration-300 ease-out";
 
   const blobPixelSize = {
-    "2xs": 15,
-    xs: 20,
-    sm: 24,
-    md: 28,
-    lg: 38,
-    xl: 48,
+    "2xs": 18,
+    xs: 24,
+    sm: 28,
+    md: 38,
+    lg: 54,
+    xl: 68,
   }[size];
 
   // 0. Custom Blob or Default Blob Avatar (from c0le0ni/blob-avatar)
@@ -471,24 +471,35 @@ export function AgentAvatar({
   if (isDefaultBlob) {
     const defaultBlob = getAgentBlobProfile(agent.id || agent.slug, agent.name, agent.roleTag);
     const blobProps = customConfig?.blob || defaultBlob;
+    const rawAnim = forcedAnimation || blobProps.animation || defaultBlob.animation;
+    // Prevent "thinking" clip which morphs the blob into 3 dots
+    const safeAnim = typeof rawAnim === "string" ? rawAnim.replace(/thinking(\.\d+(\.\d+)?)?/g, "nod.1.4,jump.1.4") : rawAnim;
     const shouldAnimate = Boolean(forcedAnimation || alwaysAnimate || isHovered);
+    const cleanClassName = className
+      .replace(/ring-\d+/g, "")
+      .replace(/ring-[^\s]+/g, "")
+      .replace(/border[^\s]*/g, "")
+      .replace(/shadow[^\s]*/g, "");
     return (
       <div
         ref={containerRef}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`relative flex items-center justify-center shrink-0 border border-slate-200/60 dark:border-white/10 shadow-xs select-none bg-slate-50 dark:bg-[#161622] overflow-hidden ${sizeBox} ${hoverEffects} ${className}`}
+        className={`relative inline-flex items-center justify-center shrink-0 select-none bg-transparent border-0 overflow-visible leading-none ${sizeBox} ${
+          isHovered ? "scale-110" : ""
+        } ${hoverEffects} ${cleanClassName}`}
       >
         <BlobAvatar
           shape={blobProps.shape as any || defaultBlob.shape}
           expression={blobProps.expression as any || defaultBlob.expression}
           color={blobProps.color || defaultBlob.color}
           paused={!shouldAnimate}
-          animation={forcedAnimation || blobProps.animation || defaultBlob.animation}
+          animation={safeAnim}
           seed={blobProps.seed || defaultBlob.seed}
           size={blobPixelSize}
           gaze={shouldAnimate || interactive}
           reaction={interactive}
+          className="flex items-center justify-center"
         />
       </div>
     );
