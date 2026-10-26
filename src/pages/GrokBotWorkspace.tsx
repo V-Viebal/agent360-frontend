@@ -515,6 +515,7 @@ function AgentThinkingModal({
   const [viewMode, setViewMode] = useState<"tree" | "timeline">("tree");
   const [selectedWaveIdx, setSelectedWaveIdx] = useState<number>(-1);
   const [expandedBranchIds, setExpandedBranchIds] = useState<Record<string, boolean>>({});
+  const [flowSearchQuery, setFlowSearchQuery] = useState<string>("");
 
   // Mobile swipe down to close gesture state & touch handling
   const [dragY, setDragY] = useState(0);
@@ -954,19 +955,27 @@ function AgentThinkingModal({
       });
     }
 
-    if (
+    const q = flowSearchQuery.trim().toLowerCase();
+    const byParticipant =
       selectedParticipantFilter === "all" ||
       selectedParticipantFilter === "agentteams-manager" ||
       selectedParticipantFilter === hostSlug
-    ) {
-      return completedTurns;
-    }
-    return completedTurns.filter(
+        ? completedTurns
+        : completedTurns.filter(
+            (t) =>
+              t.author_id.toLowerCase() === selectedParticipantFilter ||
+              (t.target_agent_id && t.target_agent_id.toLowerCase() === selectedParticipantFilter)
+          );
+    if (!q) return byParticipant;
+    return byParticipant.filter(
       (t) =>
-        t.author_id.toLowerCase() === selectedParticipantFilter ||
-        (t.target_agent_id && t.target_agent_id.toLowerCase() === selectedParticipantFilter)
+        t.author_id.toLowerCase().includes(q) ||
+        (t.author_name || "").toLowerCase().includes(q) ||
+        (t.text || "").toLowerCase().includes(q) ||
+        (t.reasoning || "").toLowerCase().includes(q) ||
+        (Array.isArray(t.steps) && t.steps.some((s: any) => (s.tool || "").toLowerCase().includes(q) || (s.text || "").toLowerCase().includes(q)))
     );
-  }, [activeWave, activeWaveIndex, executionWaves.length, isCurrentlyRunning, room, activeRespondingAgent, allAgents, selectedParticipantFilter, hostSlug]);
+  }, [activeWave, activeWaveIndex, executionWaves.length, isCurrentlyRunning, room, activeRespondingAgent, allAgents, selectedParticipantFilter, hostSlug, flowSearchQuery]);
 
   const completedCollabCount = activeWave ? activeWave.collaboratorTurns.length : 0;
   const totalExpectedCollabCount = activeWave
@@ -1329,7 +1338,7 @@ function AgentThinkingModal({
                           size="2xs"
                           alwaysAnimate={isRunning}
                           forcedAnimation={isRunning ? "nod.1.4,jump.1.4,wink.1.4" : undefined}
-                          className="shrink-0 scale-90 ring-1 ring-black/5 dark:ring-white/10"
+                          className="shrink-0"
                         />
                         <span className="font-semibold">@{p.agent_id}</span>
                         <span className="opacity-70 text-[9px]">
@@ -1338,6 +1347,30 @@ function AgentThinkingModal({
                       </button>
                     );
                   })}
+              </div>
+
+              {/* Quick Keyword Search in Flow Tree */}
+              <div className="pt-1 flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    data-testid="flow-tree-search-input"
+                    value={flowSearchQuery}
+                    onChange={(e) => setFlowSearchQuery(e.target.value)}
+                    placeholder="Tìm kiếm từ khóa, @agent hoặc công cụ trong Flow Tree..."
+                    className="w-full pl-7 pr-6 py-1 rounded-lg bg-white dark:bg-[#191926] border border-slate-200 dark:border-[#2a2a3c] text-[10px] font-mono text-slate-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:border-[#f8a87c]"
+                  />
+                  {flowSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setFlowSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Session Evolution Wave Selector (Shows smooth Solo <-> Multi-Agent transitions across turns) */}
@@ -1495,7 +1528,7 @@ function AgentThinkingModal({
                           agent={cAg || { id: collabSlug, name: collabSlug }}
                           size="2xs"
                           interactive={false}
-                          className="scale-90 shrink-0"
+                          className="shrink-0"
                         />
                         <span>@{collabSlug}</span>
                         <span className="opacity-70 text-[9px]">(Chuyên viên)</span>
@@ -1518,7 +1551,7 @@ function AgentThinkingModal({
                           agent={allAgents.find((a) => (a.slug || "").toLowerCase() === hostSlug.toLowerCase() || a.id.toLowerCase() === hostSlug.toLowerCase()) || { id: hostSlug, name: hostDisplayName }}
                           size="2xs"
                           interactive={false}
-                          className="scale-90 shrink-0"
+                          className="shrink-0"
                         />
                         <span>@{hostSlug}</span>
                         <span className="opacity-85 text-[9px]">
@@ -5050,9 +5083,9 @@ export function GrokBotWorkspace() {
   const [channelFilter, setChannelFilter] = useState<string>(() => {
     try {
       const savedGlobal = localStorage.getItem("agent360_last_channel_filter");
-      return savedGlobal || "console";
+      return savedGlobal || "all";
     } catch {
-      return "console";
+      return "all";
     }
   });
 
@@ -5061,10 +5094,10 @@ export function GrokBotWorkspace() {
     if (!selectedAgentId) return;
     try {
       const savedForAgent = localStorage.getItem(`agent360_channel_filter_${selectedAgentId}`);
-      if (savedForAgent) {
-        setChannelFilter(savedForAgent);
-      }
-    } catch {}
+      setChannelFilter(savedForAgent || "all");
+    } catch {
+      setChannelFilter("all");
+    }
   }, [selectedAgentId]);
 
   const handleSelectChannelFilter = (newChannel: string) => {
@@ -5853,9 +5886,10 @@ export function GrokBotWorkspace() {
     if (selectedChatId) {
       sessionScrollPositionsRef.current[selectedChatId] = el.scrollTop;
     }
-    // Calculate distance from bottom
+    // Calculate distance from bottom only when content overflows container
+    const hasOverflow = el.scrollHeight > el.clientHeight + 24;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    const isScrolledUp = distanceFromBottom > 35;
+    const isScrolledUp = hasOverflow && distanceFromBottom > 35;
     isUserScrolledUpRef.current = isScrolledUp;
     setShowScrollBottomBtn(isScrolledUp);
 
@@ -6261,13 +6295,18 @@ export function GrokBotWorkspace() {
             localStorage.setItem(savedChatKey, targetChatId);
           } catch {}
 
-          // Ensure channel filter does not hide this newly selected chat if it belongs to a different channel
+          // Ensure channel filter does not hide loaded chats or the selected chat
           const targetChannel = (targetChat.channel || "console").toLowerCase();
           setChannelFilter((prev) => {
-            if (prev !== "all" && prev !== targetChannel) {
+            if (prev === "all") return "all";
+            const hasPrevChannelChats = loadedChats.some((c) => {
+              const ch = (c.channel || "console").toLowerCase();
+              return prev === "other" ? !["console", "telegram", "zalo"].includes(ch) : ch === prev;
+            });
+            if (!hasPrevChannelChats) return "all";
+            if (prev !== targetChannel) {
               if (prev === "other" && !["console", "telegram", "zalo"].includes(targetChannel)) return prev;
-              // If target channel has sessions, switch to that channel or "all"
-              return targetChannel || "all";
+              return "all";
             }
             return prev;
           });
@@ -7034,6 +7073,15 @@ export function GrokBotWorkspace() {
       }
       return;
     }
+    // Check if container actually overflows; if not, hide scroll-to-bottom button
+    if (messagesContainerRef.current) {
+      const el = messagesContainerRef.current;
+      if (el.scrollHeight <= el.clientHeight + 24) {
+        setShowScrollBottomBtn(false);
+        isUserScrolledUpRef.current = false;
+      }
+    }
+
     // During active streaming or new messages, only scroll if user has NOT scrolled up
     if (isStreaming && !isUserScrolledUpRef.current) {
       jumpToBottom();
@@ -9020,10 +9068,10 @@ export function GrokBotWorkspace() {
                         }}
                         className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
-                            ? "px-2 py-1 gap-2"
+                            ? "px-2 py-1 gap-1.5"
                             : layoutDensity === "comfortable"
-                            ? "px-2.5 py-2 gap-2.5"
-                            : "px-2 py-1.5 gap-2.5"
+                            ? "px-2.5 py-1.5 gap-2"
+                            : "px-2 py-1 gap-1.5"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
                             ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
@@ -9033,7 +9081,7 @@ export function GrokBotWorkspace() {
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
-                        <div className="relative shrink-0">
+                        <div className="relative shrink-0 flex items-center justify-center self-center">
                           <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
@@ -9044,7 +9092,7 @@ export function GrokBotWorkspace() {
                         </div>
 
                         {/* Agent Details: Lean typography with rich status tooltip */}
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
                             <span className={`text-xs font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
@@ -9189,7 +9237,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[11px] font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[10px] leading-tight font-sans truncate block mt-0 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -9261,10 +9309,10 @@ export function GrokBotWorkspace() {
                         }}
                         className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
-                            ? "px-2 py-1 gap-2"
+                            ? "px-2 py-1 gap-1.5"
                             : layoutDensity === "comfortable"
-                            ? "px-2.5 py-2 gap-2.5"
-                            : "px-2 py-1.5 gap-2.5"
+                            ? "px-2.5 py-1.5 gap-2"
+                            : "px-2 py-1 gap-1.5"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
                             ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
@@ -9274,7 +9322,7 @@ export function GrokBotWorkspace() {
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
-                        <div className="relative shrink-0">
+                        <div className="relative shrink-0 flex items-center justify-center self-center">
                           <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
@@ -9285,7 +9333,7 @@ export function GrokBotWorkspace() {
                         </div>
 
                         {/* Agent Details: Lean typography with rich status tooltip */}
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
                             <span className={`text-xs font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
@@ -9430,7 +9478,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[11px] font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[10px] leading-tight font-sans truncate block mt-0 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -9702,7 +9750,7 @@ export function GrokBotWorkspace() {
                     setMobileBotInfoOpen((prev) => !prev);
                   }
                 }}
-                className="group flex items-center gap-1.5 sm:gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none"
+                className="group inline-flex items-center justify-center gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none leading-none"
               >
                 {hasNoAgents ? (
                   <>
@@ -9711,7 +9759,7 @@ export function GrokBotWorkspace() {
                   </>
                 ) : (
                   <>
-                    <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
+                    <AgentAvatar agent={selectedAgent} size="sm" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
                       <ChevronRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
@@ -10010,11 +10058,11 @@ export function GrokBotWorkspace() {
                     style={{
                       color: agentTheme.light,
                       backgroundColor: variant === "inline" ? agentTheme.bgLight : undefined,
-                      borderColor: variant === "inline" ? agentTheme.borderLight : undefined,
+                      borderColor: undefined,
                     }}
-                    className={`relative inline-flex items-center gap-1.5 group/agchip cursor-pointer select-none dark:!text-[var(--dark-theme-color)] ${
+                    className={`relative inline-flex items-center gap-1 group/agchip cursor-pointer select-none dark:!text-[var(--dark-theme-color)] transition-transform duration-150 ease-out hover:scale-105 ${
                       variant === "inline"
-                        ? "px-2 py-0.5 mx-0.5 rounded-full border text-[12px] font-medium align-baseline shadow-2xs hover:brightness-105"
+                        ? "px-1.5 py-0.5 mx-0.5 my-0.5 rounded-full border-0 text-[12px] font-medium align-middle leading-none shadow-2xs hover:brightness-105"
                         : "font-semibold hover:underline"
                     }`}
                   >
@@ -10023,9 +10071,9 @@ export function GrokBotWorkspace() {
                       agent={matchedAg || { id: cleanSlug, name: fullName, roleTag: roleLabel }}
                       size="2xs"
                       interactive={false}
-                      className="shrink-0 scale-95 shadow-2xs ring-1 ring-black/5 dark:ring-white/10"
+                      className="shrink-0"
                     />
-                    <span className="font-semibold">{shortName}</span>
+                    <span className="font-semibold leading-none">{shortName}</span>
 
                     {/* Hover / Focus Popover Card showing Bot Role, Model, Live Status & Click to Open Shared History */}
                     <span
@@ -11488,53 +11536,14 @@ export function GrokBotWorkspace() {
 
                       const sessionCommands = [
                         {
-                          id: "cmd-goal",
-                          title: "Goal",
-                          description: "Set a goal to keep pursuing",
-                          icon: <Target size={14} className="text-emerald-400" />,
+                          id: "cmd-attach-files",
+                          title: "Attach files",
+                          description: "Tải lên tệp hoặc thư mục từ máy",
+                          icon: <Paperclip size={14} className="text-[#f8a87c]" />,
                           action: () => {
                             setIsPlusMenuOpen(false);
-                            setInputText("");
-                            handleSelectLoopMode("goal");
-                            setForkToast("Đã kích hoạt Goal mode (Bám sát mục tiêu)");
-                            setTimeout(() => setForkToast(null), 3000);
-                          },
-                        },
-                        {
-                          id: "cmd-agent-settings",
-                          title: "Agent Settings",
-                          description: "Mở cài đặt chuyên sâu của Agent (Model, Apps, A2A, Cron, Memory)",
-                          icon: <Settings size={14} className="text-[#f8a87c]" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            setAgentSettingsModalTab("general");
-                            setIsAgentSettingsModalOpen(true);
-                          },
-                        },
-                        {
-                          id: "cmd-mcp",
-                          title: "MCP",
-                          description: "Show MCP server status",
-                          hasChevron: true,
-                          icon: <Activity size={14} className="text-neutral-400" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            setAgentSettingsModalTab("apps_mcp");
-                            setIsAgentSettingsModalOpen(true);
-                          },
-                        },
-                        {
-                          id: "cmd-memories",
-                          title: "Memories",
-                          description: "Xem và quản lý bộ nhớ của agent",
-                          icon: <Layers size={14} className="text-neutral-400" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            setAgentSettingsModalTab("memory_skills");
-                            setIsAgentSettingsModalOpen(true);
+                            setInputText((prev) => prev.replace(/(\/[a-zA-Z0-9_-]*)$/, ""));
+                            fileInputRef.current?.click();
                           },
                         },
                         {
@@ -11546,18 +11555,6 @@ export function GrokBotWorkspace() {
                             setIsPlusMenuOpen(false);
                             setInputText("");
                             handleNewChat();
-                          },
-                        },
-                        {
-                          id: "cmd-pet",
-                          title: "Pet",
-                          description: "Wake or tuck away the desktop pet",
-                          icon: <Sparkles size={14} className="text-neutral-400" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            setForkToast("Desktop Pet is ready in fleet");
-                            setTimeout(() => setForkToast(null), 2500);
                           },
                         },
                         {
@@ -11574,6 +11571,19 @@ export function GrokBotWorkspace() {
                           },
                         },
                         {
+                          id: "cmd-goal",
+                          title: "Goal",
+                          description: "Set a goal to keep pursuing",
+                          icon: <Target size={14} className="text-emerald-400" />,
+                          action: () => {
+                            setIsPlusMenuOpen(false);
+                            setInputText("");
+                            handleSelectLoopMode("goal");
+                            setForkToast("Đã kích hoạt Goal mode (Bám sát mục tiêu)");
+                            setTimeout(() => setForkToast(null), 3000);
+                          },
+                        },
+                        {
                           id: "cmd-plan-mode",
                           title: "Plan mode",
                           description: "Turn plan mode on",
@@ -11587,54 +11597,15 @@ export function GrokBotWorkspace() {
                           },
                         },
                         {
-                          id: "cmd-rename",
-                          title: "Rename",
-                          description: "Rename the current chat",
-                          icon: <Edit2 size={14} className="text-neutral-400" />,
+                          id: "cmd-agent-settings",
+                          title: "Agent Settings",
+                          description: "Mở cài đặt chuyên sâu của Agent (Model, Apps, A2A, Cron, Memory)",
+                          icon: <Settings size={14} className="text-[#f8a87c]" />,
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText("");
-                            if (selectedChatId) {
-                              setEditingChatId(selectedChatId);
-                              setEditingChatTitle(selectedChat?.title || "");
-                            }
-                          },
-                        },
-                        {
-                          id: "cmd-side",
-                          title: "Side",
-                          description: "Start a temporary side chat",
-                          icon: <MessageSquare size={14} className="text-neutral-400" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            handleForkSession(messages.length > 0 ? messages.length - 1 : 0);
-                            setForkToast("Đã mở temporary side chat");
-                            setTimeout(() => setForkToast(null), 3000);
-                          },
-                        },
-                        {
-                          id: "cmd-sketch",
-                          title: "Sketch",
-                          description: "Draw a sketch",
-                          icon: <Layers size={14} className="text-teal-400" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            handleToggleBotInfo(false);
-                            setRightTab("Computer");
-                          },
-                        },
-                        {
-                          id: "cmd-status",
-                          title: "Status",
-                          description: `Show chat ID, context usage (${usagePercent}% used)`,
-                          icon: <Activity size={14} className="text-neutral-400" />,
-                          action: () => {
-                            setIsPlusMenuOpen(false);
-                            setInputText("");
-                            setForkToast(`Session: ${selectedChatId || "default"} | Context: ${usagePercent}%`);
-                            setTimeout(() => setForkToast(null), 4000);
+                            setAgentSettingsModalTab("general");
+                            setIsAgentSettingsModalOpen(true);
                           },
                         },
                       ];
@@ -11674,10 +11645,10 @@ export function GrokBotWorkspace() {
                                         {cmd.icon}
                                       </div>
                                       <div className="flex items-baseline gap-2.5 min-w-0 flex-1">
-                                        <span className="font-semibold text-xs text-slate-900 dark:text-white shrink-0">
+                                        <span className="font-medium text-[11px] text-slate-900 dark:text-white shrink-0">
                                           {cmd.title}
                                         </span>
-                                        <span className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
+                                        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
                                           {cmd.description}
                                         </span>
                                       </div>
@@ -11809,9 +11780,12 @@ export function GrokBotWorkspace() {
                         title: ag.name,
                         description: ag.roleTag || ag.description || "Fast helper subagent running in fleet",
                         icon: (
-                          <div className="h-5 w-5 rounded-full bg-gradient-to-br from-amber-400 to-[#f8a87c] flex items-center justify-center text-black font-bold text-[10px] shrink-0 shadow-2xs">
-                            {ag.name.slice(0, 1).toUpperCase()}
-                          </div>
+                          <AgentAvatar
+                            agent={ag}
+                            size="2xs"
+                            interactive={false}
+                            className="shrink-0"
+                          />
                         ),
                         action: () => {
                           setIsPlusMenuOpen(false);
@@ -11842,15 +11816,15 @@ export function GrokBotWorkspace() {
                     const filteredAgents = filterItems(agentActions);
 
                     const allAtItems = [
-                      ...filteredAdd,
-                      ...filteredPlugins,
                       ...filteredAgents,
+                      ...filteredPlugins,
+                      ...filteredAdd,
                     ];
 
                     const groups = [
-                      { name: "Add", items: filteredAdd },
-                      { name: "Plugins", items: filteredPlugins },
                       { name: "Agents", items: filteredAgents },
+                      { name: "Apps & MCPs", items: filteredPlugins },
+                      { name: "Add", items: filteredAdd },
                     ].filter((g) => g.items.length > 0);
 
                     return (
@@ -11888,10 +11862,10 @@ export function GrokBotWorkspace() {
                                             {item.icon}
                                           </div>
                                           <div className="flex items-baseline gap-2 min-w-0 flex-1">
-                                            <span className="font-semibold text-xs text-slate-900 dark:text-white shrink-0">
+                                            <span className="font-medium text-[11px] text-slate-900 dark:text-white shrink-0">
                                               {item.title}
                                             </span>
-                                            <span className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
+                                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
                                               {item.description}
                                             </span>
                                           </div>
@@ -12308,13 +12282,18 @@ export function GrokBotWorkspace() {
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-                              <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border ${
-                                isAlreadyMentioned
-                                  ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-                                  : "bg-amber-500/15 dark:bg-[#f8a87c]/20 border-amber-500/40 dark:border-[#f8a87c]/30 text-[#f8a87c]"
-                              }`}>
-                                {isAlreadyMentioned ? <Check size={11} className="stroke-[2.5]" /> : ag.name.slice(0, 1)}
-                              </div>
+                              {isAlreadyMentioned ? (
+                                <div className="h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0 shadow-2xs border bg-emerald-500/20 border-emerald-500/50 text-emerald-400">
+                                  <Check size={11} className="stroke-[2.5]" />
+                                </div>
+                              ) : (
+                                <AgentAvatar
+                                  agent={ag}
+                                  size="2xs"
+                                  interactive={false}
+                                  className="shrink-0"
+                                />
+                              )}
                               <span className="truncate text-[11px]">{ag.name}</span>
                             </div>
                             <span className={`text-[9px] font-mono shrink-0 flex items-center gap-1 ${
@@ -12334,86 +12313,6 @@ export function GrokBotWorkspace() {
 
                 </div>
             )}
-
-            {/* Proposal 3: Smart Solo Suggested Collaborator 1-Tap Summon Bar */}
-            {(() => {
-              const hostSlugCur = (selectedAgent?.slug || selectedAgent?.id || "").replace(/^bot:agent360:/i, "").toLowerCase();
-              const canonicalSpecialists = [
-                { slug: "zen", label: "Zen (Sales & B2B)" },
-                { slug: "climax-default", label: "Climax (Brand & Social)" },
-                { slug: "planthy-pm", label: "Planthy PM (Timeline)" },
-                { slug: "ken", label: "Ken (Product PO)" },
-                { slug: "mons", label: "Mons (Dev & Infra)" },
-              ].filter((s) => s.slug !== hostSlugCur);
-
-              // Check if latest request turn in activeSessionRoom has suggested_collaborators from Manager
-              let managerSuggested: string[] = [];
-              if (activeSessionRoom && Array.isArray(activeSessionRoom.turns)) {
-                const lastReq = [...activeSessionRoom.turns].reverse().find((t) => t.kind === "request");
-                const triageStep = lastReq?.steps?.find((s: any) => s.tool === "agentteams_manager_triage");
-                if (triageStep?.result) {
-                  try {
-                    const parsed = JSON.parse(triageStep.result);
-                    if (Array.isArray(parsed.suggested_collaborators)) {
-                      managerSuggested = parsed.suggested_collaborators.map((x: string) => String(x).toLowerCase());
-                    }
-                  } catch {}
-                }
-              }
-
-              const orderedChips = [
-                ...canonicalSpecialists.filter((c) => managerSuggested.includes(c.slug)),
-                ...canonicalSpecialists.filter((c) => !managerSuggested.includes(c.slug)),
-              ].slice(0, 4);
-
-              return (
-                <div
-                  data-testid="smart-solo-suggested-bar"
-                  className="mb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 select-none"
-                >
-                  <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 shrink-0 flex items-center gap-1">
-                    <Sparkles size={10} className="text-[#f8a87c]" />
-                    <span>{managerSuggested.length > 0 ? "Manager gợi ý phối hợp:" : "Phối hợp nhanh:"}</span>
-                  </span>
-                  {orderedChips.map((item) => {
-                    const isSuggested = managerSuggested.includes(item.slug);
-                    const isAlreadyTagged = new RegExp(`@${item.slug}\\b`, "i").test(inputText);
-                    return (
-                      <button
-                        key={item.slug}
-                        type="button"
-                        data-testid={`smart-suggest-chip-${item.slug}`}
-                        onClick={() => {
-                          triggerHaptic(8);
-                          setInputText((prev) => {
-                            if (new RegExp(`@${item.slug}\\b`, "i").test(prev)) return prev;
-                            return prev ? `${prev.trimEnd()} @${item.slug} ` : `@${item.slug} `;
-                          });
-                          if (selectedChatId && selectedAgentId) {
-                            pullAgentIntoChatRoom(selectedAgentId, selectedChatId, item.slug, {
-                              hostSessionId: selectedChat?.session_id || selectedChatId,
-                            }).then((res) => {
-                              if (res?.room) setActiveSessionRoom(res.room);
-                            });
-                          }
-                          setTimeout(() => textareaRef.current?.focus(), 40);
-                        }}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border transition-all cursor-pointer shrink-0 ${
-                          isAlreadyTagged
-                            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300 font-semibold"
-                            : isSuggested
-                            ? "bg-[#f8a87c]/15 border-[#f8a87c]/45 text-[#e0682b] dark:text-[#f8a87c] font-semibold"
-                            : "bg-slate-100/80 dark:bg-[#161620] border-slate-200 dark:border-[#262636] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:border-[#f8a87c]/40"
-                        }`}
-                      >
-                        <span>{isAlreadyTagged ? "✓" : "+"} @{item.slug}</span>
-                        {isSuggested && <span className="text-[8px] opacity-80">(Gợi ý)</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
 
             {replyingToMsg && (
               <div
@@ -12593,33 +12492,21 @@ export function GrokBotWorkspace() {
                         if (trigger === "/") {
                           // Session actions list for '/'
                           const slashNavList = [
-                            { id: "cmd-agent-settings", type: "action" },
-                            { id: "cmd-goal", type: "action" },
-                            { id: "cmd-mcp", type: "action" },
-                            { id: "cmd-memories", type: "action" },
+                            { id: "cmd-attach-files", type: "action" },
                             { id: "cmd-new-chat", type: "action" },
-                            { id: "cmd-pet", type: "action" },
                             { id: "cmd-pin-chat", type: "action" },
+                            { id: "cmd-goal", type: "action" },
                             { id: "cmd-plan-mode", type: "action" },
-                            { id: "cmd-rename", type: "action" },
-                            { id: "cmd-side", type: "action" },
-                            { id: "cmd-sketch", type: "action" },
-                            { id: "cmd-status", type: "action" },
+                            { id: "cmd-agent-settings", type: "action" },
                           ];
 
                           const slashTitles: Record<string, { title: string; desc: string }> = {
-                            "cmd-agent-settings": { title: "Agent Settings", desc: "Mở cài đặt chuyên sâu của Agent" },
-                            "cmd-goal": { title: "Goal", desc: "Set a goal to keep pursuing" },
-                            "cmd-mcp": { title: "MCP", desc: "Show MCP server status" },
-                            "cmd-memories": { title: "Memories", desc: "Xem và quản lý bộ nhớ của agent" },
+                            "cmd-attach-files": { title: "Attach files", desc: "Tải lên tệp hoặc thư mục từ máy" },
                             "cmd-new-chat": { title: "New chat", desc: "Start a blank chat in the same agent" },
-                            "cmd-pet": { title: "Pet", desc: "Wake or tuck away the desktop pet" },
                             "cmd-pin-chat": { title: "Pin chat", desc: "Keep this chat in the sidebar" },
+                            "cmd-goal": { title: "Goal", desc: "Set a goal to keep pursuing" },
                             "cmd-plan-mode": { title: "Plan mode", desc: "Turn plan mode on" },
-                            "cmd-rename": { title: "Rename", desc: "Rename the current chat" },
-                            "cmd-side": { title: "Side", desc: "Start a temporary side chat" },
-                            "cmd-sketch": { title: "Sketch", desc: "Draw a sketch" },
-                            "cmd-status": { title: "Status", desc: "Show chat ID, context usage" },
+                            "cmd-agent-settings": { title: "Agent Settings", desc: "Mở cài đặt chuyên sâu của Agent" },
                           };
 
                           const filteredSlash = q
@@ -12644,32 +12531,18 @@ export function GrokBotWorkspace() {
                               setIsPlusMenuOpen(false);
                               setInputText("");
 
-                              if (selected.id === "cmd-agent-settings") {
-                                setAgentSettingsModalTab("general");
-                                setIsAgentSettingsModalOpen(true);
-                              } else if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
-                                handleSelectLoopMode("goal");
-                              } else if (selected.id === "cmd-mcp") {
-                                setAgentSettingsModalTab("apps_mcp");
-                                setIsAgentSettingsModalOpen(true);
-                              } else if (selected.id === "cmd-memories") {
-                                setAgentSettingsModalTab("memory_skills");
-                                setIsAgentSettingsModalOpen(true);
+                              if (selected.id === "cmd-attach-files") {
+                                setInputText((prev) => prev.replace(/(\/[a-zA-Z0-9_-]*)$/, ""));
+                                fileInputRef.current?.click();
                               } else if (selected.id === "cmd-new-chat") {
                                 handleNewChat();
                               } else if (selected.id === "cmd-pin-chat" && selectedChatId) {
                                 togglePinChat(selectedChatId);
-                              } else if (selected.id === "cmd-rename" && selectedChatId) {
-                                setEditingChatId(selectedChatId);
-                                setEditingChatTitle(selectedChat?.title || "");
-                              } else if (selected.id === "cmd-side") {
-                                handleForkSession(messages.length > 0 ? messages.length - 1 : 0);
-                              } else if (selected.id === "cmd-sketch") {
-                                handleToggleBotInfo(false);
-                                setRightTab("Computer");
-                              } else if (selected.id === "cmd-status") {
-                                setForkToast(`Session: ${selectedChatId || "default"}`);
-                                setTimeout(() => setForkToast(null), 3000);
+                              } else if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
+                                handleSelectLoopMode("goal");
+                              } else if (selected.id === "cmd-agent-settings") {
+                                setAgentSettingsModalTab("general");
+                                setIsAgentSettingsModalOpen(true);
                               }
                               return;
                             }
@@ -12692,16 +12565,18 @@ export function GrokBotWorkspace() {
                           const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
                           const displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
 
-                          const allAtNav: Array<{ id: string; type: "file" | "browser" | "mode" | "app" | "agent"; title: string; description: string }> = [
+                          const allAtNav: Array<{ id: string; type: "file" | "browser" | "mode" | "app" | "agent"; title: string; description: string }> = [];
+
+                          displayAgents.forEach((ag) => allAtNav.push({ id: ag.id, type: "agent", title: ag.name, description: ag.roleTag || ag.description || "" }));
+                          rawApps.forEach((a) => allAtNav.push({ id: a.id, type: "app", title: a.title, description: a.description }));
+
+                          allAtNav.push(
                             { id: "action-files-folders", type: "file", title: "Files and folders", description: "Tải lên tệp hoặc thư mục mã nguồn từ máy" },
                             { id: "action-attach-browser", type: "browser", title: "Attach Microsoft Edge", description: "Live browser sandbox" },
                             { id: "mode-goal", type: "mode", title: "Goal", description: "Set a goal to keep pursuing" },
                             { id: "mode-plan", type: "mode", title: "Plan mode", description: "Turn plan mode on" },
-                            { id: "mode-sketch", type: "mode", title: "Sketch", description: "Draw a sketch" },
-                          ];
-
-                          rawApps.forEach((a) => allAtNav.push({ id: a.id, type: "app", title: a.title, description: a.description }));
-                          displayAgents.forEach((ag) => allAtNav.push({ id: ag.id, type: "agent", title: ag.name, description: ag.roleTag || ag.description || "" }));
+                            { id: "mode-sketch", type: "mode", title: "Sketch", description: "Draw a sketch" }
+                          );
 
                           const filteredAt = q
                             ? allAtNav.filter((it) => it.title.toLowerCase().includes(q) || it.description.toLowerCase().includes(q) || it.id.toLowerCase().includes(q))
@@ -13366,10 +13241,12 @@ export function GrokBotWorkspace() {
                     {/* Interactive Icon Box: Ultra-compact & aligned */}
                     <div
                       onClick={(e) => handleToggleSelectChat(chat.id, e)}
-                      className={`h-5 w-5 rounded-md border flex items-center justify-center shrink-0 relative transition-all cursor-pointer ${
+                      className={`h-5 w-5 rounded-md flex items-center justify-center shrink-0 relative transition-all cursor-pointer ${
                         selectedChatIds.includes(chat.id)
-                          ? "bg-[#f8a87c] border-[#f8a87c] text-black shadow-xs"
-                          : "bg-slate-100 dark:bg-[#181822] border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 group-hover:border-[#f8a87c]/50"
+                          ? "bg-[#f8a87c] border border-[#f8a87c] text-black shadow-xs"
+                          : isChatRunning
+                          ? "bg-transparent border-0 group-hover:bg-slate-100 dark:group-hover:bg-[#181822] group-hover:border group-hover:border-[#f8a87c]/50"
+                          : "bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 group-hover:border-[#f8a87c]/50"
                       }`}
                       title={selectedChatIds.includes(chat.id) ? "Bỏ chọn phiên này" : "Chọn phiên này để xóa hàng loạt"}
                     >
@@ -13387,7 +13264,7 @@ export function GrokBotWorkspace() {
                             interactive={false}
                             alwaysAnimate={true}
                             forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                            className="scale-95 ring-1 ring-[#f8a87c]/50"
+                            className="shrink-0"
                           />
                         ) : (
                           <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
@@ -13982,10 +13859,10 @@ ${chat.id}`);
               >
                 <AgentAvatar agent={selectedAgent} size="lg" className="shadow-lg" />
                 <span
-                  className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white dark:ring-[#0c0c0e] ${
+                  className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1.5 ring-white dark:ring-[#0c0c0e] ${
                     selectedAgent.status === "degraded"
-                      ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] animate-pulse"
-                      : "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                      ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse"
+                      : "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
                   }`}
                 />
               </div>
