@@ -5849,12 +5849,18 @@ export function GrokBotWorkspace() {
         }
       }
     }
+    const knownFleetSlugs = new Set(
+      agents.map((a) => (a.slug || a.id).replace(/^bot:agent360:/i, "").toLowerCase())
+    );
     for (const m of sourceMsgs) {
       if (m.role === "user" && m.content) {
         const matches = Array.from(m.content.matchAll(/(?:^|\s)@([a-zA-Z0-9_-]{2,32})/g));
         for (const mt of matches) {
           const slug = mt[1].toLowerCase();
-          if (slug !== (selectedAgent?.slug || selectedAgentId || "").toLowerCase()) {
+          if (
+            slug !== (selectedAgent?.slug || selectedAgentId || "").toLowerCase() &&
+            (knownFleetSlugs.size === 0 || knownFleetSlugs.has(slug))
+          ) {
             collabSet.add(slug);
           }
         }

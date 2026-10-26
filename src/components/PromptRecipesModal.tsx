@@ -214,8 +214,8 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
             }}
             className="p-3.5 rounded-xl bg-white dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 transition-all cursor-pointer group shadow-xs space-y-1.5"
           >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-[#f8a87c] transition-colors truncate">
                   {recipe.title}
                 </span>
@@ -229,7 +229,10 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
                 {recipe.collaborators && recipe.collaborators.length > 0 && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                     <Users size={9} />
-                    <span>{recipe.collaborators.map((c) => `@${c}`).join(" ")}</span>
+                    <span>
+                      {recipe.collaborators.slice(0, 3).map((c) => `@${c}`).join(" ")}
+                      {recipe.collaborators.length > 3 ? ` +${recipe.collaborators.length - 3}` : ""}
+                    </span>
                   </span>
                 )}
                 <span className="px-1.5 py-0.2 rounded text-[9px] font-mono uppercase bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-neutral-400 border border-slate-200 dark:border-white/10">
