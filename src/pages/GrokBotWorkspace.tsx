@@ -6194,6 +6194,22 @@ export function GrokBotWorkspace() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Listen to WebSocket composio:connection_activated globally so workspace state updates even when modal is closed
+  useEffect(() => {
+    const handleGlobalComposioActivation = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail;
+      if (detail?.app_slug) {
+        const cleanSlug = String(detail.app_slug).toLowerCase().replace(/^composio_/, "");
+        setConnectedAppIds((prev) => Array.from(new Set([...prev, cleanSlug])));
+        setMcpRefreshTrigger((t) => t + 1);
+      }
+    };
+    window.addEventListener("composio:connection_activated", handleGlobalComposioActivation);
+    return () => {
+      window.removeEventListener("composio:connection_activated", handleGlobalComposioActivation);
+    };
+  }, []);
+
   // Fetch agent-specific MCP clients, loop mode and subagents whenever selectedAgentId changes
   useEffect(() => {
     if (!isKnownAgent(selectedAgentId)) return;
@@ -15035,6 +15051,7 @@ ${chat.id}`);
         onToggleAgentEnabled={handleToggleAgentEnabled}
         onOpenConnectModal={() => setIsConnectAppsOpen(true)}
         mcpRefreshTrigger={mcpRefreshTrigger}
+        onMcpClientsChanged={() => setMcpRefreshTrigger((t) => t + 1)}
         onOpenTopologyModal={() => setIsTopologyModalOpen(true)}
         channels={channels}
         loadingChannels={loadingChannels}
@@ -15700,11 +15717,34 @@ ${chat.id}`);
         targetAgentName={selectedAgent.name}
         connectedAppIds={connectedAppIds}
         onAppConnected={(appId) => {
-          setConnectedAppIds((prev) => Array.from(new Set([...prev, appId])));
+          const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");
+          setConnectedAppIds((prev) => Array.from(new Set([...prev, cleanSlug])));
+          setCurrentAgentMcpClients((prev) => {
+            const clientKey = `composio_${cleanSlug}`;
+            if (prev.some((c) => c.key.toLowerCase() === clientKey || c.key.toLowerCase() === cleanSlug)) {
+              return prev;
+            }
+            const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === cleanSlug);
+            return [
+              ...prev,
+              {
+                key: clientKey,
+                name: matched?.name || cleanSlug,
+                description: matched?.description || `Composio ${cleanSlug} integration`,
+                enabled: true,
+                transport: "sse",
+                url: `https://connect.composio.dev/mcp/${cleanSlug}`,
+              },
+            ];
+          });
           setMcpRefreshTrigger((t) => t + 1);
         }}
         onAppDisconnected={(appId) => {
-          setConnectedAppIds((prev) => prev.filter((id) => id !== appId));
+          const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");
+          setConnectedAppIds((prev) => prev.filter((id) => id !== cleanSlug));
+          setCurrentAgentMcpClients((prev) =>
+            prev.filter((c) => c.key.toLowerCase().replace(/^composio_/, "") !== cleanSlug)
+          );
           setMcpRefreshTrigger((t) => t + 1);
         }}
       />

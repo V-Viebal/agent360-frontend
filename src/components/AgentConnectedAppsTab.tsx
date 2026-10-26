@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import { AgentMcpClient, fetchAgentMcpClients } from "../services/agentApi";
+import { AgentMcpClient, fetchAgentMcpClients, authorizedFetch } from "../services/agentApi";
 import { APPS_CATALOG } from "./ConnectAppsModal";
 
 interface AgentConnectedAppsTabProps {
@@ -20,6 +20,7 @@ interface AgentConnectedAppsTabProps {
   agentName: string;
   onOpenConnectModal: () => void;
   onRefreshTrigger?: number;
+  onClientsChanged?: () => void;
 }
 
 export function AgentConnectedAppsTab({
@@ -27,6 +28,7 @@ export function AgentConnectedAppsTab({
   agentName,
   onOpenConnectModal,
   onRefreshTrigger = 0,
+  onClientsChanged,
 }: AgentConnectedAppsTabProps) {
   const { t } = useTranslation();
   const [clients, setClients] = useState<AgentMcpClient[]>([]);
@@ -54,12 +56,23 @@ export function AgentConnectedAppsTab({
     loadMcpClients();
   }, [agentId, onRefreshTrigger]);
 
+  useEffect(() => {
+    const handleWsActivated = () => {
+      loadMcpClients();
+      onClientsChanged?.();
+    };
+    window.addEventListener("composio:connection_activated", handleWsActivated);
+    return () => {
+      window.removeEventListener("composio:connection_activated", handleWsActivated);
+    };
+  }, [agentId]);
+
       const handleInspectSchema = async (client: AgentMcpClient, e: React.MouseEvent) => {
     e.stopPropagation();
     const appSlug = client.key.replace(/^composio_/, "");
     // Fetch schema details via refresh-schema
     try {
-      const res = await fetch("/api/integrations/composio/refresh-schema", {
+      const res = await authorizedFetch("/api/integrations/composio/refresh-schema", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appSlug, agentId }),
@@ -81,7 +94,7 @@ export function AgentConnectedAppsTab({
     const appSlug = client.key.replace(/^composio_/, "");
     setRefreshingKey(client.key);
     try {
-      const res = await fetch("/api/integrations/composio/refresh-schema", {
+      const res = await authorizedFetch("/api/integrations/composio/refresh-schema", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appSlug, agentId }),
@@ -106,14 +119,19 @@ export function AgentConnectedAppsTab({
 
     setDeletingKey(clientKey);
     try {
-      const res = await fetch(`/api/mcp/${encodeURIComponent(clientKey)}`, {
-        method: "DELETE",
-        headers: {
-          "X-Agent-Id": agentId,
+      const res = await authorizedFetch(
+        `/api/mcp/${encodeURIComponent(clientKey)}`,
+        {
+          method: "DELETE",
+          headers: {
+            "X-Agent-Id": agentId,
+          },
         },
-      });
+        agentId
+      );
       if (res.ok) {
         setClients((prev) => prev.filter((c) => c.key !== clientKey));
+        onClientsChanged?.();
       } else {
         alert(`Failed to delete client: status ${res.status}`);
       }
@@ -410,7 +428,7 @@ export function AgentConnectedAppsTab({
         agentName={agentName}
         tools={inspectorModal.tools}
         onRefreshSchema={async () => {
-          const res = await fetch("/api/integrations/composio/refresh-schema", {
+          const res = await authorizedFetch("/api/integrations/composio/refresh-schema", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ appSlug: inspectorModal.appSlug, agentId }),

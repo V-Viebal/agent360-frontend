@@ -65,6 +65,7 @@ interface AgentSettingsModalProps {
   // Apps & MCP
   onOpenConnectModal: () => void;
   mcpRefreshTrigger: number;
+  onMcpClientsChanged?: () => void;
   // Sub-Agents & Topology
   onOpenTopologyModal: () => void;
   // Channels & Schedules
@@ -102,6 +103,7 @@ export function AgentSettingsModal({
   onToggleAgentEnabled,
   onOpenConnectModal,
   mcpRefreshTrigger,
+  onMcpClientsChanged,
   onOpenTopologyModal,
   channels,
   loadingChannels,
@@ -620,6 +622,7 @@ export function AgentSettingsModal({
                   agentName={agent.name}
                   onOpenConnectModal={onOpenConnectModal}
                   onRefreshTrigger={mcpRefreshTrigger}
+                  onClientsChanged={onMcpClientsChanged}
                 />
               </div>
             )}

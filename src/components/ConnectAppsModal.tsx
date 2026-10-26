@@ -1,4 +1,5 @@
 import { useTranslation } from "../i18n/LanguageContext";
+import { authorizedFetch } from "../services/agentApi";
 import { useState, useEffect } from "react";
 import {
   Search,
@@ -553,6 +554,7 @@ export function ConnectAppsModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [loadingAppId, setLoadingAppId] = useState<string | null>(null);
+  const [pendingAuthAppIds, setPendingAuthAppIds] = useState<string[]>([]);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   // Realtime WebSocket event listener for instant OAuth activation (MUST run before early return)
@@ -568,6 +570,7 @@ export function ConnectAppsModal({
         const incomingAgent = (detail.agent_id || "").toLowerCase();
 
         if (incomingAgent === cleanTargetAgent || incomingAgent === "all" || !incomingAgent) {
+          setPendingAuthAppIds((prev) => prev.filter((id) => id !== cleanSlug));
           onAppConnected?.(cleanSlug);
           setFeedbackMsg({
             text: `✓ WebSocket: ${detail.message || `Đã kết nối thành công ứng dụng ${cleanSlug}!`}`,
@@ -602,16 +605,21 @@ export function ConnectAppsModal({
     try {
       if (isCurrentlyConnected) {
         // Disconnect: Hot-patch DELETE from agent MCP layer
-        const res = await fetch(`/api/mcp/composio_${app.id}`, {
-          method: "DELETE",
-          headers: {
-            "X-Agent-Id": targetAgentId,
+        const res = await authorizedFetch(
+          `/api/mcp/composio_${app.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "X-Agent-Id": targetAgentId,
+            },
           },
-        });
+          targetAgentId
+        );
         if (res.ok) {
+          setPendingAuthAppIds((prev) => prev.filter((id) => id !== app.id));
           onAppDisconnected?.(app.id);
           setFeedbackMsg({
-            text: `Disconnected ${app.name} from ${targetAgentName}`,
+            text: `Đã ngắt kết nối ${app.name} khỏi ${targetAgentName}`,
             type: "success",
           });
         } else {
@@ -619,50 +627,61 @@ export function ConnectAppsModal({
         }
       } else {
         // Connect: Call Composio OAuth + Hot-patch into Agent MCP
-        const connRes = await fetch("/api/integrations/composio/connect", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            appSlug: app.id,
-            action: "add",
-            agentId: targetAgentId,
-          }),
-        });
+        const connRes = await authorizedFetch(
+          "/api/integrations/composio/connect",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              appSlug: app.id,
+              action: "add",
+              agentId: targetAgentId,
+            }),
+          },
+          targetAgentId
+        );
 
         const connData = await connRes.json();
         if (!connRes.ok) {
-          throw new Error(connData.error || "Integration connection failed");
+          throw new Error(connData.error || connData.detail || "Integration connection failed");
         }
 
-        // The backend /integrations/composio/connect call above already registers the MCP client on the agent
-        // with the agent-scoped Composio key resolved server-side; no client-side key or second hot-patch.
+        // Immediately reflect connection in parent state & trigger MCP refresh
         onAppConnected?.(app.id);
 
-        if (connData.redirect_url) {
+        const isImmediatelyActive = connData.status === "active" || !connData.redirect_url;
+        if (!isImmediatelyActive && connData.redirect_url) {
+          setPendingAuthAppIds((prev) => Array.from(new Set([...prev, app.id])));
           // Open OAuth consent in new tab
           window.open(connData.redirect_url, "_blank", "noopener,noreferrer");
           setFeedbackMsg({
-            text: `Opening OAuth for ${app.name}. Đang tự động theo dõi xác thực ngầm...`,
+            text: `Đã mở trang cấp quyền OAuth cho ${app.name}. Đang tự động theo dõi trạng thái xác thực...`,
             type: "success",
           });
 
-          // Short-term auto-poll worker: checks every 4s for up to 3 minutes
+          // Short-term auto-poll worker: checks every 3s for up to 3 minutes
           let attempts = 0;
-          const maxAttempts = 45; // 45 * 4s = 180s = 3 minutes
+          const maxAttempts = 60; // 60 * 3s = 180s = 3 minutes
           const pollInterval = setInterval(async () => {
             attempts++;
             if (attempts > maxAttempts) {
               clearInterval(pollInterval);
+              setPendingAuthAppIds((prev) => prev.filter((id) => id !== app.id));
               return;
             }
             try {
-              const statusRes = await fetch(`/api/integrations/composio/status?appSlug=${encodeURIComponent(app.id)}`, {
-                headers: { "X-Agent-Id": targetAgentId }
-              });
+              const statusRes = await authorizedFetch(
+                `/api/integrations/composio/status?appSlug=${encodeURIComponent(app.id)}&agentIdQuery=${encodeURIComponent(targetAgentId)}`,
+                {
+                  headers: { "X-Agent-Id": targetAgentId },
+                },
+                targetAgentId
+              );
               if (statusRes.ok) {
                 const statusData = await statusRes.json();
                 if (statusData.status === "active") {
                   clearInterval(pollInterval);
+                  setPendingAuthAppIds((prev) => prev.filter((id) => id !== app.id));
                   setFeedbackMsg({
                     text: `✓ Xác thực OAuth ${app.name} hoàn tất thành công! Đã kích hoạt cho ${targetAgentName}.`,
                     type: "success",
@@ -673,10 +692,11 @@ export function ConnectAppsModal({
             } catch (pollErr) {
               // silent poll retry
             }
-          }, 4000);
+          }, 3000);
         } else {
+          setPendingAuthAppIds((prev) => prev.filter((id) => id !== app.id));
           setFeedbackMsg({
-            text: `Successfully hot-patched ${app.name} into ${targetAgentName}`,
+            text: `✓ Đã kết nối và kích hoạt ${app.name} thành công cho ${targetAgentName}!`,
             type: "success",
           });
         }
@@ -831,6 +851,7 @@ export function ConnectAppsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {categoryApps.map((app) => {
                     const isConnected = connectedAppIds.includes(app.id);
+                    const isPendingAuth = pendingAuthAppIds.includes(app.id);
                     const isLoading = loadingAppId === app.id;
 
                     return (
@@ -890,6 +911,11 @@ export function ConnectAppsModal({
                         >
                           {isLoading ? (
                             <Loader2 size={12} className="animate-spin text-slate-700 dark:text-neutral-300" />
+                          ) : isPendingAuth ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin text-amber-400" />
+                              <span className="text-amber-300">Đang xác thực...</span>
+                            </>
                           ) : isConnected ? (
                             <>
                               <Check size={12} className="text-emerald-400" />
