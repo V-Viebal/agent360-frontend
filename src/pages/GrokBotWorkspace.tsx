@@ -1306,18 +1306,18 @@ function AgentThinkingModal({
                         cur === "auto" ? "co_execute" : cur === "co_execute" ? "synthesize_only" : "auto";
                       onUpdateHostExecutionPolicy?.(next);
                     }}
-                    title="Bấm để chuyển chế độ tự thực thi của Chủ session: Auto (Manager quyết) -> Luôn tự chạy kèm -> Chỉ đại diện tổng hợp"
-                    className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer font-semibold"
+                    title="Bấm để chuyển chế độ tự thực thi của Chủ session"
+                    className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-[#1f1f2e] dark:hover:bg-[#28283a] text-slate-700 dark:text-neutral-300 border border-slate-200 dark:border-[#2e2e42] transition-colors cursor-pointer font-medium"
                   >
-                    👑 Chủ session:{" "}
+                    Chủ session:{" "}
                     {(room.host_execution_policy || "auto") === "co_execute"
-                      ? "Luôn tự chạy kèm"
+                      ? "Tự chạy kèm"
                       : (room.host_execution_policy || "auto") === "synthesize_only"
-                      ? "Chỉ đại diện tổng hợp"
-                      : "Auto (Manager quyết)"}
+                      ? "Chỉ tổng hợp"
+                      : "Tự động"}
                   </button>
-                  <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/25">
-                    Chế độ: {(room.triage_policy || "auto").toUpperCase()} · {room.status}
+                  <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#1f1f2e] text-slate-600 dark:text-neutral-400 border border-slate-200 dark:border-[#2e2e42]">
+                    {(room.triage_policy || "auto").toUpperCase()} · {room.status}
                   </span>
                 </div>
               </div>
@@ -1364,24 +1364,12 @@ function AgentThinkingModal({
                           }
                           setSelectedParticipantFilter(isSelected ? "all" : p.agent_id);
                         }}
-                        style={isSelected ? {
-                          backgroundColor: pTheme.bgLight,
-                          borderColor: pTheme.light,
-                          color: pTheme.light,
-                        } : {
-                          color: isRunning || isDone ? undefined : pTheme.light,
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer dark:!text-[var(--p-dark-col)] ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
                           isSelected
-                            ? "font-semibold shadow-2xs"
-                            : isRunning
-                            ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-300"
-                            : isDone
-                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                            : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-slate-700 dark:text-neutral-200"
-                        } ${isMsgAuthor && !isSelected ? "ring-1 ring-[#f8a87c]/60" : ""}`}
+                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white font-semibold shadow-2xs"
+                            : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#202030]"
+                        } ${isMsgAuthor && !isSelected ? "ring-1 ring-slate-400 dark:ring-neutral-500" : ""}`}
                       >
-                        <style>{`[data-testid=\"room-flow-agent-chip-${p.agent_id}\"] { --p-dark-col: ${pTheme.dark}; }`}</style>
                         <AgentAvatar
                           agent={participantAg || { id: p.agent_id, name: p.agent_id, roleTag: p.role }}
                           size="2xs"
@@ -1467,23 +1455,17 @@ function AgentThinkingModal({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
-                    <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                    <span>1. Yêu cầu Đầu vào & Ngữ cảnh Phiên (Root Intent)</span>
+                    <span className="h-2 w-2 rounded-full bg-slate-400" />
+                    <span>1. Yêu cầu Đầu vào (Root Intent)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {activeWaveIndex > 0 && (
-                      <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25">
-                        🔄 Kế thừa {activeWaveIndex} lượt ngữ cảnh trước
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 dark:bg-[#20202e] dark:text-neutral-400 border border-slate-200 dark:border-[#2e2e40]">
+                        Kế thừa {activeWaveIndex} lượt
                       </span>
                     )}
-                    <span
-                      className={`text-[9px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
-                        activeWave.isMultiAgentWave
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/30"
-                          : "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
-                      }`}
-                    >
-                      {activeWave.isMultiAgentWave ? "🤝 Multi-Agent Room Mode" : "🧠 Smart Solo Agent Mode"}
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-[#20202e] dark:text-neutral-300 border border-slate-200 dark:border-[#2e2e40]">
+                      {activeWave.isMultiAgentWave ? "Multi-Agent Room" : "Solo Agent"}
                     </span>
                   </div>
                 </div>
@@ -1518,38 +1500,75 @@ function AgentThinkingModal({
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold">
+                    {activeWave.isMultiAgentWave && (() => {
+                      const progKind = activeWave.progressTurns?.[0]?.receipt?.kind || "";
+                      const kickoffArgs = activeWave.kickoffTurn?.steps?.[0]?.args || "";
+                      let playbook = progKind === "relay"
+                        ? "relay_pipeline"
+                        : progKind === "review"
+                        ? "adversarial_review"
+                        : progKind === "workstreams"
+                        ? "task_decomposition"
+                        : progKind === "reply"
+                        ? "consultation"
+                        : activeWave.triageMeta.mode === "manager_specialist_recruitment"
+                        ? "peer_assist"
+                        : activeWave.triageMeta.selectedCollaborators.length === 1
+                        ? "consultation"
+                        : "deliberation";
+                      try {
+                        if (kickoffArgs) {
+                          const parsed = JSON.parse(kickoffArgs);
+                          if (parsed.collaboration_mode) playbook = parsed.collaboration_mode;
+                        }
+                      } catch {}
+                      const playbookLabel =
+                        playbook === "relay_pipeline"
+                          ? "Chuỗi Bàn giao (Relay Pipeline)"
+                          : playbook === "adversarial_review"
+                          ? "Phản biện & Kiểm định Rủi ro"
+                          : playbook === "task_decomposition"
+                          ? "Chia để Trị (Task Decomposition)"
+                          : playbook === "peer_assist"
+                          ? "Hỗ trợ Đồng đội (Peer Assist)"
+                          : playbook === "consultation"
+                          ? "Tham vấn Chuyên gia (Consultation)"
+                          : "Hội đồng Thảo luận (Deliberation)";
+                      return (
+                        <span
+                          data-testid="flow-tree-playbook-badge"
+                          data-playbook={playbook}
+                          className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/35 font-semibold"
+                        >
+                          {playbookLabel}
+                        </span>
+                      );
+                    })()}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-[#222232] dark:text-neutral-300 border border-slate-200 dark:border-[#323248]">
                       {getModeLabel(activeWave.triageMeta.mode, activeWave.isMultiAgentWave)}
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#222232] text-slate-700 dark:text-neutral-300 border border-slate-200 dark:border-[#323248]">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#222232] text-slate-700 dark:text-neutral-300 border border-slate-200 dark:border-[#323248]">
                       {activeWave.isMultiAgentWave && visibleCollaboratorBranches.length > 1
                         ? activeWave.triageMeta.executionStrategy === "parallel"
-                          ? "⚡ Song song (Parallel)"
-                          : "🔗 Tuần tự (Sequential)"
-                        : "🎯 Trực tiếp (Direct)"}
+                          ? "Song song"
+                          : "Tuần tự"
+                        : "Trực tiếp"}
                     </span>
                     {activeWave.isMultiAgentWave && totalExpectedCollabCount > 0 && (
                       <span
                         data-testid="flow-tree-step-counter"
-                        className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full border font-semibold ${
-                          isCurrentlyRunning && completedCollabCount < totalExpectedCollabCount
-                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/35"
-                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
-                        }`}
+                        className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md border border-slate-200 dark:border-[#323248] bg-slate-100 dark:bg-[#222232] text-slate-700 dark:text-neutral-300"
                       >
                         {isCurrentlyRunning && completedCollabCount < totalExpectedCollabCount ? (
                           <Loader2 size={10} className="animate-spin" />
                         ) : (
-                          <Check size={10} />
+                          <Check size={10} className="text-emerald-500" />
                         )}
                         <span>
-                          Tiến độ Room: {completedCollabCount}/{totalExpectedCollabCount} nhánh{showHostCoExecBranch ? " + Chủ session tự chạy" : ""}
+                          Tiến độ: {completedCollabCount}/{totalExpectedCollabCount}
                         </span>
                       </span>
                     )}
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                      Tin cậy {Math.round((activeWave.triageMeta.confidence || 0.95) * 100)}%
-                    </span>
                   </div>
                 </div>
 
@@ -1566,12 +1585,7 @@ function AgentThinkingModal({
                     return (
                       <span
                         key={collabSlug}
-                        style={{
-                          backgroundColor: cTheme.bgLight,
-                          borderColor: cTheme.borderLight,
-                          color: cTheme.light,
-                        }}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-mono font-semibold shadow-2xs"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-[#282838] bg-slate-50 dark:bg-[#191926] text-slate-700 dark:text-neutral-300 text-[10px] font-mono shadow-2xs"
                       >
                         <AgentAvatar
                           agent={cAg || { id: collabSlug, name: collabSlug }}
@@ -1589,12 +1603,7 @@ function AgentThinkingModal({
                     return (
                       <span
                         data-testid="flow-tree-host-role-badge"
-                        style={{
-                          backgroundColor: hostTheme.bgLight,
-                          borderColor: hostTheme.borderLight,
-                          color: hostTheme.light,
-                        }}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[10px] font-mono font-semibold shadow-2xs"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-[#282838] bg-slate-50 dark:bg-[#191926] text-slate-700 dark:text-neutral-300 text-[10px] font-mono shadow-2xs"
                       >
                         <AgentAvatar
                           agent={allAgents.find((a) => (a.slug || "").toLowerCase() === hostSlug.toLowerCase() || a.id.toLowerCase() === hostSlug.toLowerCase()) || { id: hostSlug, name: hostDisplayName }}
@@ -1758,8 +1767,8 @@ function AgentThinkingModal({
                                 <span>Đang thực thi...</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0">
-                                <Check size={10} />
+                              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded text-slate-600 dark:text-neutral-400 bg-slate-100 dark:bg-[#20202e] border border-slate-200 dark:border-[#2e2e40] shrink-0">
+                                <Check size={10} className="text-emerald-500" />
                                 <span>Hoàn tất</span>
                               </span>
                             )}
@@ -11048,6 +11057,12 @@ export function GrokBotWorkspace() {
                                   ? "Messaged"
                                   : rKind === "reply" || (rCount <= 1 && participants.length === 1)
                                   ? "Message from"
+                                  : rKind === "relay"
+                                  ? `${rCount} relay steps with`
+                                  : rKind === "review"
+                                  ? `${rCount} review checks with`
+                                  : rKind === "workstreams"
+                                  ? `${rCount} workstreams with`
                                   : `${rCount} messages with`;
 
                               return (
@@ -11070,7 +11085,9 @@ export function GrokBotWorkspace() {
                                           {pIdx === participants.length - 1 ? "and" : ","}
                                         </span>
                                       )}
-                                      {renderAgentMentionChip(pSlug, undefined, "inline")}
+                                      <span className="pointer-events-none inline-flex items-center">
+                                        {renderAgentMentionChip(pSlug, undefined, "inline")}
+                                      </span>
                                     </React.Fragment>
                                   ))}
                                 </button>
