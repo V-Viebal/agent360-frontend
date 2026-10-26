@@ -90,6 +90,7 @@ export interface SessionCollaborationRoom {
   updated_at: string;
   room_title?: string | null;
   triage_policy?: "auto" | "manual" | string | null;
+  host_execution_policy?: "auto" | "co_execute" | "synthesize_only" | string | null;
 }
 
 export interface ReplyToMessageInfo {

@@ -1715,10 +1715,14 @@ export async function postChatRoomMessage(
 export async function updateChatRoomTriagePolicy(
   agentId: string,
   chatId: string,
-  triagePolicy: "auto" | "manual"
+  triagePolicy?: "auto" | "manual",
+  hostExecutionPolicy?: "auto" | "co_execute" | "synthesize_only"
 ): Promise<SessionCollaborationRoom | null> {
   try {
     const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const payload: Record<string, string> = {};
+    if (triagePolicy) payload.triage_policy = triagePolicy;
+    if (hostExecutionPolicy) payload.host_execution_policy = hostExecutionPolicy;
     const res = await authorizedFetch(
       `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/room/triage-policy`,
       {
@@ -1727,7 +1731,7 @@ export async function updateChatRoomTriagePolicy(
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ triage_policy: triagePolicy }),
+        body: JSON.stringify(payload),
       },
       cleanId
     );

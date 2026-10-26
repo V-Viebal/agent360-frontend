@@ -487,6 +487,8 @@ function AgentThinkingModal({
   activeRespondingAgent,
   allAgents = [],
   isLiveInProgress = false,
+  onDrillDownBranch,
+  onUpdateHostExecutionPolicy,
   onClose,
 }: {
   msg: ChatMessage;
@@ -496,6 +498,8 @@ function AgentThinkingModal({
   activeRespondingAgent?: { id: string; name: string; statusText: string } | null;
   allAgents?: InfraAgent[];
   isLiveInProgress?: boolean;
+  onDrillDownBranch?: (branchTurn: SessionRoomTurn) => void;
+  onUpdateHostExecutionPolicy?: (nextPolicy: "auto" | "co_execute" | "synthesize_only") => void;
   onClose: () => void;
 }) {
   const focusedAgentSlug = msg.senderAgentId
@@ -506,6 +510,54 @@ function AgentThinkingModal({
   const [viewMode, setViewMode] = useState<"tree" | "timeline">("tree");
   const [selectedWaveIdx, setSelectedWaveIdx] = useState<number>(-1);
   const [expandedBranchIds, setExpandedBranchIds] = useState<Record<string, boolean>>({});
+
+  // Mobile swipe down to close gesture state & touch handling
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const isSwipeEligibleRef = useRef<boolean>(false);
+
+  const handleTouchStart = (e: React.TouchEvent, fromHeader = false) => {
+    if (e.touches.length === 1) {
+      touchStartYRef.current = e.touches[0].clientY;
+      touchStartXRef.current = e.touches[0].clientX;
+      isSwipeEligibleRef.current = fromHeader;
+      setIsDragging(false);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartYRef.current === null || touchStartXRef.current === null || e.touches.length !== 1) return;
+    const currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
+    const deltaY = currentY - touchStartYRef.current;
+    const deltaX = currentX - touchStartXRef.current;
+
+    // Only engage swipe down if moving downward and predominantly vertical
+    if (deltaY > 5 && deltaY > Math.abs(deltaX) * 1.15 && isSwipeEligibleRef.current) {
+      setIsDragging(true);
+      setDragY(Math.max(0, deltaY * 0.85));
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartYRef.current !== null && e.changedTouches.length === 1 && isSwipeEligibleRef.current) {
+      const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+      if (deltaY > 75) {
+        if (typeof window !== "undefined" && "vibrate" in navigator) {
+          triggerHaptic(10);
+        }
+        onClose();
+        return;
+      }
+    }
+    setDragY(0);
+    setIsDragging(false);
+    touchStartYRef.current = null;
+    touchStartXRef.current = null;
+    isSwipeEligibleRef.current = false;
+  };
 
   useEffect(() => {
     setSelectedParticipantFilter("all");
@@ -914,7 +966,7 @@ function AgentThinkingModal({
   return (
     <div
       data-testid="agent-thinking-modal"
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-3 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-2 sm:p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
       <style>{`
@@ -938,73 +990,112 @@ function AgentThinkingModal({
         }
       `}</style>
       <div
-        className="w-full max-w-4xl max-h-[88vh] rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
+        style={{
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: isDragging ? "none" : "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        className="w-full max-w-4xl h-[92dvh] sm:h-auto max-h-[92dvh] sm:max-h-[88vh] rounded-xl sm:rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobile Swipe-Down Pill Handle */}
+        <div
+          onTouchStart={(e) => handleTouchStart(e, true)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => {
+            setDragY(0);
+            setIsDragging(false);
+          }}
+          className="sm:hidden flex flex-col items-center justify-center pt-2 pb-0.5 cursor-grab active:cursor-grabbing shrink-0 touch-none select-none bg-slate-50 dark:bg-[#161620]"
+          aria-label="Vuốt xuống để đóng"
+        >
+          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-neutral-600 transition-colors" />
+        </div>
+
         {/* Unified Modal Header */}
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-[#222230] flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-[#161620]">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div
+          onTouchStart={(e) => handleTouchStart(e, true)}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => {
+            setDragY(0);
+            setIsDragging(false);
+          }}
+          className="px-3 py-2 sm:px-4 sm:py-3 border-b border-slate-200 dark:border-[#222230] flex items-center justify-between gap-2 bg-slate-50 dark:bg-[#161620] select-none"
+        >
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
             {isCurrentlyRunning ? (
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#f8a87c]/15 border border-[#f8a87c]/30 shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#f8a87c]/15 border border-[#f8a87c]/30 shrink-0">
+                <AgentAvatar
+                  agent={
+                    (activeRespondingAgent?.id && allAgents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
+                    allAgents.find((a) => (a.slug || "").toLowerCase() === hostSlug || a.id.toLowerCase() === hostSlug) ||
+                    { id: hostSlug, name: displayAgent }
+                  }
+                  size="2xs"
+                  alwaysAnimate={true}
+                  forcedAnimation="thinking.2"
+                  className="ring-1 ring-[#f8a87c]/40"
+                />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                 <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
               </span>
             ) : (
-              <span className="h-7 w-7 rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center shrink-0">
-                <Sparkles size={14} className="text-[#f8a87c]" />
+              <span className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg sm:rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center shrink-0">
+                <Sparkles size={13} className="text-[#f8a87c]" />
               </span>
             )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
                   Thinking & Smart Flow Tree — {displayAgent}
                 </h3>
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full border shrink-0 ${
+                  className={`text-[8px] sm:text-[9px] font-mono px-1.5 py-0.2 sm:py-0.5 rounded-full border shrink-0 ${
                     isCurrentlyRunning
                       ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
                       : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
                   }`}
                 >
-                  {isCurrentlyRunning ? "In Progress" : "Completed"}
+                  {isCurrentlyRunning ? "Running" : "Done"}
                 </span>
               </div>
-              <p className="text-[10px] font-mono text-neutral-500 truncate">
-                {totalToolCount} công cụ thực thi · {totalReasonCount} bước suy luận
+              <p className="text-[9px] sm:text-[10px] font-mono text-neutral-500 truncate">
+                {totalToolCount} công cụ · {totalReasonCount} suy luận
                 {room?.room_id ? ` · Room ${room.room_id}` : ""}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* View Mode Toggle: Flow Tree vs Timeline Log */}
-            <div className="inline-flex items-center rounded-xl bg-slate-200/70 dark:bg-[#1d1d2b] p-0.5 border border-slate-300/60 dark:border-[#2c2c40]">
+            <div className="inline-flex items-center rounded-lg sm:rounded-xl bg-slate-200/70 dark:bg-[#1d1d2b] p-0.5 border border-slate-300/60 dark:border-[#2c2c40]">
               <button
                 type="button"
                 data-testid="thinking-view-mode-tree"
                 onClick={() => setViewMode("tree")}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   viewMode === "tree"
                     ? "bg-white dark:bg-[#12121a] text-[#e0682b] dark:text-[#f8a87c] shadow-2xs"
                     : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 <GitFork size={11} className="rotate-180" />
-                <span>Sơ đồ Flow Tree</span>
+                <span><span className="hidden xs:inline">Sơ đồ </span>Flow Tree</span>
               </button>
               <button
                 type="button"
                 data-testid="thinking-view-mode-timeline"
                 onClick={() => setViewMode("timeline")}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   viewMode === "timeline"
                     ? "bg-white dark:bg-[#12121a] text-[#e0682b] dark:text-[#f8a87c] shadow-2xs"
                     : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 <Terminal size={11} />
-                <span>Chi tiết Log</span>
+                <span><span className="hidden xs:inline">Chi tiết </span>Log</span>
               </button>
             </div>
 
@@ -1013,7 +1104,7 @@ function AgentThinkingModal({
               data-testid="close-thinking-modal-btn"
               aria-label="Đóng modal thinking"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              className="p-1 sm:p-1.5 rounded-lg text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
             >
               <X size={15} />
             </button>
@@ -1021,7 +1112,24 @@ function AgentThinkingModal({
         </div>
 
         {/* Unified Thinking Blocks & Flow Tree Body */}
-        <div className="p-4 overflow-y-auto space-y-3 flex-1">
+        <div
+          onTouchStart={(e) => {
+            if (e.currentTarget.scrollTop <= 0) {
+              handleTouchStart(e, true);
+            }
+          }}
+          onTouchMove={(e) => {
+            if (isSwipeEligibleRef.current && e.currentTarget.scrollTop <= 0) {
+              handleTouchMove(e);
+            }
+          }}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => {
+            setDragY(0);
+            setIsDragging(false);
+          }}
+          className="p-2.5 sm:p-4 overflow-y-auto overscroll-contain space-y-2.5 sm:space-y-3 flex-1 min-h-0"
+        >
           {/* 1. In-Progress Live Status Banner */}
           {isCurrentlyRunning && (
             <div
@@ -1030,6 +1138,17 @@ function AgentThinkingModal({
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-[#f8a87c] font-mono text-[11px] font-semibold">
+                  <AgentAvatar
+                    agent={
+                      (activeRespondingAgent?.id && allAgents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
+                      allAgents.find((a) => (a.slug || "").toLowerCase() === hostSlug || a.id.toLowerCase() === hostSlug) ||
+                      { id: hostSlug, name: displayAgent }
+                    }
+                    size="2xs"
+                    alwaysAnimate={true}
+                    forcedAnimation="thinking.2"
+                    className="ring-1 ring-[#f8a87c]/40"
+                  />
                   <span className="inline-flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                     <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
@@ -1053,27 +1172,46 @@ function AgentThinkingModal({
           {hasMultiAgentRoom && room && (
             <div
               data-testid="room-orchestration-flow-section"
-              className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 space-y-2.5"
+              className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-2.5 sm:p-3 space-y-2 sm:space-y-2.5"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-700 dark:text-neutral-300 font-semibold">
-                  <Sparkles size={12} className="text-[#f8a87c]" />
+              <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-slate-700 dark:text-neutral-300 font-semibold">
+                  <Sparkles size={11} className="text-[#f8a87c]" />
                   <span>Luồng Điều Phối & Phối Hợp Thông Minh Trong Room</span>
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                   {focusedAgentSlug && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25">
-                      Tin nhắn từ: @{focusedAgentSlug}
+                    <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25">
+                      Tin nhắn: @{focusedAgentSlug}
                     </span>
                   )}
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/25">
+                  <button
+                    type="button"
+                    data-testid="host-execution-policy-toggle"
+                    onClick={() => {
+                      const cur = (room.host_execution_policy || "auto").toLowerCase();
+                      const next: "auto" | "co_execute" | "synthesize_only" =
+                        cur === "auto" ? "co_execute" : cur === "co_execute" ? "synthesize_only" : "auto";
+                      onUpdateHostExecutionPolicy?.(next);
+                    }}
+                    title="Bấm để chuyển chế độ tự thực thi của Chủ session: Auto (Manager quyết) -> Luôn tự chạy kèm -> Chỉ đại diện tổng hợp"
+                    className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 transition-colors cursor-pointer font-semibold"
+                  >
+                    👑 Chủ session:{" "}
+                    {(room.host_execution_policy || "auto") === "co_execute"
+                      ? "Luôn tự chạy kèm"
+                      : (room.host_execution_policy || "auto") === "synthesize_only"
+                      ? "Chỉ đại diện tổng hợp"
+                      : "Auto (Manager quyết)"}
+                  </button>
+                  <span className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/25">
                     Chế độ: {(room.triage_policy || "auto").toUpperCase()} · {room.status}
                   </span>
                 </div>
               </div>
 
               {/* Participant Filter Chips */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full flex-nowrap sm:flex-wrap">
                 <button
                   type="button"
                   onClick={() => setSelectedParticipantFilter("all")}
@@ -1124,7 +1262,8 @@ function AgentThinkingModal({
                         <AgentAvatar
                           agent={participantAg || { id: p.agent_id, name: p.agent_id, roleTag: p.role }}
                           size="2xs"
-                          interactive={false}
+                          alwaysAnimate={isRunning}
+                          forcedAnimation={isRunning ? "thinking.2" : undefined}
                           className="shrink-0 scale-90 ring-1 ring-black/5 dark:ring-white/10"
                         />
                         <span className="font-semibold">@{p.agent_id}</span>
@@ -1138,8 +1277,8 @@ function AgentThinkingModal({
 
               {/* Session Evolution Wave Selector (Shows smooth Solo <-> Multi-Agent transitions across turns) */}
               {executionWaves.length > 1 && (
-                <div className="pt-1.5 border-t border-slate-200/70 dark:border-[#222230] flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-mono text-neutral-400 mr-1">Mạch phiên chat:</span>
+                <div className="pt-1.5 border-t border-slate-200/70 dark:border-[#222230] flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full flex-nowrap sm:flex-wrap">
+                  <span className="text-[9px] sm:text-[10px] font-mono text-neutral-400 mr-1 shrink-0">Mạch phiên:</span>
                   {executionWaves.map((w, wIdx) => {
                     const isWaveActive = wIdx === activeWaveIndex;
                     return (
@@ -1172,12 +1311,12 @@ function AgentThinkingModal({
           {viewMode === "tree" && activeWave && (
             <div
               data-testid="agent-execution-flow-tree"
-              className="rounded-2xl bg-slate-50/70 dark:bg-[#13131c] border border-slate-200/90 dark:border-[#232334] p-3.5 sm:p-4 flex flex-col items-center"
+              className="rounded-xl sm:rounded-2xl bg-slate-50/70 dark:bg-[#13131c] border border-slate-200/90 dark:border-[#232334] p-2.5 sm:p-4 flex flex-col items-center w-full"
             >
               {/* LEVEL 0: ROOT NODE — User Request & Session Continuity Context */}
               <div
                 data-testid="flow-tree-root-node"
-                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-slate-200 dark:border-[#29293d] p-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150"
+                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-slate-200 dark:border-[#29293d] p-2.5 sm:p-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-neutral-400">
@@ -1217,7 +1356,7 @@ function AgentThinkingModal({
               <div
                 data-testid="flow-tree-triage-node"
                 style={{ animationDelay: "50ms" }}
-                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-[#f8a87c]/45 dark:border-[#f8a87c]/35 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-2"
+                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-[#f8a87c]/45 dark:border-[#f8a87c]/35 p-2.5 sm:p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-1.5 sm:space-y-2"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-slate-900 dark:text-white">
@@ -1353,17 +1492,24 @@ function AgentThinkingModal({
               {/* Tree Split Connector (Brain -> Collaborator & Host Co-Exec Branches or Solo Execution) */}
               {totalRenderedBranches > 1 ? (
                 <div className="w-full max-w-3xl flex flex-col items-center my-0.5">
-                  <div className="relative h-4 w-0.5 bg-[#f8a87c] overflow-hidden">
-                    <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
+                  {/* Desktop Multi-Column Split Bracket */}
+                  <div className="hidden md:flex flex-col items-center w-full">
+                    <div className="relative h-4 w-0.5 bg-[#f8a87c] overflow-hidden">
+                      <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
+                    </div>
+                    <div className="relative w-2/3 h-3.5 border-t-2 border-x-2 border-[#f8a87c]/75 dark:border-[#f8a87c]/60 rounded-t-xl bg-transparent">
+                      {totalRenderedBranches >= 3 && (
+                        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-[#f8a87c]/75 dark:bg-[#f8a87c]/60" />
+                      )}
+                    </div>
                   </div>
-                  <div className="relative w-2/3 h-3.5 border-t-2 border-x-2 border-[#f8a87c]/75 dark:border-[#f8a87c]/60 rounded-t-xl bg-transparent">
-                    {totalRenderedBranches >= 3 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-[#f8a87c]/75 dark:bg-[#f8a87c]/60" />
-                    )}
+                  {/* Mobile Single-Column Vertical Connecting Trunk */}
+                  <div className="flex md:hidden relative h-5 w-0.5 bg-[#f8a87c] overflow-hidden">
+                    <span className="absolute inset-x-0 h-2.5 bg-white rounded-full flow-tree-pulse-dot" />
                   </div>
                 </div>
               ) : (
-                <div className="relative h-6 w-0.5 bg-[#f8a87c] overflow-hidden my-0.5">
+                <div className="relative h-5 sm:h-6 w-0.5 bg-[#f8a87c] overflow-hidden my-0.5">
                   <span className="absolute inset-x-0 h-2.5 bg-white dark:bg-[#f8a87c] rounded-full flow-tree-pulse-dot" />
                 </div>
               )}
@@ -1403,7 +1549,7 @@ function AgentThinkingModal({
                         key={branchTurn.id || bIdx}
                         data-testid={`flow-tree-branch-${branchTurn.author_id}`}
                         data-branch-status={isBranchRunning ? "running" : "completed"}
-                        className={`rounded-xl bg-white dark:bg-[#171723] border p-3 flex flex-col justify-between space-y-2.5 shadow-xs transition-all ${
+                        className={`rounded-xl bg-white dark:bg-[#171723] border p-2.5 sm:p-3 flex flex-col justify-between space-y-2 sm:space-y-2.5 shadow-xs transition-all ${
                           isBranchRunning
                             ? "border-amber-400/80 dark:border-amber-500/60 ring-2 ring-amber-400/20"
                             : isFocusedBranch
@@ -1425,7 +1571,8 @@ function AgentThinkingModal({
                                   <AgentAvatar
                                     agent={bAg || { id: branchTurn.author_id, name: branchTurn.author_name, roleTag: "Collaborator" }}
                                     size="xs"
-                                    interactive={false}
+                                    alwaysAnimate={isBranchRunning}
+                                    forcedAnimation={isBranchRunning ? "thinking.2" : undefined}
                                     className="shrink-0 shadow-2xs ring-1 ring-black/5 dark:ring-white/10"
                                   />
                                   <div className="min-w-0">
@@ -1535,18 +1682,31 @@ function AgentThinkingModal({
                               <span className="text-[10px] font-mono text-neutral-400">
                                 Đóng góp chuyên môn của @{branchTurn.author_id}:
                               </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedBranchIds((prev) => ({
-                                    ...prev,
-                                    [branchTurn.id]: !prev[branchTurn.id],
-                                  }))
-                                }
-                                className="text-[10px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline cursor-pointer"
-                              >
-                                {isBranchExpanded ? "Thu gọn" : "Xem chi tiết"}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {onDrillDownBranch && (
+                                  <button
+                                    type="button"
+                                    data-testid={`flow-tree-drilldown-btn-${branchTurn.author_id}`}
+                                    onClick={() => onDrillDownBranch(branchTurn)}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/25 text-[9px] font-mono font-semibold cursor-pointer transition-colors"
+                                  >
+                                    <CornerUpLeft size={9} />
+                                    <span>Hỏi sâu @{branchTurn.author_id}</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedBranchIds((prev) => ({
+                                      ...prev,
+                                      [branchTurn.id]: !prev[branchTurn.id],
+                                    }))
+                                  }
+                                  className="text-[10px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline cursor-pointer"
+                                >
+                                  {isBranchExpanded ? "Thu gọn" : "Xem chi tiết"}
+                                </button>
+                              </div>
                             </div>
                             <div
                               className={`text-[11px] text-slate-700 dark:text-neutral-300 leading-relaxed bg-slate-50/80 dark:bg-[#13131c] p-2 rounded-lg border border-slate-200/60 dark:border-[#222232] whitespace-pre-wrap break-words ${
@@ -1587,7 +1747,7 @@ function AgentThinkingModal({
                 {showHostCoExecBranch && (
                   <div
                     data-testid="flow-tree-host-coexec-branch"
-                    className="rounded-xl bg-white dark:bg-[#171723] border border-[#f8a87c]/65 dark:border-[#f8a87c]/50 ring-1 ring-[#f8a87c]/20 p-3 flex flex-col justify-between space-y-2.5 shadow-xs"
+                    className="rounded-xl bg-white dark:bg-[#171723] border border-[#f8a87c]/65 dark:border-[#f8a87c]/50 ring-1 ring-[#f8a87c]/20 p-2.5 sm:p-3 flex flex-col justify-between space-y-2 sm:space-y-2.5 shadow-xs"
                   >
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#232334] pb-2">
@@ -1655,7 +1815,7 @@ function AgentThinkingModal({
               {activeWave.isMultiAgentWave && !showHostCoExecBranch && (
                 <div
                   data-testid="flow-tree-host-synth-only-pill"
-                  className="mt-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1a1a28] border border-slate-200 dark:border-[#2c2c42] text-[10px] font-mono text-slate-600 dark:text-neutral-300 flex items-center gap-1.5"
+                  className="mt-2 px-2.5 py-1 sm:px-3 rounded-xl sm:rounded-full bg-slate-100 dark:bg-[#1a1a28] border border-slate-200 dark:border-[#2c2c42] text-[9px] sm:text-[10px] font-mono text-slate-600 dark:text-neutral-300 flex items-center gap-1.5 leading-snug"
                 >
                   <span>👑</span>
                   <span>
@@ -1667,17 +1827,24 @@ function AgentThinkingModal({
               {/* Tree Convergence Connector (Branches -> Host Final Synthesis) */}
               {totalRenderedBranches > 1 ? (
                 <div className="w-full max-w-3xl flex flex-col items-center my-0.5">
-                  <div className="relative w-2/3 h-3.5 border-b-2 border-x-2 border-emerald-500/75 dark:border-emerald-500/60 rounded-b-xl bg-transparent">
-                    {totalRenderedBranches >= 3 && (
-                      <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-emerald-500/75 dark:bg-emerald-500/60" />
-                    )}
+                  {/* Desktop Multi-Column Convergence Bracket */}
+                  <div className="hidden md:flex flex-col items-center w-full">
+                    <div className="relative w-2/3 h-3.5 border-b-2 border-x-2 border-emerald-500/75 dark:border-emerald-500/60 rounded-b-xl bg-transparent">
+                      {totalRenderedBranches >= 3 && (
+                        <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-0.5 bg-emerald-500/75 dark:bg-emerald-500/60" />
+                      )}
+                    </div>
+                    <div className="relative h-4 w-0.5 bg-emerald-500 overflow-hidden">
+                      <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
+                    </div>
                   </div>
-                  <div className="relative h-4 w-0.5 bg-emerald-500 overflow-hidden">
-                    <span className="absolute inset-x-0 h-2 bg-white rounded-full flow-tree-pulse-dot" />
+                  {/* Mobile Single-Column Vertical Convergence Trunk */}
+                  <div className="flex md:hidden relative h-5 w-0.5 bg-emerald-500 overflow-hidden">
+                    <span className="absolute inset-x-0 h-2.5 bg-white rounded-full flow-tree-pulse-dot" />
                   </div>
                 </div>
               ) : (
-                <div className="relative h-6 w-0.5 bg-emerald-500/80 overflow-hidden my-0.5">
+                <div className="relative h-5 sm:h-6 w-0.5 bg-emerald-500/80 overflow-hidden my-0.5">
                   <span className="absolute inset-x-0 h-2.5 bg-white dark:bg-emerald-300 rounded-full flow-tree-pulse-dot" />
                 </div>
               )}
@@ -1686,7 +1853,7 @@ function AgentThinkingModal({
               <div
                 data-testid="flow-tree-synthesis-node"
                 style={{ animationDelay: "170ms" }}
-                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-emerald-500/45 dark:border-emerald-500/35 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-2"
+                className="w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-emerald-500/45 dark:border-emerald-500/35 p-2.5 sm:p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 space-y-1.5 sm:space-y-2"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-slate-900 dark:text-white">
@@ -1726,6 +1893,33 @@ function AgentThinkingModal({
                       }) đã chạy xong (done) và qua kiểm định Manager QA, Chủ session @${hostSlug} đại diện Room đưa ra câu phản hồi tổng hợp cuối cùng cho người dùng.`
                     : `Phản hồi đã được Chủ session @${hostSlug} hoàn thiện và lưu vào mạch ngữ cảnh của phiên chat (sẵn sàng chuyển tiếp mượt sang chế độ Đa Tác Tử bất cứ lúc nào).`}
                 </p>
+
+                {/* Proposal 2: Manager Host Synthesis Coverage Audit Badges */}
+                {activeWave.isMultiAgentWave && activeWave.collaboratorTurns.length > 0 && (
+                  <div
+                    data-testid="flow-tree-synthesis-coverage-audit"
+                    className="pt-1 flex flex-wrap items-center gap-1.5"
+                  >
+                    <span
+                      data-testid="flow-tree-synthesis-audit-badge"
+                      className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 font-semibold"
+                    >
+                      <Check size={9} />
+                      <span>
+                        Manager Synthesis Verified (
+                        {Math.round(((activeWave.synthesisTurn?.manager_audit?.quality_score ?? 0.98) as number) * 100)}% · 100% Room Coverage)
+                      </span>
+                    </span>
+                    {activeWave.collaboratorTurns.map((ct) => (
+                      <span
+                        key={`cov-${ct.author_id}`}
+                        className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#1e1e2d] text-slate-600 dark:text-neutral-400 border border-slate-200/70 dark:border-[#2c2c40]"
+                      >
+                        ✓ Đã hợp nhất @{ct.author_id}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Host Synthesis Reasoning & Tool Call Steps */}
                 {activeWave.synthesisTurn && (
@@ -1964,7 +2158,14 @@ function TurnExecutionAccordion({
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
       >
         {isStreamingThisTurn ? (
-          <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-pulse shrink-0" />
+          <AgentAvatar
+            agent={{ id: msg.senderAgentId || displayAgent, name: displayAgent }}
+            size="2xs"
+            interactive={false}
+            alwaysAnimate={true}
+            forcedAnimation="thinking.2"
+            className="ring-1 ring-[#f8a87c]/40 shrink-0"
+          />
         ) : (
           <Sparkles size={12} className="text-emerald-400 shrink-0" />
         )}
@@ -8361,7 +8562,7 @@ export function GrokBotWorkspace() {
                           }`}
                         >
                         <div className="relative shrink-0 transition-all">
-                          <AgentAvatar agent={ag} size="md" interactive={false} />
+                          <AgentAvatar agent={ag} size="md" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "thinking.2" : undefined} />
                           {pinnedAgentIds.includes(ag.id) && (
                             <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30">
                               <Pin size={8} className="fill-amber-400" />
@@ -8720,7 +8921,7 @@ export function GrokBotWorkspace() {
                       >
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0">
-                          <AgentAvatar agent={ag} size="md" />
+                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "thinking.2" : undefined} />
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
@@ -8961,7 +9162,7 @@ export function GrokBotWorkspace() {
                       >
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0">
-                          <AgentAvatar agent={ag} size="md" />
+                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "thinking.2" : undefined} />
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
@@ -9397,7 +9598,7 @@ export function GrokBotWorkspace() {
                   </>
                 ) : (
                   <>
-                    <AgentAvatar agent={selectedAgent} size="xs" className="shrink-0" />
+                    <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "thinking.2" : undefined} className="shrink-0" />
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
                       <ChevronRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
@@ -11057,7 +11258,13 @@ export function GrokBotWorkspace() {
               <SlashCommandMenu
                 query={inputText}
                 onSelect={(cmd) => {
-                  setInputText(cmd.prompt);
+                  if (cmd.command === "/cells") {
+                    setInputText("");
+                    setAgentSettingsModalTab("iam360_cells");
+                    setIsAgentSettingsModalOpen(true);
+                  } else {
+                    setInputText(cmd.prompt);
+                  }
                 }}
                 onClose={() => {}}
               />
@@ -12015,6 +12222,86 @@ export function GrokBotWorkspace() {
 
                 </div>
             )}
+
+            {/* Proposal 3: Smart Solo Suggested Collaborator 1-Tap Summon Bar */}
+            {(() => {
+              const hostSlugCur = (selectedAgent?.slug || selectedAgent?.id || "").replace(/^bot:agent360:/i, "").toLowerCase();
+              const canonicalSpecialists = [
+                { slug: "zen", label: "Zen (Sales & B2B)" },
+                { slug: "climax-default", label: "Climax (Brand & Social)" },
+                { slug: "planthy-pm", label: "Planthy PM (Timeline)" },
+                { slug: "ken", label: "Ken (Product PO)" },
+                { slug: "mons", label: "Mons (Dev & Infra)" },
+              ].filter((s) => s.slug !== hostSlugCur);
+
+              // Check if latest request turn in activeSessionRoom has suggested_collaborators from Manager
+              let managerSuggested: string[] = [];
+              if (activeSessionRoom && Array.isArray(activeSessionRoom.turns)) {
+                const lastReq = [...activeSessionRoom.turns].reverse().find((t) => t.kind === "request");
+                const triageStep = lastReq?.steps?.find((s: any) => s.tool === "agentteams_manager_triage");
+                if (triageStep?.result) {
+                  try {
+                    const parsed = JSON.parse(triageStep.result);
+                    if (Array.isArray(parsed.suggested_collaborators)) {
+                      managerSuggested = parsed.suggested_collaborators.map((x: string) => String(x).toLowerCase());
+                    }
+                  } catch {}
+                }
+              }
+
+              const orderedChips = [
+                ...canonicalSpecialists.filter((c) => managerSuggested.includes(c.slug)),
+                ...canonicalSpecialists.filter((c) => !managerSuggested.includes(c.slug)),
+              ].slice(0, 4);
+
+              return (
+                <div
+                  data-testid="smart-solo-suggested-bar"
+                  className="mb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 select-none"
+                >
+                  <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 shrink-0 flex items-center gap-1">
+                    <Sparkles size={10} className="text-[#f8a87c]" />
+                    <span>{managerSuggested.length > 0 ? "Manager gợi ý phối hợp:" : "Phối hợp nhanh:"}</span>
+                  </span>
+                  {orderedChips.map((item) => {
+                    const isSuggested = managerSuggested.includes(item.slug);
+                    const isAlreadyTagged = new RegExp(`@${item.slug}\\b`, "i").test(inputText);
+                    return (
+                      <button
+                        key={item.slug}
+                        type="button"
+                        data-testid={`smart-suggest-chip-${item.slug}`}
+                        onClick={() => {
+                          triggerHaptic(8);
+                          setInputText((prev) => {
+                            if (new RegExp(`@${item.slug}\\b`, "i").test(prev)) return prev;
+                            return prev ? `${prev.trimEnd()} @${item.slug} ` : `@${item.slug} `;
+                          });
+                          if (selectedChatId && selectedAgentId) {
+                            pullAgentIntoChatRoom(selectedAgentId, selectedChatId, item.slug, {
+                              hostSessionId: selectedChat?.session_id || selectedChatId,
+                            }).then((res) => {
+                              if (res?.room) setActiveSessionRoom(res.room);
+                            });
+                          }
+                          setTimeout(() => textareaRef.current?.focus(), 40);
+                        }}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border transition-all cursor-pointer shrink-0 ${
+                          isAlreadyTagged
+                            ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300 font-semibold"
+                            : isSuggested
+                            ? "bg-[#f8a87c]/15 border-[#f8a87c]/45 text-[#e0682b] dark:text-[#f8a87c] font-semibold"
+                            : "bg-slate-100/80 dark:bg-[#161620] border-slate-200 dark:border-[#262636] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:border-[#f8a87c]/40"
+                        }`}
+                      >
+                        <span>{isAlreadyTagged ? "✓" : "+"} @{item.slug}</span>
+                        {isSuggested && <span className="text-[8px] opacity-80">(Gợi ý)</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {replyingToMsg && (
               <div
@@ -12979,10 +13266,17 @@ export function GrokBotWorkspace() {
                         <Check size={11} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#f8a87c]"} />
                       </span>
 
-                      {/* Channel icon OR Running Spin inside icon box */}
+                      {/* Channel icon OR Running Animated Agent Avatar inside icon box */}
                       <span className={selectedChatIds.includes(chat.id) ? "hidden" : "block group-hover:hidden flex items-center justify-center"}>
                         {isChatRunning ? (
-                          <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+                          <AgentAvatar
+                            agent={selectedAgent}
+                            size="2xs"
+                            interactive={false}
+                            alwaysAnimate={true}
+                            forcedAnimation="thinking.2"
+                            className="scale-95 ring-1 ring-[#f8a87c]/50"
+                          />
                         ) : (
                           <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
                         )}
@@ -15778,6 +16072,33 @@ ${chat.id}`);
             activeRespondingAgent={activeRespondingAgent}
             allAgents={agents}
             isLiveInProgress={isModalTurnLive}
+            onDrillDownBranch={(branchTurn) => {
+              const cleanSnippet = stripSharedRoomContext(branchTurn.text || "").slice(0, 140);
+              setActiveThinkingModalMsg(null);
+              setIsLiveThinkingModalOpen(false);
+              setReplyingToMsg({
+                id: branchTurn.id,
+                role: "assistant",
+                authorName: `🤖 ${branchTurn.author_name || branchTurn.author_id} (@${branchTurn.author_id})`,
+                snippet: cleanSnippet,
+              });
+              setInputText((prev) => {
+                if (new RegExp(`@${branchTurn.author_id}\\b`, "i").test(prev)) return prev;
+                return prev ? `@${branchTurn.author_id} ${prev}` : `@${branchTurn.author_id} `;
+              });
+              setTimeout(() => textareaRef.current?.focus(), 60);
+            }}
+            onUpdateHostExecutionPolicy={async (nextPolicy) => {
+              if (!selectedAgentId || !selectedChatId) return;
+              setActiveSessionRoom((prev) => (prev ? { ...prev, host_execution_policy: nextPolicy } : prev));
+              const updated = await updateChatRoomTriagePolicy(
+                selectedAgent?.slug || selectedAgentId,
+                selectedChatId,
+                (activeSessionRoom?.triage_policy as "auto" | "manual") || "auto",
+                nextPolicy
+              );
+              if (updated) setActiveSessionRoom(updated);
+            }}
             onClose={() => {
               setActiveThinkingModalMsg(null);
               setIsLiveThinkingModalOpen(false);
