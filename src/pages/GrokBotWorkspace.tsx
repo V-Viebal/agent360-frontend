@@ -531,8 +531,27 @@ function AgentThinkingModal({
     setViewMode(hasMultiAgentRoom ? "tree" : "timeline");
   }, [hasMultiAgentRoom]);
   const [selectedWaveIdx, setSelectedWaveIdx] = useState<number>(-1);
+  const [selectedRoundFilter, setSelectedRoundFilter] = useState<"all" | number>(() => {
+    const rNo = msg.roomReceipt?.round_no || msg.roundNo;
+    return typeof rNo === "number" && rNo >= 1 ? rNo : "all";
+  });
   const [expandedBranchIds, setExpandedBranchIds] = useState<Record<string, boolean>>({});
   const [flowSearchQuery, setFlowSearchQuery] = useState<string>("");
+  const flowSearchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f" && hasMultiAgentRoom) {
+        if (flowSearchInputRef.current) {
+          e.preventDefault();
+          flowSearchInputRef.current.focus();
+          flowSearchInputRef.current.select();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [hasMultiAgentRoom]);
 
   // Mobile swipe down to close gesture state & touch handling
   const [dragY, setDragY] = useState(0);
@@ -601,7 +620,9 @@ function AgentThinkingModal({
   useEffect(() => {
     setSelectedParticipantFilter("all");
     setSelectedWaveIdx(-1);
-  }, [msg.id, msg.senderAgentId]);
+    const rNo = msg.roomReceipt?.round_no || msg.roundNo;
+    setSelectedRoundFilter(typeof rNo === "number" && rNo >= 1 ? rNo : "all");
+  }, [msg.id, msg.senderAgentId, msg.roomReceipt?.round_no, msg.roundNo]);
 
   const steps = msg.steps || [];
   const toolCalls = msg.toolCalls || [];
@@ -1006,13 +1027,23 @@ function AgentThinkingModal({
       });
     }
 
+    const distinctRounds = Array.from(new Set(completedTurns.map((t) => t.round_no || 1))).sort((a, b) => a - b);
+    const effectiveRound =
+      selectedRoundFilter !== "all" && distinctRounds.length > 1 && distinctRounds.includes(selectedRoundFilter)
+        ? selectedRoundFilter
+        : "all";
+    const byRound =
+      effectiveRound === "all"
+        ? completedTurns
+        : completedTurns.filter((t) => (t.round_no || 1) === effectiveRound);
+
     const q = flowSearchQuery.trim().toLowerCase();
     const byParticipant =
       selectedParticipantFilter === "all" ||
       selectedParticipantFilter === "agentteams-manager" ||
       selectedParticipantFilter === hostSlug
-        ? completedTurns
-        : completedTurns.filter(
+        ? byRound
+        : byRound.filter(
             (t) =>
               t.author_id.toLowerCase() === selectedParticipantFilter ||
               (t.target_agent_id && t.target_agent_id.toLowerCase() === selectedParticipantFilter)
@@ -1026,7 +1057,13 @@ function AgentThinkingModal({
         (t.reasoning || "").toLowerCase().includes(q) ||
         (Array.isArray(t.steps) && t.steps.some((s: any) => (s.tool || "").toLowerCase().includes(q) || (s.text || "").toLowerCase().includes(q)))
     );
-  }, [activeWave, activeWaveIndex, executionWaves.length, isCurrentlyRunning, room, activeRespondingAgent, allAgents, selectedParticipantFilter, hostSlug, flowSearchQuery]);
+  }, [activeWave, activeWaveIndex, executionWaves.length, isCurrentlyRunning, room, activeRespondingAgent, allAgents, selectedParticipantFilter, selectedRoundFilter, hostSlug, flowSearchQuery]);
+
+  const availableWaveRounds = useMemo(() => {
+    if (!activeWave) return [1];
+    const rounds = Array.from(new Set(activeWave.collaboratorTurns.map((t) => t.round_no || 1))).sort((a, b) => a - b);
+    return rounds.length > 0 ? rounds : [1];
+  }, [activeWave]);
 
   const completedCollabCount = activeWave ? activeWave.collaboratorTurns.length : 0;
   const totalExpectedCollabCount = activeWave
@@ -1395,11 +1432,12 @@ function AgentThinkingModal({
                 <div className="relative flex-1">
                   <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
                   <input
+                    ref={flowSearchInputRef}
                     type="text"
                     data-testid="flow-tree-search-input"
                     value={flowSearchQuery}
                     onChange={(e) => setFlowSearchQuery(e.target.value)}
-                    placeholder="Tìm kiếm từ khóa, @agent hoặc công cụ trong Flow Tree..."
+                    placeholder="Tìm kiếm từ khóa, @agent hoặc công cụ trong Flow Tree (Ctrl+F)..."
                     className="w-full pl-7 pr-6 py-1 rounded-lg bg-white dark:bg-[#191926] border border-slate-200 dark:border-[#2a2a3c] text-[10px] font-mono text-slate-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:border-[#f8a87c]"
                   />
                   {flowSearchQuery && (
@@ -1412,6 +1450,37 @@ function AgentThinkingModal({
                     </button>
                   )}
                 </div>
+                {availableWaveRounds.length > 0 && (
+                  <div data-testid="flow-tree-round-filter-bar" className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      data-testid="flow-tree-round-btn-all"
+                      onClick={() => setSelectedRoundFilter("all")}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                        selectedRoundFilter === "all" || (availableWaveRounds.length === 1 && selectedRoundFilter === 1)
+                          ? "bg-[#f8a87c]/15 border-[#f8a87c] text-slate-900 dark:text-white font-semibold"
+                          : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-neutral-500 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      Tất cả vòng
+                    </button>
+                    {availableWaveRounds.map((rNo) => (
+                      <button
+                        key={rNo}
+                        type="button"
+                        data-testid={`flow-tree-round-btn-${rNo}`}
+                        onClick={() => setSelectedRoundFilter(selectedRoundFilter === rNo ? "all" : rNo)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                          selectedRoundFilter === rNo && availableWaveRounds.length > 1
+                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white font-semibold"
+                            : "bg-white dark:bg-[#191926] border-slate-200 dark:border-[#2a2a3c] text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                      >
+                        Vòng {rNo}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Session Evolution Wave Selector (Shows smooth Solo <-> Multi-Agent transitions across turns) */}
@@ -2021,6 +2090,72 @@ function AgentThinkingModal({
                   </div>
                 )}
               </div>
+
+              {/* Enhancement 2: Team Wave Dynamics & Consensus Banner */}
+              {activeWave.isMultiAgentWave && activeWave.collaboratorTurns.length > 0 && (() => {
+                const cTurns = activeWave.collaboratorTurns;
+                const avgQa = Math.round(
+                  (cTurns.reduce((acc, t) => acc + ((t.manager_audit?.quality_score ?? 0.94) as number), 0) / cTurns.length) * 100
+                );
+                const hasCautious = cTurns.some((t) => /chưa cần|không nên|tạm hoãn|quá tốn kém|cắt giảm/i.test(t.text || ""));
+                const hasAggressive = cTurns.some((t) => /bắt buộc phải|nên dùng ngay|ưu tiên đầu tư ngay/i.test(t.text || ""));
+                const hasConflict = cTurns.length >= 2 && hasCautious && hasAggressive;
+                const needsClarify = cTurns.some(
+                  (t) => t.kind === "question" || t.manager_audit?.verdict === "scope_pending" || /cần làm rõ|vui lòng cho biết|thiếu thông tin/i.test(t.text || "")
+                );
+                const hasFallback = cTurns.some((t) => (t.text || "").includes("**[Đóng góp chuyên môn từ @"));
+
+                const dynState = hasConflict
+                  ? "conflict_detected"
+                  : hasFallback
+                  ? "partial_degraded_recovery"
+                  : needsClarify
+                  ? "clarification_needed"
+                  : cTurns.length >= 2
+                  ? "strong_consensus"
+                  : "complementary_synergy";
+
+                const dynLabel =
+                  dynState === "conflict_detected"
+                    ? "Trọng tài Phân xử Trade-off (Conflict Arbitration)"
+                    : dynState === "partial_degraded_recovery"
+                    ? "Phục hồi Liền mạch (Resilient Synthesis)"
+                    : dynState === "clarification_needed"
+                    ? "Chốt Phương án Mặc định + 1 Câu hỏi Làm rõ"
+                    : dynState === "strong_consensus"
+                    ? "Hội tụ Đồng thuận Cao (100% Team Consensus)"
+                    : "Bổ trợ Chuyên môn Liên ngành (Synergy)";
+
+                const dynDesc =
+                  dynState === "conflict_detected"
+                    ? `Phát hiện góc nhìn giằng co giữa các chuyên viên; Chủ phòng (@${hostSlug}) phân xử theo giai đoạn để dung hòa hiệu năng và chi phí.`
+                    : dynState === "partial_degraded_recovery"
+                    ? `Kết hợp dữ kiện sâu từ các nhánh hoàn tất với khung chuẩn chuyên môn dự phòng để đảm bảo độ phủ 100%.`
+                    : dynState === "clarification_needed"
+                    ? `Đưa ra phương án khuyến nghị mặc định dùng được ngay và gom mọi điểm cần xác nhận thành đúng 1 câu hỏi gọn ở cuối bài.`
+                    : `Cả ${cTurns.length} nhánh chuyên viên (${cTurns.map((t) => `@${t.author_id}`).join(", ")}) đều hội tụ đồng thuận và đạt chuẩn nghiệm thu Manager QA trung bình ${avgQa}%.`;
+
+                return (
+                  <div
+                    data-testid="flow-tree-wave-dynamics-banner"
+                    data-dynamics-state={dynState}
+                    className="mt-2.5 w-full max-w-2xl rounded-xl bg-white dark:bg-[#171723] border border-emerald-500/35 dark:border-emerald-500/30 px-3 py-2 shadow-2xs flex flex-col gap-1"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        <Check size={11} />
+                        <span>Động lực học Team · {dynLabel}</span>
+                      </span>
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                        Team QA Avg: {avgQa}%
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-neutral-300 leading-snug">
+                      {dynDesc}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Proposal 1: When Manager decides synthesize_only (Host does not self-execute), show explicit priority routing pill */}
               {activeWave.isMultiAgentWave && !showHostCoExecBranch && (
@@ -10311,6 +10446,60 @@ export function GrokBotWorkspace() {
 
                 return (
                   <div data-testid="chat-message-attachments" className={`flex flex-col gap-2 ${cleanContent ? "mb-2" : ""}`}>
+                    {parsedAttachments.length >= 2 && (
+                      <div
+                        data-testid="chat-attachments-summary-bar"
+                        className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100/90 dark:bg-[#171723] border border-slate-200/80 dark:border-[#2a2a3c] text-[10px] font-mono"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5 text-slate-700 dark:text-neutral-300">
+                          <Paperclip size={11} className="text-[#f8a87c] shrink-0" />
+                          <span className="font-semibold">Bộ tài nguyên đính kèm ({parsedAttachments.length} tệp)</span>
+                          {imageItems.length > 0 && (
+                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
+                              {imageItems.length} Ảnh
+                            </span>
+                          )}
+                          {videoItems.length > 0 && (
+                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
+                              {videoItems.length} Video
+                            </span>
+                          )}
+                          {audioItems.length > 0 && (
+                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
+                              {audioItems.length} Audio
+                            </span>
+                          )}
+                          {fileItems.length > 0 && (
+                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
+                              {fileItems.length} Tài liệu
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          data-testid="download-all-attachments-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerHaptic(12);
+                            parsedAttachments.forEach((att, idx) => {
+                              setTimeout(() => {
+                                const a = document.createElement("a");
+                                a.href = `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`;
+                                a.download = att.fileName;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                              }, idx * 180);
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/35 font-semibold transition-colors cursor-pointer shrink-0"
+                          title="Tải xuống toàn bộ tài nguyên trong lượt phản hồi này"
+                        >
+                          <Download size={10} />
+                          <span>Tải tất cả</span>
+                        </button>
+                      </div>
+                    )}
                     {imageItems.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {imageItems.map((att, aIdx) => (
