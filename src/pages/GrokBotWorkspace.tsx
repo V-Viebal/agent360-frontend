@@ -227,7 +227,16 @@ function stripSharedRoomContext(text: string): string {
   }
   let idx = cleaned.indexOf("[SHARED SESSION ROOM CONTEXT]");
   if (idx < 0) idx = cleaned.indexOf("[AGENTTEAMS COLLABORATION ROOM");
-  return idx >= 0 ? cleaned.slice(0, idx).trimEnd() : cleaned;
+  if (idx < 0) return cleaned;
+  let head = cleaned.slice(0, idx).trimEnd();
+  const tail = cleaned.slice(idx);
+  const tailAttachments = tail.match(/\[Attached File:\s*[^\n\r]+?\s*\([^()\n\r]+\)\]/gi) || [];
+  for (const att of tailAttachments) {
+    if (!head.includes(att)) {
+      head = head ? `${head}\n\n${att}` : att;
+    }
+  }
+  return head;
 }
 
 export interface ParsedChatAttachmentItem {
@@ -645,7 +654,10 @@ function AgentThinkingModal({
   const executionWaves = useMemo(() => {
     type WaveGroup = {
       waveNo: number;
+      runId?: string;
       requestTurn: SessionRoomTurn | null;
+      kickoffTurn: SessionRoomTurn | null;
+      progressTurns: SessionRoomTurn[];
       collaboratorTurns: SessionRoomTurn[];
       managerGuardTurns: SessionRoomTurn[];
       synthesisTurn: SessionRoomTurn | null;
@@ -765,7 +777,10 @@ function AgentThinkingModal({
       return [
         {
           waveNo: 1,
+          runId: msg.runId,
           requestTurn: null,
+          kickoffTurn: null,
+          progressTurns: [],
           collaboratorTurns: [],
           managerGuardTurns: [],
           synthesisTurn: synthTurn,
@@ -776,30 +791,54 @@ function AgentThinkingModal({
     }
 
     const waves: WaveGroup[] = [];
+    let curRunId: string | undefined = undefined;
     let curReq: SessionRoomTurn | null = null;
+    let curKickoff: SessionRoomTurn | null = null;
+    let curProgress: SessionRoomTurn[] = [];
     let curCollabs: SessionRoomTurn[] = [];
     let curGuards: SessionRoomTurn[] = [];
     let curSynth: SessionRoomTurn | null = null;
 
     const flushWave = () => {
-      if (!curReq && curCollabs.length === 0 && !curSynth) return;
+      if (!curReq && !curKickoff && curProgress.length === 0 && curCollabs.length === 0 && !curSynth) return;
       const meta = parseTriageFromTurn(curReq, curCollabs);
+      const resolvedRunId =
+        curRunId ||
+        curReq?.run_id ||
+        curKickoff?.run_id ||
+        curProgress[0]?.run_id ||
+        curCollabs[0]?.run_id ||
+        curSynth?.run_id ||
+        undefined;
       waves.push({
         waveNo: waves.length + 1,
+        runId: resolvedRunId,
         requestTurn: curReq,
+        kickoffTurn: curKickoff,
+        progressTurns: curProgress,
         collaboratorTurns: curCollabs,
         managerGuardTurns: curGuards,
         synthesisTurn: curSynth,
         triageMeta: meta,
-        isMultiAgentWave: curCollabs.length > 0 || meta.selectedCollaborators.length > 0,
+        isMultiAgentWave: curCollabs.length > 0 || Boolean(curKickoff) || meta.selectedCollaborators.length > 0,
       });
+      curRunId = undefined;
       curReq = null;
+      curKickoff = null;
+      curProgress = [];
       curCollabs = [];
       curGuards = [];
       curSynth = null;
     };
 
     for (const turn of roomWaveTurns) {
+      if (turn.run_id && curRunId && turn.run_id !== curRunId) {
+        flushWave();
+      }
+      if (turn.run_id && !curRunId) {
+        curRunId = turn.run_id;
+      }
+
       if (turn.kind === "request") {
         if (
           curReq &&
@@ -811,8 +850,15 @@ function AgentThinkingModal({
         }
         if (curReq || curCollabs.length > 0 || curSynth) {
           flushWave();
+          if (turn.run_id) curRunId = turn.run_id;
         }
         curReq = turn;
+      } else if (turn.kind === "host_kickoff") {
+        if (curSynth) flushWave();
+        curKickoff = turn;
+      } else if (turn.kind === "host_progress") {
+        if (curSynth) flushWave();
+        curProgress.push(turn);
       } else if (turn.kind === "manager_guard") {
         curGuards.push(turn);
       } else if (turn.kind === "synthesis") {
@@ -866,12 +912,15 @@ function AgentThinkingModal({
     }
     const matchedIdx = executionWaves.findIndex(
       (w) =>
+        (msg.runId && w.runId === msg.runId) ||
         w.requestTurn?.id === msg.id ||
+        w.kickoffTurn?.id === msg.id ||
+        w.progressTurns.some((p) => p.id === msg.id) ||
         w.synthesisTurn?.id === msg.id ||
         w.collaboratorTurns.some((c) => c.id === msg.id)
     );
     return matchedIdx >= 0 ? matchedIdx : Math.max(0, executionWaves.length - 1);
-  }, [executionWaves, selectedWaveIdx, msg.id]);
+  }, [executionWaves, selectedWaveIdx, msg.id, msg.runId]);
 
   const activeWave = executionWaves[activeWaveIndex] || executionWaves[executionWaves.length - 1];
 
@@ -1683,6 +1732,12 @@ function AgentThinkingModal({
                                       >
                                         <style>{`[data-testid="room-flow-turn-${branchTurn.kind}-${branchTurn.author_id}"] { --b-dark-col: ${bTheme.dark}; }`}</style>
                                         @{branchTurn.author_id}
+                                      </span>
+                                      <span
+                                        data-testid={`flow-tree-round-badge-${branchTurn.author_id}-${branchTurn.round_no || 1}`}
+                                        className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-neutral-300 border border-slate-200/70 dark:border-white/10"
+                                      >
+                                        Vòng {branchTurn.round_no || 1}
                                       </span>
                                       {isFocusedBranch && (
                                         <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
@@ -6969,28 +7024,55 @@ export function GrokBotWorkspace() {
 
   const liveTurnForView = liveTurn && liveTurn.chatId === selectedChatId ? liveTurn : null;
   const displayMessages = useMemo<ChatMessage[]>(() => {
-    const base = [...messages];
-    if (activeSessionRoom && (activeSessionRoom.host_chat_id === selectedChatId || activeSessionRoom.host_session_id === selectedChatId || (selectedChat?.session_id && (activeSessionRoom.host_chat_id === selectedChat.session_id || activeSessionRoom.host_session_id === selectedChat.session_id))) && Array.isArray(activeSessionRoom.turns)) {
+    // Narrator Model: filter out any legacy/cached collaborator bubbles so only User + Host narrator bubbles appear on the main chat timeline
+    const base = messages.filter(
+      (m) =>
+        m.role === "user" ||
+        (m.visibility !== "room" &&
+          m.turnKind !== "collaborator_reply" &&
+          m.turnKind !== "collaborator_progress" &&
+          m.turnKind !== "question" &&
+          m.turnKind !== "manager_guard" &&
+          m.authorRole !== "collaborator" &&
+          !m.senderAgentId)
+    );
+    if (
+      activeSessionRoom &&
+      (activeSessionRoom.host_chat_id === selectedChatId ||
+        activeSessionRoom.host_session_id === selectedChatId ||
+        (selectedChat?.session_id &&
+          (activeSessionRoom.host_chat_id === selectedChat.session_id ||
+            activeSessionRoom.host_session_id === selectedChat.session_id))) &&
+      Array.isArray(activeSessionRoom.turns)
+    ) {
       const sortedRoomTurns = [...activeSessionRoom.turns].sort((a, b) => (a.turn_no || 0) - (b.turn_no || 0));
       for (const rt of sortedRoomTurns) {
-        if (rt.kind === "request" && rt.author_role !== "manager") {
-          const cleanReq = stripSharedRoomContext(rt.text || "").trim();
-          if (cleanReq && !base.some((m) => m.role === "user" && stripSharedRoomContext(m.content).trim() === cleanReq)) {
-            const reqMsg: ChatMessage = {
-              id: rt.id,
-              role: "user",
-              content: cleanReq,
-              timestamp: rt.created_at,
+        if (rt.kind !== "host_kickoff" && rt.kind !== "host_progress" && rt.kind !== "synthesis") continue;
+        const isSynth = rt.kind === "synthesis";
+        const existingMatchIdx = base.findIndex(
+          (m) =>
+            m.id === rt.id ||
+            (isSynth &&
+              m.role === "assistant" &&
+              m.turnKind !== "host_kickoff" &&
+              m.turnKind !== "host_progress" &&
+              m.content.trim() === (rt.text || "").trim())
+        );
+        if (existingMatchIdx >= 0) {
+          if (rt.run_id || rt.receipt) {
+            base[existingMatchIdx] = {
+              ...base[existingMatchIdx],
+              runId: base[existingMatchIdx].runId || rt.run_id || undefined,
+              roundNo: base[existingMatchIdx].roundNo || rt.round_no || undefined,
+              turnKind: base[existingMatchIdx].turnKind || rt.kind,
+              roomReceipt: base[existingMatchIdx].roomReceipt || rt.receipt || undefined,
+              roomId: base[existingMatchIdx].roomId || activeSessionRoom.room_id,
+              matrixRoomId: base[existingMatchIdx].matrixRoomId || activeSessionRoom.matrix_room_id,
+              elementRoomUrl: base[existingMatchIdx].elementRoomUrl || activeSessionRoom.element_room_url,
             };
-            const firstCollabIdx = base.findIndex((m) => Boolean(m.senderAgentId) && m.roomId === activeSessionRoom.room_id);
-            if (firstCollabIdx >= 0) base.splice(firstCollabIdx, 0, reqMsg);
-            else base.push(reqMsg);
           }
           continue;
         }
-        if (rt.kind !== "collaborator_reply" && rt.kind !== "question" && rt.kind !== "manager_guard" && rt.kind !== "synthesis") continue;
-        const isSynth = rt.kind === "synthesis";
-        if (base.some((m) => m.id === rt.id || (isSynth && m.role === "assistant" && !m.senderAgentId && m.content.trim() === (rt.text || "").trim()))) continue;
         const rtSteps = Array.isArray((rt as any).steps) ? (rt as any).steps : [];
         const turnMsg: ChatMessage = {
           id: rt.id,
@@ -7001,25 +7083,28 @@ export function GrokBotWorkspace() {
           toolCalls: rtSteps.filter((s: any) => s.kind === "tool_call"),
           timestamp: rt.created_at,
           evidenceStatus: "observed",
-          senderAgentId: isSynth ? undefined : rt.author_id,
-          senderAgentName: isSynth ? undefined : rt.author_name,
-          authorRole: rt.author_role,
+          authorRole: "host",
+          runId: rt.run_id || undefined,
+          roundNo: rt.round_no || undefined,
+          turnKind: rt.kind,
+          visibility: "main",
+          roomReceipt: rt.receipt || undefined,
           roomId: activeSessionRoom.room_id,
           matrixRoomId: activeSessionRoom.matrix_room_id,
           elementRoomUrl: activeSessionRoom.element_room_url,
         };
         if (!isSynth) {
-          // Find the matching Host synthesis message for this wave (or active streaming bot-* message at tail) so Collaborator replies always appear BEFORE Host synthesis!
           const matchingSynthIdx = base.findIndex(
             (m, idx) =>
               idx > 0 &&
               m.role === "assistant" &&
-              !m.senderAgentId &&
+              m.turnKind !== "host_kickoff" &&
+              m.turnKind !== "host_progress" &&
               (m.id.startsWith("bot-") ||
+                (rt.run_id && m.runId === rt.run_id) ||
                 sortedRoomTurns.some(
                   (st) => st.kind === "synthesis" && (st.turn_no || 0) > (rt.turn_no || 0) && m.content.trim() === (st.text || "").trim()
-                ) ||
-                (idx === base.length - 1 && (base[idx - 1].senderAgentId || /@[a-zA-Z0-9_-]+/.test(base[idx - 1].content))))
+                ))
           );
           if (matchingSynthIdx >= 0) {
             base.splice(matchingSynthIdx, 0, turnMsg);
@@ -8107,6 +8192,17 @@ export function GrokBotWorkspace() {
                   });
                 }
               }
+              const turnVis = ev.visibility || ev.turn.visibility || (ev.turn.kind === "host_kickoff" || ev.turn.kind === "host_progress" || ev.turn.kind === "synthesis" ? "main" : "room");
+              if (
+                turnVis === "room" ||
+                ev.turn.kind === "collaborator_reply" ||
+                ev.turn.kind === "collaborator_progress" ||
+                ev.turn.kind === "question" ||
+                ev.turn.kind === "manager_guard" ||
+                ev.turn.author_role === "collaborator"
+              ) {
+                return;
+              }
               const sseSteps = Array.isArray(ev.turn.steps) ? ev.turn.steps : [];
               const roomMsg: ChatMessage = {
                 id: ev.turn.id || `room-turn-${Date.now()}`,
@@ -8117,9 +8213,12 @@ export function GrokBotWorkspace() {
                 toolCalls: sseSteps.filter((s: any) => s.kind === "tool_call"),
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 evidenceStatus: "observed",
-                senderAgentId: ev.turn.author_id,
-                senderAgentName: ev.turn.author_name,
-                authorRole: ev.turn.author_role,
+                authorRole: "host",
+                runId: ev.run_id || ev.turn.run_id || undefined,
+                roundNo: ev.round_no || ev.turn.round_no || 1,
+                turnKind: ev.turn.kind,
+                visibility: "main",
+                roomReceipt: ev.receipt || ev.turn.receipt || undefined,
                 roomId: ev.room?.room_id,
                 matrixRoomId: ev.room?.matrix_room_id,
                 elementRoomUrl: ev.room?.element_room_url,
@@ -10684,16 +10783,39 @@ export function GrokBotWorkspace() {
                       }`}>
                         {renderQuotedReplyBox()}
                         {renderMessageAttachmentsBox()}
-                        {cleanContent && (
-                          <p className="whitespace-pre-wrap select-text break-words">
-                            {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
-                              if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
-                                return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
-                              }
-                              return <span key={pIdx}>{part}</span>;
-                            })}
-                          </p>
-                        )}
+                        {cleanContent && (() => {
+                          const mentionMatches = Array.from(cleanContent.matchAll(/(?:^|\s)@([a-zA-Z0-9_-]{2,32})/g)).map((m) => m[1]);
+                          const uniqueMentions = Array.from(new Set(mentionMatches));
+                          const strippedPromptText = cleanContent.replace(/(?:^|\s)@[a-zA-Z0-9_-]{2,32}\b/g, " ").replace(/\s+/g, " ").trim();
+                          const startsWithSingleShortMention =
+                            uniqueMentions.length === 1 &&
+                            /^@[a-zA-Z0-9_-]{2,32}\s+/.test(cleanContent.trim()) &&
+                            strippedPromptText.length <= 42;
+
+                          if (uniqueMentions.length > 0 && strippedPromptText && !startsWithSingleShortMention) {
+                            return (
+                              <div className="space-y-1.5">
+                                <p className="whitespace-pre-wrap select-text break-words">{strippedPromptText}</p>
+                                <div data-testid="user-bubble-mention-chips" className="flex flex-wrap items-center gap-1 pt-0.5">
+                                  {uniqueMentions.map((slug) => (
+                                    <span key={slug}>{renderAgentMentionChip(`@${slug}`, undefined, "inline")}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <p className="whitespace-pre-wrap select-text break-words">
+                              {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
+                                if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
+                                  return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
+                                }
+                                return <span key={pIdx}>{part}</span>;
+                              })}
+                            </p>
+                          );
+                        })()}
                         {msg.metadata?.isOfflineQueued && (
                           <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
@@ -10889,27 +11011,47 @@ export function GrokBotWorkspace() {
                               )}
                             </div>
                             </div>
-                            {/* Subtle "Messaged <Bot>" footer right-aligned below Host Agent bubble when collaborating */}
+                            {/* Narrator Inline Receipt ("Messaged @A and @B", "N messages with @A and @B", "Message from @A") right-aligned below Host bubble */}
                             {!msg.senderAgentId && (() => {
-                              const nextTurn = displayMessages[mIdx + 1];
-                              const prevTurn = mIdx > 0 ? displayMessages[mIdx - 1] : null;
-                              let messagedAgentId: string | undefined = nextTurn?.senderAgentId;
-                              let messagedAgentName: string | undefined = nextTurn?.senderAgentName;
-                              if (!messagedAgentId && prevTurn?.role === "user") {
-                                const mMatch = prevTurn.content.match(/@([a-zA-Z0-9_-]+)/);
-                                if (mMatch && mMatch[1].toLowerCase() !== (selectedAgent.slug || "").toLowerCase()) {
-                                  messagedAgentId = mMatch[1].toLowerCase();
-                                }
+                              const receipt = msg.roomReceipt || (msg.metadata?.receipt as any);
+                              if (!receipt || !Array.isArray(receipt.participants) || receipt.participants.length === 0) {
+                                return null;
                               }
-                              if (!messagedAgentId) return null;
+                              const participants: string[] = receipt.participants;
+                              const rKind: string = receipt.kind || "dispatch";
+                              const rRound: number = receipt.round_no || msg.roundNo || 1;
+                              const rCount: number = receipt.message_count || participants.length;
+                              const prefixText =
+                                rKind === "dispatch"
+                                  ? "Messaged"
+                                  : rKind === "reply" || (rCount <= 1 && participants.length === 1)
+                                  ? "Message from"
+                                  : `${rCount} messages with`;
+
                               return (
-                                <div
-                                  data-testid={`messaged-collaborator-${messagedAgentId}`}
-                                  className="flex items-center justify-end self-end gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mt-1 px-1 select-none"
+                                <button
+                                  type="button"
+                                  data-testid={`room-inline-receipt-${rKind}-${rRound}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(12);
+                                    handleOpenActiveThinkingModal(msg);
+                                  }}
+                                  title="Bấm để mở Flow Tree xem chi tiết trao đổi trong Room ở vòng này"
+                                  className="flex flex-wrap items-center justify-end self-end gap-1 text-[11px] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 mt-1.5 px-1.5 py-0.5 rounded-full hover:bg-slate-100/80 dark:hover:bg-white/[0.05] transition-colors cursor-pointer select-none"
                                 >
-                                  <span>Messaged</span>
-                                  {renderAgentMentionChip(messagedAgentId, messagedAgentName, "meta")}
-                                </div>
+                                  <span>{prefixText}</span>
+                                  {participants.map((pSlug, pIdx) => (
+                                    <React.Fragment key={pSlug + pIdx}>
+                                      {pIdx > 0 && (
+                                        <span className="text-slate-400 dark:text-neutral-500">
+                                          {pIdx === participants.length - 1 ? "and" : ","}
+                                        </span>
+                                      )}
+                                      {renderAgentMentionChip(pSlug, undefined, "inline")}
+                                    </React.Fragment>
+                                  ))}
+                                </button>
                               );
                             })()}
                           </div>

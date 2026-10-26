@@ -646,8 +646,33 @@ export function setCachedChatMessages(chatId: string, messages: ChatMessage[], a
   const key = `${cleanAgentId}:${chatId}`;
   _chatMessagesCache.set(key, { messages, timestamp: Date.now() });
   try {
-    sessionStorage.setItem(`agent360_msgcache_${key}`, JSON.stringify(messages.slice(-50)));
+    sessionStorage.setItem(`agent360_msgcache_${key}`, JSON.stringify(messages.slice(-200)));
   } catch {}
+}
+
+function extractMediaTagsFromContentParts(parts: any[], existingText: string): string {
+  if (!Array.isArray(parts)) return "";
+  const added: string[] = [];
+  for (const item of parts) {
+    if (!item || typeof item !== "object") continue;
+    const t = String(item.type || "").toLowerCase();
+    if (t === "text" || t === "data" || t === "reasoning") continue;
+    const rawUrl =
+      (typeof item.image_url === "string" ? item.image_url : item.image_url?.url) ||
+      (typeof item.file_url === "string" ? item.file_url : item.file_url?.url) ||
+      (typeof item.audio_url === "string" ? item.audio_url : item.audio_url?.url) ||
+      (typeof item.video_url === "string" ? item.video_url : item.video_url?.url) ||
+      (typeof item.url === "string" ? item.url : "") ||
+      (typeof item.path === "string" ? item.path : "") ||
+      (typeof item.file_path === "string" ? item.file_path : "");
+    if (!rawUrl) continue;
+    const cleanUrl = String(rawUrl).trim();
+    if (!cleanUrl || existingText.includes(cleanUrl)) continue;
+    const fallbackName = cleanUrl.replace(/\\/g, "/").split("/").pop() || "attachment";
+    const fileName = String(item.file_name || item.filename || item.name || fallbackName).trim();
+    added.push(`[Attached File: ${fileName} (${cleanUrl})]`);
+  }
+  return added.join("\n");
 }
 
 export function parseRawChatMessages(rawList: any[], chatId: string, isSessionActive: boolean = false): ChatMessage[] {
@@ -670,105 +695,67 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           .filter((c: any) => c.type === "text" || !c.type)
           .map((c: any) => c.text || "")
           .join("\n");
+        const mediaTags = extractMediaTagsFromContentParts(m.content, userContent);
+        if (mediaTags) {
+          userContent = userContent ? `${userContent}\n\n${mediaTags}` : mediaTags;
+        }
       }
       let roomCtxIdx = userContent.indexOf("[SHARED SESSION ROOM CONTEXT]");
       if (roomCtxIdx < 0) roomCtxIdx = userContent.indexOf("[AGENTTEAMS COLLABORATION ROOM");
-      let sharedCtxBlock = "";
       if (roomCtxIdx >= 0) {
-        sharedCtxBlock = userContent.slice(roomCtxIdx);
-        userContent = userContent.slice(0, roomCtxIdx).trimEnd();
+        const tail = userContent.slice(roomCtxIdx);
+        let head = userContent.slice(0, roomCtxIdx).trimEnd();
+        const tailAttachments = tail.match(/\[Attached File:\s*[^\n\r]+?\s*\([^()\n\r]+\)\]/gi) || [];
+        for (const att of tailAttachments) {
+          if (!head.includes(att)) {
+            head = head ? `${head}\n\n${att}` : att;
+          }
+        }
+        userContent = head;
       }
       turns.push({
         id: m.id || `${chatId}-${mIdx}-user`,
         role: "user",
         content: userContent || "(Empty user message)",
         timestamp: ts,
+        runId: m.metadata?.run_id || undefined,
+        roomId: m.metadata?.room_id || undefined,
         reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
+        metadata: m.metadata || undefined,
       });
-
-      // Recover embedded collaborator turns from [SHARED SESSION ROOM CONTEXT] if backend room turns were not yet injected into rawList
-      if (sharedCtxBlock) {
-        const markers = [
-          "Các chuyên viên AI trong phiên đã lần lượt đóng góp ý kiến chuyên môn",
-          "Các chuyên viên AI trong Room đã lần lượt đóng góp ý kiến chuyên môn",
-          "Các chuyên viên trong phiên đã lần lượt phản hồi:"
-        ];
-        let secIdx = -1;
-        for (const mk of markers) {
-          const found = sharedCtxBlock.indexOf(mk);
-          if (found >= 0) {
-            const colon = sharedCtxBlock.indexOf(":", found);
-            secIdx = colon >= 0 ? colon + 1 : found + mk.length;
-            break;
-          }
-        }
-        if (secIdx >= 0) {
-          let bodyAfter = sharedCtxBlock.slice(secIdx);
-          const endMatch = bodyAfter.match(/\r?\n\s*(?:Với vai trò Chủ phòng|Hãy dựa trên ngữ cảnh chung)/i);
-          if (endMatch && typeof endMatch.index === "number") {
-            bodyAfter = bodyAfter.slice(0, endMatch.index);
-          }
-          const entryRegex = /(?:^|\r?\n)- @([a-zA-Z0-9_-]+)\s*\((.+?)\):\s*([\s\S]*?)(?=(?:\r?\n- @[a-zA-Z0-9_-]+\s*\(.+?\):)|$)/g;
-          let match: RegExpExecArray | null;
-          let cIdx = 0;
-          while ((match = entryRegex.exec(bodyAfter)) !== null) {
-            const agId = match[1].trim().toLowerCase();
-            const agName = match[2].trim();
-            let repText = match[3].trim();
-            if (!repText) continue;
-            const alreadyInRaw = rawList.some(
-              (rm: any) =>
-                rm?.metadata?.sender_agent_id &&
-                String(rm.metadata.sender_agent_id).toLowerCase() === agId &&
-                (typeof rm.content === "string"
-                  ? rm.content.includes(repText.slice(0, 40))
-                  : Array.isArray(rm.content) && rm.content.some((p: any) => String(p?.text || "").includes(repText.slice(0, 40))))
-            );
-            if (!alreadyInRaw) {
-              cIdx++;
-              turns.push({
-                id: `${m.id || chatId}-collab-${agId}-${mIdx}-${cIdx}`,
-                role: "assistant",
-                content: repText,
-                timestamp: ts,
-                senderAgentId: agId,
-                senderAgentName: agName,
-                authorRole: "collaborator",
-                steps: [
-                  {
-                    kind: "reasoning",
-                    id: `step-r-${agId}-${mIdx}`,
-                    text: `Phân tích chuyên môn từ @${agId} (${agName}) trong Room.`
-                  },
-                  {
-                    kind: "tool_call",
-                    id: `step-t-${agId}-${mIdx}`,
-                    call_id: `call-${agId}-${mIdx}`,
-                    tool: "session_room_collaborate",
-                    args: JSON.stringify({ collaborator: agId, session: chatId }),
-                    result: "completed",
-                    state: "success"
-                  }
-                ],
-                toolCalls: [
-                  {
-                    id: `step-t-${agId}-${mIdx}`,
-                    call_id: `call-${agId}-${mIdx}`,
-                    tool: "session_room_collaborate",
-                    args: JSON.stringify({ collaborator: agId, session: chatId }),
-                    result: "completed",
-                    state: "success"
-                  }
-                ]
-              });
-            }
-          }
-        }
-      }
     } else if (role === "assistant") {
+      // Narrator Model: Specialist room turns (visibility="room" or collaborator_reply) belong in collaboration_room Flow Tree only, never as separate main chat bubbles
+      const msgVisibility = m.metadata?.visibility;
+      const msgTurnKind = m.metadata?.turn_kind;
+      const msgAuthorRole = m.metadata?.author_role;
       const msgSenderAgentId = m.metadata?.sender_agent_id || undefined;
+      if (
+        msgVisibility === "room" ||
+        msgTurnKind === "collaborator_reply" ||
+        msgTurnKind === "collaborator_progress" ||
+        msgTurnKind === "question" ||
+        msgTurnKind === "manager_guard" ||
+        msgAuthorRole === "collaborator" ||
+        Boolean(msgSenderAgentId)
+      ) {
+        continue;
+      }
+
       const msgRoomId = m.metadata?.room_id || undefined;
-      if (currentAsst && (currentAsst.senderAgentId !== msgSenderAgentId || currentAsst.roomId !== msgRoomId)) {
+      const msgRunId = m.metadata?.run_id || undefined;
+      const msgRoundNo = typeof m.metadata?.round_no === "number" ? m.metadata.round_no : undefined;
+      const msgReceipt = m.metadata?.receipt || undefined;
+      const isNarratorMilestone = msgTurnKind === "host_kickoff" || msgTurnKind === "host_progress" || msgTurnKind === "synthesis" || Boolean(msgReceipt);
+
+      // Keep Host narrator bubbles (host_kickoff, host_progress, synthesis) as distinct bubbles so inline receipts render between them!
+      if (
+        currentAsst &&
+        (currentAsst.senderAgentId !== msgSenderAgentId ||
+          currentAsst.roomId !== msgRoomId ||
+          isNarratorMilestone ||
+          Boolean(currentAsst.turnKind) ||
+          Boolean(currentAsst.roomReceipt))
+      ) {
         currentAsst = null;
       }
       if (!currentAsst) {
@@ -782,12 +769,17 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           steps: [...metaSteps],
           toolCalls: [...metaTools],
           reasoning: m.metadata?.reasoning || "",
-          senderAgentId: msgSenderAgentId,
-          senderAgentName: m.metadata?.sender_agent_name || undefined,
-          authorRole: m.metadata?.author_role || undefined,
+          senderAgentId: undefined,
+          senderAgentName: undefined,
+          authorRole: msgAuthorRole || "host",
           roomId: msgRoomId,
           matrixRoomId: m.metadata?.matrix_room_id || undefined,
           elementRoomUrl: m.metadata?.element_room_url || undefined,
+          runId: msgRunId,
+          roundNo: msgRoundNo,
+          turnKind: msgTurnKind || undefined,
+          visibility: msgVisibility || "main",
+          roomReceipt: msgReceipt,
           reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
           metadata: m.metadata || undefined
         };
@@ -807,6 +799,10 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
               callDatas.push(item.data);
             }
           }
+        }
+        const asstMediaTags = extractMediaTagsFromContentParts(m.content, textContent);
+        if (asstMediaTags) {
+          textContent = textContent ? `${textContent}\n\n${asstMediaTags}` : asstMediaTags;
         }
       }
 

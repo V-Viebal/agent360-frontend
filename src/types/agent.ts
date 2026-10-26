@@ -50,13 +50,21 @@ export interface SessionRoomParticipant {
   joined_at: string;
 }
 
+export interface SessionRoomInlineReceipt {
+  kind: "dispatch" | "exchange" | "reply" | string;
+  round_no: number;
+  participants: string[];
+  message_count?: number;
+  label?: string | null;
+}
+
 export interface SessionRoomTurn {
   id: string;
   turn_no: number;
   author_id: string;
   author_name: string;
   author_role: "host" | "collaborator" | "manager" | "admin" | "user" | string;
-  kind: "request" | "collaborator_progress" | "collaborator_reply" | "question" | "answer" | "manager_guard" | "synthesis" | string;
+  kind: "request" | "host_kickoff" | "host_progress" | "collaborator_progress" | "collaborator_reply" | "question" | "answer" | "manager_guard" | "synthesis" | string;
   text: string;
   target_agent_id?: string | null;
   created_at: string;
@@ -71,6 +79,10 @@ export interface SessionRoomTurn {
     manager_directive?: string | null;
     auto_retried?: boolean;
   } | null;
+  run_id?: string | null;
+  round_no?: number;
+  visibility?: "main" | "room" | string;
+  receipt?: SessionRoomInlineReceipt | null;
 }
 
 export interface SessionCollaborationRoom {
@@ -91,6 +103,9 @@ export interface SessionCollaborationRoom {
   room_title?: string | null;
   triage_policy?: "auto" | "manual" | string | null;
   host_execution_policy?: "auto" | "co_execute" | "synthesize_only" | string | null;
+  active_run_id?: string | null;
+  active_round?: number;
+  run_state?: string | null;
 }
 
 export interface ReplyToMessageInfo {
@@ -118,6 +133,11 @@ export interface ChatMessage {
   roomId?: string;
   matrixRoomId?: string;
   elementRoomUrl?: string;
+  runId?: string;
+  roundNo?: number;
+  turnKind?: string;
+  visibility?: string;
+  roomReceipt?: SessionRoomInlineReceipt;
 }
 
 export interface InfraAgent {
