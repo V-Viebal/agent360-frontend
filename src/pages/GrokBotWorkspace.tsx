@@ -11155,7 +11155,7 @@ export function GrokBotWorkspace() {
       )}
 
       {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
-        <div className={`${isCompactMode ? "p-2.5 pb-3" : "p-4"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-2`}>
+        <div className={`${isCompactMode ? "px-2.5 pt-1.5 pb-3" : "px-4 pt-2 pb-4"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-2`}>
           {/* Request Queue Indicator */}
           {requestQueue.length > 0 && (
             <div className="flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-[#14141c]/95 border border-[#2a2a38] text-[11px] font-mono text-neutral-300 shadow-md animate-in fade-in duration-100">
@@ -11654,7 +11654,7 @@ export function GrokBotWorkspace() {
                                       </div>
                                     </div>
 
-                                    {cmd.hasChevron ? (
+                                    {(cmd as any).hasChevron ? (
                                       <ChevronRight size={13} className="text-neutral-500 shrink-0 ml-2 opacity-60 group-hover:opacity-100" />
                                     ) : (
                                       <span className="text-[10px] font-mono text-neutral-500 opacity-0 group-hover:opacity-100 shrink-0 ml-2">
@@ -12690,7 +12690,7 @@ export function GrokBotWorkspace() {
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-0 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
-                    isMultiline ? "min-h-[44px] max-h-[210px] py-1 px-0.5" : "flex-1 max-h-[210px] py-1"
+                    isMultiline ? "min-h-[40px] max-h-[210px] pt-0.5 pb-1 px-0.5" : "flex-1 max-h-[210px] py-1"
                   }`}
                 />
               );
@@ -12807,8 +12807,8 @@ export function GrokBotWorkspace() {
                   }}
                   className={`relative ${
                     isMultiline
-                      ? "flex flex-col gap-2 p-3 sm:p-3.5"
-                      : "flex items-center gap-2 px-4 py-2.5"
+                      ? "flex flex-col gap-2 pt-2 pb-2.5 px-3 sm:pt-2.5 sm:pb-3 sm:px-3.5"
+                      : "flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2"
                   } bg-white dark:bg-[#14141c] border ${
                     isDraggingFiles
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
