@@ -555,19 +555,10 @@ export function ConnectAppsModal({
   const [loadingAppId, setLoadingAppId] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  if (!isOpen) return null;
-
-  const categories = [
-    "All",
-    "Password Managers",
-    "Productivity",
-    "Communication",
-    "Code",
-    "Data",
-  ];
-
-    // Realtime WebSocket event listener for instant OAuth activation
+  // Realtime WebSocket event listener for instant OAuth activation (MUST run before early return)
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleWsActivation = (event: Event) => {
       const customEv = event as CustomEvent;
       const detail = customEv.detail;
@@ -590,7 +581,18 @@ export function ConnectAppsModal({
     return () => {
       window.removeEventListener("composio:connection_activated", handleWsActivation);
     };
-  }, [targetAgentId, onAppConnected]);
+  }, [isOpen, targetAgentId, onAppConnected]);
+
+  if (!isOpen) return null;
+
+  const categories = [
+    "All",
+    "Password Managers",
+    "Productivity",
+    "Communication",
+    "Code",
+    "Data",
+  ];
 
   const handleToggleApp = async (app: ConnectedAppItem) => {
     const isCurrentlyConnected = connectedAppIds.includes(app.id);
