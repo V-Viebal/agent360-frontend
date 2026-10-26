@@ -103,6 +103,10 @@ jobs:
           DIST_ROOT="${{ steps.env-target.outputs.dist_root }}"
           mkdir -p "$DIST_ROOT/assets"
           cp -r dist/assets/. "$DIST_ROOT/assets/"
+          if [ -d dist/fonts ]; then
+            mkdir -p "$DIST_ROOT/fonts"
+            cp -r dist/fonts/. "$DIST_ROOT/fonts/"
+          fi
           # Every chunk referenced by the new index.html must be on disk before index.html switches.
           for a in $(grep -oE 'assets/[A-Za-z0-9._-]+\.(js|css)' dist/index.html | sort -u); do
             cmp -s "dist/$a" "$DIST_ROOT/$a" || { echo "::error::asset $a not published"; exit 1; }
