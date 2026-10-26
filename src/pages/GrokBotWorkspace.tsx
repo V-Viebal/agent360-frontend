@@ -1509,6 +1509,18 @@ function AgentThinkingModal({
                         ? "adversarial_review"
                         : progKind === "workstreams"
                         ? "task_decomposition"
+                        : progKind === "brainstorm"
+                        ? "brainstorm_divergence"
+                        : progKind === "arbitration"
+                        ? "debate_arbitration"
+                        : progKind === "war_room"
+                        ? "incident_war_room"
+                        : progKind === "verification"
+                        ? "fact_check_verification"
+                        : progKind === "refinement"
+                        ? "progressive_refinement"
+                        : progKind === "voting"
+                        ? "consensus_voting"
                         : progKind === "reply"
                         ? "consultation"
                         : activeWave.triageMeta.mode === "manager_specialist_recruitment"
@@ -1523,10 +1535,22 @@ function AgentThinkingModal({
                         }
                       } catch {}
                       const playbookLabel =
-                        playbook === "relay_pipeline"
+                        playbook === "incident_war_room"
+                          ? "Tác chiến Khẩn cấp (Incident War Room)"
+                          : playbook === "relay_pipeline"
                           ? "Chuỗi Bàn giao (Relay Pipeline)"
                           : playbook === "adversarial_review"
                           ? "Phản biện & Kiểm định Rủi ro"
+                          : playbook === "debate_arbitration"
+                          ? "Tranh biện & Phân xử (Arbitration)"
+                          : playbook === "fact_check_verification"
+                          ? "Kiểm chứng & Đối soát (Fact-Check)"
+                          : playbook === "consensus_voting"
+                          ? "Biểu quyết Đa tiêu chí (Voting)"
+                          : playbook === "progressive_refinement"
+                          ? "Tinh chỉnh Đa lớp (Refinement)"
+                          : playbook === "brainstorm_divergence"
+                          ? "Phát tán Ý tưởng (Brainstorm)"
                           : playbook === "task_decomposition"
                           ? "Chia để Trị (Task Decomposition)"
                           : playbook === "peer_assist"
@@ -11063,6 +11087,18 @@ export function GrokBotWorkspace() {
                                   ? `${rCount} review checks with`
                                   : rKind === "workstreams"
                                   ? `${rCount} workstreams with`
+                                  : rKind === "brainstorm"
+                                  ? `${rCount} ideas explored with`
+                                  : rKind === "arbitration"
+                                  ? `${rCount} trade-offs arbitrated with`
+                                  : rKind === "war_room"
+                                  ? `${rCount} war-room actions with`
+                                  : rKind === "verification"
+                                  ? `${rCount} verifications with`
+                                  : rKind === "refinement"
+                                  ? `${rCount} refinement passes with`
+                                  : rKind === "voting"
+                                  ? `${rCount} scorecards from`
                                   : `${rCount} messages with`;
 
                               return (
