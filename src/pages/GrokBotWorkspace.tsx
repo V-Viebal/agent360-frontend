@@ -3704,7 +3704,7 @@ export function GrokBotWorkspace() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isAvatarSetupModalOpen, setIsAvatarSetupModalOpen] = useState(false);
-  const [settingsModalTab, setSettingsModalTab] = useState<"appearance" | "language" | "audio" | "privacy_export" | "voice_record">("appearance");
+  const [settingsModalTab, setSettingsModalTab] = useState<"profile" | "appearance" | "language" | "audio" | "privacy_export" | "voice_record">("profile");
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
   const [isStarredShortcutsModalOpen, setIsStarredShortcutsOpen] = useState(false);
@@ -10734,11 +10734,17 @@ export function GrokBotWorkspace() {
                   )}
                 </div>
               );
+              const prevMsg = mIdx > 0 ? displayMessages[mIdx - 1] : null;
+              const isConsecutiveAssistant = !isUser && prevMsg && prevMsg.role === "assistant";
               return (
                 <div
                   key={msg.id}
                   id={`chat-msg-${msg.id}`}
-                  className={`flex flex-col space-y-1 w-full group/msg ${isUser ? "items-end" : "items-start"}`}
+                  className={`flex flex-col w-full group/msg ${
+                    isConsecutiveAssistant
+                      ? "-mt-2 sm:-mt-2.5 space-y-0.5"
+                      : "space-y-1"
+                  } ${isUser ? "items-end" : "items-start"}`}
                 >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
@@ -11038,7 +11044,7 @@ export function GrokBotWorkspace() {
                                     handleOpenActiveThinkingModal(msg);
                                   }}
                                   title="Bấm để mở Flow Tree xem chi tiết trao đổi trong Room ở vòng này"
-                                  className="flex flex-wrap items-center justify-end self-end gap-1 text-[11px] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 mt-1.5 px-1.5 py-0.5 rounded-full hover:bg-slate-100/80 dark:hover:bg-white/[0.05] transition-colors cursor-pointer select-none"
+                                  className="flex flex-wrap items-center justify-end self-end gap-1 text-[11px] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 mt-0.5 mb-0.5 px-1.5 py-0.5 rounded-full hover:bg-slate-100/80 dark:hover:bg-white/[0.05] transition-colors cursor-pointer select-none"
                                 >
                                   <span>{prefixText}</span>
                                   {participants.map((pSlug, pIdx) => (
