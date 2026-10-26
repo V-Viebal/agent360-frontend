@@ -796,11 +796,23 @@ export function LandingPage() {
             </span>
           </h1>
 
-          <p className="mt-4 sm:mt-5 max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-neutral-600 dark:text-neutral-400 font-normal leading-relaxed">
-            {isVi
-              ? "Mỗi Bot sở hữu một máy tính Linux riêng, tự mở trình duyệt và làm việc trực tiếp trên phần mềm của bạn. Phối hợp song song 24/7, xong việc là có báo cáo nghiệm thu rõ ràng."
-              : "Every Bot gets its own Linux computer, headless browser, and persistent memory. Working 24/7 in parallel with verifiable receipts."}
-          </p>
+          <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-mono text-neutral-600 dark:text-neutral-400">
+            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5">
+              {isVi ? "Máy tính Linux riêng" : "Dedicated Linux VM"}
+            </span>
+            <span className="text-neutral-300 dark:text-neutral-700">•</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5">
+              {isVi ? "Trình duyệt tự động" : "Headless Browser"}
+            </span>
+            <span className="text-neutral-300 dark:text-neutral-700">•</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5">
+              {isVi ? "Bộ nhớ dài hạn" : "Persistent Memory"}
+            </span>
+            <span className="text-neutral-300 dark:text-neutral-700">•</span>
+            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5 text-[#f8a87c]">
+              {isVi ? "Nghiệm thu 24/7" : "Verifiable Receipts"}
+            </span>
+          </div>
 
           {/* Interactive Live Command Dispatcher */}
           <form
@@ -946,7 +958,7 @@ export function LandingPage() {
                 <span>ROLE WORKBENCH SIMULATOR</span>
               </div>
               <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-                {t("roles.title")}
+                {isVi ? "Chọn vị trí nhân sự cần giao việc" : "Specialized corporate roles"}
               </h2>
             </div>
 
@@ -1026,7 +1038,6 @@ export function LandingPage() {
                 </div>
 
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{activeRole.title}</h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">{activeRole.headline}</p>
 
                 {/* Animated Visual Step Pipeline */}
                 <div className="mt-5 space-y-2.5">
@@ -1429,16 +1440,11 @@ export function LandingPage() {
             <div className="lg:col-span-6 space-y-4">
               <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c]">
                 <CheckCircle2 size={13} />
-                <span>{t("interaction.badge")}</span>
+                <span>{isVi ? "KIỂM SOÁT BẢO MẬT" : "HUMAN-IN-THE-LOOP"}</span>
               </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-                {t("interaction.title")}
+              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
+                {isVi ? "Tự chủ thực thi. Dừng lại khi duyệt chi." : "Autonomous work. Pauses for approval."}
               </h2>
-              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
-                {isVi
-                  ? "Nhắn tin như đồng nghiệp. Bot tự động nghiên cứu và chuẩn bị sẵn biên bản, chỉ hỏi ý kiến bạn trước khi thực thi lệnh nhạy cảm."
-                  : "Delegate like a colleague. Bots execute autonomously and pause at cryptographic Human Approval Gates before production writes."}
-              </p>
 
               {/* Interactive Chat Simulation Card */}
               <div className="rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-lg overflow-hidden font-sans">
@@ -1531,16 +1537,11 @@ export function LandingPage() {
             <div id="hierarchy" className="lg:col-span-6 space-y-4">
               <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c]">
                 <Network size={13} />
-                <span>{t("hierarchy.badge")}</span>
+                <span>{isVi ? "ĐIỀU PHỐI ĐA BOT" : "MULTI-AGENT ACP"}</span>
               </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-                {t("hierarchy.title")}
+              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
+                {isVi ? "Tự bàn giao công việc giữa các phòng ban." : "Autonomous cross-team task handoffs."}
               </h2>
-              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
-                {isVi
-                  ? "Các Bot tự động bàn giao tác vụ qua giao thức ACP: Sales chốt hợp đồng → Tài chính xuất hóa đơn → Chánh văn phòng cập nhật KPI."
-                  : "Bots pass work autonomously over ACP: Sales closes deal → Finance issues invoice → Chief of Staff updates board OKRs."}
-              </p>
 
               {/* Animated Multi-Agent Mesh Visual */}
               <div className="rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] p-5 shadow-lg space-y-3 font-mono text-xs">
@@ -1622,16 +1623,11 @@ export function LandingPage() {
             <div className="lg:col-span-5 space-y-3">
               <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c]">
                 <Eye size={13} />
-                <span>{t("tools.badge")}</span>
+                <span>{isVi ? "TRÌNH DUYỆT TỰ HÀNH" : "ISOLATED BROWSER CDP"}</span>
               </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-                {t("tools.title")}
+              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
+                {isVi ? "Thao tác trực tiếp trên giao diện web của bạn." : "Navigates your web apps with 60 FPS precision."}
               </h2>
-              <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400">
-                {isVi
-                  ? "Đăng nhập một lần. Bot thao tác trực tiếp trên giao diện web (Zendesk, ERPCore, Ngân hàng, Google) trực tiếp trên máy tính độc lập với trình duyệt cô lập an toàn."
-                  : "Log in once. Bots navigate complex SaaS UIs directly via isolated Chromium CDP sessions with persistent cookies."}
-              </p>
               <div className="pt-2 flex flex-wrap gap-1.5">
                 {["Zendesk", "ERPCore", "GitHub", "Notion", "Google Workspace", "PayOS", "Telegram"].map((tool) => (
                   <span
@@ -1723,14 +1719,9 @@ export function LandingPage() {
                     {isVi ? "08:00 Sáng Mỗi Ngày" : "08:00 AM Daily"}
                   </span>
                 </div>
-                <h3 className="font-newsreader text-2xl text-neutral-900 dark:text-white font-normal">
-                  {t("routines.title")}
+                <h3 className="font-newsreader text-2xl text-neutral-900 dark:text-white font-normal mb-4">
+                  {isVi ? "Tự động chạy định kỳ mỗi sáng" : "Scheduled daily routines"}
                 </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 mb-4">
-                  {isVi
-                    ? "Hướng dẫn một lần, Bot lưu thành lịch trình tự động chạy mỗi sáng."
-                    : "Show a workflow once; Skyer compiles it into a deterministic cron job."}
-                </p>
               </div>
 
               <div className="rounded-lg border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#08090d] p-3.5 font-mono text-[11px] space-y-2">
@@ -1766,14 +1757,9 @@ export function LandingPage() {
                   </span>
                   <span className="text-[11px] font-mono text-neutral-400">ReMe Engine</span>
                 </div>
-                <h3 className="font-newsreader text-2xl text-neutral-900 dark:text-white font-normal">
-                  {t("memory.title")}
+                <h3 className="font-newsreader text-2xl text-neutral-900 dark:text-white font-normal mb-4">
+                  {isVi ? "Ghi nhớ quy định & thói quen làm việc" : "Persistent memory & organizational rules"}
                 </h3>
-                <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1 mb-4">
-                  {isVi
-                    ? "Bộ nhớ 2 tầng: File Markdown chuẩn (MEMORY.md, SOUL.md) kết hợp đồ thị tri thức Knowledge Base KB."
-                    : "Dual-tier memory: Structured Markdown files (`MEMORY.md`) synced with Knowledge Base KB vector graph."}
-                </p>
               </div>
 
               <div className="rounded-lg border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#08090d] p-3.5 font-mono text-[11px] space-y-2">
@@ -1817,11 +1803,8 @@ export function LandingPage() {
       <section id="pricing" className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#f8a87c] font-semibold">
-              {t("pricing.badge")}
-            </span>
-            <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal mt-2">
-              {t("pricing.title")}
+            <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
+              {isVi ? "Bảng giá điện toán minh bạch" : "Predictable compute pricing"}
             </h2>
           </div>
 
@@ -1856,9 +1839,7 @@ export function LandingPage() {
                       {isVi ? plan.period.vi : plan.period.en}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
-                    {isVi ? plan.description.vi : plan.description.en}
-                  </p>
+
 
                   <ul className="mt-5 space-y-2.5 border-t border-neutral-200 dark:border-[var(--border-subtle)] pt-4 text-xs text-neutral-700 dark:text-neutral-300">
                     {(isVi ? plan.features.vi : plan.features.en).map((f) => (
@@ -1895,7 +1876,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="font-newsreader text-2xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-              {t("faq.title")}
+              {isVi ? "Câu hỏi thường gặp" : "Frequently Asked Questions"}
             </h2>
           </div>
 

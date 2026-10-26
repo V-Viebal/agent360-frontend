@@ -398,9 +398,6 @@ export function DocsPage() {
             <h1 className="font-newsreader text-3xl sm:text-5xl font-semibold text-neutral-900 dark:text-white tracking-tight">
               {activeDoc.title}
             </h1>
-            <p className="mt-3 text-base text-neutral-400 leading-relaxed max-w-3xl font-sans">
-              {activeDoc.summary}
-            </p>
           </div>
 
           {/* Key Takeaways Box */}

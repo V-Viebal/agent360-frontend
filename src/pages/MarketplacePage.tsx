@@ -179,9 +179,19 @@ export function MarketplacePage() {
             <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               {t("marketplace.title")}
             </h1>
-            <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-3xl leading-relaxed">
-              {t("marketplace.subtitle")}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-mono text-neutral-600 dark:text-neutral-400">
+              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+                {language === "vi" ? "8 Phòng ban chuyên trách" : "8 Corporate Departments"}
+              </span>
+              <span className="text-neutral-300 dark:text-neutral-700">•</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+                {language === "vi" ? "12 Nhân viên tự hành" : "12 Autonomous Teammates"}
+              </span>
+              <span className="text-neutral-300 dark:text-neutral-700">•</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[#f8a87c]">
+                {language === "vi" ? "Đồng bộ BaseCore & ERPCore" : "BaseCore & ERPCore Native"}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

@@ -361,12 +361,9 @@ export function AgentStatsDashboardPage() {
               <Activity size={14} className="animate-pulse" />
               <span>{t("analytics.headerSubtitle")}</span>
             </div>
-            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-900 dark:text-white">
+            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               Agent Load & Telemetry
             </h1>
-            <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-              Real-time operational metrics across all autonomous AI teammates: execution turns, prompt token consumption, cache hit rates, and multi-channel traffic.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 min-w-0">

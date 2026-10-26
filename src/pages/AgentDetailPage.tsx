@@ -197,10 +197,6 @@ export function AgentDetailPage() {
         {activeTab === "overview" && (
           <div className="space-y-6">
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
-              <h3 className="text-sm font-semibold mb-2">{isVi ? "Bối cảnh & Mục tiêu Chuyên trách" : "Backstory & Objective"}</h3>
-              <p className="text-sm text-[var(--text-muted)] leading-relaxed mb-4">
-                {agent.backstory}
-              </p>
               <div className="p-4 rounded-lg bg-black/20 border border-white/5 font-mono text-xs text-[var(--text-primary)]">
                 <span className="text-[#ff7a00] font-semibold">{isVi ? "Mục tiêu: " : "Goal: "}</span>
                 {agent.goal}
@@ -243,9 +239,7 @@ export function AgentDetailPage() {
                 <Users className="w-4 h-4 text-[#ff7a00]" />
                 {isVi ? "Phương thức Phối hợp Đội ngũ:" : "Collaborative Team Mode:"} {agent.teamConfig.collaborationMode}
               </h3>
-              <p className="text-xs text-[var(--text-muted)] mb-6">
-                {isVi ? "Khi đảm nhận một dự án lớn, nhân viên AI này sẽ tự động phối hợp qua giao thức Skyer ACP với các vị trí sau:" : "When assigned a large initiative, this agent collaborates over the Skyer ACP protocol with the following peer agents:"}
-              </p>
+
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
                 {agent.teamConfig.teammateRoles.map((role, idx) => (

@@ -414,9 +414,6 @@ export function AIOrgChart() {
         <h2 className="font-newsreader text-2xl sm:text-4xl font-semibold text-white">
           {t("orgChart.title")}
         </h2>
-        <p className="mt-2 text-xs sm:text-sm text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-          {t("orgChart.subtitle")}
-        </p>
 
         <div className="mt-5 flex items-center justify-center gap-3">
           <button
