@@ -11437,9 +11437,9 @@ const selectedAgentTheme = getAgentColorTheme(
                                       }, 0);
                                     }
                                   }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-cyan-500 dark:text-cyan-400 transition-colors cursor-pointer"
                                 >
-                                  <Edit2 size={14} className="text-neutral-400 shrink-0" />
+                                  <Edit2 size={14} className="text-cyan-400 shrink-0" />
                                   <span>Edit</span>
                                 </button>
                               )}
@@ -13903,23 +13903,30 @@ const selectedAgentTheme = getAgentColorTheme(
                           }
                         }}
                         style={{
-                          backgroundColor: isRecording ? (liveVoiceEnergy > 45 ? undefined : (selectedAgentTheme.primary || selectedAgentTheme.dark)) : undefined,
-                          color: isRecording ? "#ffffff" : undefined,
+                          backgroundColor: isRecording
+                            ? (liveVoiceEnergy > 45 ? undefined : (selectedAgentTheme.primary || selectedAgentTheme.dark))
+                            : (selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)"),
+                          borderColor: isRecording
+                            ? "transparent"
+                            : (selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)"),
+                          color: isRecording
+                            ? "#ffffff"
+                            : (selectedAgentTheme.light || selectedAgentTheme.primary),
                           boxShadow: isRecording
                             ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
                               (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : (selectedAgentTheme.primary || selectedAgentTheme.dark))
                             : undefined,
                         }}
-                        className={`p-1.5 rounded-full cursor-pointer transition-all ${
+                        className={`h-7 w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border ${
                           isRecording
                             ? liveVoiceEnergy > 45
-                              ? "bg-gradient-to-r from-[#ff3366] to-[var(--agent-color)] text-white"
-                              : "text-white shadow-xs"
-                            : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
+                              ? "bg-gradient-to-r from-[#ff3366] to-[var(--agent-color)] text-white border-transparent"
+                              : "text-white shadow-xs border-transparent"
+                            : "hover:brightness-105 active:scale-95 shadow-2xs"
                         }`}
                         title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
                       >
-                        {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={16} />}
+                        {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={14} className="stroke-[2.2]" />}
                       </button>
                     ) : (
                       /* Send button: replaces Voice button when user inputs text or attachments */
@@ -17198,10 +17205,10 @@ ${chat.id}`);
                         }, 0);
                       }
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 text-cyan-600 dark:text-cyan-400 transition-colors cursor-pointer"
                   >
-                    <Edit2 size={16} className="shrink-0 text-slate-400 dark:text-slate-300" />
-                    <span className="font-medium text-xs text-slate-800 dark:text-white">Edit</span>
+                    <Edit2 size={16} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
+                    <span className="font-medium text-xs text-cyan-600 dark:text-cyan-400">Edit</span>
                   </button>
                 )}
 
