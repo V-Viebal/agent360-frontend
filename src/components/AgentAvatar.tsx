@@ -70,8 +70,15 @@ export const BLOB_ANIMATIONS = [
   "play.1.8,wink.1.4,idle.1.2",
 ] as const;
 
+export function normalizeAgentSeedKey(agentId: string = ""): string {
+  return (agentId || "").replace(/^bot:agent360:/i, "").trim().toLowerCase();
+}
+
 export function getAgentBlobProfile(agentId: string = "", name: string = "", roleTag: string = "") {
-  const seedStr = `${agentId || ""}-${name || ""}-${roleTag || ""}`.toLowerCase();
+  const cleanId = normalizeAgentSeedKey(agentId);
+  const cleanName = (name || "").replace(/^bot:agent360:/i, "").trim().toLowerCase();
+  const cleanRole = (roleTag || "").trim().toLowerCase();
+  const seedStr = cleanId ? `${cleanId}-${cleanName}-${cleanRole}` : `${cleanName}-${cleanRole}`;
   let h = 0;
   for (let i = 0; i < seedStr.length; i++) {
     h = ((h << 5) - h) + seedStr.charCodeAt(i);
@@ -117,7 +124,8 @@ export const BLOB_COLOR_THEMES: Record<
 };
 
 export function getAgentColorTheme(agentId: string = "", name: string = "", roleTag: string = "") {
-  const cfg = getAgentAvatarConfig(agentId);
+  const cleanId = normalizeAgentSeedKey(agentId);
+  const cfg = getAgentAvatarConfig(agentId) || getAgentAvatarConfig(cleanId);
   const colorKey = cfg?.blob?.color || getAgentBlobProfile(agentId, name, roleTag).color;
   if (colorKey && BLOB_COLOR_THEMES[colorKey]) {
     return BLOB_COLOR_THEMES[colorKey];

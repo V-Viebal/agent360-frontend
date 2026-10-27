@@ -5498,24 +5498,14 @@ export function GrokBotWorkspace() {
   }, [activeChatMenuId, activeAgentMenuId]);
 
   const [chatFilterTab, setChatFilterTab] = useState<"all" | "unread" | "pinned" | "archived">("all");
-  const [channelFilter, setChannelFilter] = useState<string>(() => {
-    try {
-      const savedGlobal = localStorage.getItem("agent360_last_channel_filter");
-      return savedGlobal || "all";
-    } catch {
-      return "all";
-    }
-  });
+  const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [isChannelFilterOpen, setIsChannelFilterOpen] = useState<boolean>(false);
 
-  // Persist and restore channel tab filter specifically for each agent
+  // Default to showing all channels for each agent, reset filter bar collapsed
   useEffect(() => {
     if (!selectedAgentId) return;
-    try {
-      const savedForAgent = localStorage.getItem(`agent360_channel_filter_${selectedAgentId}`);
-      setChannelFilter(savedForAgent || "all");
-    } catch {
-      setChannelFilter("all");
-    }
+    setChannelFilter("all");
+    setIsChannelFilterOpen(false);
   }, [selectedAgentId]);
 
   const handleSelectChannelFilter = (newChannel: string) => {
@@ -8734,7 +8724,7 @@ export function GrokBotWorkspace() {
           if (firstTokenTime === null) {
             firstTokenTime = performance.now();
           }
-          if (!turnAcc.text) {
+          if (!turnAcc.hasSeenStructuredEvents && !turnAcc.text) {
             accumulated = chunkText;
             updateTurnMessages((prev) => prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: chunkText } : m)));
           }
@@ -9515,8 +9505,8 @@ export function GrokBotWorkspace() {
                         <div className="relative shrink-0 flex items-center justify-center transition-all">
                           <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {pinnedAgentIds.includes(ag.id) && (
-                            <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30">
-                              <Pin size={8} className="fill-amber-400" />
+                            <span className="absolute -top-1 -left-1 text-amber-500 dark:text-amber-400 p-0.5 bg-white dark:bg-[#1a1a24] rounded-full border border-amber-500/40 dark:border-amber-400/30 shadow-xs z-10 flex items-center justify-center">
+                              <Pin size={8} className="fill-amber-500 dark:fill-amber-400" />
                             </span>
                           )}
 
@@ -9626,7 +9616,7 @@ export function GrokBotWorkspace() {
                 ) : (
                   <AgentAvatar agent={userAsAgent} size="sm" interactive={false} className="rounded-full ring-1 ring-[#3a3a4c] group-hover/userav:ring-[#f8a87c] transition-all" />
                 )}
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0c0c0e] shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                
               </div>
 
               {/* User Profile Dropdown Menu in Collapsed State */}
@@ -9643,7 +9633,7 @@ export function GrokBotWorkspace() {
                   <div className="text-[10px] text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
-                  icon={<Settings size={14} className="text-[#f8a87c]" />}
+                  icon={<Settings size={14} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Cài đặt (Settings)"
                   badge="Mở"
                   onClick={() => {
@@ -9654,7 +9644,7 @@ export function GrokBotWorkspace() {
                   }}
                 />
                 <DropdownMenuItem
-                  icon={<Command size={13} className="text-[#f8a87c]" />}
+                  icon={<Command size={13} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Command Palette"
                   badge="Ctrl+K"
                   badgeColor="text-neutral-400"
@@ -9667,14 +9657,14 @@ export function GrokBotWorkspace() {
                 <DropdownMenuSection label="Hệ thống">
 
                   <DropdownMenuItem
-                    icon={<Activity size={13} className="text-emerald-400" />}
-                    label="Fleet Diagnostics"
-                    badge="Healthy"
-                    badgeColor="text-emerald-400"
+                    icon={<ShieldCheck size={13} className="text-[#f8a87c]" />}
+                    label="Quyền & Sandbox"
+                    badge="Quản lý"
+                    badgeColor="text-[#f8a87c]"
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      handleToggleBotInfo(false);
-                      setRightTab("Details");
+                      setIsPermissionsModalOpen(true);
+                      setMobileAgentsOpen(false);
                     }}
                   />
                   <DropdownMenuItem
@@ -9859,18 +9849,18 @@ export function GrokBotWorkspace() {
                           }
                           handleSelectAgent(ag);
                         }}
-                        className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
+                        className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
-                            ? "px-2.5 py-1.5 gap-2"
+                            ? "px-2.5 py-1.5 gap-2.5"
                             : layoutDensity === "comfortable"
-                            ? "px-3 py-2.5 gap-2.5"
-                            : "px-2.5 py-2 gap-2"
+                            ? "px-3 py-2.5 gap-3"
+                            : "px-2.5 py-2 gap-2.5"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
-                            ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
+                            ? "bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
                             : isSelected
-                            ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs cursor-pointer"
-                            : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
+                            ? "bg-neutral-200/80 dark:bg-[#1c1c26] text-neutral-900 dark:text-white cursor-pointer"
+                            : "hover:bg-neutral-200/50 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
@@ -9887,7 +9877,7 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[15.5px] sm:text-[16px] font-medium truncate block transition-all ${
+                            <span className={`text-[15px] font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
                                 ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
                                 : "text-neutral-900 dark:text-white"
@@ -10030,7 +10020,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[12.5px] sm:text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -10100,18 +10090,18 @@ export function GrokBotWorkspace() {
                           }
                           handleSelectAgent(ag);
                         }}
-                        className={`w-full rounded-xl text-left flex items-center transition-colors border animate-fade-in-stagger group relative ${
+                        className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent animate-fade-in-stagger group relative ${
                           layoutDensity === "compact"
-                            ? "px-2.5 py-1.5 gap-2"
+                            ? "px-2.5 py-1.5 gap-2.5"
                             : layoutDensity === "comfortable"
-                            ? "px-3 py-2.5 gap-2.5"
-                            : "px-2.5 py-2 gap-2"
+                            ? "px-3 py-2.5 gap-3"
+                            : "px-2.5 py-2 gap-2.5"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
-                            ? "border-transparent bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
+                            ? "bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
                             : isSelected
-                            ? "bg-white dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] text-neutral-900 dark:text-white shadow-xs cursor-pointer"
-                            : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
+                            ? "bg-neutral-200/80 dark:bg-[#1c1c26] text-neutral-900 dark:text-white cursor-pointer"
+                            : "hover:bg-neutral-200/50 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
@@ -10128,7 +10118,7 @@ export function GrokBotWorkspace() {
                         {/* Agent Details: Lean typography with rich status tooltip */}
                         <div className="min-w-0 flex-1 flex flex-col justify-center">
                           <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[15.5px] sm:text-[16px] font-medium truncate block transition-all ${
+                            <span className={`text-[15px] font-medium truncate block transition-all ${
                               ag.enabled === false || ag.status === "disabled"
                                 ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
                                 : "text-neutral-900 dark:text-white"
@@ -10271,7 +10261,7 @@ export function GrokBotWorkspace() {
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[12.5px] sm:text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-neutral-500 dark:text-neutral-400"
@@ -10318,18 +10308,6 @@ export function GrokBotWorkspace() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {/* Quick hardware permission status indicators */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsPermissionsModalOpen(true);
-                    }}
-                    className="flex items-center gap-1 p-1 rounded-lg hover:bg-[#20202c] text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                    title="Browser Hardware & Sandbox Permissions (Click to manage)"
-                  >
-                    <ShieldCheck size={13} className="text-[#f8a87c]" />
-                  </button>
                   {/* User dropdown chevron indicator: Ẩn mặc định, hover hiện ChevronUp */}
                   <ChevronUp
                     size={13}
@@ -10354,7 +10332,7 @@ export function GrokBotWorkspace() {
                   <div className="text-[10px] text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
-                  icon={<Settings size={14} className="text-[#f8a87c]" />}
+                  icon={<Settings size={14} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Cài đặt (Settings)"
                   badge="Mở"
                   onClick={() => {
@@ -10365,7 +10343,7 @@ export function GrokBotWorkspace() {
                   }}
                 />
                 <DropdownMenuItem
-                  icon={<Command size={13} className="text-[#f8a87c]" />}
+                  icon={<Command size={13} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Command Palette"
                   badge="Ctrl+K"
                   badgeColor="text-neutral-400"
@@ -10378,14 +10356,14 @@ export function GrokBotWorkspace() {
                 <DropdownMenuSection label="Hệ thống">
 
                   <DropdownMenuItem
-                    icon={<Activity size={13} className="text-emerald-400" />}
-                    label="Fleet Diagnostics"
-                    badge="Healthy"
-                    badgeColor="text-emerald-400"
+                    icon={<ShieldCheck size={13} className="text-[#f8a87c]" />}
+                    label="Quyền & Sandbox"
+                    badge="Quản lý"
+                    badgeColor="text-[#f8a87c]"
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      handleToggleBotInfo(false);
-                      setRightTab("Details");
+                      setIsPermissionsModalOpen(true);
+                      setMobileAgentsOpen(false);
                     }}
                   />
                   <DropdownMenuItem
@@ -10495,46 +10473,8 @@ export function GrokBotWorkspace() {
             <Menu size={16} />
           </button>
 
-          {/* Middle Group: Capsule Info + Telemetry HUD with Shared Tooltip */}
+          {/* Middle Group: Capsule Info + Telemetry HUD */}
           <div className="flex items-center gap-2 mx-auto">
-            <Tooltip
-              placement="bottom"
-              minWidth={260}
-              maxWidth={320}
-              className="flex-col !items-stretch gap-1.5 p-3 text-left !whitespace-normal"
-              content={
-                <div className="space-y-1.5 w-full text-left font-mono">
-                  <div className="flex items-center justify-between gap-3 text-neutral-800 dark:text-neutral-200 border-b border-neutral-100 dark:border-white/10 pb-1.5">
-                    <span className="text-[#f8a87c] font-semibold">{selectedAgent.roleTag || "AI Teammate"}</span>
-                    {nodePingMs !== null && (
-                      <span
-                        className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono border ${
-                          nodePingMs < 80
-                            ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/30"
-                            : nodePingMs < 200
-                            ? "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/30"
-                            : "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/30"
-                        }`}
-                      >
-                        <Wifi size={10} />
-                        <span>{nodePingMs}ms</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
-                    <span>Hạ tầng node:</span>
-                    <span className="text-neutral-900 dark:text-neutral-200 font-semibold">{selectedAgent.node}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 text-neutral-600 dark:text-neutral-400 text-[10px]">
-                    <span>Mô hình AI:</span>
-                    <span className="text-neutral-700 dark:text-neutral-300">{selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}</span>
-                  </div>
-                  <div className="pt-0.5 text-[9px] text-[#f8a87c] flex items-center justify-center font-sans">
-                    <span>Bấm để {isBotInfoCollapsed ? "mở" : "đóng"} thông số kỹ thuật</span>
-                  </div>
-                </div>
-              }
-            >
               <div
                 id="tour-bot-spec-trigger"
                 onClick={() => {
@@ -10574,7 +10514,6 @@ export function GrokBotWorkspace() {
                   </span>
                 )}
               </div>
-            </Tooltip>
           </div>
 
           {/* Header Action Controls (Command Palette moved into Avatar Menu) */}
@@ -10750,47 +10689,49 @@ export function GrokBotWorkspace() {
               </div>
             </div>
           ) : displayMessages.length === 0 ? (
-            /* First-turn Suggested Tasks (Minimal, Clean & Dynamic per Agent) */
-            <div className="py-8 px-4 flex flex-col items-center justify-center animate-in fade-in duration-200 max-w-lg mx-auto w-full space-y-3">
-              
+            /* First-turn Suggested Tasks Card matching reference (Greeting bubble + A/B/C/D options card) */
+            <div className="py-6 px-2 sm:px-4 flex flex-col items-start animate-in fade-in duration-200 max-w-xl w-full space-y-2.5 font-sans">
+              {/* Greeting Bubble */}
+              <div className="inline-block rounded-[18px] px-4 py-2 bg-neutral-100 dark:bg-[#16161e] border border-neutral-200/70 dark:border-[#242432] text-[14.5px] text-slate-800 dark:text-neutral-200 leading-snug">
+                Xin chào{user?.name ? ` ${user.name.split(" ")[0]}` : ""}, mình là <span className="font-medium text-slate-900 dark:text-white">{selectedAgent.name}</span>! Rất vui được hỗ trợ bạn hôm nay.
+              </div>
 
-              <div className="space-y-1.5 w-full text-left font-sans pt-1">
-                {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => (
-                  <button
-                    key={qIdx}
-                    type="button"
-                    onClick={() => {
-                      executeTurnStream(item.prompt);
-                    }}
-                    style={{
-                      ["--agent-primary" as any]: selectedAgentTheme.primary,
-                    }}
-                    className="w-full p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#14141c]/90 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[var(--agent-primary)]/50 text-left transition-all cursor-pointer group shadow-xs flex items-center justify-between gap-2.5 min-w-0"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span
-                        style={{ backgroundColor: selectedAgentTheme.primary }}
-                        className="h-1.5 w-1.5 rounded-full shrink-0 group-hover:scale-125 transition-transform"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-medium text-slate-900 dark:text-neutral-100 group-hover:text-[var(--agent-primary)] transition-colors truncate">
-                            {item.title}
-                          </p>
-                          {item.badge && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-[#1e1e2c] text-neutral-600 dark:text-neutral-300 border border-slate-300 dark:border-[#2b2b3e] shrink-0">
-                              {item.badge}
+              {/* Options Card */}
+              <div className="w-full rounded-2xl bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] p-4 sm:p-5 shadow-2xs space-y-3">
+                <h3 className="text-[15.5px] font-semibold text-slate-900 dark:text-white leading-snug">
+                  Bạn muốn bắt đầu với công việc nào trước?
+                </h3>
+
+                <div className="space-y-1.5 pt-0.5">
+                  {getDynamicSuggestionsForAgent(selectedAgent).map((item, qIdx) => {
+                    const optionLetter = String.fromCharCode(65 + qIdx);
+                    return (
+                      <button
+                        key={qIdx}
+                        type="button"
+                        onClick={() => {
+                          executeTurnStream(item.prompt);
+                        }}
+                        style={{
+                          ["--agent-primary" as any]: selectedAgentTheme.primary,
+                        }}
+                        className="w-full px-2.5 py-2 rounded-xl hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-left transition-all cursor-pointer group flex items-center justify-between gap-3 min-w-0"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className="h-6 w-6 rounded-md bg-neutral-100 dark:bg-[#1c1c26] border border-neutral-200/90 dark:border-[#2b2b3a] text-[12px] font-medium text-neutral-600 dark:text-neutral-300 group-hover:border-[var(--agent-primary)]/50 group-hover:text-slate-900 dark:group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
+                            {optionLetter}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[14px] text-slate-800 dark:text-neutral-200 group-hover:text-slate-950 dark:group-hover:text-white transition-colors block truncate">
+                              {item.title}
                             </span>
-                          )}
+                          </div>
                         </div>
-                        <p className="text-[11px] text-neutral-500 truncate mt-0.5">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowRight size={12} style={{ color: selectedAgentTheme.primary }} className="transition-all opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 shrink-0" />
-                  </button>
-                ))}
+                        <ArrowRight size={13} style={{ color: selectedAgentTheme.primary }} className="transition-all opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ) : (
@@ -11371,9 +11312,10 @@ export function GrokBotWorkspace() {
                                   onClick={() => {
                                     handleOpenActiveThinkingModal(msg);
                                   }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-emerald-500 dark:text-emerald-400 transition-colors cursor-pointer font-medium"
+                                  style={{ color: selectedAgentTheme.light }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer font-medium"
                                 >
-                                  <Sparkles size={14} className="text-emerald-400 shrink-0" />
+                                  <Sparkles size={14} style={{ color: selectedAgentTheme.primary }} className="shrink-0" />
                                   <span>Thinking & Tools</span>
                                 </button>
                               )}
@@ -11684,7 +11626,7 @@ export function GrokBotWorkspace() {
                             // Agent emitted distinct message segments across tool calls (e.g., Segment 1: lead-in before tool, Segment 2+: final answer after tool)
                             leadInSegments = rawSegs.slice(0, -1);
                             mainBodyContent = rawSegs[rawSegs.length - 1];
-                          } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && rawSegs[0].length <= 220) {
+                          } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && rawSegs[0].length <= 280) {
                             // Agent emitted its opening lead-in segment and is currently executing a tool call before emitting the final answer
                             leadInSegments = [rawSegs[0]];
                             mainBodyContent = "";
@@ -11695,34 +11637,25 @@ export function GrokBotWorkspace() {
                               .map((p) => p.trim())
                               .filter(Boolean);
                             const firstPara = paragraphs[0] || "";
-                            const isShortConversationalOpening =
-                              paragraphs.length >= 2 &&
-                              firstPara.length >= 8 &&
-                              firstPara.length <= 220 &&
+                            const isPlainOpeningLine =
+                              firstPara.length >= 6 &&
+                              firstPara.length <= 280 &&
                               !firstPara.includes("\n") &&
                               !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(firstPara);
 
-                            if (isShortConversationalOpening && (soloTools.length > 0 || rawReasonText.length > 0 || paragraphs.length >= 2)) {
+                            if (paragraphs.length >= 2 && isPlainOpeningLine) {
                               leadInSegments = [firstPara];
                               mainBodyContent = paragraphs.slice(1).join("\n\n");
-                            }
-                          }
-
-                          // If no lead-in segment was in content yet, check if the Agent's own reasoning starts with a direct conversational sentence (excluding 3rd-person internal meta-notes)
-                          if (leadInSegments.length === 0 && rawReasonText) {
-                            const firstReasonLine = rawReasonText
-                              .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, "")
-                              .replace(/\s+/g, " ")
-                              .split(/(?<=[.!?\n])\s+/)[0]
-                              ?.trim();
-                            const isInternalThirdPersonNote = Boolean(
-                              firstReasonLine &&
-                              /^(?:the\s+user|user\s+(?:wants|asks|is|said|requested)|according\s+to\s+my|người\s+dùng|khách\s+hàng|câu\s+hỏi\s+này|yêu\s+cầu\s+này|cần\s+phải|trước\s+tiên\s+cần|bước\s+1)/i.test(
-                                firstReasonLine
-                              )
-                            );
-                            if (firstReasonLine && !isInternalThirdPersonNote && firstReasonLine.length >= 10 && firstReasonLine.length <= 220) {
-                              leadInSegments = [firstReasonLine];
+                            } else if (
+                              paragraphs.length === 1 &&
+                              isTurnActivelyRunning &&
+                              isPlainOpeningLine &&
+                              !cleanContent.includes("\n\n")
+                            ) {
+                              // While streaming the opening conversational lead-in sentence (before \n\n arrives),
+                              // render it directly inside the lead-in bubble above the responding indicator pill so it never jumps or disappears.
+                              leadInSegments = [firstPara];
+                              mainBodyContent = "";
                             }
                           }
                         }
@@ -11737,7 +11670,7 @@ export function GrokBotWorkspace() {
                                   <div
                                     key={`lead-${msg.id}-${sIdx}`}
                                     data-testid="solo-kickoff-intent-bubble"
-                                    className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[15.5px] sm:text-[16px] leading-relaxed select-text"
+                                    className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text"
                                   >
                                     <FormattedMessageContent
                                       content={seg}
@@ -11767,12 +11700,12 @@ export function GrokBotWorkspace() {
                                         forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                                         className="shrink-0"
                                       />
-                                      <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
+                                      
                                     </div>
                                     <span className="flex items-center gap-1">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                                      <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
+                                      <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
+                                      <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
                                     </span>
                                   </div>
                                 )}
@@ -11847,9 +11780,9 @@ export function GrokBotWorkspace() {
                                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                                     className="shrink-0"
                                   />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                                  <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
+                                  <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
+                                  <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
                                 </span>
                               )}
                             </div>
@@ -11962,12 +11895,12 @@ export function GrokBotWorkspace() {
                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                     className="shrink-0"
                   />
-                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
+                  
                 </div>
                 <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                  <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
+                  <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
+                  <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
                 </span>
               </div>
             </div>
@@ -13005,14 +12938,15 @@ export function GrokBotWorkspace() {
                           setIsPlusMenuOpen(false);
                           fileInputRef.current?.click();
                         }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border border-[#f8a87c]/30 bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 text-slate-900 dark:text-white group shadow-xs"
+                        style={{ backgroundColor: selectedAgentTheme.bgLight, borderColor: selectedAgentTheme.borderLight }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border text-slate-900 dark:text-white group shadow-xs"
                       >
-                        <div className="h-7 w-7 rounded-lg bg-[#f8a87c] flex items-center justify-center text-black shrink-0 shadow-xs transition-transform group-hover:scale-105">
+                        <div style={{ backgroundColor: selectedAgentTheme.primary }} className="h-7 w-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs transition-transform group-hover:scale-105">
                           <Paperclip size={14} className="stroke-[2.5]" />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-[#f8a87c] transition-colors">
+                            <span style={{ color: selectedAgentTheme.light }} className="font-semibold text-xs transition-colors">
                               Add Files
                             </span>
                             <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-neutral-400">0</span>
@@ -13054,7 +12988,7 @@ export function GrokBotWorkspace() {
                               <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-neutral-400">1</span>
                             </div>
                             {activeLoopMode === "default" && (
-                              <span className="h-2 w-2 rounded-full bg-[#f8a87c] shrink-0 ml-1" />
+                              <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-2 w-2 rounded-full shrink-0 ml-1" />
                             )}
                           </div>
                           <span className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug">
@@ -13796,7 +13730,7 @@ export function GrokBotWorkspace() {
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-0 text-[15px] sm:text-[16px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
+                  className={`w-full bg-transparent border-0 text-[14.5px] sm:text-[15px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
                     isMultiline ? "min-h-[44px] max-h-[210px] pt-1 pb-1.5 px-0.5" : "flex-1 max-h-[210px] py-1.5"
                   }`}
                 />
@@ -14206,53 +14140,82 @@ export function GrokBotWorkspace() {
                       <CheckCheck size={14} />
                     </button>
                   </Tooltip>
+
+                  <Tooltip content={channelFilter !== "all" ? `Lọc kênh: ${channelFilter}` : "Lọc theo kênh giao tiếp"} placement="bottom" minWidth={150}>
+                    <button
+                      aria-label="Lọc theo kênh"
+                      data-ux-target-min="24"
+                      type="button"
+                      onClick={() => setIsChannelFilterOpen(!isChannelFilterOpen)}
+                      style={
+                        (isChannelFilterOpen || channelFilter !== "all") && selectedAgentTheme.primary
+                          ? { color: selectedAgentTheme.primary }
+                          : undefined
+                      }
+                      className={`h-6 w-6 rounded-md flex items-center justify-center transition-colors cursor-pointer relative ${
+                        isChannelFilterOpen || channelFilter !== "all"
+                          ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                          : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-[#1f1f26]"
+                      }`}
+                    >
+                      <Radio size={13} />
+                      {channelFilter !== "all" && (
+                        <span
+                          style={{ backgroundColor: selectedAgentTheme.primary }}
+                          className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-[#f8a87c]"
+                        />
+                      )}
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
 
-              {/* Sub-Channel Filter Bar (All / Console / Telegram / Zalo / Khác) */}
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 text-[10px] font-mono select-none scroll-mask-horizontal">
-                {[
-                  { id: "console", label: "Console" },
-                  { id: "telegram", label: "Telegram", badgeColor: "text-sky-400" },
-                  { id: "zalo", label: "Zalo", badgeColor: "text-blue-500" },
-                  { id: "other", label: "Khác" },
-                  { id: "all", label: "Tất cả kênh" },
-                ].map((ch) => {
-                  const isActive = channelFilter === ch.id;
-                  const channelCount = ch.id === "all"
-                    ? chats.length
-                    : ch.id === "other"
-                    ? chats.filter(c => !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase())).length
-                    : chats.filter(c => (c.channel || "console").toLowerCase() === ch.id).length;
+              {/* Sub-Channel Filter Bar (All / Console / Telegram / Zalo / Khác) - only shown when isChannelFilterOpen is true */}
+              {isChannelFilterOpen && (
+                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-1 text-[10px] font-mono select-none scroll-mask-horizontal border-t border-slate-200/60 dark:border-[#1e1e28] animate-in fade-in duration-150">
+                  {[
+                    { id: "all", label: "Tất cả kênh" },
+                    { id: "console", label: "Console" },
+                    { id: "telegram", label: "Telegram", badgeColor: "text-sky-400" },
+                    { id: "zalo", label: "Zalo", badgeColor: "text-blue-500" },
+                    { id: "other", label: "Khác" },
+                  ].map((ch) => {
+                    const isActive = channelFilter === ch.id;
+                    const channelCount = ch.id === "all"
+                      ? chats.length
+                      : ch.id === "other"
+                      ? chats.filter(c => !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase())).length
+                      : chats.filter(c => (c.channel || "console").toLowerCase() === ch.id).length;
 
-                  if (ch.id !== "all" && channelCount === 0) return null;
+                    if (ch.id !== "all" && channelCount === 0) return null;
 
-                  return (
-                    <button
-                      key={ch.id}
-                      type="button"
-                      onClick={() => handleSelectChannelFilter(ch.id)}
-                      style={
-                        isActive
-                          ? {
-                              backgroundColor: `${selectedAgentTheme.primary}26`,
-                              borderColor: `${selectedAgentTheme.primary}66`,
-                              color: selectedAgentTheme.primary,
-                            }
-                          : undefined
-                      }
-                      className={`px-2 py-0.5 rounded-full shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
-                        isActive
-                          ? "font-semibold shadow-xs"
-                          : "border-transparent text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <span>{ch.label}</span>
-                      <span className="text-[9px] opacity-75 font-bold">({channelCount})</span>
-                    </button>
-                  );
-                })}
-              </div>
+                    return (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        onClick={() => handleSelectChannelFilter(ch.id)}
+                        style={
+                          isActive
+                            ? {
+                                backgroundColor: `${selectedAgentTheme.primary}26`,
+                                borderColor: `${selectedAgentTheme.primary}66`,
+                                color: selectedAgentTheme.primary,
+                              }
+                            : undefined
+                        }
+                        className={`px-2 py-0.5 rounded-full shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
+                          isActive
+                            ? "font-semibold shadow-xs"
+                            : "border-transparent text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        <span>{ch.label}</span>
+                        <span className="text-[9px] opacity-75 font-bold">({channelCount})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
@@ -14451,7 +14414,7 @@ export function GrokBotWorkspace() {
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
-                              className={`text-[14px] sm:text-[14.5px] chat-title-marquee inline-block whitespace-nowrap ${
+                              className={`text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
                                 (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
                               } ${
                                 isSelected
@@ -15002,7 +14965,7 @@ ${chat.id}`);
             ) : (
             <>
             {/* Compact Agent Identity Header */}
-            <div className="p-4 flex flex-col items-center text-center border-b border-neutral-200 dark:border-[#1c1c22]">
+            <div className="pt-4 pb-2 px-4 flex flex-col items-center text-center">
               <div
                 ref={mascotRef}
                 onClick={() => {
@@ -15021,7 +14984,7 @@ ${chat.id}`);
               </div>
 
               <div className="flex items-center gap-1.5 justify-center">
-                <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-[16px] font-semibold text-slate-900 dark:text-white tracking-tight">
                   {selectedAgent.name}
                 </h2>
                 {activeLoopMode !== "default" && (
@@ -15037,27 +15000,11 @@ ${chat.id}`);
                   </span>
                 )}
               </div>
-
-              <div className="mt-1 flex items-center gap-2 text-xs font-mono text-neutral-500 dark:text-neutral-400">
-                <span>{selectedAgent.roleTag || "Agent"}</span>
-                <span>•</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAgentSettingsModalTab("general");
-                    setIsAgentSettingsModalOpen(true);
-                  }}
-                  className="text-[#e0682b] dark:text-[#f8a87c] hover:underline cursor-pointer"
-                  title="Đổi mô hình AI trong Cài đặt Agent"
-                >
-                  {selectedAgent.model.includes("/") ? selectedAgent.model.split("/").pop() : selectedAgent.model}
-                </button>
-              </div>
             </div>
 
-            {/* 3 Streamlined Tabs: Computer | Details | Library */}
-            <div className="flex items-center justify-around border-b border-neutral-200 dark:border-[#1c1c22] text-sm font-medium text-neutral-500 dark:text-neutral-400 px-2 shrink-0">
-              {(["Details", "Computer", "Library"] as const).map((tab) => (
+            {/* 3 Streamlined Pill Tabs: Details | Library | Computer */}
+            <div className="flex items-center justify-center gap-1.5 px-3 pb-3 pt-1 border-b border-neutral-200/70 dark:border-[#1c1c22] text-[13px] font-medium shrink-0">
+              {(["Details", "Library", "Computer"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
@@ -15066,10 +15013,10 @@ ${chat.id}`);
                       loadWorkspaceTree();
                     }
                   }}
-                  className={`py-2.5 px-3 transition-colors cursor-pointer border-b-2 font-sans ${
+                  className={`py-1.5 px-3.5 rounded-full transition-all cursor-pointer font-sans ${
                     rightTab === tab
-                      ? "text-neutral-900 dark:text-white border-[#f8a87c] font-semibold"
-                      : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                      ? "bg-neutral-200/80 dark:bg-[#22222e] text-neutral-900 dark:text-white font-semibold"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5"
                   }`}
                 >
                   {tab === "Library" && workspaceFiles.length > 0 ? `Library (${workspaceFiles.length})` : tab}
@@ -15082,80 +15029,75 @@ ${chat.id}`);
               {rightTab === "Computer" && (() => {
                 const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
                 return (
-                  <div className="flex flex-col w-full">
-                    {/* Live Browser Fixed-Height Responsive Card */}
-                    <div className="w-full rounded-2xl border border-slate-200 dark:border-[#262634] bg-slate-900 dark:bg-[#101015] overflow-hidden shadow-xl flex flex-col shrink-0">
-                      {/* Top Browser Bar */}
-                      <div className="h-9 px-3 bg-slate-100 dark:bg-[#171720] border-b border-slate-200 dark:border-[#242430] flex items-center justify-between text-xs font-mono select-none shrink-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
-                          <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-900 dark:text-white truncate">
-                            {selectedAgent.name} Computer
-                          </span>
+                  <div className="flex flex-col items-center w-full">
+                    {/* Live or Asleep Computer Screen Card matching reference UI */}
+                    <div
+                      onClick={() => {
+                        handleToggleComputerSplit(true);
+                        if (typeof window !== "undefined" && window.innerWidth < 1280) {
+                          handleToggleBotInfo(true);
+                          setMobileBotInfoOpen(false);
+                        }
+                      }}
+                      style={{ height: "190px", width: "100%", position: "relative", overflow: "hidden", flexShrink: 0 }}
+                      className="w-full rounded-2xl border border-neutral-200/80 dark:border-[#242432] bg-neutral-100/90 dark:bg-[#14141c] cursor-pointer group flex items-center justify-center transition-colors"
+                      title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
+                    >
+                      <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
+                      {browserTarget.isLive && browserTarget.profile && (
+                        <div data-testid="agent-browser-profile" className="absolute top-2 left-2 z-[5] px-2 py-0.5 rounded-md bg-black/70 border border-white/10 text-[11px] font-sans text-white pointer-events-none">
+                          {browserTarget.profile}
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button aria-label="Mở Computer Workspace" data-ux-target-min="24"
-                            type="button"
-                            onClick={() => {
-                              handleToggleComputerSplit(true);
-                              if (typeof window !== "undefined" && window.innerWidth < 1280) {
-                                handleToggleBotInfo(true);
-                                setMobileBotInfoOpen(false);
-                              }
-                            }}
-                            className="p-1 text-neutral-400 hover:text-[#f8a87c] hover:bg-[#232330] rounded transition-colors cursor-pointer"
-                            title="Mở Computer Workspace (Tỉ lệ 3:7)"
-                          >
-                            <Maximize2 size={13} />
-                          </button>
-                          <a aria-label="Open in new window"
+                      )}
+                      {browserTarget.isLive && (
+                        <div className="absolute top-2 right-2 z-[15] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <a
+                            aria-label="Open in new window"
                             href={browserTarget.url ? "#" : undefined}
-                            onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              if (browserTarget.url) openAgentDesktopTab(agentBrowserFor);
+                            }}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-1 text-neutral-400 hover:text-white hover:bg-[#232330] rounded transition-colors cursor-pointer"
+                            className="p-1.5 bg-black/70 text-neutral-300 hover:text-white rounded-lg border border-white/10 transition-colors cursor-pointer"
                             title="Open in new window"
                           >
                             <ExternalLink size={13} />
                           </a>
                         </div>
-                      </div>
-
-                      {/* Embedded Live Iframe Viewport: Fixed 190px responsive height with hover action */}
-                      <div 
-                        onClick={() => {
-                          handleToggleComputerSplit(true);
-                          if (typeof window !== "undefined" && window.innerWidth < 1280) {
-                            handleToggleBotInfo(true);
-                            setMobileBotInfoOpen(false);
-                          }
-                        }}
-                        style={{ height: "190px", width: "100%", position: "relative", overflow: "hidden", flexShrink: 0 }}
-                        className="cursor-pointer group flex items-center justify-center rounded-b-2xl bg-white dark:bg-black transition-colors"
-                        title="Click để mở chế độ Computer (Tỉ lệ 3:7 và đóng các sidebar)"
-                      >
-                        <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
-                        {browserTarget.profile && (
-                          <div data-testid="agent-browser-profile" className="absolute top-1.5 left-1.5 z-[5] px-1.5 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
-                            {browserTarget.profile} · {agentBrowser?.service}
+                      )}
+                      {!browserTarget.isLive && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center select-none">
+                          <div className="relative flex items-center justify-center opacity-45 grayscale">
+                            <AgentAvatar agent={selectedAgent} size="lg" interactive={false} />
+                            <span className="absolute -top-2 -right-3 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 tracking-tighter select-none">
+                              z<span className="text-[12px]">Z</span><span className="text-[9px]">z</span>
+                            </span>
                           </div>
-                        )}
-                        {!browserTarget.isLive && (
-                          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-50 dark:bg-black px-3 text-center transition-colors">
-                            {agentBrowser === null ? "Resolving agent browser…" : agentBrowser.cdpReachable ? `Opening profile ${agentBrowser.profile}…` : "Browser unreachable"}
-                          </div>
-                        )}
-
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-2 z-10 select-none">
-                          <div className="h-9 w-9 rounded-full bg-[#f8a87c] text-black flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
-                            <Maximize2 size={16} className="stroke-[2.5]" />
-                          </div>
-                          <span className="text-[11px] font-mono font-semibold text-white! keep-white bg-slate-900/90 dark:bg-black/90 px-3 py-1 rounded-full border border-white/20 shadow-lg tracking-wide">
-                            Mở Computer Workspace
+                          <span className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300">
+                            {agentBrowser === null
+                              ? "Resolving computer…"
+                              : agentBrowser.cdpReachable
+                              ? `Opening ${agentBrowser.profile}…`
+                              : "Computer is asleep"}
                           </span>
                         </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-2 z-10 select-none">
+                        <div className="h-9 w-9 rounded-full bg-white dark:bg-[#22222e] text-neutral-900 dark:text-white flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                          <Maximize2 size={15} />
+                        </div>
+                        <span className="text-[12px] font-medium text-white bg-black/75 px-3 py-1 rounded-full border border-white/15 shadow-sm">
+                          Mở Computer Workspace
+                        </span>
                       </div>
                     </div>
+                    <span className="mt-2 text-[12px] text-neutral-400 dark:text-neutral-500 font-sans select-none">
+                      {selectedAgent.name}&apos;s screen
+                    </span>
                   </div>
                 );
               })()}
@@ -15168,7 +15110,7 @@ ${chat.id}`);
                       <span className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-xs">
                         Giới thiệu & Vai trò
                       </span>
-                      <span className="text-[10px] uppercase text-[#e0682b] dark:text-[#f8a87c]">
+                      <span style={{ color: selectedAgentTheme.light }} className="text-[10px] uppercase font-semibold">
                         {selectedAgent.roleTag || "Agent"}
                       </span>
                     </div>
@@ -15461,7 +15403,7 @@ ${chat.id}`);
                     {/* Clean Minimal Header: Count & Icon-only Action Controls with Tooltips */}
                     <div className="flex items-center justify-between gap-1.5 px-0.5">
                       <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 text-xs">
-                        <Layers size={13} className="text-[#f8a87c] shrink-0" />
+                        <Layers size={13} style={{ color: selectedAgentTheme.primary }} className="shrink-0" />
                         <span>
                           Library ({filteredWorkspaceFiles.length}
                           {filteredWorkspaceFiles.length !== workspaceFiles.length ? ` / ${workspaceFiles.length}` : ""})
@@ -17102,10 +17044,11 @@ ${chat.id}`);
                       const raw = mobileActionMsg.rawMsg;
                       handleOpenActiveThinkingModal(raw);
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer font-medium"
+                    style={{ color: selectedAgentTheme.light }}
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer font-medium"
                   >
-                    <Sparkles size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Thinking & Tools</span>
+                    <Sparkles size={16} style={{ color: selectedAgentTheme.primary }} className="shrink-0" />
+                    <span className="text-xs font-medium">Thinking & Tools</span>
                   </button>
                 )}
 

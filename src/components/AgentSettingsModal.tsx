@@ -23,7 +23,7 @@ import {
   Activity,
 } from "lucide-react";
 import { InfraAgent } from "../types/agent";
-import { AgentAvatar } from "./AgentAvatar";
+import { AgentAvatar, getAgentColorTheme } from "./AgentAvatar";
 import { AgentConnectedAppsTab } from "./AgentConnectedAppsTab";
 import { AgentSubAgentsTab } from "./AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "./ExternalSubAgentsTab";
@@ -117,6 +117,7 @@ export function AgentSettingsModal({
   skills,
 }: AgentSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
+  const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
   const [navSearch, setNavSearch] = useState("");
   const [reactionSummary, setReactionSummary] = useState<MessageReactionSummaryDto | null>(null);
@@ -277,7 +278,7 @@ export function AgentSettingsModal({
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   Cấu hình Agent: {agent.name}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 shrink-0">
+                <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0">
                   {agent.roleTag || "AI Teammate"}
                 </span>
               </div>
@@ -448,7 +449,7 @@ export function AgentSettingsModal({
                         Mô hình Ngôn ngữ Hoạt động (Active LLM Model)
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] bg-[#f8a87c]/10 px-2.5 py-0.5 rounded-full border border-[#f8a87c]/30 font-semibold">
+                    <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold">
                       {isChangingModel ? "Đang cập nhật..." : currentCleanModel}
                     </span>
                   </div>
@@ -490,7 +491,7 @@ export function AgentSettingsModal({
                           }`}
                         >
                           <span className="truncate">{m.model}</span>
-                          {isCurrent && <Check size={13} className="text-[#f8a87c] shrink-0" />}
+                          {isCurrent && <Check size={13} style={{ color: agentTheme.primary }} className="shrink-0" />}
                         </button>
                       );
                     })}
@@ -526,7 +527,7 @@ export function AgentSettingsModal({
                     </div>
                     <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230]">
                       <div className="text-[10px] text-neutral-500">Skills Bound</div>
-                      <div className="text-[#e0682b] dark:text-[#f8a87c] font-semibold truncate mt-0.5">
+                      <div style={{ color: agentTheme.light }} className="font-semibold truncate mt-0.5">
                         {skills.length} available
                       </div>
                     </div>

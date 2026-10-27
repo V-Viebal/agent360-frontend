@@ -14,8 +14,10 @@ export class TurnAccumulator {
   private readonly tools: ToolCallItem[] = [];
   private readonly stepOrder: Array<{ kind: "reasoning"; id: string } | { kind: "tool_call"; callId: string }> = [];
   private readonly toolMsgToCall = new Map<string, string>();
+  private lastActiveMsgId: string | null = null;
   done = false;
   userText: string | null = null;
+  hasSeenStructuredEvents = false;
 
   constructor(private readonly messageId: string) {}
 
@@ -45,6 +47,8 @@ export class TurnAccumulator {
         }
         return false;
       }
+      this.hasSeenStructuredEvents = true;
+      this.lastActiveMsgId = id;
       this.messageTypes.set(id, type);
       if ((type === "reasoning" || type === "thinking") && !this.reasoningById.has(id)) {
         this.reasoningById.set(id, "");
@@ -63,6 +67,7 @@ export class TurnAccumulator {
       return true;
     }
     if (event.object === "content") {
+      this.hasSeenStructuredEvents = true;
       this.ingestContent(event, event.status === "completed");
       return true;
     }
@@ -71,7 +76,7 @@ export class TurnAccumulator {
 
   private ingestContent(part: any, completed: boolean) {
     if (!part || typeof part !== "object") return;
-    const msgId: string = part.msg_id || "default-msg";
+    const msgId: string = part.msg_id || this.lastActiveMsgId || "default-msg";
     const msgType = this.messageTypes.get(msgId) || (part.type === "reasoning" || part.type === "thinking" ? "reasoning" : "message");
     if (part.type === "text" || part.type === "reasoning" || part.type === "thinking") {
       const isReasoning = msgType === "reasoning" || msgType === "thinking" || part.type === "reasoning" || part.type === "thinking";

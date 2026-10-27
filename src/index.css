@@ -256,12 +256,12 @@
   /* Typography scale: keep app UI on 5 sizes; display sizes are opt-in */
   --font-size-meta: 12px;
   --font-size-ui: 13px;
-  --font-size-body: 14px;
-  --font-size-title: 16px;
-  --font-size-heading: 20px;
+  --font-size-body: 14.5px;
+  --font-size-title: 15.5px;
+  --font-size-heading: 19px;
   --line-height-meta: 1.4;
   --line-height-ui: 1.45;
-  --line-height-body: 1.55;
+  --line-height-body: 1.5;
   --line-height-title: 1.35;
   --line-height-heading: 1.25;
 
@@ -393,15 +393,15 @@ body {
   line-height: var(--line-height-heading) !important;
 }
 
-/* Sidebars are scanned constantly; use one step larger than dense app UI. */
+/* Sidebars: balanced hierarchy matching reference (15px name / 13px subtext / 12px meta) */
 [data-type-scope="sidebar"] {
-  --font-size-meta: 13px;
-  --font-size-ui: 14px;
-  --font-size-body: 15px;
-  --font-size-title: 16px;
-  --icon-size-xs: 13px;
-  --icon-size-sm: 15px;
-  --icon-size-md: 17px;
+  --font-size-meta: 12px;
+  --font-size-ui: 13px;
+  --font-size-body: 14.5px;
+  --font-size-title: 15px;
+  --icon-size-xs: 12px;
+  --icon-size-sm: 14px;
+  --icon-size-md: 16px;
 }
 
 /* Lucide icons: collapse ad-hoc size props into 5 icon steps. */

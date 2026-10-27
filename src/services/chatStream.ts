@@ -67,6 +67,8 @@ export async function sendConsoleChatMessageStream(
   let lastError: Error | null = null;
   let accumulatedText = "";
   let accumulatedReasoning = "";
+  const reasoningMsgIds = new Set<string>();
+  let currentStreamMsgType = "message";
   const activeToolCalls: Record<string, { tool: string; args: string; result?: string; state: "calling" | "success" | "error" }> = {};
   let lastActiveToolCallId: string | null = null;
 
@@ -175,8 +177,21 @@ export async function sendConsoleChatMessageStream(
               const parsed = JSON.parse(rawData);
               options.onEvent?.(parsed);
 
-              // 1. Text Delta Streaming (AgentCore native chunk format)
-              if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {
+              if (parsed.object === "message" && parsed.type) {
+                currentStreamMsgType = parsed.type;
+                if ((parsed.type === "reasoning" || parsed.type === "thinking") && parsed.id) {
+                  reasoningMsgIds.add(parsed.id);
+                }
+              }
+
+              const isReasoningContentChunk =
+                parsed.type === "reasoning" ||
+                parsed.type === "thinking" ||
+                (parsed.msg_id && reasoningMsgIds.has(parsed.msg_id)) ||
+                (!parsed.msg_id && (currentStreamMsgType === "reasoning" || currentStreamMsgType === "thinking"));
+
+              // 1. Text Delta Streaming (AgentCore native chunk format — strictly excluding reasoning chunks!)
+              if (!isReasoningContentChunk && ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text")) {
                 if (parsed.delta && parsed.text) {
                   accumulatedText += parsed.text;
                   onChunk?.(accumulatedText);
@@ -184,6 +199,13 @@ export async function sendConsoleChatMessageStream(
                   accumulatedText = parsed.text;
                   onChunk?.(accumulatedText);
                 }
+              } else if (isReasoningContentChunk && parsed.text) {
+                if (parsed.delta) {
+                  accumulatedReasoning += parsed.text;
+                } else {
+                  accumulatedReasoning = parsed.text;
+                }
+                onReasoning?.(accumulatedReasoning);
               }
 
               // 2. Direct message delta or array content compatibility
