@@ -165,7 +165,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                 { value: "preference", label: t("memory.preference") },
                 { value: "project", label: t("memory.projectContext") },
               ]}
-              triggerClassName="bg-[#121218] border border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-white hover:border-[#f8a87c]/40"
+              triggerClassName="bg-slate-100 dark:bg-[#121218] border border-slate-200 dark:border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-slate-800 dark:text-white hover:border-[#f8a87c]/40"
               dropdownAlign="right"
             />
           </div>
@@ -175,13 +175,13 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder="Type what this agent should always remember..."
-            className="w-full bg-slate-50 dark:bg-[#101016] border border-[#262638] rounded-lg p-2 text-xs text-white placeholder-neutral-500 focus:outline-none resize-none font-sans"
+            className="w-full bg-slate-50 dark:bg-[#101016] border border-slate-200 dark:border-[#262638] rounded-lg p-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none resize-none font-sans"
           />
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-2.5 py-1 rounded text-[10px] text-slate-500 dark:text-neutral-400 hover:text-white cursor-pointer"
+              className="px-2.5 py-1 rounded text-[10px] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
             >
               Cancel
             </button>
@@ -236,13 +236,13 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                   rows={2}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full bg-[#181822] border border-[#f8a87c] rounded-lg p-2 text-xs text-white focus:outline-none resize-none font-sans"
+                  className="w-full bg-white dark:bg-[#181822] border border-[#f8a87c] rounded-lg p-2 text-xs text-slate-900 dark:text-white focus:outline-none resize-none font-sans"
                 />
                 <div className="flex items-center justify-end gap-1.5">
                   <button
                     type="button"
                     onClick={() => setEditingId(null)}
-                    className="p-1 rounded text-slate-500 dark:text-neutral-400 hover:text-white cursor-pointer"
+                    className="p-1 rounded text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                   >
                     <X size={12} />
                   </button>

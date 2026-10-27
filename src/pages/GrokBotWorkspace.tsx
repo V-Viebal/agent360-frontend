@@ -260,6 +260,294 @@ function stabilizeStreamingMarkdown(text: string, isActivelyStreaming: boolean):
   return out;
 }
 
+function computeIsMultilineComposer(text: string): boolean {
+  if (!text) return false;
+  if (text.includes("\n")) return true;
+  if (typeof window === 'undefined') return text.length > 70;
+  const w = window.innerWidth;
+  // Dynamic responsive threshold based on viewport width:
+  // On mobile phone (< 640px), 32-35 characters already overflow a single-line inline composer.
+  // On tablets (< 1024px), ~50 characters fill the row.
+  // On desktop (>= 1024px), 70 characters.
+  const threshold = w < 480 ? 32 : w < 640 ? 40 : w < 1024 ? 54 : 70;
+  return text.length > threshold;
+}
+
+function detectSessionPronouns(messages: ChatMessage[], currentMsg: ChatMessage): { self: string; user: string; isVi: boolean } {
+  const sampleTexts: string[] = [];
+  for (let i = Math.max(0, messages.length - 8); i < messages.length; i++) {
+    if (messages[i]?.content) sampleTexts.push(messages[i].content);
+  }
+  if (currentMsg?.content) sampleTexts.push(currentMsg.content);
+  if (currentMsg?.reasoning) sampleTexts.push(currentMsg.reasoning);
+  const combined = sampleTexts.join("\n");
+
+  const hasViChars = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(combined);
+  if (!hasViChars && /\b(the|and|for|you|please|check|what|how|list|report)\b/i.test(combined)) {
+    return { self: "I", user: "you", isVi: false };
+  }
+
+  let user = "anh";
+  if (/\bchị\b/i.test(combined) && !/\banh\b/i.test(combined)) {
+    user = "chị";
+  } else if (/\bbạn\b/i.test(combined) && !/\b(anh|chị)\b/i.test(combined)) {
+    user = "bạn";
+  }
+
+  let self = "em";
+  if (user === "bạn") {
+    self = /\btôi\b/i.test(combined) ? "tôi" : "mình";
+  }
+  return { self, user, isVi: true };
+}
+
+function transformReasonStepToLeadIn(
+  rawStepText: string,
+  pronouns: { self: string; user: string; isVi: boolean },
+  isStepComplete: boolean
+): string | null {
+  if (!rawStepText) return null;
+  const cleaned = rawStepText
+    .replace(/^\s*\[LEAD_IN\]:?\s*/i, "")
+    .replace(/\b[a-z0-9]+__[a-z0-9_]+\b/gi, "")
+    .trim();
+  if (!cleaned) return null;
+
+  const lines = cleaned
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        l.length > 0 &&
+        !/^(?:đang cân nhắc giữa|quyết định gọi|theo chỉ dẫn trong profile|according to my|bước \d)/i.test(l)
+    );
+  if (lines.length === 0) return null;
+
+  const firstLine = lines[0];
+  const firstSentence = firstLine.split(/(?<=[.!?])\s+/)[0]?.trim() || firstLine;
+  if (!isStepComplete && firstSentence.length < 28 && !/[.!?]$/.test(firstSentence)) {
+    return null;
+  }
+
+  const { self, user, isVi } = pronouns;
+  const capSelf = self.charAt(0).toUpperCase() + self.slice(1);
+
+  if (!isVi) {
+    const en = firstSentence.replace(/[.]+$/, "").trim();
+    const mUser = en.match(/^(?:the\s+user|user)\s+(?:wants|asked|is\s+asking|needs|requested)\s+to\s+(.+)$/i);
+    if (mUser) return `Let me ${mUser[1]} for you.`;
+    const mNeed = en.match(/^(?:need\s+to|must|should)\s+(.+)$/i);
+    if (mNeed) return `Let me ${mNeed[1]} for you.`;
+    const mDoing = en.match(/^((?:checking|searching|querying|fetching|running|preparing)\s+.+)$/i);
+    if (mDoing) return `I'm ${mDoing[1].charAt(0).toLowerCase() + mDoing[1].slice(1)} for you...`;
+    if (/^(?:let\s+me|i'll|i\s+will|i'm|i\s+am)\b/i.test(en)) return `${en}.`;
+    return null;
+  }
+
+  let body = firstSentence.replace(/[.!…]+$/, "").trim();
+  body = body.replace(/\s+(?:của|cho)\s+(?:người\s+dùng|khách\s+hàng)\b/gi, "");
+
+  // 1. Already starts with first-person conversational pronoun (Để em, Em đang, Em vừa, Mình đang...)
+  if (new RegExp(`^(?:để\\s+${self}|${self}\\s+(?:đang|vừa|sẽ|tiếp\\s+tục|kiểm\\s+tra|rà\\s+soát|đối\\s+chiếu))\\b`, "i").test(body)) {
+    return `${body}.`;
+  }
+
+  const endsWithQuestionParticle = (s: string) =>
+    /\b(?:không|chưa|chưa\s+nhỉ|bao\s+nhiêu|thế\s+nào|ra\s+sao|như\s+thế\s+nào|ở\s+đâu|gì|nào)$/i.test(s.trim());
+
+  const attachForUser = (act: string, suffix: string) => {
+    const hasForUser = new RegExp(`\\b(?:cho|giúp)\\s+${user}\\b`, "i").test(act);
+    if (hasForUser) return `${act}${suffix}`;
+    if (endsWithQuestionParticle(act)) {
+      const withGiup = act.replace(/^(kiểm\s+tra|rà\s+soát|xem|tìm\s+kiếm|tra\s+cứu)\b/i, `$1 giúp ${user}`);
+      return withGiup !== act ? `${withGiup}${suffix}` : `${act}${suffix}`;
+    }
+    return `${act} cho ${user}${suffix}`;
+  };
+
+  // 2. "Đã <action1>. Tiếp tục <action2>" or "Tiếp tục <action>"
+  const mViCont = firstLine.match(/(?:^|\.\s*)tiếp\s+tục\s+([^.!?\n]+)/i);
+  if (mViCont) {
+    const act = mViCont[1].trim().replace(/[.!…]+$/, "");
+    return `${capSelf} tiếp tục ${attachForUser(act, "...")}`;
+  }
+
+  // 3. "Người dùng muốn/yêu cầu/cần/hỏi <action>"
+  const mViUser = body.match(/^(?:người\s+dùng|khách\s+hàng)\s+(?:đang\s+)?(?:muốn|yêu\s+cầu|cần|hỏi|đề\s+nghị)\s+(.+)$/i);
+  if (mViUser) {
+    let act = mViUser[1].trim();
+    act = act.replace(/^biết\s+/i, "kiểm tra ");
+    return `Để ${self} ${attachForUser(act, " nhé.")}`;
+  }
+
+  // 4. "Cần (phải )?<action>"
+  const mViNeed = body.match(/^cần\s+(?:phải\s+)?(.+)$/i);
+  if (mViNeed) {
+    const act = mViNeed[1].trim();
+    return `Để ${self} ${attachForUser(act, " nhé.")}`;
+  }
+
+  // 5. "Đang <action>"
+  const mViDoing = body.match(/^đang\s+(.+)$/i);
+  if (mViDoing) {
+    const act = mViDoing[1].trim();
+    if (/^(?:cân\s+nhắc|suy\s+nghĩ\s+cách)/i.test(act)) return null;
+    return `${capSelf} đang ${attachForUser(act, "...")}`;
+  }
+
+  return null;
+}
+
+function extractSoloTurnLeadInAndBody(
+  msg: ChatMessage,
+  cleanContent: string,
+  sessionMessages: ChatMessage[],
+  isTurnActivelyRunning: boolean,
+  hasCallingStep: boolean,
+  isRoomNarratorTurn: boolean,
+  agentKey: string
+): { leadInSegments: string[]; mainBodyContent: string } {
+  if (isRoomNarratorTurn) {
+    return { leadInSegments: [], mainBodyContent: cleanContent };
+  }
+
+  const pronouns = detectSessionPronouns(sessionMessages, msg);
+  const { self } = pronouns;
+  const soloSteps = Array.isArray(msg.steps) ? msg.steps : [];
+  const soloTools =
+    Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0
+      ? msg.toolCalls
+      : soloSteps.filter((s) => s.kind === "tool_call");
+  const soloReasonList = soloSteps.filter((s) => s.kind === "reasoning" && s.text);
+  const rawReasonSource =
+    soloReasonList.length > 0
+      ? soloReasonList.map((r) => r.text || "")
+      : msg.reasoning
+      ? [msg.reasoning]
+      : [];
+
+  const reasonLeadIns: string[] = [];
+  for (let rIdx = 0; rIdx < rawReasonSource.length; rIdx++) {
+    const rText = rawReasonSource[rIdx];
+    const isStepComplete =
+      !isTurnActivelyRunning ||
+      soloTools.length > 0 ||
+      rIdx < rawReasonSource.length - 1 ||
+      Boolean(cleanContent);
+    const transformed = transformReasonStepToLeadIn(rText, pronouns, isStepComplete);
+    if (transformed && transformed.length >= 10 && transformed.length <= 280) {
+      const normNew = transformed.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
+      const isDup = reasonLeadIns.some((prev) => {
+        const normPrev = prev.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
+        return normPrev === normNew || normPrev.includes(normNew) || normNew.includes(normPrev);
+      });
+      if (!isDup && reasonLeadIns.length < 2) {
+        reasonLeadIns.push(transformed);
+      }
+    }
+  }
+
+  const isShortConversationalPara = (p: string) =>
+    p.length >= 6 &&
+    p.length <= 260 &&
+    !p.includes("\n") &&
+    !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(p);
+
+  const isExplicitConversationalLeadIn = (p: string) => {
+    if (!isShortConversationalPara(p)) return false;
+    // Must start with conversational ack/action ("Để em...", "Em vừa...", "Em đang...", "Em đã kiểm tra...", "Let me...", "I just..."),
+    // NOT a refusal ("Em không...", "Em chưa có...") or date/data conclusion ("Hôm nay **...", "Đây là sample...")
+    if (/^(?:không\b|em\s+(?:không|chưa\s+có)\b|hôm\s+nay\b|đây\s+là\b|browser\s+đã\b)/i.test(p.trim())) {
+      return false;
+    }
+    return new RegExp(
+      `^(?:để\\s+${self}|${self}\\s+(?:vừa|đang|đã\\s+(?:kiểm\\s+tra|đối\\s+chiếu|rà\\s+soát|lấy|tổng\\s+hợp)|xin\\s+báo)|giờ\\s+hệ\\s+thống\\s+${self}\\s+vừa|let\\s+me|i've\\s+just|i\\s+just\\s+checked)\\b`,
+      "i"
+    ).test(p.trim());
+  };
+
+  let contentLeadIns: string[] = [];
+  let mainBodyContent = cleanContent;
+
+  const rawSegs = Array.isArray(msg.textSegments)
+    ? msg.textSegments
+        .map((s) => parseQuotedReplyFromContent(s, undefined, agentKey).cleanContent)
+        .filter(Boolean)
+    : [];
+
+  if (rawSegs.length >= 2) {
+    const lastSeg = rawSegs[rawSegs.length - 1];
+    const lastParas = lastSeg.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    if (lastParas.length >= 2 && isExplicitConversationalLeadIn(lastParas[0])) {
+      contentLeadIns = [...rawSegs.slice(0, -1), lastParas[0]];
+      mainBodyContent = lastParas.slice(1).join("\n\n");
+    } else {
+      contentLeadIns = rawSegs.slice(0, -1);
+      mainBodyContent = lastSeg;
+    }
+  } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && isShortConversationalPara(rawSegs[0])) {
+    contentLeadIns = [rawSegs[0]];
+    mainBodyContent = "";
+  } else if (cleanContent) {
+    const paragraphs = cleanContent
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const firstPara = paragraphs[0] || "";
+    const secondPara = paragraphs[1] || "";
+
+    if (
+      paragraphs.length >= 3 &&
+      isExplicitConversationalLeadIn(firstPara) &&
+      isExplicitConversationalLeadIn(secondPara) &&
+      secondPara.length <= 160
+    ) {
+      contentLeadIns = [firstPara, secondPara];
+      mainBodyContent = paragraphs.slice(2).join("\n\n");
+    } else if (
+      paragraphs.length >= 2 &&
+      (isExplicitConversationalLeadIn(firstPara) || (reasonLeadIns.length === 0 && isShortConversationalPara(firstPara) && !/^(?:không\b|em\s+(?:không|chưa\s+có)\b|hôm\s+nay\b|đây\s+là\b|browser\s+đã\b)/i.test(firstPara)))
+    ) {
+      contentLeadIns = [firstPara];
+      mainBodyContent = paragraphs.slice(1).join("\n\n");
+    } else if (
+      paragraphs.length === 1 &&
+      isTurnActivelyRunning &&
+      isExplicitConversationalLeadIn(firstPara) &&
+      !cleanContent.includes("\n\n")
+    ) {
+      contentLeadIns = [firstPara];
+      mainBodyContent = "";
+    }
+  }
+
+  const combinedLeadIns: string[] = [...reasonLeadIns];
+  const overflowContentParas: string[] = [];
+  for (const cl of contentLeadIns) {
+    const normCl = cl.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
+    const isDup = combinedLeadIns.some((prev) => {
+      const normPrev = prev.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
+      return normPrev === normCl || normPrev.includes(normCl) || normCl.includes(normPrev);
+    });
+    if (!isDup) {
+      if (combinedLeadIns.length < 2) {
+        combinedLeadIns.push(cl);
+      } else {
+        overflowContentParas.push(cl);
+      }
+    }
+  }
+
+  if (overflowContentParas.length > 0) {
+    mainBodyContent = [...overflowContentParas, mainBodyContent].filter(Boolean).join("\n\n");
+  }
+
+  return {
+    leadInSegments: combinedLeadIns.slice(0, 2),
+    mainBodyContent,
+  };
+}
+
 export interface ParsedChatAttachmentItem {
   fileName: string;
   rawUrl: string;
@@ -5443,7 +5731,7 @@ export function GrokBotWorkspace() {
   // Khi switch giữa multiple line và single line, luôn đảm bảo giữ focus và đặt con trỏ ở cuối
   const prevIsMultilineRef = useRef<boolean>(false);
   useLayoutEffect(() => {
-    const isMultiline = inputText.includes("\n") || inputText.length > 70;
+    const isMultiline = computeIsMultilineComposer(inputText);
     const didChangeLayoutMode = isMultiline !== prevIsMultilineRef.current;
     prevIsMultilineRef.current = isMultiline;
 
@@ -8186,7 +8474,22 @@ const selectedAgentTheme = getAgentColorTheme(
 
     const body = messages.map((m) => {
       const roleLabel = m.role === "user" ? "### 👤 User" : `### 🤖 ${selectedAgent.name}`;
-      let text = `${roleLabel} (${m.timestamp})\n\n${m.content}\n\n`;
+      let renderedBody = m.content || "";
+      if (m.role === "assistant") {
+        const { leadInSegments, mainBodyContent } = extractSoloTurnLeadInAndBody(
+          m,
+          stripSharedRoomContext(m.content || ""),
+          messages,
+          false,
+          false,
+          Boolean(m.senderAgentId || m.roomReceipt || m.metadata?.receipt),
+          selectedAgent?.slug || selectedAgent?.id || "default"
+        );
+        if (leadInSegments.length > 0) {
+          renderedBody = [...leadInSegments, mainBodyContent].filter(Boolean).join("\n\n");
+        }
+      }
+      let text = `${roleLabel} (${m.timestamp})\n\n${renderedBody}\n\n`;
       if (m.steps && m.steps.length > 0) {
         text += `#### Execution Steps & Receipts:\n`;
         m.steps.forEach((s) => {
@@ -11881,73 +12184,15 @@ const selectedAgentTheme = getAgentColorTheme(
                           soloReasonList.map((r) => r.text || "").join("\n")
                         ).trim();
 
-                        // Extract natural lead-in segment(s) and main body directly from the Agent's own context-driven output (any language, any persona/pronouns)
-                        let leadInSegments: string[] = [];
-                        let mainBodyContent = cleanContent;
-
-                        const isShortConversationalPara = (p: string) =>
-                          p.length >= 6 &&
-                          p.length <= 280 &&
-                          !p.includes("\n") &&
-                          !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(p);
-
-                        if (!isRoomNarratorTurn) {
-                          const preToolLeadMatch = rawReasonText.match(/(?:^|\n)\s*\[LEAD_IN\]:?\s*([^\n]+)/i);
-                          const lockedPreToolLeadIn = preToolLeadMatch?.[1]?.trim() || "";
-                          const rawSegs = Array.isArray(msg.textSegments)
-                            ? msg.textSegments
-                                .map((s) => parseQuotedReplyFromContent(s, undefined, selectedAgent?.slug || selectedAgent?.id || "default").cleanContent)
-                                .filter(Boolean)
-                            : [];
-
-                          if (rawSegs.length >= 2) {
-                            const lastSeg = rawSegs[rawSegs.length - 1];
-                            const lastParas = lastSeg.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-                            if (lastParas.length >= 2 && isShortConversationalPara(lastParas[0])) {
-                              leadInSegments = [...rawSegs.slice(0, -1), lastParas[0]];
-                              mainBodyContent = lastParas.slice(1).join("\n\n");
-                            } else {
-                              leadInSegments = rawSegs.slice(0, -1);
-                              mainBodyContent = lastSeg;
-                            }
-                          } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && isShortConversationalPara(rawSegs[0])) {
-                            leadInSegments = [rawSegs[0]];
-                            mainBodyContent = "";
-                          } else if (cleanContent) {
-                            const paragraphs = cleanContent
-                              .split(/\n\s*\n/)
-                              .map((p) => p.trim())
-                              .filter(Boolean);
-                            const firstPara = paragraphs[0] || "";
-                            const secondPara = paragraphs[1] || "";
-
-                            if (paragraphs.length >= 3 && isShortConversationalPara(firstPara) && isShortConversationalPara(secondPara) && secondPara.length <= 180) {
-                              leadInSegments = [firstPara, secondPara];
-                              mainBodyContent = paragraphs.slice(2).join("\n\n");
-                            } else if (paragraphs.length >= 2 && isShortConversationalPara(firstPara)) {
-                              leadInSegments = [firstPara];
-                              mainBodyContent = paragraphs.slice(1).join("\n\n");
-                            } else if (
-                              paragraphs.length === 1 &&
-                              isTurnActivelyRunning &&
-                              isShortConversationalPara(firstPara) &&
-                              !cleanContent.includes("\n\n")
-                            ) {
-                              leadInSegments = [firstPara];
-                              mainBodyContent = "";
-                            }
-                          }
-
-                          if (lockedPreToolLeadIn && isShortConversationalPara(lockedPreToolLeadIn)) {
-                            const normLocked = lockedPreToolLeadIn.toLowerCase().replace(/[.!?…]+$/g, "").trim();
-                            const normFirst = (leadInSegments[0] || "").toLowerCase().replace(/[.!?…]+$/g, "").trim();
-                            if (!normFirst) {
-                              leadInSegments = [lockedPreToolLeadIn];
-                            } else if (normFirst !== normLocked && !normFirst.includes(normLocked) && !normLocked.includes(normFirst)) {
-                              leadInSegments = [lockedPreToolLeadIn, ...leadInSegments].slice(0, 2);
-                            }
-                          }
-                        }
+                        const { leadInSegments, mainBodyContent } = extractSoloTurnLeadInAndBody(
+                          msg,
+                          cleanContent,
+                          displayMessages,
+                          isTurnActivelyRunning,
+                          hasCallingStep,
+                          isRoomNarratorTurn,
+                          selectedAgent?.slug || selectedAgent?.id || "default"
+                        );
 
                         const showRespondingPill = Boolean(isTurnActivelyRunning);
 
@@ -12157,12 +12402,12 @@ const selectedAgentTheme = getAgentColorTheme(
                                     triggerHaptic(10);
                                     handleOpenActiveThinkingModal(msg);
                                   }}
-                                  className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors animate-in fade-in duration-150"
+                                  className="inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors animate-in fade-in duration-150"
                                 >
                                   <div className="relative shrink-0 flex items-center justify-center pointer-events-none">
                                     <AgentAvatar
                                       agent={selectedAgent}
-                                      size="xs"
+                                      size="2xs"
                                       interactive={false}
                                       alwaysAnimate={true}
                                       forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
@@ -12209,7 +12454,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
                       selectedAgent
                     }
-                    size="xs"
+                    size="2xs"
                     interactive={false}
                     alwaysAnimate={true}
                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
@@ -13692,7 +13937,7 @@ const selectedAgentTheme = getAgentColorTheme(
             )}
 
             {(() => {
-              const isMultiline = inputText.includes("\n") || inputText.length > 70;
+              const isMultiline = computeIsMultilineComposer(inputText);
               
               // Common Plus Button Trigger
               const renderPlusButton = () => {

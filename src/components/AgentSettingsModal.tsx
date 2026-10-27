@@ -403,7 +403,7 @@ export function AgentSettingsModal({
                       <button
                         type="button"
                         onClick={() => setModelSearch("")}
-                        className="text-neutral-400 hover:text-white cursor-pointer"
+                        className="text-slate-400 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white cursor-pointer"
                       >
                         <X size={11} />
                       </button>

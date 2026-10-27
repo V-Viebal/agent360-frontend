@@ -7,6 +7,8 @@ const STATIC_ASSETS = [
   '/app',
   '/favicon.svg',
   '/logo.svg',
+  '/icon-192.png',
+  '/badge-96.png',
   '/manifest.json'
 ];
 
@@ -58,8 +60,8 @@ self.addEventListener('message', (event) => {
     if (self.registration && typeof self.registration.showNotification === 'function') {
       self.registration.showNotification(title || 'Skyer — Task Completed', {
         body: body || 'Autonomous agent finished executing task.',
-        icon: icon || '/favicon.svg',
-        badge: '/favicon.svg',
+        icon: icon || '/icon-192.png',
+        badge: '/badge-96.png',
         tag: tag || 'skyer-task',
         renotify: true,
         data: { url: url || '/app' }

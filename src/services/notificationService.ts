@@ -199,8 +199,9 @@ export function notifyTaskComplete(params: {
       type: "NOTIFY_TASK_COMPLETE",
       title,
       body,
-      icon: "/favicon.svg",
+      icon: "/icon-192.png",
       tag: `skyer-turn-${params.sessionId || Date.now()}`,
+      badge: "/badge-96.png",
       url: `/app`
     });
     return;
@@ -211,7 +212,8 @@ export function notifyTaskComplete(params: {
     try {
       new Notification(title, {
         body,
-        icon: "/favicon.svg",
+        icon: "/icon-192.png",
+        badge: "/badge-96.png",
         tag: `skyer-turn-${params.sessionId || Date.now()}`
       });
     } catch (e) {

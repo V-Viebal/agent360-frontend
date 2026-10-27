@@ -657,7 +657,7 @@ export function SettingsModal({
                       <button
                         type="button"
                         onClick={() => setIsEditingProfile(false)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-medium text-neutral-400 hover:text-white cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                       >
                         {t("settings.profileEditCancel")}
                       </button>
@@ -963,7 +963,7 @@ export function SettingsModal({
                         onClick={() => setThemeMode(opt.id)}
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-sm"
+                            ? "bg-[#f8a87c]/10 border-[#f8a87c] text-slate-900 dark:text-white shadow-sm"
                             : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                         }`}
                       >
@@ -1008,7 +1008,7 @@ export function SettingsModal({
                           onClick={() => handleDensityChange(d.id as any)}
                           className={`p-3 rounded-xl border flex flex-col justify-between cursor-pointer transition-all ${
                             isSel
-                              ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-sm"
+                              ? "bg-[#f8a87c]/10 border-[#f8a87c] text-slate-900 dark:text-white shadow-sm"
                               : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                           }`}
                         >
@@ -1045,7 +1045,7 @@ export function SettingsModal({
                         onClick={() => setLanguageSelection(opt.id)}
                         className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                           isSelected
-                            ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-sm"
+                            ? "bg-[#f8a87c]/10 border-[#f8a87c] text-slate-900 dark:text-white shadow-sm"
                             : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                         }`}
                       >
@@ -1111,7 +1111,7 @@ export function SettingsModal({
                           onClick={() => handleSelectPreset(preset.id as SoundPreset)}
                           className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                             isSelected
-                              ? "bg-[#f8a87c]/10 border-[#f8a87c] text-white shadow-xs"
+                              ? "bg-[#f8a87c]/10 border-[#f8a87c] text-slate-900 dark:text-white shadow-xs"
                               : "bg-slate-50 dark:bg-[#161622] border-slate-200 dark:border-[#262634] text-slate-700 dark:text-neutral-300 hover:border-[#f8a87c]/40"
                           }`}
                         >
@@ -1132,7 +1132,7 @@ export function SettingsModal({
                                 e.stopPropagation();
                                 playNotificationChime(preset.id as SoundPreset);
                               }}
-                              className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white text-[10px] font-mono transition-colors"
+                              className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white text-[10px] font-mono transition-colors"
                               title={t("settings.audioTestBtn")}
                             >
                               {t("settings.audioTestBtn")}
@@ -1265,7 +1265,7 @@ export function SettingsModal({
                       className={`flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                         isTestingSpeech
                           ? "bg-red-500/20 border-red-500/40 text-red-400 shadow-sm"
-                          : "bg-[#1e1e2c] hover:bg-[#28283a] border-slate-200 dark:border-[#2e2e42] text-white hover:border-[#f8a87c]/40"
+                          : "bg-slate-100 dark:bg-[#1e1e2c] hover:bg-slate-200 dark:hover:bg-[#28283a] border-slate-200 dark:border-[#2e2e42] text-slate-800 dark:text-white hover:border-[#f8a87c]/40"
                       }`}
                     >
                       {isTestingSpeech ? (
@@ -1288,7 +1288,7 @@ export function SettingsModal({
                         setSelectedVoiceURI("");
                         saveStoredSpeechSettings({ rate: 1.05, pitch: 1.0, voiceURI: "" });
                       }}
-                      className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-white text-xs font-mono transition-colors cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white text-xs font-mono transition-colors cursor-pointer"
                       title={t("settings.ttsResetDefault")}
                     >
                       {t("settings.ttsResetDefault")}
@@ -1498,8 +1498,8 @@ export function SettingsModal({
                       onClick={() => onSttLangChange?.("vi-VN")}
                       className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                         sttLang === "vi-VN"
-                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold shadow-xs"
-                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white font-bold shadow-xs"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-slate-200 dark:border-[#28283a] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       <span>Tiếng Việt (vi-VN)</span>
@@ -1510,8 +1510,8 @@ export function SettingsModal({
                       onClick={() => onSttLangChange?.("en-US")}
                       className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all cursor-pointer ${
                         sttLang === "en-US"
-                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold shadow-xs"
-                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white font-bold shadow-xs"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-slate-200 dark:border-[#28283a] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       <span>English (en-US)</span>
@@ -1539,7 +1539,7 @@ export function SettingsModal({
                       })),
                     ]}
                     className="w-full"
-                    triggerClassName="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2.5 py-1.5 text-xs text-white font-sans"
+                    triggerClassName="w-full bg-slate-50 dark:bg-[#1c1c28] border border-slate-200 dark:border-[#28283a] hover:border-[#f8a87c] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-sans"
                   />
                 </div>
 
@@ -1558,8 +1558,8 @@ export function SettingsModal({
                       onClick={() => handleVadModeChange("continuous")}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                         vadMode === "continuous"
-                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
-                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white font-bold"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-slate-200 dark:border-[#28283a] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       Auto Silence
@@ -1569,8 +1569,8 @@ export function SettingsModal({
                       onClick={() => handleVadModeChange("manual")}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                         vadMode === "manual"
-                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
-                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white font-bold"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-slate-200 dark:border-[#28283a] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       Manual Toggle
@@ -1580,8 +1580,8 @@ export function SettingsModal({
                       onClick={() => handleVadModeChange("push_to_talk")}
                       className={`px-2 py-1.5 rounded-lg border text-center transition-all cursor-pointer ${
                         vadMode === "push_to_talk"
-                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-white font-bold"
-                          : "bg-slate-100 dark:bg-[#1c1c28] border-[#28283a] text-slate-500 dark:text-neutral-400 hover:text-white"
+                          ? "bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white font-bold"
+                          : "bg-slate-100 dark:bg-[#1c1c28] border-slate-200 dark:border-[#28283a] text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
                       Push-to-Talk
