@@ -265,6 +265,13 @@
   --line-height-title: 1.35;
   --line-height-heading: 1.25;
 
+  /* Icon scale paired with the type scale */
+  --icon-size-xs: 12px;
+  --icon-size-sm: 14px;
+  --icon-size-md: 16px;
+  --icon-size-lg: 20px;
+  --icon-size-xl: 24px;
+
   /* Theme Tokens - Default Dark Mode (Obsidian) */
   --bg-page: #080a0f;
   --bg-workspace: #0c0c0e;
@@ -384,6 +391,39 @@ body {
 .text-2xl {
   font-size: var(--font-size-heading) !important;
   line-height: var(--line-height-heading) !important;
+}
+
+/* Sidebars are scanned constantly; use one step larger than dense app UI. */
+[data-type-scope="sidebar"] {
+  --font-size-meta: 13px;
+  --font-size-ui: 14px;
+  --font-size-body: 15px;
+  --font-size-title: 16px;
+  --icon-size-xs: 13px;
+  --icon-size-sm: 15px;
+  --icon-size-md: 17px;
+}
+
+/* Lucide icons: collapse ad-hoc size props into 5 icon steps. */
+svg.lucide:is([width="8"], [width="9"], [width="10"], [width="11"]) {
+  width: var(--icon-size-xs);
+  height: var(--icon-size-xs);
+}
+svg.lucide:is([width="12"], [width="13"], [width="14"]) {
+  width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+}
+svg.lucide:is([width="15"], [width="16"], [width="17"]) {
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+}
+svg.lucide:is([width="18"], [width="20"], [width="22"]) {
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+}
+svg.lucide[width="24"] {
+  width: var(--icon-size-xl);
+  height: var(--icon-size-xl);
 }
 
 /* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */

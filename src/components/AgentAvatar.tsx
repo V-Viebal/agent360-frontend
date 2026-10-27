@@ -504,10 +504,11 @@ export function AgentAvatar({
     const cleanClassName = size === "3xs"
       ? className
       : className
-          .replace(/ring-\d+/g, "")
-          .replace(/ring-[^\s]+/g, "")
-          .replace(/border[^\s]*/g, "")
-          .replace(/shadow[^\s]*/g, "");
+          .replace(/\bring-\d+/g, "")
+          .replace(/\bring-[^\s]+/g, "")
+          .replace(/\bborder[^\s]*/g, "")
+          .replace(/\bshadow[^\s]*/g, "")
+          .replace(/\bbg-[^\s]+/g, "");
     return (
       <div
         ref={containerRef}

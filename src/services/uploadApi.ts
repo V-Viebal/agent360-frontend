@@ -80,6 +80,12 @@ export function resolveUploadedAttachmentPreviewUrl(urlOrPath: string, agentId: 
     return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${encodeURIComponent(`${virtualMatch[1]}_${virtualMatch[2]}`)}`;
   }
 
+  // Preserve relative path if file is inside a relative workspace subfolder (e.g., .tmp/zeroism-slide/file.pdf)
+  if (!normalized.startsWith("/") && normalized.includes("/")) {
+    const relParts = normalized.split("/").map(encodeURIComponent).join("/");
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${relParts}`;
+  }
+
   const fallbackName = normalized.split("/").filter(Boolean).pop();
   if (fallbackName) {
     return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${encodeURIComponent(fallbackName)}`;

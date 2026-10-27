@@ -7835,6 +7835,34 @@ export function GrokBotWorkspace() {
     }
   }, [displayMessages, isStreaming, selectedChatId]);
 
+  // Only trigger scrolling the selected agent into view when resizing or expanding/collapsing the left sidebar
+  useEffect(() => {
+    if (!selectedAgentId || agents.length === 0) return;
+    const scrollSelectedAgent = (behavior: ScrollBehavior = "smooth") => {
+      const cleanTarget = selectedAgentId.replace(/^bot:agent360:/i, "").toLowerCase();
+      const targetAgent = agents.find(
+        (a) => a.id === selectedAgentId || a.slug === cleanTarget || (a.id || "").toLowerCase() === selectedAgentId.toLowerCase()
+      );
+      if (!targetAgent) return;
+
+      if (targetAgent.enabled === false || targetAgent.status === "disabled") {
+        setDisabledAgentsExpanded(true);
+      }
+
+      const selector = `[data-agent-item-id="${targetAgent.id}"], [data-agent-slug="${targetAgent.slug || cleanTarget}"]`;
+      const els = Array.from(document.querySelectorAll<HTMLElement>(selector));
+      const visibleEl = els.find((el) => el.offsetParent !== null) || els[0];
+      if (visibleEl) {
+        visibleEl.scrollIntoView({ block: "center", behavior });
+      }
+    };
+
+    // Trigger across layout transition phases strictly when sidebar size/collapse changes
+    scrollSelectedAgent("auto");
+    const t1 = setTimeout(() => scrollSelectedAgent("auto"), 80);
+    const t2 = setTimeout(() => scrollSelectedAgent("smooth"), 260);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [isLeftSidebarCollapsed, leftSidebarWidth]);
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
     const agName = selectedAgent?.name || "Workspace";
@@ -9398,6 +9426,7 @@ export function GrokBotWorkspace() {
       {/* ========================================================= */}
       <aside
         id="tour-agent-selector"
+        data-type-scope="sidebar"
         style={{
           width:
             !isCompactMode && typeof window !== "undefined" && window.innerWidth >= 1024
@@ -9473,6 +9502,8 @@ export function GrokBotWorkspace() {
                       <Tooltip key={ag.id} content={tooltipText} placement="right" minWidth={120}>
                         <button
                           aria-label={ag.name}
+                          data-agent-item-id={ag.id}
+                          data-agent-slug={ag.slug}
                           data-ux-target-min="24"
                           onClick={() => handleSelectAgent(ag)}
                           className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
@@ -9561,6 +9592,8 @@ export function GrokBotWorkspace() {
                             <Tooltip key={ag.id} content={`${ag.name} (Đã tắt)`} placement="right" minWidth={120}>
                               <button
                                 aria-label={ag.name}
+                                data-agent-item-id={ag.id}
+                                data-agent-slug={ag.slug}
                                 data-ux-target-min="24"
                                 disabled
                                 className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none shrink-0"
@@ -9804,6 +9837,7 @@ export function GrokBotWorkspace() {
                       <div
                         key={ag.id}
                         data-agent-item-id={ag.id}
+                        data-agent-slug={ag.slug}
                         style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
                         onTouchStart={() => handleTouchStartAgent(ag)}
                         onTouchEnd={handleTouchEndAgent}
@@ -10838,7 +10872,7 @@ export function GrokBotWorkspace() {
                         className="shrink-0"
                       />
                     </span>
-                    <span className={`font-semibold leading-none ${variant === "inline" ? "text-white dark:text-white" : ""}`}>{shortName}</span>
+                    <span style={{ color: "#ffffff" }} className="font-semibold leading-none !text-white">{shortName}</span>
 
                     {/* Hover / Focus Popover Card showing Bot Role, Model, Live Status & Click to Open Shared History */}
                     <span
@@ -13947,6 +13981,7 @@ export function GrokBotWorkspace() {
       <aside
         ref={chatSessionsAsideRef}
         id="tour-chat-sessions"
+        data-type-scope="sidebar"
         style={{
           width:
             typeof window !== "undefined" && window.innerWidth >= 1024
@@ -14904,6 +14939,7 @@ ${chat.id}`);
       {/* 4. RIGHTMOST PANE: SELECTED BOT INFO (COLLAPSIBLE) */}
       {/* ========================================================= */}
       <aside
+        data-type-scope="sidebar"
         style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
         className={`fixed xl:static xl:relative inset-y-0 right-0 z-[60] xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok mobile-drawer-panel ${
           isBotInfoCollapsed
@@ -14976,7 +15012,7 @@ ${chat.id}`);
                 className="relative mb-2 transition-transform hover:scale-105 cursor-pointer group"
                 title="Bấm để mở Cài đặt Agent"
               >
-                <AgentAvatar agent={selectedAgent} size="2xl" className="shadow-2xl" />
+                <AgentAvatar agent={selectedAgent} size="2xl" className="" />
                 {selectedAgent.status === "degraded" && (
                   <span
                     className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1.5 ring-white dark:ring-[#0c0c0e] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)] animate-pulse"
