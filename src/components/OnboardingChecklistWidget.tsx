@@ -1,4 +1,3 @@
-import { useTranslation } from "../i18n/LanguageContext";
 import React, { useState, useEffect } from "react";
 import {
   Sparkles,
@@ -7,26 +6,31 @@ import {
   X,
   ChevronRight,
   HelpCircle,
+  PanelRight,
+  MessageSquare,
+  Bot,
 } from "lucide-react";
+import { Tooltip } from "./ui/Tooltip";
 import { startOnboardingTour, highlightElement } from "../services/onboardingService";
 
 export interface OnboardingMilestones {
-  selectedAgent: boolean;
-  sentMessage: boolean;
-  openedSpecsOrTopology: boolean;
-  triedVoiceOrShortcuts: boolean;
+  openedAgentDetail: boolean;
+  openedChatList: boolean;
+  // Deprecated compatibility milestones
+  selectedAgent?: boolean;
+  sentMessage?: boolean;
+  openedSpecsOrTopology?: boolean;
+  triedVoiceOrShortcuts?: boolean;
 }
 
 const STORAGE_KEY_CHECKLIST_DISMISSED = "agent360_onboarding_checklist_dismissed";
-const STORAGE_KEY_MILESTONES = "agent360_onboarding_milestones";
+const STORAGE_KEY_MILESTONES = "agent360_onboarding_milestones_v2";
 
 export function getStoredMilestones(): OnboardingMilestones {
   if (typeof window === "undefined") {
     return {
-      selectedAgent: false,
-      sentMessage: false,
-      openedSpecsOrTopology: false,
-      triedVoiceOrShortcuts: false,
+      openedAgentDetail: false,
+      openedChatList: false,
     };
   }
   try {
@@ -34,10 +38,8 @@ export function getStoredMilestones(): OnboardingMilestones {
     if (raw) return JSON.parse(raw);
   } catch {}
   return {
-    selectedAgent: false,
-    sentMessage: false,
-    openedSpecsOrTopology: false,
-    triedVoiceOrShortcuts: false,
+    openedAgentDetail: false,
+    openedChatList: false,
   };
 }
 
@@ -60,23 +62,21 @@ export function recordMilestone(key: keyof OnboardingMilestones) {
 }
 
 interface OnboardingChecklistWidgetProps {
-  onOpenAgentsDrawer?: () => void;
-  onOpenTopology?: () => void;
-  onOpenShortcuts?: () => void;
-  onOpenSpecs?: () => void;
+  isBotInfoCollapsed?: boolean;
+  isChatListCollapsed?: boolean;
+  onToggleBotInfo?: () => void;
+  onToggleChatList?: () => void;
   onFocusComposer?: () => void;
   variant?: "floating" | "inline";
 }
 
 export function OnboardingChecklistWidget({
-  onOpenAgentsDrawer,
-  onOpenTopology,
-  onOpenShortcuts,
-  onOpenSpecs,
-  onFocusComposer,
+  isBotInfoCollapsed = true,
+  isChatListCollapsed = false,
+  onToggleBotInfo,
+  onToggleChatList,
   variant = "floating",
 }: OnboardingChecklistWidgetProps) {
-  const { t } = useTranslation();
   const [milestones, setMilestones] = useState<OnboardingMilestones>(() => getStoredMilestones());
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -86,12 +86,16 @@ export function OnboardingChecklistWidget({
       return false;
     }
   });
+
+  // Default to minimized (collapsed) state as requested by the user
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     try {
-      return localStorage.getItem("agent360_onboarding_checklist_collapsed") === "true";
+      const stored = localStorage.getItem("agent360_onboarding_checklist_collapsed_v2");
+      if (stored === null) return true; // Default minimized
+      return stored === "true";
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -99,7 +103,7 @@ export function OnboardingChecklistWidget({
     setIsCollapsed((prev) => {
       const next = collapse !== undefined ? collapse : !prev;
       try {
-        localStorage.setItem("agent360_onboarding_checklist_collapsed", next ? "true" : "false");
+        localStorage.setItem("agent360_onboarding_checklist_collapsed_v2", next ? "true" : "false");
       } catch {}
       return next;
     });
@@ -117,12 +121,23 @@ export function OnboardingChecklistWidget({
     };
   }, []);
 
-  const totalSteps = 4;
+  // Update milestone dynamically when sidebars open
+  useEffect(() => {
+    if (!isBotInfoCollapsed) {
+      recordMilestone("openedAgentDetail");
+    }
+  }, [isBotInfoCollapsed]);
+
+  useEffect(() => {
+    if (!isChatListCollapsed) {
+      recordMilestone("openedChatList");
+    }
+  }, [isChatListCollapsed]);
+
+  const totalSteps = 2;
   const completedSteps = [
-    milestones.selectedAgent,
-    milestones.sentMessage,
-    milestones.openedSpecsOrTopology,
-    milestones.triedVoiceOrShortcuts,
+    milestones.openedAgentDetail,
+    milestones.openedChatList,
   ].filter(Boolean).length;
   const progressPercent = Math.round((completedSteps / totalSteps) * 100);
   const isAllCompleted = completedSteps === totalSteps;
@@ -130,9 +145,7 @@ export function OnboardingChecklistWidget({
   const handleDismiss = () => {
     setIsDismissed(true);
     try {
-      // Permanently record that user dismissed the onboarding checklist
       localStorage.setItem(STORAGE_KEY_CHECKLIST_DISMISSED, "true");
-      // Also broadcast to other tabs/components
       window.dispatchEvent(new CustomEvent("agent360_checklist_dismissed"));
     } catch {}
   };
@@ -141,241 +154,149 @@ export function OnboardingChecklistWidget({
 
   return (
     <div
-      className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[60] w-[calc(100vw-24px)] max-w-[390px] sm:max-w-[420px] md:w-[410px] shadow-2xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans"
+      className="fixed bottom-3 right-3 sm:bottom-5 sm:right-5 z-[60] w-[calc(100vw-24px)] max-w-[320px] sm:max-w-[340px] shadow-xl animate-in slide-in-from-bottom-5 duration-300 bg-white/95 dark:bg-[#121218]/95 backdrop-blur-md border border-slate-200 dark:border-[#2a2a3a] rounded-2xl overflow-hidden text-neutral-200 font-sans select-none"
     >
-      <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#222230] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c]">
-            <Sparkles size={15} />
+      {/* Header bar */}
+      <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#222230] flex items-center justify-between">
+        <div
+          onClick={() => handleToggleCollapse()}
+          className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+          title={isCollapsed ? "Bấm để mở rộng" : "Bấm để thu gọn"}
+        >
+          <div className="h-6 w-6 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c] shrink-0">
+            <Sparkles size={13} />
           </div>
-          <div>
-            <h4 className="text-xs font-semibold text-slate-900 dark:text-white tracking-wide">
-              {t("onboarding.title")}
+          <div className="min-w-0 flex-1">
+            <h4 className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+              Làm quen cơ bản
             </h4>
             <p className="text-[10px] text-neutral-400 font-mono">
-              {t("onboarding.steps", { completed: completedSteps, total: totalSteps, percent: progressPercent })}
+              {completedSteps}/{totalSteps} bước ({progressPercent}%)
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={() => handleToggleCollapse()}
-            className="p-1 rounded text-neutral-400 hover:text-white hover:bg-white/5 transition-colors text-[11px] font-mono px-1.5 cursor-pointer"
+            className="p-1 rounded text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors text-[10px] font-mono px-1.5 cursor-pointer"
           >
-            {isCollapsed ? t("onboarding.expand") : t("onboarding.collapse")}
+            {isCollapsed ? "Mở" : "Thu gọn"}
           </button>
           <button
             type="button"
             onClick={handleDismiss}
-            className="p-1 rounded-md text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-            title={t("onboarding.dismiss")}
+            className="p-1 rounded-md text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            title="Đóng bảng hướng dẫn"
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         </div>
       </div>
 
-      <div className="h-1 w-full bg-[#1e1e2c]">
+      <div className="h-0.5 w-full bg-[#1e1e2c]">
         <div
           className="h-full bg-gradient-to-r from-[#f8a87c] to-amber-400 transition-all duration-500"
           style={{ width: `${progressPercent}%` }}
         />
       </div>
 
+      {/* Expanded Checklist Steps (Minimal text + Tooltip for details) */}
       {!isCollapsed && (
-        <div className="p-3.5 space-y-2.5">
-          {/* Milestone 1 */}
+        <div className="p-3 space-y-2">
+          {/* Step 1: Agent Details Sidebar */}
           <div
-            className={`p-2.5 rounded-xl border transition-all ${
-              milestones.selectedAgent
+            className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 ${
+              milestones.openedAgentDetail
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
                 : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
-            } flex items-start gap-2.5`}
+            }`}
           >
-            <div className="mt-0.5 shrink-0">
-              {milestones.selectedAgent ? (
-                <CheckCircle2 size={16} className="text-emerald-400" />
-              ) : (
-                <Circle size={16} className="text-neutral-500" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">{t("onboarding.step1Title")}</span>
-                {milestones.selectedAgent && (
-                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step1Done")}</span>
-                )}
-              </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Xem danh sách đồng đội ở cột bên trái: Lập trình viên (SWE), Vận hành (SRE), Kiểm thử (QA), v.v.
-              </p>
-              {!milestones.selectedAgent && (
-                <div className="pt-1 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== "undefined" && window.innerWidth < 1024 && onOpenAgentsDrawer) {
-                        onOpenAgentsDrawer();
-                      } else {
-                        highlightElement("#tour-agent-selector", "Danh sách đồng đội", "Bấm chọn bạn đồng đội bạn muốn giao việc ở đây nhé", "right");
-                      }
-                    }}
-                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
-                  >
-                    <span>{t("onboarding.step1Action")}</span> <ChevronRight size={11} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Milestone 2 */}
-          <div
-            className={`p-2.5 rounded-xl border transition-all ${
-              milestones.sentMessage
-                ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
-            } flex items-start gap-2.5`}
-          >
-            <div className="mt-0.5 shrink-0">
-              {milestones.sentMessage ? (
-                <CheckCircle2 size={16} className="text-emerald-400" />
-              ) : (
-                <Circle size={16} className="text-neutral-500" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">{t("onboarding.step2Title")}</span>
-                {milestones.sentMessage ? (
-                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step2Done")}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="shrink-0">
+                {milestones.openedAgentDetail ? (
+                  <CheckCircle2 size={15} className="text-emerald-400" />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => onFocusComposer && onFocusComposer()}
-                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
-                  >
-                    Gõ lời nhắn ngay <ChevronRight size={11} />
-                  </button>
+                  <Circle size={15} className="text-neutral-500" />
                 )}
               </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Hỏi một câu bất kỳ hoặc bấm một gợi ý có sẵn để bạn ấy bắt tay vào làm việc ngay.
-              </p>
+              <Tooltip content="Bấm vào tên hoặc avatar Agent ở thanh header để xem Memory, Library và Routine" placement="top" minWidth={160}>
+                <span className="text-xs font-medium cursor-help flex items-center gap-1 truncate">
+                  <span>1. Chi tiết Agent</span>
+                  <HelpCircle size={11} className="text-neutral-400 shrink-0" />
+                </span>
+              </Tooltip>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onToggleBotInfo) onToggleBotInfo();
+                recordMilestone("openedAgentDetail");
+              }}
+              className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20"
+            >
+              <span>{isBotInfoCollapsed ? "Mở" : "Đóng"}</span>
+              <ChevronRight size={11} />
+            </button>
           </div>
 
-          {/* Milestone 3 */}
+          {/* Step 2: Chat Sessions Sidebar */}
           <div
-            className={`p-2.5 rounded-xl border transition-all ${
-              milestones.openedSpecsOrTopology
+            className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 ${
+              milestones.openedChatList
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
                 : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
-            } flex items-start gap-2.5`}
+            }`}
           >
-            <div className="mt-0.5 shrink-0">
-              {milestones.openedSpecsOrTopology ? (
-                <CheckCircle2 size={16} className="text-emerald-400" />
-              ) : (
-                <Circle size={16} className="text-neutral-500" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">{t("onboarding.step3Title")}</span>
-                {milestones.openedSpecsOrTopology ? (
-                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step3Done")}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="shrink-0">
+                {milestones.openedChatList ? (
+                  <CheckCircle2 size={15} className="text-emerald-400" />
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenTopology) onOpenTopology();
-                      recordMilestone("openedSpecsOrTopology");
-                    }}
-                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
-                  >
-                    Mở sơ đồ mạng lưới <ChevronRight size={11} />
-                  </button>
+                  <Circle size={15} className="text-neutral-500" />
                 )}
               </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Xem các bạn bot phối hợp công việc với nhau thế nào (phím Ctrl + G).
-              </p>
+              <Tooltip content="Bấm nút chat ở góc trên để mở danh sách các phiên trò chuyện của Agent" placement="top" minWidth={160}>
+                <span className="text-xs font-medium cursor-help flex items-center gap-1 truncate">
+                  <span>2. Danh sách Chat</span>
+                  <HelpCircle size={11} className="text-neutral-400 shrink-0" />
+                </span>
+              </Tooltip>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (onToggleChatList) onToggleChatList();
+                recordMilestone("openedChatList");
+              }}
+              className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20"
+            >
+              <span>{isChatListCollapsed ? "Mở" : "Đóng"}</span>
+              <ChevronRight size={11} />
+            </button>
           </div>
 
-          {/* Milestone 4 */}
-          <div
-            className={`p-2.5 rounded-xl border transition-all ${
-              milestones.triedVoiceOrShortcuts
-                ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
-            } flex items-start gap-2.5`}
-          >
-            <div className="mt-0.5 shrink-0">
-              {milestones.triedVoiceOrShortcuts ? (
-                <CheckCircle2 size={16} className="text-emerald-400" />
-              ) : (
-                <Circle size={16} className="text-neutral-500" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium">{t("onboarding.step4Title")}</span>
-                {milestones.triedVoiceOrShortcuts ? (
-                  <span className="text-[10px] font-mono text-emerald-400">{t("onboarding.step4Done")}</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenShortcuts) onOpenShortcuts();
-                      recordMilestone("triedVoiceOrShortcuts");
-                    }}
-                    className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5"
-                  >
-                    Xem phím tắt (Ctrl+/) <ChevronRight size={11} />
-                  </button>
-                )}
-              </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
-                Trên điện thoại: Chạm biểu tượng Micro để nói. Trên máy tính: Bấm Alt + M hoặc xem bảng phím tắt (Ctrl+/).
-              </p>
-            </div>
-          </div>
-
-          {/* Footer */}
+          {/* Footer Controls */}
           <div className="pt-2 border-t border-slate-200 dark:border-[#222230] flex items-center justify-between">
             <button
               type="button"
               onClick={() => startOnboardingTour({ force: true })}
-              className="text-[11px] font-medium text-[#f8a87c] hover:text-[#ff9433] transition-colors flex items-center gap-1 cursor-pointer"
+              className="text-[10.5px] font-medium text-[#f8a87c] hover:text-[#ff9433] transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <Sparkles size={13} />
-              <span>{t("onboarding.tourBtn")}</span>
+              <Sparkles size={12} />
+              <span>Dẫn tham quan</span>
             </button>
 
-            {isAllCompleted ? (
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 text-[11px] font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                title="Bấm để đóng bảng và bắt đầu làm việc ngay"
-              >
-                <CheckCircle2 size={13} />
-                <span>Đã sẵn sàng làm việc! ✕</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="text-[10px] text-neutral-400 hover:text-neutral-300 font-mono transition-colors cursor-pointer hover:underline"
-                title="Đóng bảng và không hiển thị lại"
-              >
-                Đã hiểu, đóng bảng này
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="text-[10px] text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 font-mono transition-colors cursor-pointer hover:underline"
+            >
+              Đóng bảng
+            </button>
           </div>
         </div>
       )}

@@ -3876,9 +3876,10 @@ function parseChatTimestamp(ts?: string): Date | null {
   return null;
 }
 
-function formatChatTimestampDivider(ts?: string, lang: string = "vi"): string {
+function formatChatTimestampDivider(ts?: string, lang?: string): string {
   const d = parseChatTimestamp(ts);
   if (!d) return ts ? String(ts) : "";
+  const effectiveLang = (lang || (typeof document !== "undefined" && document.documentElement.lang) || "vi").toLowerCase().startsWith("vi") ? "vi" : "en";
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   const yesterday = new Date(now);
@@ -3887,10 +3888,10 @@ function formatChatTimestampDivider(ts?: string, lang: string = "vi"): string {
 
   const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
   if (isToday) {
-    return lang === "vi" ? `Hôm nay ${timeStr}` : `Today ${timeStr}`;
+    return effectiveLang === "vi" ? `Hôm nay ${timeStr}` : `Today ${timeStr}`;
   }
   if (isYesterday) {
-    return lang === "vi" ? `Hôm qua ${timeStr}` : `Yesterday ${timeStr}`;
+    return effectiveLang === "vi" ? `Hôm qua ${timeStr}` : `Yesterday ${timeStr}`;
   }
   return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${timeStr}`;
 }
@@ -6329,6 +6330,21 @@ export function GrokBotWorkspace() {
   const userTurnsRef = useRef<{ msg: ChatMessage; originalIdx: number }[]>([]);
   const traceCardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [traceCardPos, setTraceCardPos] = useState<{ top: number; right: number } | null>(null);
+  const traceBarScrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Keep active tick inside trace bar visible at all times
+  useEffect(() => {
+    if (activeTraceIdx === null || !traceBarScrollRef.current) return;
+    const container = traceBarScrollRef.current;
+    const activeEl = container.querySelector(`[data-trace-tick-idx="${activeTraceIdx}"]`) as HTMLElement;
+    if (activeEl) {
+      const cRect = container.getBoundingClientRect();
+      const elRect = activeEl.getBoundingClientRect();
+      if (elRect.top < cRect.top + 20 || elRect.bottom > cRect.bottom - 20) {
+        activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
+  }, [activeTraceIdx]);
 
   const findCurrentVisibleUserTurnIdx = (userTurns: { msg: ChatMessage; originalIdx: number }[]): number => {
     if (!messagesContainerRef.current || userTurns.length === 0) return 0;
@@ -7161,20 +7177,41 @@ export function GrokBotWorkspace() {
             const applySyncedMessages = (nextTurns: ChatMessage[]) => {
               if (!nextTurns || nextTurns.length === 0) return;
               setMessages((prev) => {
-                if (prev.length === nextTurns.length) {
+                // Preserve any existing reasoning, steps, toolCalls, and roomReceipt from prev turns when SSE session_update only carries plain message content
+                const mergedTurns = nextTurns.map((nt, idx) => {
+                  const matchedPrev =
+                    prev.find((pm) => pm.id === nt.id) ||
+                    (idx < prev.length && prev[idx].role === nt.role && prev[idx].content.trim() === nt.content.trim() ? prev[idx] : null) ||
+                    (idx === nextTurns.length - 1 && prev.length > 0 && prev[prev.length - 1].role === "assistant" && nt.role === "assistant" ? prev[prev.length - 1] : null);
+                  if (!matchedPrev) return nt;
+                  return {
+                    ...nt,
+                    reasoning: nt.reasoning || matchedPrev.reasoning,
+                    steps: nt.steps && nt.steps.length > 0 ? nt.steps : matchedPrev.steps,
+                    toolCalls: nt.toolCalls && nt.toolCalls.length > 0 ? nt.toolCalls : matchedPrev.toolCalls,
+                    roomReceipt: nt.roomReceipt || matchedPrev.roomReceipt,
+                    runId: nt.runId || matchedPrev.runId,
+                    roundNo: nt.roundNo || matchedPrev.roundNo,
+                    turnKind: nt.turnKind || matchedPrev.turnKind,
+                  };
+                });
+
+                if (prev.length === mergedTurns.length) {
                   const prevLast = prev[prev.length - 1];
-                  const nextLast = nextTurns[nextTurns.length - 1];
+                  const nextLast = mergedTurns[mergedTurns.length - 1];
                   if (
                     prevLast &&
                     nextLast &&
                     prevLast.content === nextLast.content &&
+                    prevLast.reasoning === nextLast.reasoning &&
                     (prevLast.steps?.length || 0) === (nextLast.steps?.length || 0) &&
                     (prevLast.toolCalls?.length || 0) === (nextLast.toolCalls?.length || 0)
                   ) {
                     return prev;
                   }
                 }
-                return nextTurns;
+                setCachedChatMessages(selectedChatId, mergedTurns, selectedAgentId);
+                return mergedTurns;
               });
               setShowPollCard(false);
               const lastTurn = nextTurns[nextTurns.length - 1];
@@ -7366,6 +7403,12 @@ export function GrokBotWorkspace() {
     tools: [],
     sessions: [],
   };
+
+  const selectedAgentTheme = getAgentColorTheme(
+    selectedAgent?.id || selectedAgentId,
+    selectedAgent?.name,
+    selectedAgent?.roleTag
+  );
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
   const isTurnActiveInStorage = typeof window !== "undefined" && Boolean(selectedChatId && sessionStorage.getItem(`agent360_active_turn_${selectedChatId}`) === "true");
@@ -7665,11 +7708,12 @@ export function GrokBotWorkspace() {
     const isRemoteOrReloadedTurnActive = Boolean(liveTurnForView) || (isCurrentSessionRunning && !isStreaming);
     if (!isRemoteOrReloadedTurnActive) return base;
 
-    // If base ends with an orphaned empty/partial bot-* placeholder from before a page reload, replace it with liveTurn
+    // If base ends with an orphaned empty/partial bot-* placeholder from before a page reload, merge its reasoning/steps into liveTurn instead of losing them!
+    let poppedAssistantTrace: ChatMessage | null = null;
     if (liveTurnForView && base.length > 0) {
       const lastItem = base[base.length - 1];
       if (lastItem.role === "assistant" && (lastItem.id.startsWith("bot-") || !lastItem.content)) {
-        base.pop();
+        poppedAssistantTrace = base.pop() || null;
       }
     }
 
@@ -7681,7 +7725,18 @@ export function GrokBotWorkspace() {
     }
 
     if (liveTurnForView) {
-      base.push(liveTurnForView.msg);
+      const ltMsg = liveTurnForView.msg;
+      base.push(
+        poppedAssistantTrace
+          ? {
+              ...ltMsg,
+              content: ltMsg.content || poppedAssistantTrace.content,
+              reasoning: ltMsg.reasoning || poppedAssistantTrace.reasoning,
+              steps: ltMsg.steps && ltMsg.steps.length > 0 ? ltMsg.steps : poppedAssistantTrace.steps,
+              toolCalls: ltMsg.toolCalls && ltMsg.toolCalls.length > 0 ? ltMsg.toolCalls : poppedAssistantTrace.toolCalls,
+            }
+          : ltMsg
+      );
     } else if (base.length === 0 || base[base.length - 1].role === "user") {
       base.push({
         id: `live-pending-${selectedChatId}`,
@@ -10436,7 +10491,9 @@ export function GrokBotWorkspace() {
 
             {/* Only show MessageSquare expand button when chat sidebar is closed */}
             {(isChatListCollapsed || (!mobileChatsOpen && typeof window !== "undefined" && window.innerWidth < 1024)) && (
-              <button aria-label="Expand Conversations list" data-ux-target-min="24"
+              <button
+                id="tour-chat-expand-btn"
+                aria-label="Expand Conversations list" data-ux-target-min="24"
                 onClick={() => {
                   if (window.innerWidth >= 1024) {
                     handleToggleChatList(false);
@@ -11336,7 +11393,7 @@ export function GrokBotWorkspace() {
               const prevMsg = mIdx > 0 ? displayMessages[mIdx - 1] : null;
               const isConsecutiveAssistant = !isUser && prevMsg && prevMsg.role === "assistant";
               const showTimestampDivider = shouldShowChatTimestampDivider(prevMsg?.timestamp, msg.timestamp);
-              const formattedDividerTime = showTimestampDivider ? formatChatTimestampDivider(msg.timestamp, language) : null;
+              const formattedDividerTime = showTimestampDivider ? formatChatTimestampDivider(msg.timestamp, language || "vi") : null;
 
               return (
                 <React.Fragment key={msg.id}>
@@ -11382,9 +11439,16 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
-                      <div className={`inline-block rounded-2xl px-4 py-2.5 text-[15.5px] sm:text-[16px] leading-relaxed max-w-[85%] sm:max-w-[80%] bg-amber-500/10 text-slate-900 border border-amber-500/30 dark:bg-[#1c1c26] dark:text-neutral-100 dark:border-[#2c2c3e] rounded-br-xs shadow-xs font-sans font-normal ml-auto break-words ${
-                        isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""
-                      }`}>
+                      <div
+                        style={{
+                          backgroundColor: (selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark,
+                          borderColor: (selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark,
+                          color: "#ffffff",
+                        }}
+                        className={`inline-block rounded-2xl px-4 py-2.5 text-[15.5px] sm:text-[16px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white font-medium border rounded-br-xs shadow-xs font-sans ml-auto break-words [&_*]:!text-white ${
+                          isHighlighted ? "ring-2 ring-white/60 shadow-lg" : ""
+                        }`}
+                      >
                         {renderQuotedReplyBox()}
                         {renderMessageAttachmentsBox()}
                         {cleanContent && (() => {
@@ -11449,18 +11513,8 @@ export function GrokBotWorkspace() {
                           longPressPreventClickRef.current = false;
                           return;
                         }
-                        // When this assistant turn is actively in-progress, clicking it opens the realtime thinking & tool calls modal
-                        if ((isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn) {
-                          handleOpenActiveThinkingModal(msg);
-                        }
                       }}
                       onContextMenu={(e) => {
-                        if ((isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn) {
-                          e.preventDefault();
-                          triggerHaptic(12);
-                          handleOpenActiveThinkingModal(msg);
-                          return;
-                        }
                         if (window.innerWidth < 1024) {
                           e.preventDefault();
                           triggerHaptic(15);
@@ -11483,7 +11537,11 @@ export function GrokBotWorkspace() {
                     >
                       {/* Native Solo Thinking & Workflow Narrator (1. Chuẩn bị làm gì -> 2. Luồng làm việc -> 3. Đang làm được gì + Inline Receipt -> 4. Câu trả lời cuối) */}
                       {(() => {
-                        const isTurnActivelyRunning = (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn;
+                        const hasCallingStep = Boolean(
+                          (Array.isArray(msg.steps) && msg.steps.some((s) => s.kind === "tool_call" && s.state === "calling")) ||
+                          (Array.isArray(msg.toolCalls) && msg.toolCalls.some((t) => t.state === "calling"))
+                        );
+                        const isTurnActivelyRunning = (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView) || (!msg.content && hasCallingStep)) && isLastTurn;
                         const isRoomNarratorTurn = Boolean(
                           msg.senderAgentId ||
                           msg.roomReceipt ||
@@ -11514,105 +11572,196 @@ export function GrokBotWorkspace() {
                         if (!showSoloNativeNarration) {
                           if (!msg.content && isTurnActivelyRunning) {
                             return (
-                              <button
-                                type="button"
+                              <div
                                 data-testid="active-responding-agent-pill"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerHaptic(12);
-                                  handleOpenActiveThinkingModal(msg);
-                                }}
-                                onFocus={() => handleOpenActiveThinkingModal(msg)}
-                                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
-                                title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối & chi tiết thực thi công cụ"}
+                                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
                               >
                                 <div className="relative shrink-0 flex items-center justify-center">
                                   <AgentAvatar
                                     agent={selectedAgent}
-                                    size="2xs"
+                                    size="xs"
                                     interactive={false}
+                                    alwaysAnimate={true}
                                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                                    className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                                    className="shrink-0"
                                   />
-                                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
                                 </div>
                                 <span className="flex items-center gap-1">
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                                 </span>
-                              </button>
+                              </div>
                             );
                           }
                           return null;
                         }
 
-                        // Build a single natural conversational lead-in sentence (matching the 5 reference images: no technical tool names, no step counters, no receipt row)
+                        // 1. Infer the exact pronoun pair (selfPronoun / userPronoun) from how this Agent & User actually address each other in the session
                         const prevUserText =
                           mIdx > 0 && displayMessages[mIdx - 1]?.role === "user"
                             ? stripSharedRoomContext(displayMessages[mIdx - 1].content || "").trim()
                             : "";
-                        const usesAnhEm = /\b(?:anh|em)\b/i.test(prevUserText) || /\b(?:anh|em)\b/i.test(cleanContent);
-                        const selfPronoun = usesAnhEm ? "em" : "mình";
-                        const userPronoun = usesAnhEm ? "anh" : "bạn";
+                        const recentDialogueSample = [
+                          cleanContent,
+                          prevUserText,
+                          ...displayMessages
+                            .slice(Math.max(0, mIdx - 6), mIdx)
+                            .map((m) => stripSharedRoomContext(m.content || "")),
+                        ].join(" ");
 
-                        const cleanedReasonFirst = rawReasonText
-                          .replace(/^(?:The user said|According to my activation instructions|User wants|I need to|Let's)[^.\n]*[.\n]?\s*/i, "")
-                          .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, "")
-                          .replace(/\s+/g, " ")
-                          .split(/(?<=[.!?\n])\s+/)[0]
-                          ?.trim();
+                        const hasVnWord = (sample: string, word: string) =>
+                          new RegExp(`(?:^|[\\s,.;:!?()"'])${word}(?=$|[\\s,.;:!?()"'])`, "i").test(sample);
+                        const currentTurnSample = `${prevUserText} ${cleanContent}`;
 
-                        const isVietnameseSentence =
-                          Boolean(cleanedReasonFirst) &&
-                          cleanedReasonFirst.length >= 14 &&
-                          cleanedReasonFirst.length <= 165 &&
-                          /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(cleanedReasonFirst);
-
-                        let naturalLeadIn = "";
-                        if (isVietnameseSentence && cleanedReasonFirst) {
-                          naturalLeadIn = cleanedReasonFirst.endsWith(".") || cleanedReasonFirst.endsWith("!")
-                            ? cleanedReasonFirst
-                            : `${cleanedReasonFirst}.`;
-                        } else if (prevUserText) {
-                          const lowerUser = prevUserText.toLowerCase();
-                          if (/mở\s+tiếp\s+thẻ|mở\s+thẻ|card\s*box|kết\s+nối\s+dịch\s+vụ/i.test(lowerUser)) {
-                            naturalLeadIn = usesAnhEm
-                              ? "Dạ, để em kiểm tra và mở thẻ kết nối dịch vụ cho anh nhé."
-                              : "Để mình kiểm tra và mở thẻ kết nối dịch vụ cho bạn nhé.";
-                          } else if (/phân\s+tích\s+kỹ\s+hơn\s+về\s+(.+)/i.test(prevUserText)) {
-                            const topic = prevUserText.match(/phân\s+tích\s+kỹ\s+hơn\s+về\s+(.+)/i)?.[1]?.replace(/[?!.]+$/, "").trim();
-                            naturalLeadIn = `${selfPronoun === "em" ? "Em" : "Mình"} sẽ đọc kỹ tài liệu và mã nguồn liên quan đến ${topic || "nội dung này"}, rồi gửi ${userPronoun} phân tích chi tiết.`;
-                          } else if (/release|phiên\s+bản|v\d+\.\d+|chuẩn\s+login|hỗ\s+trợ/i.test(lowerUser)) {
-                            naturalLeadIn = `Để ${selfPronoun} xem chi tiết thông tin phiên bản và mã nguồn rồi tổng hợp cho ${userPronoun} nhé.`;
-                          } else if (/chấm\s+công|nhân\s+sự|nghỉ\s+phép|worktime/i.test(lowerUser)) {
-                            naturalLeadIn = `Để ${selfPronoun} kiểm tra dữ liệu chấm công và danh sách nhân sự hôm nay rồi gửi báo cáo cho ${userPronoun} nhé.`;
-                          } else if (/setup|thiết\s+lập|cấu\s+hình|quan\s+trọng/i.test(lowerUser)) {
-                            naturalLeadIn = `Để ${selfPronoun} xem còn những mục quan trọng nào đáng thiết lập cho ${userPronoun}.`;
-                          } else {
-                            naturalLeadIn = `Để ${selfPronoun} kiểm tra thông tin và chuẩn bị câu trả lời chi tiết cho ${userPronoun} nhé.`;
-                          }
-                        } else {
-                          naturalLeadIn = `Để ${selfPronoun} kiểm tra và tổng hợp thông tin chi tiết cho ${userPronoun} nhé.`;
+                        let selfPronoun = "mình";
+                        let userPronoun = "bạn";
+                        if (hasVnWord(currentTurnSample, "chị") || (hasVnWord(recentDialogueSample, "em") && hasVnWord(recentDialogueSample, "chị") && !hasVnWord(currentTurnSample, "anh"))) {
+                          selfPronoun = "em";
+                          userPronoun = "chị";
+                        } else if (hasVnWord(currentTurnSample, "anh") || (hasVnWord(recentDialogueSample, "em") && hasVnWord(recentDialogueSample, "anh"))) {
+                          selfPronoun = "em";
+                          userPronoun = "anh";
+                        } else if (hasVnWord(cleanContent, "tôi")) {
+                          selfPronoun = "tôi";
+                          userPronoun = hasVnWord(recentDialogueSample, "anh") ? "anh" : hasVnWord(recentDialogueSample, "chị") ? "chị" : "bạn";
                         }
 
+                        const alignPronounsToContext = (sentence: string): string => {
+                          let s = sentence.trim();
+                          if (selfPronoun === "em") {
+                            s = s
+                              .replace(/^Mình\s+sẽ\b/i, "Em sẽ")
+                              .replace(/^Để\s+mình\b/i, "Để em")
+                              .replace(/\bmình\s+sẽ\b/gi, "em sẽ")
+                              .replace(/\bđể\s+mình\b/gi, "để em")
+                              .replace(/\bcho\s+bạn\b/gi, `cho ${userPronoun}`)
+                              .replace(/\bgửi\s+bạn\b/gi, `gửi ${userPronoun}`)
+                              .replace(/\bgiúp\s+bạn\b/gi, `giúp ${userPronoun}`);
+                          } else if (selfPronoun === "mình") {
+                            s = s
+                              .replace(/^Dạ,\s*để\s+em\b/i, "Để mình")
+                              .replace(/^Để\s+em\b/i, "Để mình")
+                              .replace(/^Em\s+sẽ\b/i, "Mình sẽ")
+                              .replace(/\bcho\s+(?:anh|chị)\b/gi, "cho bạn")
+                              .replace(/\bgửi\s+(?:anh|chị)\b/gi, "gửi bạn")
+                              .replace(/\bgiúp\s+(?:anh|chị)\b/gi, "giúp bạn");
+                          }
+                          return s;
+                        };
+
+                        // 2. Transform the Agent's actual reasoning sentences + active tool intent into a genuine 1st-person thought lead-in
+                        const reasonSentences = rawReasonText
+                          .replace(/^(?:The user said|According to my activation instructions)[^.\n]*[.\n]?\s*/i, "")
+                          .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, "")
+                          .replace(/\s+/g, " ")
+                          .split(/(?<=[.!?\n])\s+/)
+                          .map((s) => s.trim())
+                          .filter(Boolean);
+
+                        const convertReasonSentenceToFirstPerson = (rawSent: string): string | null => {
+                          if (!rawSent || rawSent.length < 10) return null;
+                          // Case A: Already a 1st-person Vietnamese sentence ("Để mình...", "Mình sẽ...", "Để em...", "Dạ, giờ em...")
+                          if (/^(?:để\s+(?:mình|em|tôi)|(?:mình|em|tôi)\s+sẽ|dạ[,\s]|ok[,\s]|giờ\s+(?:mình|em))/i.test(rawSent)) {
+                            const aligned = alignPronounsToContext(rawSent);
+                            return /[.!?]$/.test(aligned) ? aligned : `${aligned}.`;
+                          }
+                          // Case B: 3rd-person action plan in reasoning ("Cần kiểm tra...", "Trước tiên cần đọc...", "Hãy phân tích...")
+                          const actionPlanMatch = rawSent.match(
+                            /^(?:bây\s+giờ\s+|trước\s+tiên\s+|đầu\s+tiên\s+|tiếp\s+theo\s+)?(?:cần\s+phải|cần|hãy|ta\s+sẽ|tôi\s+cần|mình\s+cần|em\s+cần)\s+(.+)/i
+                          );
+                          if (actionPlanMatch && actionPlanMatch[1]) {
+                            let act = actionPlanMatch[1].replace(/[.!?]+$/, "").trim();
+                            act = act
+                              .replace(/\bcho\s+(?:người\s+dùng|user|khách\s+hàng|họ|anh\s+ấy|chị\s+ấy)\b/gi, `cho ${userPronoun}`)
+                              .replace(/\bcủa\s+(?:người\s+dùng|user|khách\s+hàng)\b/gi, `của ${userPronoun}`);
+                            const converted = alignPronounsToContext(`Để ${selfPronoun} ${act}`);
+                            return /\bcho\s+(?:anh|chị|bạn)\b/i.test(converted)
+                              ? `${converted} nhé.`
+                              : `${converted} cho ${userPronoun} nhé.`;
+                          }
+                          // Case C: 3rd-person user-intent reflection ("Người dùng yêu cầu <X>", "Người dùng muốn <X>", "User yêu cầu <X>")
+                          const userIntentMatch = rawSent.match(
+                            /^(?:người\s+dùng|user|khách\s+hàng|anh\s+ấy|chị\s+ấy)\s+(?:đang\s+)?(?:yêu\s+cầu|muốn|nhờ|hỏi\s+về|cần)\s+(.+)/i
+                          );
+                          if (userIntentMatch && userIntentMatch[1]) {
+                            let intentClause = userIntentMatch[1].replace(/[.!?]+$/, "").trim();
+                            intentClause = intentClause
+                              .replace(/\bcho\s+(?:người\s+dùng|user|họ|anh\s+ấy|chị\s+ấy)\b/gi, `cho ${userPronoun}`)
+                              .replace(/\bgửi\s+(?:người\s+dùng|user|họ|anh\s+ấy|chị\s+ấy)\b/gi, `gửi ${userPronoun}`);
+                            const prefix = selfPronoun === "em" ? "Dạ, để em" : `Để ${selfPronoun}`;
+                            const converted = alignPronounsToContext(`${prefix} ${intentClause}`);
+                            return /nhé[.!]?$/i.test(converted) ? converted : `${converted} nhé.`;
+                          }
+                          return null;
+                        };
+
+                        let naturalLeadIn = "";
+                        // Prefer a second sentence in reasoning if it describes the concrete action ("Cần kiểm tra..."), otherwise use the first sentence
+                        if (reasonSentences.length > 1) {
+                          naturalLeadIn = convertReasonSentenceToFirstPerson(reasonSentences[1]) || convertReasonSentenceToFirstPerson(reasonSentences[0]) || "";
+                        } else if (reasonSentences.length === 1) {
+                          naturalLeadIn = convertReasonSentenceToFirstPerson(reasonSentences[0]) || "";
+                        }
+
+                        if (!naturalLeadIn) {
+                          const cleanGoal = prevUserText
+                            .replace(/^(?:hãy|nhờ\s+(?:em|bạn|anh)|giúp\s+(?:anh|chị|mình|tôi)|em\s+ơi|bạn\s+ơi)[,\s]*/i, "")
+                            .replace(/[?!.]+$/, "")
+                            .trim();
+                          if (cleanGoal && cleanGoal.length >= 6 && cleanGoal.length <= 95) {
+                            const goalAdjusted = cleanGoal
+                              .replace(/\bcho\s+(?:anh|chị|mình|tôi)\b/gi, `cho ${userPronoun}`)
+                              .replace(/\bgửi\s+(?:anh|chị|mình|tôi)\b/gi, `gửi ${userPronoun}`);
+                            naturalLeadIn =
+                              selfPronoun === "em"
+                                ? `Dạ, để em ${goalAdjusted.charAt(0).toLowerCase() + goalAdjusted.slice(1)}${/\bcho\s+|\bgửi\s+/i.test(goalAdjusted) ? "" : ` cho ${userPronoun}`} nhé.`
+                                : `Để ${selfPronoun} ${goalAdjusted.charAt(0).toLowerCase() + goalAdjusted.slice(1)}${/\bcho\s+|\bgửi\s+/i.test(goalAdjusted) ? "" : ` cho ${userPronoun}`} nhé.`;
+                          } else {
+                            naturalLeadIn =
+                              selfPronoun === "em"
+                                ? `Dạ, để em kiểm tra và thực hiện ngay cho ${userPronoun} nhé.`
+                                : `Để ${selfPronoun} kiểm tra và chuẩn bị câu trả lời chi tiết cho ${userPronoun} nhé.`;
+                          }
+                        }
+
+                        const showLeadInBubble = Boolean(soloTools.length > 0 || rawReasonText.length > 0);
+
                         return (
-                          <div
-                            data-testid="solo-kickoff-intent-bubble"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenActiveThinkingModal(msg);
-                            }}
-                            title="Bấm để xem chi tiết suy luận & công cụ đã chạy"
-                            className="inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[15.5px] sm:text-[16px] leading-relaxed cursor-pointer hover:border-[#f8a87c]/40 transition-colors"
-                          >
-                            <span>{naturalLeadIn}</span>
-                            {isTurnActivelyRunning && !msg.content && (
-                              <span className="inline-flex items-center gap-1 ml-2 align-middle">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                              </span>
+                          <div className="flex flex-col items-start gap-1.5 max-w-[85%] sm:max-w-[80%]">
+                            {showLeadInBubble && (
+                              <div
+                                data-testid="solo-kickoff-intent-bubble"
+                                className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[15.5px] sm:text-[16px] leading-relaxed select-text"
+                              >
+                                {naturalLeadIn}
+                              </div>
+                            )}
+
+                            {/* Separate Responding Indicator Pill below the lead-in bubble while turn is still actively generating */}
+                            {!msg.content && isTurnActivelyRunning && (
+                              <div
+                                data-testid="active-responding-agent-pill"
+                                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
+                              >
+                                <div className="relative shrink-0 flex items-center justify-center">
+                                  <AgentAvatar
+                                    agent={selectedAgent}
+                                    size="xs"
+                                    interactive={false}
+                                    alwaysAnimate={true}
+                                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
+                                    className="shrink-0"
+                                  />
+                                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
+                                </div>
+                                <span className="flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                                </span>
+                              </div>
                             )}
                           </div>
                         );
@@ -11668,34 +11817,27 @@ export function GrokBotWorkspace() {
                                   });
                                 }}
                               />
-                              {/* Inline pulsing button with small animated Agent Blob Avatar alongside dots */}
+                              {/* Inline pulsing indicator with small animated Agent Blob Avatar alongside dots */}
                               {isStreaming && isLastTurn && (
-                                <button
-                                  type="button"
+                                <span
                                   data-testid="inline-streaming-dots-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    triggerHaptic(12);
-                                    handleOpenActiveThinkingModal(msg);
-                                  }}
-                                  onFocus={() => handleOpenActiveThinkingModal(msg)}
-                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-all"
-                                  title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem Thinking & tiến trình đang chạy"}
+                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 border border-[#f8a87c]/30 align-middle select-none"
                                 >
                                   <AgentAvatar
                                     agent={
                                       (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
                                       selectedAgent
                                     }
-                                    size="2xs"
+                                    size="xs"
                                     interactive={false}
+                                    alwaysAnimate={true}
                                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                                    className="ring-1 ring-[#f8a87c]/30"
+                                    className="shrink-0"
                                   />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                                </button>
+                                </span>
                               )}
                             </div>
                             </div>
@@ -11788,20 +11930,9 @@ export function GrokBotWorkspace() {
           {/* Responding Indicator with Agent Avatar + Animation alongside 3-dots */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
-              <button
-                type="button"
+              <div
                 data-testid="active-responding-agent-pill"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  triggerHaptic(12);
-                  handleOpenActiveThinkingModal();
-                }}
-                onFocus={() => {
-                  handleOpenActiveThinkingModal();
-                }}
-                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
-                title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
-                aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
+                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
               >
                 <div className="relative shrink-0 flex items-center justify-center">
                   <AgentAvatar
@@ -11809,19 +11940,20 @@ export function GrokBotWorkspace() {
                       (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
                       selectedAgent
                     }
-                    size="2xs"
+                    size="xs"
                     interactive={false}
+                    alwaysAnimate={true}
                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                    className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                    className="shrink-0"
                   />
-                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
                 </div>
                 <span className="flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                 </span>
-              </button>
+              </div>
             </div>
           )}
 
@@ -11905,8 +12037,9 @@ export function GrokBotWorkspace() {
 
                 return (
                   <div
+                    ref={traceBarScrollRef}
                     style={{ gap: `${gapPx}px` }}
-                    className="flex flex-col items-end py-1 px-1 max-h-[82vh] overflow-y-auto overflow-x-visible scrollbar-none select-none"
+                    className="flex flex-col items-end py-1 px-1 max-h-[80vh] overflow-y-auto overflow-x-visible scrollbar-none select-none overscroll-contain"
                   >
                     {userTurns.map((turn: { msg: ChatMessage; originalIdx: number }, tIdx: number) => {
                       const isHovered = hoveredTraceIdx === tIdx;
@@ -13657,6 +13790,7 @@ export function GrokBotWorkspace() {
                     <AudioVisualizerWaveform
                       isRecording={isRecording}
                       agentId={selectedAgent?.id}
+                      themeColor={selectedAgentTheme.dark}
                       onAudioLevel={(lvl) => {
                         audioEnergyLevelRef.current = lvl;
                         setLiveVoiceEnergy(lvl);
@@ -13692,16 +13826,18 @@ export function GrokBotWorkspace() {
                           }
                         }}
                         style={{
+                          backgroundColor: isRecording ? (liveVoiceEnergy > 45 ? undefined : ((selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark)) : undefined,
+                          color: isRecording ? "#ffffff" : undefined,
                           boxShadow: isRecording
                             ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
-                              (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : "rgba(248, 168, 124, 0.65)")
+                              (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : ((selectedAgentTheme as any).bubbleBg || selectedAgentTheme.dark))
                             : undefined,
                         }}
                         className={`p-1.5 rounded-full cursor-pointer transition-all ${
                           isRecording
                             ? liveVoiceEnergy > 45
-                              ? "bg-gradient-to-r from-[#ff3366] to-[#f8a87c] text-white"
-                              : "bg-[#f8a87c] text-black"
+                              ? "bg-gradient-to-r from-[#ff3366] to-[var(--agent-color)] text-white"
+                              : "text-white shadow-xs"
                             : "hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400"
                         }`}
                         title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
@@ -13712,7 +13848,10 @@ export function GrokBotWorkspace() {
                       /* Send button: replaces Voice button when user inputs text or attachments */
                       <button
                         type="submit"
-                        className="h-7 w-7 rounded-full bg-[#f8a87c] text-black hover:bg-[#ffb48a] shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        style={{
+                          backgroundColor: (selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark,
+                        }}
+                        className="h-7 w-7 rounded-full text-white hover:brightness-110 shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title={isStreaming ? "Add to request queue" : "Send Message"}
                         aria-label={isStreaming ? "Add to request queue" : "Send Message"}
                       >
@@ -13767,8 +13906,9 @@ export function GrokBotWorkspace() {
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
                       : isRecording
                       ? "border-red-500/60 ring-2 ring-red-500/20"
-                      : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[#f8a87c]/50 dark:focus-within:border-[#f8a87c]/50 focus-within:ring-1 focus-within:ring-[#f8a87c]/20"
+                      : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[var(--agent-color)]/50 focus-within:ring-1 focus-within:ring-[var(--agent-color)]/20"
                   } rounded-2xl shadow-xs transition-all overflow-hidden`}
+                  style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
                 >
                   {isDraggingFiles && (
                     <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-2xl animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
@@ -16476,23 +16616,21 @@ ${chat.id}`);
       />
 
       <OnboardingChecklistWidget
-        onOpenAgentsDrawer={() => {
-          setMobileAgentsOpen(true);
-          setMobileChatsOpen(false);
-          setMobileBotInfoOpen(false);
+        isBotInfoCollapsed={isBotInfoCollapsed}
+        isChatListCollapsed={isChatListCollapsed}
+        onToggleBotInfo={() => {
+          handleToggleBotInfo();
+          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+            setMobileBotInfoOpen((prev) => !prev);
+          }
         }}
-        onOpenTopology={() => {
-          setIsTopologyModalOpen(true);
-          recordMilestone("openedSpecsOrTopology");
-        }}
-        onOpenShortcuts={() => {
-          setIsKeyboardShortcutsOpen(true);
-          recordMilestone("triedVoiceOrShortcuts");
-        }}
-        onOpenSpecs={() => {
-          setIsBotInfoCollapsed(false);
-          setRightTab("Details");
-          recordMilestone("openedSpecsOrTopology");
+        onToggleChatList={() => {
+          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+            setMobileChatsOpen((prev) => !prev);
+            handleToggleChatList(false);
+          } else {
+            handleToggleChatList();
+          }
         }}
         onFocusComposer={() => {
           const textarea = document.querySelector("#tour-prompt-composer textarea") as HTMLTextAreaElement;

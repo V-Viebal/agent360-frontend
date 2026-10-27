@@ -6,6 +6,7 @@ interface AudioVisualizerWaveformProps {
   className?: string;
   onAudioLevel?: (level: number) => void;
   agentId?: string;
+  themeColor?: string;
 }
 
 export function AudioVisualizerWaveform({
@@ -13,6 +14,7 @@ export function AudioVisualizerWaveform({
   className = "",
   onAudioLevel,
   agentId,
+  themeColor,
 }: AudioVisualizerWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -128,10 +130,11 @@ export function AudioVisualizerWaveform({
             const x = startX + i * (barWidth + gap);
             const y = (canvas.height - height) / 2;
 
-            // Gradient bar from neon orange to bright pink-red
+            // Gradient bar using agent themeColor or fallback
+            const baseColor = themeColor || "#f8a87c";
             const gradient = ctx.createLinearGradient(0, y, 0, y + height);
-            gradient.addColorStop(0, percent > 0.6 ? "#ff3366" : "#f8a87c");
-            gradient.addColorStop(1, percent > 0.6 ? "#ff9900" : "#ff3366");
+            gradient.addColorStop(0, percent > 0.6 ? "#ff3366" : baseColor);
+            gradient.addColorStop(1, percent > 0.6 ? baseColor : "#ff3366");
 
             ctx.fillStyle = gradient;
             ctx.beginPath();
