@@ -109,7 +109,9 @@ import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-Trash2,
+  MoreVertical,
+  MoreHorizontal,
+  Trash2,
   Globe,
   LogOut,
   Pin,
@@ -9435,7 +9437,7 @@ const selectedAgentTheme = getAgentColorTheme(
     if (typeof window === 'undefined') return { top: '50%', left: '50%', isAbove: false, transformOrigin: 'top center' };
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const menuWidth = 230;
+    const menuWidth = 256;
     const isUser = role === 'user';
     const menuHeight = isExpandedEmoji ? 360 : 255;
     const margin = 10;
@@ -9586,7 +9588,8 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
 
             {/* Collapsed Agents List */}
-            <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-2 flex flex-col items-center scrollbar-none">
+            <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-2 flex flex-col items-center scrollbar-none">
               {isAdmin && (
                 <a
                   href="/admin"
@@ -9841,6 +9844,12 @@ const selectedAgentTheme = getAgentColorTheme(
                   })()}
                 </>
               )}
+              </div>
+              {/* Bottom blur/gradient fade edge when agent list is scrollable in collapsed rail */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/70 to-transparent z-10 backdrop-blur-[1px]"
+              />
             </div>
 
             {/* Collapsed Bottom Profile Bar */}
@@ -10011,10 +10020,10 @@ const selectedAgentTheme = getAgentColorTheme(
 
             {/* Admin Management Navigation for Admin Role */}
             {isAdmin && (
-              <div className="p-2 border-b border-[#1c1c22]">
+              <div className="p-2 border-b border-neutral-200/80 dark:border-[#1c1c22]">
                 <a
                   href="/admin"
-                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[#f8a87c]/20 via-[#f8a87c]/10 to-transparent border border-[#f8a87c]/40 hover:border-[#f8a87c] hover:bg-[#f8a87c]/25 text-[#f8a87c] transition-all group shadow-sm shadow-[#f8a87c]/10 select-none cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[#f8a87c]/20 via-[#f8a87c]/10 to-transparent border border-[#f8a87c]/40 hover:border-[#f8a87c] hover:bg-[#f8a87c]/25 text-[#f8a87c] transition-all group shadow-2xs select-none cursor-pointer"
                   title="Truy cập Bảng điều khiển Quản trị, phân quyền Member và quản lý Fleet"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -10022,11 +10031,11 @@ const selectedAgentTheme = getAgentColorTheme(
                       <Shield size={14} className="group-hover:scale-110 transition-transform" />
                     </div>
                     <div className="flex flex-col truncate text-left">
-                      <span className="text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-[#f8a87c] transition-colors flex items-center gap-1.5">
                         Quản trị Hệ thống
-                        <span className="px-1.5 py-0.2 rounded-full bg-[#f8a87c]/30 text-[#f8a87c] text-[9px] font-mono font-bold uppercase">Admin</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-[#f8a87c]/30 text-[#f8a87c] text-[9px] font-sans font-bold uppercase">Admin</span>
                       </span>
-                      <span className="text-[10px] text-neutral-400 font-mono truncate">Phân quyền Agent & User Directory</span>
+                      <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate">Phân quyền Agent & User Directory</span>
                     </div>
                   </div>
                   <ChevronRight size={14} className="text-[#f8a87c]/70 group-hover:translate-x-0.5 group-hover:text-[#f8a87c] transition-all shrink-0 ml-1" />
@@ -10035,7 +10044,7 @@ const selectedAgentTheme = getAgentColorTheme(
             )}
 
             {/* Search Agents */}
-            <div className="p-2 border-b border-[#1c1c22]">
+            <div className="p-2 border-b border-neutral-200/80 dark:border-[#1c1c22]">
               <SearchInput
                 value={agentSearchQuery}
                 onChange={setAgentSearchQuery}
@@ -10172,6 +10181,28 @@ const selectedAgentTheme = getAgentColorTheme(
 
                               {/* Agent Options Menu (triggered by right click on desktop, long press on mobile) */}
                               <div className="relative z-10 pointer-events-auto" data-agent-menu-container="true">
+                                <button
+                                  aria-label="Tùy chọn agent"
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    triggerHaptic(15);
+                                    setActiveAgentMenuPos(null);
+                                    setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
+                                  }}
+                                  className={`hidden lg:flex p-1 rounded-lg transition-all cursor-pointer items-center justify-center ${
+                                    activeAgentMenuId === ag.id
+                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      : ag.enabled === false || ag.status === "disabled"
+                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
+                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                  }`}
+                                  title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
+                                >
+                                  <MoreVertical size={13} />
+                                </button>
+
                                 <DropdownMenu
                                   isOpen={activeAgentMenuId === ag.id}
                                   onClose={() => {
@@ -10398,6 +10429,28 @@ const selectedAgentTheme = getAgentColorTheme(
 
                               {/* Agent Options Menu (triggered by right click on desktop, long press on mobile) */}
                               <div className="relative z-10 pointer-events-auto" data-agent-menu-container="true">
+                                <button
+                                  aria-label="Tùy chọn agent"
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    triggerHaptic(15);
+                                    setActiveAgentMenuPos(null);
+                                    setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
+                                  }}
+                                  className={`hidden lg:flex p-1 rounded-lg transition-all cursor-pointer items-center justify-center ${
+                                    activeAgentMenuId === ag.id
+                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      : ag.enabled === false || ag.status === "disabled"
+                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
+                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                  }`}
+                                  title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
+                                >
+                                  <MoreVertical size={13} />
+                                </button>
+
                                 <DropdownMenu
                                   isOpen={activeAgentMenuId === ag.id}
                                   onClose={() => {
@@ -10498,24 +10551,24 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
 
             {/* Bottom Profile Bar with User Dropdown */}
-            <div ref={userMenuRef} className="p-3 border-t border-[#1c1c22] relative select-none">
+            <div ref={userMenuRef} className="p-3 border-t border-neutral-200/80 dark:border-[#1c1c22] relative select-none">
               <div
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center justify-between text-xs cursor-pointer hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors group/user"
+                className="flex items-center justify-between text-xs cursor-pointer hover:bg-neutral-200/60 dark:hover:bg-[#161620] -m-1.5 p-1.5 rounded-xl transition-colors group/user"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="h-7 w-7 rounded-full flex items-center justify-center shadow-xs shrink-0 relative overflow-visible">
                     {currentUser?.picture ? (
-                      <div className="h-7 w-7 rounded-full overflow-hidden border border-[#3a3a4c] bg-[#2a2a34]">
+                      <div className="h-7 w-7 rounded-full overflow-hidden border border-neutral-300 dark:border-[#3a3a4c] bg-neutral-100 dark:bg-[#2a2a34]">
                         <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
                       </div>
                     ) : (
-                      <AgentAvatar agent={userAsAgent} size="xs" interactive={false} className="rounded-full ring-1 ring-[#3a3a4c]" />
+                      <AgentAvatar agent={userAsAgent} size="xs" interactive={false} className="rounded-full ring-1 ring-neutral-300 dark:ring-[#3a3a4c]" />
                     )}
                   </div>
                   <div className="flex flex-col truncate">
-                    <span className="text-xs text-neutral-200 font-medium truncate">{cleanDisplayName}</span>
-                    <span className="text-[10px] text-neutral-500 truncate">{cleanDisplayEmail}</span>
+                    <span className="text-xs text-slate-900 dark:text-neutral-200 font-medium truncate">{cleanDisplayName}</span>
+                    <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate">{cleanDisplayEmail}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -10694,7 +10747,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     setMobileBotInfoOpen((prev) => !prev);
                   }
                 }}
-                className="group inline-flex items-center justify-center gap-2 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium text-neutral-900 dark:text-white shadow-xs hover:shadow-sm cursor-pointer transition-all select-none leading-none"
+                className="group inline-flex items-center justify-center gap-2.5 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200/90 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-3.5 py-1.5 rounded-full text-[13.5px] font-semibold text-neutral-900 dark:text-white shadow-2xs hover:shadow-xs cursor-pointer transition-all select-none leading-none"
               >
                 {hasNoAgents ? (
                   <>
@@ -11429,8 +11482,47 @@ const selectedAgentTheme = getAgentColorTheme(
                         <CornerUpLeft size={13} />
                       </button>
 
-                      {/* Extend Menu Container (triggered by right click on desktop, long press on mobile) */}
+                      {/* Extend Menu Button (...) - 3-dots on desktop hover */}
                       <div className="relative">
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-extend-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                            const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                            const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                            setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
+                            setActiveReactPopoverMsgId(null);
+                            if (typeof window !== "undefined" && window.innerWidth < 640) {
+                              const turnEl = document.getElementById(`chat-msg-${msg.id}`);
+                              const bubbleEl = (turnEl?.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                              const bubbleRect = bubbleEl.getBoundingClientRect();
+                              const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
+                              setMobileActionMsg({
+                                id: msg.id,
+                                content: cleanContent,
+                                turnIdx: mIdx,
+                                role: isUser ? "user" : "assistant",
+                                hasThinking,
+                                rawMsg: msg,
+                                anchorRect: anchor,
+                              });
+                            } else {
+                              setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                            }
+                          }}
+                          className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            isExtendOpen
+                              ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                              : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
+                          aria-label="Mở rộng"
+                        >
+                          <MoreHorizontal size={13} />
+                        </button>
 
                         {/* Desktop Vertical Extend Dropdown Menu - Compact & Always In Viewport */}
                         {isExtendOpen && (
@@ -14725,8 +14817,26 @@ const selectedAgentTheme = getAgentColorTheme(
                             )}
                           </button>
 
-                          {/* Chat Session Options Menu (triggered by right click on desktop, long press on mobile) */}
+                          {/* Chat Session Options Menu (3-dots on desktop hover, right click on desktop, long press on mobile) */}
                           <div className="relative" data-chat-menu-container="true">
+                            <button
+                              aria-label="Tùy chọn phiên"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveChatMenuPos(null);
+                                setActiveChatMenuId(activeChatMenuId === chat.id ? null : chat.id);
+                              }}
+                              className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
+                                activeChatMenuId === chat.id
+                                  ? "text-[#f8a87c] bg-white/10 opacity-100"
+                                  : "text-neutral-400 hover:text-white"
+                              }`}
+                              title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
+                            >
+                              <MoreVertical size={13} />
+                            </button>
+
                             <DropdownMenu
                               isOpen={activeChatMenuId === chat.id}
                               onClose={() => {
@@ -15557,14 +15667,14 @@ ${chat.id}`);
                       )}
 
                       <div className="flex-1 min-w-0">
-                        <div className="truncate text-[11px] leading-tight font-medium">{node.name}</div>
+                        <div className="truncate text-[12.5px] leading-tight font-medium text-slate-800 dark:text-neutral-200">{node.name}</div>
                         {folderHint && (
-                          <div className="truncate text-[9px] text-neutral-500 leading-tight font-mono">{folderHint}</div>
+                          <div className="truncate text-[11px] text-slate-400 dark:text-neutral-500 leading-tight font-sans">{folderHint}</div>
                         )}
                       </div>
 
                       {node.extension && (
-                        <span className={`px-1 py-0.2 rounded text-[8px] uppercase border font-mono shrink-0 ${getCategoryBadgeStyle(node.category)}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase border font-sans font-medium shrink-0 ${getCategoryBadgeStyle(node.category)}`}>
                           {node.extension}
                         </span>
                       )}
@@ -17116,7 +17226,7 @@ ${chat.id}`);
                 position: "absolute",
                 top: coords.top,
                 left: coords.left,
-                width: "225px",
+                width: "256px",
                 transformOrigin: coords.transformOrigin,
               }}
               className="flex flex-col items-center gap-2 max-h-[85vh] animate-in zoom-in-90 fade-in duration-200 ease-out select-none will-change-transform"
@@ -17126,9 +17236,9 @@ ${chat.id}`);
               <div className="flex flex-col items-center gap-1.5 w-full">
                 <div
                   data-testid="mobile-quick-react-bar"
-                  className="flex items-center justify-between px-2.5 py-1.5 rounded-full bg-white dark:bg-[#1c2430] border border-slate-200/90 dark:border-white/10 shadow-xl w-full"
+                  className="flex items-center justify-between px-2 py-1 rounded-full bg-white dark:bg-[#1a2230] border border-slate-200/90 dark:border-white/15 shadow-xl w-full select-none overflow-hidden"
                 >
-                  <div className="flex items-center justify-between flex-1 gap-1">
+                  <div className="flex items-center justify-around flex-1 gap-0.5">
                     {recentReactions.slice(0, 7).map((emoji) => {
                       const isSelected = (msgReactions[mobileActionMsg.id] || []).includes(emoji);
                       return (
@@ -17141,17 +17251,17 @@ ${chat.id}`);
                             setShowFullEmojiPicker(false);
                             setMobileActionMsg(null);
                           }}
-                          className={`h-6.5 w-6.5 rounded-full flex items-center justify-center text-sm transition-transform active:scale-125 hover:scale-110 cursor-pointer ${
+                          className={`h-6 w-6 rounded-full flex items-center justify-center text-[15px] leading-none transition-transform active:scale-125 hover:scale-115 cursor-pointer shrink-0 ${
                             isSelected ? "bg-[#f8a87c]/30 ring-1 ring-[#f8a87c]" : "hover:bg-slate-100 dark:hover:bg-white/10"
                           }`}
                           aria-label={`Thả ${emoji}`}
                         >
-                          {emoji}
+                          <span className="leading-none select-none">{emoji}</span>
                         </button>
                       );
                     })}
                   </div>
-                  {/* Plus button to toggle full emoji palette */}
+                  {/* Plus button inside the rounded pill container */}
                   <button
                     type="button"
                     data-testid="mobile-more-emoji-btn"
@@ -17159,12 +17269,12 @@ ${chat.id}`);
                       triggerHaptic(10);
                       setShowFullEmojiPicker((prev) => !prev);
                     }}
-                    className={`h-7 w-7 ml-1 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer ${
-                      showFullEmojiPicker ? "bg-slate-200 dark:bg-white/20 text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                    className={`h-6 w-6 ml-0.5 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer shrink-0 border border-slate-200/70 dark:border-white/10 ${
+                      showFullEmojiPicker ? "bg-slate-200 dark:bg-white/25 text-slate-900 dark:text-white" : "bg-slate-100/80 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/15"
                     }`}
                     title="Mở thêm biểu tượng cảm xúc"
                   >
-                    <Plus size={14} className="shrink-0" />
+                    <Plus size={13} className="shrink-0 stroke-[2.2]" />
                   </button>
                 </div>
 

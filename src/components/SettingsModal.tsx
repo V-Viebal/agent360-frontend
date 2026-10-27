@@ -585,7 +585,7 @@ export function SettingsModal({
                 {/* Profile Avatar Card */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] flex flex-col sm:flex-row items-center gap-4">
                   <div className="relative shrink-0">
-                    <div className="h-16 w-16 rounded-2xl bg-[#2a2a34] text-[#f8a87c] border-2 border-[#f8a87c]/40 flex items-center justify-center text-xl font-bold overflow-hidden shadow-md">
+                    <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-[#2a2a34] text-[#e0682b] dark:text-[#f8a87c] border-2 border-[#f8a87c]/40 flex items-center justify-center text-xl font-bold overflow-hidden shadow-md">
                       {currentUser?.picture ? (
                         <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
                       ) : (
@@ -968,7 +968,7 @@ export function SettingsModal({
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${isSelected ? "bg-[#f8a87c]/20 text-[#f8a87c]" : "bg-[#20202c] text-neutral-400"}`}>
+                          <div className={`p-2 rounded-lg ${isSelected ? "bg-[#f8a87c]/20 text-[#f8a87c]" : "bg-slate-200 dark:bg-[#20202c] text-slate-600 dark:text-neutral-400"}`}>
                             {opt.icon}
                           </div>
                           <div>
@@ -1116,7 +1116,7 @@ export function SettingsModal({
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0 pr-1">
-                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#f8a87c]/20 text-[#f8a87c]" : "bg-[#20202c] text-slate-500 dark:text-neutral-400"}`}>
+                            <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? "bg-[#f8a87c]/20 text-[#f8a87c]" : "bg-slate-200 dark:bg-[#20202c] text-slate-600 dark:text-neutral-400"}`}>
                               <Volume2 size={14} />
                             </div>
                             <div className="min-w-0 truncate">
@@ -1207,7 +1207,7 @@ export function SettingsModal({
                           setSpeechRate(val);
                           saveStoredSpeechSettings({ rate: val });
                         }}
-                        className="w-full accent-[#f8a87c] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
+                        className="w-full accent-[#f8a87c] h-1.5 bg-slate-200 dark:bg-[#22222e] rounded-lg cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] font-mono text-neutral-500">
                         <span>{t("settings.ttsSpeedSlow")}</span>
@@ -1233,7 +1233,7 @@ export function SettingsModal({
                           setSpeechPitch(val);
                           saveStoredSpeechSettings({ pitch: val });
                         }}
-                        className="w-full accent-[#f8a87c] h-1.5 bg-[#22222e] rounded-lg cursor-pointer"
+                        className="w-full accent-[#f8a87c] h-1.5 bg-slate-200 dark:bg-[#22222e] rounded-lg cursor-pointer"
                       />
                       <div className="flex justify-between text-[10px] font-mono text-neutral-500">
                         <span>{t("settings.ttsPitchLow")}</span>
@@ -1627,7 +1627,7 @@ export function SettingsModal({
                   </p>
 
                   <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 space-y-1.5">
+                    <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2.5 space-y-1.5">
                       <span className="text-[10px] text-neutral-400 block">Opus Bitrate:</span>
                       <div className="flex items-center gap-1">
                         {[32, 64, 128].map((kbps) => (
@@ -1647,7 +1647,7 @@ export function SettingsModal({
                       </div>
                     </div>
 
-                    <div className="bg-[#12121a] border border-[#222230] rounded-xl p-2.5">
+                    <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-xl p-2.5">
                       <ToggleSwitch
                         size="sm"
                         checked={voiceProfile.lowLatencyMode}
@@ -1720,7 +1720,7 @@ export function SettingsModal({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono pt-1">
                     {/* Bass Band */}
-                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                    <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                       <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                         <span>Bass</span>
                         <span className="text-[#f8a87c] font-bold">{freqBands.bass}%</span>
@@ -1735,7 +1735,7 @@ export function SettingsModal({
                     </div>
 
                     {/* Mid Band */}
-                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                    <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                       <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                         <span>Mid</span>
                         <span className="text-cyan-400 font-bold">{freqBands.mid}%</span>
@@ -1750,7 +1750,7 @@ export function SettingsModal({
                     </div>
 
                     {/* Treble Band */}
-                    <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+                    <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                       <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                         <span>Treble</span>
                         <span className="text-purple-400 font-bold">{freqBands.treble}%</span>

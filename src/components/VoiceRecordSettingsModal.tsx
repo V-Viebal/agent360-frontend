@@ -373,7 +373,7 @@ export function VoiceRecordSettingsModal({
 
             <div className="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
               {/* Bitrate selection */}
-              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2.5 space-y-1.5">
+              <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2.5 space-y-1.5">
                 <span className="text-[10px] text-neutral-400 block">Opus Bitrate:</span>
                 <div className="flex items-center gap-1">
                   {[32, 64, 128].map((kbps) => (
@@ -384,7 +384,7 @@ export function VoiceRecordSettingsModal({
                       className={`flex-1 py-1 rounded text-[11px] font-bold cursor-pointer transition-colors border ${
                         voiceProfile.bitrateKbps === kbps
                           ? "bg-cyan-500/20 border-cyan-500 text-cyan-300"
-                          : "bg-[#181824] border-[#262638] text-neutral-400 hover:text-white"
+                          : "bg-white dark:bg-[#181824] border-slate-200 dark:border-[#262638] text-neutral-400 hover:text-white"
                       }`}
                     >
                       {kbps}k
@@ -394,7 +394,7 @@ export function VoiceRecordSettingsModal({
               </div>
 
               {/* Ultra Low Latency Mode */}
-              <div className="bg-[#12121a] border border-[#222230] rounded-xl p-2.5">
+              <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-xl p-2.5">
                 <ToggleSwitch
                   size="sm"
                   checked={voiceProfile.lowLatencyMode}
@@ -468,7 +468,7 @@ export function VoiceRecordSettingsModal({
 
             <div className="grid grid-cols-3 gap-2 text-xs font-mono pt-1">
               {/* Bass Band */}
-              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+              <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                   <span>{t("voiceSettings.bass")}</span>
                   <span className="text-[#f8a87c] font-bold">{freqBands.bass}%</span>
@@ -483,7 +483,7 @@ export function VoiceRecordSettingsModal({
               </div>
 
               {/* Mid Band */}
-              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+              <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                   <span>{t("voiceSettings.mid")}</span>
                   <span className="text-cyan-400 font-bold">{freqBands.mid}%</span>
@@ -498,7 +498,7 @@ export function VoiceRecordSettingsModal({
               </div>
 
               {/* Treble Band */}
-              <div className="bg-[#12121a] border border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
+              <div className="bg-slate-50 dark:bg-[#12121a] border border-slate-200 dark:border-[#222230] rounded-lg p-2 flex flex-col items-center gap-1.5">
                 <div className="flex items-center justify-between w-full text-[10px] text-neutral-400">
                   <span>{t("voiceSettings.treble")}</span>
                   <span className="text-purple-400 font-bold">{freqBands.treble}%</span>
@@ -516,7 +516,7 @@ export function VoiceRecordSettingsModal({
         </div>
 
         {/* Footer info */}
-        <div className="px-5 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-5 py-3 bg-slate-50 dark:bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <div className="flex items-center gap-2">
             {onOpenPermissions && (
               <button
