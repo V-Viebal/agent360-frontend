@@ -260,6 +260,15 @@ export function AgentSettingsModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        style={{
+          "--agent-primary": agentTheme.primary,
+          "--agent-light": agentTheme.light,
+          "--agent-dark": agentTheme.dark,
+          "--agent-bg-light": agentTheme.bgLight,
+          "--agent-bg-dark": agentTheme.bgDark,
+          "--agent-border-light": agentTheme.borderLight,
+          "--agent-border-dark": agentTheme.borderDark,
+        } as React.CSSProperties}
         className="w-full sm:w-[95vw] md:w-[1100px] lg:w-[1240px] xl:w-[1360px] max-w-[96vw] h-[94dvh] sm:h-[92vh] max-h-[100dvh] sm:max-h-[820px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
@@ -278,7 +287,7 @@ export function AgentSettingsModal({
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
                   Cấu hình Agent: {agent.name}
                 </h3>
-                <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0 bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
                   {agent.roleTag || "AI Teammate"}
                 </span>
               </div>
@@ -340,12 +349,12 @@ export function AgentSettingsModal({
                         onClick={() => setActiveTab(item.id)}
                         className={`flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left transition-all cursor-pointer shrink-0 md:w-full ${
                           isActive
-                            ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold shadow-xs"
+                            ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
                             : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-[#181822] hover:text-slate-900 dark:hover:text-white border border-transparent"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={isActive ? "text-[#e0682b] dark:text-[#f8a87c]" : "text-neutral-400"}>
+                          <span className={isActive ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "text-neutral-400"}>
                             {item.icon}
                           </span>
                           <div className="truncate">
@@ -406,7 +415,7 @@ export function AgentSettingsModal({
                       <button
                         type="button"
                         onClick={onOpenAvatarModal}
-                        className="text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer pt-0.5"
+                        className="text-[11px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] hover:underline flex items-center gap-1 cursor-pointer pt-0.5"
                       >
                         <Camera size={12} />
                         <span>Đổi ảnh đại diện (Avatar)</span>
@@ -444,12 +453,12 @@ export function AgentSettingsModal({
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Sparkles size={15} className="text-[#f8a87c]" />
+                      <Sparkles size={15} style={{ color: agentTheme.primary }} />
                       <span className="text-xs font-semibold text-slate-900 dark:text-white">
                         Mô hình Ngôn ngữ Hoạt động (Active LLM Model)
                       </span>
                     </div>
-                    <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold">
+                    <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
                       {isChangingModel ? "Đang cập nhật..." : currentCleanModel}
                     </span>
                   </div>
@@ -486,7 +495,7 @@ export function AgentSettingsModal({
                           onClick={() => onSelectModel(m.model, m.providerId)}
                           className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-all cursor-pointer border text-left ${
                             isCurrent
-                              ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold shadow-xs"
+                              ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
                               : "bg-white dark:bg-[#121218] hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-slate-200/80 dark:border-[#222230]"
                           }`}
                         >
@@ -538,7 +547,7 @@ export function AgentSettingsModal({
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Activity size={15} className="text-[#f8a87c]" />
+                      <Activity size={15} style={{ color: agentTheme.primary }} />
                       <span>Hiệu năng & Telemetry Thời gian thực</span>
                     </span>
                     {turnTelemetry?.estimatedCostUsd !== undefined && (
@@ -562,7 +571,7 @@ export function AgentSettingsModal({
                     </div>
                     <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
                       <span className="text-[10px] text-neutral-500">Model kiểm thử</span>
-                      <span className="text-[#e0682b] dark:text-[#f8a87c] font-bold truncate" title={turnTelemetry?.model || agent.model}>
+                      <span className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-bold truncate" title={turnTelemetry?.model || agent.model}>
                         {(turnTelemetry?.model || agent.model).split("/").pop()}
                       </span>
                     </div>
@@ -573,7 +582,7 @@ export function AgentSettingsModal({
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Smile size={15} className="text-[#f8a87c]" />
+                      <Smile size={15} style={{ color: agentTheme.primary }} />
                       <span>Đánh giá Phản hồi & Mức độ Hài lòng (Reactions Telemetry)</span>
                     </span>
                     <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
@@ -644,7 +653,8 @@ export function AgentSettingsModal({
                       onClose();
                       onOpenTopologyModal();
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-[#f8a87c] hover:bg-[#f8a87c]/90 text-neutral-950 text-xs font-mono font-semibold shrink-0 transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+                    style={{ backgroundColor: agentTheme.primary }}
+                    className="px-3 py-1.5 rounded-xl hover:opacity-90 text-neutral-950 text-xs font-mono font-semibold shrink-0 transition-opacity shadow-sm cursor-pointer flex items-center gap-1.5"
                   >
                     <Network size={13} />
                     <span>Mở Sơ đồ A2A</span>
@@ -678,7 +688,7 @@ export function AgentSettingsModal({
                 <div className="rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
-                      <Radio size={14} className="text-[#f8a87c]" />
+                      <Radio size={14} style={{ color: agentTheme.primary }} />
                       <span>Kênh kết nối (Integrated Channels)</span>
                     </span>
                     <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
@@ -745,7 +755,7 @@ export function AgentSettingsModal({
                 <div className="rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
-                      <Clock size={14} className="text-[#f8a87c]" />
+                      <Clock size={14} style={{ color: agentTheme.primary }} />
                       <span>Lịch trình Tự động (Schedules & Cron)</span>
                     </span>
                     <div className="flex items-center gap-2">
@@ -755,7 +765,7 @@ export function AgentSettingsModal({
                       <button
                         type="button"
                         onClick={onAddSchedule}
-                        className="flex items-center gap-1 bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer"
+                        className="flex items-center gap-1 bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] hover:opacity-85 text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-all cursor-pointer"
                       >
                         <Plus size={12} />
                         <span>Thêm lịch</span>
@@ -825,10 +835,10 @@ export function AgentSettingsModal({
                 <div className="rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
-                      <Sparkles size={14} className="text-[#f8a87c]" />
+                      <Sparkles size={14} style={{ color: agentTheme.primary }} />
                       <span>Kỹ năng Hoạt động (Live Skills Pool)</span>
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
                       {skills.length} skills ready
                     </span>
                   </div>
@@ -839,7 +849,7 @@ export function AgentSettingsModal({
                         className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#20202a] text-slate-700 dark:text-neutral-300 flex items-center justify-between"
                       >
                         <span className="truncate">{s}</span>
-                        <span className="text-[9px] text-emerald-500 dark:text-[#f8a87c] font-sans shrink-0 ml-2">
+                        <span className="text-[9px] text-emerald-500 dark:text-[var(--agent-dark)] font-sans shrink-0 ml-2">
                           Ready
                         </span>
                       </div>

@@ -11437,9 +11437,9 @@ const selectedAgentTheme = getAgentColorTheme(
                                       }, 0);
                                     }
                                   }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-cyan-500 dark:text-cyan-400 transition-colors cursor-pointer"
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
                                 >
-                                  <Edit2 size={14} className="text-cyan-400 shrink-0" />
+                                  <Edit2 size={14} className="text-neutral-400 shrink-0" />
                                   <span>Edit</span>
                                 </button>
                               )}
@@ -17198,10 +17198,10 @@ ${chat.id}`);
                         }, 0);
                       }
                     }}
-                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 text-cyan-600 dark:text-cyan-400 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3.5 px-4 py-2.5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white transition-colors cursor-pointer"
                   >
-                    <Edit2 size={16} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
-                    <span className="font-medium text-xs text-cyan-600 dark:text-cyan-400">Edit</span>
+                    <Edit2 size={16} className="shrink-0 text-slate-400 dark:text-slate-300" />
+                    <span className="font-medium text-xs text-slate-800 dark:text-white">Edit</span>
                   </button>
                 )}
 
