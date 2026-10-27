@@ -107,6 +107,7 @@ export async function initiatePasswordReset(
   url.searchParams.set('resource', authConfig.apiResource);
   url.searchParams.set('first_screen', 'reset_password');
   url.searchParams.set('identifier', 'email');
+  url.searchParams.set('prompt', 'login');
   if (loginHint) {
     url.searchParams.set('login_hint', loginHint);
   }

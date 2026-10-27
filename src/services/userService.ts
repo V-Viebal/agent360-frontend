@@ -153,3 +153,46 @@ export async function updateUserProfile(updates: { name?: string; picture?: stri
 
   return updated;
 }
+
+/**
+ * Update the current user's password via backend Logto Management API integration
+ */
+export async function changeCurrentUserPassword(newPassword: string): Promise<{ ok: boolean; message?: string; error?: string }> {
+  const accessToken =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")
+      : null;
+
+  if (!accessToken) {
+    return { ok: false, error: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại." };
+  }
+
+  try {
+    const res = await fetch("/api/users/me/password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ newPassword }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: data?.error || data?.detail || data?.title || "Không thể cập nhật mật khẩu. Vui lòng thử lại.",
+      };
+    }
+
+    return {
+      ok: true,
+      message: data?.message || "Đã cập nhật mật khẩu thành công!",
+    };
+  } catch (err: any) {
+    return {
+      ok: false,
+      error: err?.message || "Lỗi kết nối máy chủ khi cập nhật mật khẩu.",
+    };
+  }
+}
