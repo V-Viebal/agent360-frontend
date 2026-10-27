@@ -74,14 +74,17 @@ export function initiateSkyerSignOut(authConfig: {
   window.location.href = endSessionUrl.toString();
 }
 
-export async function initiatePasswordReset(authConfig: {
-  endpoint: string;
-  appId: string;
-  localAppId: string;
-  apiResource: string;
-  apiScopes?: string[];
-  redirectUri: string;
-}) {
+export async function initiatePasswordReset(
+  authConfig: {
+    endpoint: string;
+    appId: string;
+    localAppId: string;
+    apiResource: string;
+    apiScopes?: string[];
+    redirectUri: string;
+  },
+  loginHint?: string
+) {
   const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   const clientId = isLocal ? authConfig.localAppId : authConfig.appId;
   const redirect = isLocal ? 'http://localhost:3000/callback' : authConfig.redirectUri;
@@ -103,6 +106,10 @@ export async function initiatePasswordReset(authConfig: {
   url.searchParams.set('state', state);
   url.searchParams.set('resource', authConfig.apiResource);
   url.searchParams.set('first_screen', 'reset_password');
+  url.searchParams.set('identifier', 'email');
+  if (loginHint) {
+    url.searchParams.set('login_hint', loginHint);
+  }
 
   window.location.href = url.toString();
 }

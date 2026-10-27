@@ -798,7 +798,8 @@ export function SettingsModal({
                   <div
                     onClick={() => {
                       onClose();
-                      initiatePasswordReset(authConfig);
+                      const emailHint = cleanDisplayEmail && !cleanDisplayEmail.includes("@skyer.hmz.one") ? cleanDisplayEmail : undefined;
+                      initiatePasswordReset(authConfig, emailHint);
                     }}
                     className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-blue-500/10 transition-colors select-none group"
                   >

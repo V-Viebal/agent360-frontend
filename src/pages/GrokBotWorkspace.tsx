@@ -1,6 +1,6 @@
 import React from "react";
 import { connectSessionMultiplexer, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate } from "../services/sessionMultiplexer";
-function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string; isSelected?: boolean; size?: number }) {
+function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { channel?: string; isSelected?: boolean; size?: number; activeColor?: string }) {
   const ch = (channel || "console").toLowerCase();
   
   // 1. Official Telegram Logo SVG
@@ -66,7 +66,13 @@ function ChannelChatIcon({ channel, isSelected, size = 15 }: { channel?: string;
   }
 
   // 5. Default Console Web Workspace
-  return <MessageSquare size={size} className={isSelected ? "text-[#f8a87c]" : "text-neutral-400"} />;
+  return (
+    <MessageSquare
+      size={size}
+      style={isSelected && activeColor ? { color: activeColor } : undefined}
+      className={isSelected ? (!activeColor ? "text-[#f8a87c]" : "") : "text-neutral-400"}
+    />
+  );
 }
 
 import { getCurrentUserProfile, UserProfile } from "../services/userService";
@@ -5458,6 +5464,7 @@ export function GrokBotWorkspace() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isInitialLoadRef = useRef<boolean>(true);
+  const needsScrollToLatestRef = useRef<boolean>(true);
   const touchSwipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Search in conversation list
@@ -6332,17 +6339,16 @@ export function GrokBotWorkspace() {
   const [traceCardPos, setTraceCardPos] = useState<{ top: number; right: number } | null>(null);
   const traceBarScrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Keep active tick inside trace bar visible at all times
+  // Keep active tick inside trace bar visible at all times (centered in scrollable container)
   useEffect(() => {
     if (activeTraceIdx === null || !traceBarScrollRef.current) return;
     const container = traceBarScrollRef.current;
     const activeEl = container.querySelector(`[data-trace-tick-idx="${activeTraceIdx}"]`) as HTMLElement;
     if (activeEl) {
-      const cRect = container.getBoundingClientRect();
-      const elRect = activeEl.getBoundingClientRect();
-      if (elRect.top < cRect.top + 20 || elRect.bottom > cRect.bottom - 20) {
-        activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }
+      // Calculate target scrollTop purely within container to avoid triggering ancestor scroll
+      const elTop = activeEl.offsetTop;
+      const targetScroll = Math.max(0, elTop - container.clientHeight / 2 + activeEl.clientHeight / 2);
+      container.scrollTo({ top: targetScroll, behavior: "smooth" });
     }
   }, [activeTraceIdx]);
 
@@ -6517,26 +6523,52 @@ export function GrokBotWorkspace() {
   }, [isPlusMenuOpen]);
 
   // Scroll directly to the latest user request (or bottom if no user turns)
-  const scrollToLatestRequestOrBottom = (smooth = false) => {
-    const userTurns = userTurnsRef.current;
-    if (userTurns.length > 0) {
-      const lastTurn = userTurns[userTurns.length - 1];
-      const targetEl = document.getElementById(`chat-msg-${lastTurn.msg.id}`);
-      if (targetEl && messagesContainerRef.current) {
-        const containerRect = messagesContainerRef.current.getBoundingClientRect();
+  const scrollToLatestRequestOrBottom = (smooth = false): boolean => {
+    if (!messagesContainerRef.current) return false;
+    const container = messagesContainerRef.current;
+
+    // Look for last user message in state
+    const userMsgs = (messages || []).filter((m) => m.role === "user");
+    if (userMsgs.length > 0) {
+      const lastUserMsg = userMsgs[userMsgs.length - 1];
+      const targetEl = document.getElementById(`chat-msg-${lastUserMsg.id}`);
+      if (targetEl) {
+        const containerRect = container.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
-        const offset = targetRect.top - containerRect.top + messagesContainerRef.current.scrollTop;
-        messagesContainerRef.current.scrollTo({
-          top: Math.max(0, offset - 12),
+        const offset = targetRect.top - containerRect.top + container.scrollTop;
+        container.scrollTo({
+          top: Math.max(0, offset - 14),
           behavior: smooth ? "smooth" : "auto",
         });
-        const lastIdx = userTurns.length - 1;
+        const lastIdx = userMsgs.length - 1;
         setActiveTraceIdx(lastIdx);
         activeTraceIdxRef.current = lastIdx;
-        return;
+        needsScrollToLatestRef.current = false;
+        return true;
       }
     }
-    jumpToBottom();
+
+    // Fallback: check DOM elements directly in case msg.id differs
+    const allMsgEls = Array.from(container.querySelectorAll<HTMLElement>('[id^="chat-msg-"]'));
+    const userEls = allMsgEls.filter((el) => el.classList.contains("items-end"));
+    if (userEls.length > 0) {
+      const lastEl = userEls[userEls.length - 1];
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = lastEl.getBoundingClientRect();
+      const offset = targetRect.top - containerRect.top + container.scrollTop;
+      container.scrollTo({
+        top: Math.max(0, offset - 14),
+        behavior: smooth ? "smooth" : "auto",
+      });
+      needsScrollToLatestRef.current = false;
+      return true;
+    }
+
+    if (container.scrollHeight > container.clientHeight) {
+      container.scrollTop = container.scrollHeight;
+      return true;
+    }
+    return false;
   };
 
   // Jump immediately to bottom on open / chat switch without smooth scroll animation
@@ -6965,6 +6997,8 @@ export function GrokBotWorkspace() {
     if (!selectedChatId || !selectedChatKnown) return;
 
     isInitialLoadRef.current = true;
+    needsScrollToLatestRef.current = true;
+    isUserScrolledUpRef.current = false;
     let mounted = true;
 
     // 1. Instant Cache Hit: render cached turns immediately without spinner
@@ -6974,15 +7008,18 @@ export function GrokBotWorkspace() {
       setMessages(cachedTurns);
       setShowPollCard(false);
       setIsLoadingMessages(false);
-      setTimeout(() => {
+      const scheduleScroll = () => {
         const savedPos = sessionScrollPositionsRef.current[selectedChatId];
-        if (typeof savedPos === "number" && messagesContainerRef.current) {
+        if (typeof savedPos === "number" && savedPos > 50 && messagesContainerRef.current) {
           messagesContainerRef.current.scrollTop = savedPos;
         } else {
           scrollToLatestRequestOrBottom();
         }
         isInitialLoadRef.current = false;
-      }, 0);
+      };
+      setTimeout(scheduleScroll, 0);
+      setTimeout(scheduleScroll, 50);
+      setTimeout(scheduleScroll, 150);
     } else {
       setIsLoadingMessages(true);
     }
@@ -7049,14 +7086,17 @@ export function GrokBotWorkspace() {
       // Trigger load latest request only when newly opening chat session without cached turns
       if (isInitialLoadRef.current) {
         isInitialLoadRef.current = false;
-        const savedPos = sessionScrollPositionsRef.current[selectedChatId];
-        if (typeof savedPos === "number" && messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = savedPos;
-        } else {
-          setTimeout(() => scrollToLatestRequestOrBottom(), 0);
-          setTimeout(() => scrollToLatestRequestOrBottom(), 60);
-          setTimeout(() => scrollToLatestRequestOrBottom(), 180);
-        }
+        const scheduleScroll = () => {
+          const savedPos = sessionScrollPositionsRef.current[selectedChatId];
+          if (typeof savedPos === "number" && savedPos > 50 && messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = savedPos;
+          } else {
+            scrollToLatestRequestOrBottom();
+          }
+        };
+        setTimeout(scheduleScroll, 0);
+        setTimeout(scheduleScroll, 60);
+        setTimeout(scheduleScroll, 200);
       }
     }).catch(() => {
       // Keep whatever real (cached) turns we have; never substitute canned dialogue.
@@ -7189,6 +7229,7 @@ export function GrokBotWorkspace() {
                     reasoning: nt.reasoning || matchedPrev.reasoning,
                     steps: nt.steps && nt.steps.length > 0 ? nt.steps : matchedPrev.steps,
                     toolCalls: nt.toolCalls && nt.toolCalls.length > 0 ? nt.toolCalls : matchedPrev.toolCalls,
+                    textSegments: nt.textSegments && nt.textSegments.length > 0 ? nt.textSegments : matchedPrev.textSegments,
                     roomReceipt: nt.roomReceipt || matchedPrev.roomReceipt,
                     runId: nt.runId || matchedPrev.runId,
                     roundNo: nt.roundNo || matchedPrev.roundNo,
@@ -7731,6 +7772,7 @@ export function GrokBotWorkspace() {
           ? {
               ...ltMsg,
               content: ltMsg.content || poppedAssistantTrace.content,
+              textSegments: ltMsg.textSegments && ltMsg.textSegments.length > 0 ? ltMsg.textSegments : poppedAssistantTrace.textSegments,
               reasoning: ltMsg.reasoning || poppedAssistantTrace.reasoning,
               steps: ltMsg.steps && ltMsg.steps.length > 0 ? ltMsg.steps : poppedAssistantTrace.steps,
               toolCalls: ltMsg.toolCalls && ltMsg.toolCalls.length > 0 ? ltMsg.toolCalls : poppedAssistantTrace.toolCalls,
@@ -7750,17 +7792,24 @@ export function GrokBotWorkspace() {
   }, [messages, activeSessionRoom, liveTurnForView, isCurrentSessionRunning, isStreaming, selectedChatId, selectedChat?.session_id]);
 
   useEffect(() => {
-    // Only scroll to latest request on initial load / chat switch
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
+    // If a session was just opened or switched, keep attempting to scroll to the latest user request until rendered
+    if (needsScrollToLatestRef.current && displayMessages.length > 0) {
       const savedPos = sessionScrollPositionsRef.current[selectedChatId];
-      if (typeof savedPos === "number" && messagesContainerRef.current) {
+      if (typeof savedPos === "number" && savedPos > 50 && messagesContainerRef.current) {
         messagesContainerRef.current.scrollTop = savedPos;
+        needsScrollToLatestRef.current = false;
       } else {
-        scrollToLatestRequestOrBottom();
+        const ok = scrollToLatestRequestOrBottom();
+        if (!ok) {
+          const t1 = setTimeout(scrollToLatestRequestOrBottom, 40);
+          const t2 = setTimeout(scrollToLatestRequestOrBottom, 120);
+          const t3 = setTimeout(scrollToLatestRequestOrBottom, 300);
+          return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+        }
       }
       return;
     }
+
     // Check if container actually overflows; if not, hide scroll-to-bottom button
     if (messagesContainerRef.current) {
       const el = messagesContainerRef.current;
@@ -7774,7 +7823,7 @@ export function GrokBotWorkspace() {
     if (isStreaming && !isUserScrolledUpRef.current) {
       jumpToBottom();
     }
-  }, [displayMessages.length, isStreaming, selectedChatId]);
+  }, [displayMessages, isStreaming, selectedChatId]);
 
   // Dynamic Document Title based on active session and agent
   useEffect(() => {
@@ -8632,7 +8681,7 @@ export function GrokBotWorkspace() {
         lastPaint = now;
         const snap = turnAcc.snapshot();
         updateTurnMessages((prev) =>
-          prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: snap.content, reasoning: snap.reasoning, steps: snap.steps, toolCalls: snap.toolCalls } : m))
+          prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: snap.content, textSegments: snap.textSegments, reasoning: snap.reasoning, steps: snap.steps, toolCalls: snap.toolCalls } : m))
         );
         if (selectedChatIdRef.current === originChatId && !isUserScrolledUpRef.current) {
           jumpToBottom();
@@ -8850,6 +8899,7 @@ export function GrokBotWorkspace() {
           return {
             ...m,
             content: accumulated || m.content || "Agent finished without a text response.",
+            textSegments: finalSnap.textSegments && finalSnap.textSegments.length > 0 ? finalSnap.textSegments : m.textSegments,
             evidenceStatus: accumulated ? "observed" : "unknown",
             reasoning: hasAccTrace ? finalSnap.reasoning : m.reasoning,
             steps: hasAccTrace ? finalSnap.steps : m.steps,
@@ -10668,17 +10718,23 @@ export function GrokBotWorkspace() {
                     onClick={() => {
                       executeTurnStream(item.prompt);
                     }}
-                    className="w-full p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#14141c]/90 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/40 text-left transition-all cursor-pointer group shadow-xs flex items-center justify-between gap-2.5 min-w-0"
+                    style={{
+                      ["--agent-primary" as any]: selectedAgentTheme.primary,
+                    }}
+                    className="w-full p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-[#14141c]/90 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#242432] hover:border-[var(--agent-primary)]/50 text-left transition-all cursor-pointer group shadow-xs flex items-center justify-between gap-2.5 min-w-0"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0 group-hover:scale-125 transition-transform" />
+                      <span
+                        style={{ backgroundColor: selectedAgentTheme.primary }}
+                        className="h-1.5 w-1.5 rounded-full shrink-0 group-hover:scale-125 transition-transform"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-xs font-medium text-slate-900 dark:text-neutral-100 group-hover:text-[#f8a87c] transition-colors truncate">
+                          <p className="text-xs font-medium text-slate-900 dark:text-neutral-100 group-hover:text-[var(--agent-primary)] transition-colors truncate">
                             {item.title}
                           </p>
                           {item.badge && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-[#1e1e2c] text-neutral-600 dark:text-[#f8a87c] border border-slate-300 dark:border-[#2b2b3e] shrink-0">
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-[#1e1e2c] text-neutral-600 dark:text-neutral-300 border border-slate-300 dark:border-[#2b2b3e] shrink-0">
                               {item.badge}
                             </span>
                           )}
@@ -10688,7 +10744,7 @@ export function GrokBotWorkspace() {
                         </p>
                       </div>
                     </div>
-                    <ArrowRight size={12} className="text-neutral-400 group-hover:text-[#f8a87c] group-hover:translate-x-0.5 transition-all opacity-0 group-hover:opacity-100 shrink-0" />
+                    <ArrowRight size={12} style={{ color: selectedAgentTheme.primary }} className="transition-all opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 shrink-0" />
                   </button>
                 ))}
               </div>
@@ -11441,11 +11497,11 @@ export function GrokBotWorkspace() {
                     >
                       <div
                         style={{
-                          backgroundColor: (selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark,
-                          borderColor: (selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark,
+                          backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
+                          borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
                           color: "#ffffff",
                         }}
-                        className={`inline-block rounded-2xl px-4 py-2.5 text-[15.5px] sm:text-[16px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white font-medium border rounded-br-xs shadow-xs font-sans ml-auto break-words [&_*]:!text-white ${
+                        className={`inline-block rounded-full px-3.5 py-1 sm:px-4 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] !text-white font-medium border shadow-xs font-sans ml-auto break-words [&_*]:!text-white ${
                           isHighlighted ? "ring-2 ring-white/60 shadow-lg" : ""
                         }`}
                       >
@@ -11535,13 +11591,18 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Native Solo Thinking & Workflow Narrator (1. Chuẩn bị làm gì -> 2. Luồng làm việc -> 3. Đang làm được gì + Inline Receipt -> 4. Câu trả lời cuối) */}
+                      {/* Language-Agnostic Context-Native Solo Turn Rendering:
+                          Splits natural lead-in segment(s) emitted by the Agent from the main answer body,
+                          and keeps the Responding Indicator Pill strictly separate while actively running. */}
                       {(() => {
                         const hasCallingStep = Boolean(
                           (Array.isArray(msg.steps) && msg.steps.some((s) => s.kind === "tool_call" && s.state === "calling")) ||
                           (Array.isArray(msg.toolCalls) && msg.toolCalls.some((t) => t.state === "calling"))
                         );
-                        const isTurnActivelyRunning = (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView) || (!msg.content && hasCallingStep)) && isLastTurn;
+                        const isTurnActivelyRunning =
+                          (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView) || (!msg.content && hasCallingStep)) &&
+                          isLastTurn;
+
                         const isRoomNarratorTurn = Boolean(
                           msg.senderAgentId ||
                           msg.roomReceipt ||
@@ -11565,228 +11626,136 @@ export function GrokBotWorkspace() {
                           soloReasonList.map((r) => r.text || "").join("\n")
                         ).trim();
 
-                        const showSoloNativeNarration =
-                          !isRoomNarratorTurn &&
-                          (isTurnActivelyRunning || soloTools.length > 0 || rawReasonText.length > 0);
+                        // Extract natural lead-in segment(s) and main body directly from the Agent's own context-driven output (any language, any persona/pronouns)
+                        let leadInSegments: string[] = [];
+                        let mainBodyContent = cleanContent;
 
-                        if (!showSoloNativeNarration) {
-                          if (!msg.content && isTurnActivelyRunning) {
-                            return (
-                              <div
-                                data-testid="active-responding-agent-pill"
-                                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
-                              >
-                                <div className="relative shrink-0 flex items-center justify-center">
-                                  <AgentAvatar
-                                    agent={selectedAgent}
-                                    size="xs"
-                                    interactive={false}
-                                    alwaysAnimate={true}
-                                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                                    className="shrink-0"
-                                  />
-                                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
-                                </div>
-                                <span className="flex items-center gap-1">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                                </span>
-                              </div>
+                        if (!isRoomNarratorTurn) {
+                          const rawSegs = Array.isArray(msg.textSegments)
+                            ? msg.textSegments
+                                .map((s) => parseQuotedReplyFromContent(s, undefined, selectedAgent?.slug || selectedAgent?.id || "default").cleanContent)
+                                .filter(Boolean)
+                            : [];
+
+                          if (rawSegs.length >= 2) {
+                            // Agent emitted distinct message segments across tool calls (e.g., Segment 1: lead-in before tool, Segment 2+: final answer after tool)
+                            leadInSegments = rawSegs.slice(0, -1);
+                            mainBodyContent = rawSegs[rawSegs.length - 1];
+                          } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && rawSegs[0].length <= 220) {
+                            // Agent emitted its opening lead-in segment and is currently executing a tool call before emitting the final answer
+                            leadInSegments = [rawSegs[0]];
+                            mainBodyContent = "";
+                          } else if (cleanContent) {
+                            // Check if the Agent's response starts with a short conversational lead-in paragraph separated by a blank line from the detailed body
+                            const paragraphs = cleanContent
+                              .split(/\n\s*\n/)
+                              .map((p) => p.trim())
+                              .filter(Boolean);
+                            const firstPara = paragraphs[0] || "";
+                            const isShortConversationalOpening =
+                              paragraphs.length >= 2 &&
+                              firstPara.length >= 8 &&
+                              firstPara.length <= 220 &&
+                              !firstPara.includes("\n") &&
+                              !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(firstPara);
+
+                            if (isShortConversationalOpening && (soloTools.length > 0 || rawReasonText.length > 0 || paragraphs.length >= 2)) {
+                              leadInSegments = [firstPara];
+                              mainBodyContent = paragraphs.slice(1).join("\n\n");
+                            }
+                          }
+
+                          // If no lead-in segment was in content yet, check if the Agent's own reasoning starts with a direct conversational sentence (excluding 3rd-person internal meta-notes)
+                          if (leadInSegments.length === 0 && rawReasonText) {
+                            const firstReasonLine = rawReasonText
+                              .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, "")
+                              .replace(/\s+/g, " ")
+                              .split(/(?<=[.!?\n])\s+/)[0]
+                              ?.trim();
+                            const isInternalThirdPersonNote = Boolean(
+                              firstReasonLine &&
+                              /^(?:the\s+user|user\s+(?:wants|asks|is|said|requested)|according\s+to\s+my|người\s+dùng|khách\s+hàng|câu\s+hỏi\s+này|yêu\s+cầu\s+này|cần\s+phải|trước\s+tiên\s+cần|bước\s+1)/i.test(
+                                firstReasonLine
+                              )
                             );
-                          }
-                          return null;
-                        }
-
-                        // 1. Infer the exact pronoun pair (selfPronoun / userPronoun) from how this Agent & User actually address each other in the session
-                        const prevUserText =
-                          mIdx > 0 && displayMessages[mIdx - 1]?.role === "user"
-                            ? stripSharedRoomContext(displayMessages[mIdx - 1].content || "").trim()
-                            : "";
-                        const recentDialogueSample = [
-                          cleanContent,
-                          prevUserText,
-                          ...displayMessages
-                            .slice(Math.max(0, mIdx - 6), mIdx)
-                            .map((m) => stripSharedRoomContext(m.content || "")),
-                        ].join(" ");
-
-                        const hasVnWord = (sample: string, word: string) =>
-                          new RegExp(`(?:^|[\\s,.;:!?()"'])${word}(?=$|[\\s,.;:!?()"'])`, "i").test(sample);
-                        const currentTurnSample = `${prevUserText} ${cleanContent}`;
-
-                        let selfPronoun = "mình";
-                        let userPronoun = "bạn";
-                        if (hasVnWord(currentTurnSample, "chị") || (hasVnWord(recentDialogueSample, "em") && hasVnWord(recentDialogueSample, "chị") && !hasVnWord(currentTurnSample, "anh"))) {
-                          selfPronoun = "em";
-                          userPronoun = "chị";
-                        } else if (hasVnWord(currentTurnSample, "anh") || (hasVnWord(recentDialogueSample, "em") && hasVnWord(recentDialogueSample, "anh"))) {
-                          selfPronoun = "em";
-                          userPronoun = "anh";
-                        } else if (hasVnWord(cleanContent, "tôi")) {
-                          selfPronoun = "tôi";
-                          userPronoun = hasVnWord(recentDialogueSample, "anh") ? "anh" : hasVnWord(recentDialogueSample, "chị") ? "chị" : "bạn";
-                        }
-
-                        const alignPronounsToContext = (sentence: string): string => {
-                          let s = sentence.trim();
-                          if (selfPronoun === "em") {
-                            s = s
-                              .replace(/^Mình\s+sẽ\b/i, "Em sẽ")
-                              .replace(/^Để\s+mình\b/i, "Để em")
-                              .replace(/\bmình\s+sẽ\b/gi, "em sẽ")
-                              .replace(/\bđể\s+mình\b/gi, "để em")
-                              .replace(/\bcho\s+bạn\b/gi, `cho ${userPronoun}`)
-                              .replace(/\bgửi\s+bạn\b/gi, `gửi ${userPronoun}`)
-                              .replace(/\bgiúp\s+bạn\b/gi, `giúp ${userPronoun}`);
-                          } else if (selfPronoun === "mình") {
-                            s = s
-                              .replace(/^Dạ,\s*để\s+em\b/i, "Để mình")
-                              .replace(/^Để\s+em\b/i, "Để mình")
-                              .replace(/^Em\s+sẽ\b/i, "Mình sẽ")
-                              .replace(/\bcho\s+(?:anh|chị)\b/gi, "cho bạn")
-                              .replace(/\bgửi\s+(?:anh|chị)\b/gi, "gửi bạn")
-                              .replace(/\bgiúp\s+(?:anh|chị)\b/gi, "giúp bạn");
-                          }
-                          return s;
-                        };
-
-                        // 2. Transform the Agent's actual reasoning sentences + active tool intent into a genuine 1st-person thought lead-in
-                        const reasonSentences = rawReasonText
-                          .replace(/^(?:The user said|According to my activation instructions)[^.\n]*[.\n]?\s*/i, "")
-                          .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, "")
-                          .replace(/\s+/g, " ")
-                          .split(/(?<=[.!?\n])\s+/)
-                          .map((s) => s.trim())
-                          .filter(Boolean);
-
-                        const convertReasonSentenceToFirstPerson = (rawSent: string): string | null => {
-                          if (!rawSent || rawSent.length < 10) return null;
-                          // Case A: Already a 1st-person Vietnamese sentence ("Để mình...", "Mình sẽ...", "Để em...", "Dạ, giờ em...")
-                          if (/^(?:để\s+(?:mình|em|tôi)|(?:mình|em|tôi)\s+sẽ|dạ[,\s]|ok[,\s]|giờ\s+(?:mình|em))/i.test(rawSent)) {
-                            const aligned = alignPronounsToContext(rawSent);
-                            return /[.!?]$/.test(aligned) ? aligned : `${aligned}.`;
-                          }
-                          // Case B: 3rd-person action plan in reasoning ("Cần kiểm tra...", "Trước tiên cần đọc...", "Hãy phân tích...")
-                          const actionPlanMatch = rawSent.match(
-                            /^(?:bây\s+giờ\s+|trước\s+tiên\s+|đầu\s+tiên\s+|tiếp\s+theo\s+)?(?:cần\s+phải|cần|hãy|ta\s+sẽ|tôi\s+cần|mình\s+cần|em\s+cần)\s+(.+)/i
-                          );
-                          if (actionPlanMatch && actionPlanMatch[1]) {
-                            let act = actionPlanMatch[1].replace(/[.!?]+$/, "").trim();
-                            act = act
-                              .replace(/\bcho\s+(?:người\s+dùng|user|khách\s+hàng|họ|anh\s+ấy|chị\s+ấy)\b/gi, `cho ${userPronoun}`)
-                              .replace(/\bcủa\s+(?:người\s+dùng|user|khách\s+hàng)\b/gi, `của ${userPronoun}`);
-                            const converted = alignPronounsToContext(`Để ${selfPronoun} ${act}`);
-                            return /\bcho\s+(?:anh|chị|bạn)\b/i.test(converted)
-                              ? `${converted} nhé.`
-                              : `${converted} cho ${userPronoun} nhé.`;
-                          }
-                          // Case C: 3rd-person user-intent reflection ("Người dùng yêu cầu <X>", "Người dùng muốn <X>", "User yêu cầu <X>")
-                          const userIntentMatch = rawSent.match(
-                            /^(?:người\s+dùng|user|khách\s+hàng|anh\s+ấy|chị\s+ấy)\s+(?:đang\s+)?(?:yêu\s+cầu|muốn|nhờ|hỏi\s+về|cần)\s+(.+)/i
-                          );
-                          if (userIntentMatch && userIntentMatch[1]) {
-                            let intentClause = userIntentMatch[1].replace(/[.!?]+$/, "").trim();
-                            intentClause = intentClause
-                              .replace(/\bcho\s+(?:người\s+dùng|user|họ|anh\s+ấy|chị\s+ấy)\b/gi, `cho ${userPronoun}`)
-                              .replace(/\bgửi\s+(?:người\s+dùng|user|họ|anh\s+ấy|chị\s+ấy)\b/gi, `gửi ${userPronoun}`);
-                            const prefix = selfPronoun === "em" ? "Dạ, để em" : `Để ${selfPronoun}`;
-                            const converted = alignPronounsToContext(`${prefix} ${intentClause}`);
-                            return /nhé[.!]?$/i.test(converted) ? converted : `${converted} nhé.`;
-                          }
-                          return null;
-                        };
-
-                        let naturalLeadIn = "";
-                        // Prefer a second sentence in reasoning if it describes the concrete action ("Cần kiểm tra..."), otherwise use the first sentence
-                        if (reasonSentences.length > 1) {
-                          naturalLeadIn = convertReasonSentenceToFirstPerson(reasonSentences[1]) || convertReasonSentenceToFirstPerson(reasonSentences[0]) || "";
-                        } else if (reasonSentences.length === 1) {
-                          naturalLeadIn = convertReasonSentenceToFirstPerson(reasonSentences[0]) || "";
-                        }
-
-                        if (!naturalLeadIn) {
-                          const cleanGoal = prevUserText
-                            .replace(/^(?:hãy|nhờ\s+(?:em|bạn|anh)|giúp\s+(?:anh|chị|mình|tôi)|em\s+ơi|bạn\s+ơi)[,\s]*/i, "")
-                            .replace(/[?!.]+$/, "")
-                            .trim();
-                          if (cleanGoal && cleanGoal.length >= 6 && cleanGoal.length <= 95) {
-                            const goalAdjusted = cleanGoal
-                              .replace(/\bcho\s+(?:anh|chị|mình|tôi)\b/gi, `cho ${userPronoun}`)
-                              .replace(/\bgửi\s+(?:anh|chị|mình|tôi)\b/gi, `gửi ${userPronoun}`);
-                            naturalLeadIn =
-                              selfPronoun === "em"
-                                ? `Dạ, để em ${goalAdjusted.charAt(0).toLowerCase() + goalAdjusted.slice(1)}${/\bcho\s+|\bgửi\s+/i.test(goalAdjusted) ? "" : ` cho ${userPronoun}`} nhé.`
-                                : `Để ${selfPronoun} ${goalAdjusted.charAt(0).toLowerCase() + goalAdjusted.slice(1)}${/\bcho\s+|\bgửi\s+/i.test(goalAdjusted) ? "" : ` cho ${userPronoun}`} nhé.`;
-                          } else {
-                            naturalLeadIn =
-                              selfPronoun === "em"
-                                ? `Dạ, để em kiểm tra và thực hiện ngay cho ${userPronoun} nhé.`
-                                : `Để ${selfPronoun} kiểm tra và chuẩn bị câu trả lời chi tiết cho ${userPronoun} nhé.`;
+                            if (firstReasonLine && !isInternalThirdPersonNote && firstReasonLine.length >= 10 && firstReasonLine.length <= 220) {
+                              leadInSegments = [firstReasonLine];
+                            }
                           }
                         }
 
-                        const showLeadInBubble = Boolean(soloTools.length > 0 || rawReasonText.length > 0);
+                        const showRespondingPill = Boolean(isTurnActivelyRunning && (!mainBodyContent || hasCallingStep));
 
                         return (
-                          <div className="flex flex-col items-start gap-1.5 max-w-[85%] sm:max-w-[80%]">
-                            {showLeadInBubble && (
-                              <div
-                                data-testid="solo-kickoff-intent-bubble"
-                                className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[15.5px] sm:text-[16px] leading-relaxed select-text"
-                              >
-                                {naturalLeadIn}
+                          <>
+                            {(leadInSegments.length > 0 || showRespondingPill) && (
+                              <div className="flex flex-col items-start gap-1.5 max-w-[85%] sm:max-w-[80%]">
+                                {leadInSegments.map((seg, sIdx) => (
+                                  <div
+                                    key={`lead-${msg.id}-${sIdx}`}
+                                    data-testid="solo-kickoff-intent-bubble"
+                                    className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[15.5px] sm:text-[16px] leading-relaxed select-text"
+                                  >
+                                    <FormattedMessageContent
+                                      content={seg}
+                                      agentNode={selectedAgent.node}
+                                      onImageClick={(url, name) => {
+                                        setLightboxRotation(0);
+                                        setLightboxZoom(1);
+                                        setLightboxMeta(null);
+                                        setShowLightboxMeta(false);
+                                        setLightboxImageUrl({ url, name });
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+
+                                {showRespondingPill && (
+                                  <div
+                                    data-testid="active-responding-agent-pill"
+                                    className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
+                                  >
+                                    <div className="relative shrink-0 flex items-center justify-center">
+                                      <AgentAvatar
+                                        agent={selectedAgent}
+                                        size="xs"
+                                        interactive={false}
+                                        alwaysAnimate={true}
+                                        forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
+                                        className="shrink-0"
+                                      />
+                                      <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
+                                    </div>
+                                    <span className="flex items-center gap-1">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                                      <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             )}
 
-                            {/* Separate Responding Indicator Pill below the lead-in bubble while turn is still actively generating */}
-                            {!msg.content && isTurnActivelyRunning && (
-                              <div
-                                data-testid="active-responding-agent-pill"
-                                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
-                              >
-                                <div className="relative shrink-0 flex items-center justify-center">
-                                  <AgentAvatar
-                                    agent={selectedAgent}
-                                    size="xs"
-                                    interactive={false}
-                                    alwaysAnimate={true}
-                                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                                    className="shrink-0"
-                                  />
-                                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black" />
-                                </div>
-                                <span className="flex items-center gap-1">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {(msg.content || parsedAttachments.length > 0) && (
-                        <>
-                          <div className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
-                            {/* Subtle Collaborator Header matching reference UI ("Message from <Agent>") */}
-                            {msg.senderAgentId && (
-                              <div
-                                data-testid={`room-msg-badge-${msg.senderAgentId}`}
-                                className="flex items-center justify-end self-end gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-1 px-1 select-none"
-                              >
-                                <span>Message from</span>
-                                {renderAgentMentionChip(msg.senderAgentId, msg.senderAgentName || msg.senderAgentId, "meta")}
-                              </div>
-                            )}
+                            {(mainBodyContent || parsedAttachments.length > 0) && (
+                              <>
+                                <div className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
+                                  {msg.senderAgentId && (
+                                    <div
+                                      data-testid={`room-msg-badge-${msg.senderAgentId}`}
+                                      className="flex items-center justify-end self-end gap-1.5 text-[11px] text-neutral-400 dark:text-neutral-500 mb-1 px-1 select-none"
+                                    >
+                                      <span>Message from</span>
+                                      {renderAgentMentionChip(msg.senderAgentId, msg.senderAgentName || msg.senderAgentId, "meta")}
+                                    </div>
+                                  )}
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                            <div className={`inline-block w-auto max-w-full rounded-2xl px-4 py-2.5 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                            <div className={`inline-block w-auto max-w-full rounded-full px-3.5 py-1 sm:px-4 sm:py-1.5 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             {renderMessageAttachmentsBox()}
                             <div className="text-[15.5px] sm:text-[16px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
+                              {mainBodyContent && (
                               <FormattedMessageContent
-                                content={cleanContent}
+                                content={mainBodyContent}
                                 agentNode={selectedAgent.node}
                                 onImageClick={(url, name) => {
                                   setLightboxRotation(0);
@@ -11817,6 +11786,7 @@ export function GrokBotWorkspace() {
                                   });
                                 }}
                               />
+                              )}
                               {/* Inline pulsing indicator with small animated Agent Blob Avatar alongside dots */}
                               {isStreaming && isLastTurn && (
                                 <span
@@ -11917,6 +11887,9 @@ export function GrokBotWorkspace() {
                           {renderMessageReactionsAndActions()}
                         </>
                       )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -12000,10 +11973,16 @@ export function GrokBotWorkspace() {
 
           return (
             <div
-              className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 z-30 flex-col items-end select-none pl-6 pr-1 py-3"
+              className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 z-30 flex-col items-end select-none pl-8 pr-1 py-3 pointer-events-auto"
               onPointerLeave={() => {
                 setHoveredTraceIdx(null);
                 setTraceCardPos(null);
+              }}
+              onWheel={(e) => {
+                // Ensure wheel scroll smoothly rolls the trace bar ticks
+                if (traceBarScrollRef.current) {
+                  traceBarScrollRef.current.scrollTop += e.deltaY;
+                }
               }}
               onPointerMove={(e) => {
                 // Smoothly pick the closest tick based on mouse Y coordinate
@@ -12027,19 +12006,18 @@ export function GrokBotWorkspace() {
                 }
               }}
             >
-              {/* Ticks waveform stack: centered vertically, hugging right edge, dynamically dense when turns count is high */}
+              {/* Ticks waveform stack: bounded max height (max-h-[360px]), scrollable with auto-centering on active tick */}
               {(() => {
                 const totalTurns = userTurns.length;
-                // Compute dynamic spacing and tick height so up to 150+ requests always fit perfectly in viewport
-                const gapPx = totalTurns > 80 ? 1 : totalTurns > 50 ? 2 : totalTurns > 30 ? 3 : 5;
-                const tickH = totalTurns > 80 ? "1.5px" : totalTurns > 50 ? "2px" : "3px";
-                const padY = totalTurns > 60 ? "0px" : "1.5px";
+                const tickH = "2.5px";
+                const gapPx = 4;
+                const padY = "1.5px";
 
                 return (
                   <div
                     ref={traceBarScrollRef}
                     style={{ gap: `${gapPx}px` }}
-                    className="flex flex-col items-end py-1 px-1 max-h-[80vh] overflow-y-auto overflow-x-visible scrollbar-none select-none overscroll-contain"
+                    className="flex flex-col items-end py-3 px-1 max-h-[360px] sm:max-h-[400px] overflow-y-auto overflow-x-visible scrollbar-none select-none overscroll-contain"
                   >
                     {userTurns.map((turn: { msg: ChatMessage; originalIdx: number }, tIdx: number) => {
                       const isHovered = hoveredTraceIdx === tIdx;
@@ -13826,11 +13804,11 @@ export function GrokBotWorkspace() {
                           }
                         }}
                         style={{
-                          backgroundColor: isRecording ? (liveVoiceEnergy > 45 ? undefined : ((selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark)) : undefined,
+                          backgroundColor: isRecording ? (liveVoiceEnergy > 45 ? undefined : (selectedAgentTheme.primary || selectedAgentTheme.dark)) : undefined,
                           color: isRecording ? "#ffffff" : undefined,
                           boxShadow: isRecording
                             ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
-                              (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : ((selectedAgentTheme as any).bubbleBg || selectedAgentTheme.dark))
+                              (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : (selectedAgentTheme.primary || selectedAgentTheme.dark))
                             : undefined,
                         }}
                         className={`p-1.5 rounded-full cursor-pointer transition-all ${
@@ -13849,7 +13827,7 @@ export function GrokBotWorkspace() {
                       <button
                         type="submit"
                         style={{
-                          backgroundColor: (selectedAgentTheme as any).bubbleBg || selectedAgentTheme.light || selectedAgentTheme.dark,
+                          backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
                         }}
                         className="h-7 w-7 rounded-full text-white hover:brightness-110 shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title={isStreaming ? "Add to request queue" : "Send Message"}
@@ -13967,6 +13945,7 @@ export function GrokBotWorkspace() {
                 ? "0px"
                 : `${chatSessionsWidth}px`
               : undefined,
+          ["--agent-primary" as any]: selectedAgentTheme.primary,
         }}
         className={`fixed lg:static lg:relative inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok chat-sidebar-panel mobile-drawer-panel ${
           mobileChatsOpen
@@ -14071,9 +14050,14 @@ export function GrokBotWorkspace() {
                       handleSelectChat(c);
                       // Keep current collapsed/expanded state when switching chat
                     }}
+                    style={
+                      isSelected
+                        ? { backgroundColor: selectedAgentTheme.primary, borderColor: selectedAgentTheme.primary, color: "#ffffff" }
+                        : undefined
+                    }
                     className={`h-7 w-7 rounded-xl flex items-center justify-center text-[10px] font-mono cursor-pointer transition-all border relative ${
                       isSelected
-                        ? "bg-[#f8a87c] border-[#f8a87c] text-black font-bold shadow-md shadow-[#f8a87c]/25"
+                        ? "font-bold shadow-sm"
                         : "bg-[#16161e] border-[#22222d] text-neutral-400 hover:text-white hover:bg-[#20202c] hover:border-[#303042]"
                     }`}
                     title={`${c.title} (${c.channel || "console"})`}
@@ -14095,7 +14079,7 @@ export function GrokBotWorkspace() {
                           {isCRunning ? (
                             <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
                           ) : c.channel && c.channel.toLowerCase() !== "console" ? (
-                            <ChannelChatIcon channel={c.channel} isSelected={isSelected} size={13} />
+                            <ChannelChatIcon channel={c.channel} isSelected={isSelected} activeColor={selectedAgentTheme.primary} size={13} />
                           ) : (
                             displayLetter
                           )}
@@ -14137,6 +14121,7 @@ export function GrokBotWorkspace() {
                   <Tabs
                     size="sm"
                     className="justify-start min-w-max flex items-center gap-1"
+                    themeColor={selectedAgentTheme.primary}
                     activeTab={chatFilterTab}
                     onChange={(tabId) => setChatFilterTab(tabId as any)}
                     tabs={[
@@ -14203,9 +14188,18 @@ export function GrokBotWorkspace() {
                       key={ch.id}
                       type="button"
                       onClick={() => handleSelectChannelFilter(ch.id)}
+                      style={
+                        isActive
+                          ? {
+                              backgroundColor: `${selectedAgentTheme.primary}26`,
+                              borderColor: `${selectedAgentTheme.primary}66`,
+                              color: selectedAgentTheme.primary,
+                            }
+                          : undefined
+                      }
                       className={`px-2 py-0.5 rounded-full shrink-0 transition-all cursor-pointer border flex items-center gap-1 ${
                         isActive
-                          ? "bg-[#f8a87c]/15 border-[#f8a87c]/40 text-[#f8a87c] font-semibold shadow-xs"
+                          ? "font-semibold shadow-xs"
                           : "border-transparent text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
                       }`}
                     >
@@ -14226,18 +14220,25 @@ export function GrokBotWorkspace() {
                   title="Chọn tất cả hoặc bỏ chọn tất cả phiên trong danh sách này"
                 >
                   <div
+                    style={
+                      filteredChats.every((c) => selectedChatIds.includes(c.id))
+                        ? { backgroundColor: selectedAgentTheme.primary, borderColor: selectedAgentTheme.primary }
+                        : filteredChats.some((c) => selectedChatIds.includes(c.id))
+                        ? { backgroundColor: `${selectedAgentTheme.primary}40`, borderColor: selectedAgentTheme.primary, color: selectedAgentTheme.primary }
+                        : undefined
+                    }
                     className={`h-3.5 w-3.5 rounded border flex items-center justify-center transition-all ${
                       filteredChats.every((c) => selectedChatIds.includes(c.id))
-                        ? "bg-[#f8a87c] border-[#f8a87c] text-black shadow-xs"
+                        ? "text-white shadow-xs"
                         : filteredChats.some((c) => selectedChatIds.includes(c.id))
-                        ? "bg-[#f8a87c]/30 border-[#f8a87c] text-[#f8a87c]"
-                        : "border-slate-300 dark:border-[#303042] bg-white dark:bg-[#161622] group-hover:border-[#f8a87c]/60"
+                        ? ""
+                        : "border-slate-300 dark:border-[#303042] bg-white dark:bg-[#161622]"
                     }`}
                   >
                     {filteredChats.every((c) => selectedChatIds.includes(c.id)) ? (
                       <Check size={9} className="stroke-[3]" />
                     ) : filteredChats.some((c) => selectedChatIds.includes(c.id)) ? (
-                      <div className="h-1 w-1 rounded-xs bg-[#f8a87c]" />
+                      <div style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1 w-1 rounded-xs" />
                     ) : null}
                   </div>
                   <span className="font-sans text-[11px] text-slate-600 dark:text-neutral-400 group-hover:text-slate-900 dark:group-hover:text-neutral-200">
@@ -14334,18 +14335,23 @@ export function GrokBotWorkspace() {
                     {/* Interactive Icon Box: Ultra-compact & aligned */}
                     <div
                       onClick={(e) => handleToggleSelectChat(chat.id, e)}
+                      style={
+                        selectedChatIds.includes(chat.id)
+                          ? { backgroundColor: selectedAgentTheme.primary, borderColor: selectedAgentTheme.primary, color: "#ffffff" }
+                          : undefined
+                      }
                       className={`h-5 w-5 rounded-md flex items-center justify-center shrink-0 relative transition-all cursor-pointer ${
                         selectedChatIds.includes(chat.id)
-                          ? "bg-[#f8a87c] border border-[#f8a87c] text-black shadow-xs"
+                          ? "border shadow-xs"
                           : isChatRunning
-                          ? "bg-transparent border-0 group-hover:bg-slate-100 dark:group-hover:bg-[#181822] group-hover:border group-hover:border-[#f8a87c]/50"
-                          : "bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 group-hover:border-[#f8a87c]/50"
+                          ? "bg-transparent border-0 group-hover:bg-slate-100 dark:group-hover:bg-[#181822] group-hover:border group-hover:border-[var(--agent-primary)]/50"
+                          : "bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3a] text-slate-500 dark:text-neutral-400 hover:border-[var(--agent-primary)]/50"
                       }`}
                       title={selectedChatIds.includes(chat.id) ? "Bỏ chọn phiên này" : "Chọn phiên này để xóa hàng loạt"}
                     >
                       {/* Checkbox Icon (always shown if checked, or shown on desktop hover) */}
                       <span className={selectedChatIds.includes(chat.id) ? "block" : "hidden group-hover:block"}>
-                        <Check size={11} className={selectedChatIds.includes(chat.id) ? "text-black stroke-[3]" : "text-[#f8a87c]"} />
+                        <Check size={11} style={!selectedChatIds.includes(chat.id) ? { color: selectedAgentTheme.primary } : undefined} className={selectedChatIds.includes(chat.id) ? "text-white stroke-[3]" : ""} />
                       </span>
 
                       {/* Channel icon OR Running Animated Agent Avatar inside icon box */}
@@ -14360,7 +14366,7 @@ export function GrokBotWorkspace() {
                             className="shrink-0"
                           />
                         ) : (
-                          <ChannelChatIcon channel={chat.channel} isSelected={isSelected} size={11} />
+                          <ChannelChatIcon channel={chat.channel} isSelected={isSelected} activeColor={selectedAgentTheme.primary} size={11} />
                         )}
                       </span>
 

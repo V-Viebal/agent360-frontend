@@ -87,7 +87,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
   }
   let res: Response | null = null;
   for (let attempt = 0; attempt < 3; attempt++) {
-    res = await fetch(`${API_BASE_URL}/agents`, { headers: { Accept: "application/json" } });
+    res = await authorizedFetch(`${API_BASE_URL}/agents`, { headers: { Accept: "application/json" } });
     if (res.ok || (res.status !== 401 && res.status < 500)) break;
     if (res.status === 401 && !hasCredential()) break;
     await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
@@ -393,7 +393,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
 
 export async function fetchActiveChats(): Promise<string[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/chats/active`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/chats/active`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) return [];
@@ -1038,6 +1038,10 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
               text: t
             });
           } else {
+            if (!currentAsst.textSegments) currentAsst.textSegments = [];
+            if (currentAsst.textSegments[currentAsst.textSegments.length - 1] !== t) {
+              currentAsst.textSegments.push(t);
+            }
             if (currentAsst.content) {
               currentAsst.content += "\n\n" + t;
             } else {
@@ -1445,7 +1449,7 @@ import { InfraNodeInstance, BotDeploymentInstance } from "../types/instance";
 
 export async function fetchInfraInstances(): Promise<InfraNodeInstance[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/instances`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/instances`, {
       headers: { Accept: "application/json" }
     });
     if (!res.ok) {
@@ -1484,7 +1488,7 @@ export interface CompactContextResponse {
 export async function compactAgentContext(agentId: string, sessionId?: string, hint?: string): Promise<CompactContextResponse> {
   try {
     const cleanAgent = agentId.replace(/^bot:agent360:/, "").trim();
-    const res = await fetch(`${API_BASE_URL}/agents/compact-context`, {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/compact-context`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
