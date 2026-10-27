@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { User, Mail, Key, LogOut, ChevronDown, ChevronRight, Loader2, Lock, ArrowRight } from "lucide-react";
 import { initiateSkyerSignOut, initiatePasswordReset } from "../services/pkceAuth";
-import { getCurrentUserProfile, UserProfile, updateUserProfile, changeCurrentUserPassword } from "../services/userService";
+import { getCurrentUserProfile, UserProfile, updateUserProfile, changeCurrentUserPassword, getCurrentUserPasswordStatus } from "../services/userService";
 import { Edit3, Save } from "lucide-react";
 import { authConfig } from "../config/authConfig";
 import React, { useState } from "react";
@@ -106,14 +106,19 @@ export function SettingsModal({
   const [savingPassword, setSavingPassword] = useState<boolean>(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [hasPasswordSet, setHasPasswordSet] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
     getCurrentUserProfile().then((u) => {
       if (u) {
         setCurrentUser(u);
         setEditName(u.name || "");
         setEditAvatar(u.picture || "");
       }
+    });
+    getCurrentUserPasswordStatus().then((has) => {
+      setHasPasswordSet(has);
     });
   }, [isOpen]);
 
@@ -810,8 +815,8 @@ export function SettingsModal({
                       <div className="min-w-0">
                         <h4 className="text-[13px] font-semibold text-slate-800 dark:text-blue-300 flex items-center gap-2">
                           <span>{t("settings.password_change") || "Đổi mật khẩu"}</span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 font-normal">
-                            Skyer Identity
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${hasPasswordSet === true ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20" : hasPasswordSet === false ? "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"}`}>
+                            {hasPasswordSet === true ? "Đã có mật khẩu" : hasPasswordSet === false ? "Chưa tạo mật khẩu" : "Skyer Identity"}
                           </span>
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-neutral-400 truncate mt-0.5">
@@ -927,6 +932,7 @@ export function SettingsModal({
                                   setPasswordError(res.error || "Cập nhật mật khẩu thất bại");
                                 } else {
                                   setPasswordSuccess(res.message || "Đã cập nhật mật khẩu thành công!");
+                                  setHasPasswordSet(true);
                                   setNewPassword("");
                                   setConfirmPassword("");
                                   setTimeout(() => {

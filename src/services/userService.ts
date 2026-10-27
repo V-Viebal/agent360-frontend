@@ -196,3 +196,28 @@ export async function changeCurrentUserPassword(newPassword: string): Promise<{ 
     };
   }
 }
+
+/**
+ * Query whether the current user has a password set on Logto
+ */
+export async function getCurrentUserPasswordStatus(): Promise<boolean> {
+  const accessToken =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")
+      : null;
+
+  if (!accessToken) return false;
+
+  try {
+    const res = await fetch("/api/users/me/password", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return Boolean(data?.hasPassword);
+    }
+  } catch {}
+  return false;
+}

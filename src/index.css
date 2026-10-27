@@ -1408,3 +1408,56 @@ html.light .mobile-drawer-backdrop,
 [data-theme="light"] .mobile-drawer-backdrop {
   background-color: rgba(15, 23, 42, 0.35) !important;
 }
+
+/* Fix agent mention hover card light & dark mode styles overriding any parent message bubble constraints */
+[data-testid^="agent-mention-card-"],
+div [data-testid^="agent-mention-card-"],
+span [data-testid^="agent-mention-card-"],
+p [data-testid^="agent-mention-card-"] {
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.dark [data-testid^="agent-mention-card-"],
+[data-theme="dark"] [data-testid^="agent-mention-card-"],
+.dark [data-testid^="agent-mention-card-"] {
+  color: #f8fafc !important;
+  background-color: #18202c !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-testid^="agent-mention-card-"] span {
+  color: inherit !important;
+}
+
+[data-testid^="agent-mention-card-"] span[class*="text-slate-900"] {
+  color: #0f172a !important;
+}
+
+html.dark [data-testid^="agent-mention-card-"] span[class*="text-slate-900"],
+[data-theme="dark"] [data-testid^="agent-mention-card-"] span[class*="text-slate-900"],
+.dark [data-testid^="agent-mention-card-"] span[class*="dark:text-white"] {
+  color: #ffffff !important;
+}
+
+[data-testid^="agent-mention-card-"] span[class*="text-slate-600"],
+[data-testid^="agent-mention-card-"] span[class*="text-slate-500"] {
+  color: #475569 !important;
+}
+
+html.dark [data-testid^="agent-mention-card-"] span[class*="text-slate-600"],
+html.dark [data-testid^="agent-mention-card-"] span[class*="text-slate-500"],
+.dark [data-testid^="agent-mention-card-"] span[class*="text-neutral-400"],
+.dark [data-testid^="agent-mention-card-"] span[class*="text-neutral-500"] {
+  color: #94a3b8 !important;
+}
+
+[data-testid^="agent-mention-card-"] span[class*="text-blue-600"] {
+  color: #2563eb !important;
+}
+
+html.dark [data-testid^="agent-mention-card-"] span[class*="text-blue-400"],
+.dark [data-testid^="agent-mention-card-"] span[class*="text-blue-400"] {
+  color: #60a5fa !important;
+}

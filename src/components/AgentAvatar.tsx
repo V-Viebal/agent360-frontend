@@ -373,7 +373,7 @@ interface AgentAvatarProps {
     name?: string;
     roleTag?: string;
   };
-  size?: "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: "3xs" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
   overrideConfig?: CustomAvatarConfig | null;
   interactive?: boolean;
@@ -440,6 +440,7 @@ export function AgentAvatar({
   }
 
   const sizeBox = {
+    "3xs": "h-4.5 w-4.5 rounded-full",
     "2xs": "h-6 w-6 rounded-lg",
     xs: "h-7 w-7 rounded-lg",
     sm: "h-8.5 w-8.5 rounded-xl",
@@ -450,6 +451,7 @@ export function AgentAvatar({
   }[size];
 
   const iconSize = {
+    "3xs": 10,
     "2xs": 13,
     xs: 15,
     sm: 18,
@@ -460,6 +462,7 @@ export function AgentAvatar({
   }[size];
 
   const emojiSizeClass = {
+    "3xs": "text-[10px]",
     "2xs": "text-xs",
     xs: "text-sm",
     sm: "text-base",
@@ -474,6 +477,7 @@ export function AgentAvatar({
     : "transition-transform duration-300 ease-out";
 
   const blobPixelSize = {
+    "3xs": 17,
     "2xs": 24,
     xs: 28,
     sm: 34,
@@ -497,11 +501,13 @@ export function AgentAvatar({
           .replace(/^,|,$/g, "")
       : "nod.1.4,jump.1.4,wink.1.4";
     const shouldAnimate = Boolean(forcedAnimation || alwaysAnimate || isHovered);
-    const cleanClassName = className
-      .replace(/ring-\d+/g, "")
-      .replace(/ring-[^\s]+/g, "")
-      .replace(/border[^\s]*/g, "")
-      .replace(/shadow[^\s]*/g, "");
+    const cleanClassName = size === "3xs"
+      ? className
+      : className
+          .replace(/ring-\d+/g, "")
+          .replace(/ring-[^\s]+/g, "")
+          .replace(/border[^\s]*/g, "")
+          .replace(/shadow[^\s]*/g, "");
     return (
       <div
         ref={containerRef}

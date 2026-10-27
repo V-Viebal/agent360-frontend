@@ -10822,25 +10822,23 @@ export function GrokBotWorkspace() {
                     data-testid={`agent-mention-chip-${cleanSlug}`}
                     onClick={openCollabHistory}
                     title={`Bấm để xem lịch sử phối hợp với ${shortName}`}
-                    style={{
-                      color: agentTheme.light,
-                      backgroundColor: variant === "inline" ? agentTheme.bgLight : undefined,
-                      borderColor: undefined,
-                    }}
-                    className={`relative inline-flex items-center gap-1 group/agchip cursor-pointer select-none dark:!text-[var(--dark-theme-color)] transition-transform duration-150 ease-out hover:scale-105 ${
+                    style={variant === "meta" ? { color: agentTheme.light } : undefined}
+                    className={`relative inline-flex items-center gap-1 group/agchip cursor-pointer select-none transition-transform duration-150 ease-out hover:scale-105 ${
                       variant === "inline"
-                        ? "px-1.5 py-0.5 mx-0.5 my-0.5 rounded-full border-0 text-[12px] font-medium align-middle leading-none shadow-2xs hover:brightness-105"
-                        : "font-semibold hover:underline"
+                        ? "align-middle leading-none mx-0.5 my-0"
+                        : "font-semibold hover:underline dark:!text-[var(--dark-theme-color)]"
                     }`}
                   >
                     <style>{`[data-testid=\"agent-mention-chip-${cleanSlug}\"] { --dark-theme-color: ${agentTheme.dark}; }`}</style>
-                    <AgentAvatar
-                      agent={matchedAg || { id: cleanSlug, name: fullName, roleTag: roleLabel }}
-                      size="2xs"
-                      interactive={false}
-                      className="shrink-0"
-                    />
-                    <span className="font-semibold leading-none">{shortName}</span>
+                    <span className="inline-flex items-center justify-center shrink-0 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_1px_rgba(255,255,255,0.95))]">
+                      <AgentAvatar
+                        agent={matchedAg || { id: cleanSlug, name: fullName, roleTag: roleLabel }}
+                        size="3xs"
+                        interactive={false}
+                        className="shrink-0"
+                      />
+                    </span>
+                    <span className={`font-semibold leading-none ${variant === "inline" ? "text-white dark:text-white" : ""}`}>{shortName}</span>
 
                     {/* Hover / Focus Popover Card showing Bot Role, Model, Live Status & Click to Open Shared History */}
                     <span
@@ -10849,13 +10847,13 @@ export function GrokBotWorkspace() {
                       className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-60 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100"
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-xs text-slate-900 dark:text-white truncate">{fullName}</span>
+                        <span className="font-semibold text-xs !text-slate-900 dark:!text-white truncate">{fullName}</span>
                         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono shrink-0 ${
                           isAgRunning
-                            ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+                            ? "bg-amber-500/15 !text-amber-600 dark:!text-amber-400 border border-amber-500/30"
                             : isAgOnline
-                            ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/30"
-                            : "bg-neutral-500/15 text-neutral-400 border border-neutral-500/30"
+                            ? "bg-emerald-500/15 !text-emerald-600 dark:!text-emerald-400 border border-emerald-500/30"
+                            : "bg-neutral-500/15 !text-neutral-500 dark:!text-neutral-400 border border-neutral-500/30"
                         }`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${
                             isAgRunning ? "bg-amber-400 animate-ping" : isAgOnline ? "bg-emerald-400" : "bg-neutral-400"
@@ -10864,15 +10862,15 @@ export function GrokBotWorkspace() {
                         </span>
                       </span>
                       {matchedAg?.description && (
-                        <span className="text-[10px] text-slate-500 dark:text-neutral-400 line-clamp-2 leading-snug">
+                        <span className="text-[10px] !text-slate-600 dark:!text-neutral-400 line-clamp-2 leading-snug">
                           {matchedAg.description}
                         </span>
                       )}
-                      <span className="flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-neutral-500 pt-1 border-t border-slate-100 dark:border-white/5">
+                      <span className="flex items-center justify-between text-[10px] font-mono !text-slate-500 dark:!text-neutral-400 pt-1 border-t border-slate-100 dark:border-white/5">
                         <span className="truncate">{roleLabel}</span>
-                        <span className="truncate text-[#f8a87c]">{modelLabel}</span>
+                        <span className="truncate !text-[#e0682b] dark:!text-[#f8a87c]">{modelLabel}</span>
                       </span>
-                      <span className="mt-0.5 pt-1 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                      <span className="mt-0.5 pt-1 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] font-medium !text-blue-600 dark:!text-blue-400">
                         <span>Xem lịch sử phối hợp chung</span>
                         <span>→</span>
                       </span>
