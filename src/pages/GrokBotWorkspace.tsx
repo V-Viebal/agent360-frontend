@@ -671,6 +671,7 @@ function AgentThinkingModal({
   const hostSlug = (room?.host_agent_id || agentId || "mons").replace(/^bot:agent360:/i, "").toLowerCase();
   const hostParticipant = room?.participants?.find((p) => p.role === "host" || p.agent_id === hostSlug);
   const hostDisplayName = hostParticipant?.display_name || agentLabel || hostSlug;
+  const hostTheme = getAgentColorTheme(hostSlug, hostDisplayName);
   const displayAgent = msg.senderAgentName || msg.senderAgentId || agentLabel || "Agent";
   const isCurrentlyRunning = Boolean(
     isLiveInProgress ||
@@ -1165,13 +1166,14 @@ function AgentThinkingModal({
                   forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                   className="ring-1 ring-[#f8a87c]/40"
                 />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
+                <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
+                <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
               </span>
             ) : (
-              <span className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg sm:rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center shrink-0">
-                <Sparkles size={13} className="text-[#f8a87c]" />
+              <span style={{ backgroundColor: hostTheme.bgLight, borderColor: hostTheme.borderLight }}
+                className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg sm:rounded-xl border flex items-center justify-center shrink-0">
+                <Sparkles size={13} style={{ color: hostTheme.primary }} />
               </span>
             )}
             <div className="min-w-0 flex-1">
@@ -5471,6 +5473,7 @@ export function GrokBotWorkspace() {
   const [chatSearchQuery, setChatSearchQuery] = useState("");
   const [activeChatMenuId, setActiveChatMenuId] = useState<string | null>(null);
   const [activeAgentMenuId, setActiveAgentMenuId] = useState<string | null>(null);
+  const [activeAgentMenuPos, setActiveAgentMenuPos] = useState<{ x: number; y: number } | null>(null);
   // Outside click listener to dismiss active chat 3-dots menu
   useEffect(() => {
     const handleOutsideChatMenu = (e: MouseEvent) => {
@@ -5483,6 +5486,7 @@ export function GrokBotWorkspace() {
       const target = e.target as HTMLElement;
       if (!target.closest('[data-agent-menu-container="true"]') && !target.closest('[role="menu"]')) {
         setActiveAgentMenuId(null);
+        setActiveAgentMenuPos(null);
       }
     };
     if (activeChatMenuId) {
@@ -7445,7 +7449,16 @@ export function GrokBotWorkspace() {
     sessions: [],
   };
 
-  const selectedAgentTheme = getAgentColorTheme(
+    // Re-render theme immediately when agent avatar config is saved or reset
+  const [, setAvatarUpdateTick] = useState(0);
+  useEffect(() => {
+    const handleAvatarUpdated = () => {
+      setAvatarUpdateTick((t) => t + 1);
+    };
+    window.addEventListener("agent-avatar-updated", handleAvatarUpdated);
+    return () => window.removeEventListener("agent-avatar-updated", handleAvatarUpdated);
+  }, []);
+const selectedAgentTheme = getAgentColorTheme(
     selectedAgent?.id || selectedAgentId,
     selectedAgent?.name,
     selectedAgent?.roleTag
@@ -9495,7 +9508,26 @@ export function GrokBotWorkspace() {
                           data-agent-item-id={ag.id}
                           data-agent-slug={ag.slug}
                           data-ux-target-min="24"
-                          onClick={() => handleSelectAgent(ag)}
+                          onTouchStart={() => handleTouchStartAgent(ag)}
+                          onTouchEnd={handleTouchEndAgent}
+                          onTouchMove={handleTouchEndAgent}
+                          onTouchCancel={handleTouchEndAgent}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            if (isCoarseTouchDevice()) {
+                              setMobileActionAgent(ag);
+                            } else {
+                              setActiveAgentMenuId(ag.id);
+                              setActiveAgentMenuPos({ x: e.clientX, y: e.clientY });
+                            }
+                          }}
+                          onClick={() => {
+                            if (longPressPreventClickRef.current) {
+                              longPressPreventClickRef.current = false;
+                              return;
+                            }
+                            handleSelectAgent(ag);
+                          }}
                           className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
                             isSelected
                               ? "bg-neutral-200/80 dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] shadow-xs cursor-pointer"
@@ -9585,7 +9617,19 @@ export function GrokBotWorkspace() {
                                 data-agent-item-id={ag.id}
                                 data-agent-slug={ag.slug}
                                 data-ux-target-min="24"
-                                disabled
+                                onTouchStart={() => handleTouchStartAgent(ag)}
+                                onTouchEnd={handleTouchEndAgent}
+                                onTouchMove={handleTouchEndAgent}
+                                onTouchCancel={handleTouchEndAgent}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  if (isCoarseTouchDevice()) {
+                                    setMobileActionAgent(ag);
+                                  } else {
+                                    setActiveAgentMenuId(ag.id);
+                                    setActiveAgentMenuPos({ x: e.clientX, y: e.clientY });
+                                  }
+                                }}
                                 className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none shrink-0"
                               >
                                 <div className="relative shrink-0">
@@ -10397,7 +10441,7 @@ export function GrokBotWorkspace() {
         {!isLeftSidebarCollapsed && (
           <div
             onMouseDown={() => setIsResizingLeft(true)}
-            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/50 transition-colors z-30 -mr-0.5"
+            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 transition-colors z-30 -mr-0.5"
             title="Drag to resize agents sidebar"
           />
         )}
@@ -10495,9 +10539,9 @@ export function GrokBotWorkspace() {
                     <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
-                      <ChevronRight size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
+                      <ChevronRight size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
                     ) : (
-                      <ChevronLeft size={13} className="text-neutral-400 group-hover:text-[#f8a87c] opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:-translate-x-1" />
+                      <ChevronLeft size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:-translate-x-1" />
                     )}
                   </>
                 )}
@@ -11687,9 +11731,15 @@ export function GrokBotWorkspace() {
                                 ))}
 
                                 {showRespondingPill && (
-                                  <div
+                                  <button
+                                    type="button"
                                     data-testid="active-responding-agent-pill"
-                                    className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      triggerHaptic(10);
+                                      handleOpenActiveThinkingModal(msg);
+                                    }}
+                                    className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
                                   >
                                     <div className="relative shrink-0 flex items-center justify-center">
                                       <AgentAvatar
@@ -11700,14 +11750,13 @@ export function GrokBotWorkspace() {
                                         forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                                         className="shrink-0"
                                       />
-                                      
                                     </div>
                                     <span className="flex items-center gap-1">
                                       <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
                                       <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
                                       <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
                                     </span>
-                                  </div>
+                                  </button>
                                 )}
                               </div>
                             )}
@@ -11766,8 +11815,22 @@ export function GrokBotWorkspace() {
                               {/* Inline pulsing indicator with small animated Agent Blob Avatar alongside dots */}
                               {isStreaming && isLastTurn && (
                                 <span
+                                  role="button"
+                                  tabIndex={0}
                                   data-testid="inline-streaming-dots-btn"
-                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 border border-[#f8a87c]/30 align-middle select-none"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(10);
+                                    handleOpenActiveThinkingModal(msg);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleOpenActiveThinkingModal(msg);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-colors"
                                 >
                                   <AgentAvatar
                                     agent={
@@ -11879,9 +11942,15 @@ export function GrokBotWorkspace() {
           {/* Responding Indicator with Agent Avatar + Animation alongside 3-dots */}
           {isCurrentSessionRunning && (displayMessages.length === 0 || displayMessages[displayMessages.length - 1].role === "user") && (
             <div className="flex flex-col items-start w-full space-y-1 animate-in fade-in duration-150 my-1">
-              <div
+              <button
+                type="button"
                 data-testid="active-responding-agent-pill"
-                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] select-none shadow-2xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic(10);
+                  handleOpenActiveThinkingModal();
+                }}
+                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
               >
                 <div className="relative shrink-0 flex items-center justify-center">
                   <AgentAvatar
@@ -11895,14 +11964,13 @@ export function GrokBotWorkspace() {
                     forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
                     className="shrink-0"
                   />
-                  
                 </div>
                 <span className="flex items-center gap-1">
                   <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
                   <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
                   <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
                 </span>
-              </div>
+              </button>
             </div>
           )}
 
@@ -13942,7 +14010,7 @@ export function GrokBotWorkspace() {
             } w-1.5 h-full cursor-col-resize hover:bg-[#f8a87c]/40 active:bg-[#f8a87c] transition-colors z-30 group`}
             title="Kéo để chỉnh độ rộng danh sách chat"
           >
-            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[#f8a87c] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
+            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
           </div>
         )}
         {/* Header & Collapse Toggle */}
@@ -13977,9 +14045,12 @@ export function GrokBotWorkspace() {
               <Tooltip content="Tạo cuộc hội thoại mới" placement="bottom" shortcut="Ctrl+Shift+O" minWidth={160}>
                 <button aria-label="New Chat Session" data-ux-target-min="24"
                   onClick={handleNewChat}
-                  className="h-7 w-7 rounded-lg border border-slate-300 dark:border-[#2e2e3c] bg-white dark:bg-[#181822] hover:bg-slate-100 dark:hover:bg-[#20202c] hover:border-slate-400 dark:hover:border-[#3e3e50] flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-slate-950 dark:hover:text-white shadow-2xs transition-all cursor-pointer"
+                  style={{
+                    borderColor: selectedAgentTheme.primary ? `${selectedAgentTheme.primary}99` : undefined,
+                  }}
+                  className="h-7 w-7 rounded-lg border-2 border-slate-400/80 dark:border-white/30 bg-slate-100 dark:bg-[#1f1f2a] hover:bg-white dark:hover:bg-[#282836] hover:border-slate-600 dark:hover:border-white/60 flex items-center justify-center text-slate-800 dark:text-white shadow-xs hover:shadow-sm transition-all cursor-pointer active:scale-95 group/newchat"
                 >
-                  <Plus size={15} className="stroke-[2.2]" />
+                  <Plus size={15} className="stroke-[2.5] text-slate-800 dark:text-white group-hover/newchat:scale-110 transition-transform" />
                 </button>
               </Tooltip>
 
@@ -14625,7 +14696,7 @@ ${chat.id}`);
 
                               <DropdownMenuItem
                                 data-testid={`chat-menu-save-team-recipe-${chat.id}`}
-                                icon={<Sparkles size={13} className="text-[#f8a87c]" />}
+                                icon={<Sparkles size={13} style={{ color: selectedAgentTheme.primary }} />}
                                 label="Lưu thành Team Recipe"
                                 onClick={() => {
                                   handleSaveChatAsTeamRecipe(chat);
@@ -14914,7 +14985,7 @@ ${chat.id}`);
         {!isBotInfoCollapsed && (
           <div
             onMouseDown={() => setIsResizingRight(true)}
-            className="hidden xl:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/50 transition-colors z-30 -ml-0.5"
+            className="hidden xl:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 transition-colors z-30 -ml-0.5"
             title="Drag to resize agent specification pane"
           />
         )}

@@ -24,6 +24,7 @@ interface DropdownMenuProps {
   className?: string;
   width?: string;
   anchorRef?: React.RefObject<HTMLElement | null>;
+  anchorPosition?: { x: number; y: number } | null;
   placement?: "bottom" | "top";
 }
 
@@ -41,6 +42,7 @@ export function DropdownMenu({
   className = "",
   width = "w-56",
   anchorRef,
+  anchorPosition,
   placement = "bottom",
 }: DropdownMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -48,14 +50,35 @@ export function DropdownMenu({
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
 
   const updatePosition = () => {
+    const menuEl = menuRef.current;
+    const menuWidth = menuEl ? menuEl.offsetWidth : (parseInt(width.replace(/[^0-9]/g, ""), 10) * 4 || 240);
+    const menuHeight = menuEl ? menuEl.offsetHeight : 220;
+
+    if (anchorPosition) {
+      let top = anchorPosition.y + 4;
+      let left = anchorPosition.x;
+
+      if (left + menuWidth > window.innerWidth - 8) {
+        left = Math.max(8, anchorPosition.x - menuWidth);
+      }
+      if (top + menuHeight > window.innerHeight - 8) {
+        top = Math.max(8, anchorPosition.y - menuHeight - 4);
+      }
+      if (top < 8) top = 8;
+      if (left < 8) left = 8;
+
+      setCoords({
+        top: top + window.scrollY,
+        left: left + window.scrollX,
+      });
+      return;
+    }
+
     // 1. Determine target anchor element (either provided anchorRef or parent of container)
     const targetElement = anchorRef?.current || containerRef.current?.parentElement;
     if (!targetElement) return;
 
     const rect = targetElement.getBoundingClientRect();
-    const menuEl = menuRef.current;
-    const menuWidth = menuEl ? menuEl.offsetWidth : (parseInt(width.replace(/[^0-9]/g, ""), 10) * 4 || 240);
-    const menuHeight = menuEl ? menuEl.offsetHeight : 220;
 
     let top = placement === "top" ? rect.top - menuHeight - 6 : rect.bottom + 6;
     let left = align === "left" ? rect.left : rect.right - menuWidth;
@@ -89,7 +112,7 @@ export function DropdownMenu({
       });
       return () => cancelAnimationFrame(timer);
     }
-  }, [isOpen, align, placement]);
+  }, [isOpen, align, placement, anchorPosition]);
 
   useEffect(() => {
     if (!isOpen) return;
