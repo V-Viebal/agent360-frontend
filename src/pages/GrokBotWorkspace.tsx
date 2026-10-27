@@ -9515,7 +9515,7 @@ const selectedAgentTheme = getAgentColorTheme(
         ["--agent-border-light" as any]: selectedAgentTheme.borderLight,
         ["--agent-border-dark" as any]: selectedAgentTheme.borderDark,
       } as React.CSSProperties}
-      className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors">
+      className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors selection:bg-[var(--agent-border-light)]">
       {/* ========================================================= */}
       {/* DEDICATED OVERLAY BACKDROPS FOR MOBILE RESPONSIVE DRAWERS */}
       {/* ========================================================= */}

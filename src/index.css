@@ -338,6 +338,18 @@ html {
   font-size: 16px;
 }
 
+
+/* Text Selection Highlight following active Agent Theme */
+::selection {
+  background-color: var(--agent-border-light, rgba(248, 168, 124, 0.35));
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: var(--agent-border-light, rgba(248, 168, 124, 0.35));
+  color: inherit;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--font-size-body);
