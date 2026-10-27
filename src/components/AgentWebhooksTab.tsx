@@ -238,7 +238,7 @@ export function AgentWebhooksTab({
       if (res.delivery) {
         setDeliveries((prev) => [res.delivery, ...prev.filter((d) => d.id !== res.delivery.id)].slice(0, 50));
       }
-      showToast(`✓ Đã gửi sự kiện Webhook xuống QwenPaw (${res.latency_ms}ms) — Trạng thái: ${res.status.toUpperInvariant()}`);
+      showToast(`✓ Đã gửi sự kiện Webhook xuống QwenPaw (${res.latency_ms}ms) — Trạng thái: ${res.status.toUpperCase()}`);
     } catch (err: any) {
       showToast(err.message || "Lỗi gửi thử Webhook", "error");
     } finally {
