@@ -14134,13 +14134,15 @@ const selectedAgentTheme = getAgentColorTheme(
                       <button
                         type="submit"
                         style={{
-                          backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
+                          backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
+                          borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
+                          color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
                         }}
-                        className="h-7 w-7 rounded-full text-white hover:brightness-110 shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        className="h-7 w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title={isStreaming ? "Add to request queue" : "Send Message"}
                         aria-label={isStreaming ? "Add to request queue" : "Send Message"}
                       >
-                        <ArrowUp size={15} className="stroke-[2.5]" />
+                        <ArrowUp size={14} className="stroke-[2.2]" />
                       </button>
                     )}
                   </div>
