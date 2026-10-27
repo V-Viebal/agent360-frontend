@@ -745,9 +745,7 @@ export function ConnectAppsModal({
                   {targetAgentName}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400">
-                Hot-patch Composio MCP tools directly into agent runtime
-              </p>
+
             </div>
           </div>
 

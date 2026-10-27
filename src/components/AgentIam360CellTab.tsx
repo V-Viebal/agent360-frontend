@@ -226,9 +226,9 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                 key={tab.id}
                 type="button"
                 onClick={() => setSubView(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shrink-0 cursor-pointer transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shrink-0 cursor-pointer transition-all ${
                   active
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 !text-white dark:!text-slate-900 shadow-xs"
                     : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >

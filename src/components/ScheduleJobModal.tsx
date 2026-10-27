@@ -230,9 +230,6 @@ export function ScheduleJobModal({
               <span className="font-semibold text-slate-900 dark:text-white tracking-wide text-xs">
                 {job ? "Chỉnh sửa Lịch Routine" : "Thêm Lịch Routine mới"}
               </span>
-              <p className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
-                {agentName} • Tự động thực thi theo thời gian
-              </p>
             </div>
           </div>
           <button

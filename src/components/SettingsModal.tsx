@@ -187,8 +187,7 @@ export function SettingsModal({
   const [voiceProfile, setVoiceProfileState] = useState<VoiceAudioProfile>(() => getVoiceAudioProfile());
 
   // Layout Density State
-    const [tabSearchQuery, setTabSearchQuery] = useState("");
-  const [isTestRecording, setIsTestRecording] = useState(false);
+    const [isTestRecording, setIsTestRecording] = useState(false);
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null);
   const [testSecondsLeft, setTestSecondsLeft] = useState(0);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
@@ -479,66 +478,38 @@ export function SettingsModal({
   const navItems: {
     id: SettingsTab;
     label: string;
-    subtitle: string;
     icon: React.ReactNode;
-    group: string;
   }[] = [
     {
       id: "profile",
-      label: t("settings.tabProfile") || "Hồ sơ người dùng",
-      subtitle: "Tài khoản & Xác thực",
+      label: t("settings.tabProfile") || "Hồ sơ cá nhân",
       icon: <User size={15} />,
-      group: t("settings.groupAccount") || "Tài khoản",
     },
     {
       id: "appearance",
       label: t("settings.tabAppearance") || "Giao diện",
-      subtitle: "Chủ đề & Mật độ hiển thị",
       icon: <Palette size={15} />,
-      group: t("settings.groupSystem") || "Hệ thống",
     },
     {
       id: "language",
       label: t("settings.tabLanguage") || "Ngôn ngữ",
-      subtitle: "Tiếng Việt / English",
       icon: <Globe size={15} />,
-      group: t("settings.groupSystem") || "Hệ thống",
     },
     {
       id: "audio",
       label: t("settings.tabAudio") || "Âm thanh",
-      subtitle: "Chuông báo & TTS",
       icon: <Volume2 size={15} />,
-      group: t("settings.groupSystem") || "Hệ thống",
     },
     {
       id: "privacy_export",
-      label: t("settings.tabPrivacy") || "Bảo mật & Tiện ích",
-      subtitle: "Quyền riêng tư & Sao lưu",
+      label: t("settings.tabPrivacy") || "Bảo mật & Dữ liệu",
       icon: <ShieldCheck size={15} />,
-      group: t("settings.groupSystem") || "Hệ thống",
     },
     {
       id: "voice_record",
-      label: t("settings.tabVoiceRecord") || "Thu âm & Micro",
-      subtitle: "Micro, VAD & Khử ồn",
+      label: t("settings.tabVoiceRecord") || "Micro & Thu âm",
       icon: <Mic size={15} />,
-      group: t("settings.groupVoice") || "Giọng nói & Thu âm",
     },
-  ];
-
-  const visibleNavItems = navItems.filter(
-    (item) =>
-      !tabSearchQuery.trim() ||
-      item.label.toLowerCase().includes(tabSearchQuery.toLowerCase()) ||
-      item.subtitle.toLowerCase().includes(tabSearchQuery.toLowerCase()) ||
-      item.group.toLowerCase().includes(tabSearchQuery.toLowerCase())
-  );
-
-  const groups = [
-    t("settings.groupAccount") || "Tài khoản",
-    t("settings.groupSystem") || "Hệ thống",
-    t("settings.groupVoice") || "Giọng nói & Thu âm",
   ];
 
   return (
@@ -575,64 +546,26 @@ export function SettingsModal({
 
         {/* Modal Body: Left Tab Nav & Right Content Panel */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-          {/* Navigation Tabs (Grouped into System vs Voice Recording) */}
-          <div className="w-full md:w-56 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2 sm:p-2.5 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto shrink-0 no-scrollbar">
-            {/* Quick Filter Search in Sidebar */}
-            <div className="hidden md:block px-1 pb-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#222230] text-xs">
-                <Search size={12} className="text-slate-400 dark:text-neutral-500 shrink-0" />
-                <input
-                  type="text"
-                  value={tabSearchQuery}
-                  onChange={(e) => setTabSearchQuery(e.target.value)}
-                  placeholder="Lọc cài đặt..."
-                  className="w-full bg-transparent border-0 text-slate-800 dark:text-neutral-200 placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none text-[11px]"
-                />
-                {tabSearchQuery && (
-                  <button type="button" onClick={() => setTabSearchQuery("")} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                    <X size={11} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Render groups cleanly */}
-            {groups.map((grp) => {
-              const items = visibleNavItems.filter((i) => i.group === grp);
-              if (items.length === 0) return null;
+          {/* Navigation Tabs: Minimalist 1-line */}
+          <div className="w-full md:w-52 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2 sm:p-2.5 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto shrink-0 no-scrollbar">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
               return (
-                <div key={grp} className="flex md:flex-col gap-1 md:mb-2 shrink-0">
-                  <div className="hidden md:block px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-neutral-500 font-semibold select-none">
-                    {grp}
-                  </div>
-                  {items.map((item) => {
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveTab(item.id)}
-                        className={`flex items-center justify-between gap-2 px-3 py-2 sm:py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 md:w-full ${
-                          isActive
-                            ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold shadow-xs"
-                            : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={isActive ? "text-[#e0682b] dark:text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400"}>
-                            {item.icon}
-                          </span>
-                          <div className="truncate text-left">
-                            <div className="text-xs leading-tight truncate">{item.label}</div>
-                            <div className="hidden md:block text-[10px] text-slate-400 dark:text-neutral-500 font-normal truncate mt-0.5">
-                              {item.subtitle}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 md:w-full ${
+                    isActive
+                      ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold shadow-xs"
+                      : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent"
+                  }`}
+                >
+                  <span className={isActive ? "text-[#e0682b] dark:text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400"}>
+                    {item.icon}
+                  </span>
+                  <span className="text-xs truncate">{item.label}</span>
+                </button>
               );
             })}
           </div>
@@ -1016,13 +949,9 @@ export function SettingsModal({
             {/* 1. APPEARANCE TAB */}
             {activeTab === "appearance" && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
-                    {t("settings.themeHeader")}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                    {t("settings.themeCurrent")} <span className="text-[#f8a87c] font-semibold capitalize">{themeMode === "system" ? t("settings.themeSystemName") : themeMode === "dark" ? t("settings.themeDarkName") : t("settings.themeLightName")}</span>
-                  </p>
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white">Chủ đề giao diện</span>
+                  <span className="text-[10px] font-mono text-[#f8a87c] font-semibold capitalize">{themeMode === "system" ? "Tự động" : themeMode === "dark" ? "Tối" : "Sáng"}</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5">
@@ -1103,13 +1032,8 @@ export function SettingsModal({
             {/* 2. LANGUAGE TAB */}
             {activeTab === "language" && (
               <div className="space-y-4 animate-in fade-in duration-150">
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
-                    {t("settings.langHeader")}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                    {t("settings.langSubtitle")}
-                  </p>
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white">Ngôn ngữ hiển thị</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5">
