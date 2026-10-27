@@ -1986,6 +1986,9 @@ export interface AgentWebhookDeliveryRecord {
   response_preview?: string | null;
   signature_verified: boolean;
   timestamp: string;
+  retry_count?: number;
+  target_url?: string | null;
+  raw_payload?: string | null;
 }
 
 export interface QwenPawBridgeProbeResult {
@@ -2141,4 +2144,29 @@ export async function testAgentWebhookDispatch(
     throw new Error(`Test webhook dispatch failed (HTTP ${res.status})`);
   }
   return await res.json();
+}
+
+
+export async function replayAgentWebhookDelivery(
+  agentId: string,
+  deliveryId: string
+): Promise<{
+  success: boolean;
+  message: string;
+  delivery: AgentWebhookDeliveryRecord;
+}> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/deliveries/${encodeURIComponent(deliveryId)}/replay`,
+    {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    },
+    cleanId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Lỗi phát lại Webhook delivery (HTTP ${res.status})`);
+  }
+  return res.json();
 }

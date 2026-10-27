@@ -18,6 +18,7 @@ import {
   Radio,
   Sparkles,
   Server,
+  RotateCcw,
 } from "lucide-react";
 import {
   AgentWebhookConfig,
@@ -30,6 +31,7 @@ import {
   fetchAgentWebhookDeliveries,
   probeAgentQwenPawBridge,
   testAgentWebhookDispatch,
+  replayAgentWebhookDelivery,
 } from "../services/agentApi";
 
 interface AgentWebhooksTabProps {
@@ -59,6 +61,7 @@ export function AgentWebhooksTab({
   const [rotating, setRotating] = useState(false);
   const [probing, setProbing] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [replayingId, setReplayingId] = useState<string | null>(null);
 
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -243,6 +246,22 @@ export function AgentWebhooksTab({
       showToast(err.message || "Lỗi gửi thử Webhook", "error");
     } finally {
       setTesting(false);
+    }
+  };
+
+  
+  const handleReplayDelivery = async (deliveryId: string) => {
+    setReplayingId(deliveryId);
+    try {
+      const res = await replayAgentWebhookDelivery(agentId, deliveryId);
+      if (res.delivery) {
+        setDeliveries((prev) => [res.delivery, ...prev.filter((d) => d.id !== res.delivery.id)].slice(0, 50));
+      }
+      showToast(res.message, res.success ? "success" : "error");
+    } catch (err: any) {
+      showToast(err.message || "Lỗi phát lại Webhook", "error");
+    } finally {
+      setReplayingId(null);
     }
   };
 
@@ -823,14 +842,34 @@ export function AgentWebhooksTab({
                     </div>
                   </div>
 
-                  <div className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 truncate">
-                    <span className="text-neutral-500">Payload: </span>
-                    {d.payload_preview}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[11px] font-mono text-slate-600 dark:text-neutral-400 truncate flex-1">
+                      <span className="text-neutral-500">Payload: </span>
+                      {d.payload_preview}
+                    </div>
+                    {d.direction === "outbound" && (
+                      <button
+                        type="button"
+                        data-testid={`btn-replay-webhook-${d.id}`}
+                        disabled={replayingId === d.id}
+                        onClick={() => handleReplayDelivery(d.id)}
+                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#1a1a26] hover:bg-slate-200 dark:hover:bg-[#262638] text-slate-700 dark:text-neutral-300 border border-slate-200 dark:border-[#2e2e42] text-[10px] font-mono flex items-center gap-1 cursor-pointer shrink-0 disabled:opacity-50"
+                        title="Phát lại (Replay) sự kiện Outbound Webhook này kèm cơ chế retry"
+                      >
+                        {replayingId === d.id ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+                        <span>Replay</span>
+                      </button>
+                    )}
                   </div>
                   {d.response_preview && (
                     <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-300/90 truncate">
                       <span className="text-neutral-500">Response: </span>
                       {d.response_preview}
+                    </div>
+                  )}
+                  {typeof d.retry_count === "number" && d.retry_count > 0 && (
+                    <div className="text-[9px] font-mono text-amber-500/90">
+                      Đã tự động thử lại {d.retry_count} lần (Exponential Backoff Queue)
                     </div>
                   )}
                 </div>
