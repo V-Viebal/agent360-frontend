@@ -3225,7 +3225,7 @@ function FormattedMessageContent({
   const parts = content.split(codeBlockRegex);
 
   return (
-    <div className="space-y-2.5 text-[15.5px] sm:text-[16px] leading-relaxed select-text min-w-0 max-w-full break-words">
+    <div className="space-y-1.5 text-[14.5px] sm:text-[15px] leading-snug select-text min-w-0 max-w-full break-words">
       {parts.map((part, idx) => {
         if (part.startsWith("```") && part.endsWith("```")) {
           const match = part.match(/^```(\w+)?\s*\n([\s\S]*?)```$/);
@@ -6343,13 +6343,20 @@ export function GrokBotWorkspace() {
   useEffect(() => {
     if (activeTraceIdx === null || !traceBarScrollRef.current) return;
     const container = traceBarScrollRef.current;
-    const activeEl = container.querySelector(`[data-trace-tick-idx="${activeTraceIdx}"]`) as HTMLElement;
-    if (activeEl) {
-      // Calculate target scrollTop purely within container to avoid triggering ancestor scroll
-      const elTop = activeEl.offsetTop;
-      const targetScroll = Math.max(0, elTop - container.clientHeight / 2 + activeEl.clientHeight / 2);
-      container.scrollTo({ top: targetScroll, behavior: "smooth" });
-    }
+    const syncTraceScroll = (smooth = true) => {
+      const activeEl = container.querySelector(`[data-trace-tick-idx="${activeTraceIdx}"]`) as HTMLElement;
+      if (activeEl) {
+        const cRect = container.getBoundingClientRect();
+        const elRect = activeEl.getBoundingClientRect();
+        const relativeTop = elRect.top - cRect.top + container.scrollTop;
+        const targetScroll = Math.max(0, relativeTop - container.clientHeight / 2 + elRect.height / 2);
+        container.scrollTo({ top: targetScroll, behavior: smooth ? "smooth" : "auto" });
+      }
+    };
+    syncTraceScroll(true);
+    // Double check after layout paint
+    const t = setTimeout(() => syncTraceScroll(false), 50);
+    return () => clearTimeout(t);
   }, [activeTraceIdx]);
 
   const findCurrentVisibleUserTurnIdx = (userTurns: { msg: ChatMessage; originalIdx: number }[]): number => {
@@ -6543,6 +6550,9 @@ export function GrokBotWorkspace() {
         const lastIdx = userMsgs.length - 1;
         setActiveTraceIdx(lastIdx);
         activeTraceIdxRef.current = lastIdx;
+        if (traceBarScrollRef.current) {
+          traceBarScrollRef.current.scrollTop = traceBarScrollRef.current.scrollHeight;
+        }
         needsScrollToLatestRef.current = false;
         return true;
       }
@@ -9605,7 +9615,7 @@ export function GrokBotWorkspace() {
                   badge="Mở"
                   onClick={() => {
                     setIsUserMenuOpen(false);
-                    setSettingsModalTab("appearance");
+                    setSettingsModalTab("profile");
                     setIsSettingsModalOpen(true);
                     setMobileAgentsOpen(false);
                   }}
@@ -10315,7 +10325,7 @@ export function GrokBotWorkspace() {
                   badge="Mở"
                   onClick={() => {
                     setIsUserMenuOpen(false);
-                    setSettingsModalTab("appearance");
+                    setSettingsModalTab("profile");
                     setIsSettingsModalOpen(true);
                     setMobileAgentsOpen(false);
                   }}
@@ -11501,7 +11511,7 @@ export function GrokBotWorkspace() {
                           borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
                           color: "#ffffff",
                         }}
-                        className={`inline-block rounded-full px-3.5 py-1 sm:px-4 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] !text-white font-medium border shadow-xs font-sans ml-auto break-words [&_*]:!text-white ${
+                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] !text-white font-medium border shadow-xs font-sans ml-auto break-words [&_*]:!text-white ${
                           isHighlighted ? "ring-2 ring-white/60 shadow-lg" : ""
                         }`}
                       >
@@ -11749,10 +11759,10 @@ export function GrokBotWorkspace() {
                                     </div>
                                   )}
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                            <div className={`inline-block w-auto max-w-full rounded-full px-3.5 py-1 sm:px-4 sm:py-1.5 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                            <div className={`inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             {renderMessageAttachmentsBox()}
-                            <div className="text-[15.5px] sm:text-[16px] leading-relaxed divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
+                            <div className="text-[14.5px] sm:text-[15px] leading-snug divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               {mainBodyContent && (
                               <FormattedMessageContent
                                 content={mainBodyContent}

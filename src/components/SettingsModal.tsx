@@ -156,8 +156,8 @@ export function SettingsModal({
   };
 
   React.useEffect(() => {
-    if (isOpen && initialTab) {
-      setActiveTab(initialTab);
+    if (isOpen) {
+      setActiveTab(initialTab || "profile");
     }
   }, [isOpen, initialTab]);
 
