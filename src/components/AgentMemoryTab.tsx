@@ -113,20 +113,15 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
 
   return (
     <div className="space-y-3 text-xs font-sans pb-4">
-      {/* Header Info Banner */}
-      <div className="p-3 rounded-xl bg-[#14141c] border border-slate-200 dark:border-[#22222e] space-y-1.5">
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-white flex items-center gap-1.5">
-            <Brain size={13} className="text-[#f8a87c]" />
-            <span>{t("memory.tabTitle")}</span>
-          </span>
-          <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 bg-white/5 px-2 py-0.5 rounded border border-white/10">
-            {memories.length} entries
-          </span>
-        </div>
-        <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-relaxed">
-          Facts and rules learned across conversations that persist into {agentName}&apos;s system prompt.
-        </p>
+      {/* Minimal Header Count */}
+      <div className="flex items-center justify-between px-1 text-xs">
+        <span className="font-semibold text-slate-800 dark:text-white flex items-center gap-1.5">
+          <Brain size={13} className="text-[#f8a87c]" />
+          <span>Ghi nhớ dài hạn</span>
+        </span>
+        <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+          {memories.length} mục
+        </span>
       </div>
 
       {/* Filter and Add Button */}

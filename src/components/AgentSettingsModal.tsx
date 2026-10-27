@@ -596,11 +596,11 @@ export function AgentSettingsModal({
                                 onClick={() => onToggleChannel(ch.type, ch.enabled)}
                                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
                                   ch.enabled
-                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25"
-                                    : "bg-slate-200/70 dark:bg-white/5 border-slate-300 dark:border-white/10 text-neutral-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                                    : "bg-slate-200/60 dark:bg-white/5 border-slate-300/80 dark:border-white/10 text-neutral-400"
                                 }`}
                               >
-                                {ch.enabled ? "Enabled" : "Disabled"}
+                                {ch.enabled ? "Bật" : "Tắt"}
                               </button>
                             </div>
                           </div>

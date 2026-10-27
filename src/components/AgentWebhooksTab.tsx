@@ -296,24 +296,19 @@ export function AgentWebhooksTab({
       )}
 
       {/* Top Action Bar & Runtime Bridge Status */}
-      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[var(--agent-light)] dark:text-[var(--agent-dark)]">
-              <Server size={16} />
+            <div className="h-8 w-8 rounded-xl bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0">
+              <Server size={15} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h5 className="text-xs font-semibold text-slate-900 dark:text-white">
-                  Cầu nối QwenPaw Runtime & Inbound Webhook Gateway
-                </h5>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                  {config?.qwenpaw_node || "Fleet Active"}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
-                Tiếp nhận sự kiện thời gian thực từ bên ngoài, xác thực chữ ký HMAC-SHA256 và điều phối trực tiếp xuống QwenPaw API của {agentName}.
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                Cầu nối QwenPaw Gateway
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                {config?.qwenpaw_node || "Fleet Active"}
+              </span>
             </div>
           </div>
 
