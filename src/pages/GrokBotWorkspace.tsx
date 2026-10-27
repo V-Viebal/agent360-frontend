@@ -5363,9 +5363,13 @@ export function GrokBotWorkspace() {
     prevIsMultilineRef.current = isMultiline;
 
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      if (inputText) {
-        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+      if (isMultiline) {
+        textareaRef.current.style.height = "auto";
+        if (inputText) {
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+        }
+      } else {
+        textareaRef.current.style.height = "24px";
       }
       if (didChangeLayoutMode || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
         textareaRef.current.focus({ preventScroll: true });
@@ -11793,7 +11797,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                       triggerHaptic(10);
                                       handleOpenActiveThinkingModal(msg);
                                     }}
-                                    className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
+                                    className="inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
                                   >
                                     <div className="relative shrink-0 flex items-center justify-center">
                                       <AgentAvatar
@@ -12004,7 +12008,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   triggerHaptic(10);
                   handleOpenActiveThinkingModal();
                 }}
-                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
               >
                 <div className="relative shrink-0 flex items-center justify-center">
                   <AgentAvatar
@@ -13852,8 +13856,8 @@ const selectedAgentTheme = getAgentColorTheme(
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-0 text-[14.5px] sm:text-[15px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-relaxed overflow-y-auto scrollbar-hover ${
-                    isMultiline ? "min-h-[44px] max-h-[210px] pt-1 pb-1.5 px-0.5" : "flex-1 max-h-[210px] py-1.5"
+                  className={`w-full bg-transparent border-0 text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-snug ${
+                    isMultiline ? "overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "overflow-hidden flex-1 h-[24px] max-h-[24px] py-0"
                   }`}
                 />
               );
@@ -14092,12 +14096,9 @@ const selectedAgentTheme = getAgentColorTheme(
           </div>
         ) : (
           <div className="h-12 px-3 border-b border-slate-200 dark:border-[#1c1c22] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden whitespace-nowrap" title={selectedAgent.name ? `Chats của ${selectedAgent.name} (${chats.length})` : `Chats (${chats.length})`}>
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden whitespace-nowrap" title={selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}>
               <span className="text-sm font-sans text-slate-800 dark:text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}
-              </span>
-              <span className="text-xs font-sans text-slate-500 dark:text-neutral-400 font-normal shrink-0" style={{ whiteSpace: "nowrap", textWrap: "nowrap" }}>
-                ({chats.length})
               </span>
             </div>
 
@@ -15177,7 +15178,7 @@ ${chat.id}`);
                     >
                       <AgentBrowserPreview agentId={agentBrowserFor} enabled={Boolean(browserTarget.isLive)} />
                       {browserTarget.isLive && browserTarget.profile && (
-                        <div data-testid="agent-browser-profile" className="absolute top-2 left-2 z-[5] px-2 py-0.5 rounded-md bg-black/70 border border-white/10 text-[11px] font-sans text-white pointer-events-none">
+                        <div data-testid="agent-browser-profile" className="absolute top-2 left-2 z-[5] px-2 py-0.5 rounded-md bg-black/80 dark:bg-black/70 border border-white/20 text-[11px] font-sans text-white! keep-white pointer-events-none shadow-sm">
                           {browserTarget.profile}
                         </div>
                       )}
