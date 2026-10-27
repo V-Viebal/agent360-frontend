@@ -513,7 +513,7 @@ svg.lucide[width="24"] {
   will-change: scroll-position;
   transform: translateZ(0);
   scrollbar-width: thin;
-  scrollbar-color: rgba(248, 168, 124, 0.25) transparent;
+  scrollbar-color: var(--agent-border-light, rgba(248, 168, 124, 0.25)) transparent;
 }
 
 .smooth-scroll-container::-webkit-scrollbar {
@@ -532,11 +532,11 @@ svg.lucide[width="24"] {
 }
 
 .smooth-scroll-container:hover::-webkit-scrollbar-thumb {
-  background: rgba(248, 168, 124, 0.4);
+  background: var(--agent-border-light, rgba(248, 168, 124, 0.4));
 }
 
 .smooth-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(248, 168, 124, 0.8);
+  background: var(--agent-primary, rgba(248, 168, 124, 0.8));
 }
 
 @keyframes fadeIn {

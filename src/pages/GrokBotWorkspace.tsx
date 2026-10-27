@@ -9505,7 +9505,17 @@ const selectedAgentTheme = getAgentColorTheme(
   filteredChatsRef.current = filteredChats;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors">
+    <div
+      style={{
+        ["--agent-primary" as any]: selectedAgentTheme.primary,
+        ["--agent-light" as any]: selectedAgentTheme.light,
+        ["--agent-dark" as any]: selectedAgentTheme.dark,
+        ["--agent-bg-light" as any]: selectedAgentTheme.bgLight,
+        ["--agent-bg-dark" as any]: selectedAgentTheme.bgDark,
+        ["--agent-border-light" as any]: selectedAgentTheme.borderLight,
+        ["--agent-border-dark" as any]: selectedAgentTheme.borderDark,
+      } as React.CSSProperties}
+      className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors">
       {/* ========================================================= */}
       {/* DEDICATED OVERLAY BACKDROPS FOR MOBILE RESPONSIVE DRAWERS */}
       {/* ========================================================= */}
@@ -9848,7 +9858,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {/* Bottom blur/gradient fade edge when agent list is scrollable in collapsed rail */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/70 to-transparent z-10 backdrop-blur-[1px]"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/85 to-transparent z-20 backdrop-blur-[2px]"
               />
             </div>
 
@@ -11980,7 +11990,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     </div>
                                   )}
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                            <div className={`inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[#f8a87c] shadow-lg" : ""}`}>
+                            <div className={`inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[var(--agent-primary)] shadow-lg" : ""}`}>
                             {renderQuotedReplyBox()}
                             {renderMessageAttachmentsBox()}
                             <div className="text-[14.5px] sm:text-[15px] leading-snug divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
@@ -13238,7 +13248,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           <div className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">Tệp đính kèm</div>
                           <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Tải lên tệp hoặc thư mục</div>
                         </div>
-                        <Paperclip size={13} className="text-[#f8a87c]" />
+                        <Paperclip size={13} style={{ color: selectedAgentTheme.primary }} />
                       </div>
 
                       <button
@@ -13281,14 +13291,18 @@ const selectedAgentTheme = getAgentColorTheme(
                       <button
                         type="button"
                         onClick={() => handleSelectLoopMode("default")}
+                        style={activeLoopMode === "default" ? {
+                          backgroundColor: selectedAgentTheme.bgLight,
+                          borderColor: selectedAgentTheme.primary,
+                        } : undefined}
                         className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "default"
-                            ? "bg-amber-500/10 dark:bg-[#1f1f2e] border-[#f8a87c] text-slate-900 dark:text-white shadow-xs"
+                            ? "text-slate-900 dark:text-white shadow-xs"
                             : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
                         }`}
                       >
                         <div className="h-6 w-6 rounded-lg bg-white dark:bg-neutral-800 border border-slate-200 dark:border-transparent shadow-2xs flex items-center justify-center text-neutral-600 dark:text-neutral-300 mt-0.5 shrink-0 transition-colors">
-                          <CircleDot size={13} className={activeLoopMode === "default" ? "text-[#f8a87c]" : "text-slate-500 dark:text-neutral-400"} />
+                          <CircleDot size={13} style={activeLoopMode === "default" ? { color: selectedAgentTheme.primary } : undefined} className={activeLoopMode === "default" ? "" : "text-slate-500 dark:text-neutral-400"} />
                         </div>
                         <div className="flex flex-col text-left min-w-0 flex-1">
                           <div className="flex items-center justify-between w-full">
@@ -13399,7 +13413,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             setAgentSettingsModalTab("apps_mcp");
                             setIsAgentSettingsModalOpen(true);
                           }}
-                          className="p-1 rounded-md text-neutral-400 hover:text-[#f8a87c] hover:bg-white/5 transition-colors cursor-pointer"
+                          className="p-1 rounded-md text-neutral-400 hover:text-[var(--agent-primary)] hover:bg-white/5 transition-colors cursor-pointer"
                           aria-label="View Apps in sidebar"
                         >
                           <ExternalLink size={12} />
@@ -13467,7 +13481,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
-                                ? "bg-[#f8a87c]/15 dark:bg-[#f8a87c]/20 border-[#f8a87c] text-slate-900 dark:text-white shadow-xs"
+                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border-[var(--agent-primary)] text-slate-900 dark:text-white shadow-xs"
                                 : isAlreadyAdded
                                 ? "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/40 text-slate-900 dark:text-white"
                                 : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
@@ -13609,7 +13623,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
-                                ? "bg-cyan-500/15 dark:bg-cyan-500/20 border-cyan-500 text-slate-900 dark:text-white shadow-xs"
+                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border-[var(--agent-primary)] text-slate-900 dark:text-white shadow-xs"
                                 : isAlreadyMentioned
                                 ? "bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/40 text-slate-900 dark:text-white"
                                 : "text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-[#181822]/80 hover:bg-slate-200 dark:hover:bg-[#20202e] border-slate-200/80 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42]"
