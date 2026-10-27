@@ -2421,41 +2421,159 @@ function AgentThinkingModal({
                 (selectedParticipantFilter === "all" ||
                   (msg.senderAgentId && msg.senderAgentId.toLowerCase() === selectedParticipantFilter) ||
                   (!msg.senderAgentId && room?.host_agent_id?.toLowerCase() === selectedParticipantFilter)) && (
-                  <>
-                    {reasoningItems.map((r, rIdx) => {
-                      const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
-                      const estimatedSec = Math.max(1, Math.round(wordCount / 18));
-                      return (
-                        <div
-                          key={rIdx}
-                          className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-1.5"
-                        >
-                          <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[11px]">
-                            <Sparkles size={12} className="text-[#f8a87c]" />
-                            <span className="font-semibold">
-                              Suy luận · {displayAgent} (~{estimatedSec}s · {wordCount} từ)
-                            </span>
-                          </div>
-                          <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
-                            {renderInlineMarkdown(r.text || "")}
-                          </div>
+                  <div data-testid="solo-native-execution-flow" className="space-y-3">
+                    {/* Stage 1: Chuẩn bị làm gì (Preparation & Intent) */}
+                    <div
+                      data-testid="solo-flow-stage-1-intent"
+                      className="rounded-xl bg-white dark:bg-[#171723] border border-slate-200 dark:border-[#29293d] p-3 text-xs font-sans space-y-1.5 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-800 dark:text-neutral-100">
+                          <span className="h-4 w-4 rounded-md bg-[#f8a87c]/15 border border-[#f8a87c]/40 text-[#e0682b] dark:text-[#f8a87c] flex items-center justify-center text-[10px] font-bold">
+                            1
+                          </span>
+                          <span>Chuẩn bị làm gì (Intent & Kế hoạch xử lý)</span>
                         </div>
-                      );
-                    })}
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                          Đã xác lập kế hoạch
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
+                        {reasoningItems.length > 0 && reasoningItems[0].text
+                          ? reasoningItems[0].text
+                          : allToolItems.length > 0
+                          ? `${displayAgent} chuẩn bị phân tích yêu cầu, lần lượt gọi ${allToolItems.map((t) => t.tool).join(", ")} để lấy dữ kiện thực tế rồi tổng hợp câu trả lời.`
+                          : `${displayAgent} tiếp nhận yêu cầu, phân tích ngữ cảnh phiên chat và chuẩn bị phương án phản hồi trực tiếp.`}
+                      </p>
+                    </div>
 
-                    {allToolItems.map((step, sIdx) => (
-                      <AgentToolCard
-                        key={sIdx}
-                        agentId={msg.senderAgentId || agentId || agentLabel}
-                        toolCall={{
-                          tool: step.tool || "Tool",
-                          args: step.args,
-                          result: step.result,
-                          state: step.state,
-                        }}
-                      />
-                    ))}
-                  </>
+                    {/* Stage 2: Luồng làm việc (Workflow Pipeline) */}
+                    <div
+                      data-testid="solo-flow-stage-2-pipeline"
+                      className="rounded-xl bg-white dark:bg-[#171723] border border-slate-200 dark:border-[#29293d] p-3 text-xs font-sans space-y-2 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-800 dark:text-neutral-100">
+                          <span className="h-4 w-4 rounded-md bg-cyan-500/15 border border-cyan-500/40 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-[10px] font-bold">
+                            2
+                          </span>
+                          <span>Luồng làm việc (Workflow Pipeline)</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-neutral-400">
+                          {allToolItems.filter((t) => t.state !== "calling").length + 1}/{allToolItems.length + 2} chặng
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-[10px] font-mono">
+                          <Check size={10} />
+                          <span>1. Phân tích & Lập kế hoạch</span>
+                        </span>
+                        {allToolItems.map((t, idx) => (
+                          <React.Fragment key={`${t.id || t.tool || "tool"}-${idx}`}>
+                            <span className="text-neutral-400 text-[10px]">→</span>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono ${
+                                t.state === "calling"
+                                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/35"
+                                  : t.state === "error"
+                                  ? "bg-rose-500/15 text-rose-500 border-rose-500/35"
+                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                              }`}
+                            >
+                              {t.state === "calling" ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                              <span>
+                                {idx + 2}. {t.tool || "Tool"}
+                              </span>
+                            </span>
+                          </React.Fragment>
+                        ))}
+                        <span className="text-neutral-400 text-[10px]">→</span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono ${
+                            isCurrentlyRunning
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/35"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                          }`}
+                        >
+                          {isCurrentlyRunning ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                          <span>{allToolItems.length + 2}. Chốt câu trả lời cuối</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Stage 3: Đang làm được gì (Executed Tools & Intermediate Results) */}
+                    <div
+                      data-testid="solo-flow-stage-3-progress"
+                      className="rounded-xl bg-slate-50 dark:bg-[#14141c] border border-slate-200 dark:border-[#22222e] p-3 text-xs font-sans space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-800 dark:text-neutral-100">
+                          <span className="h-4 w-4 rounded-md bg-amber-500/15 border border-amber-500/40 text-amber-500 flex items-center justify-center text-[10px] font-bold">
+                            3
+                          </span>
+                          <span>Đang làm được gì (Suy luận & Kết quả công cụ)</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-neutral-400">
+                          {reasoningItems.length} suy luận · {allToolItems.length} công cụ
+                        </span>
+                      </div>
+
+                      {reasoningItems.map((r, rIdx) => {
+                        const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
+                        const estimatedSec = Math.max(1, Math.round(wordCount / 18));
+                        return (
+                          <div
+                            key={rIdx}
+                            className="rounded-xl bg-white dark:bg-[#181824] border border-slate-200/80 dark:border-[#252536] p-2.5 text-xs font-sans space-y-1"
+                          >
+                            <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[10px]">
+                              <Sparkles size={11} className="text-[#f8a87c]" />
+                              <span className="font-semibold">
+                                Suy luận #{rIdx + 1} · {displayAgent} (~{estimatedSec}s · {wordCount} từ)
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap break-words">
+                              {renderInlineMarkdown(r.text || "")}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {allToolItems.map((step, sIdx) => (
+                        <AgentToolCard
+                          key={sIdx}
+                          agentId={msg.senderAgentId || agentId || agentLabel}
+                          toolCall={{
+                            tool: step.tool || "Tool",
+                            args: step.args,
+                            result: step.result,
+                            state: step.state,
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Stage 4: Câu trả lời cuối cùng (Final Deliverable Summary) */}
+                    <div
+                      data-testid="solo-flow-stage-4-final"
+                      className="rounded-xl bg-white dark:bg-[#171723] border border-emerald-500/40 dark:border-emerald-500/30 p-3 text-xs font-sans space-y-1 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                          <Check size={12} />
+                          <span>4. Câu trả lời cuối cùng (Final Response)</span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                          {isCurrentlyRunning ? "Đang hoàn thiện..." : "Đã phản hồi"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed line-clamp-3">
+                        {msg.content
+                          ? stripSharedRoomContext(msg.content)
+                          : `${displayAgent} đang tổng hợp toàn bộ dữ kiện vừa thu thập thành câu trả lời cuối cùng cho bạn...`}
+                      </p>
+                    </div>
+                  </div>
                 )}
             </div>
           )}
@@ -3972,7 +4090,14 @@ export function GrokBotWorkspace() {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState<boolean>(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const cached = sessionStorage.getItem("skyer_user_profile") || localStorage.getItem("skyer_user_profile");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   // Strictly check if current logged in user has ADMIN role.
   // When an authenticated user session exists, their role MUST reflect their real account role.
   // Leftover operatorKey in localStorage must NEVER elevate a regular MEMBER / CUSTOMER session to admin!
@@ -3996,15 +4121,10 @@ export function GrokBotWorkspace() {
       })();
 
   useEffect(() => {
-    getCurrentUserProfile().then((u) => {
-      if (u) {
-        setCurrentUser(u);
-        // If roles is empty, force refresh from backend to ensure Admin permissions are caught
-        if (!u.roles || u.roles.length === 0) {
-          getCurrentUserProfile(true).then((fresh) => {
-            if (fresh) setCurrentUser(fresh);
-          });
-        }
+    // Always validate user profile and roles against backend PostgreSQL on mount/reload
+    getCurrentUserProfile(true).then((fresh) => {
+      if (fresh) {
+        setCurrentUser(fresh);
       }
     });
   }, []);
@@ -6809,14 +6929,13 @@ export function GrokBotWorkspace() {
 
     let sse: EventSource | null = null;
     try {
-      const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
       let sseUrl = `/api/agents/${encodeURIComponent(selectedAgentId)}/chats/${encodeURIComponent(selectedChatId)}/stream`;
       try {
         const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || defaultOpKey;
+        const opKey = !token ? (localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token")) : null;
         const qParams = new URLSearchParams();
         if (token) qParams.set("access_token", token);
-        if (opKey) qParams.set("operatorToken", opKey);
+        else if (opKey) qParams.set("operatorToken", opKey);
         const qStr = qParams.toString();
         if (qStr) sseUrl += `?${qStr}`;
       } catch {}
@@ -9110,12 +9229,12 @@ export function GrokBotWorkspace() {
                           onClick={() => handleSelectAgent(ag)}
                           className={`relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border group shrink-0 ${
                             isSelected
-                              ? "bg-[#1c1c26] border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25 cursor-pointer"
+                              ? "bg-neutral-200/80 dark:bg-[#1c1c26] border-neutral-300 dark:border-[#303042] shadow-xs cursor-pointer"
                               : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#161620] hover:border-transparent cursor-pointer"
                           }`}
                         >
-                        <div className="relative shrink-0 transition-all">
-                          <AgentAvatar agent={ag} size="md" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
+                        <div className="relative shrink-0 flex items-center justify-center transition-all">
+                          <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {pinnedAgentIds.includes(ag.id) && (
                             <span className="absolute -top-1 -left-1 text-amber-400 p-0.5 bg-slate-900/80 dark:bg-black/80 rounded-full ring-1 ring-amber-400/30">
                               <Pin size={8} className="fill-amber-400" />
@@ -11216,44 +11335,174 @@ export function GrokBotWorkspace() {
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
-                      {/* Responding Indicator with Agent Avatar + Animation alongside 3-dots */}
-                      {!msg.content && (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn && (
-                        <button
-                          type="button"
-                          data-testid="active-responding-agent-pill"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerHaptic(12);
-                            handleOpenActiveThinkingModal(msg);
-                          }}
-                          onFocus={() => {
-                            handleOpenActiveThinkingModal(msg);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
-                          title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối Room & chi tiết thực thi công cụ"}
-                          aria-label={activeRespondingAgent?.statusText || "Xem luồng điều phối Room và chi tiết thực thi công cụ"}
-                        >
-                          <div className="relative shrink-0 flex items-center justify-center">
-                            <AgentAvatar
-                              agent={
-                                (msg.senderAgentId && agents.find((a) => a.id === msg.senderAgentId || a.slug === msg.senderAgentId)) ||
-                                (activeRespondingAgent?.id && agents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
-                                selectedAgent
-                              }
-                              size="2xs"
-                              interactive={false}
-                              forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                              className="ring-1 ring-[#f8a87c]/40 animate-pulse"
-                            />
-                            <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                      {/* Native Solo Thinking & Workflow Narrator (1. Chuẩn bị làm gì -> 2. Luồng làm việc -> 3. Đang làm được gì + Inline Receipt -> 4. Câu trả lời cuối) */}
+                      {(() => {
+                        const isTurnActivelyRunning = (isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) && isLastTurn;
+                        const isRoomNarratorTurn = Boolean(
+                          msg.senderAgentId ||
+                          msg.roomReceipt ||
+                          msg.metadata?.receipt ||
+                          msg.turnKind === "host_kickoff" ||
+                          msg.turnKind === "host_progress" ||
+                          msg.turnKind === "synthesis" ||
+                          (activeSessionRoom &&
+                            Array.isArray(activeSessionRoom.participants) &&
+                            activeSessionRoom.participants.some((p) => p.role === "collaborator"))
+                        );
+
+                        const soloSteps = Array.isArray(msg.steps) ? msg.steps : [];
+                        const soloTools =
+                          Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0
+                            ? msg.toolCalls
+                            : soloSteps.filter((s) => s.kind === "tool_call");
+                        const soloReasonList = soloSteps.filter((s) => s.kind === "reasoning" && s.text);
+                        const rawReasonText = (
+                          msg.reasoning ||
+                          soloReasonList.map((r) => r.text || "").join("\n")
+                        ).trim();
+
+                        const showSoloNativeNarration =
+                          !isRoomNarratorTurn &&
+                          (isTurnActivelyRunning || soloTools.length > 0 || rawReasonText.length > 0);
+
+                        if (!showSoloNativeNarration) {
+                          if (!msg.content && isTurnActivelyRunning) {
+                            return (
+                              <button
+                                type="button"
+                                data-testid="active-responding-agent-pill"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerHaptic(12);
+                                  handleOpenActiveThinkingModal(msg);
+                                }}
+                                onFocus={() => handleOpenActiveThinkingModal(msg)}
+                                className="inline-flex items-center justify-center gap-2 px-2.5 py-1.5 rounded-2xl bg-slate-100/90 dark:bg-[#14141c]/95 border border-slate-200/80 dark:border-white/[0.08] hover:border-[#f8a87c]/50 focus:border-[#f8a87c] focus:outline-none transition-all cursor-pointer select-none shadow-2xs group hover:scale-[1.02]"
+                                title={activeRespondingAgent?.statusText || "Bấm hoặc focus để xem luồng điều phối & chi tiết thực thi công cụ"}
+                              >
+                                <div className="relative shrink-0 flex items-center justify-center">
+                                  <AgentAvatar
+                                    agent={selectedAgent}
+                                    size="2xs"
+                                    interactive={false}
+                                    forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
+                                    className="ring-1 ring-[#f8a87c]/40 animate-pulse"
+                                  />
+                                  <span className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-white dark:ring-black animate-ping" />
+                                </div>
+                                <span className="flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                                </span>
+                              </button>
+                            );
+                          }
+                          return null;
+                        }
+
+                        const agentSlugClean = (selectedAgent?.slug || selectedAgent?.id || "gm-boc").replace(/^bot:agent360:/i, "");
+                        const firstReasonSentence = rawReasonText
+                          .replace(/^(?:The user said|According to my activation instructions)[^.\n]*[.\n]\s*/i, "")
+                          .split(/(?<=[.!?\n])\s+/)[0]
+                          ?.trim();
+
+                        const toolNamesList = Array.from(new Set(soloTools.map((t) => t.tool || "công cụ").filter(Boolean)));
+                        const completedToolList = soloTools.filter((t) => t.state !== "calling");
+                        const callingTool = soloTools.find((t) => t.state === "calling");
+
+                        // 1. Beat 1: Đang chuẩn bị làm gì (Intent & Preparation Bubble)
+                        const kickoffIntentText =
+                          firstReasonSentence && firstReasonSentence.length >= 12
+                            ? firstReasonSentence
+                            : toolNamesList.length > 0
+                            ? `Để xử lý yêu cầu này, mình sẽ phân tích ngữ cảnh và kiểm tra dữ liệu qua ${toolNamesList.join(", ")}, sau đó tổng hợp câu trả lời chi tiết cho bạn.`
+                            : `Mình đã tiếp nhận yêu cầu. Để mình phân tích dữ kiện và chuẩn bị câu trả lời chi tiết cho bạn nhé.`;
+
+                        // 2. Beat 2 & 3: Luồng làm việc & Đang làm được gì (Workflow Pipeline & Live Progress Bubble)
+                        let workflowProgressText = "";
+                        if (soloTools.length > 0) {
+                          const pipelineStr = ["Phân tích yêu cầu", ...toolNamesList, "Tổng hợp phản hồi"].join(" → ");
+                          const latestDoneTool = completedToolList[completedToolList.length - 1];
+                          let resultSnippet = "";
+                          if (latestDoneTool?.result) {
+                            const cleanRes = String(latestDoneTool.result).replace(/\s+/g, " ").trim();
+                            resultSnippet = cleanRes.length > 90 ? `${cleanRes.slice(0, 90)}...` : cleanRes;
+                          }
+
+                          if (callingTool || (isTurnActivelyRunning && completedToolList.length < soloTools.length)) {
+                            workflowProgressText = `Luồng làm việc (${pipelineStr}): Đã hoàn tất ${completedToolList.length}/${soloTools.length} bước công cụ, hiện đang thực thi ${callingTool?.tool || toolNamesList[0]} để thu thập dữ kiện...`;
+                          } else {
+                            workflowProgressText = `Luồng làm việc (${pipelineStr}): Mình đã thực thi xong ${soloTools.length}/${soloTools.length} bước công cụ (${toolNamesList.join(", ")})${resultSnippet ? ` và ghi nhận kết quả: ${resultSnippet}` : ""}. Dưới đây là câu trả lời cuối cùng cho bạn.`;
+                          }
+                        } else if (rawReasonText.length > 0) {
+                          workflowProgressText = isTurnActivelyRunning
+                            ? `Luồng làm việc (Phân tích yêu cầu → Suy luận chuyên môn → Chốt phản hồi): Mình đang đối chiếu các dữ kiện để hoàn thiện câu trả lời...`
+                            : `Luồng làm việc (Phân tích yêu cầu → Suy luận chuyên môn → Chốt phản hồi): Mình đã rà soát xong các dữ kiện trọng tâm và gửi bạn câu trả lời ngay dưới đây.`;
+                        }
+
+                        const totalWorkflowSteps = soloTools.length > 0 ? soloTools.length : 1;
+                        const receiptLabelPrefix =
+                          isTurnActivelyRunning && !msg.content
+                            ? `Running ${totalWorkflowSteps} workflow ${totalWorkflowSteps === 1 ? "step" : "steps"} with`
+                            : soloTools.length > 0
+                            ? `Executed ${soloTools.length} ${soloTools.length === 1 ? "tool step" : "tool steps"} with`
+                            : `Completed workflow with`;
+
+                        return (
+                          <div
+                            data-testid="solo-native-workflow-narrator"
+                            className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%] space-y-1"
+                          >
+                            {/* Beat 1 Bubble: Chuẩn bị làm gì */}
+                            <div
+                              data-testid="solo-kickoff-intent-bubble"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenActiveThinkingModal(msg);
+                              }}
+                              className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-700 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-300 text-[14.5px] sm:text-[15px] leading-relaxed cursor-pointer hover:border-[#f8a87c]/40 transition-colors"
+                            >
+                              {kickoffIntentText}
+                            </div>
+
+                            {/* Beat 2 & 3 Bubble: Luồng làm việc & Đang làm được gì */}
+                            {workflowProgressText && (
+                              <div
+                                data-testid="solo-progress-status-bubble"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenActiveThinkingModal(msg);
+                                }}
+                                className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-700 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-300 text-[14.5px] sm:text-[15px] leading-relaxed cursor-pointer hover:border-[#f8a87c]/40 transition-colors"
+                              >
+                                {workflowProgressText}
+                              </div>
+                            )}
+
+                            {/* Native Inline Workflow Receipt right-aligned below progress bubble */}
+                            <button
+                              type="button"
+                              data-testid="solo-inline-receipt-steps"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerHaptic(12);
+                                handleOpenActiveThinkingModal(msg);
+                              }}
+                              title="Bấm để mở xem chi tiết 4 chặng: Chuẩn bị, Luồng làm việc, Kết quả công cụ & Phản hồi cuối"
+                              className="flex flex-wrap items-center justify-end self-end gap-1 text-[11px] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 mt-0.5 mb-0.5 px-1.5 py-0.5 rounded-full hover:bg-slate-100/80 dark:hover:bg-white/[0.05] transition-colors cursor-pointer select-none"
+                            >
+                              {isTurnActivelyRunning && !msg.content && (
+                                <Loader2 size={10} className="animate-spin text-[#f8a87c] mr-0.5" />
+                              )}
+                              <span>{receiptLabelPrefix}</span>
+                              <span className="pointer-events-none inline-flex items-center">
+                                {renderAgentMentionChip(agentSlugClean, selectedAgent?.name, "inline")}
+                              </span>
+                            </button>
                           </div>
-                          <span className="flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
-                          </span>
-                        </button>
-                      )}
+                        );
+                      })()}
 
                       {(msg.content || parsedAttachments.length > 0) && (
                         <>
@@ -11504,34 +11753,65 @@ export function GrokBotWorkspace() {
 
           return (
             <div
-              className="hidden lg:flex absolute right-2.5 top-1/2 -translate-y-1/2 z-30 flex-col items-end select-none"
-              onMouseLeave={() => {
+              className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 z-30 flex-col items-end select-none pl-6 pr-1 py-3"
+              onPointerLeave={() => {
                 setHoveredTraceIdx(null);
                 setTraceCardPos(null);
               }}
+              onPointerMove={(e) => {
+                // Smoothly pick the closest tick based on mouse Y coordinate
+                const tickNodes = Array.from(e.currentTarget.querySelectorAll("[data-trace-tick-idx]"));
+                if (tickNodes.length === 0) return;
+                const mouseY = e.clientY;
+                let closestIdx: number | null = null;
+                let minDist = Infinity;
+                tickNodes.forEach((node) => {
+                  const r = node.getBoundingClientRect();
+                  const centerY = r.top + r.height / 2;
+                  const dist = Math.abs(mouseY - centerY);
+                  if (dist < minDist) {
+                    minDist = dist;
+                    closestIdx = Number((node as HTMLElement).dataset.traceTickIdx);
+                  }
+                });
+                if (closestIdx !== null && closestIdx !== hoveredTraceIdx && minDist < 28) {
+                  setHoveredTraceIdx(closestIdx);
+                  if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+                }
+              }}
             >
               {/* Ticks waveform stack: centered vertically, hugging right edge */}
-              <div className="flex flex-col items-end gap-[6px] py-2 px-1 max-h-[70vh] overflow-visible select-none">
+              <div className="flex flex-col items-end gap-[5px] py-1 px-1 max-h-[75vh] overflow-visible select-none">
                 {userTurns.map((turn: { msg: ChatMessage; originalIdx: number }, tIdx: number) => {
                   const isHovered = hoveredTraceIdx === tIdx;
                   const isCurrentActive = activeTraceIdx === tIdx;
                   const isBookmarked = starredMsgIds.includes(turn.msg.id);
-                  let widthClass = "w-2";
+                  // Smooth gaussian-like width expansion in pixels for fluid cursor tracking
+                  let tickWidth = 8; // default rest width in px
                   if (hoveredTraceIdx !== null) {
                     const dist = Math.abs(hoveredTraceIdx - tIdx);
-                    if (dist === 0) widthClass = "w-7";
-                    else if (dist === 1) widthClass = "w-5";
-                    else if (dist === 2) widthClass = "w-4";
-                    else if (dist === 3) widthClass = "w-3";
-                    else widthClass = "w-2";
+                    if (dist === 0) tickWidth = 32;
+                    else if (dist === 1) tickWidth = 22;
+                    else if (dist === 2) tickWidth = 16;
+                    else if (dist === 3) tickWidth = 12;
+                    else if (dist === 4) tickWidth = 10;
+                    else tickWidth = 8;
                   }
 
                   return (
-                    <div key={turn.msg.id || tIdx} className="relative flex items-center justify-end">
+                    <div
+                      key={turn.msg.id || tIdx}
+                      className="relative flex items-center justify-end py-[2px] group/tick cursor-pointer"
+                      onPointerEnter={() => {
+                        setHoveredTraceIdx(tIdx);
+                        if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+                      }}
+                      onClick={() => scrollToUserTurn(tIdx)}
+                    >
                       {/* Clean minimal tooltip positioned directly relative to this tick item */}
                       {isHovered && (
                         <div
-                          className="absolute right-full mr-2.5 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
+                          className="absolute right-full mr-3 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
                         >
                           <span className="font-mono text-[11px] text-[#e0682b] dark:text-[#f8a87c] font-bold shrink-0">
                             #{tIdx + 1}
@@ -11546,19 +11826,15 @@ export function GrokBotWorkspace() {
                         data-trace-tick-idx={tIdx}
                         type="button"
                         aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
-                        onMouseEnter={() => {
-                          setHoveredTraceIdx(tIdx);
-                          if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
-                        }}
-                        onClick={() => scrollToUserTurn(tIdx)}
-                        className={`h-[2.5px] rounded-full transition-all duration-200 cursor-pointer ${widthClass} ${
+                        style={{ width: `${tickWidth}px` }}
+                        className={`h-[3px] rounded-full transition-[width,background-color,transform,box-shadow] duration-150 ease-out cursor-pointer pointer-events-auto ${
                           isHovered
-                            ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.3)] dark:shadow-[0_0_8px_rgba(255,255,255,0.85)] scale-y-125"
+                            ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.35)] dark:shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-y-125"
                             : isBookmarked
                             ? "bg-amber-500/90 dark:bg-amber-400/80 hover:bg-amber-600 dark:hover:bg-amber-300"
                             : isCurrentActive
                             ? "bg-slate-700 dark:bg-white/80 shadow-[0_0_4px_rgba(0,0,0,0.2)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]"
-                            : "bg-neutral-300 hover:bg-neutral-500 dark:bg-neutral-600/70 dark:hover:bg-neutral-300"
+                            : "bg-neutral-300/85 hover:bg-neutral-600 dark:bg-neutral-600/75 dark:hover:bg-neutral-200"
                         }`}
                       />
                     </div>
