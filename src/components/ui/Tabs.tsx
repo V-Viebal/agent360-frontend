@@ -15,6 +15,7 @@ export interface TabsProps<T extends string = string> {
   size?: "sm" | "md";
   className?: string;
   variant?: "pill" | "underline";
+  themeColor?: string;
 }
 
 export function Tabs<T extends string = string>({
@@ -24,6 +25,7 @@ export function Tabs<T extends string = string>({
   size = "md",
   className = "",
   variant = "pill",
+  themeColor,
 }: TabsProps<T>) {
   const isSm = size === "sm";
 
@@ -107,11 +109,22 @@ export function Tabs<T extends string = string>({
               onChange(tab.id);
             }}
             onKeyDown={(e) => handleKeyDown(e, idx)}
+            style={
+              isActive && themeColor
+                ? {
+                    backgroundColor: `${themeColor}26`,
+                    borderColor: `${themeColor}59`,
+                    color: themeColor,
+                  }
+                : undefined
+            }
             className={`flex items-center justify-center gap-1.5 rounded-md transition-all cursor-pointer font-medium shrink-0 whitespace-nowrap text-nowrap [text-wrap:nowrap] ${
               isSm ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-xs"
             } ${
               isActive
-                ? "bg-[#f8a87c]/20 text-[#f8a87c] dark:text-[#f8a87c] font-semibold border border-[#f8a87c]/30 shadow-xs"
+                ? !themeColor
+                  ? "bg-[#f8a87c]/20 text-[#f8a87c] dark:text-[#f8a87c] font-semibold border border-[#f8a87c]/30 shadow-xs"
+                  : "font-semibold border shadow-xs"
                 : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
             }`}
           >
@@ -119,8 +132,16 @@ export function Tabs<T extends string = string>({
             <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
+                style={
+                  isActive && themeColor
+                    ? {
+                        backgroundColor: `${themeColor}33`,
+                        color: themeColor,
+                      }
+                    : undefined
+                }
                 className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
-                  isActive ? "bg-[#f8a87c]/25 text-[#f8a87c] font-bold" : "bg-white/10 text-neutral-400"
+                  isActive ? (!themeColor ? "bg-[#f8a87c]/25 text-[#f8a87c] font-bold" : "font-bold") : "bg-white/10 text-neutral-400"
                 }`}
               >
                 {tab.count}

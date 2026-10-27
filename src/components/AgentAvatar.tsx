@@ -102,27 +102,37 @@ export const BLOB_COLOR_THEMES: Record<
     borderDark: string;
   }
 > = {
-  "#f8a87c": { primary: "#f8a87c", bubbleBg: "#d45c15", textOnPastel: "#1e1e24", light: "#b44808", dark: "#f8a87c", bgLight: "rgba(248,168,124,0.18)", bgDark: "rgba(248,168,124,0.22)", borderLight: "rgba(248,168,124,0.45)", borderDark: "rgba(248,168,124,0.35)" },
-  "#38bdf8": { primary: "#38bdf8", bubbleBg: "#0284c7", textOnPastel: "#0c1824", light: "#0369a1", dark: "#38bdf8", bgLight: "rgba(56,189,248,0.18)", bgDark: "rgba(56,189,248,0.22)", borderLight: "rgba(56,189,248,0.45)", borderDark: "rgba(56,189,248,0.35)" },
-  "#34d399": { primary: "#34d399", bubbleBg: "#059669", textOnPastel: "#062215", light: "#047857", dark: "#34d399", bgLight: "rgba(52,211,153,0.18)", bgDark: "rgba(52,211,153,0.22)", borderLight: "rgba(52,211,153,0.45)", borderDark: "rgba(52,211,153,0.35)" },
-  "#a78bfa": { primary: "#a78bfa", bubbleBg: "#7c3aed", textOnPastel: "#171224", light: "#6d28d9", dark: "#a78bfa", bgLight: "rgba(167,139,250,0.18)", bgDark: "rgba(167,139,250,0.22)", borderLight: "rgba(167,139,250,0.45)", borderDark: "rgba(167,139,250,0.35)" },
-  "#fb7185": { primary: "#fb7185", bubbleBg: "#e11d48", textOnPastel: "#211116", light: "#be123c", dark: "#fb7185", bgLight: "rgba(251,113,133,0.18)", bgDark: "rgba(251,113,133,0.22)", borderLight: "rgba(251,113,133,0.45)", borderDark: "rgba(251,113,133,0.35)" },
-  "#fbbf24": { primary: "#fbbf24", bubbleBg: "#d97706", textOnPastel: "#241a06", light: "#b45309", dark: "#fbbf24", bgLight: "rgba(251,191,36,0.18)", bgDark: "rgba(251,191,36,0.22)", borderLight: "rgba(251,191,36,0.45)", borderDark: "rgba(251,191,36,0.35)" },
-  "#2dd4bf": { primary: "#2dd4bf", bubbleBg: "#0d9488", textOnPastel: "#04201c", light: "#0f766e", dark: "#2dd4bf", bgLight: "rgba(45,212,191,0.18)", bgDark: "rgba(45,212,191,0.22)", borderLight: "rgba(45,212,191,0.45)", borderDark: "rgba(45,212,191,0.35)" },
-  "#a3e635": { primary: "#a3e635", bubbleBg: "#65a30d", textOnPastel: "#151e0d", light: "#4d7c0f", dark: "#a3e635", bgLight: "rgba(163,230,53,0.18)", bgDark: "rgba(163,230,53,0.22)", borderLight: "rgba(163,230,53,0.45)", borderDark: "rgba(163,230,53,0.35)" },
-  "#f472b6": { primary: "#f472b6", bubbleBg: "#db2777", textOnPastel: "#261620", light: "#be185d", dark: "#f472b6", bgLight: "rgba(244,114,182,0.18)", bgDark: "rgba(244,114,182,0.22)", borderLight: "rgba(244,114,182,0.45)", borderDark: "rgba(244,114,182,0.35)" },
-  "#60a5fa": { primary: "#60a5fa", bubbleBg: "#2563eb", textOnPastel: "#0d1b2a", light: "#1d4ed8", dark: "#60a5fa", bgLight: "rgba(96,165,250,0.18)", bgDark: "rgba(96,165,250,0.22)", borderLight: "rgba(96,165,250,0.45)", borderDark: "rgba(96,165,250,0.35)" },
-  "#c084fc": { primary: "#c084fc", bubbleBg: "#9333ea", textOnPastel: "#1d1125", light: "#7e22ce", dark: "#c084fc", bgLight: "rgba(192,132,252,0.18)", bgDark: "rgba(192,132,252,0.22)", borderLight: "rgba(192,132,252,0.45)", borderDark: "rgba(192,132,252,0.35)" },
-  "#4ade80": { primary: "#4ade80", bubbleBg: "#16a34a", textOnPastel: "#092212", light: "#15803d", dark: "#4ade80", bgLight: "rgba(74,222,128,0.18)", bgDark: "rgba(74,222,128,0.22)", borderLight: "rgba(74,222,128,0.45)", borderDark: "rgba(74,222,128,0.35)" },
+  "#f8a87c": { primary: "#f8a87c", bubbleBg: "#f8a87c", textOnPastel: "#1e1e24", light: "#c2540a", dark: "#f8a87c", bgLight: "rgba(248,168,124,0.18)", bgDark: "rgba(248,168,124,0.22)", borderLight: "rgba(248,168,124,0.45)", borderDark: "rgba(248,168,124,0.35)" },
+  "#38bdf8": { primary: "#38bdf8", bubbleBg: "#38bdf8", textOnPastel: "#0c1824", light: "#0284c7", dark: "#38bdf8", bgLight: "rgba(56,189,248,0.18)", bgDark: "rgba(56,189,248,0.22)", borderLight: "rgba(56,189,248,0.45)", borderDark: "rgba(56,189,248,0.35)" },
+  "#34d399": { primary: "#34d399", bubbleBg: "#34d399", textOnPastel: "#062215", light: "#059669", dark: "#34d399", bgLight: "rgba(52,211,153,0.18)", bgDark: "rgba(52,211,153,0.22)", borderLight: "rgba(52,211,153,0.45)", borderDark: "rgba(52,211,153,0.35)" },
+  "#a78bfa": { primary: "#a78bfa", bubbleBg: "#a78bfa", textOnPastel: "#171224", light: "#7c3aed", dark: "#a78bfa", bgLight: "rgba(167,139,250,0.18)", bgDark: "rgba(167,139,250,0.22)", borderLight: "rgba(167,139,250,0.45)", borderDark: "rgba(167,139,250,0.35)" },
+  "#fb7185": { primary: "#fb7185", bubbleBg: "#fb7185", textOnPastel: "#211116", light: "#e11d48", dark: "#fb7185", bgLight: "rgba(251,113,133,0.18)", bgDark: "rgba(251,113,133,0.22)", borderLight: "rgba(251,113,133,0.45)", borderDark: "rgba(251,113,133,0.35)" },
+  "#fbbf24": { primary: "#fbbf24", bubbleBg: "#fbbf24", textOnPastel: "#241a06", light: "#d97706", dark: "#fbbf24", bgLight: "rgba(251,191,36,0.18)", bgDark: "rgba(251,191,36,0.22)", borderLight: "rgba(251,191,36,0.45)", borderDark: "rgba(251,191,36,0.35)" },
+  "#2dd4bf": { primary: "#2dd4bf", bubbleBg: "#2dd4bf", textOnPastel: "#04201c", light: "#0d9488", dark: "#2dd4bf", bgLight: "rgba(45,212,191,0.18)", bgDark: "rgba(45,212,191,0.22)", borderLight: "rgba(45,212,191,0.45)", borderDark: "rgba(45,212,191,0.35)" },
+  "#a3e635": { primary: "#a3e635", bubbleBg: "#a3e635", textOnPastel: "#151e0d", light: "#65a30d", dark: "#a3e635", bgLight: "rgba(163,230,53,0.18)", bgDark: "rgba(163,230,53,0.22)", borderLight: "rgba(163,230,53,0.45)", borderDark: "rgba(163,230,53,0.35)" },
+  "#f472b6": { primary: "#f472b6", bubbleBg: "#f472b6", textOnPastel: "#261620", light: "#db2777", dark: "#f472b6", bgLight: "rgba(244,114,182,0.18)", bgDark: "rgba(244,114,182,0.22)", borderLight: "rgba(244,114,182,0.45)", borderDark: "rgba(244,114,182,0.35)" },
+  "#60a5fa": { primary: "#60a5fa", bubbleBg: "#60a5fa", textOnPastel: "#0d1b2a", light: "#2563eb", dark: "#60a5fa", bgLight: "rgba(96,165,250,0.18)", bgDark: "rgba(96,165,250,0.22)", borderLight: "rgba(96,165,250,0.45)", borderDark: "rgba(96,165,250,0.35)" },
+  "#c084fc": { primary: "#c084fc", bubbleBg: "#c084fc", textOnPastel: "#1d1125", light: "#9333ea", dark: "#c084fc", bgLight: "rgba(192,132,252,0.18)", bgDark: "rgba(192,132,252,0.22)", borderLight: "rgba(192,132,252,0.45)", borderDark: "rgba(192,132,252,0.35)" },
+  "#4ade80": { primary: "#4ade80", bubbleBg: "#4ade80", textOnPastel: "#092212", light: "#16a34a", dark: "#4ade80", bgLight: "rgba(74,222,128,0.18)", bgDark: "rgba(74,222,128,0.22)", borderLight: "rgba(74,222,128,0.45)", borderDark: "rgba(74,222,128,0.35)" },
 };
 
 export function getAgentColorTheme(agentId: string = "", name: string = "", roleTag: string = "") {
   const cfg = getAgentAvatarConfig(agentId);
-  if (cfg?.blob?.color && BLOB_COLOR_THEMES[cfg.blob.color]) {
-    return BLOB_COLOR_THEMES[cfg.blob.color];
+  const colorKey = cfg?.blob?.color || getAgentBlobProfile(agentId, name, roleTag).color;
+  if (colorKey && BLOB_COLOR_THEMES[colorKey]) {
+    return BLOB_COLOR_THEMES[colorKey];
   }
-  const defaultBlob = getAgentBlobProfile(agentId, name, roleTag);
-  return BLOB_COLOR_THEMES[defaultBlob.color] || BLOB_COLOR_THEMES["#f8a87c"];
+  return {
+    primary: colorKey || "#f8a87c",
+    bubbleBg: colorKey || "#f8a87c",
+    textOnPastel: "#1e1e24",
+    light: "#c2540a",
+    dark: colorKey || "#f8a87c",
+    bgLight: "rgba(248,168,124,0.18)",
+    bgDark: "rgba(248,168,124,0.22)",
+    borderLight: "rgba(248,168,124,0.45)",
+    borderDark: "rgba(248,168,124,0.35)",
+  };
 }
 
 

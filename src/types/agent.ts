@@ -119,6 +119,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  textSegments?: string[];
   replyTo?: ReplyToMessageInfo;
   reactions?: string[];
   reasoning?: string;

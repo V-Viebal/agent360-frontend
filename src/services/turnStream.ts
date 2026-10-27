@@ -115,8 +115,12 @@ export class TurnAccumulator {
     }
   }
 
+  get textSegments(): string[] {
+    return this.textOrder.map((id) => (this.textById.get(id) || "").trim()).filter(Boolean);
+  }
+
   get text(): string {
-    return this.textOrder.map((id) => (this.textById.get(id) || "").trim()).filter(Boolean).join("\n\n");
+    return this.textSegments.join("\n\n");
   }
 
   snapshot(base: Partial<ChatMessage> = {}): ChatMessage {
@@ -131,13 +135,15 @@ export class TurnAccumulator {
       }
     }
     const reasoning = steps.filter((s) => s.kind === "reasoning").map((s) => s.text).join("\n");
+    const segs = this.textSegments;
     return {
       id: this.messageId,
       role: "assistant",
       timestamp: new Date().toISOString(),
       evidenceStatus: "observed",
       ...base,
-      content: this.text,
+      content: segs.join("\n\n"),
+      textSegments: segs.length > 0 ? segs : undefined,
       reasoning,
       steps,
       toolCalls: steps.filter((s) => s.kind === "tool_call").map(({ kind, text, ...t }) => t as ToolCallItem),
