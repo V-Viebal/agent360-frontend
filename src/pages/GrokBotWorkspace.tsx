@@ -3857,8 +3857,55 @@ function isCoarseTouchDevice(): boolean {
   return isSmallScreen || (hasCoarse && !hasFine);
 }
 
+
+function parseChatTimestamp(ts?: string): Date | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (!isNaN(d.getTime())) return d;
+  const m = String(ts).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (m) {
+    let hours = parseInt(m[1], 10);
+    const minutes = parseInt(m[2], 10);
+    const meridiem = m[3]?.toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    const now = new Date();
+    now.setHours(hours, minutes, 0, 0);
+    return now;
+  }
+  return null;
+}
+
+function formatChatTimestampDivider(ts?: string, lang: string = "vi"): string {
+  const d = parseChatTimestamp(ts);
+  if (!d) return ts ? String(ts) : "";
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+
+  const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+  if (isToday) {
+    return lang === "vi" ? `Hôm nay ${timeStr}` : `Today ${timeStr}`;
+  }
+  if (isYesterday) {
+    return lang === "vi" ? `Hôm qua ${timeStr}` : `Yesterday ${timeStr}`;
+  }
+  return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${timeStr}`;
+}
+
+function shouldShowChatTimestampDivider(prevTs?: string, currTs?: string): boolean {
+  if (!currTs) return false;
+  if (!prevTs) return true;
+  const d1 = parseChatTimestamp(prevTs);
+  const d2 = parseChatTimestamp(currTs);
+  if (!d1 || !d2) return false;
+  return Math.abs(d2.getTime() - d1.getTime()) >= 15 * 60 * 1000;
+}
+
 export function GrokBotWorkspace() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { agentParam, chatParam } = useParams<{ agentParam?: string; chatParam?: string }>();
   const navigate = useNavigate();
   const [agents, setAgents] = useState<InfraAgent[]>([]);
@@ -3882,16 +3929,12 @@ export function GrokBotWorkspace() {
       return "";
     }
   });
-  // Agent-scoped loads only run for an id that exists in the real fleet (stale/unknown ids would 404 on every API).
-  // While fleet is still initializing (isLoadingAgents === true), allow candidate IDs so initial fetch starts eagerly.
+  // Agent-scoped loads only run for an id that exists in the user's verified owned/assigned fleet.
+  // NEVER allow loading chats, MCPs, or messages before `agents` is verified from the backend!
   const isKnownAgent = (id: string | null | undefined) => {
-    if (!id) return false;
+    if (!id || agents.length === 0) return false;
     const bare = id.replace(/^bot:agent360:/i, "").toLowerCase();
-    if (agents.length === 0) {
-      // During initial bootstrap, accept valid-format agent identifiers (e.g. from URL route /app/:agentParam)
-      return bare.length > 0 && !/^bot:agent360:(swe-lead|sre-sentinel|qa-vision|kb-researcher)$/i.test(id);
-    }
-    return agents.some((a) => a.id === id || a.slug === bare || a.id.toLowerCase() === `bot:agent360:${bare}`);
+    return agents.some((a) => a.id === id || a.slug === bare || (a.id || "").toLowerCase() === `bot:agent360:${bare}` || (a.slug || "").toLowerCase() === bare);
   };
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -4261,12 +4304,21 @@ export function GrokBotWorkspace() {
           setSelectedAgentId(matched.id);
           try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
         }
+      } else {
+        // User tried to navigate to an unowned agent URL -> redirect back to /app or their first owned agent
+        const fallback = agents[0];
+        if (fallback) {
+          setSelectedAgentId(fallback.id);
+          navigate(`/app/${fallback.slug || fallback.id}`, { replace: true });
+        } else {
+          navigate("/app", { replace: true });
+        }
       }
     }
   }, [agentParam, agents.length]);
 
   useEffect(() => {
-    if (chatParam && chatParam !== selectedChatId) {
+    if (chatParam && chatParam !== selectedChatId && isKnownAgent(selectedAgentId)) {
       setSelectedChatId(chatParam);
       try {
         localStorage.setItem("agent360_last_chat_id", chatParam);
@@ -4275,7 +4327,7 @@ export function GrokBotWorkspace() {
         }
       } catch {}
     }
-  }, [chatParam, selectedAgentId]);
+  }, [chatParam, selectedAgentId, agents.length]);
 
   // Rightmost bot info tab: 'Computer' | 'Details' | 'Library'
   const [rightTab, setRightTab] = useState<"Details" | "Computer" | "Library">("Details");
@@ -6589,6 +6641,36 @@ export function GrokBotWorkspace() {
         });
       } catch {}
 
+      // Strictly purge any cached chats/messages for agents NOT in the user's owned `loadedAgents` list
+      try {
+        const ownedSlugs = new Set(
+          loadedAgents.flatMap((a: any) => {
+            const slug = (a.slug || a.id || "").replace(/^bot:agent360:/i, "").toLowerCase();
+            return [slug, (a.id || "").toLowerCase(), `bot:agent360:${slug}`];
+          })
+        );
+        for (const store of [sessionStorage, localStorage]) {
+          const keysToPurge: string[] = [];
+          for (let i = 0; i < store.length; i++) {
+            const k = store.key(i);
+            if (!k) continue;
+            if (k.startsWith("agent360_chats_cache_")) {
+              const rem = k.slice("agent360_chats_cache_".length);
+              const cachedSlug = (rem.includes(":") ? rem.split(":").pop()! : rem).replace(/^bot:agent360:/i, "").toLowerCase();
+              if (!ownedSlugs.has(cachedSlug)) keysToPurge.push(k);
+            } else if (k.startsWith("agent360_msgcache_")) {
+              const parts = k.slice("agent360_msgcache_".length).split(":");
+              const cachedPrefix = (parts.length >= 3 ? parts[1] : parts[0]).replace(/^bot:agent360:/i, "").toLowerCase();
+              if (!ownedSlugs.has(cachedPrefix)) keysToPurge.push(k);
+            } else if (k.startsWith("agent360_last_chat_")) {
+              const cachedSlug = k.slice("agent360_last_chat_".length).replace(/^bot:agent360:/i, "").toLowerCase();
+              if (!ownedSlugs.has(cachedSlug)) keysToPurge.push(k);
+            }
+          }
+          for (const k of keysToPurge) store.removeItem(k);
+        }
+      } catch {}
+
       if (loadedAgents.length > 0) {
         // Route param /app/:agentParam wins, then ?agent= (query param), then localStorage
         let queryAgent = "";
@@ -6604,6 +6686,24 @@ export function GrokBotWorkspace() {
         try {
           localStorage.setItem("agent360_last_agent_id", targetId);
         } catch {}
+      } else {
+        // User has 0 assigned agents: clear selectedAgentId, selectedChatId, chats, messages, and clean URL to /app
+        setSelectedAgentId("");
+        setSelectedChatId("");
+        setChats([]);
+        setChatsAgentId("");
+        setMessages([]);
+        setAgentRecentSessions({});
+        setUnreadCompletedSessions({});
+        try {
+          localStorage.removeItem("agent360_last_agent_id");
+          localStorage.removeItem("agent360_last_chat_id");
+          localStorage.removeItem("agent360_recent_sessions_map");
+          localStorage.removeItem("agent360_unread_sessions");
+        } catch {}
+        if (window.location.pathname !== "/app") {
+          navigate("/app", { replace: true });
+        }
       }
     }
     initData();
@@ -6676,7 +6776,15 @@ export function GrokBotWorkspace() {
 
   // Fetch agent-specific chats whenever selectedAgentId changes
   useEffect(() => {
-    if (!isKnownAgent(selectedAgentId)) return;
+    if (!isKnownAgent(selectedAgentId)) {
+      if (!isLoadingAgents) {
+        setChats([]);
+        setChatsAgentId("");
+        setSelectedChatId("");
+        setMessages([]);
+      }
+      return;
+    }
     let cancelled = false;
     const currentAgent = selectedAgentId;
 
@@ -6830,7 +6938,7 @@ export function GrokBotWorkspace() {
 
   // A restored chat id may belong to another agent (or be gone); only load chats in this agent's real list.
   // Client-created sessions (session-*) are not in the server list yet and are allowed.
-  const selectedChatKnown = !!selectedChatId && (
+  const selectedChatKnown = !!selectedChatId && isKnownAgent(selectedAgentId) && (
     selectedChatId.startsWith("session-") ||
     chats.some((c) => c.id === selectedChatId || c.session_id === selectedChatId) ||
     Boolean(chatParam && chatParam === selectedChatId)
@@ -8007,6 +8115,7 @@ export function GrokBotWorkspace() {
 
   // New Chat session with Optimistic Insertion and Instant UI Feedback
   const handleNewChat = () => {
+    if (hasNoAgents || !selectedAgent?.id || !isKnownAgent(selectedAgent.id)) return;
     const timestamp = Date.now();
     const newChatId = `session-${timestamp.toString().slice(-6)}`;
     const newSession: AgentSession = {
@@ -11226,16 +11335,29 @@ export function GrokBotWorkspace() {
               );
               const prevMsg = mIdx > 0 ? displayMessages[mIdx - 1] : null;
               const isConsecutiveAssistant = !isUser && prevMsg && prevMsg.role === "assistant";
+              const showTimestampDivider = shouldShowChatTimestampDivider(prevMsg?.timestamp, msg.timestamp);
+              const formattedDividerTime = showTimestampDivider ? formatChatTimestampDivider(msg.timestamp, language) : null;
+
               return (
-                <div
-                  key={msg.id}
-                  id={`chat-msg-${msg.id}`}
-                  className={`flex flex-col w-full group/msg ${
-                    isConsecutiveAssistant
-                      ? "-mt-2 sm:-mt-2.5 space-y-0.5"
-                      : "space-y-1"
-                  } ${isUser ? "items-end" : "items-start"}`}
-                >
+                <React.Fragment key={msg.id}>
+                  {showTimestampDivider && formattedDividerTime && (
+                    <div
+                      data-testid={`chat-timestamp-divider-${msg.id}`}
+                      className="w-full flex items-center justify-center my-3 sm:my-4 select-none pointer-events-none"
+                    >
+                      <span className="text-[11px] sm:text-[11.5px] font-sans text-neutral-400 dark:text-neutral-500 font-normal tracking-tight px-3 py-1">
+                        {formattedDividerTime}
+                      </span>
+                    </div>
+                  )}
+                  <div
+                    id={`chat-msg-${msg.id}`}
+                    className={`flex flex-col w-full group/msg ${
+                      isConsecutiveAssistant
+                        ? "-mt-2 sm:-mt-2.5 space-y-0.5"
+                        : "space-y-1"
+                    } ${isUser ? "items-end" : "items-start"}`}
+                  >
                   {/* If user message: Clean right-aligned bubble, shrink to fit content */}
                   {isUser ? (
                     <div
@@ -11656,6 +11778,7 @@ export function GrokBotWorkspace() {
                     </div>
                   )}
                 </div>
+                </React.Fragment>
               );
             })
           )}

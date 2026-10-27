@@ -37,17 +37,19 @@ async function waitForCredential(maxMs: number): Promise<void> {
 }
 
 export function getAuthHeaders(agentId?: string): Record<string, string> {
-  const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
   let token = "";
   let opToken = "";
   try {
     token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
-    opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || defaultOpKey;
+    if (!token) {
+      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || "";
+    }
   } catch {}
 
   const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  if (opToken) {
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  } else if (opToken) {
     headers["X-Agent360-Operator-Token"] = opToken;
     headers["X-Operator-Token"] = opToken;
   }
@@ -170,37 +172,66 @@ export async function markChatAsRead(chatId: string, agentId?: string): Promise<
 
 const _agentChatsCache = new Map<string, { data: AgentSession[]; timestamp: number }>();
 
-export function updateCachedAgentChatsRead(agentId?: string): void {
+export function getCurrentCacheUserScope(): string {
+  try {
+    if (typeof window === "undefined") return "anon";
+    const profileRaw = sessionStorage.getItem("skyer_user_profile") || localStorage.getItem("skyer_user_profile");
+    if (profileRaw) {
+      const parsed = JSON.parse(profileRaw);
+      if (parsed?.sub) return String(parsed.sub).trim();
+    }
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    if (token && token.includes(".")) {
+      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      if (payload?.sub) return String(payload.sub).trim();
+    }
+    const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token");
+    if (opKey) return "operator";
+  } catch {}
+  return "anon";
+}
+
+function getScopedChatsCacheKey(agentId?: string): string {
   const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
-  const cached = _agentChatsCache.get(cleanAgentId);
+  const scope = getCurrentCacheUserScope();
+  return `${scope}:${cleanAgentId}`;
+}
+
+export function updateCachedAgentChatsRead(agentId?: string): void {
+  const scopedKey = getScopedChatsCacheKey(agentId);
+  const cached = _agentChatsCache.get(scopedKey);
   if (cached && Array.isArray(cached.data)) {
     cached.data = cached.data.map((c) => ({ ...c, unread: false }));
-    _agentChatsCache.set(cleanAgentId, cached);
+    _agentChatsCache.set(scopedKey, cached);
   }
   try {
-    const raw = sessionStorage.getItem(`agent360_chats_cache_${cleanAgentId}`);
+    const raw = sessionStorage.getItem(`agent360_chats_cache_${scopedKey}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        sessionStorage.setItem(`agent360_chats_cache_${cleanAgentId}`, JSON.stringify(parsed.map((c: any) => ({ ...c, unread: false }))));
+        const updated = JSON.stringify(parsed.map((c: any) => ({ ...c, unread: false })));
+        sessionStorage.setItem(`agent360_chats_cache_${scopedKey}`, updated);
+        localStorage.setItem(`agent360_chats_cache_${scopedKey}`, updated);
       }
     }
   } catch {}
 }
 
 export function getCachedAgentChats(agentId?: string): AgentSession[] | null {
-  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
-  const cached = _agentChatsCache.get(cleanAgentId);
+  const scope = getCurrentCacheUserScope();
+  if (scope === "anon") return null;
+  const scopedKey = getScopedChatsCacheKey(agentId);
+  const cached = _agentChatsCache.get(scopedKey);
   if (cached && Date.now() - cached.timestamp < 120_000) {
     return cached.data;
   }
   try {
-    const raw = sessionStorage.getItem(`agent360_chats_cache_${cleanAgentId}`)
-      || localStorage.getItem(`agent360_chats_cache_${cleanAgentId}`);
+    const raw = sessionStorage.getItem(`agent360_chats_cache_${scopedKey}`)
+      || localStorage.getItem(`agent360_chats_cache_${scopedKey}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        _agentChatsCache.set(cleanAgentId, { data: parsed, timestamp: Date.now() });
+        _agentChatsCache.set(scopedKey, { data: parsed, timestamp: Date.now() });
         return parsed;
       }
     }
@@ -224,6 +255,15 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
           headers: { Accept: "application/json" }
         }, cleanAgentId);
         if (res.ok) break;
+        if (res.status === 401 || res.status === 403) {
+          const scopedKey = getScopedChatsCacheKey(cleanAgentId);
+          _agentChatsCache.delete(scopedKey);
+          try {
+            sessionStorage.removeItem(`agent360_chats_cache_${scopedKey}`);
+            localStorage.removeItem(`agent360_chats_cache_${scopedKey}`);
+          } catch {}
+          return [];
+        }
         if (res.status === 404 && cleanAgentId) {
           // If cleanAgentId 404s, try fallback with raw agentId or /chats
           break;
@@ -263,7 +303,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
       // If rawSnippet is missing, check client-side cached messages for this session
       if (!rawSnippet || rawSnippet === 'Chưa có tin nhắn mới' || /^[0-9a-f-]{16,}/i.test(rawSnippet)) {
         try {
-          const key = `${cleanAgentId || 'default'}:${c.id}`;
+          const key = `${getCurrentCacheUserScope()}:${cleanAgentId || 'default'}:${c.id}`;
           const rawCache = sessionStorage.getItem(`agent360_msgcache_${key}`);
           if (rawCache) {
             const parsedMsgs = JSON.parse(rawCache);
@@ -325,14 +365,15 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
       };
     });
 
-    // Populate SWR in-memory, sessionStorage, and localStorage fallback cache
-    if (result && result.length > 0) {
-      const cacheKey = cleanAgentId || "default";
-      _agentChatsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    // Populate SWR in-memory, sessionStorage, and localStorage fallback cache (strictly scoped by user sub)
+    const scope = getCurrentCacheUserScope();
+    if (result && result.length > 0 && scope !== "anon") {
+      const scopedKey = getScopedChatsCacheKey(cleanAgentId);
+      _agentChatsCache.set(scopedKey, { data: result, timestamp: Date.now() });
       try {
         const serialized = JSON.stringify(result.slice(0, 100));
-        sessionStorage.setItem(`agent360_chats_cache_${cacheKey}`, serialized);
-        localStorage.setItem(`agent360_chats_cache_${cacheKey}`, serialized);
+        sessionStorage.setItem(`agent360_chats_cache_${scopedKey}`, serialized);
+        localStorage.setItem(`agent360_chats_cache_${scopedKey}`, serialized);
       } catch {}
     }
 
@@ -618,12 +659,14 @@ export async function downloadWorkspaceFile(agentId: string, filePath: string, f
   }
 }
 
-// Fast Client-Side Dialogue Session Cache for Instant Navigation
+// Fast Client-Side Dialogue Session Cache for Instant Navigation (User-Sub Isolated)
 const _chatMessagesCache = new Map<string, { messages: ChatMessage[]; timestamp: number }>();
 
 export function getCachedChatMessages(chatId: string, agentId?: string): ChatMessage[] | null {
+  const scope = getCurrentCacheUserScope();
+  if (scope === "anon") return null;
   const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
-  const key = `${cleanAgentId}:${chatId}`;
+  const key = `${scope}:${cleanAgentId}:${chatId}`;
   const cached = _chatMessagesCache.get(key);
   if (cached && cached.messages) {
     return cached.messages;
@@ -642,8 +685,10 @@ export function getCachedChatMessages(chatId: string, agentId?: string): ChatMes
 }
 
 export function setCachedChatMessages(chatId: string, messages: ChatMessage[], agentId?: string): void {
+  const scope = getCurrentCacheUserScope();
+  if (scope === "anon") return;
   const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
-  const key = `${cleanAgentId}:${chatId}`;
+  const key = `${scope}:${cleanAgentId}:${chatId}`;
   _chatMessagesCache.set(key, { messages, timestamp: Date.now() });
   try {
     sessionStorage.setItem(`agent360_msgcache_${key}`, JSON.stringify(messages.slice(-200)));
@@ -1061,22 +1106,20 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
       `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}`
     ].filter(Boolean) as string[];
 
-    const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
-    let opToken = "";
-    let accessToken = "";
-    try {
-      accessToken = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
-      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || defaultOpKey;
-    } catch {}
-
-    const reqHeaders: Record<string, string> = { Accept: "application/json" };
-    if (accessToken) reqHeaders["Authorization"] = `Bearer ${accessToken}`;
-    if (opToken) reqHeaders["X-Agent360-Operator-Token"] = opToken;
+    const reqHeaders: Record<string, string> = { Accept: "application/json", ...getAuthHeaders(cleanAgentId) };
 
     let res: Response | null = null;
     for (const u of urlsToTry) {
       try {
         const attempt = await fetch(u, { headers: reqHeaders });
+        if (attempt.status === 401 || attempt.status === 403) {
+          const key = `${getCurrentCacheUserScope()}:${cleanAgentId || "default"}:${chatId}`;
+          _chatMessagesCache.delete(key);
+          try {
+            sessionStorage.removeItem(`agent360_msgcache_${key}`);
+          } catch {}
+          return [];
+        }
         if (attempt.ok) {
           res = attempt;
           break;
@@ -1845,12 +1888,7 @@ export async function submitMessageReaction(
     Accept: "text/event-stream, application/json",
     "X-Agent-Id": cleanId,
   };
-  try {
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-    if (token) authHeaders["Authorization"] = "Bearer " + token;
-    const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
-    if (opKey) authHeaders["X-Agent360-Operator-Token"] = opKey;
-  } catch {}
+  Object.assign(authHeaders, getAuthHeaders(cleanId));
 
   const url = `/api/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/reactions`;
   return await fetch(url, {

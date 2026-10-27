@@ -42,9 +42,20 @@ export interface A2AMetrics {
 const B = "/api";
 const KEY = "agent360.a2a.operatorKey";
 function enc(s: string): string { return encodeURIComponent(s); }
-const DEFAULT_OP_KEY = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
 export const operatorKey = {
-  get: () => (typeof localStorage !== "undefined" ? localStorage.getItem(KEY) || DEFAULT_OP_KEY : DEFAULT_OP_KEY),
+  get: () => {
+    try {
+      if (typeof localStorage === "undefined") return "";
+      const hasUserToken = !!(
+        (typeof sessionStorage !== "undefined" && sessionStorage.getItem("skyer_access_token")) ||
+        localStorage.getItem("skyer_access_token")
+      );
+      if (hasUserToken) return "";
+      return localStorage.getItem(KEY) || "";
+    } catch {
+      return "";
+    }
+  },
   set: (v: string) => (v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY)),
 };
 export class A2AAuthError extends Error {}

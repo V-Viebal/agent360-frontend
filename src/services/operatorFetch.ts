@@ -31,7 +31,7 @@ export function installOperatorFetch(): void {
     const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(raw, window.location.origin);
     const key = operatorKey.get();
-    const token = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_access_token") : null;
+    const token = typeof window !== "undefined" ? (sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")) : null;
 
     if (url.origin === window.location.origin && url.pathname.startsWith("/api/")) {
       const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));

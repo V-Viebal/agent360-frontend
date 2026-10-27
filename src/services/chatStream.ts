@@ -101,14 +101,14 @@ export async function sendConsoleChatMessageStream(
         Accept: "text/event-stream"
       };
       try {
-        const defaultOpKey = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
         const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
         if (token) {
           authHeaders["Authorization"] = "Bearer " + token;
-        }
-        const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || defaultOpKey;
-        if (opKey) {
-          authHeaders["X-Agent360-Operator-Token"] = opKey;
+        } else {
+          const opKey = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token");
+          if (opKey) {
+            authHeaders["X-Agent360-Operator-Token"] = opKey;
+          }
         }
       } catch {}
 

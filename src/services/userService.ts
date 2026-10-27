@@ -31,13 +31,19 @@ export function parseJwt(token: string): any {
  * Get the current user profile from Logto id_token and backend PostgreSQL RBAC
  */
 export async function getCurrentUserProfile(forceRefresh = false): Promise<UserProfile | null> {
-  const accessToken = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_access_token") : null;
-  const idToken = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("skyer_id_token") : null;
+  const accessToken =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")
+      : null;
+  const idToken =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("skyer_id_token") || localStorage.getItem("skyer_id_token")
+      : null;
 
-  // 1. Try from cached profile in sessionStorage (if not forcing refresh and has roles)
+  // 1. Try from cached profile in sessionStorage / localStorage (if not forcing refresh and has roles)
   if (!forceRefresh) {
     try {
-      const cachedStr = sessionStorage.getItem("skyer_user_profile");
+      const cachedStr = sessionStorage.getItem("skyer_user_profile") || localStorage.getItem("skyer_user_profile");
       if (cachedStr) {
         const cached = JSON.parse(cachedStr);
         if (cached && Array.isArray(cached.roles) && cached.roles.length > 0) {
@@ -103,7 +109,9 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
 
   if (user) {
     try {
-      sessionStorage.setItem("skyer_user_profile", JSON.stringify(user));
+      const serialized = JSON.stringify(user);
+      sessionStorage.setItem("skyer_user_profile", serialized);
+      localStorage.setItem("skyer_user_profile", serialized);
     } catch {}
   }
 
@@ -129,7 +137,7 @@ export async function updateUserProfile(updates: { name?: string; picture?: stri
   } catch {}
 
   // Attempt to sync to Logto custom data / userinfo if available
-  const accessToken = sessionStorage.getItem('skyer_access_token');
+  const accessToken = sessionStorage.getItem('skyer_access_token') || localStorage.getItem('skyer_access_token');
   if (accessToken && authConfig.endpoint) {
     try {
       await fetch(new URL('/api/users/me', authConfig.endpoint).toString(), {

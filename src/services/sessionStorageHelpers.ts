@@ -26,11 +26,37 @@ export function removeStoredToken(key: string): void {
   } catch {}
 }
 
+export function clearCachedAgentAndChatData(): void {
+  try {
+    for (const store of [sessionStorage, localStorage]) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < store.length; i++) {
+        const k = store.key(i);
+        if (
+          k &&
+          (k.startsWith("agent360_chats_cache_") ||
+            k.startsWith("agent360_msgcache_") ||
+            k.startsWith("agent360_last_chat") ||
+            k === "agent360_last_agent_id" ||
+            k === "agent360_recent_sessions_map" ||
+            k === "agent360_unread_sessions")
+        ) {
+          keysToRemove.push(k);
+        }
+      }
+      for (const k of keysToRemove) {
+        store.removeItem(k);
+      }
+    }
+  } catch {}
+}
+
 export function clearAllSessionState(): void {
   removeStoredToken(ACCESS);
   removeStoredToken(REFRESH);
   removeStoredToken(ID_TOKEN);
   removeStoredToken(USER_PROFILE);
+  clearCachedAgentAndChatData();
   try {
     sessionStorage.removeItem("skyer_last_exchanged_code");
     sessionStorage.removeItem("skyer_oidc_verifier");
