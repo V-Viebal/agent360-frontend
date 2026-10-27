@@ -11427,7 +11427,9 @@ export function GrokBotWorkspace() {
                           let resultSnippet = "";
                           if (latestDoneTool?.result) {
                             const cleanRes = String(latestDoneTool.result).replace(/\s+/g, " ").trim();
-                            resultSnippet = cleanRes.length > 90 ? `${cleanRes.slice(0, 90)}...` : cleanRes;
+                            if (!cleanRes.startsWith("{") && !cleanRes.startsWith("[")) {
+                              resultSnippet = cleanRes.length > 90 ? `${cleanRes.slice(0, 90)}...` : cleanRes;
+                            }
                           }
 
                           if (callingTool || (isTurnActivelyRunning && completedToolList.length < soloTools.length)) {
