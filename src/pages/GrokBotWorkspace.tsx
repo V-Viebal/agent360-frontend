@@ -10693,7 +10693,7 @@ export function GrokBotWorkspace() {
             <div className="py-6 px-2 sm:px-4 flex flex-col items-start animate-in fade-in duration-200 max-w-xl w-full space-y-2.5 font-sans">
               {/* Greeting Bubble */}
               <div className="inline-block rounded-[18px] px-4 py-2 bg-neutral-100 dark:bg-[#16161e] border border-neutral-200/70 dark:border-[#242432] text-[14.5px] text-slate-800 dark:text-neutral-200 leading-snug">
-                Xin chào{user?.name ? ` ${user.name.split(" ")[0]}` : ""}, mình là <span className="font-medium text-slate-900 dark:text-white">{selectedAgent.name}</span>! Rất vui được hỗ trợ bạn hôm nay.
+                Xin chào{currentUser?.name ? ` ${currentUser.name.split(" ")[0]}` : ""}, mình là <span className="font-medium text-slate-900 dark:text-white">{selectedAgent.name}</span>! Rất vui được hỗ trợ bạn hôm nay.
               </div>
 
               {/* Options Card */}
