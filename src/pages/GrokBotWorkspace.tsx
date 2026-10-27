@@ -6448,6 +6448,29 @@ export function GrokBotWorkspace() {
     };
   }, [isPlusMenuOpen]);
 
+  // Scroll directly to the latest user request (or bottom if no user turns)
+  const scrollToLatestRequestOrBottom = (smooth = false) => {
+    const userTurns = userTurnsRef.current;
+    if (userTurns.length > 0) {
+      const lastTurn = userTurns[userTurns.length - 1];
+      const targetEl = document.getElementById(`chat-msg-${lastTurn.msg.id}`);
+      if (targetEl && messagesContainerRef.current) {
+        const containerRect = messagesContainerRef.current.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const offset = targetRect.top - containerRect.top + messagesContainerRef.current.scrollTop;
+        messagesContainerRef.current.scrollTo({
+          top: Math.max(0, offset - 12),
+          behavior: smooth ? "smooth" : "auto",
+        });
+        const lastIdx = userTurns.length - 1;
+        setActiveTraceIdx(lastIdx);
+        activeTraceIdxRef.current = lastIdx;
+        return;
+      }
+    }
+    jumpToBottom();
+  };
+
   // Jump immediately to bottom on open / chat switch without smooth scroll animation
   const jumpToBottom = () => {
     if (messagesContainerRef.current) {
@@ -6832,7 +6855,7 @@ export function GrokBotWorkspace() {
         if (typeof savedPos === "number" && messagesContainerRef.current) {
           messagesContainerRef.current.scrollTop = savedPos;
         } else {
-          jumpToBottom();
+          scrollToLatestRequestOrBottom();
         }
         isInitialLoadRef.current = false;
       }, 0);
@@ -6899,15 +6922,16 @@ export function GrokBotWorkspace() {
         setShowPollCard(false);
       }
       setIsLoadingMessages(false);
-      // Trigger load latest (jumpToBottom) only when newly opening chat session without cached turns
+      // Trigger load latest request only when newly opening chat session without cached turns
       if (isInitialLoadRef.current) {
         isInitialLoadRef.current = false;
         const savedPos = sessionScrollPositionsRef.current[selectedChatId];
         if (typeof savedPos === "number" && messagesContainerRef.current) {
           messagesContainerRef.current.scrollTop = savedPos;
         } else {
-          setTimeout(jumpToBottom, 0);
-          setTimeout(jumpToBottom, 60);
+          setTimeout(() => scrollToLatestRequestOrBottom(), 0);
+          setTimeout(() => scrollToLatestRequestOrBottom(), 60);
+          setTimeout(() => scrollToLatestRequestOrBottom(), 180);
         }
       }
     }).catch(() => {
@@ -7563,14 +7587,14 @@ export function GrokBotWorkspace() {
   }, [messages, activeSessionRoom, liveTurnForView, isCurrentSessionRunning, isStreaming, selectedChatId, selectedChat?.session_id]);
 
   useEffect(() => {
-    // Only jump to bottom on initial load / chat switch
+    // Only scroll to latest request on initial load / chat switch
     if (isInitialLoadRef.current) {
       isInitialLoadRef.current = false;
       const savedPos = sessionScrollPositionsRef.current[selectedChatId];
       if (typeof savedPos === "number" && messagesContainerRef.current) {
         messagesContainerRef.current.scrollTop = savedPos;
       } else {
-        jumpToBottom();
+        scrollToLatestRequestOrBottom();
       }
       return;
     }
@@ -11401,107 +11425,73 @@ export function GrokBotWorkspace() {
                           return null;
                         }
 
-                        const agentSlugClean = (selectedAgent?.slug || selectedAgent?.id || "gm-boc").replace(/^bot:agent360:/i, "");
-                        const firstReasonSentence = rawReasonText
-                          .replace(/^(?:The user said|According to my activation instructions)[^.\n]*[.\n]\s*/i, "")
+                        // Build a single natural conversational lead-in sentence (matching the 5 reference images: no technical tool names, no step counters, no receipt row)
+                        const prevUserText =
+                          mIdx > 0 && displayMessages[mIdx - 1]?.role === "user"
+                            ? stripSharedRoomContext(displayMessages[mIdx - 1].content || "").trim()
+                            : "";
+                        const usesAnhEm = /\b(?:anh|em)\b/i.test(prevUserText) || /\b(?:anh|em)\b/i.test(cleanContent);
+                        const selfPronoun = usesAnhEm ? "em" : "mình";
+                        const userPronoun = usesAnhEm ? "anh" : "bạn";
+
+                        const cleanedReasonFirst = rawReasonText
+                          .replace(/^(?:The user said|According to my activation instructions|User wants|I need to|Let's)[^.\n]*[.\n]?\s*/i, "")
+                          .replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/gi, "")
+                          .replace(/\s+/g, " ")
                           .split(/(?<=[.!?\n])\s+/)[0]
                           ?.trim();
 
-                        const toolNamesList = Array.from(new Set(soloTools.map((t) => t.tool || "công cụ").filter(Boolean)));
-                        const completedToolList = soloTools.filter((t) => t.state !== "calling");
-                        const callingTool = soloTools.find((t) => t.state === "calling");
+                        const isVietnameseSentence =
+                          Boolean(cleanedReasonFirst) &&
+                          cleanedReasonFirst.length >= 14 &&
+                          cleanedReasonFirst.length <= 165 &&
+                          /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(cleanedReasonFirst);
 
-                        // 1. Beat 1: Đang chuẩn bị làm gì (Intent & Preparation Bubble)
-                        const kickoffIntentText =
-                          firstReasonSentence && firstReasonSentence.length >= 12
-                            ? firstReasonSentence
-                            : toolNamesList.length > 0
-                            ? `Để xử lý yêu cầu này, mình sẽ phân tích ngữ cảnh và kiểm tra dữ liệu qua ${toolNamesList.join(", ")}, sau đó tổng hợp câu trả lời chi tiết cho bạn.`
-                            : `Mình đã tiếp nhận yêu cầu. Để mình phân tích dữ kiện và chuẩn bị câu trả lời chi tiết cho bạn nhé.`;
-
-                        // 2. Beat 2 & 3: Luồng làm việc & Đang làm được gì (Workflow Pipeline & Live Progress Bubble)
-                        let workflowProgressText = "";
-                        if (soloTools.length > 0) {
-                          const pipelineStr = ["Phân tích yêu cầu", ...toolNamesList, "Tổng hợp phản hồi"].join(" → ");
-                          const latestDoneTool = completedToolList[completedToolList.length - 1];
-                          let resultSnippet = "";
-                          if (latestDoneTool?.result) {
-                            const cleanRes = String(latestDoneTool.result).replace(/\s+/g, " ").trim();
-                            if (!cleanRes.startsWith("{") && !cleanRes.startsWith("[")) {
-                              resultSnippet = cleanRes.length > 90 ? `${cleanRes.slice(0, 90)}...` : cleanRes;
-                            }
-                          }
-
-                          if (callingTool || (isTurnActivelyRunning && completedToolList.length < soloTools.length)) {
-                            workflowProgressText = `Luồng làm việc (${pipelineStr}): Đã hoàn tất ${completedToolList.length}/${soloTools.length} bước công cụ, hiện đang thực thi ${callingTool?.tool || toolNamesList[0]} để thu thập dữ kiện...`;
+                        let naturalLeadIn = "";
+                        if (isVietnameseSentence && cleanedReasonFirst) {
+                          naturalLeadIn = cleanedReasonFirst.endsWith(".") || cleanedReasonFirst.endsWith("!")
+                            ? cleanedReasonFirst
+                            : `${cleanedReasonFirst}.`;
+                        } else if (prevUserText) {
+                          const lowerUser = prevUserText.toLowerCase();
+                          if (/mở\s+tiếp\s+thẻ|mở\s+thẻ|card\s*box|kết\s+nối\s+dịch\s+vụ/i.test(lowerUser)) {
+                            naturalLeadIn = usesAnhEm
+                              ? "Dạ, để em kiểm tra và mở thẻ kết nối dịch vụ cho anh nhé."
+                              : "Để mình kiểm tra và mở thẻ kết nối dịch vụ cho bạn nhé.";
+                          } else if (/phân\s+tích\s+kỹ\s+hơn\s+về\s+(.+)/i.test(prevUserText)) {
+                            const topic = prevUserText.match(/phân\s+tích\s+kỹ\s+hơn\s+về\s+(.+)/i)?.[1]?.replace(/[?!.]+$/, "").trim();
+                            naturalLeadIn = `${selfPronoun === "em" ? "Em" : "Mình"} sẽ đọc kỹ tài liệu và mã nguồn liên quan đến ${topic || "nội dung này"}, rồi gửi ${userPronoun} phân tích chi tiết.`;
+                          } else if (/release|phiên\s+bản|v\d+\.\d+|chuẩn\s+login|hỗ\s+trợ/i.test(lowerUser)) {
+                            naturalLeadIn = `Để ${selfPronoun} xem chi tiết thông tin phiên bản và mã nguồn rồi tổng hợp cho ${userPronoun} nhé.`;
+                          } else if (/chấm\s+công|nhân\s+sự|nghỉ\s+phép|worktime/i.test(lowerUser)) {
+                            naturalLeadIn = `Để ${selfPronoun} kiểm tra dữ liệu chấm công và danh sách nhân sự hôm nay rồi gửi báo cáo cho ${userPronoun} nhé.`;
+                          } else if (/setup|thiết\s+lập|cấu\s+hình|quan\s+trọng/i.test(lowerUser)) {
+                            naturalLeadIn = `Để ${selfPronoun} xem còn những mục quan trọng nào đáng thiết lập cho ${userPronoun}.`;
                           } else {
-                            workflowProgressText = `Luồng làm việc (${pipelineStr}): Mình đã thực thi xong ${soloTools.length}/${soloTools.length} bước công cụ (${toolNamesList.join(", ")})${resultSnippet ? ` và ghi nhận kết quả: ${resultSnippet}` : ""}. Dưới đây là câu trả lời cuối cùng cho bạn.`;
+                            naturalLeadIn = `Để ${selfPronoun} kiểm tra thông tin và chuẩn bị câu trả lời chi tiết cho ${userPronoun} nhé.`;
                           }
-                        } else if (rawReasonText.length > 0) {
-                          workflowProgressText = isTurnActivelyRunning
-                            ? `Luồng làm việc (Phân tích yêu cầu → Suy luận chuyên môn → Chốt phản hồi): Mình đang đối chiếu các dữ kiện để hoàn thiện câu trả lời...`
-                            : `Luồng làm việc (Phân tích yêu cầu → Suy luận chuyên môn → Chốt phản hồi): Mình đã rà soát xong các dữ kiện trọng tâm và gửi bạn câu trả lời ngay dưới đây.`;
+                        } else {
+                          naturalLeadIn = `Để ${selfPronoun} kiểm tra và tổng hợp thông tin chi tiết cho ${userPronoun} nhé.`;
                         }
-
-                        const totalWorkflowSteps = soloTools.length > 0 ? soloTools.length : 1;
-                        const receiptLabelPrefix =
-                          isTurnActivelyRunning && !msg.content
-                            ? `Running ${totalWorkflowSteps} workflow ${totalWorkflowSteps === 1 ? "step" : "steps"} with`
-                            : soloTools.length > 0
-                            ? `Executed ${soloTools.length} ${soloTools.length === 1 ? "tool step" : "tool steps"} with`
-                            : `Completed workflow with`;
 
                         return (
                           <div
-                            data-testid="solo-native-workflow-narrator"
-                            className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%] space-y-1"
+                            data-testid="solo-kickoff-intent-bubble"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenActiveThinkingModal(msg);
+                            }}
+                            title="Bấm để xem chi tiết suy luận & công cụ đã chạy"
+                            className="inline-block w-auto max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[15.5px] sm:text-[16px] leading-relaxed cursor-pointer hover:border-[#f8a87c]/40 transition-colors"
                           >
-                            {/* Beat 1 Bubble: Chuẩn bị làm gì */}
-                            <div
-                              data-testid="solo-kickoff-intent-bubble"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenActiveThinkingModal(msg);
-                              }}
-                              className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-700 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-300 text-[14.5px] sm:text-[15px] leading-relaxed cursor-pointer hover:border-[#f8a87c]/40 transition-colors"
-                            >
-                              {kickoffIntentText}
-                            </div>
-
-                            {/* Beat 2 & 3 Bubble: Luồng làm việc & Đang làm được gì */}
-                            {workflowProgressText && (
-                              <div
-                                data-testid="solo-progress-status-bubble"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenActiveThinkingModal(msg);
-                                }}
-                                className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-700 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-300 text-[14.5px] sm:text-[15px] leading-relaxed cursor-pointer hover:border-[#f8a87c]/40 transition-colors"
-                              >
-                                {workflowProgressText}
-                              </div>
-                            )}
-
-                            {/* Native Inline Workflow Receipt right-aligned below progress bubble */}
-                            <button
-                              type="button"
-                              data-testid="solo-inline-receipt-steps"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                triggerHaptic(12);
-                                handleOpenActiveThinkingModal(msg);
-                              }}
-                              title="Bấm để mở xem chi tiết 4 chặng: Chuẩn bị, Luồng làm việc, Kết quả công cụ & Phản hồi cuối"
-                              className="flex flex-wrap items-center justify-end self-end gap-1 text-[11px] text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 mt-0.5 mb-0.5 px-1.5 py-0.5 rounded-full hover:bg-slate-100/80 dark:hover:bg-white/[0.05] transition-colors cursor-pointer select-none"
-                            >
-                              {isTurnActivelyRunning && !msg.content && (
-                                <Loader2 size={10} className="animate-spin text-[#f8a87c] mr-0.5" />
-                              )}
-                              <span>{receiptLabelPrefix}</span>
-                              <span className="pointer-events-none inline-flex items-center">
-                                {renderAgentMentionChip(agentSlugClean, selectedAgent?.name, "inline")}
+                            <span>{naturalLeadIn}</span>
+                            {isTurnActivelyRunning && !msg.content && (
+                              <span className="inline-flex items-center gap-1 ml-2 align-middle">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
                               </span>
-                            </button>
+                            )}
                           </div>
                         );
                       })()}
@@ -11782,67 +11772,81 @@ export function GrokBotWorkspace() {
                 }
               }}
             >
-              {/* Ticks waveform stack: centered vertically, hugging right edge */}
-              <div className="flex flex-col items-end gap-[5px] py-1 px-1 max-h-[75vh] overflow-visible select-none">
-                {userTurns.map((turn: { msg: ChatMessage; originalIdx: number }, tIdx: number) => {
-                  const isHovered = hoveredTraceIdx === tIdx;
-                  const isCurrentActive = activeTraceIdx === tIdx;
-                  const isBookmarked = starredMsgIds.includes(turn.msg.id);
-                  // Smooth gaussian-like width expansion in pixels for fluid cursor tracking
-                  let tickWidth = 8; // default rest width in px
-                  if (hoveredTraceIdx !== null) {
-                    const dist = Math.abs(hoveredTraceIdx - tIdx);
-                    if (dist === 0) tickWidth = 32;
-                    else if (dist === 1) tickWidth = 22;
-                    else if (dist === 2) tickWidth = 16;
-                    else if (dist === 3) tickWidth = 12;
-                    else if (dist === 4) tickWidth = 10;
-                    else tickWidth = 8;
-                  }
+              {/* Ticks waveform stack: centered vertically, hugging right edge, dynamically dense when turns count is high */}
+              {(() => {
+                const totalTurns = userTurns.length;
+                // Compute dynamic spacing and tick height so up to 150+ requests always fit perfectly in viewport
+                const gapPx = totalTurns > 80 ? 1 : totalTurns > 50 ? 2 : totalTurns > 30 ? 3 : 5;
+                const tickH = totalTurns > 80 ? "1.5px" : totalTurns > 50 ? "2px" : "3px";
+                const padY = totalTurns > 60 ? "0px" : "1.5px";
 
-                  return (
-                    <div
-                      key={turn.msg.id || tIdx}
-                      className="relative flex items-center justify-end py-[2px] group/tick cursor-pointer"
-                      onPointerEnter={() => {
-                        setHoveredTraceIdx(tIdx);
-                        if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
-                      }}
-                      onClick={() => scrollToUserTurn(tIdx)}
-                    >
-                      {/* Clean minimal tooltip positioned directly relative to this tick item */}
-                      {isHovered && (
+                return (
+                  <div
+                    style={{ gap: `${gapPx}px` }}
+                    className="flex flex-col items-end py-1 px-1 max-h-[82vh] overflow-y-auto overflow-x-visible scrollbar-none select-none"
+                  >
+                    {userTurns.map((turn: { msg: ChatMessage; originalIdx: number }, tIdx: number) => {
+                      const isHovered = hoveredTraceIdx === tIdx;
+                      const isCurrentActive = activeTraceIdx === tIdx;
+                      const isBookmarked = starredMsgIds.includes(turn.msg.id);
+                      // Smooth gaussian-like width expansion in pixels for fluid cursor tracking
+                      let tickWidth = 8; // default rest width in px
+                      if (hoveredTraceIdx !== null) {
+                        const dist = Math.abs(hoveredTraceIdx - tIdx);
+                        if (dist === 0) tickWidth = 32;
+                        else if (dist === 1) tickWidth = 22;
+                        else if (dist === 2) tickWidth = 16;
+                        else if (dist === 3) tickWidth = 12;
+                        else if (dist === 4) tickWidth = 10;
+                        else tickWidth = 8;
+                      }
+
+                      return (
                         <div
-                          className="absolute right-full mr-3 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
+                          key={turn.msg.id || tIdx}
+                          style={{ paddingTop: padY, paddingBottom: padY }}
+                          className="relative flex items-center justify-end group/tick cursor-pointer shrink-0"
+                          onPointerEnter={() => {
+                            setHoveredTraceIdx(tIdx);
+                            if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+                          }}
+                          onClick={() => scrollToUserTurn(tIdx)}
                         >
-                          <span className="font-mono text-[11px] text-[#e0682b] dark:text-[#f8a87c] font-bold shrink-0">
-                            #{tIdx + 1}
-                          </span>
-                          <span className="truncate max-w-[260px] sm:max-w-[360px] font-medium leading-snug text-slate-700 dark:text-neutral-200">
-                            {turn.msg.content.trim()}
-                          </span>
-                        </div>
-                      )}
+                          {/* Clean minimal tooltip positioned directly relative to this tick item */}
+                          {isHovered && (
+                            <div
+                              className="absolute right-full mr-3 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
+                            >
+                              <span className="font-mono text-[11px] text-[#e0682b] dark:text-[#f8a87c] font-bold shrink-0">
+                                #{tIdx + 1}
+                              </span>
+                              <span className="truncate max-w-[260px] sm:max-w-[360px] font-medium leading-snug text-slate-700 dark:text-neutral-200">
+                                {turn.msg.content.trim()}
+                              </span>
+                            </div>
+                          )}
 
-                      <button
-                        data-trace-tick-idx={tIdx}
-                        type="button"
-                        aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
-                        style={{ width: `${tickWidth}px` }}
-                        className={`h-[3px] rounded-full transition-[width,background-color,transform,box-shadow] duration-150 ease-out cursor-pointer pointer-events-auto ${
-                          isHovered
-                            ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.35)] dark:shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-y-125"
-                            : isBookmarked
-                            ? "bg-amber-500/90 dark:bg-amber-400/80 hover:bg-amber-600 dark:hover:bg-amber-300"
-                            : isCurrentActive
-                            ? "bg-slate-700 dark:bg-white/80 shadow-[0_0_4px_rgba(0,0,0,0.2)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]"
-                            : "bg-neutral-300/85 hover:bg-neutral-600 dark:bg-neutral-600/75 dark:hover:bg-neutral-200"
-                        }`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+                          <button
+                            data-trace-tick-idx={tIdx}
+                            type="button"
+                            aria-label={`Yêu cầu ${tIdx + 1}: ${turn.msg.content.slice(0, 40)}`}
+                            style={{ width: `${tickWidth}px`, height: tickH }}
+                            className={`rounded-full transition-[width,background-color,transform,box-shadow] duration-150 ease-out cursor-pointer pointer-events-auto ${
+                              isHovered
+                                ? "bg-slate-900 dark:bg-white shadow-[0_0_8px_rgba(0,0,0,0.35)] dark:shadow-[0_0_10px_rgba(255,255,255,0.9)] scale-y-125"
+                                : isBookmarked
+                                ? "bg-amber-500/90 dark:bg-amber-400/80 hover:bg-amber-600 dark:hover:bg-amber-300"
+                                : isCurrentActive
+                                ? "bg-slate-700 dark:bg-white/80 shadow-[0_0_4px_rgba(0,0,0,0.2)] dark:shadow-[0_0_4px_rgba(255,255,255,0.5)]"
+                                : "bg-neutral-300/85 hover:bg-neutral-600 dark:bg-neutral-600/75 dark:hover:bg-neutral-200"
+                            }`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
 
             </div>
