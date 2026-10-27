@@ -37,7 +37,13 @@ export interface ComposioConnectionEvent {
   timestamp?: string;
 }
 
-export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot | ComposioConnectionEvent;
+export interface AgentWebhookDeliveryWsEvent {
+  type: "agent_webhook_delivery";
+  agent_id: string;
+  delivery: any;
+}
+
+export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot | ComposioConnectionEvent | AgentWebhookDeliveryWsEvent;
 
 export interface MultiplexerHandlers {
   onSnapshot?: (snapshot: ActiveSessionsSnapshot) => void;
@@ -95,6 +101,10 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("composio:connection_activated", { detail: data }));
             }
+          } else if (data.type === "agent_webhook_delivery") {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:webhook_delivery", { detail: data }));
+            }
           }
         } catch {}
       };
@@ -145,6 +155,10 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (handlers.onComposioConnection) handlers.onComposioConnection(update);
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("composio:connection_activated", { detail: update }));
+            }
+          } else if (update.type === "agent_webhook_delivery") {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:webhook_delivery", { detail: update }));
             }
           }
         } catch {}

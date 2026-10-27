@@ -1294,10 +1294,24 @@ html.light .bg-\[\#0e0e14\],
   background-color: var(--bg-card-subtle) !important;
 }
 
-/* Only invert text-white when inside light containers, never inside dark components */
-html.light .text-white:not(.keep-white):not([class*="bg-neutral-900"]):not([class*="bg-black"]):not([class*="bg-[#f8a87c]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-amber"]),
-[data-theme="light"] .text-white:not(.keep-white):not([class*="bg-neutral-900"]):not([class*="bg-black"]):not([class*="bg-[#f8a87c]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-amber"]) {
+/* Only invert text-white when inside light containers, never inside dark components or dark badges */
+html.light .text-white:not(.keep-white):not([class*="bg-neutral-900"]):not([class*="bg-black"]):not([class*="bg-slate-900"]):not([class*="bg-slate-800"]):not([class*="bg-slate-950"]):not([class*="bg-[#f8a87c]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-indigo"]),
+[data-theme="light"] .text-white:not(.keep-white):not([class*="bg-neutral-900"]):not([class*="bg-black"]):not([class*="bg-slate-900"]):not([class*="bg-slate-800"]):not([class*="bg-slate-950"]):not([class*="bg-[#f8a87c]"]):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-amber"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-indigo"]) {
   color: var(--text-primary);
+}
+
+/* Ensure any dark pill / button in light mode keeps clean crisp white text */
+html.light [class*="bg-slate-900"],
+[data-theme="light"] [class*="bg-slate-900"],
+html.light [class*="bg-slate-800"],
+[data-theme="light"] [class*="bg-slate-800"] {
+  color: #ffffff !important;
+}
+html.light [class*="bg-slate-900"] *,
+[data-theme="light"] [class*="bg-slate-900"] *,
+html.light [class*="bg-slate-800"] *,
+[data-theme="light"] [class*="bg-slate-800"] * {
+  color: inherit !important;
 }
 
 html.light .text-neutral-200,
@@ -1503,4 +1517,19 @@ html.dark [data-testid^="agent-mention-card-"] span[class*="text-slate-500"],
 html.dark [data-testid^="agent-mention-card-"] span[class*="text-blue-400"],
 .dark [data-testid^="agent-mention-card-"] span[class*="text-blue-400"] {
   color: #60a5fa !important;
+}
+
+/* Agent browser profile badge styling across modes */
+[data-testid="agent-browser-profile"],
+div[data-testid="agent-browser-profile"] {
+  color: #ffffff !important;
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  font-weight: 500 !important;
+}
+html.light [data-testid="agent-browser-profile"],
+[data-theme="light"] [data-testid="agent-browser-profile"] {
+  color: #ffffff !important;
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
 }

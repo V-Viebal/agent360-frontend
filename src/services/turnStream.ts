@@ -209,7 +209,8 @@ export async function attachLiveTurn(
     }
     if (!acc.ingest(ev)) continue;
     const now = performance.now();
-    if (!emittedInitial || acc.done || now - lastEmit > 45) {
+    const isStructuralEvent = ev?.object === "message" || (ev?.object === "content" && ev?.type === "data");
+    if (!emittedInitial || isStructuralEvent || acc.done || now - lastEmit > 40) {
       emittedInitial = true;
       lastEmit = now;
       onUpdate(acc.snapshot(), acc.userText);

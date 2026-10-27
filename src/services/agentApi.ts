@@ -1931,3 +1931,214 @@ export async function fetchAgentReactionSummary(
     return null;
   }
 }
+
+
+// ==========================================
+// Agent Webhooks & QwenPaw Bridge APIs
+// ==========================================
+
+export interface OutboundWebhookTarget {
+  id: string;
+  name: string;
+  url: string;
+  enabled: boolean;
+  events?: string[];
+  secret?: string;
+  headers?: Record<string, string>;
+}
+
+export interface AgentWebhookConfig {
+  agent_id: string;
+  enabled: boolean;
+  require_hmac: boolean;
+  signing_secret_masked: string;
+  signing_secret_preview: string;
+  inbound_webhook_url: string;
+  agentteams_webhook_url: string;
+  allowed_events: string[];
+  default_channel: string;
+  default_session_prefix: string;
+  auto_trigger_agent_turn: boolean;
+  forward_to_matrix_room: boolean;
+  rate_limit_per_minute: number;
+  deduplication_window_seconds: number;
+  prompt_template: string;
+  outbound_webhooks: OutboundWebhookTarget[];
+  matrix_channel_enabled: boolean;
+  matrix_homeserver?: string;
+  matrix_user_id?: string;
+  qwenpaw_runtime_status: string;
+  qwenpaw_node: string;
+  updated_at: string;
+}
+
+export interface AgentWebhookDeliveryRecord {
+  id: string;
+  agent_id: string;
+  direction: "inbound" | "outbound" | "qwenpaw_bridge";
+  event_type: string;
+  source: string;
+  session_id?: string | null;
+  status: "delivered" | "triggered" | "rejected" | "duplicate" | "failed" | string;
+  http_status: number;
+  latency_ms: number;
+  payload_preview: string;
+  response_preview?: string | null;
+  signature_verified: boolean;
+  timestamp: string;
+}
+
+export interface QwenPawBridgeProbeResult {
+  agent_id: string;
+  node: string;
+  instance_name: string;
+  is_qwenpaw_runtime: boolean;
+  runtime_reachable: boolean;
+  runtime_status: string;
+  latency_ms: number;
+  active_channels: string[];
+  matrix_configured: boolean;
+  heartbeat_enabled: boolean;
+  running_task_count: number;
+  checked_at: string;
+  message: string;
+}
+
+export async function fetchAgentWebhookConfig(agentId: string): Promise<AgentWebhookConfig | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/config`,
+      { headers: { Accept: "application/json" } },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("fetchAgentWebhookConfig error:", err);
+    return null;
+  }
+}
+
+export async function updateAgentWebhookConfig(
+  agentId: string,
+  payload: Partial<{
+    enabled: boolean;
+    require_hmac: boolean;
+    allowed_events: string[];
+    default_channel: string;
+    default_session_prefix: string;
+    auto_trigger_agent_turn: boolean;
+    forward_to_matrix_room: boolean;
+    rate_limit_per_minute: number;
+    deduplication_window_seconds: number;
+    prompt_template: string;
+    outbound_webhooks: OutboundWebhookTarget[];
+    matrix_channel_enabled: boolean;
+    matrix_homeserver: string;
+    matrix_user_id: string;
+  }>
+): Promise<AgentWebhookConfig | null> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/config`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    },
+    cleanId
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to update webhook config (HTTP ${res.status})`);
+  }
+  return await res.json();
+}
+
+export async function rotateAgentWebhookSecret(agentId: string): Promise<{
+  success: boolean;
+  agent_id: string;
+  new_secret: string;
+  config: AgentWebhookConfig;
+  message: string;
+}> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/rotate-secret`,
+    { method: "POST", headers: { Accept: "application/json" } },
+    cleanId
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to rotate webhook secret (HTTP ${res.status})`);
+  }
+  return await res.json();
+}
+
+export async function fetchAgentWebhookDeliveries(
+  agentId: string,
+  limit: number = 40
+): Promise<AgentWebhookDeliveryRecord[]> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/deliveries?limit=${limit}`,
+      { headers: { Accept: "application/json" } },
+      cleanId
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function probeAgentQwenPawBridge(agentId: string): Promise<QwenPawBridgeProbeResult> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/probe-qwenpaw`,
+    { method: "POST", headers: { Accept: "application/json" } },
+    cleanId
+  );
+  if (!res.ok) {
+    throw new Error(`Probe QwenPaw failed (HTTP ${res.status})`);
+  }
+  return await res.json();
+}
+
+export async function testAgentWebhookDispatch(
+  agentId: string,
+  payload?: {
+    event_type?: string;
+    source?: string;
+    session_id?: string;
+    channel?: string;
+    message?: string;
+    trigger_turn?: boolean;
+    wait_for_completion?: boolean;
+  }
+): Promise<{
+  success: boolean;
+  status: string;
+  event_id: string;
+  agent_id: string;
+  session_id: string;
+  latency_ms: number;
+  assistant_reply?: string | null;
+  delivery: AgentWebhookDeliveryRecord;
+}> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/test`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload || {}),
+    },
+    cleanId
+  );
+  if (!res.ok) {
+    throw new Error(`Test webhook dispatch failed (HTTP ${res.status})`);
+  }
+  return await res.json();
+}

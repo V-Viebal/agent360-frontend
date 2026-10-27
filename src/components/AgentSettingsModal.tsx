@@ -29,6 +29,7 @@ import { AgentSubAgentsTab } from "./AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "./ExternalSubAgentsTab";
 import { AgentMemoryTab } from "./AgentMemoryTab";
 import { AgentIam360CellTab } from "./AgentIam360CellTab";
+import { AgentWebhooksTab } from "./AgentWebhooksTab";
 import { AgentChannelConfig, AgentScheduleJob, fetchAgentReactionSummary, MessageReactionSummaryDto } from "../services/agentApi";
 
 export type AgentSettingsTab =
@@ -119,7 +120,6 @@ export function AgentSettingsModal({
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
   const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
-  const [navSearch, setNavSearch] = useState("");
   const [reactionSummary, setReactionSummary] = useState<MessageReactionSummaryDto | null>(null);
 
   useEffect(() => {
@@ -184,74 +184,48 @@ export function AgentSettingsModal({
   const navItems: {
     id: AgentSettingsTab;
     label: string;
-    subtitle: string;
     icon: React.ReactNode;
-    group: "Cấu hình Cốt lõi" | "Mạng lưới & Tích hợp" | "Tri thức & Tự động hóa";
     badge?: string | number;
   }[] = [
     {
       id: "general",
-      label: "Hồ sơ & Mô hình AI",
-      subtitle: "Identity, LLM Model & Governance",
+      label: "Hồ sơ & Mô hình",
       icon: <Bot size={15} />,
-      group: "Cấu hình Cốt lõi",
     },
     {
       id: "iam360_cells",
-      label: "IAM360 Cells & Cây quyền",
-      subtitle: "Identity Cell, Org Cell & ReBAC Tree",
+      label: "Phân quyền & Cells",
       icon: <ShieldCheck size={15} />,
-      group: "Cấu hình Cốt lõi",
       badge: "2-Cell",
     },
     {
       id: "apps_mcp",
       label: "Ứng dụng & MCP",
-      subtitle: "Connected Apps & Tool Schemas",
       icon: <Layers size={15} />,
-      group: "Mạng lưới & Tích hợp",
     },
     {
       id: "subagents",
-      label: "Đội ngũ & A2A",
-      subtitle: "Sub-Agents & Swarm Topology",
+      label: "Đội ngũ Sub-Agents",
       icon: <Network size={15} />,
-      group: "Mạng lưới & Tích hợp",
     },
     {
       id: "channels_cron",
-      label: "Kênh & Lịch tự động",
-      subtitle: "Dispatch Channels & Cron Jobs",
+      label: "Kênh & Lịch chạy",
       icon: <Radio size={15} />,
-      group: "Tri thức & Tự động hóa",
       badge: channels.filter((c) => c.enabled).length + schedules.length || undefined,
     },
     {
       id: "webhooks_a2a",
       label: "Webhooks & Matrix",
-      subtitle: "Inbound HMAC & Event Telemetry",
       icon: <Activity size={15} />,
-      group: "Mạng lưới & Tích hợp",
-      badge: "Realtime",
     },
     {
       id: "memory_skills",
       label: "Bộ nhớ & Kỹ năng",
-      subtitle: "Long-term Memory & Live Skills",
       icon: <Brain size={15} />,
-      group: "Tri thức & Tự động hóa",
       badge: skills.length || undefined,
     },
   ];
-
-  const visibleNavItems = navItems.filter(
-    (item) =>
-      !navSearch.trim() ||
-      item.label.toLowerCase().includes(navSearch.toLowerCase()) ||
-      item.subtitle.toLowerCase().includes(navSearch.toLowerCase())
-  );
-
-  const groups = ["Cấu hình Cốt lõi", "Mạng lưới & Tích hợp", "Tri thức & Tự động hóa"] as const;
 
   return (
     <div
@@ -309,70 +283,33 @@ export function AgentSettingsModal({
 
         {/* Modal Body: 2-Column Split Design Pattern */}
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-          {/* Left Navigation Rail */}
-          <div className="w-full md:w-64 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2 sm:p-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto shrink-0 no-scrollbar">
-            {/* Quick Filter in Left Nav */}
-            <div className="hidden md:flex items-center gap-1.5 bg-white dark:bg-[#161620] border border-slate-200 dark:border-[#242432] rounded-xl px-2.5 py-1.5 mb-2">
-              <Search size={13} className="text-neutral-400 shrink-0" />
-              <input
-                type="text"
-                value={navSearch}
-                onChange={(e) => setNavSearch(e.target.value)}
-                placeholder="Tìm mục cấu hình..."
-                className="w-full bg-transparent text-xs text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none font-sans"
-              />
-              {navSearch && (
-                <button
-                  type="button"
-                  onClick={() => setNavSearch("")}
-                  className="text-neutral-400 hover:text-white cursor-pointer"
-                >
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-
-            {groups.map((grp) => {
-              const items = visibleNavItems.filter((i) => i.group === grp);
-              if (items.length === 0) return null;
+          {/* Left Navigation Rail: Minimalist, clean single-line */}
+          <div className="w-full md:w-52 bg-slate-50 dark:bg-[#0f0f15] border-b md:border-b-0 md:border-r border-slate-200 dark:border-[#20202c] p-2 sm:p-2.5 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto shrink-0 no-scrollbar">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
               return (
-                <div key={grp} className="flex md:flex-col gap-1 md:mb-3 shrink-0">
-                  <div className="hidden md:block px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-neutral-500 font-semibold">
-                    {grp}
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left transition-all cursor-pointer shrink-0 md:w-full ${
+                    isActive
+                      ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
+                      : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-[#181822] hover:text-slate-900 dark:hover:text-white border border-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={isActive ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "text-neutral-400"}>
+                      {item.icon}
+                    </span>
+                    <span className="text-xs truncate">{item.label}</span>
                   </div>
-                  {items.map((item) => {
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveTab(item.id)}
-                        className={`flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left transition-all cursor-pointer shrink-0 md:w-full ${
-                          isActive
-                            ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
-                            : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-[#181822] hover:text-slate-900 dark:hover:text-white border border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={isActive ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "text-neutral-400"}>
-                            {item.icon}
-                          </span>
-                          <div className="truncate">
-                            <div className="text-xs leading-tight truncate">{item.label}</div>
-                            <div className="hidden md:block text-[10px] text-slate-400 dark:text-neutral-500 font-normal truncate mt-0.5">
-                              {item.subtitle}
-                            </div>
-                          </div>
-                        </div>
-                        {item.badge !== undefined && (
-                          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-neutral-300 shrink-0">
-                            {item.badge}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                  {item.badge !== undefined && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-neutral-300 shrink-0">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
@@ -381,45 +318,37 @@ export function AgentSettingsModal({
           <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5 bg-white dark:bg-[#121218]">
             {/* TAB 1: GENERAL (Identity, LLM Model, Governance, Status) */}
             {activeTab === "general" && (
-              <div className="space-y-5 max-w-4xl">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Hồ sơ & Mô hình Trí tuệ (Identity & LLM)</h4>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Quản lý định danh, ảnh đại diện, mô hình ngôn ngữ đang hoạt động và trạng thái vận hành của {agent.name}.
-                  </p>
-                </div>
-
+              <div className="space-y-4 max-w-4xl">
                 {/* Agent Identity Card */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div
                       onClick={onOpenAvatarModal}
                       className="relative group cursor-pointer shrink-0"
-                      title="Bấm để thay đổi Avatar của Agent"
+                      title="Bấm để đổi Avatar"
                     >
-                      <AgentAvatar agent={agent} size="xl" className="shadow-md" />
-                      <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                        <Camera size={18} />
+                      <AgentAvatar agent={agent} size="lg" className="shadow-xs" />
+                      <div className="absolute inset-0 rounded-2xl bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                        <Camera size={16} />
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-semibold text-slate-900 dark:text-white">{agent.name}</span>
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                          {agent.status === "disabled" || agent.enabled === false ? "Disabled" : "Active"}
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{agent.name}</span>
+                        <span
+                          style={{
+                            backgroundColor: agentTheme.bgLight,
+                            color: agentTheme.light,
+                            borderColor: agentTheme.borderLight,
+                          }}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0"
+                        >
+                          {agent.roleTag || "Agent"}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-neutral-400 font-mono">
-                        ID: {agent.id} • Slug: {agent.slug}
+                      <p className="text-[11px] text-slate-400 dark:text-neutral-500 font-mono truncate">
+                        ID: {agent.id} • {agent.slug}
                       </p>
-                      <button
-                        type="button"
-                        onClick={onOpenAvatarModal}
-                        className="text-[11px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] hover:underline flex items-center gap-1 cursor-pointer pt-0.5"
-                      >
-                        <Camera size={12} />
-                        <span>Đổi ảnh đại diện (Avatar)</span>
-                      </button>
                     </div>
                   </div>
 
@@ -429,48 +358,45 @@ export function AgentSettingsModal({
                       type="button"
                       onClick={(e) => onToggleAgentEnabled(agent, e)}
                       disabled={togglingAgentId === agent.id}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-mono font-medium flex items-center gap-2 border transition-all cursor-pointer shrink-0 ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${
                         agent.enabled === false || agent.status === "disabled"
-                          ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                          : "bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                          ? "bg-slate-200/70 dark:bg-white/5 border-slate-300 dark:border-white/10 text-neutral-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                          : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                       }`}
+                      title={agent.enabled === false || agent.status === "disabled" ? "Bấm để kích hoạt Agent" : "Bấm để tạm dừng Agent"}
                     >
                       {togglingAgentId === agent.id ? (
-                        <Loader2 size={14} className="animate-spin" />
+                        <Loader2 size={13} className="animate-spin" />
                       ) : agent.enabled === false || agent.status === "disabled" ? (
-                        <Power size={14} />
+                        <Power size={13} />
                       ) : (
-                        <PowerOff size={14} />
+                        <PowerOff size={13} />
                       )}
-                      <span>
-                        {agent.enabled === false || agent.status === "disabled" ? "Kích hoạt Agent" : "Vô hiệu hóa Agent"}
-                      </span>
+                      <span>{agent.enabled === false || agent.status === "disabled" ? "Tạm dừng" : "Hoạt động"}</span>
                     </button>
                   )}
                 </div>
 
                 {/* Active LLM Model Switcher Card */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={15} style={{ color: agentTheme.primary }} />
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white">
-                        Mô hình Ngôn ngữ Hoạt động (Active LLM Model)
-                      </span>
-                    </div>
-                    <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
-                      {isChangingModel ? "Đang cập nhật..." : currentCleanModel}
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Sparkles size={14} style={{ color: agentTheme.primary }} />
+                      <span>Mô hình AI</span>
+                    </span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
+                      {isChangingModel ? "Đang đổi..." : currentCleanModel}
                     </span>
                   </div>
 
                   {/* Search models */}
-                  <div className="flex items-center gap-2 bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] rounded-xl px-3 py-1.5">
-                    <Search size={13} className="text-neutral-400 shrink-0" />
+                  <div className="flex items-center gap-2 bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] rounded-xl px-2.5 py-1">
+                    <Search size={12} className="text-neutral-400 shrink-0" />
                     <input
                       type="text"
                       value={modelSearch}
                       onChange={(e) => setModelSearch(e.target.value)}
-                      placeholder="Tìm mô hình (grok-4.7, gpt-5.6-luna, claude, gemini)..."
+                      placeholder="Tìm mô hình..."
                       className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none"
                     />
                     {modelSearch && (
@@ -479,12 +405,12 @@ export function AgentSettingsModal({
                         onClick={() => setModelSearch("")}
                         className="text-neutral-400 hover:text-white cursor-pointer"
                       >
-                        <X size={12} />
+                        <X size={11} />
                       </button>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-52 overflow-y-auto pr-1">
                     {filteredModels.map((m) => {
                       const isCurrent = currentCleanModel === m.model;
                       return (
@@ -493,14 +419,14 @@ export function AgentSettingsModal({
                           type="button"
                           disabled={isChangingModel}
                           onClick={() => onSelectModel(m.model, m.providerId)}
-                          className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono transition-all cursor-pointer border text-left ${
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer border text-left ${
                             isCurrent
                               ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
                               : "bg-white dark:bg-[#121218] hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-slate-200/80 dark:border-[#222230]"
                           }`}
                         >
                           <span className="truncate">{m.model}</span>
-                          {isCurrent && <Check size={13} style={{ color: agentTheme.primary }} className="shrink-0" />}
+                          {isCurrent && <Check size={12} style={{ color: agentTheme.primary }} className="shrink-0" />}
                         </button>
                       );
                     })}
@@ -508,102 +434,47 @@ export function AgentSettingsModal({
                 </div>
 
                 {/* System Governance & Constitution Summary */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <ShieldCheck size={15} className="text-emerald-400" />
-                      <span>Hiến pháp & Quản trị Hệ thống (Persona & Governance)</span>
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <ShieldCheck size={14} className="text-emerald-500 dark:text-emerald-400" />
+                      <span>Hồ sơ & Quản trị</span>
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                      Enforced (Pass)
+                    <span className="text-[10px] font-mono text-neutral-400">
+                      SOUL.md ({agent.slug}) • {skills.length} skills
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed select-text">
-                    {agent.description || "Chưa có mô tả chi tiết cho Agent này."}
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230]">
-                      <div className="text-[10px] text-neutral-500">Identity Profile</div>
-                      <div className="text-slate-800 dark:text-neutral-200 font-semibold truncate mt-0.5">
-                        SOUL.md ({agent.slug})
-                      </div>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230]">
-                      <div className="text-[10px] text-neutral-500">Runtime Engine</div>
-                      <div className="text-slate-800 dark:text-neutral-200 font-semibold truncate mt-0.5">
-                        {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}
-                      </div>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230]">
-                      <div className="text-[10px] text-neutral-500">Skills Bound</div>
-                      <div style={{ color: agentTheme.light }} className="font-semibold truncate mt-0.5">
-                        {skills.length} available
-                      </div>
-                    </div>
-                  </div>
+                  {agent.description && (
+                    <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed select-text line-clamp-3">
+                      {agent.description}
+                    </p>
+                  )}
                 </div>
 
-                {/* Real-time Turn Telemetry & System Latency */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Activity size={15} style={{ color: agentTheme.primary }} />
-                      <span>Hiệu năng & Telemetry Thời gian thực</span>
-                    </span>
-                    {turnTelemetry?.estimatedCostUsd !== undefined && (
-                      <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                        ${turnTelemetry.estimatedCostUsd.toFixed(4)}
-                      </span>
+                {/* Turn Telemetry & Reactions: Compact 1-line statistics strip */}
+                {(turnTelemetry?.ttftMs || reactionSummary?.total_reactions) && (
+                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] flex items-center justify-between gap-3 text-[11px] font-mono flex-wrap">
+                    {turnTelemetry?.ttftMs && (
+                      <div className="flex items-center gap-1.5 text-neutral-500">
+                        <Activity size={13} style={{ color: agentTheme.primary }} />
+                        <span>TTFT: <strong className="text-slate-800 dark:text-neutral-200">{turnTelemetry.ttftMs}ms</strong></span>
+                        {turnTelemetry.tokensPerSec && (
+                          <span>• <strong className="text-emerald-500">{turnTelemetry.tokensPerSec.toFixed(1)} t/s</strong></span>
+                        )}
+                      </div>
+                    )}
+                    {reactionSummary && reactionSummary.total_reactions > 0 && (
+                      <div className="flex items-center gap-2 text-neutral-500 ml-auto">
+                        <Smile size={13} style={{ color: agentTheme.primary }} />
+                        <span>Đánh giá:</span>
+                        <span className="text-emerald-500 font-semibold">+{reactionSummary.positive_count}</span>
+                        {reactionSummary.negative_count > 0 && (
+                          <span className="text-rose-500 font-semibold">-{reactionSummary.negative_count}</span>
+                        )}
+                      </div>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
-                      <span className="text-[10px] text-neutral-500">TTFT (Latency)</span>
-                      <span className="text-amber-500 dark:text-amber-400 font-bold">{turnTelemetry?.ttftMs ? `${turnTelemetry.ttftMs}ms` : "Chưa có turn"}</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
-                      <span className="text-[10px] text-neutral-500">Tốc độ sinh</span>
-                      <span className="text-emerald-500 dark:text-emerald-400 font-bold">{turnTelemetry?.tokensPerSec ? `${turnTelemetry.tokensPerSec.toFixed(1)} t/s` : "—"}</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
-                      <span className="text-[10px] text-neutral-500">Thời gian phản hồi</span>
-                      <span className="text-slate-800 dark:text-neutral-300 font-bold">{turnTelemetry?.totalDurationMs ? `${(turnTelemetry.totalDurationMs / 1000).toFixed(1)}s` : "—"}</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#222230] flex flex-col gap-0.5">
-                      <span className="text-[10px] text-neutral-500">Model kiểm thử</span>
-                      <span className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-bold truncate" title={turnTelemetry?.model || agent.model}>
-                        {(turnTelemetry?.model || agent.model).split("/").pop()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reaction Satisfaction & Implicit Evaluation Summary */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Smile size={15} style={{ color: agentTheme.primary }} />
-                      <span>Đánh giá Phản hồi & Mức độ Hài lòng (Reactions Telemetry)</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400">
-                      Tổng {reactionSummary?.total_reactions || 0} lượt đánh giá
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
-                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col gap-0.5">
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Tích cực (Khen / Tốt)</span>
-                      <span className="text-emerald-500 text-sm font-bold">{reactionSummary?.positive_count || 0}</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex flex-col gap-0.5">
-                      <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold">Cần cải thiện (Chưa hài lòng)</span>
-                      <span className="text-rose-500 text-sm font-bold">{reactionSummary?.negative_count || 0}</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col gap-0.5">
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Trung tính / Góp ý</span>
-                      <span className="text-amber-500 text-sm font-bold">{reactionSummary?.neutral_count || 0}</span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -621,12 +492,7 @@ export function AgentSettingsModal({
             {/* TAB 2: APPS & MCP */}
             {activeTab === "apps_mcp" && (
               <div className="space-y-4 max-w-4xl">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Ứng dụng Kết nối & Máy chủ MCP</h4>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Quản lý các kết nối OAuth bên thứ ba (Composio) và danh sách công cụ MCP được gắn trực tiếp vào {agent.name}.
-                  </p>
-                </div>
+
                 <AgentConnectedAppsTab
                   agentId={agent.id}
                   agentName={agent.name}
@@ -640,13 +506,10 @@ export function AgentSettingsModal({
             {/* TAB 3: SUB-AGENTS & A2A TOPOLOGY */}
             {activeTab === "subagents" && (
               <div className="space-y-4 max-w-4xl">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Đội ngũ Sub-Agents & Mạng lưới A2A</h4>
-                    <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-                      Cấu hình phân quyền uỷ thác tác vụ giữa {agent.name} và các Agent nội bộ hoặc liên cụm (External A2A).
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between gap-3 pb-1">
+                  <span className="text-xs font-mono uppercase tracking-wider text-neutral-500 font-semibold">
+                    Danh sách Sub-Agents & Topology
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
@@ -654,11 +517,11 @@ export function AgentSettingsModal({
                       onOpenTopologyModal();
                     }}
                     style={{ backgroundColor: agentTheme.primary }}
-                    className="px-3 py-1.5 rounded-xl hover:opacity-90 text-neutral-950 text-xs font-mono font-semibold shrink-0 transition-opacity shadow-sm cursor-pointer flex items-center gap-1.5"
+                    className="px-2.5 py-1 rounded-lg hover:opacity-90 text-neutral-950 text-xs font-mono font-semibold shrink-0 transition-opacity shadow-2xs cursor-pointer flex items-center gap-1"
                   >
-                    <Network size={13} />
-                    <span>Mở Sơ đồ A2A</span>
-                    <ArrowUpRight size={13} />
+                    <Network size={12} />
+                    <span>Sơ đồ A2A</span>
+                    <ArrowUpRight size={12} />
                   </button>
                 </div>
 
@@ -677,19 +540,14 @@ export function AgentSettingsModal({
             {/* TAB 4: CHANNELS & CRON SCHEDULES */}
             {activeTab === "channels_cron" && (
               <div className="space-y-5 max-w-4xl">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Kênh Giao tiếp & Lịch trình Tự động (Cron)</h4>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Bật/tắt các cổng nhận tin nhắn (Telegram, Discord, Slack, Matrix, Console) và thiết lập công việc định kỳ.
-                  </p>
-                </div>
+
 
                 {/* Integrated Dispatch Channels */}
                 <div className="rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
                       <Radio size={14} style={{ color: agentTheme.primary }} />
-                      <span>Kênh kết nối (Integrated Channels)</span>
+                      <span>Kênh kết nối</span>
                     </span>
                     <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                       {channels.filter((c) => c.enabled).length} đang hoạt động
@@ -756,7 +614,7 @@ export function AgentSettingsModal({
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
                       <Clock size={14} style={{ color: agentTheme.primary }} />
-                      <span>Lịch trình Tự động (Schedules & Cron)</span>
+                      <span>Lịch trình (Cron)</span>
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-neutral-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
@@ -812,15 +670,22 @@ export function AgentSettingsModal({
               </div>
             )}
 
+            {/* TAB 4B: WEBHOOKS, MATRIX BRIDGE & QWENPAW RUNTIME API */}
+            {activeTab === "webhooks_a2a" && (
+              <div className="space-y-4 max-w-4xl">
+
+                <AgentWebhooksTab
+                  agentId={agent.id}
+                  agentName={agent.name}
+                  agentSlug={agent.slug}
+                />
+              </div>
+            )}
+
             {/* TAB 5: MEMORY & LIVE SKILLS */}
             {activeTab === "memory_skills" && (
               <div className="space-y-6 max-w-4xl">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Bộ nhớ Dài hạn & Kỹ năng (Memory & Skills)</h4>
-                  <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
-                    Quản lý các ghi nhớ bối cảnh của {agent.name} và danh sách kỹ năng chuyên môn (SKILL.md) đã nạp.
-                  </p>
-                </div>
+
 
                 {/* Agent Memory Section */}
                 <div className="rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] p-4">
@@ -836,7 +701,7 @@ export function AgentSettingsModal({
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-2">
                       <Sparkles size={14} style={{ color: agentTheme.primary }} />
-                      <span>Kỹ năng Hoạt động (Live Skills Pool)</span>
+                      <span>Kỹ năng (Skills)</span>
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
                       {skills.length} skills ready

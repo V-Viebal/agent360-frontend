@@ -111,7 +111,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
 Trash2,
   Globe,
-  MoreVertical,
   LogOut,
   Pin,
   PinOff,
@@ -177,7 +176,6 @@ Trash2,
   Rocket,
   ArrowUp,
   Bookmark,
-  MoreHorizontal,
   CornerUpLeft,
   Smile,
 } from "lucide-react";
@@ -243,6 +241,21 @@ function stripSharedRoomContext(text: string): string {
     }
   }
   return head;
+}
+
+function stabilizeStreamingMarkdown(text: string, isActivelyStreaming: boolean): string {
+  if (!text || !isActivelyStreaming) return text;
+  let out = text;
+  const boldCount = (out.match(/\*\*/g) || []).length;
+  if (boldCount % 2 === 1 && !out.endsWith("*")) {
+    out += "**";
+  }
+  const lastLine = out.split("\n").pop() || "";
+  const inlineTickCount = (lastLine.replace(/```/g, "").match(/`/g) || []).length;
+  if (inlineTickCount % 2 === 1) {
+    out += "`";
+  }
+  return out;
 }
 
 export interface ParsedChatAttachmentItem {
@@ -635,10 +648,18 @@ function AgentThinkingModal({
   const allToolItems = steps.filter((s) => s.kind === "tool_call").length > 0
     ? steps.filter((s) => s.kind === "tool_call")
     : toolCalls.map((tc) => ({ kind: "tool_call" as const, ...tc }));
-  const reasoningItems = steps.filter((s) => s.kind === "reasoning");
-  if (reasoningItems.length === 0 && msg.reasoning) {
-    reasoningItems.push({ kind: "reasoning", text: msg.reasoning });
+  const rawReasoningSteps = steps.filter((s) => s.kind === "reasoning");
+  if (rawReasoningSteps.length === 0 && msg.reasoning) {
+    rawReasoningSteps.push({ kind: "reasoning", text: msg.reasoning });
   }
+  const reasoningItems = rawReasoningSteps
+    .map((r) => ({
+      ...r,
+      text: (r.text || "").replace(/^\s*\[LEAD_IN\]:?\s*[^\n]*\n?/i, "").trim(),
+    }))
+    .filter((r) => Boolean(r.text));
+  const modalBodyScrollRef = useRef<HTMLDivElement>(null);
+  const isModalScrolledUpRef = useRef(false);
 
   // Extract room turns ONLY when this session is a true multi-agent room
   const roomWaveTurns = useMemo(() => {
@@ -679,6 +700,14 @@ function AgentThinkingModal({
     room?.status === "collaborator_running" ||
     room?.status === "synthesizing"
   );
+
+  useEffect(() => {
+    if (!isCurrentlyRunning || isModalScrolledUpRef.current) return;
+    const el = modalBodyScrollRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [isCurrentlyRunning, totalToolCount, totalReasonCount, msg.content]);
 
   // Group roomWaveTurns into hierarchical Execution Waves for the Flow Tree
   const executionWaves = useMemo(() => {
@@ -1274,6 +1303,11 @@ function AgentThinkingModal({
 
         {/* Unified Thinking Blocks & Flow Tree Body */}
         <div
+          ref={modalBodyScrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            isModalScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 80;
+          }}
           onTouchStart={(e) => {
             if (e.currentTarget.scrollTop <= 0) {
               handleTouchStart(e, true);
@@ -1324,7 +1358,24 @@ function AgentThinkingModal({
                 )}
               </div>
               <p className="text-xs text-slate-800 dark:text-neutral-200 font-medium">
-                {activeRespondingAgent?.statusText || `${displayAgent} đang phân tích suy luận và thực thi công cụ...`}
+                {(() => {
+                  if (activeRespondingAgent?.statusText) return activeRespondingAgent.statusText;
+                  const callingTool = allToolItems.find((t) => t.state === "calling");
+                  const doneToolsCount = allToolItems.filter((t) => t.state !== "calling").length;
+                  if (callingTool) {
+                    return `${displayAgent} đang thực thi công cụ ${callingTool.tool || "Tool"} (${doneToolsCount}/${allToolItems.length} công cụ hoàn tất)...`;
+                  }
+                  if (allToolItems.length > 0) {
+                    return `${displayAgent} đã thực thi xong ${doneToolsCount} công cụ (${allToolItems.map((t) => t.tool).join(", ")}) — đang tổng hợp câu trả lời cuối cùng...`;
+                  }
+                  if (msg.content && msg.content.trim().length > 0) {
+                    return `${displayAgent} đã thu thập xong dữ kiện (${allToolItems.length} công cụ) — đang hoàn thiện câu trả lời...`;
+                  }
+                  if (reasoningItems.length > 0) {
+                    return `${displayAgent} đang phân tích suy luận (${reasoningItems.length} bước) và lập kế hoạch xử lý...`;
+                  }
+                  return `${displayAgent} đang tiếp nhận yêu cầu và phân tích ngữ cảnh phiên chat...`;
+                })()}
               </p>
             </div>
           )}
@@ -2442,8 +2493,16 @@ function AgentThinkingModal({
                           </span>
                           <span>Chuẩn bị làm gì (Intent & Kế hoạch xử lý)</span>
                         </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
-                          Đã xác lập kế hoạch
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                            isCurrentlyRunning && reasoningItems.length === 0 && allToolItems.length === 0
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25"
+                          }`}
+                        >
+                          {isCurrentlyRunning && reasoningItems.length === 0 && allToolItems.length === 0
+                            ? "Đang phân tích ngữ cảnh..."
+                            : "Đã xác lập kế hoạch"}
                         </span>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed">
@@ -2525,6 +2584,13 @@ function AgentThinkingModal({
                           {reasoningItems.length} suy luận · {allToolItems.length} công cụ
                         </span>
                       </div>
+
+                      {isCurrentlyRunning && reasoningItems.length === 0 && allToolItems.length === 0 && (
+                        <div className="rounded-xl bg-white dark:bg-[#181824] border border-dashed border-amber-500/35 p-2.5 text-xs font-sans flex items-center gap-2 text-slate-600 dark:text-neutral-300">
+                          <Loader2 size={13} className="text-amber-500 animate-spin shrink-0" />
+                          <span>{displayAgent} đang khởi tạo luồng suy luận và kiểm tra công cụ cần thiết...</span>
+                        </div>
+                      )}
 
                       {reasoningItems.map((r, rIdx) => {
                         const wordCount = (r.text || "").split(/\s+/).filter(Boolean).length;
@@ -2688,13 +2754,27 @@ function TurnExecutionAccordion({
 
 // Agent Tool Execution Block
 function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?: string; result?: string; state?: "calling" | "success" | "error" }; agentId?: string }) {
-  const [open, setOpen] = useState(false);
+  const isCalling = toolCall.state === "calling";
+  const isError = toolCall.state === "error";
+  const [open, setOpen] = useState<boolean>(isCalling);
+  const userToggledRef = useRef(false);
+  const [callingElapsedSec, setCallingElapsedSec] = useState(0);
   const [copied, setCopied] = useState<"args" | "result" | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewRefreshNonce, setPreviewRefreshNonce] = useState(0);
 
-  const isCalling = toolCall.state === "calling";
-  const isError = toolCall.state === "error";
+  useEffect(() => {
+    if (isCalling) {
+      if (!userToggledRef.current) setOpen(true);
+      const started = Date.now();
+      const iv = setInterval(() => {
+        setCallingElapsedSec(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+      }, 500);
+      return () => clearInterval(iv);
+    } else if (!userToggledRef.current) {
+      setOpen(false);
+    }
+  }, [isCalling]);
 
   // Check if toolCall is browser view screen, screenshot, cdp, or visual navigation action
   const toolLower = (toolCall.tool || "").toLowerCase();
@@ -2758,7 +2838,10 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
     <div className="w-full rounded-lg border border-neutral-200/70 dark:border-[#22222c]/80 bg-white dark:bg-[#121217] overflow-hidden my-0.5 transition-all text-[11px] font-mono shadow-xs">
       {/* Header Bar: Compact, reduced padding, height, spacing, font size & weight */}
       <div
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          userToggledRef.current = true;
+          setOpen(!open);
+        }}
         className="px-2 py-1 bg-neutral-50/70 dark:bg-[#15151c]/70 hover:bg-neutral-100 dark:hover:bg-[#191922] flex items-center justify-between cursor-pointer select-none transition-colors border-b border-transparent min-h-[26px]"
       >
         <div className="flex items-center gap-1.5 min-w-0">
@@ -2785,7 +2868,7 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
                 : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             }`}
           >
-            {isCalling ? "calling" : isError ? "error" : "0"}
+            {isCalling ? `calling · ${callingElapsedSec}s` : isError ? "error" : "0"}
           </span>
         </div>
 
@@ -5476,6 +5559,7 @@ export function GrokBotWorkspace() {
   // Search in conversation list
   const [chatSearchQuery, setChatSearchQuery] = useState("");
   const [activeChatMenuId, setActiveChatMenuId] = useState<string | null>(null);
+  const [activeChatMenuPos, setActiveChatMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [activeAgentMenuId, setActiveAgentMenuId] = useState<string | null>(null);
   const [activeAgentMenuPos, setActiveAgentMenuPos] = useState<{ x: number; y: number } | null>(null);
   // Outside click listener to dismiss active chat 3-dots menu
@@ -5484,6 +5568,7 @@ export function GrokBotWorkspace() {
       const target = e.target as HTMLElement;
       if (!target.closest('[data-chat-menu-container="true"]') && !target.closest('[role="menu"]')) {
         setActiveChatMenuId(null);
+        setActiveChatMenuPos(null);
       }
     };
     const handleOutsideAgentMenu = (e: MouseEvent) => {
@@ -8720,9 +8805,26 @@ const selectedAgentTheme = getAgentColorTheme(
 
       const turnAcc = new TurnAccumulator(tempBotMsgId);
       let lastPaint = 0;
+      let paintTimer: ReturnType<typeof setTimeout> | null = null;
       const paintTurn = (force = false) => {
         const now = performance.now();
-        if (!force && now - lastPaint < 60) return;
+        if (!force && now - lastPaint < 32) {
+          if (!paintTimer) {
+            paintTimer = setTimeout(() => {
+              paintTimer = null;
+              if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+                window.requestAnimationFrame(() => paintTurn(true));
+              } else {
+                paintTurn(true);
+              }
+            }, 32);
+          }
+          return;
+        }
+        if (paintTimer) {
+          clearTimeout(paintTimer);
+          paintTimer = null;
+        }
         lastPaint = now;
         const snap = turnAcc.snapshot();
         updateTurnMessages((prev) =>
@@ -8929,11 +9031,18 @@ const selectedAgentTheme = getAgentColorTheme(
               });
               return;
             }
-            if (turnAcc.ingest(ev)) paintTurn(turnAcc.done);
+            if (turnAcc.ingest(ev)) {
+              const isStructural = ev?.object === "message" || (ev?.object === "content" && ev?.type === "data");
+              paintTurn(turnAcc.done || isStructural);
+            }
           },
         }
       );
 
+      if (paintTimer) {
+        clearTimeout(paintTimer);
+        paintTimer = null;
+      }
       turnAcc.done = true;
       if (turnAcc.text) accumulated = turnAcc.text;
       const finalSnap = turnAcc.snapshot();
@@ -11320,47 +11429,8 @@ const selectedAgentTheme = getAgentColorTheme(
                         <CornerUpLeft size={13} />
                       </button>
 
-                      {/* 3. Extend Menu Button (...) - No Tooltip */}
+                      {/* Extend Menu Container (triggered by right click on desktop, long press on mobile) */}
                       <div className="relative">
-                        <button
-                          data-ux-target-min="24"
-                          data-testid="msg-extend-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                            const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                            const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                            setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
-                            setActiveReactPopoverMsgId(null);
-                            if (typeof window !== "undefined" && window.innerWidth < 640) {
-                              const turnEl = document.getElementById(`chat-msg-${msg.id}`);
-                              const bubbleEl = (turnEl?.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
-                              const bubbleRect = bubbleEl.getBoundingClientRect();
-                              const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
-                              setMobileActionMsg({
-                                id: msg.id,
-                                content: cleanContent,
-                                turnIdx: mIdx,
-                                role: isUser ? "user" : "assistant",
-                                hasThinking,
-                                rawMsg: msg,
-                                anchorRect: anchor,
-                              });
-                            } else {
-                              setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                            }
-                          }}
-                          className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                            isExtendOpen
-                              ? "bg-[#f8a87c]/20 text-[#f8a87c]"
-                              : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                          }`}
-                          aria-label="Mở rộng"
-                        >
-                          <MoreHorizontal size={13} />
-                        </button>
 
                         {/* Desktop Vertical Extend Dropdown Menu - Compact & Always In Viewport */}
                         {isExtendOpen && (
@@ -11571,14 +11641,12 @@ const selectedAgentTheme = getAgentColorTheme(
                         }
                       }}
                       onContextMenu={(e) => {
-                        if (window.innerWidth < 1024) {
-                          e.preventDefault();
-                          triggerHaptic(15);
-                          const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
-                          const bubbleRect = bubbleEl.getBoundingClientRect();
-                          const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
-                          setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg, anchorRect: anchor, clickY: e.clientY });
-                        }
+                        e.preventDefault();
+                        triggerHaptic(15);
+                        const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                        const bubbleRect = bubbleEl.getBoundingClientRect();
+                        const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
+                        setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg, anchorRect: anchor, clickY: e.clientY });
                       }}
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
@@ -11658,23 +11726,21 @@ const selectedAgentTheme = getAgentColorTheme(
                         }
                       }}
                       onContextMenu={(e) => {
-                        if (window.innerWidth < 1024) {
-                          e.preventDefault();
-                          triggerHaptic(15);
-                          const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
-                          const bubbleRect = bubbleEl.getBoundingClientRect();
-                          const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
-                          setMobileActionMsg({
-                            id: msg.id,
-                            content: cleanContent,
-                            turnIdx: mIdx,
-                            role: "assistant",
-                            hasThinking,
-                            rawMsg: msg,
-                            anchorRect: anchor,
-                            clickY: e.clientY,
-                          });
-                        }
+                        e.preventDefault();
+                        triggerHaptic(15);
+                        const bubbleEl = (e.currentTarget.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                        const bubbleRect = bubbleEl.getBoundingClientRect();
+                        const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
+                        setMobileActionMsg({
+                          id: msg.id,
+                          content: cleanContent,
+                          turnIdx: mIdx,
+                          role: "assistant",
+                          hasThinking,
+                          rawMsg: msg,
+                          anchorRect: anchor,
+                          clickY: e.clientY,
+                        });
                       }}
                       className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
                     >
@@ -11717,7 +11783,15 @@ const selectedAgentTheme = getAgentColorTheme(
                         let leadInSegments: string[] = [];
                         let mainBodyContent = cleanContent;
 
+                        const isShortConversationalPara = (p: string) =>
+                          p.length >= 6 &&
+                          p.length <= 280 &&
+                          !p.includes("\n") &&
+                          !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(p);
+
                         if (!isRoomNarratorTurn) {
+                          const preToolLeadMatch = rawReasonText.match(/(?:^|\n)\s*\[LEAD_IN\]:?\s*([^\n]+)/i);
+                          const lockedPreToolLeadIn = preToolLeadMatch?.[1]?.trim() || "";
                           const rawSegs = Array.isArray(msg.textSegments)
                             ? msg.textSegments
                                 .map((s) => parseQuotedReplyFromContent(s, undefined, selectedAgent?.slug || selectedAgent?.id || "default").cleanContent)
@@ -11725,57 +11799,68 @@ const selectedAgentTheme = getAgentColorTheme(
                             : [];
 
                           if (rawSegs.length >= 2) {
-                            // Agent emitted distinct message segments across tool calls (e.g., Segment 1: lead-in before tool, Segment 2+: final answer after tool)
-                            leadInSegments = rawSegs.slice(0, -1);
-                            mainBodyContent = rawSegs[rawSegs.length - 1];
-                          } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && rawSegs[0].length <= 280) {
-                            // Agent emitted its opening lead-in segment and is currently executing a tool call before emitting the final answer
+                            const lastSeg = rawSegs[rawSegs.length - 1];
+                            const lastParas = lastSeg.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+                            if (lastParas.length >= 2 && isShortConversationalPara(lastParas[0])) {
+                              leadInSegments = [...rawSegs.slice(0, -1), lastParas[0]];
+                              mainBodyContent = lastParas.slice(1).join("\n\n");
+                            } else {
+                              leadInSegments = rawSegs.slice(0, -1);
+                              mainBodyContent = lastSeg;
+                            }
+                          } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && isShortConversationalPara(rawSegs[0])) {
                             leadInSegments = [rawSegs[0]];
                             mainBodyContent = "";
                           } else if (cleanContent) {
-                            // Check if the Agent's response starts with a short conversational lead-in paragraph separated by a blank line from the detailed body
                             const paragraphs = cleanContent
                               .split(/\n\s*\n/)
                               .map((p) => p.trim())
                               .filter(Boolean);
                             const firstPara = paragraphs[0] || "";
-                            const isPlainOpeningLine =
-                              firstPara.length >= 6 &&
-                              firstPara.length <= 280 &&
-                              !firstPara.includes("\n") &&
-                              !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(firstPara);
+                            const secondPara = paragraphs[1] || "";
 
-                            if (paragraphs.length >= 2 && isPlainOpeningLine) {
+                            if (paragraphs.length >= 3 && isShortConversationalPara(firstPara) && isShortConversationalPara(secondPara) && secondPara.length <= 180) {
+                              leadInSegments = [firstPara, secondPara];
+                              mainBodyContent = paragraphs.slice(2).join("\n\n");
+                            } else if (paragraphs.length >= 2 && isShortConversationalPara(firstPara)) {
                               leadInSegments = [firstPara];
                               mainBodyContent = paragraphs.slice(1).join("\n\n");
                             } else if (
                               paragraphs.length === 1 &&
                               isTurnActivelyRunning &&
-                              isPlainOpeningLine &&
+                              isShortConversationalPara(firstPara) &&
                               !cleanContent.includes("\n\n")
                             ) {
-                              // While streaming the opening conversational lead-in sentence (before \n\n arrives),
-                              // render it directly inside the lead-in bubble above the responding indicator pill so it never jumps or disappears.
                               leadInSegments = [firstPara];
                               mainBodyContent = "";
                             }
                           }
+
+                          if (lockedPreToolLeadIn && isShortConversationalPara(lockedPreToolLeadIn)) {
+                            const normLocked = lockedPreToolLeadIn.toLowerCase().replace(/[.!?…]+$/g, "").trim();
+                            const normFirst = (leadInSegments[0] || "").toLowerCase().replace(/[.!?…]+$/g, "").trim();
+                            if (!normFirst) {
+                              leadInSegments = [lockedPreToolLeadIn];
+                            } else if (normFirst !== normLocked && !normFirst.includes(normLocked) && !normLocked.includes(normFirst)) {
+                              leadInSegments = [lockedPreToolLeadIn, ...leadInSegments].slice(0, 2);
+                            }
+                          }
                         }
 
-                        const showRespondingPill = Boolean(isTurnActivelyRunning && (!mainBodyContent || hasCallingStep));
+                        const showRespondingPill = Boolean(isTurnActivelyRunning);
 
                         return (
                           <>
-                            {(leadInSegments.length > 0 || showRespondingPill) && (
+                            {leadInSegments.length > 0 && (
                               <div className="flex flex-col items-start gap-1.5 max-w-[85%] sm:max-w-[80%]">
                                 {leadInSegments.map((seg, sIdx) => (
                                   <div
                                     key={`lead-${msg.id}-${sIdx}`}
                                     data-testid="solo-kickoff-intent-bubble"
-                                    className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text"
+                                    className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150"
                                   >
                                     <FormattedMessageContent
-                                      content={seg}
+                                      content={stabilizeStreamingMarkdown(seg, isTurnActivelyRunning)}
                                       agentNode={selectedAgent.node}
                                       onImageClick={(url, name) => {
                                         setLightboxRotation(0);
@@ -11787,35 +11872,6 @@ const selectedAgentTheme = getAgentColorTheme(
                                     />
                                   </div>
                                 ))}
-
-                                {showRespondingPill && (
-                                  <button
-                                    type="button"
-                                    data-testid="active-responding-agent-pill"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      triggerHaptic(10);
-                                      handleOpenActiveThinkingModal(msg);
-                                    }}
-                                    className="inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors"
-                                  >
-                                    <div className="relative shrink-0 flex items-center justify-center">
-                                      <AgentAvatar
-                                        agent={selectedAgent}
-                                        size="xs"
-                                        interactive={false}
-                                        alwaysAnimate={true}
-                                        forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                                        className="shrink-0"
-                                      />
-                                    </div>
-                                    <span className="flex items-center gap-1">
-                                      <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
-                                      <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
-                                      <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
-                                    </span>
-                                  </button>
-                                )}
                               </div>
                             )}
 
@@ -11838,7 +11894,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             <div className="text-[14.5px] sm:text-[15px] leading-snug divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
                               {mainBodyContent && (
                               <FormattedMessageContent
-                                content={mainBodyContent}
+                                content={stabilizeStreamingMarkdown(mainBodyContent, isTurnActivelyRunning)}
                                 agentNode={selectedAgent.node}
                                 onImageClick={(url, name) => {
                                   setLightboxRotation(0);
@@ -11870,8 +11926,8 @@ const selectedAgentTheme = getAgentColorTheme(
                                 }}
                               />
                               )}
-                              {/* Inline pulsing indicator with small animated Agent Blob Avatar alongside dots */}
-                              {isStreaming && isLastTurn && (
+                              {/* Inline pulsing indicator only when showRespondingPill is not already anchored below */}
+                              {isStreaming && isLastTurn && !showRespondingPill && (
                                 <span
                                   role="button"
                                   tabIndex={0}
@@ -11981,9 +12037,44 @@ const selectedAgentTheme = getAgentColorTheme(
                             </div>
                           )}
 
-                          {renderMessageReactionsAndActions()}
+                          {!showRespondingPill && (
+                            <div className="min-h-[28px] flex items-center">
+                              {renderMessageReactionsAndActions()}
+                            </div>
+                          )}
                         </>
                       )}
+
+                            {showRespondingPill && (
+                              <div className="min-h-[28px] flex items-center">
+                                <button
+                                  type="button"
+                                  data-testid="active-responding-agent-pill"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(10);
+                                    handleOpenActiveThinkingModal(msg);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100/90 dark:bg-[#14141c]/95 hover:bg-slate-200/80 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/20 select-none shadow-2xs cursor-pointer transition-colors animate-in fade-in duration-150"
+                                >
+                                  <div className="relative shrink-0 flex items-center justify-center pointer-events-none">
+                                    <AgentAvatar
+                                      agent={selectedAgent}
+                                      size="xs"
+                                      interactive={false}
+                                      alwaysAnimate={true}
+                                      forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
+                                      className="shrink-0"
+                                    />
+                                  </div>
+                                  <span className="flex items-center gap-1 pointer-events-none">
+                                    <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
+                                    <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
+                                    <span style={{ backgroundColor: selectedAgentTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
+                                  </span>
+                                </button>
+                              </div>
+                            )}
                           </>
                         );
                       })()}
@@ -13915,7 +14006,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             : (selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)"),
                           color: isRecording
                             ? "#ffffff"
-                            : (selectedAgentTheme.light || selectedAgentTheme.primary),
+                            : (selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c"),
                           boxShadow: isRecording
                             ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
                               (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : (selectedAgentTheme.primary || selectedAgentTheme.dark))
@@ -14446,9 +14537,12 @@ const selectedAgentTheme = getAgentColorTheme(
                     onTouchMove={handleTouchEndChat}
                     onTouchCancel={handleTouchEndChat}
                     onContextMenu={(e) => {
-                      if (window.innerWidth < 1024) {
-                        e.preventDefault();
+                      e.preventDefault();
+                      if (isCoarseTouchDevice()) {
                         setMobileActionChat(chat);
+                      } else {
+                        setActiveChatMenuId(chat.id);
+                        setActiveChatMenuPos({ x: e.clientX, y: e.clientY });
                       }
                     }}
                     onClick={() => {
@@ -14631,29 +14725,15 @@ const selectedAgentTheme = getAgentColorTheme(
                             )}
                           </button>
 
-                          {/* 3-Dots More Options Menu */}
+                          {/* Chat Session Options Menu (triggered by right click on desktop, long press on mobile) */}
                           <div className="relative" data-chat-menu-container="true">
-                            <button
-                              aria-label="Tùy chọn phiên"
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveChatMenuId(activeChatMenuId === chat.id ? null : chat.id);
-                              }}
-                              className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
-                                activeChatMenuId === chat.id
-                                  ? "text-[#f8a87c] bg-white/10 opacity-100"
-                                  : "text-neutral-400 hover:text-white"
-                              }`}
-                              title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
-                            >
-                              <MoreVertical size={13} />
-                            </button>
-
-                            {/* Dropdown Menu (Standard Shared Primitive) */}
                             <DropdownMenu
                               isOpen={activeChatMenuId === chat.id}
-                              onClose={() => setActiveChatMenuId(null)}
+                              onClose={() => {
+                                setActiveChatMenuId(null);
+                                setActiveChatMenuPos(null);
+                              }}
+                              anchorPosition={activeChatMenuPos}
                               align="right"
                               width="w-60"
                             >
@@ -17307,12 +17387,15 @@ ${chat.id}`);
 
       {/* Global Shared Thinking Modal (Supports static turns & live in-progress streaming turns) */}
       {(activeThinkingModalMsg || isLiveThinkingModalOpen) && (() => {
+        const inflightList = inflightMessagesRef.current[selectedChatId] || [];
         const dynamicMatch = activeThinkingModalMsg
-          ? displayMessages.find((m) => m.id === activeThinkingModalMsg.id)
+          ? (inflightList.find((m) => m.id === activeThinkingModalMsg.id) || displayMessages.find((m) => m.id === activeThinkingModalMsg.id))
           : null;
+        const lastInflight = inflightList.length > 0 ? inflightList[inflightList.length - 1] : null;
+        const lastDisplay = displayMessages.length > 0 ? displayMessages[displayMessages.length - 1] : null;
         const liveBotMsg = liveTurnForView?.msg
-          || inflightMessagesRef.current[selectedChatId]?.slice().reverse().find((m) => m.role === "assistant")
-          || [...displayMessages].reverse().find((m) => m.role === "assistant")
+          || (lastInflight?.role === "assistant" ? lastInflight : null)
+          || (lastDisplay?.role === "assistant" ? lastDisplay : null)
           || {
             id: `live-thinking-${selectedChatId}`,
             role: "assistant" as const,
