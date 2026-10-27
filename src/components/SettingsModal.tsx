@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { User, Mail, Key, LogOut, ChevronDown, ChevronRight, Loader2, Lock, ArrowRight } from "lucide-react";
+import { User, Mail, Key, LogOut, ChevronDown, ChevronRight, Loader2, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { initiateSkyerSignOut, initiatePasswordReset } from "../services/pkceAuth";
 import { getCurrentUserProfile, UserProfile, updateUserProfile, changeCurrentUserPassword, getCurrentUserPasswordStatus } from "../services/userService";
 import { Edit3, Save } from "lucide-react";
@@ -797,6 +797,37 @@ export function SettingsModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Callout Banner when user hasn't set a password yet */}
+                {hasPasswordSet === false && (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-150">
+                    <div className="flex items-start sm:items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0">
+                        <AlertCircle size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                          Tài khoản chưa thiết lập mật khẩu riêng
+                        </h4>
+                        <p className="text-[11px] text-amber-700/90 dark:text-amber-300/80 mt-0.5">
+                          Bạn đang đăng nhập qua Google OAuth. Hãy tạo mật khẩu riêng để có thể đăng nhập trên mọi thiết bị và tăng cường bảo mật.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPasswordForm(true);
+                        setPasswordError(null);
+                        setPasswordSuccess(null);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs font-semibold shrink-0 cursor-pointer shadow-xs transition-all flex items-center gap-1.5 self-end sm:self-auto"
+                    >
+                      <Key size={13} />
+                      <span>Thiết lập ngay</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Security & Password Management Center */}
                 <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 overflow-hidden transition-all duration-200">

@@ -248,7 +248,7 @@ export function AdminBillingsPage() {
             <div className="font-semibold text-slate-900 dark:text-white truncate text-xs hover:text-[#f8a87c] transition-colors">
               {tx.tenant_name || "User Skyer"}
             </div>
-            <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">{tx.tenant_email || tx.tenant_id}</div>
+            <div className={`text-[10px] text-slate-500 dark:text-neutral-400 truncate ${tx.tenant_email ? "" : "font-mono"}`}>{tx.tenant_email || tx.tenant_id}</div>
           </div>
         </div>
       ),
@@ -360,7 +360,7 @@ export function AdminBillingsPage() {
           </div>
           <div className="min-w-0">
             <div className="font-semibold text-slate-900 dark:text-white truncate text-xs">{w.display_name}</div>
-            <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono truncate">{w.email}</div>
+            <div className="text-[10px] text-slate-500 dark:text-neutral-400 truncate">{w.email}</div>
           </div>
         </div>
       ),

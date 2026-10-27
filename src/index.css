@@ -253,6 +253,18 @@
   --font-serif: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
+  /* Typography scale: keep app UI on 5 sizes; display sizes are opt-in */
+  --font-size-meta: 12px;
+  --font-size-ui: 13px;
+  --font-size-body: 14px;
+  --font-size-title: 16px;
+  --font-size-heading: 20px;
+  --line-height-meta: 1.4;
+  --line-height-ui: 1.45;
+  --line-height-body: 1.55;
+  --line-height-title: 1.35;
+  --line-height-heading: 1.25;
+
   /* Theme Tokens - Default Dark Mode (Obsidian) */
   --bg-page: #080a0f;
   --bg-workspace: #0c0c0e;
@@ -321,67 +333,58 @@ html {
 
 body {
   font-family: var(--font-sans);
-  font-size: 14.5px;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
   background-color: var(--bg-page);
   color: var(--text-primary);
   transition: background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ========================================================================== */
-/* UNIFIED TYPOGRAPHY NORMALIZATION ACROSS ALL SURFACES                       */
-/* Standardizes font sizes across chat, sidebars, modals, tabs, cards & forms */
+/* UNIFIED TYPOGRAPHY SCALE                                                   */
+/* meta 12 / ui 13 / body 14 / title 16 / heading 20                          */
 /* ========================================================================== */
 .text-\[8px\],
-.text-\[9px\] {
-  font-size: 11.5px !important;
-  line-height: 1.4 !important;
-}
-
+.text-\[9px\],
 .text-\[10px\],
-.text-\[11px\] {
-  font-size: 12.5px !important;
-  line-height: 1.45 !important;
+.text-\[10\.5px\],
+.text-\[11px\],
+.text-\[11\.5px\],
+.text-xs {
+  font-size: var(--font-size-meta) !important;
+  line-height: var(--line-height-meta) !important;
 }
 
 .text-\[12px\],
-.text-\[12\.5px\] {
-  font-size: 13px !important;
-  line-height: 1.5 !important;
-}
-
+.text-\[12\.5px\],
 .text-\[13px\],
-.text-\[13\.5px\] {
-  font-size: 14px !important;
-  line-height: 1.5 !important;
+.text-\[13\.5px\],
+.text-sm {
+  font-size: var(--font-size-ui) !important;
+  line-height: var(--line-height-ui) !important;
 }
 
 .text-\[14px\],
 .text-\[14\.5px\],
 .text-\[15px\],
 .text-\[15\.5px\],
-.text-\[16px\] {
-  font-size: 14.5px !important;
-  line-height: 1.55 !important;
-}
-
-/* Ensure text-xs throughout all sidebars and modals is legible (12.5px) */
-.text-xs {
-  font-size: 12.5px !important;
-  line-height: 1.45 !important;
-}
-
-/* Standardize text-sm to 14px */
-.text-sm {
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-}
-
-/* Standardize text-base to 15px */
 .text-base {
-  font-size: 15px !important;
-  line-height: 1.55 !important;
+  font-size: var(--font-size-body) !important;
+  line-height: var(--line-height-body) !important;
 }
 
+.text-\[16px\],
+.text-\[17px\],
+.text-lg {
+  font-size: var(--font-size-title) !important;
+  line-height: var(--line-height-title) !important;
+}
+
+.text-xl,
+.text-2xl {
+  font-size: var(--font-size-heading) !important;
+  line-height: var(--line-height-heading) !important;
+}
 
 /* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */
 .badge-theme-transition {
@@ -929,7 +932,7 @@ html.light,
 }
 
 .driverjs-skyer-theme .driver-popover-title {
-  font-size: 1.05rem !important;
+  font-size: var(--font-size-title) !important;
   font-weight: 700 !important;
   color: #ffffff !important;
   margin-bottom: 8px !important;
@@ -937,7 +940,7 @@ html.light,
 }
 
 .driverjs-skyer-theme .driver-popover-description {
-  font-size: 0.85rem !important;
+  font-size: var(--font-size-ui) !important;
   line-height: 1.55 !important;
   color: #9ca3af !important;
 }
@@ -957,7 +960,7 @@ html.light,
   border-radius: 10px !important;
   padding: 6px 14px !important;
   font-weight: 600 !important;
-  font-size: 0.8rem !important;
+  font-size: var(--font-size-ui) !important;
   text-shadow: none !important;
   transition: all 0.2s ease !important;
   cursor: pointer !important;
@@ -985,7 +988,7 @@ html.light,
 }
 
 .driverjs-skyer-theme .driver-popover-progress-text {
-  font-size: 0.75rem !important;
+  font-size: var(--font-size-meta) !important;
   font-family: var(--font-mono, monospace) !important;
   color: #9ca3af !important;
   font-weight: 500 !important;

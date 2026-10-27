@@ -353,7 +353,7 @@ export function AdminUsersPage() {
                 <div className="text-sm font-bold text-slate-900 dark:text-white">
                   {selectedUser.displayName || `${selectedUser.firstName} ${selectedUser.lastName}`.trim()}
                 </div>
-                <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{selectedUser.email || "No email"}</div>
+                <div className="text-slate-500 dark:text-neutral-400 text-[11px]">{selectedUser.email || "No email"}</div>
                 <div className="text-[10px] text-emerald-400 font-mono mt-0.5">DB Record #{selectedUser.id}</div>
               </div>
             </div>

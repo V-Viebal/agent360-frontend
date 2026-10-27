@@ -9607,7 +9607,7 @@ export function GrokBotWorkspace() {
               >
                 <div className="px-2.5 py-1.5 border-b border-slate-200 dark:border-[#22222e] mb-1">
                   <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
-                  <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
+                  <div className="text-[10px] text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-[#f8a87c]" />}
@@ -10280,7 +10280,7 @@ export function GrokBotWorkspace() {
                   </div>
                   <div className="flex flex-col truncate">
                     <span className="text-xs text-neutral-200 font-medium truncate">{cleanDisplayName}</span>
-                    <span className="text-[10px] font-mono text-neutral-500 truncate">{cleanDisplayEmail}</span>
+                    <span className="text-[10px] text-neutral-500 truncate">{cleanDisplayEmail}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -10317,7 +10317,7 @@ export function GrokBotWorkspace() {
               >
                 <div className="px-2.5 py-1.5 border-b border-slate-200 dark:border-[#22222e] mb-1">
                   <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
-                  <div className="text-[10px] font-mono text-neutral-400">{cleanDisplayEmail}</div>
+                  <div className="text-[10px] text-neutral-400">{cleanDisplayEmail}</div>
                 </div>
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-[#f8a87c]" />}
@@ -10844,35 +10844,36 @@ export function GrokBotWorkspace() {
                     <span
                       data-testid={`agent-mention-card-${cleanSlug}`}
                       onClick={openCollabHistory}
-                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-60 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100"
+                      style={{ color: "#0f172a" }}
+                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-60 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100 dark:!text-neutral-100 [&_*]:!text-inherit"
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-xs !text-slate-900 dark:!text-white truncate">{fullName}</span>
+                        <span className="font-semibold text-xs truncate" style={{ color: "#0f172a" }}>{fullName}</span>
                         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-mono shrink-0 ${
                           isAgRunning
-                            ? "bg-amber-500/15 !text-amber-600 dark:!text-amber-400 border border-amber-500/30"
+                            ? "bg-amber-500/15 border border-amber-500/30"
                             : isAgOnline
-                            ? "bg-emerald-500/15 !text-emerald-600 dark:!text-emerald-400 border border-emerald-500/30"
-                            : "bg-neutral-500/15 !text-neutral-500 dark:!text-neutral-400 border border-neutral-500/30"
-                        }`}>
+                            ? "bg-emerald-500/15 border border-emerald-500/30"
+                            : "bg-neutral-500/15 border border-neutral-500/30"
+                        }`} style={{ color: isAgRunning ? "#d97706" : isAgOnline ? "#059669" : "#64748b" }}>
                           <span className={`h-1.5 w-1.5 rounded-full ${
                             isAgRunning ? "bg-amber-400 animate-ping" : isAgOnline ? "bg-emerald-400" : "bg-neutral-400"
                           }`} />
-                          <span>{isAgRunning ? "Đang xử lý" : isAgOnline ? "Online" : "Offline"}</span>
+                          <span style={{ color: isAgRunning ? "#d97706" : isAgOnline ? "#059669" : "#64748b" }}>{isAgRunning ? "Đang xử lý" : isAgOnline ? "Online" : "Offline"}</span>
                         </span>
                       </span>
                       {matchedAg?.description && (
-                        <span className="text-[10px] !text-slate-600 dark:!text-neutral-400 line-clamp-2 leading-snug">
+                        <span className="text-[10px] line-clamp-2 leading-snug" style={{ color: "#475569" }}>
                           {matchedAg.description}
                         </span>
                       )}
-                      <span className="flex items-center justify-between text-[10px] font-mono !text-slate-500 dark:!text-neutral-400 pt-1 border-t border-slate-100 dark:border-white/5">
-                        <span className="truncate">{roleLabel}</span>
-                        <span className="truncate !text-[#e0682b] dark:!text-[#f8a87c]">{modelLabel}</span>
+                      <span className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-slate-100 dark:border-white/5" style={{ color: "#64748b" }}>
+                        <span className="truncate" style={{ color: "#64748b" }}>{roleLabel}</span>
+                        <span className="truncate" style={{ color: "#e0682b" }}>{modelLabel}</span>
                       </span>
-                      <span className="mt-0.5 pt-1 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] font-medium !text-blue-600 dark:!text-blue-400">
-                        <span>Xem lịch sử phối hợp chung</span>
-                        <span>→</span>
+                      <span className="mt-0.5 pt-1 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[10px] font-medium" style={{ color: "#2563eb" }}>
+                        <span style={{ color: "#2563eb" }}>Xem lịch sử phối hợp chung</span>
+                        <span style={{ color: "#2563eb" }}>→</span>
                       </span>
                     </span>
                   </span>
@@ -11509,7 +11510,7 @@ export function GrokBotWorkspace() {
                           borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
                           color: "#ffffff",
                         }}
-                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] !text-white font-medium border shadow-xs font-sans ml-auto break-words [&_*]:!text-white ${
+                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] !text-white font-medium border shadow-xs font-sans ml-auto break-words  ${
                           isHighlighted ? "ring-2 ring-white/60 shadow-lg" : ""
                         }`}
                       >
