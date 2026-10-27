@@ -1545,3 +1545,72 @@ html.light [data-testid="agent-browser-profile"],
   background-color: rgba(15, 23, 42, 0.85) !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
 }
+
+/* ========================================================================== */
+/* EXPLICIT LIGHT MODE FIXES FOR SETTINGS MODAL & AGENT SETTINGS MODAL        */
+/* Resolves washed-out / white text on light surfaces shown in mobile screenshots */
+/* ========================================================================== */
+html.light,
+[data-theme="light"] {
+  /* Modals Outer Frame & Panels */
+  .bg-white,
+  .bg-slate-50 {
+    color: #0f172a !important;
+  }
+
+  /* Modal Headers */
+  .bg-slate-50 h3,
+  .bg-slate-50 h4,
+  .bg-slate-50 p,
+  .bg-slate-50 span:not([class*="bg-"]):not([class*="text-"]):not(.keep-white) {
+    color: #0f172a;
+  }
+
+  /* All inputs and textareas in light mode must have dark crisp text */
+  input[type="text"],
+  input[type="search"],
+  input[type="password"],
+  textarea,
+  select {
+    color: #0f172a !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #64748b !important;
+  }
+
+  /* Profile & Metadata Cards in Settings Modal */
+  .p-4.rounded-2xl.bg-slate-50,
+  .p-3\.5.rounded-xl.bg-slate-50,
+  .p-3\.5.rounded-2xl.bg-slate-50 {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+  }
+
+  /* Labels in metadata grid: Full Name, Email, Roles, SSO Session */
+  .p-3\.5.rounded-xl.bg-slate-50 span,
+  .p-3\.5.rounded-xl.bg-slate-50 div {
+    text-shadow: none !important;
+  }
+
+  .p-3\.5.rounded-xl.bg-slate-50 > span {
+    color: #64748b !important;
+  }
+
+  .p-3\.5.rounded-xl.bg-slate-50 > div {
+    color: #0f172a !important;
+  }
+
+  /* Agent Settings Modal: Model Picker buttons */
+  .max-h-52 button {
+    color: #0f172a !important;
+  }
+
+  /* Nav Items in Left Rails */
+  nav button,
+  aside button {
+    text-shadow: none !important;
+  }
+}
