@@ -160,10 +160,10 @@ export async function markChatAsRead(chatId: string, agentId?: string): Promise<
     const endpoint = cleanAgentId
       ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanAgentId)}/chats/${encodeURIComponent(chatId)}/read`
       : `${API_BASE_URL}/chats/${encodeURIComponent(chatId)}/read`;
-    const res = await fetch(endpoint, {
+    const res = await authorizedFetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" }
-    });
+    }, cleanAgentId);
     return res.ok;
   } catch {
     return false;
