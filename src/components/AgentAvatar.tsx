@@ -402,6 +402,7 @@ export function AgentAvatar({
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
+    if (!interactive) return;
     const el = containerRef.current;
     if (!el) return;
     const parentTarget = el.closest("button, a, [role=\"button\"], [data-testid^=\"agent-mention-chip\"], .group") || el;
@@ -413,7 +414,7 @@ export function AgentAvatar({
       parentTarget.removeEventListener("pointerenter", onEnter);
       parentTarget.removeEventListener("pointerleave", onLeave);
     };
-  }, []);
+  }, [interactive]);
   const [customConfig, setCustomConfig] = useState<CustomAvatarConfig | null>(
     overrideConfig !== undefined ? overrideConfig : getAgentAvatarConfig(agent.id)
   );

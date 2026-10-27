@@ -9642,6 +9642,90 @@ const selectedAgentTheme = getAgentColorTheme(
                       )}
                     </div>
                   )}
+
+                  {/* Context menu for Rail Agents */}
+                  {(() => {
+                    const activeAg = agents.find((a) => a.id === activeAgentMenuId);
+                    if (!activeAg) return null;
+                    return (
+                      <div className="hidden" data-agent-menu-container="true">
+                        <DropdownMenu
+                          isOpen={!!activeAg}
+                          onClose={() => {
+                            setActiveAgentMenuId(null);
+                            setActiveAgentMenuPos(null);
+                          }}
+                          anchorPosition={activeAgentMenuPos}
+                          align="left"
+                          width="w-52"
+                        >
+                          <DropdownMenuItem
+                            icon={<Pin size={13} className={pinnedAgentIds.includes(activeAg.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                            label={pinnedAgentIds.includes(activeAg.id) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
+                            onClick={(e) => {
+                              togglePinAgent(activeAg.id, e);
+                              setActiveAgentMenuId(null);
+                              setActiveAgentMenuPos(null);
+                            }}
+                          />
+                          <DropdownMenuItem
+                            icon={<Plus size={13} className="text-[#f8a87c]" />}
+                            label="Tạo Chat mới với Agent"
+                            onClick={() => {
+                              handleSelectAgent(activeAg);
+                              setTimeout(() => handleNewChat(), 50);
+                              setActiveAgentMenuId(null);
+                              setActiveAgentMenuPos(null);
+                            }}
+                          />
+                          <DropdownMenuItem
+                            icon={<Settings size={13} className="text-[#f8a87c]" />}
+                            label="Cài đặt Agent (Settings)"
+                            onClick={() => {
+                              handleSelectAgent(activeAg);
+                              setAgentSettingsModalTab("general");
+                              setIsAgentSettingsModalOpen(true);
+                              setActiveAgentMenuId(null);
+                              setActiveAgentMenuPos(null);
+                            }}
+                          />
+                          <DropdownMenuItem
+                            icon={<Bot size={13} className="text-cyan-400" />}
+                            label="Xem thông số kỹ thuật"
+                            onClick={() => {
+                              handleSelectAgent(activeAg);
+                              handleToggleBotInfo(false);
+                              setActiveAgentMenuId(null);
+                              setActiveAgentMenuPos(null);
+                            }}
+                          />
+                          <DropdownMenuItem
+                            icon={
+                              togglingAgentId === activeAg.id ? (
+                                <Loader2 size={13} className="animate-spin text-neutral-400" />
+                              ) : activeAg.enabled === false || activeAg.status === "disabled" ? (
+                                <Power size={13} className="text-emerald-400" />
+                              ) : (
+                                <PowerOff size={13} className="text-rose-400" />
+                              )
+                            }
+                            label={
+                              togglingAgentId === activeAg.id
+                                ? "Đang cập nhật..."
+                                : activeAg.enabled === false || activeAg.status === "disabled"
+                                ? "Kích hoạt Agent (Bật)"
+                                : "Vô hiệu hóa Agent (Tắt)"
+                            }
+                            onClick={(e) => {
+                              handleToggleAgentEnabled(activeAg, e);
+                              setActiveAgentMenuId(null);
+                              setActiveAgentMenuPos(null);
+                            }}
+                          />
+                        </DropdownMenu>
+                      </div>
+                    );
+                  })()}
                 </>
               )}
             </div>
@@ -9878,9 +9962,12 @@ const selectedAgentTheme = getAgentColorTheme(
                         onTouchMove={handleTouchEndAgent}
                         onTouchCancel={handleTouchEndAgent}
                         onContextMenu={(e) => {
-                          if (typeof window !== "undefined" && window.innerWidth < 1024) {
-                            e.preventDefault();
+                          e.preventDefault();
+                          if (isCoarseTouchDevice()) {
                             setMobileActionAgent(ag);
+                          } else {
+                            setActiveAgentMenuId(ag.id);
+                            setActiveAgentMenuPos({ x: e.clientX, y: e.clientY });
                           }
                         }}
                         onClick={() => {
@@ -9970,33 +10057,15 @@ const selectedAgentTheme = getAgentColorTheme(
                                 return null;
                               })()}
 
-                              {/* 3-Dots More Options Menu for Agent */}
+                              {/* Agent Options Menu (triggered by right click on desktop, long press on mobile) */}
                               <div className="relative z-10 pointer-events-auto" data-agent-menu-container="true">
-                                <button
-                                  aria-label="Tùy chọn agent"
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    triggerHaptic(15);
-                                    setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
-                                  }}
-                                  className={`p-1 rounded-lg transition-all cursor-pointer ${
-                                    activeAgentMenuId === ag.id
-                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
-                                      : ag.enabled === false || ag.status === "disabled"
-                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
-                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                  }`}
-                                  title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
-                                >
-                                  <MoreVertical size={13} />
-                                </button>
-
-                                {/* Dropdown Menu */}
                                 <DropdownMenu
                                   isOpen={activeAgentMenuId === ag.id}
-                                  onClose={() => setActiveAgentMenuId(null)}
+                                  onClose={() => {
+                                    setActiveAgentMenuId(null);
+                                    setActiveAgentMenuPos(null);
+                                  }}
+                                  anchorPosition={activeAgentMenuPos}
                                   align="right"
                                   width="w-52"
                                 >
@@ -10119,9 +10188,12 @@ const selectedAgentTheme = getAgentColorTheme(
                         onTouchMove={handleTouchEndAgent}
                         onTouchCancel={handleTouchEndAgent}
                         onContextMenu={(e) => {
-                          if (typeof window !== "undefined" && window.innerWidth < 1024) {
-                            e.preventDefault();
+                          e.preventDefault();
+                          if (isCoarseTouchDevice()) {
                             setMobileActionAgent(ag);
+                          } else {
+                            setActiveAgentMenuId(ag.id);
+                            setActiveAgentMenuPos({ x: e.clientX, y: e.clientY });
                           }
                         }}
                         onClick={() => {
@@ -10211,33 +10283,15 @@ const selectedAgentTheme = getAgentColorTheme(
                                 return null;
                               })()}
 
-                              {/* 3-Dots More Options Menu for Agent */}
+                              {/* Agent Options Menu (triggered by right click on desktop, long press on mobile) */}
                               <div className="relative z-10 pointer-events-auto" data-agent-menu-container="true">
-                                <button
-                                  aria-label="Tùy chọn agent"
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    e.preventDefault();
-                                    triggerHaptic(15);
-                                    setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
-                                  }}
-                                  className={`p-1 rounded-lg transition-all cursor-pointer ${
-                                    activeAgentMenuId === ag.id
-                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
-                                      : ag.enabled === false || ag.status === "disabled"
-                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
-                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                  }`}
-                                  title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
-                                >
-                                  <MoreVertical size={13} />
-                                </button>
-
-                                {/* Dropdown Menu */}
                                 <DropdownMenu
                                   isOpen={activeAgentMenuId === ag.id}
-                                  onClose={() => setActiveAgentMenuId(null)}
+                                  onClose={() => {
+                                    setActiveAgentMenuId(null);
+                                    setActiveAgentMenuPos(null);
+                                  }}
+                                  anchorPosition={activeAgentMenuPos}
                                   align="right"
                                   width="w-52"
                                 >
