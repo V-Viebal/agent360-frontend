@@ -13977,9 +13977,9 @@ export function GrokBotWorkspace() {
               <Tooltip content="Tạo cuộc hội thoại mới" placement="bottom" shortcut="Ctrl+Shift+O" minWidth={160}>
                 <button aria-label="New Chat Session" data-ux-target-min="24"
                   onClick={handleNewChat}
-                  className="h-7 w-7 rounded-lg hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                  className="h-7 w-7 rounded-lg border border-slate-300 dark:border-[#2e2e3c] bg-white dark:bg-[#181822] hover:bg-slate-100 dark:hover:bg-[#20202c] hover:border-slate-400 dark:hover:border-[#3e3e50] flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-slate-950 dark:hover:text-white shadow-2xs transition-all cursor-pointer"
                 >
-                  <Plus size={15} />
+                  <Plus size={15} className="stroke-[2.2]" />
                 </button>
               </Tooltip>
 
