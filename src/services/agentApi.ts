@@ -671,19 +671,81 @@ export async function getSignedWorkspaceFileUrl(agentId: string, filePath: strin
   }
 }
 
-export async function fetchWorkspaceFileBlobUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
+export interface UniversalSheetPreview {
+  name: string;
+  headers: string[];
+  rows: string[][];
+  totalRows: number;
+}
+
+export interface UniversalSlidePreview {
+  index: number;
+  title: string;
+  bullets: string[];
+}
+
+export interface UniversalArchiveEntry {
+  path: string;
+  size: number;
+  compressedSize: number;
+  modifiedAt?: string | null;
+  isDirectory: boolean;
+}
+
+export interface UniversalFilePreviewResponse {
+  fileName: string;
+  path: string;
+  extension: string;
+  previewKind: string;
+  mimeType: string;
+  sizeBytes: number;
+  textContent?: string | null;
+  sheets?: UniversalSheetPreview[] | null;
+  slides?: UniversalSlidePreview[] | null;
+  paragraphs?: string[] | null;
+  archiveEntries?: UniversalArchiveEntry[] | null;
+  inlineUrl?: string | null;
+}
+
+export async function fetchUniversalFilePreview(agentId: string, filePath: string): Promise<UniversalFilePreviewResponse | null> {
   const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanPath = (filePath || "").replace(/^\/+/, "");
   try {
     const res = await authorizedFetch(
-      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-download?path=${encodeURIComponent(filePath)}&inline=${inline ? "true" : "false"}`,
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-preview?path=${encodeURIComponent(cleanPath)}`,
+      { headers: { Accept: "application/json" } },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as UniversalFilePreviewResponse;
+  } catch (err) {
+    console.warn(`fetchUniversalFilePreview failed for ${cleanId}/${cleanPath}:`, err);
+    return null;
+  }
+}
+
+export async function fetchWorkspaceFileBlobUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanPath = (filePath || "").replace(/^\/+/, "");
+  try {
+    let res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-download?path=${encodeURIComponent(cleanPath)}&inline=${inline ? "true" : "false"}`,
       {},
       cleanId
     );
+    if (!res.ok) {
+      const encodedRel = cleanPath.split("/").map(encodeURIComponent).join("/");
+      res = await authorizedFetch(
+        `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/console/files/${encodedRel}${inline ? "" : "?download=1"}`,
+        {},
+        cleanId
+      );
+    }
     if (!res.ok) return null;
     const blob = await res.blob();
     return URL.createObjectURL(blob);
   } catch (err) {
-    console.warn(`fetchWorkspaceFileBlobUrl failed for ${cleanId}/${filePath}:`, err);
+    console.warn(`fetchWorkspaceFileBlobUrl failed for ${cleanId}/${cleanPath}:`, err);
     return null;
   }
 }

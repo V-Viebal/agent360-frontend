@@ -814,6 +814,8 @@ import {
   fetchWorkspaceLibrary,
   fetchWorkspaceFileContent,
   fetchWorkspaceFileBlobUrl,
+  fetchUniversalFilePreview,
+  UniversalFilePreviewResponse,
   getSignedWorkspaceFileUrl,
   downloadWorkspaceFile,
   LibraryCategory,
@@ -5837,23 +5839,50 @@ ${targetItem.text}`;
   const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string } | null>(null);
   const [previewModalFile, setPreviewModalFile] = useState<ParsedChatAttachmentItem | null>(null);
   const [previewModalText, setPreviewModalText] = useState<string | null>(null);
+  const [previewModalStructured, setPreviewModalStructured] = useState<UniversalFilePreviewResponse | null>(null);
+  const [previewModalActiveSheet, setPreviewModalActiveSheet] = useState<number>(0);
+  const [previewModalViewSource, setPreviewModalViewSource] = useState<boolean>(false);
   const [isLoadingPreviewModalText, setIsLoadingPreviewModalText] = useState<boolean>(false);
+  const [libraryStructuredPreview, setLibraryStructuredPreview] = useState<UniversalFilePreviewResponse | null>(null);
+  const [libraryActiveSheet, setLibraryActiveSheet] = useState<number>(0);
 
-  const triggerAttachmentDownload = async (att: ParsedChatAttachmentItem) => {
-    triggerHaptic(10);
-    // Try internal authenticated workspace download first if it's an internal endpoint or bare filename
-    const match = (att.previewUrl || att.rawUrl).match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
-    if (match) {
-      const ag = decodeURIComponent(match[1]);
-      const p = decodeURIComponent(match[2]);
-      const ok = await downloadWorkspaceFile(ag, p, att.fileName);
-      if (ok) return;
+  const formatSize = (bytes?: number | null) => {
+    if (bytes === null || bytes === undefined) return "";
+    if (bytes < 1024) return `${bytes}B`;
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+  };
+
+  const extractInternalAgentAndPath = (att: ParsedChatAttachmentItem): { agentSlug: string; filePath: string } | null => {
+    const candidate = att.previewUrl || att.rawUrl || "";
+    const dlMatch = candidate.match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
+    if (dlMatch) {
+      return { agentSlug: decodeURIComponent(dlMatch[1]), filePath: decodeURIComponent(dlMatch[2]) };
     }
-    // If rawUrl is a relative workspace path or filename without http, try downloading from current agent workspace
+    const cfMatch = candidate.match(/\/agents\/([^/]+)\/console\/files\/(.+?)(?:\?|$)/i);
+    if (cfMatch) {
+      return {
+        agentSlug: decodeURIComponent(cfMatch[1]),
+        filePath: cfMatch[2].split("/").map((s) => decodeURIComponent(s)).join("/"),
+      };
+    }
+    const wsMatch = (att.rawUrl || "").replace(/\\/g, "/").match(/\/workspaces\/([^/]+)\/(.+)$/i);
+    if (wsMatch) {
+      return { agentSlug: wsMatch[1], filePath: wsMatch[2] };
+    }
     if (!/^(https?:|blob:|data:)/i.test(att.rawUrl)) {
       const ag = selectedAgent?.slug || selectedAgent?.id || selectedAgentId || "default";
       const cleanRel = att.rawUrl.replace(/^\/+/, "");
-      const ok = await downloadWorkspaceFile(ag, cleanRel.includes("/") ? cleanRel : `media/${cleanRel}`, att.fileName);
+      return { agentSlug: ag, filePath: cleanRel || att.fileName };
+    }
+    return null;
+  };
+
+  const triggerAttachmentDownload = async (att: ParsedChatAttachmentItem) => {
+    triggerHaptic(10);
+    const extracted = extractInternalAgentAndPath(att);
+    if (extracted) {
+      const ok = await downloadWorkspaceFile(extracted.agentSlug, extracted.filePath, att.fileName);
       if (ok) return;
     }
     // Fallback to storageUrl if present, or previewUrl
@@ -5868,33 +5897,53 @@ ${targetItem.text}`;
     document.body.removeChild(a);
   };
 
+  const parseClientDelimitedPreview = (fileName: string, text: string, delimiter: string): UniversalFilePreviewResponse => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const parseLine = (line: string): string[] => {
+      const cells: string[] = [];
+      let cur = "";
+      let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQ) {
+          if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+          else if (ch === '"') inQ = false;
+          else cur += ch;
+        } else {
+          if (ch === '"') inQ = true;
+          else if (ch === delimiter) { cells.push(cur.trim()); cur = ""; }
+          else cur += ch;
+        }
+      }
+      cells.push(cur.trim());
+      return cells;
+    };
+    const parsedRows = lines.slice(0, 251).map(parseLine);
+    const headers = parsedRows[0] || [];
+    const rows = parsedRows.slice(1);
+    return {
+      fileName,
+      path: fileName,
+      extension: delimiter === "\t" ? "tsv" : "csv",
+      previewKind: "spreadsheet",
+      mimeType: delimiter === "\t" ? "text/tab-separated-values" : "text/csv",
+      sizeBytes: text.length,
+      textContent: text,
+      sheets: [{ name: fileName, headers, rows, totalRows: Math.max(0, lines.length - 1) }],
+    };
+  };
+
   const handleOpenAttachmentPreview = async (att: ParsedChatAttachmentItem) => {
     let resolvedAtt = { ...att };
-
-    // If attachment points to internal workspace file, fetch authenticated Blob URL (works on all backends) or signed URL
-    const isInternalDownload = att.previewUrl.includes("/workspace/file-download");
-    if (isInternalDownload) {
-      try {
-        const match = att.previewUrl.match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
-        if (match) {
-          const agentSlug = decodeURIComponent(match[1]);
-          const filePath = decodeURIComponent(match[2]);
-          const blobUrl = await fetchWorkspaceFileBlobUrl(agentSlug, filePath, true);
-          if (blobUrl) {
-            resolvedAtt.previewUrl = blobUrl;
-          } else {
-            const signed = await getSignedWorkspaceFileUrl(agentSlug, filePath, true);
-            if (signed) {
-              resolvedAtt.previewUrl = signed;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn("[AttachmentPreview] Failed to resolve workspace file preview:", err);
-      }
-    }
+    const extracted = extractInternalAgentAndPath(att);
 
     if (resolvedAtt.isImage || resolvedAtt.kind === "image") {
+      if (extracted && !resolvedAtt.previewUrl.startsWith("blob:") && !resolvedAtt.previewUrl.startsWith("data:")) {
+        try {
+          const blobUrl = await fetchWorkspaceFileBlobUrl(extracted.agentSlug, extracted.filePath, true);
+          if (blobUrl) resolvedAtt.previewUrl = blobUrl;
+        } catch {}
+      }
       setLightboxZoom(1);
       setLightboxPan({ x: 0, y: 0 });
       setLightboxRotation(0);
@@ -5903,23 +5952,58 @@ ${targetItem.text}`;
       setLightboxImageUrl({ url: resolvedAtt.previewUrl, name: resolvedAtt.fileName });
       return;
     }
+
     setPreviewModalFile(resolvedAtt);
     setPreviewModalText(null);
-    if (resolvedAtt.kind === "code" || resolvedAtt.kind === "data" || /^(CSV|TSV|MD|MDX|TXT|JSON|YAML|YML|XML|LOG|SQL|PY|TS|TSX|JS|JSX|SH|HTML|CSS)$/i.test(resolvedAtt.ext)) {
-      setIsLoadingPreviewModalText(true);
-      try {
+    setPreviewModalStructured(null);
+    setPreviewModalActiveSheet(0);
+    setPreviewModalViewSource(false);
+    setIsLoadingPreviewModalText(true);
+
+    try {
+      // 1. For PDF, Video, Audio: resolve Blob URL so iframe/media elements never fail auth or framing
+      if (extracted && (resolvedAtt.kind === "pdf" || resolvedAtt.kind === "video" || resolvedAtt.kind === "audio")) {
+        const blobUrl = await fetchWorkspaceFileBlobUrl(extracted.agentSlug, extracted.filePath, true);
+        if (blobUrl) {
+          resolvedAtt = { ...resolvedAtt, previewUrl: blobUrl };
+          setPreviewModalFile(resolvedAtt);
+        }
+        setIsLoadingPreviewModalText(false);
+        return;
+      }
+
+      // 2. Try universal structured preview endpoint on backend (supports XLSX, CSV, TSV, DOCX, PPTX, RTF, ZIP, HTML, MD, Code, Text)
+      if (extracted) {
+        const structured = await fetchUniversalFilePreview(extracted.agentSlug, extracted.filePath);
+        if (structured) {
+          setPreviewModalStructured(structured);
+          if (structured.textContent !== undefined && structured.textContent !== null) {
+            setPreviewModalText(structured.textContent);
+          }
+          setIsLoadingPreviewModalText(false);
+          return;
+        }
+      }
+
+      // 3. Fallback: direct fetch for text/HTML/CSV/code files
+      if (
+        resolvedAtt.kind === "code" ||
+        resolvedAtt.kind === "data" ||
+        /^(CSV|TSV|MD|MDX|TXT|JSON|YAML|YML|XML|LOG|SQL|PY|TS|TSX|JS|JSX|SH|HTML|HTM|CSS|SCSS|RTF|VUE|SVELTE|CS|GO|RS|JAVA|CPP|C|H)$/i.test(resolvedAtt.ext)
+      ) {
         const res = await fetch(resolvedAtt.previewUrl);
         if (res.ok) {
-          const txt = await res.text();
-          setPreviewModalText(txt.slice(0, 120000));
-        } else {
-          setPreviewModalText(null);
+          const txt = (await res.text()).slice(0, 160000);
+          setPreviewModalText(txt);
+          if (/^(CSV|TSV)$/i.test(resolvedAtt.ext)) {
+            setPreviewModalStructured(parseClientDelimitedPreview(resolvedAtt.fileName, txt, resolvedAtt.ext.toUpperCase() === "TSV" ? "\t" : ","));
+          }
         }
-      } catch {
-        setPreviewModalText(null);
-      } finally {
-        setIsLoadingPreviewModalText(false);
       }
+    } catch (err) {
+      console.warn("[AttachmentPreview] Failed to load preview:", err);
+    } finally {
+      setIsLoadingPreviewModalText(false);
     }
   };
   const [lightboxZoom, setLightboxZoom] = useState<number>(1);
@@ -8468,6 +8552,8 @@ ${targetItem.text}`;
     setSelectedFilePath(node.path);
     setSelectedLibraryNode(node);
     setFileContent(null);
+    setLibraryStructuredPreview(null);
+    setLibraryActiveSheet(0);
     if (fileBlobUrl) {
       URL.revokeObjectURL(fileBlobUrl);
       setFileBlobUrl(null);
@@ -8478,14 +8564,21 @@ ${targetItem.text}`;
       if (!targetId) return;
       const pk = (node.previewKind || "").toLowerCase();
       const cat = (node.category || "").toLowerCase();
+      const ext = (node.extension || "").toLowerCase();
       if (pk === "image" || cat === "images" || pk === "pdf" || pk === "video" || pk === "audio" || cat === "media") {
         const blobUrl = await fetchWorkspaceFileBlobUrl(targetId, node.path, true);
         setFileBlobUrl(blobUrl);
-      } else if (pk === "spreadsheet" || pk === "document" || pk === "binary") {
-        setFileContent(null);
       } else {
-        const content = await fetchWorkspaceFileContent(targetId, node.path);
-        setFileContent(content);
+        const structured = await fetchUniversalFilePreview(targetId, node.path);
+        if (structured) {
+          setLibraryStructuredPreview(structured);
+          if (structured.textContent !== undefined && structured.textContent !== null) {
+            setFileContent(structured.textContent);
+          }
+        } else if (pk !== "spreadsheet" && pk !== "document" && pk !== "binary" && !/^(xlsx|xls|xlsm|docx|doc|pptx|ppt|zip|rar|7z|tar|gz)$/i.test(ext)) {
+          const content = await fetchWorkspaceFileContent(targetId, node.path);
+          setFileContent(content);
+        }
       }
     } finally {
       setIsLoadingFile(false);
@@ -12499,23 +12592,9 @@ const selectedAgentTheme = getAgentColorTheme(
                                 )}
                                 <button
                                   type="button"
-                                  onClick={async (e) => {
+                                  onClick={(e) => {
                                     e.stopPropagation();
-                                    triggerHaptic(10);
-                                    const match = att.previewUrl.match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
-                                    if (match) {
-                                      const ag = decodeURIComponent(match[1]);
-                                      const p = decodeURIComponent(match[2]);
-                                      const ok = await downloadWorkspaceFile(ag, p, att.fileName);
-                                      if (ok) return;
-                                    }
-                                    const a = document.createElement("a");
-                                    a.href = downloadHref;
-                                    a.download = att.fileName;
-                                    a.target = "_blank";
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    document.body.removeChild(a);
+                                    void triggerAttachmentDownload(att);
                                   }}
                                   className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0 transition-colors cursor-pointer"
                                   title={`Tải xuống ${att.fileName}`}
@@ -14093,24 +14172,7 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
           )}
 
-          {/* Quick Slash Commands Popover */}
-          <div className="relative w-full">
-            {inputText.startsWith("/") && (
-              <SlashCommandMenu
-                query={inputText}
-                onSelect={(cmd) => {
-                  if (cmd.command === "/cells") {
-                    setInputText("");
-                    setAgentSettingsModalTab("iam360_cells");
-                    setIsAgentSettingsModalOpen(true);
-                  } else {
-                    setInputText(cmd.prompt);
-                  }
-                }}
-                onClose={() => {}}
-              />
-            )}
-          </div>
+          
 
           {/* Context Token Usage High Warning (>80% threshold) */}
           {(() => {
@@ -15218,7 +15280,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     e.target.style.height = Math.min(e.target.scrollHeight, 210) + "px";
 
                     const textUpToCursor = newVal.slice(0, cursorPos);
-                    const triggerMatch = textUpToCursor.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
+                    const triggerMatch = textUpToCursor.match(/(@)([a-zA-Z0-9_-]*)$/);
 
                     if (triggerMatch) {
                       setPlusMenuSearch(triggerMatch[2]);
@@ -15405,30 +15467,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       }
                     }
 
-                    if (e.key === "Backspace") {
-                      const target = e.currentTarget;
-                      const start = target.selectionStart;
-                      const end = target.selectionEnd;
-                      if (start === end) {
-                        const textBefore = target.value.substring(0, start);
-                        const trailingTagMatch = textBefore.match(/(@[a-zA-Z0-9_-]+|\/[a-zA-Z0-9_-]+)\s*$/);
-                        if (trailingTagMatch) {
-                          e.preventDefault();
-                          const tagToRemove = trailingTagMatch[0];
-                          const newTextBefore = textBefore.substring(0, textBefore.length - tagToRemove.length);
-                          const textAfter = target.value.substring(end);
-                          const nextInput = (newTextBefore + textAfter).trimStart();
-                          setInputText(nextInput);
-                          setTimeout(() => {
-                            const newCursorPos = Math.max(0, start - tagToRemove.length);
-                            target.selectionStart = target.selectionEnd = newCursorPos;
-                            target.style.height = "auto";
-                            target.style.height = Math.min(target.scrollHeight, 210) + "px";
-                          }, 0);
-                          return;
-                        }
-                      }
-                    }
+                    // Standard natural backspace (deletes 1 character at a time)
 
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault();
@@ -17642,6 +17681,29 @@ ${chat.id}`);
                                 .{selectedLibraryNode.extension}
                               </span>
                             )}
+                            <Tooltip content="Mở rộng toàn màn hình" placement="top" minWidth={120}>
+                              <button
+                                type="button"
+                                aria-label="Expand preview"
+                                onClick={() => {
+                                  const targetId = selectedAgent?.slug || selectedAgent?.id || selectedAgentId || "default";
+                                  const fileName = selectedLibraryNode?.name || selectedFilePath.split("/").pop() || "artifact";
+                                  const fmt = classifyAttachmentFormat(fileName);
+                                  void handleOpenAttachmentPreview({
+                                    fileName,
+                                    rawUrl: selectedFilePath,
+                                    previewUrl: resolveUploadedAttachmentPreviewUrl(selectedFilePath, targetId),
+                                    isImage: fmt.kind === "image",
+                                    kind: fmt.kind,
+                                    ext: fmt.ext,
+                                    badgeColor: fmt.badgeColor,
+                                  });
+                                }}
+                                className="p-1 rounded bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-white cursor-pointer"
+                              >
+                                <Maximize2 size={11} />
+                              </button>
+                            </Tooltip>
                             <Tooltip content={`Download ${selectedFilePath.split("/").pop()}`} placement="left" minWidth={110}>
                               <button
                                 type="button"
@@ -17681,13 +17743,105 @@ ${chat.id}`);
                               title={selectedLibraryNode?.name || "PDF Preview"}
                               className="w-full h-56 rounded border-0 bg-white"
                             />
+                          ) : (selectedLibraryNode?.previewKind === "html" || /^(html|htm)$/i.test(selectedLibraryNode?.extension || "")) && fileContent ? (
+                            <iframe
+                              srcDoc={fileContent}
+                              title={selectedLibraryNode?.name || "HTML Preview"}
+                              sandbox="allow-scripts allow-downloads allow-forms"
+                              className="w-full h-56 rounded border border-slate-200 dark:border-white/10 bg-white"
+                            />
                           ) : fileBlobUrl && selectedLibraryNode?.previewKind === "video" ? (
                             <video src={fileBlobUrl} controls className="w-full max-h-56 rounded bg-black" />
                           ) : fileBlobUrl && selectedLibraryNode?.previewKind === "audio" ? (
                             <div className="py-6 flex items-center justify-center">
                               <audio src={fileBlobUrl} controls className="w-full" />
                             </div>
-                          ) : (selectedLibraryNode?.previewKind === "spreadsheet" || selectedLibraryNode?.previewKind === "document" || selectedLibraryNode?.previewKind === "binary") ? (
+                          ) : libraryStructuredPreview?.sheets && libraryStructuredPreview.sheets.length > 0 ? (
+                            <div className="space-y-2 font-sans">
+                              {libraryStructuredPreview.sheets.length > 1 && (
+                                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                                  {libraryStructuredPreview.sheets.map((sh, sIdx) => (
+                                    <button
+                                      key={sh.name + sIdx}
+                                      type="button"
+                                      onClick={() => setLibraryActiveSheet(sIdx)}
+                                      className={`px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer shrink-0 border ${
+                                        libraryActiveSheet === sIdx
+                                          ? "bg-[#f8a87c] text-black border-[#f8a87c]"
+                                          : "bg-slate-200/70 dark:bg-white/5 text-slate-700 dark:text-neutral-300 border-transparent"
+                                      }`}
+                                    >
+                                      {sh.name} ({sh.totalRows})
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {(() => {
+                                const activeSh = libraryStructuredPreview.sheets[libraryActiveSheet] || libraryStructuredPreview.sheets[0];
+                                if (!activeSh) return null;
+                                return (
+                                  <div className="overflow-auto rounded-lg border border-slate-200 dark:border-[#262636] max-h-48">
+                                    <table className="w-full text-left border-collapse text-[10px]">
+                                      {activeSh.headers.length > 0 && (
+                                        <thead className="bg-slate-200/80 dark:bg-[#1e1e2c] text-slate-900 dark:text-white sticky top-0">
+                                          <tr>
+                                            {activeSh.headers.map((h, hIdx) => (
+                                              <th key={hIdx} className="px-2 py-1 border-b border-r border-slate-300 dark:border-[#2e2e40] font-semibold whitespace-nowrap">
+                                                {h || `Col ${hIdx + 1}`}
+                                              </th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                      )}
+                                      <tbody className="divide-y divide-slate-200 dark:divide-[#222230]">
+                                        {activeSh.rows.slice(0, 50).map((r, rIdx) => (
+                                          <tr key={rIdx} className="hover:bg-slate-200/40 dark:hover:bg-white/[0.03]">
+                                            {r.map((cell, cIdx) => (
+                                              <td key={cIdx} className="px-2 py-1 border-r border-slate-200/70 dark:border-[#222230] whitespace-nowrap max-w-[180px] truncate">
+                                                {cell}
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : libraryStructuredPreview?.slides && libraryStructuredPreview.slides.length > 0 ? (
+                            <div className="space-y-2 font-sans">
+                              {libraryStructuredPreview.slides.map((sl) => (
+                                <div key={sl.index} className="p-2 rounded-lg bg-white dark:bg-[#191924] border border-slate-200 dark:border-[#282838] space-y-1">
+                                  <div className="text-[11px] font-bold text-slate-900 dark:text-white">
+                                    Slide {sl.index}: {sl.title}
+                                  </div>
+                                  {sl.bullets.map((b, bIdx) => (
+                                    <div key={bIdx} className="text-[10px] text-slate-600 dark:text-neutral-300 pl-2">• {b}</div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          ) : libraryStructuredPreview?.paragraphs && libraryStructuredPreview.paragraphs.length > 0 ? (
+                            <div className="space-y-1.5 font-sans text-[11px] leading-relaxed">
+                              {libraryStructuredPreview.paragraphs.map((pText, pIdx) => (
+                                <p key={pIdx} className="text-slate-800 dark:text-neutral-200">{pText}</p>
+                              ))}
+                            </div>
+                          ) : libraryStructuredPreview?.archiveEntries && libraryStructuredPreview.archiveEntries.length > 0 ? (
+                            <div className="space-y-1 font-mono text-[10px]">
+                              {libraryStructuredPreview.archiveEntries.map((ae, aIdx) => (
+                                <div key={aIdx} className="flex items-center justify-between gap-2 px-1.5 py-0.5 rounded hover:bg-white/5">
+                                  <span className="truncate">{ae.path}</span>
+                                  <span className="text-neutral-500 shrink-0">{ae.isDirectory ? "DIR" : formatSize(ae.size)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : fileContent ? (
+                            <div className="whitespace-pre-wrap leading-relaxed">
+                              {fileContent}
+                            </div>
+                          ) : (
                             <div className="py-6 px-3 text-center space-y-2 font-sans">
                               <div className="text-neutral-300 font-medium text-xs">{selectedLibraryNode?.name}</div>
                               <div className="text-[11px] text-neutral-500">
@@ -17706,10 +17860,6 @@ ${chat.id}`);
                                 <Download size={12} />
                                 <span>Tải xuống {selectedLibraryNode?.name}</span>
                               </button>
-                            </div>
-                          ) : (
-                            <div className="whitespace-pre-wrap leading-relaxed">
-                              {fileContent || "Empty file"}
                             </div>
                           )}
                         </div>
@@ -17900,9 +18050,9 @@ ${chat.id}`);
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden"
+            className="relative w-full max-w-5xl max-h-[88vh] flex flex-col rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden"
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#161622]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#161622] gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border shrink-0 ${previewModalFile.badgeColor}`}>
                   {previewModalFile.ext}
@@ -17910,8 +18060,32 @@ ${chat.id}`);
                 <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                   {previewModalFile.fileName}
                 </span>
+                {previewModalStructured?.sizeBytes ? (
+                  <span className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 shrink-0">
+                    ({formatSize(previewModalStructured.sizeBytes)})
+                  </span>
+                ) : null}
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {(previewModalFile.ext === "HTML" ||
+                  previewModalFile.ext === "HTM" ||
+                  previewModalFile.ext === "MD" ||
+                  previewModalFile.ext === "MDX" ||
+                  Boolean(previewModalStructured?.sheets && previewModalStructured.sheets.length > 0 && previewModalText)) && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewModalViewSource((v) => !v)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border font-mono text-[11px] transition-colors cursor-pointer ${
+                      previewModalViewSource
+                        ? "bg-amber-500/20 text-amber-500 border-amber-500/40 font-semibold"
+                        : "bg-slate-200/60 dark:bg-white/5 text-slate-700 dark:text-neutral-300 border-slate-300 dark:border-white/10 hover:text-white"
+                    }`}
+                    title="Chuyển đổi giữa chế độ Xem hiển thị (Rendered) và Mã nguồn (Raw Source)"
+                  >
+                    <Terminal size={12} />
+                    <span>{previewModalViewSource ? "Xem hiển thị" : "Mã nguồn"}</span>
+                  </button>
+                )}
                 {previewModalFile.storageUrl && (
                   <a
                     href={previewModalFile.storageUrl}
@@ -17943,28 +18117,194 @@ ${chat.id}`);
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 bg-slate-100/50 dark:bg-[#0d0d14] min-h-[260px] flex flex-col">
-              {previewModalFile.kind === "pdf" || previewModalFile.ext === "HTML" || previewModalFile.ext === "HTM" ? (
+            <div className="flex-1 overflow-auto p-4 bg-slate-100/50 dark:bg-[#0d0d14] min-h-[280px] flex flex-col">
+              {isLoadingPreviewModalText ? (
+                <div className="m-auto flex items-center gap-2 text-xs font-mono text-neutral-400">
+                  <Loader2 size={16} className="animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
+                  <span>Đang tải bản xem trước...</span>
+                </div>
+              ) : previewModalViewSource && previewModalText !== null ? (
+                <pre className="w-full flex-1 p-4 rounded-xl bg-white dark:bg-[#111118] border border-slate-200 dark:border-[#242434] text-xs font-mono text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words overflow-auto max-h-[70vh] select-text">
+                  {previewModalText || "(Tệp trống)"}
+                </pre>
+              ) : previewModalFile.ext === "HTML" || previewModalFile.ext === "HTM" || previewModalStructured?.previewKind === "html" ? (
+                previewModalText ? (
+                  <iframe
+                    srcDoc={previewModalText}
+                    title={previewModalFile.fileName}
+                    sandbox="allow-scripts allow-downloads allow-forms allow-popups"
+                    className="w-full h-[70vh] rounded-xl border border-slate-200 dark:border-white/10 bg-white"
+                  />
+                ) : (
+                  <iframe
+                    src={previewModalFile.previewUrl}
+                    title={previewModalFile.fileName}
+                    sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-popups"
+                    className="w-full h-[70vh] rounded-xl border border-slate-200 dark:border-white/10 bg-white"
+                  />
+                )
+              ) : previewModalFile.kind === "pdf" || previewModalStructured?.previewKind === "pdf" ? (
                 <iframe
                   src={previewModalFile.previewUrl}
                   title={previewModalFile.fileName}
-                  sandbox="allow-scripts allow-same-origin allow-downloads allow-forms"
-                  className="w-full h-[65vh] rounded-xl border border-slate-200 dark:border-white/10 bg-white"
+                  className="w-full h-[70vh] rounded-xl border border-slate-200 dark:border-white/10 bg-white"
                 />
-              ) : previewModalFile.kind === "video" ? (
-                <video src={previewModalFile.previewUrl} controls autoPlay className="w-full max-h-[65vh] rounded-xl bg-black m-auto" />
-              ) : previewModalFile.kind === "audio" ? (
+              ) : previewModalFile.kind === "video" || previewModalStructured?.previewKind === "video" ? (
+                <video src={previewModalFile.previewUrl} controls autoPlay className="w-full max-h-[70vh] rounded-xl bg-black m-auto" />
+              ) : previewModalFile.kind === "audio" || previewModalStructured?.previewKind === "audio" ? (
                 <div className="m-auto w-full max-w-md p-6 rounded-2xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-white/10 space-y-3 text-center">
                   <div className="text-xs font-mono text-slate-700 dark:text-neutral-300 truncate">{previewModalFile.fileName}</div>
                   <audio src={previewModalFile.previewUrl} controls autoPlay className="w-full" />
                 </div>
-              ) : isLoadingPreviewModalText ? (
-                <div className="m-auto flex items-center gap-2 text-xs font-mono text-neutral-400">
-                  <Loader2 size={15} className="animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
-                  <span>Đang tải nội dung tệp...</span>
+              ) : previewModalStructured?.sheets && previewModalStructured.sheets.length > 0 && (!previewModalStructured.paragraphs || previewModalStructured.paragraphs.length === 0) ? (
+                <div className="flex-1 flex flex-col min-h-0 space-y-2.5">
+                  {previewModalStructured.sheets.length > 1 && (
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0">
+                      {previewModalStructured.sheets.map((sh, sIdx) => (
+                        <button
+                          key={sh.name + sIdx}
+                          type="button"
+                          onClick={() => setPreviewModalActiveSheet(sIdx)}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0 border ${
+                            previewModalActiveSheet === sIdx
+                              ? "bg-[#f8a87c] text-black border-[#f8a87c]"
+                              : "bg-white dark:bg-[#181824] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-[#2a2a3c] hover:border-[#f8a87c]/50"
+                          }`}
+                        >
+                          {sh.name} <span className="opacity-70 font-mono text-[10px]">({sh.totalRows})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {(() => {
+                    const activeSh = previewModalStructured.sheets[previewModalActiveSheet] || previewModalStructured.sheets[0];
+                    if (!activeSh) return null;
+                    return (
+                      <div className="flex-1 overflow-auto rounded-xl border border-slate-200 dark:border-[#282838] bg-white dark:bg-[#111118] max-h-[66vh] select-text">
+                        <table className="w-full text-left border-collapse text-xs">
+                          {activeSh.headers.length > 0 && (
+                            <thead className="bg-slate-100 dark:bg-[#1c1c28] text-slate-900 dark:text-white sticky top-0 z-10 shadow-2xs">
+                              <tr>
+                                <th className="px-2.5 py-2 border-b border-r border-slate-200 dark:border-[#2d2d40] font-mono text-[10px] text-neutral-400 w-10 text-center">
+                                  #
+                                </th>
+                                {activeSh.headers.map((h, hIdx) => (
+                                  <th key={hIdx} className="px-3 py-2 border-b border-r border-slate-200 dark:border-[#2d2d40] font-semibold whitespace-nowrap">
+                                    {h || `Cột ${hIdx + 1}`}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                          )}
+                          <tbody className="divide-y divide-slate-200/70 dark:divide-[#222230] font-mono text-[11px]">
+                            {activeSh.rows.map((r, rIdx) => (
+                              <tr key={rIdx} className="hover:bg-slate-100/70 dark:hover:bg-white/[0.03]">
+                                <td className="px-2.5 py-1.5 border-r border-slate-200/70 dark:border-[#222230] text-neutral-400 text-center text-[10px]">
+                                  {rIdx + 1}
+                                </td>
+                                {r.map((cell, cIdx) => (
+                                  <td key={cIdx} className="px-3 py-1.5 border-r border-slate-200/70 dark:border-[#222230] text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words max-w-[320px]">
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : previewModalStructured?.slides && previewModalStructured.slides.length > 0 ? (
+                <div className="flex-1 overflow-auto space-y-3 max-h-[68vh] pr-1 select-text">
+                  {previewModalStructured.slides.map((sl) => (
+                    <div
+                      key={sl.index}
+                      className="p-5 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#282838] shadow-xs space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-2">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                          {sl.title}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-mono text-[10px] font-semibold">
+                          Slide {sl.index}
+                        </span>
+                      </div>
+                      {sl.bullets.length > 0 ? (
+                        <ul className="space-y-1.5 pl-4 list-disc text-xs text-slate-700 dark:text-neutral-300 leading-relaxed">
+                          {sl.bullets.map((b, bIdx) => (
+                            <li key={bIdx}>{b}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-neutral-400 italic">(Slide không có văn bản phụ)</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : previewModalStructured?.paragraphs && previewModalStructured.paragraphs.length > 0 ? (
+                <div className="flex-1 overflow-auto p-6 rounded-xl bg-white dark:bg-[#14141e] border border-slate-200 dark:border-[#262636] max-h-[68vh] space-y-3 text-slate-800 dark:text-neutral-200 text-sm leading-relaxed select-text">
+                  {previewModalStructured.paragraphs.map((para, pIdx) => (
+                    <p key={pIdx} className="whitespace-pre-wrap break-words">{para}</p>
+                  ))}
+                  {previewModalStructured.sheets && previewModalStructured.sheets.map((tbl, tIdx) => (
+                    <div key={tIdx} className="my-4 overflow-auto rounded-lg border border-slate-200 dark:border-[#2c2c3e]">
+                      <table className="w-full text-left border-collapse text-xs">
+                        {tbl.headers.length > 0 && (
+                          <thead className="bg-slate-100 dark:bg-[#1e1e2d] font-semibold">
+                            <tr>
+                              {tbl.headers.map((h, hIdx) => (
+                                <th key={hIdx} className="px-3 py-2 border-b border-r border-slate-200 dark:border-[#2c2c3e]">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                        )}
+                        <tbody className="divide-y divide-slate-200 dark:divide-[#262636]">
+                          {tbl.rows.map((r, rIdx) => (
+                            <tr key={rIdx}>
+                              {r.map((c, cIdx) => (
+                                <td key={cIdx} className="px-3 py-1.5 border-r border-slate-200 dark:border-[#262636]">{c}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              ) : previewModalStructured?.archiveEntries && previewModalStructured.archiveEntries.length > 0 ? (
+                <div className="flex-1 overflow-auto rounded-xl border border-slate-200 dark:border-[#262636] bg-white dark:bg-[#111118] max-h-[68vh] select-text">
+                  <table className="w-full text-left border-collapse text-xs font-mono">
+                    <thead className="bg-slate-100 dark:bg-[#1c1c28] text-slate-900 dark:text-white sticky top-0">
+                      <tr>
+                        <th className="px-3.5 py-2 border-b border-slate-200 dark:border-[#2d2d40]">Đường dẫn trong gói nén ({previewModalStructured.archiveEntries.length} mục)</th>
+                        <th className="px-3.5 py-2 border-b border-slate-200 dark:border-[#2d2d40] text-right">Kích thước</th>
+                        <th className="px-3.5 py-2 border-b border-slate-200 dark:border-[#2d2d40] text-right">Cập nhật</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200/70 dark:divide-[#222230] text-[11px]">
+                      {previewModalStructured.archiveEntries.map((ae, aIdx) => (
+                        <tr key={aIdx} className="hover:bg-slate-100/70 dark:hover:bg-white/[0.03]">
+                          <td className="px-3.5 py-1.5 text-slate-800 dark:text-neutral-200 break-all">
+                            {ae.isDirectory ? `📁 ${ae.path}` : `📄 ${ae.path}`}
+                          </td>
+                          <td className="px-3.5 py-1.5 text-right text-neutral-400 whitespace-nowrap">
+                            {ae.isDirectory ? "Thư mục" : formatSize(ae.size)}
+                          </td>
+                          <td className="px-3.5 py-1.5 text-right text-neutral-500 whitespace-nowrap">
+                            {ae.modifiedAt || "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (previewModalFile.ext === "MD" || previewModalFile.ext === "MDX" || previewModalStructured?.previewKind === "markdown") && previewModalText !== null ? (
+                <div className="w-full flex-1 p-5 rounded-xl bg-white dark:bg-[#111118] border border-slate-200 dark:border-[#242434] text-sm text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words overflow-auto max-h-[68vh] leading-relaxed select-text">
+                  {previewModalText || "(Tệp trống)"}
                 </div>
               ) : previewModalText !== null ? (
-                <pre className="w-full flex-1 p-3.5 rounded-xl bg-white dark:bg-[#111118] border border-slate-200 dark:border-[#242434] text-xs font-mono text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words overflow-auto max-h-[65vh]">
+                <pre className="w-full flex-1 p-4 rounded-xl bg-white dark:bg-[#111118] border border-slate-200 dark:border-[#242434] text-xs font-mono text-slate-800 dark:text-neutral-200 whitespace-pre-wrap break-words overflow-auto max-h-[68vh] select-text">
                   {previewModalText || "(Tệp trống)"}
                 </pre>
               ) : (
