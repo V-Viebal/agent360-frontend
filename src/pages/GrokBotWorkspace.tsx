@@ -262,16 +262,32 @@ function stabilizeStreamingMarkdown(text: string, isActivelyStreaming: boolean):
   return out;
 }
 
-function computeIsMultilineComposer(text: string): boolean {
+function computeIsMultilineComposer(text: string, measuredWidth?: number): boolean {
   if (!text) return false;
   if (text.includes("\n")) return true;
-  if (typeof window === 'undefined') return text.length > 70;
+
+  // If actual measured pixel width of the composer is available, calculate exact capacity!
+  // In single-line mode: composer has plus button (28px) + gap (8px) + right controls (~36-40px) + padding (~16px) = ~90px chrome.
+  // Average proportional character width for 14.5px Inter/sans-serif font is ~8.2px (narrow letters ~5px, wide ~12px).
+  if (measuredWidth && measuredWidth > 120) {
+    const availableTextPx = Math.max(60, measuredWidth - 92);
+    let estimatedTextPx = 0;
+    for (let i = 0; i < text.length; i++) {
+      const code = text.charCodeAt(i);
+      const ch = text[i];
+      if (code > 255) estimatedTextPx += 13.5;
+      else if ("ilI|!.,:;'\"`()[]{} ".includes(ch)) estimatedTextPx += 4.5;
+      else if ("wmWM@#%&".includes(ch)) estimatedTextPx += 12;
+      else if ("ABCDEFGHJKLMNOPQRSTUVXYZ".includes(ch)) estimatedTextPx += 9.5;
+      else estimatedTextPx += 8.2;
+    }
+    // Switch to multi-line as soon as text exceeds available single-line width
+    return estimatedTextPx >= availableTextPx;
+  }
+
+  if (typeof window === 'undefined') return text.length > 60;
   const w = window.innerWidth;
-  // Dynamic responsive threshold based on viewport width:
-  // On mobile phone (< 640px), 32-35 characters already overflow a single-line inline composer.
-  // On tablets (< 1024px), ~50 characters fill the row.
-  // On desktop (>= 1024px), 70 characters.
-  const threshold = w < 480 ? 32 : w < 640 ? 40 : w < 1024 ? 54 : 70;
+  const threshold = w < 480 ? 28 : w < 640 ? 36 : w < 1024 ? 48 : 60;
   return text.length > threshold;
 }
 
@@ -6359,7 +6375,7 @@ ${targetItem.text}`;
   // Khi switch giữa multiple line và single line, luôn đảm bảo giữ focus và đặt con trỏ ở cuối
   const prevIsMultilineRef = useRef<boolean>(false);
   useLayoutEffect(() => {
-    const isMultiline = computeIsMultilineComposer(inputText);
+    const isMultiline = computeIsMultilineComposer(inputText, composerWidth);
     const didChangeLayoutMode = isMultiline !== prevIsMultilineRef.current;
     prevIsMultilineRef.current = isMultiline;
 
@@ -6456,6 +6472,20 @@ ${targetItem.text}`;
     }
   });
   const composerFormRef = useRef<HTMLFormElement>(null);
+  const [composerWidth, setComposerWidth] = useState<number>(() => typeof window !== "undefined" ? window.innerWidth : 600);
+
+  useEffect(() => {
+    const el = composerFormRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w > 0) setComposerWidth(w);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const clearPromptParam = () => {
     setPendingPrompt("");
     try {
@@ -14087,15 +14117,15 @@ const selectedAgentTheme = getAgentColorTheme(
           {pendingApprovals.length > 0 && (
             <div className="mb-3 space-y-2" data-testid="approval-cards-container">
               {pendingApprovals.length > 1 && (
-                <div className="p-2.5 rounded-xl bg-[#181822] border border-[#2a2a3c] flex items-center justify-between text-xs font-mono">
-                  <div className="flex items-center gap-2 text-neutral-300">
-                    <ShieldAlert size={14} className="text-red-400" />
+                <div className="p-2.5 rounded-xl bg-white dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3c] flex items-center justify-between text-xs font-mono shadow-xs">
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-neutral-300">
+                    <ShieldAlert size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                     <span>{pendingApprovals.length} actions pending human authorization</span>
                   </div>
                   <button data-ux-target-min="24"
                     type="button"
                     onClick={handleBatchApproveAll}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold cursor-pointer shadow-sm transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[var(--agent-primary)] hover:opacity-90 text-black font-semibold cursor-pointer shadow-sm transition-all"
                   >
                     <CheckCheck size={13} />
                     <span>Approve All ({pendingApprovals.length})</span>
@@ -14105,18 +14135,18 @@ const selectedAgentTheme = getAgentColorTheme(
               {pendingApprovals.map((app) => (
                 <div
                   key={app.request_id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-950/20 p-3.5 text-xs text-white shadow-lg"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-[#2a2a3c] bg-white dark:bg-[#161622] p-3.5 text-xs text-slate-800 dark:text-neutral-200 shadow-sm hover:border-[var(--agent-border-light)] dark:hover:border-[var(--agent-border-dark)] transition-colors"
                 >
                   <div className="flex items-start gap-2.5">
-                    <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />
+                    <ShieldAlert size={16} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0 mt-0.5" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-red-200 font-mono">{app.tool_name}</span>
-                        <span className="rounded bg-red-500/20 px-1.5 py-0.2 text-[10px] text-red-300 uppercase font-mono">
+                        <span className="font-semibold text-slate-900 dark:text-white font-mono text-xs">{app.tool_name}</span>
+                        <span className="rounded-md bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] px-1.5 py-0.5 text-[10px] uppercase font-mono font-semibold">
                           {app.severity || "Critical"}
                         </span>
                       </div>
-                      <p className="text-neutral-300 mt-0.5 leading-relaxed">
+                      <p className="text-slate-600 dark:text-neutral-300 mt-1 leading-relaxed text-xs">
                         {app.reasoning || "Agent requests approval to execute high-risk infrastructure action."}
                       </p>
                     </div>
@@ -14125,14 +14155,14 @@ const selectedAgentTheme = getAgentColorTheme(
                     <button data-ux-target-min="24"
                       type="button"
                       onClick={() => handleInlineDeny(app.request_id, app.session_id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1.5 text-neutral-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 px-3 py-1.5 text-slate-600 dark:text-neutral-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer text-xs font-medium"
                     >
                       <XCircle size={12} /> Deny
                     </button>
                     <button data-ux-target-min="24"
                       type="button"
                       onClick={() => handleInlineApprove(app.request_id, app.session_id)}
-                      className="inline-flex items-center gap-1 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black px-3.5 py-1.5 font-semibold transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 rounded-full bg-[var(--agent-primary)] hover:opacity-90 text-black px-3.5 py-1.5 font-semibold transition-all shadow-xs cursor-pointer text-xs"
                     >
                       <CheckCircle size={12} /> Approve
                     </button>
@@ -14146,17 +14176,17 @@ const selectedAgentTheme = getAgentColorTheme(
             <div
               role="status"
               data-testid="pending-task-banner"
-              className="mb-2 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-white/10 bg-[#121218] px-4 py-3 text-xs text-neutral-300"
+              className="mb-2 flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121218] px-4 py-3 text-xs text-slate-700 dark:text-neutral-300 shadow-xs"
             >
               <span className="flex-1 min-w-0">
-                <span className="text-neutral-500">Task from Skyer home:</span>{" "}
-                <span className="text-white">“{pendingPrompt}”</span>
+                <span className="text-slate-400 dark:text-neutral-500">Task from Skyer home:</span>{" "}
+                <span className="text-slate-900 dark:text-white">“{pendingPrompt}”</span>
               </span>
               <div className="flex items-center gap-2 shrink-0">
                 <button data-ux-target-min="24"
                   type="button"
                   onClick={clearPromptParam}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-neutral-300 hover:text-white cursor-pointer"
+                  className="rounded-full border border-slate-200 dark:border-white/10 px-3 py-1.5 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                 >
                   Edit first
                 </button>
@@ -14164,7 +14194,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   type="button"
                   onClick={runPendingPrompt}
                   disabled={!selectedAgentId}
-                  className="rounded-full bg-white px-3 py-1.5 font-semibold text-black hover:bg-neutral-200 disabled:opacity-50 cursor-pointer"
+                  className="rounded-full bg-[var(--agent-primary)] px-3 py-1.5 font-semibold text-black hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-xs"
                 >
                   Run task
                 </button>
@@ -15146,7 +15176,7 @@ const selectedAgentTheme = getAgentColorTheme(
             )}
 
             {(() => {
-              const isMultiline = computeIsMultilineComposer(inputText);
+              const isMultiline = computeIsMultilineComposer(inputText, composerWidth);
               
               // Common Plus Button Trigger
               const renderPlusButton = () => {
