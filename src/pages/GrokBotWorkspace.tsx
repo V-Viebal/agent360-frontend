@@ -10161,7 +10161,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {/* Bottom blur/gradient fade edge when agent list is scrollable in collapsed rail */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/85 to-transparent z-20 backdrop-blur-[2px]"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-7 bg-gradient-to-t from-[var(--bg-sidebar)]/75 via-[var(--bg-sidebar)]/30 to-transparent z-20 pointer-events-none"
               />
             </div>
 
@@ -10365,8 +10365,9 @@ const selectedAgentTheme = getAgentColorTheme(
               />
             </div>
 
-            {/* Agents List */}
-            <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1.5 scrollbar-hover">
+            {/* Agents List Container with Bottom Fade */}
+            <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1.5 scrollbar-hover pb-4">
               {isLoadingAgents ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -10861,6 +10862,12 @@ const selectedAgentTheme = getAgentColorTheme(
                   )}
                 </>
               )}
+              </div>
+              {/* Bottom blur/gradient fade edge for expanded sidebar */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-7 bg-gradient-to-t from-[var(--bg-sidebar)]/75 via-[var(--bg-sidebar)]/30 to-transparent z-20 pointer-events-none"
+              />
             </div>
 
             {/* Bottom Profile Bar with User Dropdown */}
@@ -11060,7 +11067,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     setMobileBotInfoOpen((prev) => !prev);
                   }
                 }}
-                className="group inline-flex items-center justify-center gap-2.5 bg-neutral-100 dark:bg-[#181820] hover:bg-neutral-200/90 dark:hover:bg-[#22222e] border border-neutral-200/80 dark:border-white/10 hover:border-neutral-300 dark:hover:border-white/20 px-3.5 py-1.5 rounded-full text-[13.5px] font-semibold text-neutral-900 dark:text-white shadow-2xs hover:shadow-xs cursor-pointer transition-all select-none leading-none"
+                className="group inline-flex items-center justify-center gap-2 bg-slate-50 dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-[13px] font-semibold text-neutral-900 dark:text-white shadow-xs cursor-pointer transition-all select-none leading-none"
               >
                 {hasNoAgents ? (
                   <>
