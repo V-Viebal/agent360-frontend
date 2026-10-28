@@ -305,7 +305,6 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
           onToggleCapabilityNode={handleToggleTreeCapability}
           onReconcileDrift={handleReconcileDrift}
           reconciling={reconciling}
-          themeColor={agentTheme.primary}
         />
       )}
 

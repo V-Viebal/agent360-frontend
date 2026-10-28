@@ -5556,6 +5556,29 @@ export function GrokBotWorkspace() {
     setEditingQueueText("");
   };
 
+  
+  const handleSteerNowQueueItem = (chatId: string, itemId: string) => {
+    const currentList = requestQueuesRef.current[chatId] || [];
+    const targetItem = currentList.find((item) => item.id === itemId);
+    if (!targetItem) return;
+
+    // 1. Remove from queue
+    const updated = currentList.filter((item) => item.id !== itemId);
+    setChatQueue(chatId, updated);
+    setActiveQueueMenuId(null);
+
+    // 2. Abort current ongoing stream turn so agent interrupts immediately
+    handleStopStreaming();
+
+    // 3. Immediately launch the steered prompt with steer directive
+    const targetAgentId = chatAgentMapRef.current[chatId] || selectedAgentId;
+    const steerPrompt = `[STEER INTERRUPT: Hãy ưu tiên thực hiện yêu cầu mới này trước]:
+${targetItem.text}`;
+    setTimeout(() => {
+      executeTurnStream(steerPrompt, chatId, targetAgentId);
+    }, 150);
+  };
+
   const handleSteerQueueItem = (chatId: string, itemId: string) => {
     const currentList = requestQueuesRef.current[chatId] || [];
     const targetIdx = currentList.findIndex((item) => item.id === itemId);
@@ -13321,6 +13344,15 @@ const selectedAgentTheme = getAgentColorTheme(
                               onClick={(e) => e.stopPropagation()}
                               className="absolute right-0 bottom-full mb-1.5 w-36 rounded-xl bg-[#1c1c24] border border-neutral-700/80 shadow-2xl py-1 z-30 animate-in fade-in zoom-in-95 duration-100"
                             >
+                              <button
+                                type="button"
+                                onClick={() => handleSteerNowQueueItem(selectedChatId, item.id)}
+                                className="w-full px-3 py-1.5 text-left text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/15 flex items-center gap-2 cursor-pointer transition-colors font-medium"
+                                title="Ngắt lượt hiện tại và thực thi yêu cầu này ngay lập tức"
+                              >
+                                <Sparkles size={12} className="text-amber-400" />
+                                <span>Steer now (Chạy ngay)</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleStartEditQueueItem(item)}

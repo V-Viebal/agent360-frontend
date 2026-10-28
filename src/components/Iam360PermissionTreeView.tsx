@@ -240,7 +240,6 @@ export function Iam360PermissionTreeView({
                   checked={node.enabled ?? true}
                   onChange={(next) => onToggleCapabilityNode(node, next)}
                   size="sm"
-                  themeColor={themeColor}
                 />
               </div>
             )}
