@@ -477,6 +477,19 @@ select,
   outline-offset: 1px;
 }
 
+
+/* Accessibility: Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */
 .badge-theme-transition {
   transition-property: background-color, border-color, color, fill, stroke, box-shadow;
