@@ -193,6 +193,39 @@ export function SettingsModal({
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const testChunksRef = React.useRef<Blob[]>([]);
 
+    const [isReducedMotion, setIsReducedMotion] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const stored = localStorage.getItem("agent360_reduced_motion");
+      if (stored !== null) return stored === "true";
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleReducedMotion = (enabled: boolean) => {
+    setIsReducedMotion(enabled);
+    try {
+      localStorage.setItem("agent360_reduced_motion", String(enabled));
+      if (enabled) {
+        document.documentElement.setAttribute("data-reduced-motion", "true");
+      } else {
+        document.documentElement.removeAttribute("data-reduced-motion");
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = localStorage.getItem("agent360_reduced_motion");
+      if (stored === "true") {
+        document.documentElement.setAttribute("data-reduced-motion", "true");
+      }
+    } catch {}
+  }, []);
+
   const [layoutDensity, setLayoutDensity] = useState<"compact" | "normal" | "comfortable">(() => {
     try {
       return (localStorage.getItem("skyer_layout_density") as any) || "normal";
@@ -1026,7 +1059,30 @@ export function SettingsModal({
                     })}
                   </div>
                 </div>
-</div>
+
+                {/* Accessibility: Reduced Motion Toggle */}
+                <div className="pt-3 border-t border-slate-200 dark:border-[#222230]">
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161622] border border-slate-200 dark:border-[#262634] flex items-center justify-between gap-3">
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={14} style={{ color: "var(--agent-primary)" }} />
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                          Giảm chuyển động (Reduced Motion)
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                        Tắt các hiệu ứng động, chuyển cảnh và hiệu ứng rung để tăng tốc độ phản hồi và bảo vệ mắt.
+                      </span>
+                    </div>
+
+                    <ToggleSwitch
+                      checked={isReducedMotion}
+                      onChange={handleToggleReducedMotion}
+                      size="md"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* 2. LANGUAGE TAB */}

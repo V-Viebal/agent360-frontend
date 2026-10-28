@@ -478,7 +478,7 @@ select,
 }
 
 
-/* Accessibility: Respect user preference for reduced motion */
+/* Accessibility: Respect user preference for reduced motion (both OS preference and in-app manual toggle) */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -488,6 +488,16 @@ select,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+html[data-reduced-motion="true"],
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] ::before,
+html[data-reduced-motion="true"] ::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */
