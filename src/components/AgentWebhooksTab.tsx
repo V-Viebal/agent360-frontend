@@ -20,6 +20,7 @@ import {
   Server,
   RotateCcw,
 } from "lucide-react";
+import { getAgentColorTheme } from "./AgentAvatar";
 import {
   AgentWebhookConfig,
   AgentWebhookDeliveryRecord,
@@ -57,6 +58,7 @@ export function AgentWebhooksTab({
   agentName,
   agentSlug,
 }: AgentWebhooksTabProps) {
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const [config, setConfig] = useState<AgentWebhookConfig | null>(null);
   const [deliveries, setDeliveries] = useState<AgentWebhookDeliveryRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -622,7 +624,7 @@ export function AgentWebhooksTab({
                     onClick={() => toggleAllowedEvent(ev.id)}
                     className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
                       active
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30 font-semibold"
+                        ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold"
                         : "bg-white dark:bg-[#121218] text-neutral-400 border-slate-200 dark:border-[#242432]"
                     }`}
                   >
@@ -779,7 +781,8 @@ export function AgentWebhooksTab({
             data-testid="btn-dispatch-test-webhook"
             disabled={testing}
             onClick={handleTestWebhook}
-            className="sm:col-span-3 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-neutral-950 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+            style={{ backgroundColor: agentTheme.primary }}
+            className="sm:col-span-3 px-3 py-2 rounded-xl hover:opacity-90 text-neutral-950 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-opacity cursor-pointer disabled:opacity-50"
           >
             {testing ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
             <span>{testing ? "Đang gọi QwenPaw..." : "Bắn thử Webhook"}</span>

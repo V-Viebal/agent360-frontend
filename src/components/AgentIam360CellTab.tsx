@@ -26,6 +26,7 @@ import {
   Iam360PermissionTreeNode,
 } from "../services/iam360CellsApi";
 import { Iam360PermissionTreeView } from "./Iam360PermissionTreeView";
+import { getAgentColorTheme } from "./AgentAvatar";
 
 interface AgentIam360CellTabProps {
   agentId: string;
@@ -34,6 +35,7 @@ interface AgentIam360CellTabProps {
 }
 
 export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam360CellTabProps) {
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const [inspection, setInspection] = useState<Iam360AgentCellInspection | null>(null);
   const [loading, setLoading] = useState(true);
   const [subView, setSubView] = useState<"tree" | "identity" | "org" | "a2a_principals" | "simulator">("tree");
@@ -228,8 +230,8 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                 onClick={() => setSubView(tab.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shrink-0 cursor-pointer transition-all ${
                   active
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 !text-white dark:!text-slate-900 shadow-xs"
-                    : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
+                    ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
+                    : "text-slate-600 dark:text-neutral-400 hover:bg-slate-200/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white border border-transparent"
                 }`}
               >
                 {tab.icon}
@@ -415,7 +417,7 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
                     onClick={() => handleEnforcementChange(activeOrg.cell_id, mode)}
                     className={`px-2 py-0.5 rounded uppercase cursor-pointer border ${
                       activeOrg.runtime_enforcement === mode
-                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white font-semibold"
+                        ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold"
                         : "bg-transparent text-slate-500 border-slate-200 dark:border-[#252a3d]"
                     }`}
                   >
@@ -572,7 +574,8 @@ export function AgentIam360CellTab({ agentId, agentSlug, agentName }: AgentIam36
               <button
                 type="submit"
                 disabled={simRunning}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-medium text-xs flex items-center gap-1.5 cursor-pointer"
+                style={{ backgroundColor: agentTheme.primary }}
+                className="px-3.5 py-1.5 rounded-lg hover:opacity-90 text-black font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-opacity"
               >
                 <Play size={12} />
                 <span>{simRunning ? "Đang kiểm tra..." : "Chạy kiểm thử"}</span>

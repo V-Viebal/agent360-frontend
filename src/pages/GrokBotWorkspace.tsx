@@ -16715,7 +16715,7 @@ ${chat.id}`);
                         setAgentSettingsModalTab("general");
                         setIsAgentSettingsModalOpen(true);
                       }}
-                      className="h-7 w-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] flex items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-[#e0682b] dark:hover:text-[#f8a87c] cursor-pointer transition-colors"
+                      className="h-7 w-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] flex items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] cursor-pointer transition-colors"
                     >
                       <Settings size={13} />
                     </button>
@@ -16736,7 +16736,7 @@ ${chat.id}`);
 
             {hasNoAgents || !selectedAgent.id ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center select-none space-y-3 font-sans">
-                <div className="w-12 h-12 rounded-2xl bg-[#f8a87c]/10 border border-[#f8a87c]/25 flex items-center justify-center text-[#f8a87c]">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[var(--agent-light)] dark:text-[var(--agent-dark)]">
                   <Bot size={24} />
                 </div>
                 <h3 className="text-xs font-semibold text-slate-900 dark:text-white">Chưa chọn Agent</h3>
@@ -16992,7 +16992,7 @@ ${chat.id}`);
                               className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-slate-300 dark:hover:border-[#323242] shadow-xs flex items-center justify-between gap-3 cursor-pointer group transition-all"
                             >
                               <div className="flex flex-col min-w-0 pr-2">
-                                <span className="text-xs font-medium text-slate-900 dark:text-slate-900 dark:text-white truncate group-hover:text-[#e0682b] dark:group-hover:text-[#f8a87c] transition-colors">
+                                <span className="text-xs font-medium text-slate-900 dark:text-slate-900 dark:text-white truncate group-hover:text-[var(--agent-light)] dark:group-hover:text-[var(--agent-dark)] transition-colors">
                                   {job.name}
                                 </span>
                                 <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
@@ -17008,7 +17008,7 @@ ${chat.id}`);
                                 onClick={(e) => handleToggleScheduleRoutine(job, e)}
                                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                                   job.enabled
-                                    ? "bg-[#1d6eed] dark:bg-[#1d7bf2]"
+                                    ? "bg-[var(--agent-primary,#1d6eed)]"
                                     : "bg-slate-300 dark:bg-[#2c2c3a]"
                                 }`}
                               >
@@ -17108,7 +17108,7 @@ ${chat.id}`);
                       onClick={() => handleSelectFile(node)}
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors group ${
                         isSelected
-                          ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-medium border border-[#f8a87c]/30"
+                          ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-medium border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]"
                           : "text-slate-700 dark:text-neutral-300 hover:bg-slate-200/60 dark:hover:bg-[#1c1c24] border border-transparent"
                       }`}
                     >

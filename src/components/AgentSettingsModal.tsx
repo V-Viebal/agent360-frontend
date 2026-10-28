@@ -333,7 +333,11 @@ export function AgentSettingsModal({
                     <span className="text-xs truncate">{item.label}</span>
                   </div>
                   {item.badge !== undefined && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-neutral-300 shrink-0">
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono shrink-0 ${
+                      isActive
+                        ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]"
+                        : "bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-neutral-300"
+                    }`}>
                       {item.badge}
                     </span>
                   )}
@@ -744,7 +748,7 @@ export function AgentSettingsModal({
                                 onClick={() => onToggleChannel(ch.type, ch.enabled)}
                                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
                                   ch.enabled
-                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                                    ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-medium"
                                     : "bg-slate-200/60 dark:bg-white/5 border-slate-300/80 dark:border-white/10 text-neutral-400"
                                 }`}
                               >
@@ -799,7 +803,7 @@ export function AgentSettingsModal({
                             <span className="font-semibold text-slate-900 dark:text-white text-xs truncate">
                               {job.name}
                             </span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
                               {job.cronExpr}
                             </span>
                           </div>
@@ -862,7 +866,7 @@ export function AgentSettingsModal({
                         className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#121218] border border-slate-200/80 dark:border-[#20202a] text-slate-700 dark:text-neutral-300 flex items-center justify-between"
                       >
                         <span className="truncate">{s}</span>
-                        <span className="text-[9px] text-emerald-500 dark:text-[var(--agent-dark)] font-sans shrink-0 ml-2">
+                        <span className="text-[9px] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-mono font-semibold shrink-0 ml-2">
                           Ready
                         </span>
                       </div>

@@ -118,7 +118,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
       {/* Minimal Header Count */}
       <div className="flex items-center justify-between px-1 text-xs">
         <span className="font-semibold text-slate-800 dark:text-white flex items-center gap-1.5">
-          <Brain size={13} className="text-[#f8a87c]" />
+          <Brain size={13} style={{ color: agentTheme.primary }} />
           <span>Ghi nhớ dài hạn</span>
         </span>
         <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
@@ -157,7 +157,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
 
       {/* Add New Memory Drawer */}
       {isAdding && (
-        <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[#f8a87c]/30 space-y-2 animate-in fade-in">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#181824] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] space-y-2 animate-in fade-in">
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-700 dark:text-neutral-300">
             <span>{t("memory.newEntry")}</span>
             <CustomSelect
@@ -169,7 +169,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                 { value: "preference", label: t("memory.preference") },
                 { value: "project", label: t("memory.projectContext") },
               ]}
-              triggerClassName="bg-slate-100 dark:bg-[#121218] border border-slate-200 dark:border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-slate-800 dark:text-white hover:border-[#f8a87c]/40"
+              triggerClassName="bg-slate-100 dark:bg-[#121218] border border-slate-200 dark:border-[#2a2a3a] rounded-lg px-2 py-0.5 text-[10px] text-slate-800 dark:text-white hover:border-[var(--agent-primary)]/40"
               dropdownAlign="right"
             />
           </div>
@@ -193,7 +193,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
               type="button"
               onClick={handleAddMemory}
               disabled={!newContent.trim()}
-              className="px-3 py-1 rounded bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-[10px] cursor-pointer disabled:opacity-40 transition-colors"
+              style={{ backgroundColor: agentTheme.primary }} className="px-3 py-1 rounded hover:opacity-90 text-black font-semibold text-[10px] cursor-pointer disabled:opacity-40 transition-opacity"
             >
               Save Memory
             </button>
@@ -240,7 +240,7 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
                   rows={2}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full bg-white dark:bg-[#181822] border border-[#f8a87c] rounded-lg p-2 text-xs text-slate-900 dark:text-white focus:outline-none resize-none font-sans"
+                  style={{ borderColor: agentTheme.primary }} className="w-full bg-white dark:bg-[#181822] border rounded-lg p-2 text-xs text-slate-900 dark:text-white focus:outline-none resize-none font-sans"
                 />
                 <div className="flex items-center justify-end gap-1.5">
                   <button

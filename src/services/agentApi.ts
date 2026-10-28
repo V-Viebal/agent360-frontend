@@ -629,6 +629,24 @@ export async function fetchWorkspaceFileContent(agentId: string, filePath: strin
   }
 }
 
+export async function saveWorkspaceFileContent(agentId: string, filePath: string, content: string): Promise<boolean> {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  try {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ content }),
+    }, cleanId);
+    return res.ok;
+  } catch (err) {
+    console.warn(`saveWorkspaceFileContent failed for ${cleanId}/${filePath}:`, err);
+    return false;
+  }
+}
+
 
 export async function getSignedWorkspaceFileUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
   const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
