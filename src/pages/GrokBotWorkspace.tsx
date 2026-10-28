@@ -4008,8 +4008,8 @@ export function inferAgentViewerUrlFallback(agent?: InfraAgent | null): string {
   if (slug.startsWith("gm-") || slug === "gm" || node.includes("6th")) return "https://browser-gm.antares.vn";
   if (slug.startsWith("climax") || node.includes("climax")) return "https://browser-climax.antares.vn";
   if (slug.startsWith("planthy") || node.includes("planthy")) return "https://browser-planthy.hmz.one";
-  if (slug.startsWith("its-") || slug === "its") return "https://browser-its.antares.vn";
-  if (slug.startsWith("gl-") || slug === "gl") return "https://browser-gl.antares.vn";
+  if (slug.startsWith("its-") || slug === "its" || slug.startsWith("gl-") || slug === "gl" || node.includes("8th")) return "https://browser-gl.antares.vn";
+  if (slug.startsWith("qwenpaw-test") || node.includes("7th")) return "https://browser-test.antares.vn";
   if (["mons", "ken", "zen", "mkai", "default-core", "default"].includes(slug) || node.includes("3rd") || node.includes("core")) {
     return "https://browser.hmz.one";
   }
