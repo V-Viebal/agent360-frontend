@@ -9,6 +9,7 @@ export interface ToggleSwitchProps {
   disabled?: boolean;
   size?: "sm" | "md";
   className?: string;
+  themeColor?: string;
 }
 
 export function ToggleSwitch({
@@ -19,6 +20,7 @@ export function ToggleSwitch({
   disabled = false,
   size = "md",
   className = "",
+  themeColor,
 }: ToggleSwitchProps) {
   const isSm = size === "sm";
 
@@ -48,13 +50,14 @@ export function ToggleSwitch({
         aria-checked={checked}
         disabled={disabled}
         data-ux-target-min="24"
+        style={checked && themeColor ? { backgroundColor: themeColor } : undefined}
         onClick={(e) => {
           e.stopPropagation();
           handleToggle();
         }}
-        className={`relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f8a87c] focus-visible:ring-opacity-75 ${
+        className={`relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--switch-color,#f8a87c)] focus-visible:ring-opacity-75 ${
           isSm ? "h-4 w-7" : "h-5 w-9"
-        } ${checked ? "bg-[#f8a87c]" : "bg-neutral-300 dark:bg-[#282836]"}`}
+        } ${checked ? (themeColor ? "" : "bg-[#f8a87c]") : "bg-neutral-300 dark:bg-[#282836]"}`}
       >
         <span
           className={`pointer-events-none inline-block rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${

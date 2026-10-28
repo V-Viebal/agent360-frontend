@@ -1,4 +1,5 @@
 import { CustomSelect } from "./ui/CustomSelect";
+import { getAgentColorTheme } from "./AgentAvatar";
 import { useTranslation } from "../i18n/LanguageContext";
 import { operatorKey } from "../services/a2aApi";
 import { useEffect, useMemo, useState } from "react";
@@ -46,6 +47,7 @@ function Badge({ status }: { status: string }) {
 
 export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
   const { t } = useTranslation();
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const parent = normalizeAgentId(agentId);
   const [view, setView] = useState<"subagents" | "delegations">("subagents");
   const [bindings, setBindings] = useState<SubAgentBinding[]>([]);
@@ -374,7 +376,8 @@ export function AgentSubAgentsTab({ agentId, agentName, allAgents }: Props) {
             />
             <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="Role (e.g. Product Owner)" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/40" />
             <input value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} placeholder="Capabilities, comma separated" className="w-full bg-[#1b1b24] border border-[#282836] rounded-lg px-2.5 py-1 text-[11px] font-sans text-slate-900 dark:text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c]/40" />
-            <button disabled={!form.child || busy === "bind"} onClick={addBinding} className="w-full py-1 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-colors">
+            <button disabled={!form.child || busy === "bind"} onClick={addBinding} style={{ backgroundColor: agentTheme.primary }}
+            className="w-full py-1 rounded-lg hover:opacity-90 text-black font-semibold text-xs disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1 shadow-xs transition-opacity">
               {busy === "bind" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Bind & sync skill
             </button>
           </div>

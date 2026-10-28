@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
+import { getAgentColorTheme } from "./AgentAvatar";
 import { Network, RefreshCw, Link2, Unlink, Activity, CheckCircle2, XCircle, Clock, Send, Loader2, GitBranch, KeyRound, AlertTriangle } from "lucide-react";
 import { a2aApi, A2AAuthError, A2AHealth, A2AMetrics, A2AThread, Delegation, ExternalAgent, ExternalBinding, operatorKey } from "../services/a2aApi";
 
@@ -78,6 +79,7 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; agentName: string }) {
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const [agents, setAgents] = useState<ExternalAgent[]>([]);
   const [bindings, setBindings] = useState<ExternalBinding[]>([]);
   const [tasks, setTasks] = useState<Delegation[]>([]);
@@ -135,7 +137,8 @@ export function ExternalSubAgentsTab({ agentId, agentName }: { agentId: string; 
           <button aria-label="Discover external agents from AgentTeams" onClick={() => run("discover", a2aApi.discover, "Directory synced from AgentTeams")} className="h-7 w-7 flex items-center justify-center p-1.5 rounded-lg bg-[#16161f] border border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:text-white" title="Discover from AgentTeams">
             <RefreshCw size={12} className={busy === "discover" ? "animate-spin" : ""} />
           </button>
-          <button onClick={() => run("skill", () => a2aApi.syncSkill(agentId), `Skill synced to ${agentName}`)} aria-label="Sync external sub-agents skill to the parent agent" className="h-7 px-3 rounded-lg bg-[#f8a87c] text-black font-semibold text-[11px]">Sync Skill</button>
+          <button onClick={() => run("skill", () => a2aApi.syncSkill(agentId), `Skill synced to ${agentName}`)} aria-label="Sync external sub-agents skill to the parent agent" style={{ backgroundColor: agentTheme.primary }}
+            className="h-7 px-3 rounded-lg hover:opacity-90 text-black font-semibold text-[11px] transition-opacity">Sync Skill</button>
         </div>
       </div>
       {msg && <div className="p-2 rounded-lg bg-[#14141d] border border-[#222232] text-slate-700 dark:text-neutral-300">{msg}</div>}

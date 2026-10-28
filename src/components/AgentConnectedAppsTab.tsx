@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AgentMcpClient, fetchAgentMcpClients, authorizedFetch } from "../services/agentApi";
 import { APPS_CATALOG } from "./ConnectAppsModal";
+import { getAgentColorTheme } from "./AgentAvatar";
 
 interface AgentConnectedAppsTabProps {
   agentId: string;
@@ -32,6 +33,7 @@ export function AgentConnectedAppsTab({
   onClientsChanged,
 }: AgentConnectedAppsTabProps) {
   const { t } = useTranslation();
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const [clients, setClients] = useState<AgentMcpClient[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
@@ -234,7 +236,8 @@ export function AgentConnectedAppsTab({
 
           <button
             onClick={onOpenConnectModal}
-            className="flex items-center gap-1 bg-[#f8a87c] hover:bg-[#ff8c1a] text-black font-semibold px-2.5 py-1 rounded-lg text-[11px] shadow-sm transition-all cursor-pointer"
+            style={{ backgroundColor: agentTheme.primary }}
+            className="flex items-center gap-1 hover:opacity-90 text-black font-semibold px-2.5 py-1 rounded-lg text-[11px] shadow-sm transition-opacity cursor-pointer"
           >
             <Plus size={12} className="stroke-[2.5]" />
             <span>{t("connectedApps.addApp")}</span>

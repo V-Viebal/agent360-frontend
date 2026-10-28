@@ -1,5 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { CustomSelect } from "./ui/CustomSelect";
+import { getAgentColorTheme } from "./AgentAvatar";
 import React, { useState, useEffect } from "react";
 import { Brain, Sparkles, Plus, Trash2, Edit2, Check, X, Shield, RefreshCw } from "lucide-react";
 
@@ -47,6 +48,7 @@ const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
 
 export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTabProps) {
   const { t } = useTranslation();
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const [memories, setMemories] = useState<MemoryItem[]>(() => {
     try {
       const saved = localStorage.getItem(`agent360_memory_${agentSlug}`);
@@ -132,8 +134,9 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
               key={cat}
               type="button"
               onClick={() => setFilterCategory(cat)}
+              style={filterCategory === cat ? { backgroundColor: agentTheme.primary } : undefined}
               className={`px-2 py-0.5 rounded capitalize transition-colors cursor-pointer ${
-                filterCategory === cat ? "bg-[#f8a87c] text-black font-semibold" : "text-slate-500 dark:text-neutral-400 hover:text-white"
+                filterCategory === cat ? "text-black font-semibold shadow-xs" : "text-slate-500 dark:text-neutral-400 hover:text-white"
               }`}
             >
               {cat}
@@ -144,7 +147,8 @@ export function AgentMemoryTab({ agentId, agentName, agentSlug }: AgentMemoryTab
         <button
           type="button"
           onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 text-[10px] font-mono cursor-pointer transition-colors"
+          style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light || agentTheme.primary, borderColor: agentTheme.borderLight }}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono cursor-pointer transition-opacity hover:opacity-85"
         >
           <Plus size={11} />
           <span>{t("memory.add")}</span>

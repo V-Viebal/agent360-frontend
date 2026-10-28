@@ -1499,7 +1499,14 @@ function AgentThinkingModal({
         style={{
           transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
           transition: isDragging ? "none" : "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
+          ["--agent-primary" as any]: hostTheme.primary,
+          ["--agent-light" as any]: hostTheme.light,
+          ["--agent-dark" as any]: hostTheme.dark,
+          ["--agent-bg-light" as any]: hostTheme.bgLight,
+          ["--agent-bg-dark" as any]: hostTheme.bgDark,
+          ["--agent-border-light" as any]: hostTheme.borderLight,
+          ["--agent-border-dark" as any]: hostTheme.borderDark,
+        } as React.CSSProperties}
         className="w-full max-w-4xl h-[92dvh] sm:h-auto max-h-[92dvh] sm:max-h-[88vh] rounded-xl sm:rounded-2xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-[#262636] shadow-2xl flex flex-col overflow-hidden text-left"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1531,7 +1538,8 @@ function AgentThinkingModal({
         >
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
             {isCurrentlyRunning ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#f8a87c]/15 border border-[#f8a87c]/30 shrink-0">
+              <span style={{ backgroundColor: hostTheme.bgLight, borderColor: hostTheme.borderLight }}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border shrink-0">
                 <AgentAvatar
                   agent={
                     (activeRespondingAgent?.id && allAgents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
@@ -1541,7 +1549,8 @@ function AgentThinkingModal({
                   size="2xs"
                   alwaysAnimate={true}
                   forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                  className="ring-1 ring-[#f8a87c]/40"
+                  style={{ ringColor: hostTheme.borderLight }}
+                  className="ring-1 shrink-0"
                 />
                 <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
                 <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
@@ -1614,7 +1623,7 @@ function AgentThinkingModal({
                 onClick={() => setViewMode("tree")}
                 className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   viewMode === "tree"
-                    ? "bg-white dark:bg-[#12121a] text-[#e0682b] dark:text-[#f8a87c] shadow-2xs"
+                    ? "bg-white dark:bg-[#12121a] text-[var(--agent-light)] dark:text-[var(--agent-dark)] shadow-2xs"
                     : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
@@ -1627,7 +1636,7 @@ function AgentThinkingModal({
                 onClick={() => setViewMode("timeline")}
                 className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 ${
                   viewMode === "timeline"
-                    ? "bg-white dark:bg-[#12121a] text-[#e0682b] dark:text-[#f8a87c] shadow-2xs"
+                    ? "bg-white dark:bg-[#12121a] text-[var(--agent-light)] dark:text-[var(--agent-dark)] shadow-2xs"
                     : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
@@ -1677,10 +1686,11 @@ function AgentThinkingModal({
           {isCurrentlyRunning && (
             <div
               data-testid="inprogress-thinking-status-block"
-              className="rounded-xl bg-[#f8a87c]/[0.07] dark:bg-[#181622] border border-[#f8a87c]/35 p-3 text-xs font-sans space-y-1.5"
+              style={{ backgroundColor: hostTheme.bgLight, borderColor: hostTheme.borderLight }}
+              className="rounded-xl border p-3 text-xs font-sans space-y-1.5"
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-[#f8a87c] font-mono text-[11px] font-semibold">
+                <div style={{ color: hostTheme.primary }} className="flex items-center gap-2 font-mono text-[11px] font-semibold">
                   <AgentAvatar
                     agent={
                       (activeRespondingAgent?.id && allAgents.find((a) => a.id === activeRespondingAgent.id || a.slug === activeRespondingAgent.id)) ||
@@ -1693,9 +1703,9 @@ function AgentThinkingModal({
                     className="ring-1 ring-[#f8a87c]/40"
                   />
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-1" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-2" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] typing-dot-3" />
+                    <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
+                    <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-2" />
+                    <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-3" />
                   </span>
                   <span>Tiến trình đang thực thi (Realtime Flow)</span>
                 </div>
@@ -1845,7 +1855,7 @@ function AgentThinkingModal({
                     value={flowSearchQuery}
                     onChange={(e) => setFlowSearchQuery(e.target.value)}
                     placeholder="Tìm kiếm từ khóa, @agent hoặc công cụ trong Flow Tree (Ctrl+F)..."
-                    className="w-full pl-7 pr-6 py-1 rounded-lg bg-white dark:bg-[#191926] border border-slate-200 dark:border-[#2a2a3c] text-[10px] font-mono text-slate-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:border-[#f8a87c]"
+                    className="w-full pl-7 pr-6 py-1 rounded-lg bg-white dark:bg-[#191926] border border-slate-200 dark:border-[#2a2a3c] text-[10px] font-mono text-slate-800 dark:text-neutral-200 placeholder:text-neutral-400 focus:outline-none focus:border-[var(--agent-primary)]"
                   />
                   {flowSearchQuery && (
                     <button
@@ -2836,7 +2846,8 @@ function AgentThinkingModal({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-800 dark:text-neutral-100">
-                          <span className="h-4 w-4 rounded-md bg-[#f8a87c]/15 border border-[#f8a87c]/40 text-[#e0682b] dark:text-[#f8a87c] flex items-center justify-center text-[10px] font-bold">
+                          <span style={{ backgroundColor: hostTheme.bgLight, borderColor: hostTheme.borderLight, color: hostTheme.primary }}
+                          className="h-4 w-4 rounded-md border flex items-center justify-center text-[10px] font-bold">
                             1
                           </span>
                           <span>Chuẩn bị làm gì (Intent & Kế hoạch xử lý)</span>
@@ -2869,7 +2880,8 @@ function AgentThinkingModal({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-800 dark:text-neutral-100">
-                          <span className="h-4 w-4 rounded-md bg-cyan-500/15 border border-cyan-500/40 text-cyan-600 dark:text-cyan-400 flex items-center justify-center text-[10px] font-bold">
+                          <span style={{ backgroundColor: hostTheme.bgLight, borderColor: hostTheme.borderLight, color: hostTheme.primary }}
+                          className="h-4 w-4 rounded-md border flex items-center justify-center text-[10px] font-bold">
                             2
                           </span>
                           <span>Luồng làm việc (Workflow Pipeline)</span>
@@ -2949,7 +2961,7 @@ function AgentThinkingModal({
                             className="rounded-xl bg-white dark:bg-[#181824] border border-slate-200/80 dark:border-[#252536] p-2.5 text-xs font-sans space-y-1"
                           >
                             <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-300 font-mono text-[10px]">
-                              <Sparkles size={11} className="text-[#f8a87c]" />
+                              <Sparkles size={11} style={{ color: hostTheme.primary }} />
                               <span className="font-semibold">
                                 Suy luận #{rIdx + 1} · {displayAgent} (~{estimatedSec}s · {wordCount} từ)
                               </span>
@@ -3119,9 +3131,9 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
         setCallingElapsedSec(Math.max(0, Math.floor((Date.now() - started) / 1000)));
       }, 500);
       return () => clearInterval(iv);
-    } else if (!userToggledRef.current) {
-      setOpen(false);
     }
+    // When execution finishes: only collapse if user hasn't explicitly toggled it open
+    // If user clicked to expand it, respect their intent and stay open
   }, [isCalling]);
 
   // Check if toolCall is browser view screen, screenshot, cdp, or visual navigation action
@@ -3992,23 +4004,68 @@ export function getAgentBrowserUrl(agent: InfraAgent, info?: AgentBrowserInfo | 
  * reloads the stream when the page returns from background (mobile Safari/Chrome suspend
  * websockets), and retries with backoff if the desktop is unreachable.
  */
-function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url: string; title: string; profile: string }) {
+function SelkiesViewer({
+  agentId,
+  url,
+  title,
+  profile,
+  reloadKey = 0,
+  isResizing = false,
+}: {
+  agentId: string;
+  url: string;
+  title: string;
+  profile: string;
+  reloadKey?: number;
+  isResizing?: boolean;
+}) {
   const [src, setSrc] = useState<string>("");
   // Selkies treats a bare URL as the single "primary" controller: every new phone/desktop tab
   // kicked the previous one and reconfigured the shared display. #collab joins as a co-controller
   // and #shared as a watch-only viewer, so several devices can stay connected at once.
-  // #collab on every device: a #shared (watch-only) Selkies client stays on "Waiting for stream" until some
-  // controller has initialised the stream, so a phone opening first saw a black screen. Watch-only is a toggle.
   const [mode, setMode] = useState<"collab" | "shared">("collab");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [fitMode, setFitMode] = useState<"width" | "contain">(() => {
+    try {
+      const saved = localStorage.getItem("agent360_computer_fit_mode");
+      return saved === "contain" ? "contain" : "width";
+    } catch {
+      return "width";
+    }
+  });
+  const [viewportDims, setViewportDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const hiddenAt = useRef<number>(0);
+
+  // Smooth ResizeObserver for automatic fit-width & aspect ratio calculation when sidebars or split-pane change
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let rafId = 0;
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        setViewportDims({ w: Math.round(rect.width), h: Math.round(rect.height) });
+      });
+    });
+    ro.observe(el);
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
+  }, []);
+
+  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey` (not on every agent switch on the same host!)
+  useEffect(() => {
+    if (!url || !agentId) return;
     let alive = true;
     setError("");
     setIframeLoaded(false);
-    // The desktop host only serves /a360/{signed-token}/, so a fresh signed URL is requested per (re)connect.
     Promise.all([issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control"), focusAgentBrowser(agentId)])
       .then(([signed]) => { if (alive) setSrc(`${signed}#${mode}`); })
       .catch((e) => {
@@ -4017,11 +4074,17 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
         setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
       });
     return () => { alive = false; };
-  }, [agentId, url, attempt, mode]);
+  }, [url, attempt, mode, reloadKey]);
+
+  // When switching between agents that share the same Selkies desktop host, keep the stream alive and smoothly focus the target profile window
+  useEffect(() => {
+    if (!agentId) return;
+    focusAgentBrowser(agentId).catch(() => {});
+  }, [agentId]);
+
   useEffect(() => {
     const onVis = () => {
       if (document.hidden) { hiddenAt.current = Date.now(); return; }
-      // Back from >30 s in background: the websocket is usually dead on phones; reconnect cleanly.
       if (hiddenAt.current && Date.now() - hiddenAt.current > 30000) setAttempt((a) => a + 1);
       hiddenAt.current = 0;
     };
@@ -4030,12 +4093,24 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
     window.addEventListener("online", onOnline);
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("online", onOnline); };
   }, []);
+
+  // Calculate smooth Fit-Width vs Contain dimensions for the 1440x900 desktop stream
+  const DESKTOP_ASPECT = 1440 / 900; // 1.6
+  const containerAspect = viewportDims.w > 0 && viewportDims.h > 0 ? viewportDims.w / viewportDims.h : DESKTOP_ASPECT;
+  const shouldForceFullWidth = fitMode === "width" && viewportDims.w > 0 && viewportDims.h > 0 && containerAspect < DESKTOP_ASPECT;
+  const targetIframeHeight = shouldForceFullWidth ? Math.round(viewportDims.w / DESKTOP_ASPECT) : undefined;
+
   return (
-    <>
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full bg-black ${
+        shouldForceFullWidth ? "overflow-y-auto overflow-x-hidden flex items-start justify-center" : "overflow-hidden flex items-center justify-center"
+      }`}
+    >
       {error && (
         <>
           <AgentBrowserPreview agentId={agentId} enabled />
-          <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
+          <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
             {error === "auth" ? (
               <>
                 <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
@@ -4056,28 +4131,53 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
           </div>
         </>
       )}
-      {/* Background preview placeholder while waiting for stream or connecting (paused once iframe is live to save mobile bandwidth) */}
+      {/* Background preview placeholder while waiting for stream or connecting */}
       <AgentBrowserPreview agentId={agentId} enabled={!error && !iframeLoaded} />
       {src && (
-        <div className="relative w-full h-full flex items-center justify-center overflow-hidden bg-black">
-          <iframe
-            key={`${src}#${attempt}`}
-            src={src}
-            title={title}
-            onLoad={() => setIframeLoaded(true)}
-            className="w-full h-full border-0 bg-black z-10 transition-opacity duration-300"
-            allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
-            allowFullScreen
-            style={{ touchAction: "manipulation", maxWidth: "100%", maxHeight: "100%" }}
-          />
-        </div>
+        <iframe
+          ref={iframeRef}
+          key={`${src}#${attempt}#${reloadKey}`}
+          src={src}
+          title={title}
+          onLoad={() => {
+            setIframeLoaded(true);
+            focusAgentBrowser(agentId).catch(() => {});
+            setTimeout(() => {
+              focusAgentBrowser(agentId).catch(() => {});
+            }, 900);
+          }}
+          className={`w-full border-0 bg-black z-10 transition-[height,opacity] duration-200 ease-out ${
+            isResizing ? "pointer-events-none select-none" : ""
+          } ${shouldForceFullWidth ? "shrink-0" : "h-full"}`}
+          allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
+          allowFullScreen
+          style={{
+            touchAction: "manipulation",
+            width: "100%",
+            height: targetIframeHeight ? `${targetIframeHeight}px` : "100%",
+          }}
+        />
       )}
       {profile && (
-        <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
+        <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
           profile: {agentId}
         </div>
       )}
-      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
+      <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+        <button
+          type="button"
+          onClick={() => {
+            setFitMode((prev) => {
+              const next = prev === "width" ? "contain" : "width";
+              try { localStorage.setItem("agent360_computer_fit_mode", next); } catch {}
+              return next;
+            });
+          }}
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
+          title={fitMode === "width" ? "Đang Fit Full-Width (bấm để chuyển sang Fit Toàn Màn Hình)" : "Đang Fit Toàn Màn Hình (bấm để chuyển sang Fit Full-Width)"}
+        >
+          {fitMode === "width" ? "Fit width" : "Fit screen"}
+        </button>
         <button
           type="button"
           onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
@@ -4088,14 +4188,17 @@ function SelkiesViewer({ agentId, url, title, profile }: { agentId: string; url:
         </button>
         <button
           type="button"
-          onClick={() => setAttempt((a) => a + 1)}
+          onClick={() => {
+            focusAgentBrowser(agentId).catch(() => {});
+            setAttempt((a) => a + 1);
+          }}
           className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
-          title="Reconnect stream"
+          title="Reconnect stream & fit window"
         >
           Reconnect
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -6060,6 +6163,9 @@ export function GrokBotWorkspace() {
   // Mobile Hold-Touch / Long-Press Action Sheet state
   const [mobileActionAgent, setMobileActionAgent] = useState<InfraAgent | null>(null);
   const [mobileActionChat, setMobileActionChat] = useState<AgentSession | null>(null);
+  // Enhancement 2: Swipe actions on chat sessions (swipe left to Pin/Archive, swipe right to Delete)
+  const [swipedChatState, setSwipedChatState] = useState<{ id: string; offset: number } | null>(null);
+  const chatSwipeTouchRef = useRef<{ id: string; startX: number; startY: number; moved: boolean } | null>(null);
   const [mobileActionMsg, setMobileActionMsg] = useState<{
     id: string;
     content: string;
@@ -6348,10 +6454,17 @@ export function GrokBotWorkspace() {
     }
   };
 
-  const handleTouchStartChat = (chat: AgentSession) => {
-    // Only engage mobile bottom-sheet long-press on actual mobile/coarse touch screens
+  const handleTouchStartChat = (e: React.TouchEvent, chat: AgentSession) => {
     if (!isCoarseTouchDevice()) return;
     longPressPreventClickRef.current = false;
+    if (e.touches.length === 1) {
+      chatSwipeTouchRef.current = {
+        id: chat.id,
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        moved: false,
+      };
+    }
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
       longPressPreventClickRef.current = true;
@@ -6362,11 +6475,43 @@ export function GrokBotWorkspace() {
     }, 400);
   };
 
-  const handleTouchEndChat = () => {
+  const handleTouchMoveChat = (e: React.TouchEvent, chat: AgentSession) => {
+    if (!chatSwipeTouchRef.current || chatSwipeTouchRef.current.id !== chat.id || e.touches.length !== 1) return;
+    const deltaX = e.touches[0].clientX - chatSwipeTouchRef.current.startX;
+    const deltaY = e.touches[0].clientY - chatSwipeTouchRef.current.startY;
+
+    // If movement is mostly horizontal, engage swipe and cancel long-press
+    if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      chatSwipeTouchRef.current.moved = true;
+      longPressPreventClickRef.current = true;
+      // Clamp offset between -140px (left swipe for 2 actions) and +80px (right swipe for delete)
+      const clamped = Math.max(-140, Math.min(80, deltaX));
+      setSwipedChatState({ id: chat.id, offset: clamped });
+    }
+  };
+
+  const handleTouchEndChat = (chat?: AgentSession) => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    if (swipedChatState && chat && swipedChatState.id === chat.id) {
+      const off = swipedChatState.offset;
+      if (off <= -60) {
+        // Keep open to reveal pin & archive actions
+        setSwipedChatState({ id: chat.id, offset: -110 });
+      } else if (off >= 60) {
+        // Keep open to reveal delete action
+        setSwipedChatState({ id: chat.id, offset: 70 });
+      } else {
+        setSwipedChatState(null);
+      }
+    }
+    chatSwipeTouchRef.current = null;
   };
 
   const handleTouchStartMsg = (
@@ -8481,8 +8626,10 @@ const selectedAgentTheme = getAgentColorTheme(
   // placeholder, and its browser would flash in for the agent the user actually selected.
   const agentBrowserFor = isLoadingAgents || !agents.some((a) => a.id === selectedAgent?.id) ? "" : (selectedAgent?.slug || selectedAgent?.id || "");
   useEffect(() => {
-    setAgentBrowser(null);
-    if (!agentBrowserFor) return;
+    if (!agentBrowserFor) {
+      setAgentBrowser(null);
+      return;
+    }
     // Bring the target agent's Chromium profile window to the top immediately (on mount & selection) and pre-warm signed desktop URL for mobile
     focusAgentBrowser(agentBrowserFor).catch(() => {});
     prefetchAgentDesktopUrl(agentBrowserFor).catch(() => {});
@@ -11908,17 +12055,31 @@ const selectedAgentTheme = getAgentColorTheme(
                                   <span className="truncate">{att.caption || (isUser ? "Tệp đã gửi" : "Tệp phản hồi từ Agent")}</span>
                                 </div>
                               </div>
-                              <a
-                                href={downloadHref}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                download={att.fileName}
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[#f8a87c] shrink-0 transition-colors"
-                                title={`Tải xuống ${att.fileName}`}
-                              >
-                                <Download size={13} />
-                              </a>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {att.storageUrl && (
+                                  <a
+                                    href={att.storageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-emerald-500 shrink-0 transition-colors"
+                                    title="Mở liên kết Cloud Storage trực tiếp"
+                                  >
+                                    <ExternalLink size={13} />
+                                  </a>
+                                )}
+                                <a
+                                  href={downloadHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={att.fileName}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[#f8a87c] shrink-0 transition-colors"
+                                  title={`Tải xuống ${att.fileName}`}
+                                >
+                                  <Download size={13} />
+                                </a>
+                              </div>
                             </div>
                           );
                         })}
@@ -15344,12 +15505,69 @@ const selectedAgentTheme = getAgentColorTheme(
                 return (
                   <div
                     key={chat.id}
-                    data-chat-item-id={chat.id}
-                    style={{ animationDelay: `${Math.min(cIdx * 12, 100)}ms` }}
-                    onTouchStart={() => handleTouchStartChat(chat)}
-                    onTouchEnd={handleTouchEndChat}
-                    onTouchMove={handleTouchEndChat}
-                    onTouchCancel={handleTouchEndChat}
+                    className="relative overflow-hidden rounded-lg select-none"
+                  >
+                    {/* Background Swipe Actions Reveal Layer (Mobile) */}
+                    {swipedChatState?.id === chat.id && (
+                      <div className="absolute inset-0 flex items-center justify-between px-2 text-xs font-mono pointer-events-auto z-0">
+                        {/* Right Swipe: Delete Action */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSwipedChatState(null);
+                            setChatToDelete(chat);
+                          }}
+                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-500 cursor-pointer transition-opacity ${
+                            swipedChatState.offset > 20 ? "opacity-100" : "opacity-0"
+                          }`}
+                        >
+                          <Trash2 size={13} className="text-rose-500" />
+                          <span className="text-[10px] font-semibold">Xóa</span>
+                        </div>
+
+                        {/* Left Swipe: Pin & Archive Actions */}
+                        <div className={`flex items-center gap-1.5 transition-opacity ${
+                          swipedChatState.offset < -20 ? "opacity-100" : "opacity-0"
+                        }`}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSwipedChatState(null);
+                              togglePinChat(chat.id, e);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-500 cursor-pointer"
+                          >
+                            <Pin size={12} className={pinnedChatIds.includes(chat.id) ? "fill-amber-400" : ""} />
+                            <span className="text-[10px] font-semibold">{pinnedChatIds.includes(chat.id) ? "Bỏ ghim" : "Ghim"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSwipedChatState(null);
+                              toggleArchiveChat(chat.id, e);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 cursor-pointer"
+                          >
+                            <Archive size={12} />
+                            <span className="text-[10px] font-semibold">Lưu trữ</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div
+                      data-chat-item-id={chat.id}
+                      style={{
+                        animationDelay: `${Math.min(cIdx * 12, 100)}ms`,
+                        transform: swipedChatState?.id === chat.id ? `translateX(${swipedChatState.offset}px)` : undefined,
+                        transition: chatSwipeTouchRef.current?.moved ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                      }}
+                      onTouchStart={(e) => handleTouchStartChat(e, chat)}
+                      onTouchEnd={() => handleTouchEndChat(chat)}
+                      onTouchMove={(e) => handleTouchMoveChat(e, chat)}
+                      onTouchCancel={() => handleTouchEndChat(chat)}
                     onContextMenu={(e) => {
                       e.preventDefault();
                       if (isCoarseTouchDevice()) {
@@ -15751,6 +15969,7 @@ ${chat.id}`);
 {/* Subtitle snippet removed as requested for lean single-line chat header */}
                     </div>
                   </div>
+                  </div>
                 );
               })}
 
@@ -15885,6 +16104,7 @@ ${chat.id}`);
                     onClick={() => {
                       triggerHaptic();
                       setIsReloadingBrowser(true);
+                      focusAgentBrowser(agentBrowserFor).catch(() => {});
                       setBrowserIframeKey((k) => k + 1);
                       setTimeout(() => setIsReloadingBrowser(false), 900);
                     }}
@@ -15939,11 +16159,13 @@ ${chat.id}`);
             <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
               {browserTarget.url ? (
                 <SelkiesViewer
-                  key={`split-${selectedAgent.id}-${browserTarget.url}`}
+                  key={`split-${browserTarget.url}`}
                   agentId={agentBrowserFor}
                   url={browserTarget.url}
                   title={`${selectedAgent.name} Computer Live Split`}
                   profile={browserTarget.profile}
+                  reloadKey={browserIframeKey}
+                  isResizing={isResizingComputerSplit}
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
@@ -16987,11 +17209,12 @@ ${chat.id}`);
             <main className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative transition-colors">
               {browserTarget.url ? (
                 <SelkiesViewer
-                  key={`modal-${selectedAgent.id}-${browserTarget.url}`}
+                  key={`modal-${browserTarget.url}`}
                   agentId={agentBrowserFor}
                   url={browserTarget.url}
                   title={`${selectedAgent.name} Interactive Workspace`}
                   profile={browserTarget.profile}
+                  reloadKey={browserIframeKey}
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-black transition-colors">
@@ -17129,6 +17352,18 @@ ${chat.id}`);
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {previewModalFile.storageUrl && (
+                  <a
+                    href={previewModalFile.storageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-semibold text-xs hover:bg-emerald-500/25 transition-colors"
+                    title="Mở trực tiếp trên Cloud Storage"
+                  >
+                    <ExternalLink size={13} />
+                    <span>Cloud Storage</span>
+                  </a>
+                )}
                 <a
                   href={`${previewModalFile.previewUrl}${previewModalFile.previewUrl.includes("?") ? "&" : "?"}download=1`}
                   download={previewModalFile.fileName}
@@ -17151,10 +17386,11 @@ ${chat.id}`);
             </div>
 
             <div className="flex-1 overflow-auto p-4 bg-slate-100/50 dark:bg-[#0d0d14] min-h-[260px] flex flex-col">
-              {previewModalFile.kind === "pdf" ? (
+              {previewModalFile.kind === "pdf" || previewModalFile.ext === "HTML" || previewModalFile.ext === "HTM" ? (
                 <iframe
                   src={previewModalFile.previewUrl}
                   title={previewModalFile.fileName}
+                  sandbox="allow-scripts allow-same-origin allow-downloads allow-forms"
                   className="w-full h-[65vh] rounded-xl border border-slate-200 dark:border-white/10 bg-white"
                 />
               ) : previewModalFile.kind === "video" ? (
