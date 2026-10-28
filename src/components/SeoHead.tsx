@@ -38,7 +38,7 @@ export interface SeoHeadProps {
   };
 }
 
-const BASE_URL = "https://agent360.antares.vn";
+const BASE_URL = "https://skyer.vn";
 
 function setMetaTag(attrName: "name" | "property", attrValue: string, content: string) {
   if (typeof document === "undefined") return;

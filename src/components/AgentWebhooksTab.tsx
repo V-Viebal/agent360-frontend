@@ -451,14 +451,14 @@ export function AgentWebhooksTab({
                 data-testid="agent-inbound-webhook-url"
                 className="flex-1 text-[11px] font-mono text-slate-800 dark:text-neutral-200 bg-slate-100 dark:bg-[#181822] px-2.5 py-1.5 rounded-lg truncate border border-slate-200 dark:border-[#262636]"
               >
-                {config?.inbound_webhook_url || `https://api-agent360.antares.vn/api/v1/webhooks/agents/${cleanSlug}`}
+                {config?.inbound_webhook_url || `https://api.skyer.vn/api/v1/webhooks/agents/${cleanSlug}`}
               </code>
               <button
                 type="button"
                 onClick={() =>
                   handleCopy(
                     "inbound_url",
-                    config?.inbound_webhook_url || `https://api-agent360.antares.vn/api/v1/webhooks/agents/${cleanSlug}`
+                    config?.inbound_webhook_url || `https://api.skyer.vn/api/v1/webhooks/agents/${cleanSlug}`
                   )
                 }
                 className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1e1e2c] hover:bg-slate-200 dark:hover:bg-[#28283a] text-slate-600 dark:text-neutral-300 cursor-pointer"
@@ -477,14 +477,14 @@ export function AgentWebhooksTab({
             </div>
             <div className="flex items-center gap-2">
               <code className="flex-1 text-[11px] font-mono text-slate-800 dark:text-neutral-200 bg-slate-100 dark:bg-[#181822] px-2.5 py-1.5 rounded-lg truncate border border-slate-200 dark:border-[#262636]">
-                {config?.agentteams_webhook_url || "https://api-agent360.antares.vn/api/v1/webhooks/agentteams/events"}
+                {config?.agentteams_webhook_url || "https://api.skyer.vn/api/v1/webhooks/agentteams/events"}
               </code>
               <button
                 type="button"
                 onClick={() =>
                   handleCopy(
                     "matrix_url",
-                    config?.agentteams_webhook_url || "https://api-agent360.antares.vn/api/v1/webhooks/agentteams/events"
+                    config?.agentteams_webhook_url || "https://api.skyer.vn/api/v1/webhooks/agentteams/events"
                   )
                 }
                 className="p-1.5 rounded-lg bg-slate-100 dark:bg-[#1e1e2c] hover:bg-slate-200 dark:hover:bg-[#28283a] text-slate-600 dark:text-neutral-300 cursor-pointer"

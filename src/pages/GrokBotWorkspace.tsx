@@ -4053,6 +4053,7 @@ function SelkiesViewer({
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [preemptedByOtherTab, setPreemptedByOtherTab] = useState(false);
   // On mobile/WebKit without WebCodecs ImageDecoder, or when the user chooses Fast View,
   // use real-time CDP screencast WebSocket push so the phone never gets stuck on Selkies' "Waiting for stream...".
   const [useMobileLivePreview, setUseMobileLivePreview] = useState<boolean>(() => {
@@ -4075,6 +4076,33 @@ function SelkiesViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hiddenAt = useRef<number>(0);
+
+  // Multi-tab BroadcastChannel coordination: Selkies only allows 1 primary controller per desktop host (`url`).
+  // When another tab opens or reclaims primary control on the same `url`, automatically demote this tab to
+  // `#shared` (Watch only) BEFORE Selkies kills the connection, and auto-reclaim control when the user clicks or focuses this tab!
+  useEffect(() => {
+    if (!url || typeof BroadcastChannel === "undefined") return;
+    const tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const ch = new BroadcastChannel("agent360_selkies_primary_coord");
+
+    if (mode === "collab" && !useMobileLivePreview) {
+      setPreemptedByOtherTab(false);
+      ch.postMessage({ type: "CLAIM_PRIMARY", url, tabId });
+    }
+
+    const onMsg = (ev: MessageEvent) => {
+      const data = ev.data;
+      if (data?.type === "CLAIM_PRIMARY" && data.url === url && data.tabId !== tabId) {
+        setPreemptedByOtherTab(true);
+        setMode((prev) => (prev === "collab" ? "shared" : prev));
+      }
+    };
+    ch.addEventListener("message", onMsg);
+    return () => {
+      ch.removeEventListener("message", onMsg);
+      ch.close();
+    };
+  }, [url, mode, attempt, reloadKey, useMobileLivePreview]);
 
   // Smooth ResizeObserver for automatic fit-width & aspect ratio calculation when sidebars or split-pane change
   useEffect(() => {
@@ -4144,16 +4172,31 @@ function SelkiesViewer({
   }, [agentId]);
 
   useEffect(() => {
+    const reclaimIfPreempted = () => {
+      setPreemptedByOtherTab((wasPreempted) => {
+        if (wasPreempted) {
+          setMode("collab");
+          focusAgentBrowser(agentId).catch(() => {});
+        }
+        return false;
+      });
+    };
     const onVis = () => {
       if (document.hidden) { hiddenAt.current = Date.now(); return; }
+      reclaimIfPreempted();
       if (hiddenAt.current && Date.now() - hiddenAt.current > 30000) setAttempt((a) => a + 1);
       hiddenAt.current = 0;
     };
     const onOnline = () => setAttempt((a) => a + 1);
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", reclaimIfPreempted);
     window.addEventListener("online", onOnline);
-    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("online", onOnline); };
-  }, []);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", reclaimIfPreempted);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [agentId]);
 
   // Calculate smooth Fit-Width vs Contain dimensions for the 1440x900 desktop stream
   const DESKTOP_ASPECT = 1440 / 900; // 1.6
@@ -4192,6 +4235,27 @@ function SelkiesViewer({
           </div>
         </>
       )}
+      {preemptedByOtherTab && mode === "shared" && !error && (
+        <div
+          onClick={() => {
+            setPreemptedByOtherTab(false);
+            setMode("collab");
+            focusAgentBrowser(agentId).catch(() => {});
+          }}
+          onMouseEnter={() => {
+            setPreemptedByOtherTab(false);
+            setMode("collab");
+            focusAgentBrowser(agentId).catch(() => {});
+          }}
+          className="absolute inset-0 z-20 flex items-start justify-start p-2 bg-black/5 hover:bg-transparent cursor-pointer"
+          title="Di chuột hoặc chạm vào màn hình để tự động lấy lại quyền điều khiển (Auto-Claim Control)"
+        >
+          <div className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 flex items-center gap-2 shadow-sm">
+            <span>Đang ở chế độ Xem chung (Tab khác đang điều khiển)</span>
+            <span className="px-1.5 py-0.5 rounded bg-amber-400 text-black font-semibold text-[10px]">Chạm / Di chuột để điều khiển</span>
+          </div>
+        </div>
+      )}
       {/* Live preview layer: uses real-time WebSocket screencast push + touch-to-CDP input when Fast View is active */}
       <AgentBrowserPreview
         agentId={agentId}
@@ -4208,9 +4272,6 @@ function SelkiesViewer({
           onLoad={() => {
             setIframeLoaded(true);
             focusAgentBrowser(agentId).catch(() => {});
-            setTimeout(() => {
-              focusAgentBrowser(agentId).catch(() => {});
-            }, 900);
           }}
           className={`w-full border-0 bg-black z-10 transition-[height,opacity] duration-200 ease-out ${
             isResizing ? "pointer-events-none select-none" : ""
@@ -4230,16 +4291,14 @@ function SelkiesViewer({
         </div>
       )}
       <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
-        {typeof window !== "undefined" && (window.innerWidth < 768 || typeof (window as any).ImageDecoder === "undefined") && (
-          <button
-            type="button"
-            onClick={() => setUseMobileLivePreview((p) => !p)}
-            className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
-            title={useMobileLivePreview ? "Chuyển sang điều khiển Desktop trực tiếp (WebCodecs)" : "Chuyển sang chế độ Mobile Stream siêu tốc (CDP Screencast)"}
-          >
-            {useMobileLivePreview ? "Interactive" : "Fast View"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setUseMobileLivePreview((p) => !p)}
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
+          title={useMobileLivePreview ? "Chuyển sang điều khiển Desktop Selkies trực tiếp" : "Chuyển sang chế độ CDP Stream (mở nhiều thiết bị/tab cùng lúc không bao giờ bị đá kết nối)"}
+        >
+          {useMobileLivePreview ? "Desktop Stream" : "Multi-Device View"}
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -4256,7 +4315,10 @@ function SelkiesViewer({
         </button>
         <button
           type="button"
-          onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
+          onClick={() => {
+            setPreemptedByOtherTab(false);
+            setMode((m) => (m === "shared" ? "collab" : "shared"));
+          }}
           className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
           title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
         >
@@ -4265,6 +4327,7 @@ function SelkiesViewer({
         <button
           type="button"
           onClick={() => {
+            setPreemptedByOtherTab(false);
             focusAgentBrowser(agentId).catch(() => {});
             setAttempt((a) => a + 1);
           }}

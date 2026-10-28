@@ -69,7 +69,7 @@ jobs:
             echo "backend_upstream=agent360-backend-staging:8080" >> $GITHUB_OUTPUT
           else
             echo "dist_root=/opt/agent360/frontend-dist" >> $GITHUB_OUTPUT
-            echo "public_url=https://agent360.antares.vn" >> $GITHUB_OUTPUT
+            echo "public_url=https://skyer.vn" >> $GITHUB_OUTPUT
             echo "container_name=agent360-frontend" >> $GITHUB_OUTPUT
             echo "backend_upstream=agent360-backend:8080" >> $GITHUB_OUTPUT
           fi

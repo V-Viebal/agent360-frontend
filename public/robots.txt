@@ -1,5 +1,5 @@
 # ==============================================================================
-# Robots.txt for Skyer AI Workforce Platform (https://agent360.antares.vn)
+# Robots.txt for Skyer AI Workforce Platform (https://skyer.vn)
 # Optimized for Organic Search (SEO), Answer Engines (AEO), and Generative AI (GEO)
 # ==============================================================================
 
@@ -38,4 +38,4 @@ Allow: /
 Disallow: /api/
 Disallow: /admin/
 
-Sitemap: https://agent360.antares.vn/sitemap.xml
+Sitemap: https://skyer.vn/sitemap.xml

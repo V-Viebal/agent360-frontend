@@ -63,4 +63,4 @@ Departments collaborate over the Agent Communication Protocol (ACP):
 ## 6. Contact & Enterprise Pilot Onboarding
 To schedule an on-premise PoC in your private cloud or air-gapped data center:
 - **Email:** enterprise@skyer.ai / secops@antares.vn
-- **Registry:** https://agent360.antares.vn/marketplace
+- **Registry:** https://skyer.vn/marketplace

@@ -10,8 +10,8 @@ export const authConfig = {
   // Each deployed origin (production, staging, localhost) must be registered on the Logto SPA app.
   redirectUri: typeof window !== "undefined"
     ? `${window.location.origin}/callback`
-    : "https://agent360.antares.vn/callback",
+    : "https://skyer.vn/callback",
   postLogoutRedirectUri: typeof window !== "undefined"
     ? window.location.origin
-    : "https://agent360.antares.vn",
+    : "https://skyer.vn",
 };
