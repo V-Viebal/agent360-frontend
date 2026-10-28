@@ -147,7 +147,7 @@ agent team:
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "agent360-agent-workforce-config.yaml");
+    link.setAttribute("download", "skyer-agent-workforce-config.yaml");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -302,7 +302,7 @@ agent team:
               <button
                 onClick={handleDownloadYaml}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs transition-all shadow-sm cursor-pointer"
-                title="Download agent360-agent-workforce-config.yaml"
+                title="Download skyer-agent-workforce-config.yaml"
               >
                 <Download size={13} />
                 <span>{t("topoVis.exportConfig")}</span>

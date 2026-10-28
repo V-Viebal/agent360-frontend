@@ -37,7 +37,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
       },
       {
         id: "sess-swe-099",
-        title: "Refactor: Split Agent360 control-plane contracts",
+        title: "Refactor: Split Skyer control-plane contracts",
         updatedAt: "Yesterday",
         messageCount: 22,
         lastMessageSnippet: "Isolated Skyer Upstream vendor code from Antares bot definitions.",
@@ -101,7 +101,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
     sessions: [
       {
         id: "sess-qa-301",
-        title: "Audit: WCAG contrast check on Agent360 dark theme",
+        title: "Audit: WCAG contrast check on Skyer dark theme",
         updatedAt: "Just now",
         messageCount: 16,
         lastMessageSnippet: "Evaluated 28 text nodes; minimum contrast ratio 6.2:1 (Pass AA & AAA).",
@@ -136,7 +136,7 @@ export const MOCK_INFRA_AGENTS: InfraAgent[] = [
     sessions: [
       {
         id: "sess-kb-401",
-        title: "Documentation: Update Agent360 Architecture Hub rev 423",
+        title: "Documentation: Update Skyer Architecture Hub rev 423",
         updatedAt: "45 mins ago",
         messageCount: 7,
         lastMessageSnippet: "Synchronized vocabulary and boundaries between IAM360 and Agent Kernel.",
@@ -223,7 +223,7 @@ export const MOCK_MESSAGES_BY_SESSION: Record<string, ChatMessage[]> = {
       toolCalls: [
         {
           tool: "browser_view_screen",
-          args: '{"url": "https://agent360.antares.vn", "action": "inspect_viewport"}',
+          args: '{"url": "https://skyer.vn", "action": "inspect_viewport"}',
           result: 'Captured viewport 1920x1080. Page state: 200 OK. Headless browser ready.',
           exitCode: 0,
         },

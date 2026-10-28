@@ -132,7 +132,7 @@ export function AdminDashboardPage() {
 
             <div className="space-y-2">
               {[
-                { node: "2nd Server (App & API)", role: "Agent360 API, Nginx, Temporal, VectorDB", status: "Online" },
+                { node: "2nd Server (App & API)", role: "Skyer API, Nginx, Temporal, VectorDB", status: "Online" },
                 { node: "3rd Server (Core Workers)", role: "AgentCore Runtime, Browser CDP Proxy", status: "Online" },
                 { node: "4th Server (IAM & S3)", role: "Logto Dedicated OIDC, MinIO Dedicated S3", status: "Online" },
                 { node: "6th Server (GM Enterprise)", role: "AgentCore GM Enterprise Runtime, ERPCore", status: "Online" },

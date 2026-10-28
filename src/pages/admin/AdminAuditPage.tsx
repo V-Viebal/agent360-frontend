@@ -398,7 +398,7 @@ export function AdminAuditPage() {
           emptyTitle="Chưa có bản ghi Audit nào"
           emptyDescription="Mọi đột biến dữ liệu sẽ được tự động lưu vết tại đây."
           defaultPageSize={25}
-          exportFileName="agent360-security-audit-logs"
+          exportFileName="skyer-security-audit-logs"
           onRowClick={(log) => setSelectedLog(log)}
           selectedItemId={selectedLog?.id}
         />

@@ -4994,7 +4994,7 @@ export function GrokBotWorkspace() {
     { value: "node-4th", label: "Node 4th (Swarm & Inference)", badge: "Swarm", description: "AgentTeams Swarm & LLM360" },
     { value: "node-7th", label: "Node 7th (Control)", badge: "Control", description: "control.hmz.one / SRE Observer" },
     { value: "node-8th", label: "Node 8th (ITS & GL)", badge: "Edge", description: "ai-its / ai-gl (Inox Tân Sơn & GL)" },
-    { value: "node-2nd", label: "Node 2nd (Agent360)", badge: "Platform", description: "agent360.antares.vn" },
+    { value: "node-2nd", label: "Node 2nd (Skyer Platform)", badge: "Platform", description: "skyer.vn" },
   ];
   // Interactive Mascot Eye Tracking State
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -9533,7 +9533,7 @@ const selectedAgentTheme = getAgentColorTheme(
     if (messages.length === 0) return;
     const payload = {
       schemaVersion: "1.0",
-      platform: "Skyer Agent360",
+      platform: "Skyer",
       agent: {
         id: selectedAgent.id,
         name: selectedAgent.name,

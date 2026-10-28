@@ -703,7 +703,7 @@ export function LandingPage() {
             ? "Mỗi nhân viên AI Skyer sở hữu một máy trạm Linux riêng (/app/working), tự thao tác trình duyệt thật, kết nối công cụ nội bộ và ghi nhớ công việc dài hạn. Triển khai linh hoạt trên Cloud hoặc 100% On-Premise qua App360."
             : "Every Skyer AI teammate owns a dedicated Linux container, headless Chromium browser, MCP tool drivers, and ReMe vector memory. Deploy on Managed Cloud or 100% Air-Gapped On-Premise via App360."
         }
-        keywords="Skyer, Agent360, AI Employees, Autonomous Agents, AgentCore, Multi-Agent ACP, On-Premise AI, App360, AI Workforce, Vietnam Enterprise AI"
+        keywords="Skyer, AI Employees, Autonomous Agents, AgentCore, Multi-Agent ACP, On-Premise AI, App360, AI Workforce, Vietnam Enterprise AI"
         canonicalPath="/"
         aeoSummary={{
           question: isVi ? "Skyer là gì và hoạt động như thế nào?" : "What is Skyer and how does it work?",

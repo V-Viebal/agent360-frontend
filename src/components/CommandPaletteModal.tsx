@@ -142,7 +142,7 @@ export function CommandPaletteModal({
       id: "act-onboarding-tour",
       type: "action",
       title: "Interactive App Tour (Onboarding)",
-      subtitle: "Start step-by-step Driver.js guided walkthrough of Skyer Agent360",
+      subtitle: "Start step-by-step Driver.js guided walkthrough of Skyer",
       icon: <Sparkles size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
       action: () => {
         onClose();

@@ -218,7 +218,7 @@ export function AdminSettingsPage() {
         searchPlaceholder="Tìm kiếm dịch vụ, category, endpoint URI..."
         emptyTitle="Chưa có cấu hình nào"
         defaultPageSize={25}
-        exportFileName="agent360-cluster-settings"
+        exportFileName="skyer-cluster-settings"
         onRowClick={(item) => setSelectedConfig(item)}
         selectedItemId={selectedConfig?.id}
       />

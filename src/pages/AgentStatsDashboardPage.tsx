@@ -242,7 +242,7 @@ export function AgentStatsDashboardPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `agent360-telemetry-${stats.start_date}-to-${stats.end_date}.json`;
+    link.download = `skyer-telemetry-${stats.start_date}-to-${stats.end_date}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -283,7 +283,7 @@ export function AgentStatsDashboardPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `agent360-metrics-${stats.start_date}-to-${stats.end_date}.csv`;
+    link.download = `skyer-metrics-${stats.start_date}-to-${stats.end_date}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

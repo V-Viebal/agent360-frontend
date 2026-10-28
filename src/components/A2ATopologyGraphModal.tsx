@@ -126,7 +126,7 @@ export function A2ATopologyGraphModal({
       <g opacity="0.9" transform="translate(${width - 290}, ${height - 40})">
         <rect x="0" y="-18" width="270" height="32" rx="8" fill="#14141f" stroke="rgba(255,255,255,0.12)" />
         <circle cx="16" cy="-2" r="6" fill="#f8a87c" />
-        <text x="32" y="2" fill="#ffffff" font-size="12" font-weight="700" letter-spacing="0.5">Skyer Agent360</text>
+        <text x="32" y="2" fill="#ffffff" font-size="12" font-weight="700" letter-spacing="0.5">Skyer</text>
         <text x="145" y="2" fill="#94a3b8" font-size="10">${noteText || "Topology"}</text>
       </g>
     ` : "";
@@ -221,7 +221,7 @@ export function A2ATopologyGraphModal({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `agent360-topology-pings-${Date.now()}.json`;
+      a.download = `skyer-topology-pings-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } else {
@@ -240,7 +240,7 @@ export function A2ATopologyGraphModal({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `agent360-topology-pings-${Date.now()}.csv`;
+      a.download = `skyer-topology-pings-${Date.now()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     }

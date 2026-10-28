@@ -624,7 +624,7 @@ export function AdminOrganizationsPage() {
           emptyTitle="Chưa có Organization Cell nào"
           emptyDescription="Các Organization Cell sẽ hiển thị tại đây."
           defaultPageSize={25}
-          exportFileName="agent360-organization-cells"
+          exportFileName="skyer-organization-cells"
           onRowClick={(org) => {
             setSelectedOrg(org);
             const firstMember = Object.keys(org.members)[0] || "";
@@ -645,7 +645,7 @@ export function AdminOrganizationsPage() {
           emptyTitle="Chưa có Identity Cell nào"
           emptyDescription="Các Agent Identity Cell sẽ hiển thị tại đây."
           defaultPageSize={25}
-          exportFileName="agent360-identity-cells"
+          exportFileName="skyer-identity-cells"
           onRowClick={(idCell) => setSelectedIdentity(idCell)}
           selectedItemId={selectedIdentity?.identity_cell_id}
         />
@@ -674,7 +674,7 @@ export function AdminOrganizationsPage() {
           emptyTitle="Không có yêu cầu phê duyệt 2 người hoặc Step-Up nào"
           emptyDescription="Các yêu cầu chuyển nhượng Owner hoặc Step-Up Action sẽ xuất hiện tại đây."
           defaultPageSize={25}
-          exportFileName="agent360-iam360-approvals"
+          exportFileName="skyer-iam360-approvals"
         />
       )}
 
@@ -702,7 +702,7 @@ export function AdminOrganizationsPage() {
             emptyTitle="Chưa có dữ liệu kiểm thử"
             emptyDescription="Bấm nút 'Live Test Tất Cả' để thực thi kiểm thử trên toàn bộ Agents."
             defaultPageSize={50}
-            exportFileName="agent360-iam360-live-test-report"
+            exportFileName="skyer-iam360-live-test-report"
           />
         </div>
       )}

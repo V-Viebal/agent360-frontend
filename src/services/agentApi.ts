@@ -128,7 +128,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         displayNode = a.node || "Node 8th (ITS & GL) - antares.vn";
       } else if (nodeStr.includes("2nd")) {
         instanceKey = "node-2nd";
-        displayNode = a.node || "Node 2nd (Platform) - api-agent360.antares.vn";
+        displayNode = a.node || "Node 2nd (Platform) - api.skyer.vn";
       }
 
       return {
@@ -288,7 +288,10 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
     });
 
     const result = sortedRaw.map((c: any) => {
-      let cleanTitle = (c.name || c.title || c.topic || '').trim();
+      const stripReplyHeader = (val: string) =>
+        (val || '').replace(/^\[Replying to [^:\]]+:\s*"[^"]*"\]\s*/i, '').trim();
+
+      let cleanTitle = stripReplyHeader(c.name || c.title || c.topic || '');
       // Never expose raw technical UUID or session hashes to the UI
       if (!cleanTitle || /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleanTitle) || /^[0-9a-f]{16,}/i.test(cleanTitle) || cleanTitle.toLowerCase().startsWith('chat ') || cleanTitle.toLowerCase().startsWith('session ')) {
         const sid = c.session_id || '';
@@ -300,7 +303,7 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
       }
       const displayTitle = cleanTitle;
 
-      let rawSnippet = c.last_message?.content || c.lastMessageSnippet || c.snippet || '';
+      let rawSnippet = stripReplyHeader(c.last_message?.content || c.lastMessageSnippet || c.snippet || '');
       // If rawSnippet is missing, check client-side cached messages for this session
       if (!rawSnippet || rawSnippet === 'Chưa có tin nhắn mới' || /^[0-9a-f-]{16,}/i.test(rawSnippet)) {
         try {
@@ -311,14 +314,14 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
             if (Array.isArray(parsedMsgs) && parsedMsgs.length > 0) {
               const lastMsg = parsedMsgs[parsedMsgs.length - 1];
               if (lastMsg && lastMsg.content) {
-                rawSnippet = lastMsg.content.trim().replace(/\s+/g, ' ').slice(0, 100);
+                rawSnippet = stripReplyHeader(lastMsg.content).replace(/\s+/g, ' ').slice(0, 100);
               }
             }
           }
         } catch {}
       }
       if (!rawSnippet || /^[0-9a-f-]{16,}/i.test(rawSnippet)) {
-        rawSnippet = c.title || (c.channel && c.channel !== 'console' ? `Kênh ${c.channel}` : 'Chưa có tin nhắn mới');
+        rawSnippet = stripReplyHeader(c.title || '') || (c.channel && c.channel !== 'console' ? `Kênh ${c.channel}` : 'Chưa có tin nhắn mới');
       }
       const snippet = rawSnippet;
       const updatedStr = c.updated_at

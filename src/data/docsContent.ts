@@ -134,7 +134,7 @@ memory:
     `,
     codeSnippet: {
       language: "typescript",
-      code: `import { Agent } from "@agent360/core";
+      code: `import { Agent } from "@skyer/core";
 
 export const chiefOfStaffAgent = new Agent({
   id: "chief-of-staff",
@@ -181,7 +181,7 @@ Trong mô hình phân cấp, **Nhân viên Quản lý (Lead Manager)** nhận ch
     `,
     codeSnippet: {
       language: "python",
-      code: `from agent360 import AITeam, Process
+      code: `from skyer import AITeam, Process
 from my_agents import manager_agent, accountant_agent, legal_agent
 
 financial_team = AITeam(
@@ -201,7 +201,7 @@ result = financial_team.kickoff(inputs={
       "Cơ chế trả lại tác vụ tự động khi không đáp ứng tiêu chuẩn nghiệm thu",
       "Cổng phê duyệt của người quản lý trước khi thực thi các quyết định kinh doanh quan trọng",
     ],
-    sandboxPrompt: "agent360 team kickoff --team financial-audit --task 'Duyệt chi hóa đơn T10'",
+    sandboxPrompt: "skyer team kickoff --team financial-audit --task 'Duyệt chi hóa đơn T10'",
     sandboxOutput: [
       "[manager] Tiếp nhận mục tiêu: 'Đối soát 48 hóa đơn và lập hồ sơ duyệt chi'",
       "[accountant] Đã đối soát 48/48 hóa đơn trên ERPCore: 0 sai lệch",

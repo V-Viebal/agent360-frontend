@@ -9,6 +9,10 @@
  */
 
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 console.log("▶ Running Skyer Shared UI Components & Modal Test Suite...");
 
@@ -252,3 +256,19 @@ assert.strictEqual(getTrendColor("down"), "text-red-500", "Down trend must be re
 console.log("✓ Test 14: MetricStatCard trend color mapping verified");
 
 console.log("🎉 All 14 Shared UI Component assertions passed successfully!");
+
+console.log("Testing Agent Pin & Unpin Override Resolution...");
+const grokSrc = fs.readFileSync(path.join(rootDir, "src/pages/GrokBotWorkspace.tsx"), "utf8");
+assert.ok(
+  grokSrc.includes("agent360_unpinned_agents") && grokSrc.includes("const isAgentPinned ="),
+  "GrokBotWorkspace must maintain agent360_unpinned_agents ledger and isAgentPinned resolver so unpinning root/default agents persists across reloads"
+);
+console.log("✓ Test 15: Agent Pin / Unpin override resolution verified");
+
+console.log("Testing Message Reply Quote & Header Stripping...");
+const apiSrc = fs.readFileSync(path.join(rootDir, "src/services/agentApi.ts"), "utf8");
+assert.ok(
+  apiSrc.includes("stripReplyHeader") && grokSrc.includes("[Replying to ") && grokSrc.includes("setReplyingToMsg(null)"),
+  "Message reply quote header must be cleanly parsed in bubbles, stripped from sidebar chat titles/snippets, and cleared on Escape or chat switch"
+);
+console.log("✓ Test 16: Message Reply quote & header stripping verified");

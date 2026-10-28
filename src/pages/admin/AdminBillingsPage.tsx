@@ -497,7 +497,7 @@ export function AdminBillingsPage() {
           emptyTitle="Chưa có giao dịch thanh toán nào"
           emptyDescription="Mọi giao dịch nạp tiền qua cổng PayOS sẽ xuất hiện thời gian thực tại đây."
           defaultPageSize={25}
-          exportFileName="agent360-platform-transactions"
+          exportFileName="skyer-platform-transactions"
           onRowClick={(tx) => setSelectedTx(tx)}
           selectedItemId={selectedTx?.order_code}
         />
@@ -514,7 +514,7 @@ export function AdminBillingsPage() {
           emptyTitle="Chưa có ví nào"
           emptyDescription="Danh sách ví của người dùng sẽ hiển thị tại đây."
           defaultPageSize={25}
-          exportFileName="agent360-wallets-directory"
+          exportFileName="skyer-wallets-directory"
           onRowClick={(w) => setAdjustTarget(w)}
         />
       )}

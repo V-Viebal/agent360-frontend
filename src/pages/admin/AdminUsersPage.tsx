@@ -317,7 +317,7 @@ export function AdminUsersPage() {
         emptyTitle="Không tìm thấy thành viên"
         emptyDescription="Các tài khoản đăng ký qua Skyer SSO sẽ tự động đồng bộ vào đây."
         defaultPageSize={25}
-        exportFileName="agent360-users-directory"
+        exportFileName="skyer-users-directory"
         onRowClick={(u) => setSelectedUser(u)}
         selectedItemId={selectedUser?.id}
       />

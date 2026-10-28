@@ -93,8 +93,8 @@ export function AgentWorkspace() {
     {
       id: "init-1",
       role: "assistant",
-      content: `Hello! I am ${selectedAgent.name} provisioned on ${selectedAgent.node}. Connected through Agent360 Backend Gateway with Live SSE Stream, Tool Guard Approvals & Dynamic Model Slot Switch. How can I assist you today?`,
-      reasoning: "Loaded Agent360 Core context and verified active Skyer backend channels.",
+      content: `Hello! I am ${selectedAgent.name} provisioned on ${selectedAgent.node}. Connected through Skyer Backend Gateway with Live SSE Stream, Tool Guard Approvals & Dynamic Model Slot Switch. How can I assist you today?`,
+      reasoning: "Loaded Skyer Core context and verified active Skyer backend channels.",
       timestamp: "Just now",
       evidenceStatus: "observed",
     },

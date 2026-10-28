@@ -34,7 +34,7 @@ const DEFAULT_MEMORIES: Record<string, MemoryItem[]> = {
     {
       id: "mem-3",
       category: "project",
-      content: "Main production server is Host 2nd (agent360.antares.vn) running Docker Compose.",
+      content: "Main production server is Host 2nd (skyer.vn) running Docker Compose.",
       learnedAt: "3 days ago",
     },
     {

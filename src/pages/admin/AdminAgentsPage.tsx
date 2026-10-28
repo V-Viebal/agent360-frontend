@@ -285,7 +285,7 @@ export function AdminAgentsPage() {
         emptyTitle="Không có AI Agent nào"
         emptyDescription="Các agent containerized trên fleet sẽ tự động nhận diện ở đây."
         defaultPageSize={25}
-        exportFileName="agent360-agents-fleet"
+        exportFileName="skyer-agents-fleet"
         onRowClick={(a) => setSelectedAgent(a)}
         selectedItemId={selectedAgent?.slug}
       />
