@@ -63,10 +63,30 @@ export interface ChatSessionUpsertWsEvent {
     channel?: string;
     status?: string;
     is_running?: boolean;
+    pinned?: boolean;
+    archived?: boolean;
     updated_at?: string;
     created_at?: string;
     unread?: boolean;
   };
+  timestamp?: string;
+}
+
+export interface AgentPinUpdatedWsEvent {
+  type: "agent_pin_updated";
+  agent_id: string;
+  pinned: boolean;
+  timestamp?: string;
+}
+
+export interface ChatMessagePinUpdatedWsEvent {
+  type: "chat_message_pin_updated";
+  agent_id: string;
+  chat_id: string;
+  message_id: string;
+  pinned: boolean;
+  pinned_message_ids: string[];
+  pinned_messages?: any[];
   timestamp?: string;
 }
 
@@ -77,7 +97,9 @@ export type MultiplexerEvent =
   | ComposioConnectionEvent
   | AgentWebhookDeliveryWsEvent
   | AgentWebhookDlqAlertWsEvent
-  | ChatSessionUpsertWsEvent;
+  | ChatSessionUpsertWsEvent
+  | AgentPinUpdatedWsEvent
+  | ChatMessagePinUpdatedWsEvent;
 
 export interface MultiplexerHandlers {
   onSnapshot?: (snapshot: ActiveSessionsSnapshot) => void;
@@ -85,6 +107,8 @@ export interface MultiplexerHandlers {
   onUnreadUpdate?: (update: SessionUnreadUpdate) => void;
   onComposioConnection?: (ev: ComposioConnectionEvent) => void;
   onChatSessionUpsert?: (ev: ChatSessionUpsertWsEvent) => void;
+  onAgentPinUpdated?: (ev: AgentPinUpdatedWsEvent) => void;
+  onChatMessagePinUpdated?: (ev: ChatMessagePinUpdatedWsEvent) => void;
 }
 
 let activeMultiplexerWs: WebSocket | null = null;
@@ -163,6 +187,16 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("chat:session_upsert", { detail: data }));
             }
+          } else if (data.type === "agent_pin_updated") {
+            if (handlers.onAgentPinUpdated) handlers.onAgentPinUpdated(data);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:pin_updated", { detail: data }));
+            }
+          } else if (data.type === "chat_message_pin_updated") {
+            if (handlers.onChatMessagePinUpdated) handlers.onChatMessagePinUpdated(data);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("chat:message_pin_updated", { detail: data }));
+            }
           } else if (data.type === "composio_connection_activated") {
             if (handlers.onComposioConnection) handlers.onComposioConnection(data);
             if (typeof window !== "undefined") {
@@ -227,6 +261,16 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (handlers.onChatSessionUpsert) handlers.onChatSessionUpsert(update);
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("chat:session_upsert", { detail: update }));
+            }
+          } else if (update.type === "agent_pin_updated") {
+            if (handlers.onAgentPinUpdated) handlers.onAgentPinUpdated(update);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:pin_updated", { detail: update }));
+            }
+          } else if (update.type === "chat_message_pin_updated") {
+            if (handlers.onChatMessagePinUpdated) handlers.onChatMessagePinUpdated(update);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("chat:message_pin_updated", { detail: update }));
             }
           } else if (update.type === "composio_connection_activated") {
             if (handlers.onComposioConnection) handlers.onComposioConnection(update);

@@ -138,6 +138,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         roleTag: a.roleTag || (a.pinned ? "Core" : "Operations"),
         node: displayNode,
         instanceId: instanceKey,
+        pinned: Boolean(a.pinned),
         enabled: a.enabled ?? (a.status !== "disabled" && a.startup_status !== "disabled"),
         status: (a.enabled === false || a.status === "disabled" || a.startup_status === "disabled") ? "disabled" : (a.status || (a.startup_status === "running" ? "active" : "idle")),
         model: cleanModelDisplayName((typeof a.model === "string" ? a.model : null) || a.active_model?.model || a.backend_model || "gpt-5.6-luna"),
@@ -361,6 +362,8 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
         status: isRunning ? "running" : (c.status || "idle"),
         is_running: isRunning,
         isRunning: isRunning,
+        pinned: Boolean(c.pinned),
+        archived: Boolean(c.archived),
         _rawUpdatedAt: c.updated_at || c.last_finished_at || c.created_at || ""
       };
     });
@@ -807,6 +810,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         runId: m.metadata?.run_id || undefined,
         roomId: m.metadata?.room_id || undefined,
         reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
+        pinned: Boolean(m.pinned),
         metadata: m.metadata || undefined,
       });
     } else if (role === "assistant") {
@@ -867,6 +871,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           visibility: msgVisibility || "main",
           roomReceipt: msgReceipt,
           reactions: Array.isArray(m.reactions) ? m.reactions : (Array.isArray(m.metadata?.reactions) ? m.metadata.reactions : undefined),
+          pinned: Boolean(m.pinned),
           metadata: m.metadata || undefined
         };
         turns.push(currentAsst);
@@ -1183,6 +1188,14 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
          (Array.isArray(candidateRoom.turns) && candidateRoom.turns.some((t: any) => t.kind === "collaborator_reply" || t.kind === "collaborator_progress" || t.kind === "host_kickoff" || t.kind === "host_progress")))
       );
       window.dispatchEvent(new CustomEvent("agent360_room_synced", { detail: { chatId, room: isMultiAgent ? candidateRoom : null } }));
+      const pinnedIds = Array.isArray(data?.pinned_message_ids)
+        ? data.pinned_message_ids
+        : (Array.isArray(candidateRoom?.pinned_message_ids) ? candidateRoom.pinned_message_ids : null);
+      if (pinnedIds) {
+        window.dispatchEvent(new CustomEvent("agent360_pinned_messages_synced", {
+          detail: { agentId: cleanAgentId, chatId, pinnedMessageIds: pinnedIds }
+        }));
+      }
     }
     const isRunningOnServer = Boolean(data && !Array.isArray(data) && (data.status === "running" || data.status === "in_progress" || data.is_running));
     const rawList = Array.isArray(data) ? data : (data.messages || []);
@@ -2293,4 +2306,120 @@ export async function resolveAgentWebhookDeadLetter(
     throw new Error(err.message || `Lỗi đánh dấu xử lý sự cố DLQ (HTTP ${res.status})`);
   }
   return res.json();
+}
+
+export async function togglePinAgentApi(agentId: string, pinned: boolean): Promise<boolean> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/pin`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ pinned }),
+      },
+      cleanId
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn("togglePinAgentApi error:", err);
+    return false;
+  }
+}
+
+export async function togglePinChatApi(agentId: string, chatId: string, pinned: boolean): Promise<boolean> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/pin`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ pinned }),
+      },
+      cleanId
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn("togglePinChatApi error:", err);
+    return false;
+  }
+}
+
+export async function togglePinMessageApi(
+  agentId: string,
+  chatId: string,
+  messageId: string,
+  payload: {
+    pinned: boolean;
+    role?: string;
+    snippet?: string;
+  }
+): Promise<{
+  success: boolean;
+  pinned: boolean;
+  pinned_message_ids: string[];
+} | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/pin`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          pinned: payload.pinned,
+          action: payload.pinned ? "add" : "remove",
+          role: payload.role,
+          snippet: payload.snippet,
+        }),
+      },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("togglePinMessageApi error:", err);
+    return null;
+  }
+}
+
+export async function fetchAgentPinnedMessages(
+  agentId: string,
+  chatId?: string
+): Promise<{
+  pinned_message_ids: string[];
+  pinned_messages: Array<{
+    message_id: string;
+    agent_id: string;
+    chat_id: string;
+    role?: string;
+    snippet?: string;
+    pinned_at?: string;
+  }>;
+} | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const url = chatId
+      ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/pinned-messages`
+      : `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/pinned-messages`;
+    const res = await authorizedFetch(
+      url,
+      { headers: { Accept: "application/json" } },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }

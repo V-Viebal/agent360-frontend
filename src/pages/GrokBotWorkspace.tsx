@@ -1,6 +1,6 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent } from "../services/sessionMultiplexer";
+import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent, AgentPinUpdatedWsEvent, ChatMessagePinUpdatedWsEvent } from "../services/sessionMultiplexer";
 function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { channel?: string; isSelected?: boolean; size?: number; activeColor?: string }) {
   const ch = (channel || "console").toLowerCase();
   
@@ -836,6 +836,10 @@ import {
   updateChatTitle,
   updateChatRoomTitle,
   updateChatRoomTriagePolicy,
+  togglePinAgentApi,
+  togglePinChatApi,
+  togglePinMessageApi,
+  fetchAgentPinnedMessages,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
@@ -5194,8 +5198,24 @@ export function GrokBotWorkspace() {
         setActiveSessionRoom(detail?.room || null);
       }
     };
+    const onPinnedMessagesSynced = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail;
+      if (detail && Array.isArray(detail.pinnedMessageIds) && detail.pinnedMessageIds.length > 0) {
+        setStarredMsgIds((prev) => {
+          const merged = Array.from(new Set([...prev, ...detail.pinnedMessageIds]));
+          try {
+            localStorage.setItem("agent360_starred_messages", JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+    };
     window.addEventListener("agent360_room_synced", onRoomSynced);
-    return () => window.removeEventListener("agent360_room_synced", onRoomSynced);
+    window.addEventListener("agent360_pinned_messages_synced", onPinnedMessagesSynced);
+    return () => {
+      window.removeEventListener("agent360_room_synced", onRoomSynced);
+      window.removeEventListener("agent360_pinned_messages_synced", onPinnedMessagesSynced);
+    };
   }, [selectedChatId]);
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
     try {
@@ -5826,6 +5846,37 @@ export function GrokBotWorkspace() {
             }
           });
         }
+      },
+      onAgentPinUpdated: (ev: AgentPinUpdatedWsEvent) => {
+        if (!ev?.agent_id) return;
+        const cleanSlug = ev.agent_id.replace(/^bot:agent360:/i, "").toLowerCase();
+        const fullId = `bot:agent360:${cleanSlug}`;
+        setPinnedAgentIds((prev) => {
+          const filtered = prev.filter((id) => id !== fullId && id !== cleanSlug && id.toLowerCase() !== fullId);
+          const next = ev.pinned ? [fullId, ...filtered] : filtered;
+          try {
+            localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        setAgents((prev) =>
+          prev.map((a) =>
+            a.id.toLowerCase() === fullId || a.slug.toLowerCase() === cleanSlug ? { ...a, pinned: ev.pinned } : a
+          )
+        );
+      },
+      onChatMessagePinUpdated: (ev: ChatMessagePinUpdatedWsEvent) => {
+        if (!ev?.message_id) return;
+        setStarredMsgIds((prev) => {
+          const next = ev.pinned
+            ? Array.from(new Set([...prev, ev.message_id]))
+            : prev.filter((id) => id !== ev.message_id);
+          try {
+            localStorage.setItem("agent360_starred_messages", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        setMessages((prev) => prev.map((m) => (m.id === ev.message_id ? { ...m, pinned: ev.pinned } : m)));
       }
     });
 
@@ -7227,13 +7278,32 @@ ${targetItem.text}`;
   });
 
   const toggleStarMessage = (msgId: string) => {
+    const isCurrentlyPinned = starredMsgIds.includes(msgId);
+    const targetPinState = !isCurrentlyPinned;
     setStarredMsgIds((prev) => {
-      const next = prev.includes(msgId) ? prev.filter((id) => id !== msgId) : [...prev, msgId];
+      const next = targetPinState ? Array.from(new Set([...prev, msgId])) : prev.filter((id) => id !== msgId);
       try {
         localStorage.setItem("agent360_starred_messages", JSON.stringify(next));
       } catch {}
       return next;
     });
+
+    setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, pinned: targetPinState } : m)));
+
+    if (selectedAgentId && selectedChatId) {
+      const targetMsg = messages.find((m) => m.id === msgId);
+      const snippet = targetMsg?.content ? targetMsg.content.trim().replace(/\s+/g, " ").slice(0, 220) : "";
+      togglePinMessageApi(selectedAgentId, selectedChatId, msgId, {
+        pinned: targetPinState,
+        role: targetMsg?.role || "assistant",
+        snippet,
+      }).then((res) => {
+        if (res && res.success) {
+          setForkToast(targetPinState ? "📌 Đã ghim tin nhắn vào hồ sơ Agent" : "Đã bỏ ghim tin nhắn");
+          setTimeout(() => setForkToast(null), 2500);
+        }
+      });
+    }
   };
   const [disabledAgentsExpanded, setDisabledAgentsExpanded] = useState<boolean>(() => {
     try {
@@ -7258,13 +7328,32 @@ ${targetItem.text}`;
       e.preventDefault();
     }
     triggerHaptic(15);
+    const cleanSlug = agentId.replace(/^bot:agent360:/i, "");
+    const fullId = `bot:agent360:${cleanSlug}`;
+    const isCurrentlyPinned = pinnedAgentIds.includes(agentId) || pinnedAgentIds.includes(fullId);
+    const targetPinState = !isCurrentlyPinned;
+
     setPinnedAgentIds((prev) => {
-      const isPinned = prev.includes(agentId);
-      const next = isPinned ? prev.filter((id) => id !== agentId) : [agentId, ...prev];
+      const filtered = prev.filter((id) => id !== agentId && id !== fullId && id !== cleanSlug);
+      const next = targetPinState ? [fullId, ...filtered] : filtered;
       try {
         localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
       } catch {}
       return next;
+    });
+
+    setAgents((prev) =>
+      prev.map((a) => (a.id === agentId || a.id === fullId || a.slug === cleanSlug ? { ...a, pinned: targetPinState } : a))
+    );
+
+    togglePinAgentApi(cleanSlug, targetPinState).then((ok) => {
+      const agName = agents.find((a) => a.id === agentId || a.id === fullId || a.slug === cleanSlug)?.name || cleanSlug;
+      if (ok) {
+        setForkToast(targetPinState ? `📌 Đã ghim Agent ${agName} lên đầu` : `Đã bỏ ghim Agent ${agName}`);
+      } else {
+        setForkToast(`Không thể lưu trạng thái ghim cho ${agName}`);
+      }
+      setTimeout(() => setForkToast(null), 2500);
     });
   };
 
@@ -7851,6 +7940,18 @@ ${targetItem.text}`;
       }
 
       setAgents(loadedAgents);
+      if (Array.isArray(loadedAgents) && loadedAgents.length > 0) {
+        const runtimePinnedIds = loadedAgents.filter((a) => Boolean(a.pinned)).map((a) => a.id);
+        if (runtimePinnedIds.length > 0) {
+          setPinnedAgentIds((prev) => {
+            const merged = Array.from(new Set([...runtimePinnedIds, ...prev]));
+            try {
+              localStorage.setItem("agent360_pinned_agents", JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      }
       setSkills(loadedSkills);
       setIsLoadingAgents(false);
 
@@ -8057,6 +8158,27 @@ ${targetItem.text}`;
         if (cancelled || selectedAgentIdRef.current !== currentAgent) return;
 
         setChats(loadedChats);
+        const runtimePinnedChatIds = loadedChats.filter((c) => Boolean(c.pinned)).map((c) => c.id);
+        if (runtimePinnedChatIds.length > 0) {
+          setPinnedChatIds((prev) => {
+            const merged = Array.from(new Set([...prev, ...runtimePinnedChatIds]));
+            try {
+              localStorage.setItem("agent360_pinned_chats", JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+        fetchAgentPinnedMessages(currentAgent).then((pinRes) => {
+          if (pinRes && Array.isArray(pinRes.pinned_message_ids) && pinRes.pinned_message_ids.length > 0) {
+            setStarredMsgIds((prev) => {
+              const merged = Array.from(new Set([...prev, ...pinRes.pinned_message_ids]));
+              try {
+                localStorage.setItem("agent360_starred_messages", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
+          }
+        }).catch(() => {});
         const normCurrentAgent = normalizeAgentKey(currentAgent);
         for (const c of loadedChats) {
           registerSessionAgent(c.id, c.session_id, normCurrentAgent);
@@ -9152,13 +9274,19 @@ const selectedAgentTheme = getAgentColorTheme(
 
   const togglePinChat = (chatId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const isCurrentlyPinned = pinnedChatIds.includes(chatId);
+    const targetPinState = !isCurrentlyPinned;
     setPinnedChatIds((prev) => {
-      const next = prev.includes(chatId) ? prev.filter((id) => id !== chatId) : [...prev, chatId];
+      const next = targetPinState ? [...prev.filter((id) => id !== chatId), chatId] : prev.filter((id) => id !== chatId);
       try {
         localStorage.setItem("agent360_pinned_chats", JSON.stringify(next));
       } catch {}
       return next;
     });
+    setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, pinned: targetPinState } : c)));
+    if (selectedAgentId) {
+      togglePinChatApi(selectedAgentId, chatId, targetPinState);
+    }
   };
 
   const handleSaveChatTitle = (chatId: string) => {
