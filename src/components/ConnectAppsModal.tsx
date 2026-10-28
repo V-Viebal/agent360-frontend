@@ -1,5 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { authorizedFetch } from "../services/agentApi";
+import { getAgentColorTheme } from "./AgentAvatar";
 import { useState, useEffect } from "react";
 import {
   Search,
@@ -550,6 +551,7 @@ export function ConnectAppsModal({
   onAppConnected,
   onAppDisconnected,
 }: ConnectAppsModalProps) {
+  const agentTheme = getAgentColorTheme(targetAgentId, targetAgentName);
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -735,13 +737,13 @@ export function ConnectAppsModal({
         {/* Header */}
         <div className="px-5 py-4 border-b border-[#1f1f2a] flex items-center justify-between shrink-0 bg-[#16161c]">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-xl bg-[#f8a87c]/10 border border-[#f8a87c]/20 flex items-center justify-center text-[#f8a87c]">
+            <div style={{ backgroundColor: agentTheme.bgLight, borderColor: agentTheme.borderLight, color: agentTheme.light }} className="h-8 w-8 rounded-xl border flex items-center justify-center dark:!text-[var(--agent-color)]">
               <Sparkles size={16} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-white tracking-tight">{t("connectApps.title")}</h2>
-                <span className="text-[10px] font-mono bg-[#20202c] text-[#f8a87c] px-2 py-0.5 rounded-full border border-[#2b2b3c]">
+                <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="text-[10px] font-mono px-2 py-0.5 rounded-full border dark:!text-[var(--agent-color)]">
                   {targetAgentName}
                 </span>
               </div>
@@ -796,7 +798,7 @@ export function ConnectAppsModal({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search 60+ verified Composio tool integrations..."
-              className="w-full bg-[#1b1b24] border border-[#282836] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#f8a87c] transition-colors"
+              className="w-full bg-[#1b1b24] border border-[#282836] rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[var(--agent-color)] transition-colors"
             />
             {searchQuery && (
               <button
@@ -940,7 +942,7 @@ export function ConnectAppsModal({
                   setSearchQuery("");
                   setSelectedCategory("All");
                 }}
-                className="text-[#f8a87c] hover:underline"
+                style={{ color: agentTheme.light }} className="hover:underline dark:!text-[var(--agent-color)]"
               >
                 Clear all filters
               </button>

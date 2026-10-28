@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
 import { X, Clock, Calendar, Save, Trash2, Check, Radio, ChevronDown, Sparkles, Sliders } from "lucide-react";
 import { AgentScheduleJob, createOrUpdateSchedule, deleteSchedule } from "../services/agentApi";
+import { getAgentColorTheme } from "./AgentAvatar";
 
 interface ScheduleJobModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ScheduleJobModalProps {
   job: AgentScheduleJob | null;
   agentId: string;
   agentName: string;
+  themeColor?: string;
   onSaved: () => void;
 }
 
@@ -31,8 +33,10 @@ export function ScheduleJobModal({
   job,
   agentId,
   agentName,
+  themeColor,
   onSaved,
 }: ScheduleJobModalProps) {
+  const agentTheme = getAgentColorTheme(agentId, agentName);
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [cronExpr, setCronExpr] = useState("0 9 * * *");
@@ -219,12 +223,18 @@ export function ScheduleJobModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs text-slate-800 dark:text-neutral-200">
+      <div style={{ "--agent-color": agentTheme.dark, "--agent-light": agentTheme.light } as React.CSSProperties} className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs text-slate-800 dark:text-neutral-200">
         {/* Header */}
         <div className="px-5 py-3.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] flex items-center justify-center shrink-0">
-              <Clock size={15} />
+            <div
+              style={{
+                backgroundColor: agentTheme.bgLight,
+                color: agentTheme.light,
+              }}
+              className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border border-transparent dark:!text-[var(--agent-color)]"
+            >
+              <Clock size={15} style={{ color: agentTheme.primary }} />
             </div>
             <div>
               <span className="font-semibold text-slate-900 dark:text-white tracking-wide text-xs">
@@ -255,7 +265,7 @@ export function ScheduleJobModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="VD: Nhắc uống nước buổi sáng, Báo cáo tiến độ hằng ngày"
-              className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-2 text-slate-900 dark:text-white font-sans placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] transition-colors"
+              className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-2 text-slate-900 dark:text-white font-sans placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[var(--agent-color)] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] transition-colors"
             />
           </div>
 
@@ -263,10 +273,13 @@ export function ScheduleJobModal({
           <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432]">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-900 dark:text-white">
               <span className="flex items-center gap-1.5">
-                <Calendar size={14} className="text-[#f8a87c]" />
+                <Calendar size={14} style={{ color: agentTheme.primary }} />
                 <span>Thời gian & Tần suất thực hiện</span>
               </span>
-              <span className="text-[11px] font-mono font-normal text-[#e0682b] dark:text-[#f8a87c]">
+              <span
+                style={{ color: agentTheme.light }}
+                className="text-[11px] font-mono font-normal dark:!text-[var(--agent-color)]"
+              >
                 {humanReadableSummary}
               </span>
             </div>
@@ -287,10 +300,19 @@ export function ScheduleJobModal({
                     key={opt.id}
                     type="button"
                     onClick={() => handleFrequencyChange(opt.id as FrequencyType)}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: agentTheme.bgLight,
+                            borderColor: agentTheme.primary,
+                            color: agentTheme.light,
+                          }
+                        : undefined
+                    }
                     className={`py-1.5 px-2 rounded-xl text-xs font-medium border transition-all cursor-pointer text-center ${
                       isSelected
-                        ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#e0682b] dark:text-[#f8a87c] font-semibold shadow-xs"
-                        : "bg-white dark:bg-[#181824] hover:bg-slate-100 dark:hover:bg-[#20202e] border-slate-200 dark:border-[#28283a] text-slate-700 dark:text-neutral-300"
+                        ? "font-semibold shadow-xs dark:!text-[var(--agent-color)]"
+                        : "bg-white dark:bg-[#181824] hover:bg-slate-100 dark:hover:bg-[#20202e] border-slate-200 dark:border-[#28283a] text-slate-700 dark:text-neutral-300 hover:border-slate-300 dark:hover:border-[#3a3a50]"
                     }`}
                   >
                     {opt.label}
@@ -310,7 +332,7 @@ export function ScheduleJobModal({
                     type="time"
                     value={selectedTime}
                     onChange={(e) => handleTimeChange(e.target.value)}
-                    className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-[#f8a87c] hover:border-slate-300 dark:hover:border-[#3a3a50]"
+                    className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3 py-1.5 text-slate-900 dark:text-white font-mono text-xs focus:outline-none focus:border-[var(--agent-color)] hover:border-slate-300 dark:hover:border-[#3a3a50]"
                   />
                 </div>
 
@@ -336,7 +358,7 @@ export function ScheduleJobModal({
               <button
                 type="button"
                 onClick={() => setShowAdvancedCron(!showAdvancedCron)}
-                className="text-[10px] font-mono text-slate-500 dark:text-neutral-500 hover:text-[#e0682b] dark:hover:text-[#f8a87c] flex items-center gap-1 cursor-pointer"
+                className="text-[10px] font-mono text-slate-500 dark:text-neutral-500 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-color)] flex items-center gap-1 cursor-pointer"
               >
                 <Sliders size={11} />
                 <span>{showAdvancedCron ? "Ẩn biểu thức Cron kỹ thuật" : "Hiển thị biểu thức Cron kỹ thuật (Nâng cao)"}</span>
@@ -346,7 +368,7 @@ export function ScheduleJobModal({
                 <div className="mt-2 space-y-1 animate-in fade-in duration-100">
                   <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-neutral-400">
                     <span>Cron Expression (phút giờ ngày tháng thứ):</span>
-                    <span className="text-[#e0682b] dark:text-[#f8a87c]">{cronExpr}</span>
+                    <span style={{ color: agentTheme.light }} className="dark:!text-[var(--agent-color)]">{cronExpr}</span>
                   </div>
                   <input
                     type="text"
@@ -357,7 +379,7 @@ export function ScheduleJobModal({
                       setFrequency("custom");
                     }}
                     placeholder="VD: 0 21 * * *"
-                    className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-1.5 text-[#e0682b] dark:text-[#f8a87c] font-mono text-xs focus:outline-none focus:border-[#f8a87c]"
+                    className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl px-3.5 py-1.5 text-[var(--agent-light)] dark:text-[var(--agent-color)] font-mono text-xs focus:outline-none focus:border-[var(--agent-color)]"
                   />
                 </div>
               )}
@@ -380,7 +402,7 @@ export function ScheduleJobModal({
                 { value: "slack", label: "Slack Workspace" },
               ]}
               className="w-full"
-              triggerClassName="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] focus:border-[#f8a87c] rounded-xl px-3 py-2 text-slate-800 dark:text-white font-mono text-xs"
+              triggerClassName="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] focus:border-[var(--agent-color)] rounded-xl px-3 py-2 text-slate-800 dark:text-white font-mono text-xs"
             />
           </div>
 
@@ -395,7 +417,7 @@ export function ScheduleJobModal({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Nội dung lệnh hoặc yêu cầu mà Agent sẽ tự động chạy (VD: Nhắc nhở uống nước vào 7:00 sáng, kiểm tra nhật ký...)"
-              className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl p-3 text-slate-900 dark:text-white font-sans placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] resize-none leading-relaxed text-xs transition-colors"
+              className="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-xl p-3 text-slate-900 dark:text-white font-sans placeholder:text-slate-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-[var(--agent-color)] focus:bg-white dark:focus:bg-[#1a1a28] hover:border-slate-300 dark:hover:border-[#3a3a50] resize-none leading-relaxed text-xs transition-colors"
             />
           </div>
 
@@ -454,7 +476,11 @@ export function ScheduleJobModal({
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center gap-1.5 bg-[#f8a87c] hover:bg-[#f5935f] text-neutral-950 font-semibold px-4 py-1.5 rounded-xl transition-all cursor-pointer shadow-md disabled:opacity-50 text-xs"
+                style={{
+                  backgroundColor: agentTheme.primary,
+                  color: "#000000",
+                }}
+                className="flex items-center gap-1.5 hover:brightness-105 font-semibold px-4 py-1.5 rounded-xl transition-all cursor-pointer shadow-md disabled:opacity-50 text-xs"
               >
                 <Save size={13} />
                 <span>{job ? "Lưu thay đổi" : "Tạo Lịch mới"}</span>
