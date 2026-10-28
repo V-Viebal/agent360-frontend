@@ -109,6 +109,81 @@ export function A2ATopologyGraphModal({
     }
   }, [isOpen, currentAgent.id, allAgents.length]);
 
+  const exportTopologyImage = async (format: "png" | "svg") => {
+    const el = document.getElementById("a2a-topology-visual-canvas");
+    if (!el) return;
+
+    const width = 1200;
+    const height = 800;
+
+    // Build SVG representation with Skyer branding watermark
+    const svgHeader = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#0d0d12;font-family:Inter,system-ui,sans-serif;">`;
+    const watermark = `
+      <g opacity="0.85" transform="translate(${width - 220}, ${height - 40})">
+        <rect x="0" y="-18" width="200" height="32" rx="8" fill="#14141f" stroke="rgba(255,255,255,0.1)" />
+        <circle cx="16" cy="-2" r="6" fill="#f8a87c" />
+        <text x="32" y="2" fill="#ffffff" font-size="12" font-weight="700" letter-spacing="0.5">Skyer Agent360</text>
+        <text x="140" y="2" fill="#888899" font-size="10">Topology</text>
+      </g>
+    `;
+
+    // Clone element html into foreignObject
+    const serializer = new XMLSerializer();
+    const cloned = el.cloneNode(true) as HTMLElement;
+    cloned.style.transform = "none";
+    cloned.style.transition = "none";
+    const contentHtml = serializer.serializeToString(cloned);
+
+    const fullSvg = `${svgHeader}
+      <style>
+        .text-white { fill: #fff; color: #fff; }
+        .text-slate-900 { color: #fff; }
+      </style>
+      <foreignObject width="${width}" height="${height - 60}" x="0" y="0">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;padding:24px;box-sizing:border-box;color:#fff;background:#0d0d12;">
+          ${contentHtml}
+        </div>
+      </foreignObject>
+      ${watermark}
+    </svg>`;
+
+    if (format === "svg") {
+      const blob = new Blob([fullSvg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `skyer-a2a-topology-${Date.now()}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const img = new Image();
+      const svgBlob = new Blob([fullSvg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width * 2;
+        canvas.height = height * 2;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(2, 2);
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((pngBlob) => {
+            if (pngBlob) {
+              const pngUrl = URL.createObjectURL(pngBlob);
+              const a = document.createElement("a");
+              a.href = pngUrl;
+              a.download = `skyer-a2a-topology-${Date.now()}.png`;
+              a.click();
+              URL.revokeObjectURL(pngUrl);
+            }
+          }, "image/png");
+        }
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+  };
+
   const exportLatencyData = (format: "json" | "csv") => {
     const targetAgents = allAgents.filter((ag: InfraAgent) => {
       if (topologySearchQuery.trim()) {
@@ -337,6 +412,24 @@ export function A2ATopologyGraphModal({
                 <Download size={11} className="text-cyan-400" />
                 <span>JSON</span>
               </button>
+              <button
+                type="button"
+                onClick={() => exportTopologyImage("png")}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                title="Xuất ảnh PNG có watermark Skyer"
+              >
+                <Download size={11} className="text-emerald-400" />
+                <span>PNG</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => exportTopologyImage("svg")}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                title="Xuất vector SVG có watermark Skyer"
+              >
+                <Download size={11} className="text-purple-400" />
+                <span>SVG</span>
+              </button>
             </div>
 
             <button
@@ -415,7 +508,7 @@ export function A2ATopologyGraphModal({
                 transformOrigin: "top left",
                 transition: isPanning ? "none" : "var(--canvas-transition, transform 0.15s ease-out)",
               }}
-              className="space-y-6 w-full"
+              id="a2a-topology-visual-canvas" className="space-y-6 w-full"
             >
               {/* Level 1: Điều phối & Trưởng nhóm */}
               <div className="space-y-2.5">

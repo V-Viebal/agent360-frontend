@@ -1,9 +1,19 @@
+import { useState } from "react";
 import { useTranslation } from "../i18n/LanguageContext";
 import { SkyerLogo } from "./SkyerLogo";
-import { Bot, ArrowUpRight, ShieldCheck, Heart } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Mail, Bot } from "lucide-react";
+import { ContactModal } from "./ContactModal";
 
 export function Footer() {
   const { t } = useTranslation();
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [modalCategory, setModalCategory] = useState<"general" | "request_agent" | "enterprise">("general");
+
+  const openContact = (cat: "general" | "request_agent" | "enterprise") => {
+    setModalCategory(cat);
+    setContactModalOpen(true);
+  };
+
   return (
     <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-page)] transition-colors text-neutral-400 text-xs py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -18,6 +28,25 @@ export function Footer() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>{t("footer.operational")}</span>
             </div>
+            {/* Quick Actions */}
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => openContact("request_agent")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all text-[11px] font-medium w-fit cursor-pointer"
+              >
+                <Bot size={13} />
+                <span>Yêu cầu Nhân viên AI Mới</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openContact("general")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-all text-[11px] font-medium w-fit cursor-pointer"
+              >
+                <Mail size={13} />
+                <span>Liên hệ tư vấn giải pháp</span>
+              </button>
+            </div>
           </div>
 
           {/* Product Links */}
@@ -28,6 +57,15 @@ export function Footer() {
               <li><a href="/#workflow" className="hover:text-neutral-900 dark:hover:text-white transition-colors">{t("footer.routineAutomation")}</a></li>
               <li><a href="/#architecture" className="hover:text-neutral-900 dark:hover:text-white transition-colors">{t("footer.agentKernel")}</a></li>
               <li><a href="/#faq" className="hover:text-neutral-900 dark:hover:text-white transition-colors">{t("footer.auditTrail")}</a></li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => openContact("request_agent")}
+                  className="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1 text-xs"
+                >
+                  <span>Đặt hàng Agent theo yêu cầu</span>
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -63,6 +101,14 @@ export function Footer() {
             © {new Date().getFullYear()} Skyer. {t("footer.rights")}
           </div>
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => openContact("general")}
+              className="hover:text-neutral-300 transition-colors cursor-pointer"
+            >
+              Liên hệ
+            </button>
+            <span>•</span>
             <a href="/#architecture" className="hover:text-neutral-400">{t("footer.sandbox")}</a>
             <span>•</span>
             <a href="/docs" className="hover:text-neutral-400">{t("footer.policy")}</a>
@@ -71,6 +117,12 @@ export function Footer() {
           </div>
         </div>
       </div>
+
+      <ContactModal
+        isOpen={contactModalOpen}
+        onClose={() => setContactModalOpen(false)}
+        defaultCategory={modalCategory}
+      />
     </footer>
   );
 }

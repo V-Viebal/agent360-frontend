@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { MARKETPLACE_AGENTS } from "../data/mockMarketplaceAgents";
 import { AIOrgChart } from "../components/AIOrgChart";
+import { MarketplaceCustomAgentBanner } from "../components/MarketplaceCustomAgentBanner";
 import { AgentMarketplaceItem, AgentDepartment } from "../types/marketplace";
 
 
@@ -245,6 +246,8 @@ export function MarketplacePage() {
             {activeView === "catalog" ? t("marketplace.catalogCountDesc") : t("marketplace.hierarchyCountDesc")}
           </div>
         </div>
+
+        <MarketplaceCustomAgentBanner />
 
         {activeView === "orgchart" ? (
           <div className="mt-8">

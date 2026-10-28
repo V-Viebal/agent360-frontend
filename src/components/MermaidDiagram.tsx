@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { GitCommit, Copy, Check, Maximize2, Minimize2, Eye, Code } from "lucide-react";
+import { GitCommit, Copy, Check, Maximize2, Minimize2, Eye, Code, Download } from "lucide-react";
 
 interface MermaidDiagramProps {
   code: string;
@@ -9,6 +9,67 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
   const [viewMode, setViewMode] = useState<"diagram" | "code">("diagram");
   const [copied, setCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const exportDiagramImage = (format: "png" | "svg") => {
+    const width = 800;
+    const height = 480;
+    const svgHeader = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#0c0c12;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;">`;
+    const watermark = `
+      <g opacity="0.8" transform="translate(${width - 180}, ${height - 30})">
+        <rect x="0" y="-14" width="160" height="24" rx="6" fill="#14141f" stroke="rgba(255,255,255,0.1)" />
+        <circle cx="12" cy="-2" r="4" fill="#f8a87c" />
+        <text x="24" y="2" fill="#ffffff" font-size="10" font-weight="700">Skyer Mermaid</text>
+      </g>
+    `;
+
+    const el = document.getElementById(`mermaid-flow-canvas-${code.length}`);
+    const innerHtml = el ? el.innerHTML : "";
+
+    const fullSvg = `${svgHeader}
+      <foreignObject width="${width}" height="${height - 40}" x="0" y="0">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;padding:20px;box-sizing:border-box;color:#fff;background:#0c0c12;">
+          ${innerHtml}
+        </div>
+      </foreignObject>
+      ${watermark}
+    </svg>`;
+
+    if (format === "svg") {
+      const blob = new Blob([fullSvg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `skyer-mermaid-diagram-${Date.now()}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const img = new Image();
+      const svgBlob = new Blob([fullSvg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width * 2;
+        canvas.height = height * 2;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(2, 2);
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((pngBlob) => {
+            if (pngBlob) {
+              const pngUrl = URL.createObjectURL(pngBlob);
+              const a = document.createElement("a");
+              a.href = pngUrl;
+              a.download = `skyer-mermaid-diagram-${Date.now()}.png`;
+              a.click();
+              URL.revokeObjectURL(pngUrl);
+            }
+          }, "image/png");
+        }
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    }
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
@@ -82,6 +143,15 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
 
           <button
             type="button"
+            onClick={() => exportDiagramImage("png")}
+            className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            title="Xuất ảnh PNG có watermark Skyer"
+          >
+            <Download size={12} className="text-emerald-400" />
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title={isExpanded ? "Minimize" : "Maximize view"}
@@ -99,7 +169,7 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
       ) : (
         <div className="p-4 overflow-x-auto flex-1 flex flex-col justify-center min-h-[140px] max-h-96 overflow-y-auto">
           {steps.length > 0 ? (
-            <div className="flex flex-col gap-2.5 max-w-lg mx-auto w-full py-1">
+            <div id="mermaid-flow-canvas" className="flex flex-col gap-2.5 max-w-lg mx-auto w-full py-1">
               {steps.map((st, sIdx) => (
                 <div
                   key={sIdx}
