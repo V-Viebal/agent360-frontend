@@ -96,6 +96,25 @@ export async function dispatchAgentBrowserInput(agentId: string, payload: Browse
   }
 }
 
+
+/** Build an authenticated WebSocket URL for real-time CDP screencast push (/api/agents/{id}/browser/stream). */
+export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1280): string {
+  const id = bare(agentId);
+  const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = typeof window !== "undefined" ? window.location.host : "localhost:3000";
+  const qs = new URLSearchParams({ maxWidth: String(maxWidth) });
+  try {
+    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+    const opToken = operatorKey.get();
+    if (token) {
+      qs.set("access_token", token);
+    } else if (opToken) {
+      qs.set("operator_token", opToken);
+    }
+  } catch {}
+  return `${proto}//${host}/api/agents/${encodeURIComponent(id)}/browser/stream?${qs.toString()}`;
+}
+
 export class DesktopAuthError extends Error {}
 
 // Pre-warmed signed desktop URLs per agentId+mode so mobile & desktop reuse valid 8h tokens without re-requesting

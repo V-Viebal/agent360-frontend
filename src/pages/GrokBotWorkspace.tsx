@@ -856,7 +856,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab, prefetchAgentDesktopUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -3449,7 +3449,7 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
 }
 
 // Component to render enhanced rich links with favicons and clean domain pill badge matching user reference
-function InlineSmartLink({ href, label }: { href: string; label?: string }) {
+function InlineSmartLink({ href, label, themeColor }: { href: string; label?: string; themeColor?: string }) {
   const [imgFailed, setImgFailed] = useState(false);
 
   let hostname = "";
@@ -3503,19 +3503,19 @@ function InlineSmartLink({ href, label }: { href: string; label?: string }) {
             className="w-3.5 h-3.5 object-contain"
           />
         ) : (
-          <Globe size={11} className="text-[#f8a87c] shrink-0" />
+          <Globe size={11} style={{ color: themeColor || "#f8a87c" }} className="shrink-0" />
         )}
       </span>
       <span className="truncate max-w-[220px] text-slate-900 dark:text-slate-100 group-hover:underline underline-offset-2">
         {displayLabel}
       </span>
-      <ExternalLink size={10} className="text-slate-400 dark:text-neutral-500 group-hover:text-[#f8a87c] shrink-0 transition-colors opacity-70 group-hover:opacity-100" />
+      <ExternalLink size={10} style={{ color: themeColor || undefined }} className="text-slate-400 dark:text-neutral-500 shrink-0 transition-colors opacity-70 group-hover:opacity-100" />
     </a>
   );
 }
 
 // Markdown & Structured Content Formatter with support for links, bold, italics, code, and bare URLs
-function renderInlineMarkdown(rawText: string): React.ReactNode {
+function renderInlineMarkdown(rawText: string, themeColor?: string): React.ReactNode {
   if (!rawText) return "";
   // Tokenizer pattern matching:
   // 1. Markdown link: [label](url)
@@ -3532,7 +3532,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
     if (part.startsWith("[") && part.includes("](") && part.endsWith(")")) {
       const match = part.match(/^\[([^\]]+)\]\(([^\s)]+)\)$/);
       if (match) {
-        return <InlineSmartLink key={pIdx} href={match[2]} label={match[1]} />;
+        return <InlineSmartLink key={pIdx} href={match[2]} label={match[1]} themeColor={themeColor} />;
       }
     }
     // 2. Bold: **text**
@@ -3546,7 +3546,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
     // 3. Inline code: `code`
     if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
       return (
-        <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] font-mono text-[11px] text-[#f8a87c] mx-0.5">
+        <code key={pIdx} style={{ color: themeColor || "#f8a87c" }} className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] font-mono text-[11px] mx-0.5 font-medium">
           {part.slice(1, -1)}
         </code>
       );
@@ -3569,7 +3569,7 @@ function renderInlineMarkdown(rawText: string): React.ReactNode {
       }
       return (
         <React.Fragment key={pIdx}>
-          <InlineSmartLink href={url} />
+          <InlineSmartLink href={url} themeColor={themeColor} />
           {trailing}
         </React.Fragment>
       );
@@ -3644,12 +3644,14 @@ function FormattedMessageContent({
   agentNode,
   onSpeakSentence,
   onImageClick,
+  themeColor,
 }: {
   content: string;
   onRunCode?: (code: string, lang: string) => void;
   agentNode?: string;
   onSpeakSentence?: (sentence: string) => void;
   onImageClick?: (url: string, name: string) => void;
+  themeColor?: string;
 }) {
   const [runningBlock, setRunningBlock] = useState<number | null>(null);
   const [runOutputs, setRunOutputs] = useState<Record<number, { output: string; exitCode: number }>>({});
@@ -3690,7 +3692,7 @@ function FormattedMessageContent({
             >
               <div className="px-3 py-1.5 bg-[#14141c] border-b border-[#262634] flex items-center justify-between text-[11px] text-neutral-400 select-none">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center gap-1.5 text-[#f8a87c] font-mono">
+                  <span style={{ color: themeColor || "#f8a87c" }} className="flex items-center gap-1.5 font-mono">
                     <Terminal size={12} />
                     {lang}
                   </span>
@@ -3724,7 +3726,7 @@ function FormattedMessageContent({
                           setRunningBlock(null);
                         }, 700);
                       }}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#f8a87c] border border-[#f8a87c]/30 transition-colors cursor-pointer"
+                      style={{ color: themeColor || "#f8a87c", backgroundColor: themeColor ? `${themeColor}26` : undefined, borderColor: themeColor ? `${themeColor}4d` : undefined }} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono hover:brightness-110 transition-colors cursor-pointer border"
                       title="Execute code directly on Agent workspace node"
                     >
                       <Play size={10} fill="currentColor" />
@@ -3837,7 +3839,7 @@ function FormattedMessageContent({
                           <tr className="border-b border-slate-200 dark:border-[#252532] bg-slate-50 dark:bg-[#161620]">
                             {blk.headers.map((h, hIdx) => (
                               <th key={hIdx} className="px-3 py-2 font-semibold text-slate-800 dark:text-white font-mono text-[11px] whitespace-nowrap">
-                                {renderInlineMarkdown(h)}
+                                {renderInlineMarkdown(h, themeColor)}
                               </th>
                             ))}
                           </tr>
@@ -3848,7 +3850,7 @@ function FormattedMessageContent({
                           <tr key={rIdx} className="hover:bg-slate-50/60 dark:hover:bg-[#14141e]/70 transition-colors">
                             {row.map((cell, cIdx) => (
                               <td key={cIdx} className="px-3 py-2 text-slate-700 dark:text-neutral-300 align-top leading-relaxed text-[12px]">
-                                {renderInlineMarkdown(cell)}
+                                {renderInlineMarkdown(cell, themeColor)}
                               </td>
                             ))}
                           </tr>
@@ -3878,7 +3880,7 @@ function FormattedMessageContent({
                 return (
                   <div key={blkIdx} className="pt-2 pb-0.5">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-neutral-200 tracking-wide font-mono flex items-center gap-2">
-                      <span className="h-1 w-1 rounded-full bg-[#f8a87c]/70" />
+                      <span style={{ backgroundColor: themeColor || "#f8a87c" }} className="h-1 w-1 rounded-full opacity-80" />
                       {trimmed.slice(4)}
                     </h4>
                   </div>
@@ -3888,7 +3890,7 @@ function FormattedMessageContent({
                 return (
                   <div key={blkIdx} className="pt-3 pb-1 border-b border-dashed border-slate-200 dark:border-[#232330]">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                      <span className="text-[#f8a87c] text-xs">§</span>
+                      <span style={{ color: themeColor || "#f8a87c" }} className="text-xs">§</span>
                       {trimmed.slice(3)}
                     </h3>
                   </div>
@@ -3897,7 +3899,7 @@ function FormattedMessageContent({
               if (trimmed.startsWith("# ")) {
                 return (
                   <div key={blkIdx} className="pt-3 pb-1.5 border-b border-dashed border-slate-200 dark:border-[#2b2b3a]">
-                    <h2 className="text-base font-bold text-[#f8a87c] tracking-tight">
+                    <h2 style={{ color: themeColor || "#f8a87c" }} className="text-base font-bold tracking-tight">
                       {trimmed.slice(2)}
                     </h2>
                   </div>
@@ -3908,8 +3910,8 @@ function FormattedMessageContent({
                 const sliceLen = trimmed.startsWith("↳ ") ? 2 : 2;
                 return (
                   <div key={blkIdx} className="flex items-start gap-2 pl-1 py-0.5 text-slate-700 dark:text-neutral-300">
-                    <span className="text-[#f8a87c]/80 shrink-0 text-[11px] font-mono select-none mt-0.5">{bulletSymbol}</span>
-                    <span className="flex-1 break-words">{renderInlineMarkdown(trimmed.slice(sliceLen))}</span>
+                    <span style={{ color: themeColor || "#f8a87c" }} className="shrink-0 text-[11px] font-mono select-none mt-0.5 opacity-85">{bulletSymbol}</span>
+                    <span className="flex-1 break-words">{renderInlineMarkdown(trimmed.slice(sliceLen), themeColor)}</span>
                   </div>
                 );
               }
@@ -3919,10 +3921,10 @@ function FormattedMessageContent({
               if (numMatch) {
                 return (
                   <div key={blkIdx} className="flex items-start gap-2 pl-1 py-0.5 text-slate-700 dark:text-neutral-300">
-                    <span className="text-[#f8a87c]/70 font-mono text-[11px] shrink-0 select-none mt-0.5">
+                    <span style={{ color: themeColor || "#f8a87c" }} className="font-mono text-[11px] shrink-0 select-none mt-0.5 opacity-90 font-medium">
                       {numMatch[1]}.
                     </span>
-                    <span className="flex-1 break-words">{renderInlineMarkdown(numMatch[2])}</span>
+                    <span className="flex-1 break-words">{renderInlineMarkdown(numMatch[2], themeColor)}</span>
                   </div>
                 );
               }
@@ -4036,18 +4038,22 @@ function SelkiesViewer({
   isResizing?: boolean;
 }) {
   const [src, setSrc] = useState<string>("");
-  // Selkies treats a bare URL as the single "primary" controller: every new phone/desktop tab
-  // kicked the previous one and reconfigured the shared display. #collab joins as a co-controller
-  // and #shared as a watch-only viewer, so several devices can stay connected at once.
   const [mode, setMode] = useState<"collab" | "shared">("collab");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  // On mobile/WebKit without WebCodecs ImageDecoder, or when the user chooses Fast View,
+  // use real-time CDP screencast WebSocket push so the phone never gets stuck on Selkies' "Waiting for stream...".
+  const [useMobileLivePreview, setUseMobileLivePreview] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const isSmallOrTouch = window.innerWidth < 768 || (navigator.maxTouchPoints > 1 && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    const lacksImageDecoder = typeof (window as any).ImageDecoder === "undefined";
+    return isSmallOrTouch && lacksImageDecoder;
+  });
   const [fitMode, setFitMode] = useState<"width" | "contain">(() => {
     try {
       const saved = localStorage.getItem("agent360_computer_fit_mode");
       if (saved === "contain" || saved === "width") return saved;
-      // On mobile portrait screens (< 768px), default to "contain" so the entire 1440x900 desktop fits in view
       if (typeof window !== "undefined" && window.innerWidth < 768) return "contain";
       return "width";
     } catch {
@@ -4079,13 +4085,12 @@ function SelkiesViewer({
     };
   }, []);
 
-  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey` (not on every agent switch on the same host!)
+  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey`
   useEffect(() => {
     if (!url || !agentId) return;
     let alive = true;
     setError("");
     setIframeLoaded(false);
-    // Fire focusAgentBrowser in parallel without blocking iframe src assignment
     focusAgentBrowser(agentId).catch(() => {});
     issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
       .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
@@ -4130,7 +4135,7 @@ function SelkiesViewer({
     >
       {error && (
         <>
-          <AgentBrowserPreview agentId={agentId} enabled />
+          <AgentBrowserPreview agentId={agentId} enabled interactive={useMobileLivePreview} />
           <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
             {error === "auth" ? (
               <>
@@ -4152,9 +4157,14 @@ function SelkiesViewer({
           </div>
         </>
       )}
-      {/* Background preview placeholder while waiting for stream or connecting */}
-      <AgentBrowserPreview agentId={agentId} enabled={!error && !iframeLoaded} />
-      {src && (
+      {/* Live preview layer: uses real-time WebSocket screencast push + touch-to-CDP input when Fast View is active */}
+      <AgentBrowserPreview
+        agentId={agentId}
+        enabled={!error && (!iframeLoaded || useMobileLivePreview)}
+        intervalMs={useMobileLivePreview ? 1500 : 4000}
+        interactive={useMobileLivePreview}
+      />
+      {src && !useMobileLivePreview && (
         <iframe
           ref={iframeRef}
           key={`${src}#${attempt}#${reloadKey}`}
@@ -4185,6 +4195,16 @@ function SelkiesViewer({
         </div>
       )}
       <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+        {typeof window !== "undefined" && (window.innerWidth < 768 || typeof (window as any).ImageDecoder === "undefined") && (
+          <button
+            type="button"
+            onClick={() => setUseMobileLivePreview((p) => !p)}
+            className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
+            title={useMobileLivePreview ? "Chuyển sang điều khiển Desktop trực tiếp (WebCodecs)" : "Chuyển sang chế độ Mobile Stream siêu tốc (CDP Screencast)"}
+          >
+            {useMobileLivePreview ? "Interactive" : "Fast View"}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -4223,21 +4243,75 @@ function SelkiesViewer({
   );
 }
 
-/** Low-cost live preview: the agent's own tab screenshot, refreshed only while visible. */
-function AgentBrowserPreview({ agentId, enabled }: { agentId: string; enabled: boolean }) {
+/** Real-time CDP screencast push + low-cost fallback preview with interactive touch-to-CDP forwarding. */
+function AgentBrowserPreview({
+  agentId,
+  enabled,
+  intervalMs = 5000,
+  interactive = false,
+}: {
+  agentId: string;
+  enabled: boolean;
+  intervalMs?: number;
+  interactive?: boolean;
+}) {
   const [src, setSrc] = useState<string>("");
   const [failures, setFailures] = useState(0);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [wsLive, setWsLive] = useState(false);
+  const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
+  const [typingOpen, setTypingOpen] = useState(false);
+  const [typingText, setTypingText] = useState("");
+  const imgRef = useRef<HTMLImageElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
     let current = "";
     let fails = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let ws: WebSocket | null = null;
+    let wsConnected = false;
     const ctrl = new AbortController();
-    setSrc("");
     setFailures(0);
+    setWsLive(false);
+
+    // Connect real-time CDP screencast WebSocket push (/api/agents/{id}/browser/stream) when interactive Fast View is active
+    if (interactive && typeof WebSocket !== "undefined") {
+      try {
+        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1280));
+        ws.onmessage = (ev) => {
+          if (!alive || typeof ev.data !== "string") return;
+          try {
+            const msg = JSON.parse(ev.data);
+            const b64 = msg?.params?.data;
+            if (typeof b64 === "string" && b64.length > 0) {
+              wsConnected = true;
+              setWsLive(true);
+              fails = 0;
+              setFailures(0);
+              if (current) {
+                URL.revokeObjectURL(current);
+                current = "";
+              }
+              setSrc(`data:image/jpeg;base64,${b64}`);
+            }
+          } catch {}
+        };
+        ws.onclose = () => {
+          wsConnected = false;
+          if (alive) setWsLive(false);
+        };
+        ws.onerror = () => {
+          wsConnected = false;
+          if (alive) setWsLive(false);
+        };
+      } catch {}
+    }
+
     const tick = async () => {
-      if (!document.hidden) {
+      if (!document.hidden && !wsConnected) {
         try {
           const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now()), ctrl.signal);
           if (!alive) { URL.revokeObjectURL(next); return; }
@@ -4252,30 +4326,181 @@ function AgentBrowserPreview({ agentId, enabled }: { agentId: string; enabled: b
           setFailures(fails);
         }
       }
-      // 5 s while healthy; back off to 20 s after errors so a stalled tab is not hammered.
-      if (alive) timer = setTimeout(tick, fails > 2 ? 20000 : 5000);
+      if (alive) timer = setTimeout(tick, fails > 2 ? 15000 : (wsConnected ? 6000 : intervalMs));
     };
     tick();
     return () => {
       alive = false;
       ctrl.abort();
       if (timer) clearTimeout(timer);
+      if (ws) {
+        try { ws.close(); } catch {}
+      }
       if (current) URL.revokeObjectURL(current);
     };
-  }, [enabled, agentId]);
+  }, [enabled, agentId, intervalMs, interactive, refreshNonce]);
+
+  const computeImageNormalizedCoords = (clientX: number, clientY: number): { xRatio: number; yRatio: number; relX: number; relY: number } | null => {
+    const img = imgRef.current;
+    if (!img) return null;
+    const rect = img.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+
+    const natW = img.naturalWidth || 1440;
+    const natH = img.naturalHeight || 813;
+    const imgAspect = natW / natH;
+    const boxAspect = rect.width / rect.height;
+
+    let renderW = rect.width;
+    let renderH = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (imgAspect > boxAspect) {
+      renderW = rect.width;
+      renderH = rect.width / imgAspect;
+      offsetY = (rect.height - renderH) / 2;
+    } else {
+      renderH = rect.height;
+      renderW = rect.height * imgAspect;
+      offsetX = (rect.width - renderW) / 2;
+    }
+
+    const xInImg = clientX - rect.left - offsetX;
+    const yInImg = clientY - rect.top - offsetY;
+    if (xInImg < 0 || yInImg < 0 || xInImg > renderW || yInImg > renderH) return null;
+
+    return {
+      xRatio: Math.max(0, Math.min(1, xInImg / renderW)),
+      yRatio: Math.max(0, Math.min(1, yInImg / renderH)),
+      relX: clientX - rect.left,
+      relY: clientY - rect.top,
+    };
+  };
+
+  const triggerImmediateRefresh = () => {
+    setTimeout(() => setRefreshNonce((n) => n + 1), 160);
+    setTimeout(() => setRefreshNonce((n) => n + 1), 650);
+  };
+
   if (!enabled) return null;
   return (
     <>
       {src && (
-        <img
-          key={agentId}
-          src={src}
-          alt="Agent browser preview"
-          className="absolute inset-0 w-full h-full object-contain"
-        />
+        <div className="absolute inset-0 w-full h-full z-[12] select-none overflow-hidden">
+          <img
+            ref={imgRef}
+            key={agentId}
+            src={src}
+            alt="Agent browser preview"
+            draggable={false}
+            onClick={async (e) => {
+              if (!interactive) return;
+              const coords = computeImageNormalizedCoords(e.clientX, e.clientY);
+              if (!coords) return;
+              setRipple({ x: coords.relX, y: coords.relY, id: Date.now() });
+              await dispatchAgentBrowserInput(agentId, {
+                action: "click",
+                xRatio: coords.xRatio,
+                yRatio: coords.yRatio,
+              });
+              triggerImmediateRefresh();
+            }}
+            onWheel={async (e) => {
+              if (!interactive) return;
+              const coords = computeImageNormalizedCoords(e.clientX, e.clientY) || { xRatio: 0.5, yRatio: 0.5 };
+              await dispatchAgentBrowserInput(agentId, {
+                action: "scroll",
+                xRatio: coords.xRatio,
+                yRatio: coords.yRatio,
+                deltaX: e.deltaX,
+                deltaY: e.deltaY,
+              });
+              triggerImmediateRefresh();
+            }}
+            onTouchStart={(e) => {
+              if (!interactive || e.touches.length !== 1) return;
+              touchStartRef.current = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY,
+                time: Date.now(),
+              };
+            }}
+            onTouchEnd={async (e) => {
+              if (!interactive || !touchStartRef.current || e.changedTouches.length !== 1) return;
+              const start = touchStartRef.current;
+              touchStartRef.current = null;
+              const endTouch = e.changedTouches[0];
+              const dx = endTouch.clientX - start.x;
+              const dy = endTouch.clientY - start.y;
+              if (Math.hypot(dx, dy) > 24) {
+                const coords = computeImageNormalizedCoords(start.x, start.y) || { xRatio: 0.5, yRatio: 0.5 };
+                await dispatchAgentBrowserInput(agentId, {
+                  action: "scroll",
+                  xRatio: coords.xRatio,
+                  yRatio: coords.yRatio,
+                  deltaX: -dx * 1.6,
+                  deltaY: -dy * 1.6,
+                });
+                triggerImmediateRefresh();
+              }
+            }}
+            className={`w-full h-full object-contain ${interactive ? "cursor-pointer touch-none" : ""}`}
+          />
+          {interactive && ripple && (
+            <span
+              key={ripple.id}
+              style={{ left: `${ripple.x - 14}px`, top: `${ripple.y - 14}px` }}
+              className="pointer-events-none absolute h-7 w-7 rounded-full border-2 border-[#f8a87c] bg-[#f8a87c]/30 animate-ping"
+            />
+          )}
+          {interactive && (
+            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5">
+              {wsLive && (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-mono text-emerald-300 flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  LIVE WS
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setTypingOpen((v) => !v)}
+                className="px-2 py-0.5 rounded bg-black/75 border border-white/15 text-[10px] font-mono text-white! keep-white hover:bg-black/90 cursor-pointer"
+                title="Gửi phím hoặc văn bản xuống trình duyệt của Agent"
+              >
+                ⌨ Nhập chữ
+              </button>
+              {typingOpen && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!typingText.trim()) return;
+                    const textToSend = typingText;
+                    setTypingText("");
+                    await dispatchAgentBrowserInput(agentId, { action: "type", text: textToSend });
+                    await dispatchAgentBrowserInput(agentId, { action: "key", key: "Enter" });
+                    triggerImmediateRefresh();
+                  }}
+                  className="flex items-center gap-1 bg-black/85 border border-white/20 rounded px-1.5 py-0.5"
+                >
+                  <input
+                    type="text"
+                    value={typingText}
+                    onChange={(e) => setTypingText(e.target.value)}
+                    placeholder="Gõ nội dung + Enter…"
+                    className="w-36 sm:w-48 bg-transparent text-[11px] font-sans text-white! keep-white outline-none"
+                  />
+                  <button type="submit" className="px-1.5 py-0.2 rounded bg-[#f8a87c] text-black! text-[10px] font-semibold">
+                    Gửi
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
       )}
       {!src && (
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black">
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black z-[12]">
           {failures > 0 ? "Waiting for the agent's browser…" : "Loading preview…"}
         </div>
       )}
@@ -10451,7 +10676,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   <SkyerLogo size={24} showText={false} showBotBadge={false} />
                 </div>
                 {/* PanelLeftOpen icon revealed on hover */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 text-[#f8a87c]">
+                <div style={{ color: selectedAgentTheme.primary }} className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200">
                   <PanelLeftOpen size={18} />
                 </div>
               </button>
@@ -10464,10 +10689,18 @@ const selectedAgentTheme = getAgentColorTheme(
                 <a
                   href="/admin"
                   title="Bảng điều khiển Quản trị (Admin Portal)"
-                  className="relative h-10 w-10 rounded-xl flex items-center justify-center bg-[#f8a87c]/15 border border-[#f8a87c]/40 text-[#f8a87c] hover:bg-[#f8a87c]/25 hover:border-[#f8a87c] transition-all cursor-pointer shrink-0 shadow-sm shadow-[#f8a87c]/20 group"
+                  style={{
+                    backgroundColor: selectedAgentTheme.bgLight,
+                    borderColor: selectedAgentTheme.borderLight,
+                    color: selectedAgentTheme.light || selectedAgentTheme.primary,
+                  }}
+                  className="relative h-10 w-10 rounded-xl flex items-center justify-center border hover:brightness-105 transition-all cursor-pointer shrink-0 shadow-2xs group"
                 >
                   <Shield size={18} className="group-hover:scale-110 transition-transform" />
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#f8a87c] ring-1 ring-black" />
+                  <span
+                    style={{ backgroundColor: selectedAgentTheme.primary }}
+                    className="absolute -top-1 -right-1 h-2 w-2 rounded-full ring-1 ring-black"
+                  />
                 </a>
               )}
               {isLoadingAgents ? (
@@ -12256,11 +12489,11 @@ const selectedAgentTheme = getAgentColorTheme(
                                 e.stopPropagation();
                                 toggleMessageReaction(msg.id, emoji, msg);
                               }}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] bg-amber-500/15 dark:bg-[#f8a87c]/15 text-slate-800 dark:text-neutral-100 hover:scale-110 active:scale-90 transition-transform cursor-pointer"
+                              style={{ backgroundColor: selectedAgentTheme.bgLight, borderColor: selectedAgentTheme.borderLight }} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] text-slate-800 dark:text-neutral-100 hover:scale-110 active:scale-90 transition-transform cursor-pointer border"
                               title="Bạn đã phản hồi cảm xúc này. Bấm để gỡ bỏ."
                             >
                               <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
-                              <span className="text-[10px] font-mono text-[#f8a87c] font-semibold leading-none">1</span>
+                              <span style={{ color: selectedAgentTheme.primary }} className="text-[10px] font-mono font-semibold leading-none">1</span>
                             </button>
                           ))}
                         </div>
@@ -12285,7 +12518,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             }}
                             className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                               isReactOpen
-                                ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                                 : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
                             aria-label="Thả cảm xúc"
@@ -12312,7 +12545,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                       data-testid={`react-option-${emoji}`}
                                       onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
                                       className={`h-6 w-6 rounded-full flex items-center justify-center text-xs hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
-                                        active ? "bg-[#f8a87c]/25 ring-1 ring-[#f8a87c]" : "hover:bg-white/10"
+                                        active ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] ring-1 ring-[var(--agent-color)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "hover:bg-white/10"
                                       }`}
                                       aria-label={`Thả ${emoji}`}
                                     >
@@ -12775,10 +13008,11 @@ const selectedAgentTheme = getAgentColorTheme(
                                   <div
                                     key={`lead-${msg.id}-${sIdx}`}
                                     data-testid="solo-kickoff-intent-bubble"
-                                    className="inline-block w-auto max-w-full rounded-2xl px-4 py-2 shadow-xs bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-[#121218]/90 dark:border-[#22222e] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150"
+                                    className="inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150"
                                   >
                                     <FormattedMessageContent
                                       content={stabilizeStreamingMarkdown(seg, isTurnActivelyRunning)}
+                                      themeColor={selectedAgentTheme.primary}
                                       agentNode={selectedAgent.node}
                                       onImageClick={(url, name) => {
                                         setLightboxRotation(0);
@@ -12813,6 +13047,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               {mainBodyContent && (
                               <FormattedMessageContent
                                 content={stabilizeStreamingMarkdown(mainBodyContent, isTurnActivelyRunning)}
+                                themeColor={selectedAgentTheme.primary}
                                 agentNode={selectedAgent.node}
                                 onImageClick={(url, name) => {
                                   setLightboxRotation(0);
