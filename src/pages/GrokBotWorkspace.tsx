@@ -12208,7 +12208,7 @@ const selectedAgentTheme = getAgentColorTheme(
         <div
           ref={messagesContainerRef}
           onScroll={handleMessagesScroll}
-          className={`flex-1 overflow-y-auto scrollbar-hover ${isCompactMode ? "px-3 py-2 space-y-3" : "px-4 md:px-8 py-3 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
+          className={`flex-1 overflow-y-auto scrollbar-hover ${isCompactMode ? "px-3 pt-2 pb-6 space-y-3" : "px-4 md:px-8 pt-3 pb-8 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
         >
           {hasNoAgents ? (
             <div className="h-full min-h-[460px] flex items-center justify-center p-4">
@@ -13711,11 +13711,13 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
           );
         })()}
-          {/* Bottom feather fade edge for chat message stream */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-page)] via-[var(--bg-page)]/60 to-transparent z-20 backdrop-blur-[1px]"
-          />
+          {/* Bottom feather fade edge for chat message stream (only when scrolled up so it doesn't blur responding pill or newest message) */}
+          {showScrollBottomBtn && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-[var(--bg-page)]/80 to-transparent z-10"
+            />
+          )}
           {/* Floating Scroll to Bottom Button (Always centered horizontally in Chat UI and positioned above/outside the input composer) */}
           {showScrollBottomBtn && (
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 animate-in fade-in zoom-in-95 duration-150">
