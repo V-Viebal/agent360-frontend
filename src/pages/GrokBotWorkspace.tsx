@@ -10285,6 +10285,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   icon={<Settings size={14} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Cài đặt (Settings)"
                   badge="Mở"
+                  badgeColor="text-neutral-400"
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     setSettingsModalTab("profile");
@@ -10306,10 +10307,10 @@ const selectedAgentTheme = getAgentColorTheme(
                 <DropdownMenuSection label="Hệ thống">
 
                   <DropdownMenuItem
-                    icon={<ShieldCheck size={13} className="text-[#f8a87c]" />}
+                    icon={<ShieldCheck size={13} style={{ color: selectedAgentTheme.primary }} />}
                     label="Quyền & Sandbox"
                     badge="Quản lý"
-                    badgeColor="text-[#f8a87c]"
+                    badgeColor="text-neutral-400"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       setIsPermissionsModalOpen(true);
@@ -10320,6 +10321,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     icon={<ExternalLink size={13} className="text-neutral-400" />}
                     label="Community Forum"
                     badge="↗"
+                    badgeColor="text-neutral-400"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       window.open("https://community-agent360.antares.vn", "_blank");
@@ -11005,6 +11007,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   icon={<Settings size={14} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Cài đặt (Settings)"
                   badge="Mở"
+                  badgeColor="text-neutral-400"
                   onClick={() => {
                     setIsUserMenuOpen(false);
                     setSettingsModalTab("profile");
@@ -11026,10 +11029,10 @@ const selectedAgentTheme = getAgentColorTheme(
                 <DropdownMenuSection label="Hệ thống">
 
                   <DropdownMenuItem
-                    icon={<ShieldCheck size={13} className="text-[#f8a87c]" />}
+                    icon={<ShieldCheck size={13} style={{ color: selectedAgentTheme.primary }} />}
                     label="Quyền & Sandbox"
                     badge="Quản lý"
-                    badgeColor="text-[#f8a87c]"
+                    badgeColor="text-neutral-400"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       setIsPermissionsModalOpen(true);
@@ -11040,6 +11043,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     icon={<ExternalLink size={13} className="text-neutral-400" />}
                     label="Community Forum"
                     badge="↗"
+                    badgeColor="text-neutral-400"
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       window.open("https://community-agent360.antares.vn", "_blank");
@@ -12668,17 +12672,51 @@ const selectedAgentTheme = getAgentColorTheme(
                           }}
                           onClick={() => scrollToUserTurn(tIdx)}
                         >
-                          {/* Clean minimal tooltip positioned directly relative to this tick item */}
+                          {/* Rich Card Tooltip matching Image 2, positioned directly relative to this tick item */}
                           {isHovered && (
                             <div
-                              className="absolute right-full mr-3 z-50 max-w-[320px] sm:max-w-[420px] px-3 py-1.5 rounded-xl bg-white/95 dark:bg-[#181820]/95 text-slate-800 dark:text-neutral-100 text-[12px] shadow-xl border border-slate-200/90 dark:border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-100 flex items-center gap-2 whitespace-nowrap select-none"
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-full mr-3 top-1/2 -translate-y-1/2 z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#181820]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto animate-in fade-in zoom-in-95 duration-100 select-none text-left"
                             >
-                              <span className="font-mono text-[11px] text-[#e0682b] dark:text-[#f8a87c] font-bold shrink-0">
-                                #{tIdx + 1}
-                              </span>
-                              <span className="truncate max-w-[260px] sm:max-w-[360px] font-medium leading-snug text-slate-700 dark:text-neutral-200">
-                                {turn.msg.content.trim()}
-                              </span>
+                              {/* Header: User prompt title + Bookmark Icon */}
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="font-semibold text-xs text-slate-900 dark:text-white leading-snug line-clamp-2">
+                                  {turn.msg.content.trim()}
+                                </p>
+                                <button
+                                  type="button"
+                                  aria-label="Đánh dấu sao"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleStarMessage(turn.msg.id);
+                                  }}
+                                  className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                                >
+                                  <Bookmark
+                                    size={14}
+                                    className={starredMsgIds.includes(turn.msg.id) ? "fill-amber-400 text-amber-500 dark:text-amber-400" : ""}
+                                  />
+                                </button>
+                              </div>
+
+                              {/* Assistant Response Preview (Image 2) */}
+                              {(() => {
+                                let assistantSnippet = "";
+                                for (let i = turn.originalIdx + 1; i < displayMessages.length; i++) {
+                                  const m = displayMessages[i];
+                                  if (m.role === "user") break;
+                                  if (m.role === "assistant" && m.content) {
+                                    assistantSnippet = m.content.trim();
+                                    break;
+                                  }
+                                }
+                                if (!assistantSnippet) return null;
+                                return (
+                                  <div className="mt-2 text-[11px] text-slate-600 dark:text-neutral-300 font-sans leading-relaxed line-clamp-4 border-t border-slate-100 dark:border-white/5 pt-1.5">
+                                    {assistantSnippet}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
 
@@ -14779,11 +14817,13 @@ const selectedAgentTheme = getAgentColorTheme(
                 <button aria-label="New Chat Session" data-ux-target-min="24"
                   onClick={handleNewChat}
                   style={{
-                    borderColor: selectedAgentTheme.primary ? `${selectedAgentTheme.primary}99` : undefined,
+                    backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
+                    borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
+                    color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
                   }}
-                  className="h-7 w-7 rounded-lg border-2 border-slate-400/80 dark:border-white/30 bg-slate-100 dark:bg-[#1f1f2a] hover:bg-white dark:hover:bg-[#282836] hover:border-slate-600 dark:hover:border-white/60 flex items-center justify-center text-slate-800 dark:text-white shadow-xs hover:shadow-sm transition-all cursor-pointer active:scale-95 group/newchat"
+                  className="h-7 w-7 rounded-full border shadow-2xs hover:brightness-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0 group/newchat"
                 >
-                  <Plus size={15} className="stroke-[2.5] text-slate-800 dark:text-white group-hover/newchat:scale-110 transition-transform" />
+                  <Plus size={15} className="stroke-[2.2] group-hover/newchat:scale-110 transition-transform" />
                 </button>
               </Tooltip>
 
@@ -14808,10 +14848,15 @@ const selectedAgentTheme = getAgentColorTheme(
           <div className="flex-1 flex flex-col items-center py-3 space-y-2.5 overflow-hidden w-full">
             <button aria-label="New Chat" data-ux-target-min="24"
               onClick={handleNewChat}
-              className="h-8 w-8 rounded-xl bg-[#1c1c24] hover:bg-[#f8a87c] hover:text-white text-neutral-300 flex items-center justify-center transition-colors cursor-pointer border border-[#262632] shadow-sm"
+              style={{
+                backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
+                borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
+                color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
+              }}
+              className="h-7 w-7 rounded-full border shadow-2xs hover:brightness-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
               title="New Chat"
             >
-              <Plus size={16} />
+              <Plus size={15} className="stroke-[2.2]" />
             </button>
             <div className="w-5 h-[1px] bg-[#22222e]" />
             <div className="flex-1 overflow-y-auto space-y-2 flex flex-col items-center w-full px-1 scrollbar-none">
@@ -15522,7 +15567,7 @@ ${chat.id}`);
 
                   {filteredChats.length === 0 && (
                     <div className="py-10 px-4 text-center space-y-3 font-sans">
-                      <div className="h-9 w-9 rounded-xl bg-[#1a1a24] border border-[#262634] text-neutral-500 flex items-center justify-center mx-auto">
+                      <div className="h-9 w-9 rounded-xl bg-slate-100 dark:bg-[#1a1a24] border border-slate-200/80 dark:border-[#262634] text-slate-500 dark:text-neutral-500 flex items-center justify-center mx-auto shadow-2xs">
                         <MessageSquare size={16} />
                       </div>
                       <div className="space-y-1">
@@ -15547,9 +15592,15 @@ ${chat.id}`);
                           <button
                             type="button"
                             onClick={handleNewChat}
-                            className="px-3 py-1 rounded-lg bg-[#f8a87c] hover:bg-[#ff8a1a] text-black font-semibold text-[11px] transition-colors cursor-pointer shadow-xs"
+                            style={{
+                              backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
+                              borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
+                              color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold shadow-2xs hover:brightness-105 active:scale-95 transition-all cursor-pointer"
                           >
-                            + New Chat
+                            <Plus size={13} className="stroke-[2.2]" />
+                            <span>New Chat</span>
                           </button>
                         )}
                       </div>
@@ -15971,7 +16022,8 @@ ${chat.id}`);
                           setSelectedJobForConfig(null);
                           setIsScheduleModalOpen(true);
                         }}
-                        className="text-xs font-sans font-medium text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer"
+                        style={{ color: selectedAgentTheme.light || selectedAgentTheme.primary }}
+                        className="text-xs font-sans font-medium hover:underline flex items-center gap-1 cursor-pointer"
                         title="Thêm routine mới"
                       >
                         <Plus size={11} />
@@ -15999,7 +16051,7 @@ ${chat.id}`);
                             Bấm để lên lịch chạy tự động định kỳ
                           </span>
                         </div>
-                        <div className="h-7 w-7 rounded-xl bg-slate-100 dark:bg-[#1f1f2c] text-[#f8a87c] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <div style={{ backgroundColor: selectedAgentTheme.bgLight, color: selectedAgentTheme.light || selectedAgentTheme.primary }} className="h-7 w-7 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                           <Plus size={14} />
                         </div>
                       </div>
@@ -16239,9 +16291,10 @@ ${chat.id}`);
                                 setLibraryGroupMode("flat");
                                 setLibraryPage(1);
                               }}
+                              style={libraryGroupMode === "flat" ? { backgroundColor: selectedAgentTheme.bgLight, color: selectedAgentTheme.light || selectedAgentTheme.primary } : undefined}
                               className={`p-1 rounded transition-colors cursor-pointer ${
                                 libraryGroupMode === "flat"
-                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c]"
+                                  ? "shadow-2xs font-semibold"
                                   : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                               }`}
                             >
@@ -16257,9 +16310,10 @@ ${chat.id}`);
                                 setLibraryGroupMode("folder");
                                 setLibraryPage(1);
                               }}
+                              style={libraryGroupMode === "folder" ? { backgroundColor: selectedAgentTheme.bgLight, color: selectedAgentTheme.light || selectedAgentTheme.primary } : undefined}
                               className={`p-1 rounded transition-colors cursor-pointer ${
                                 libraryGroupMode === "folder"
-                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c]"
+                                  ? "shadow-2xs font-semibold"
                                   : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                               }`}
                             >
@@ -16275,9 +16329,10 @@ ${chat.id}`);
                                 setLibraryGroupMode("date");
                                 setLibraryPage(1);
                               }}
+                              style={libraryGroupMode === "date" ? { backgroundColor: selectedAgentTheme.bgLight, color: selectedAgentTheme.light || selectedAgentTheme.primary } : undefined}
                               className={`p-1 rounded transition-colors cursor-pointer ${
                                 libraryGroupMode === "date"
-                                  ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c]"
+                                  ? "shadow-2xs font-semibold"
                                   : "text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                               }`}
                             >

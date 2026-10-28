@@ -43,6 +43,7 @@ export function CommandPaletteModal({
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isComposingRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -251,7 +252,6 @@ export function CommandPaletteModal({
     ...(q ? actionItems.filter((a) => a.title.toLowerCase().includes(q)) : []),
   ];
 
-  const isComposingRef = useRef(false);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isComposingRef.current || e.nativeEvent.isComposing || (e as any).keyCode === 229) {
