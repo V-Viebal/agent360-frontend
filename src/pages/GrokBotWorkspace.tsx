@@ -808,6 +808,7 @@ import {
   fetchWorkspaceLibrary,
   fetchWorkspaceFileContent,
   fetchWorkspaceFileBlobUrl,
+  getSignedWorkspaceFileUrl,
   downloadWorkspaceFile,
   LibraryCategory,
   fetchAgentMcpClients,
@@ -5973,21 +5974,41 @@ ${targetItem.text}`;
   const [isLoadingPreviewModalText, setIsLoadingPreviewModalText] = useState<boolean>(false);
 
   const handleOpenAttachmentPreview = async (att: ParsedChatAttachmentItem) => {
-    if (att.isImage || att.kind === "image") {
+    let resolvedAtt = { ...att };
+
+    // If attachment points to internal workspace file, upgrade to a signed token URL
+    const isInternalDownload = att.previewUrl.includes("/workspace/file-download");
+    if (isInternalDownload) {
+      try {
+        const match = att.previewUrl.match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
+        if (match) {
+          const agentSlug = decodeURIComponent(match[1]);
+          const filePath = decodeURIComponent(match[2]);
+          const signed = await getSignedWorkspaceFileUrl(agentSlug, filePath, true);
+          if (signed) {
+            resolvedAtt.previewUrl = signed;
+          }
+        }
+      } catch (err) {
+        console.warn("[AttachmentPreview] Failed to resolve signed file url:", err);
+      }
+    }
+
+    if (resolvedAtt.isImage || resolvedAtt.kind === "image") {
       setLightboxZoom(1);
       setLightboxPan({ x: 0, y: 0 });
       setLightboxRotation(0);
       setLightboxMeta(null);
       setShowLightboxMeta(false);
-      setLightboxImageUrl({ url: att.previewUrl, name: att.fileName });
+      setLightboxImageUrl({ url: resolvedAtt.previewUrl, name: resolvedAtt.fileName });
       return;
     }
-    setPreviewModalFile(att);
+    setPreviewModalFile(resolvedAtt);
     setPreviewModalText(null);
-    if (att.kind === "code" || att.kind === "data" || /^(CSV|TSV|MD|MDX|TXT|JSON|YAML|YML|XML|LOG|SQL|PY|TS|TSX|JS|JSX|SH|HTML|CSS)$/i.test(att.ext)) {
+    if (resolvedAtt.kind === "code" || resolvedAtt.kind === "data" || /^(CSV|TSV|MD|MDX|TXT|JSON|YAML|YML|XML|LOG|SQL|PY|TS|TSX|JS|JSX|SH|HTML|CSS)$/i.test(resolvedAtt.ext)) {
       setIsLoadingPreviewModalText(true);
       try {
-        const res = await fetch(att.previewUrl);
+        const res = await fetch(resolvedAtt.previewUrl);
         if (res.ok) {
           const txt = await res.text();
           setPreviewModalText(txt.slice(0, 120000));
@@ -12445,17 +12466,31 @@ const selectedAgentTheme = getAgentColorTheme(
                                     <ExternalLink size={13} />
                                   </a>
                                 )}
-                                <a
-                                  href={downloadHref}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  download={att.fileName}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[#f8a87c] shrink-0 transition-colors"
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    triggerHaptic(10);
+                                    const match = att.previewUrl.match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
+                                    if (match) {
+                                      const ag = decodeURIComponent(match[1]);
+                                      const p = decodeURIComponent(match[2]);
+                                      const ok = await downloadWorkspaceFile(ag, p, att.fileName);
+                                      if (ok) return;
+                                    }
+                                    const a = document.createElement("a");
+                                    a.href = downloadHref;
+                                    a.download = att.fileName;
+                                    a.target = "_blank";
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                  }}
+                                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[#f8a87c] shrink-0 transition-colors cursor-pointer"
                                   title={`Tải xuống ${att.fileName}`}
                                 >
                                   <Download size={13} />
-                                </a>
+                                </button>
                               </div>
                             </div>
                           );

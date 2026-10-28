@@ -629,6 +629,24 @@ export async function fetchWorkspaceFileContent(agentId: string, filePath: strin
   }
 }
 
+
+export async function getSignedWorkspaceFileUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
+  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  try {
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/signed-file-url?path=${encodeURIComponent(filePath)}&inline=${inline ? "true" : "false"}`,
+      {},
+      cleanId
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.url || null;
+  } catch (err) {
+    console.warn(`getSignedWorkspaceFileUrl failed for ${cleanId}/${filePath}:`, err);
+    return null;
+  }
+}
+
 export async function fetchWorkspaceFileBlobUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
   const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
   try {

@@ -52,46 +52,46 @@ export function resolveUploadedAttachmentPreviewUrl(urlOrPath: string, agentId: 
   const cleanAgent = (agentId || "default").replace(/^bot:agent360:/i, "") || "default";
   const normalized = trimmed.replace(/\\/g, "/");
 
-  // Route directly to Agent360's ACL-verified file-download endpoint: /api/v1/agents/{agent}/workspace/file-download?path=...&inline=true
+  // Route directly to Agent360's ACL-verified file-download endpoint: /api/agents/{agent}/workspace/file-download?path=...&inline=true
   // 1. QwenPaw absolute workspace path: /app/working/workspaces/<agent>/media/<relpath> or /app/working/workspaces/<agent>/<relpath>
   const wsMediaMatch = normalized.match(/\/workspaces\/([^/]+)\/media\/(.+)$/i);
   if (wsMediaMatch) {
     const fileAgent = wsMediaMatch[1];
     const relPath = `media/${wsMediaMatch[2]}`;
-    return `/api/v1/agents/${encodeURIComponent(fileAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(fileAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
   }
 
   const wsAnyMatch = normalized.match(/\/workspaces\/([^/]+)\/(.+)$/i);
   if (wsAnyMatch) {
     const fileAgent = wsAnyMatch[1];
     const relPath = wsAnyMatch[2];
-    return `/api/v1/agents/${encodeURIComponent(fileAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(fileAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
   }
 
   // 2. Relative media path: media/<filename>
   const relMediaMatch = normalized.match(/^(?:\/)?media\/(.+)$/i);
   if (relMediaMatch) {
     const relPath = `media/${relMediaMatch[1]}`;
-    return `/api/v1/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
   }
 
   // 3. Virtual workspace upload: virtual://workspace/uploads/<fileId>/<filename>
   const virtualMatch = normalized.match(/^virtual:\/\/workspace\/uploads\/(upl_[a-zA-Z0-9]+)\/([^/?#]+)$/i);
   if (virtualMatch) {
     const relPath = `.tmp/agent360-uploads/${virtualMatch[1]}_${virtualMatch[2]}`;
-    return `/api/v1/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
   }
 
   // 4. Relative subfolder path (e.g. .tmp/zeroism-slide/file.pdf)
   if (!normalized.startsWith("/") && normalized.includes("/")) {
-    return `/api/v1/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(normalized)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(normalized)}&inline=true`;
   }
 
   // 5. Bare filename fallback (default to media/<filename>)
   const fallbackName = normalized.split("/").filter(Boolean).pop();
   if (fallbackName) {
     const relPath = `media/${fallbackName}`;
-    return `/api/v1/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
   }
   return urlOrPath;
 }
