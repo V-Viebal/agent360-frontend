@@ -254,6 +254,7 @@
   --agent-border-light: rgba(248, 168, 124, 0.45);
   --agent-border-dark: rgba(248, 168, 124, 0.35);
   --agent-color: #f8a87c;
+  --canvas-transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   --transport-badge-bg: #262626;
   --transport-badge-text: #e5e5e5;
   --transport-badge-border: #404040;
@@ -319,6 +320,7 @@
   --agent-border-light: rgba(248, 168, 124, 0.45);
   --agent-border-dark: rgba(248, 168, 124, 0.35);
   --agent-color: #f8a87c;
+  --canvas-transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   --transport-badge-bg: #e2e8f0;
   --transport-badge-text: #1e293b;
   --transport-badge-border: #cbd5e1;
@@ -487,6 +489,7 @@ select,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  --canvas-transition: none !important;
   }
 }
 
@@ -1215,6 +1218,7 @@ html.light .driverjs-skyer-theme .driver-popover-footer .driver-popover-close-bt
   --agent-border-light: rgba(248, 168, 124, 0.45);
   --agent-border-dark: rgba(248, 168, 124, 0.35);
   --agent-color: #f8a87c;
+  --canvas-transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.12);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);

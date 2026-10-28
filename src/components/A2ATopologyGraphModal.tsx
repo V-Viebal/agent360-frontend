@@ -413,7 +413,7 @@ export function A2ATopologyGraphModal({
               style={{
                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
                 transformOrigin: "top left",
-                transition: isPanning ? "none" : "transform 0.15s ease-out",
+                transition: isPanning ? "none" : "var(--canvas-transition, transform 0.15s ease-out)",
               }}
               className="space-y-6 w-full"
             >

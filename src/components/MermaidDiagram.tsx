@@ -48,13 +48,13 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
   return (
     <div
       className={`my-2.5 rounded-2xl overflow-hidden border border-[#2a2a3c] bg-[#0c0c12] font-mono text-xs shadow-xl transition-all ${
-        isExpanded ? "fixed inset-4 z-50 flex flex-col bg-[#0c0c12]/95 backdrop-blur-xl border-[#f8a87c]/50 p-4" : ""
+        isExpanded ? "fixed inset-4 z-50 flex flex-col bg-[#0c0c12]/95 backdrop-blur-xl border-[var(--agent-primary)]/50 p-4" : ""
       }`}
     >
       {/* Header Bar */}
       <div className="px-3.5 py-2 bg-[#14141c] border-b border-[#22222e] flex items-center justify-between text-[11px] text-neutral-400 select-none">
         <div className="flex items-center gap-2">
-          <GitCommit size={14} className="text-[#f8a87c]" />
+          <GitCommit size={14} style={{ color: "var(--agent-primary)" }} />
           <span className="font-semibold text-white">Mermaid Diagram Flow</span>
           <span className="text-[10px] text-neutral-500 font-sans">
             {nodes.length > 0 ? `${nodes.length} nodes • ${steps.length} transitions` : "Schema View"}
@@ -109,7 +109,7 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
                     <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 font-semibold truncate max-w-[120px]">
                       {st.from}
                     </span>
-                    <span className="text-[#f8a87c] font-bold">➔</span>
+                    <span style={{ color: "var(--agent-primary)" }} className="font-bold">➔</span>
                     <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold truncate max-w-[120px]">
                       {st.to}
                     </span>
