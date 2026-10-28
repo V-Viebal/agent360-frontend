@@ -21,7 +21,14 @@ import {
   Camera,
   ShieldCheck,
   Activity,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  CheckCheck,
+  FileText,
+  Cpu,
 } from "lucide-react";
+import { fetchWorkspaceFileContent } from "../services/agentApi";
 import { InfraAgent } from "../types/agent";
 import { AgentAvatar, getAgentColorTheme } from "./AgentAvatar";
 import { AgentConnectedAppsTab } from "./AgentConnectedAppsTab";
@@ -120,7 +127,28 @@ export function AgentSettingsModal({
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
   const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [reactionSummary, setReactionSummary] = useState<MessageReactionSummaryDto | null>(null);
+
+  // SOUL.md expandable viewer & editor state
+  const [isSoulExpanded, setIsSoulExpanded] = useState(false);
+  const [soulContent, setSoulContent] = useState<string>("");
+  const [loadingSoul, setLoadingSoul] = useState<boolean>(false);
+  const [copiedSoul, setCopiedSoul] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isSoulExpanded && agent?.id && !soulContent) {
+      setLoadingSoul(true);
+      fetchWorkspaceFileContent(agent.id, "SOUL.md")
+        .then((content) => {
+          setSoulContent(content || "# SOUL.md\n\n(Tệp trống hoặc chưa được khởi tạo)");
+        })
+        .catch(() => {
+          setSoulContent("# SOUL.md\n\n[Không thể tải nội dung SOUL.md]");
+        })
+        .finally(() => setLoadingSoul(false));
+    }
+  }, [isSoulExpanded, agent?.id, soulContent]);
 
   useEffect(() => {
     if (isOpen && agent?.id) {

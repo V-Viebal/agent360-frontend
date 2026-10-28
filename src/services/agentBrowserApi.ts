@@ -1,4 +1,5 @@
 import { operatorKey } from "./a2aApi";
+import { authorizedFetch } from "./agentApi";
 
 export interface AgentBrowserTab {
   targetId: string;
@@ -31,10 +32,10 @@ export const hasNoBrowser = (agentId: string) => noBrowser.has(bare(agentId));
 export async function fetchAgentBrowser(agentId: string, signal?: AbortSignal): Promise<AgentBrowserInfo | null> {
   const id = bare(agentId);
   if (noBrowser.has(id)) return null;
-  const res = await fetch(`/api/agents/${encodeURIComponent(id)}/browser`, {
+  const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser`, {
     headers: { Accept: "application/json" },
     signal,
-  });
+  }, id);
   if (res.status === 404) {
     noBrowser.add(id);
     return null;
@@ -53,7 +54,7 @@ export function agentBrowserImageUrl(agentId: string, nonce: number): string {
  * the backend requires sign-in for agent screenshots). Returns an object URL; the caller revokes the previous one.
  */
 export async function fetchAgentBrowserFrame(url: string, signal?: AbortSignal): Promise<string> {
-  const res = await fetch(url, { signal, headers: { Accept: "image/jpeg" } });
+  const res = await authorizedFetch(url, { signal, headers: { Accept: "image/jpeg" } });
   if (!res.ok) throw new Error(`frame ${res.status}`);
   return URL.createObjectURL(await res.blob());
 }
@@ -61,7 +62,8 @@ export async function fetchAgentBrowserFrame(url: string, signal?: AbortSignal):
 /** Raise the agent's own profile window on the shared desktop before showing it (same-origin only; the API rejects cross-site callers). */
 export async function focusAgentBrowser(agentId: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/agents/${encodeURIComponent(bare(agentId))}/browser/focus`, { method: "POST" });
+    const id = bare(agentId);
+    const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/focus`, { method: "POST" }, id);
     return res.ok;
   } catch {
     return false;
@@ -70,31 +72,36 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
 
 export class DesktopAuthError extends Error {}
 
+// Pre-warmed signed desktop URLs per agentId+mode so mobile & desktop reuse valid 8h tokens without re-requesting
+const cachedSignedDesktopUrls = new Map<string, { url: string; expiresAt: number }>();
+
 /**
- * Signed URL (`https://desktop/a360/{token}/`, 8 h) for the agent's Selkies desktop. The desktop hosts
- * only accept requests under that token path, so the operator key is required; without it the caller
- * should fall back to the screenshot preview.
+ * Signed URL (`https://desktop/a360/{token}/`, 8 h) for the agent's Selkies desktop.
+ * Reuses a valid pre-warmed token when available so mobile browsers connect immediately.
  */
 export async function issueAgentDesktopUrl(agentId: string, mode: "control" | "watch" = "control"): Promise<string> {
+  const id = bare(agentId);
+  const cacheKey = `${id}:${mode}`;
+  const cached = cachedSignedDesktopUrls.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.url;
+  }
+
   const key = operatorKey.get();
-  const res = await fetch(`/api/agents/${encodeURIComponent(bare(agentId))}/browser/viewer?mode=${mode}`, {
+  const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/viewer?mode=${mode}`, {
     method: "POST",
     headers: { Accept: "application/json", ...(key ? { "X-Agent360-Operator-Token": key } : {}) },
-  });
+  }, id);
   if (res.status === 401) throw new DesktopAuthError("Operator key required to open the agent desktop");
   if (!res.ok) throw new Error(`viewer ${res.status}`);
   const body = (await res.json()) as { url: string };
+  cachedSignedDesktopUrls.set(cacheKey, { url: body.url, expiresAt: Date.now() + 7 * 3600 * 1000 });
   return body.url;
 }
 
-// Pre-warmed signed desktop URLs per agentId+mode so mobile window.open can navigate synchronously
-const cachedSignedDesktopUrls = new Map<string, { url: string; expiresAt: number }>();
-
 export async function prefetchAgentDesktopUrl(agentId: string, mode: "control" | "watch" = "control"): Promise<string | null> {
   try {
-    const url = await issueAgentDesktopUrl(agentId, mode);
-    cachedSignedDesktopUrls.set(`${bare(agentId)}:${mode}`, { url, expiresAt: Date.now() + 7 * 3600 * 1000 });
-    return url;
+    return await issueAgentDesktopUrl(agentId, mode);
   } catch {
     return null;
   }
@@ -114,7 +121,6 @@ export function openAgentDesktopTab(agentId: string, hash = "#collab"): void {
   const w = window.open("about:blank", "_blank");
   issueAgentDesktopUrl(agentId, mode)
     .then((url) => {
-      cachedSignedDesktopUrls.set(cacheKey, { url, expiresAt: Date.now() + 7 * 3600 * 1000 });
       if (w && !w.closed) {
         w.opener = null;
         w.location.replace(url + hash);

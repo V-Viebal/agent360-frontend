@@ -466,8 +466,13 @@ export async function fetchAvailableModels(): Promise<ModelOption[]> {
         for (const m of pModels) {
           if (m && m.id) {
             const cleanId = m.id.includes("/") ? m.id.split("/").pop()! : m.id;
-            // Filter out non-chat / media generation models
-            if (cleanId.includes("generate-preview") || cleanId.includes("imagen") || cleanId === "metadata_health") {
+            const lower = cleanId.toLowerCase();
+            // Filter out non-chat / media / embedding / auxiliary models
+            const nonChatPatterns = [
+              "embedding", "embed", "tts", "audio", "video", "imagine", "imagen",
+              "veo", "lyria", "generate-preview", "metadata_health", "moderation", "rerank", "dall-e", "flux"
+            ];
+            if (nonChatPatterns.some(pat => lower.includes(pat))) {
               continue;
             }
             if (!list.some(x => x.model === cleanId)) {

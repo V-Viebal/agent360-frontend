@@ -3988,13 +3988,29 @@ export interface AgentBrowserMeta {
 
 // Per-agent browser identity resolved by the backend (/api/agents/{id}/browser). Each instance
 // has one Selkies desktop; agents differ by their own Chromium profile window.
+export function inferAgentViewerUrlFallback(agent?: InfraAgent | null): string {
+  if (!agent) return "";
+  const slug = (agent.slug || agent.id || "").replace(/^bot:agent360:/i, "").toLowerCase();
+  const node = (agent.node || "").toLowerCase();
+  if (slug.startsWith("gm-") || slug === "gm" || node.includes("6th")) return "https://browser-gm.antares.vn";
+  if (slug.startsWith("climax") || node.includes("climax")) return "https://browser-climax.antares.vn";
+  if (slug.startsWith("planthy") || node.includes("planthy")) return "https://browser-planthy.hmz.one";
+  if (slug.startsWith("its-") || slug === "its") return "https://browser-its.antares.vn";
+  if (slug.startsWith("gl-") || slug === "gl") return "https://browser-gl.antares.vn";
+  if (["mons", "ken", "zen", "mkai", "default-core", "default"].includes(slug) || node.includes("3rd") || node.includes("core")) {
+    return "https://browser.hmz.one";
+  }
+  return "";
+}
+
 export function getAgentBrowserUrl(agent: InfraAgent, info?: AgentBrowserInfo | null): AgentBrowserMeta {
+  const fallbackUrl = inferAgentViewerUrlFallback(agent);
   return {
-    url: info?.viewerUrl || "",
+    url: info?.viewerUrl || fallbackUrl,
     label: `${agent.name} Computer`,
-    isLive: Boolean(info?.cdpReachable && info?.profileWindowOpen),
+    isLive: info ? Boolean(info.cdpReachable && info.profileWindowOpen) : Boolean(fallbackUrl),
     hostNode: info ? `${info.node} · ${info.service}` : agent.node || "",
-    profile: info?.profile || "",
+    profile: info?.profile || (agent.slug || agent.id || ""),
     mode: "Selkies desktop · CDP",
   };
 }
@@ -4030,7 +4046,10 @@ function SelkiesViewer({
   const [fitMode, setFitMode] = useState<"width" | "contain">(() => {
     try {
       const saved = localStorage.getItem("agent360_computer_fit_mode");
-      return saved === "contain" ? "contain" : "width";
+      if (saved === "contain" || saved === "width") return saved;
+      // On mobile portrait screens (< 768px), default to "contain" so the entire 1440x900 desktop fits in view
+      if (typeof window !== "undefined" && window.innerWidth < 768) return "contain";
+      return "width";
     } catch {
       return "width";
     }
@@ -4066,8 +4085,10 @@ function SelkiesViewer({
     let alive = true;
     setError("");
     setIframeLoaded(false);
-    Promise.all([issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control"), focusAgentBrowser(agentId)])
-      .then(([signed]) => { if (alive) setSrc(`${signed}#${mode}`); })
+    // Fire focusAgentBrowser in parallel without blocking iframe src assignment
+    focusAgentBrowser(agentId).catch(() => {});
+    issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
+      .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
       .catch((e) => {
         if (!alive) return;
         setSrc("");
@@ -6501,13 +6522,16 @@ export function GrokBotWorkspace() {
     }
     if (swipedChatState && chat && swipedChatState.id === chat.id) {
       const off = swipedChatState.offset;
-      if (off <= -60) {
-        // Keep open to reveal pin & archive actions
-        setSwipedChatState({ id: chat.id, offset: -110 });
-      } else if (off >= 60) {
-        // Keep open to reveal delete action
-        setSwipedChatState({ id: chat.id, offset: 70 });
+      if (off <= -55) {
+        // Snap open to reveal pin & archive actions with gentle haptic
+        triggerHaptic(8);
+        setSwipedChatState({ id: chat.id, offset: -112 });
+      } else if (off >= 55) {
+        // Snap open to reveal delete action with warning haptic
+        triggerHaptic(10);
+        setSwipedChatState({ id: chat.id, offset: 72 });
       } else {
+        // Snap smoothly back to zero
         setSwipedChatState(null);
       }
     }
@@ -15130,7 +15154,7 @@ const selectedAgentTheme = getAgentColorTheme(
             onMouseDown={() => setIsResizingChatSessions(true)}
             className={`hidden lg:block absolute top-0 ${
               isComputerSplitOpen ? "right-0 -mr-1" : "left-0 -ml-1"
-            } w-1.5 h-full cursor-col-resize hover:bg-[#f8a87c]/40 active:bg-[#f8a87c] transition-colors z-30 group`}
+            } w-1.5 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/40 active:bg-[var(--agent-primary)] transition-colors z-30 group`}
             title="Kéo để chỉnh độ rộng danh sách chat"
           >
             <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
@@ -15166,9 +15190,9 @@ const selectedAgentTheme = getAgentColorTheme(
                 <button aria-label="New Chat Session" data-ux-target-min="24"
                   onClick={handleNewChat}
                   style={{
-                    backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
-                    borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
-                    color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
+                    backgroundColor: selectedAgentTheme.bgLight,
+                    borderColor: selectedAgentTheme.borderLight,
+                    color: selectedAgentTheme.light || selectedAgentTheme.primary,
                   }}
                   className="h-7 w-7 rounded-full border shadow-2xs hover:brightness-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0 group/newchat"
                 >
@@ -15198,9 +15222,9 @@ const selectedAgentTheme = getAgentColorTheme(
             <button aria-label="New Chat" data-ux-target-min="24"
               onClick={handleNewChat}
               style={{
-                backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
-                borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
-                color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
+                backgroundColor: selectedAgentTheme.bgLight,
+                borderColor: selectedAgentTheme.borderLight,
+                color: selectedAgentTheme.light || selectedAgentTheme.primary,
               }}
               className="h-7 w-7 rounded-full border shadow-2xs hover:brightness-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
               title="New Chat"
@@ -15319,7 +15343,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       onClick={() => setChatSearchOpen(!chatSearchOpen)}
                       className={`h-6 w-6 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
                         chatSearchOpen
-                          ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                          ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                           : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-[#1f1f26]"
                       }`}
                     >
@@ -15333,7 +15357,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       data-ux-target-min="24"
                       type="button"
                       onClick={handleMarkAllAsRead}
-                      className="h-6 w-6 rounded-md hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-[#f8a87c] dark:hover:text-[#f8a87c] transition-colors cursor-pointer"
+                      className="h-6 w-6 rounded-md hover:bg-slate-200/70 dark:hover:bg-[#1f1f26] flex items-center justify-center text-slate-500 dark:text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer"
                     >
                       <CheckCheck size={14} />
                     </button>
@@ -15352,7 +15376,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       }
                       className={`h-6 w-6 rounded-md flex items-center justify-center transition-colors cursor-pointer relative ${
                         isChannelFilterOpen || channelFilter !== "all"
-                          ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                          ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                           : "text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-[#1f1f26]"
                       }`}
                     >
@@ -15360,7 +15384,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       {channelFilter !== "all" && (
                         <span
                           style={{ backgroundColor: selectedAgentTheme.primary }}
-                          className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-[#f8a87c]"
+                          className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full"
                         />
                       )}
                     </button>
@@ -15562,7 +15586,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       style={{
                         animationDelay: `${Math.min(cIdx * 12, 100)}ms`,
                         transform: swipedChatState?.id === chat.id ? `translateX(${swipedChatState.offset}px)` : undefined,
-                        transition: chatSwipeTouchRef.current?.moved ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                        transition: chatSwipeTouchRef.current?.moved ? "none" : "transform 0.28s cubic-bezier(0.34, 1.45, 0.64, 1)",
                       }}
                       onTouchStart={(e) => handleTouchStartChat(e, chat)}
                       onTouchEnd={() => handleTouchEndChat(chat)}
@@ -15667,7 +15691,8 @@ const selectedAgentTheme = getAgentColorTheme(
                               if (e.key === "Escape") setEditingChatId(null);
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-[#121218] border border-[#f8a87c] rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
+                            style={{ borderColor: selectedAgentTheme.primary }}
+                            className="bg-[#121218] border rounded px-1.5 py-0.5 text-xs text-white focus:outline-none w-full"
                           />
                         ) : (
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
@@ -15699,7 +15724,8 @@ const selectedAgentTheme = getAgentColorTheme(
                               if (qCount <= 0) return null;
                               return (
                                 <span
-                                  className="ml-1.5 px-1.5 py-0.2 rounded-md bg-[#f8a87c]/15 text-[#f8a87c] text-[9px] font-mono border border-[#f8a87c]/30 shrink-0 font-semibold"
+                                  style={{ backgroundColor: selectedAgentTheme.bgLight, color: selectedAgentTheme.light || selectedAgentTheme.primary, borderColor: selectedAgentTheme.borderLight }}
+                                  className="ml-1.5 px-1.5 py-0.2 rounded-md text-[9px] font-mono border shrink-0 font-semibold"
                                   title={`${qCount} tin nhắn trong hàng đợi`}
                                 >
                                   +{qCount}
@@ -15769,7 +15795,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               }}
                               className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
                                 activeChatMenuId === chat.id
-                                  ? "text-[#f8a87c] bg-white/10 opacity-100"
+                                  ? "text-[var(--agent-primary)] bg-white/10 opacity-100"
                                   : "text-neutral-400 hover:text-white"
                               }`}
                               title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
@@ -15811,7 +15837,7 @@ ${chat.id}`);
                                       ID: {chat.id}
                                     </div>
                                   </div>
-                                  <span className="p-1 rounded text-neutral-400 group-hover/chatinfo:text-[#f8a87c] transition-colors shrink-0">
+                                  <span className="p-1 rounded text-neutral-400 group-hover/chatinfo:text-[var(--agent-primary)] transition-colors shrink-0">
                                     <Copy size={12} />
                                   </span>
                                 </div>
@@ -15848,7 +15874,7 @@ ${chat.id}`);
                               />
 
                               <DropdownMenuItem
-                                icon={<Search size={13} className="text-[#f8a87c]" />}
+                                icon={<Search size={13} style={{ color: selectedAgentTheme.primary }} />}
                                 label="Tìm trong phiên này"
                                 onClick={() => {
                                   handleSelectChat(chat);
@@ -15914,10 +15940,10 @@ ${chat.id}`);
                                     }}
                                   />
                                   <DropdownMenuItem
-                                    icon={<Download size={12} className="text-[#f8a87c]" />}
+                                    icon={<Download size={12} style={{ color: selectedAgentTheme.primary }} />}
                                     label="Báo cáo Markdown"
                                     badge=".md"
-                                    badgeColor="text-[#f8a87c]"
+                                    badgeColor="text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                                     onClick={() => {
                                       handleSelectChat(chat);
                                       setTimeout(() => handleExportSessionMarkdown(), 50);
@@ -16001,9 +16027,9 @@ ${chat.id}`);
                             type="button"
                             onClick={handleNewChat}
                             style={{
-                              backgroundColor: selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)",
-                              borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
-                              color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
+                              backgroundColor: selectedAgentTheme.bgLight,
+                              borderColor: selectedAgentTheme.borderLight,
+                              color: selectedAgentTheme.light || selectedAgentTheme.primary,
                             }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold shadow-2xs hover:brightness-105 active:scale-95 transition-all cursor-pointer"
                           >
@@ -16037,10 +16063,10 @@ ${chat.id}`);
             {/* Minimalist Resizer Splitter between Chat and Computer */}
             <div
               onMouseDown={() => setIsResizingComputerSplit(true)}
-              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[#f8a87c]/60 active:bg-[#f8a87c] transition-colors shrink-0 z-30 select-none group"
+              className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/60 active:bg-[var(--agent-primary)] transition-colors shrink-0 z-30 select-none group"
               title={t("computer.dragSplitterTitle") || "Kéo để thay đổi tỷ lệ"}
             >
-              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[#f8a87c] group-hover:h-9 transition-all" />
+              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[var(--agent-primary)] group-hover:h-9 transition-all" />
             </div>
 
             <section
@@ -16409,7 +16435,7 @@ ${chat.id}`);
                         <button
                           type="button"
                           onClick={() => setIsDescExpanded(!isDescExpanded)}
-                          className="mt-1.5 text-[11px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="mt-1.5 text-[11px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <span>{isDescExpanded ? "Thu gọn bớt" : "Xem thêm"}</span>
                           <ChevronDown
@@ -16452,7 +16478,7 @@ ${chat.id}`);
                           setSelectedJobForConfig(null);
                           setIsScheduleModalOpen(true);
                         }}
-                        className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[#f8a87c]/50 flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                        className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[var(--agent-primary)]/50 flex items-center justify-between gap-3 cursor-pointer group transition-all"
                       >
                         <div className="flex flex-col min-w-0 pr-2">
                           <span className="text-xs font-medium text-slate-800 dark:text-slate-900 dark:text-white truncate">
@@ -16766,13 +16792,13 @@ ${chat.id}`);
                               onClick={() => setIsLibraryFilterMenuOpen(!isLibraryFilterMenuOpen)}
                               className={`relative p-1.5 rounded-lg border transition-all cursor-pointer ${
                                 isLibraryFilterMenuOpen || activeFiltersCount > 0
-                                  ? "bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold"
+                                  ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] font-semibold"
                                   : "bg-slate-100 dark:bg-[#14141c] text-neutral-400 border-slate-200 dark:border-[#22222e] hover:text-slate-900 dark:hover:text-white"
                               }`}
                             >
                               <Filter size={12} />
                               {activeFiltersCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-[#f8a87c] text-black font-mono text-[8px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#101016]">
+                                <span style={{ backgroundColor: selectedAgentTheme.primary }} className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full text-black font-mono text-[8px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-[#101016]">
                                   {activeFiltersCount}
                                 </span>
                               )}
@@ -16833,7 +16859,7 @@ ${chat.id}`);
                                       }}
                                       className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-mono transition-colors cursor-pointer border ${
                                         isActive
-                                          ? "bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] border-[#f8a87c]/40 font-semibold"
+                                          ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] font-semibold"
                                           : "bg-slate-50 dark:bg-[#121218] text-slate-700 dark:text-neutral-300 border-slate-200 dark:border-[#242432] hover:border-slate-300 dark:hover:border-[#323242]"
                                       }`}
                                     >
@@ -16862,7 +16888,7 @@ ${chat.id}`);
                                         }}
                                         className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors cursor-pointer border ${
                                           isSelectedExt
-                                            ? "bg-[#f8a87c] text-black border-[#f8a87c] font-semibold"
+                                            ? "text-black font-semibold shadow-xs"
                                             : "bg-slate-50 dark:bg-[#121218] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/40"
                                         }`}
                                       >
