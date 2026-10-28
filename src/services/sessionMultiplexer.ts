@@ -43,7 +43,14 @@ export interface AgentWebhookDeliveryWsEvent {
   delivery: any;
 }
 
-export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot | ComposioConnectionEvent | AgentWebhookDeliveryWsEvent;
+export interface AgentWebhookDlqAlertWsEvent {
+  type: "agent_webhook_dlq_alert";
+  agent_id: string;
+  dlq_item: any;
+  message: string;
+}
+
+export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot | ComposioConnectionEvent | AgentWebhookDeliveryWsEvent | AgentWebhookDlqAlertWsEvent;
 
 export interface MultiplexerHandlers {
   onSnapshot?: (snapshot: ActiveSessionsSnapshot) => void;
@@ -105,6 +112,10 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("agent:webhook_delivery", { detail: data }));
             }
+          } else if (data.type === "agent_webhook_dlq_alert") {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:webhook_dlq_alert", { detail: data }));
+            }
           }
         } catch {}
       };
@@ -159,6 +170,10 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
           } else if (update.type === "agent_webhook_delivery") {
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("agent:webhook_delivery", { detail: update }));
+            }
+          } else if (update.type === "agent_webhook_dlq_alert") {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:webhook_dlq_alert", { detail: update }));
             }
           }
         } catch {}

@@ -1991,6 +1991,23 @@ export interface AgentWebhookDeliveryRecord {
   raw_payload?: string | null;
 }
 
+
+export interface WebhookDeadLetterRecord {
+  id: string;
+  delivery_id: string;
+  agent_id: string;
+  target_name: string;
+  target_url: string;
+  event_type: string;
+  session_id?: string | null;
+  total_attempts: number;
+  last_http_status: number;
+  last_error: string;
+  raw_payload?: string | null;
+  created_at: string;
+  resolved: boolean;
+}
+
 export interface QwenPawBridgeProbeResult {
   agent_id: string;
   node: string;
@@ -2167,6 +2184,44 @@ export async function replayAgentWebhookDelivery(
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `Lỗi phát lại Webhook delivery (HTTP ${res.status})`);
+  }
+  return res.json();
+}
+
+export async function fetchAgentWebhookDeadLetters(
+  agentId: string,
+  unresolvedOnly?: boolean,
+  limit: number = 50
+): Promise<WebhookDeadLetterRecord[]> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const qs = new URLSearchParams();
+  if (unresolvedOnly) qs.set("unresolvedOnly", "true");
+  if (limit) qs.set("limit", String(limit));
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/dlq?${qs.toString()}`,
+    { headers: { Accept: "application/json" } },
+    cleanId
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function resolveAgentWebhookDeadLetter(
+  agentId: string,
+  dlqId: string
+): Promise<{ success: boolean; message: string }> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/dlq/${encodeURIComponent(dlqId)}/resolve`,
+    {
+      method: "POST",
+      headers: { Accept: "application/json" },
+    },
+    cleanId
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Lỗi đánh dấu xử lý sự cố DLQ (HTTP ${res.status})`);
   }
   return res.json();
 }

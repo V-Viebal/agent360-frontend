@@ -32,6 +32,9 @@ import {
   probeAgentQwenPawBridge,
   testAgentWebhookDispatch,
   replayAgentWebhookDelivery,
+  fetchAgentWebhookDeadLetters,
+  resolveAgentWebhookDeadLetter,
+  WebhookDeadLetterRecord,
 } from "../services/agentApi";
 
 interface AgentWebhooksTabProps {
@@ -62,6 +65,8 @@ export function AgentWebhooksTab({
   const [probing, setProbing] = useState(false);
   const [testing, setTesting] = useState(false);
   const [replayingId, setReplayingId] = useState<string | null>(null);
+  const [dlqItems, setDlqItems] = useState<WebhookDeadLetterRecord[]>([]);
+  const [resolvingDlqId, setResolvingDlqId] = useState<string | null>(null);
 
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -99,9 +104,10 @@ export function AgentWebhooksTab({
     if (!agentId) return;
     setLoading(true);
     try {
-      const [cfg, logs] = await Promise.all([
+      const [cfg, logs, dlq] = await Promise.all([
         fetchAgentWebhookConfig(agentId),
         fetchAgentWebhookDeliveries(agentId, 40),
+        fetchAgentWebhookDeadLetters(agentId, false, 50),
       ]);
       if (cfg) {
         setConfig(cfg);
@@ -119,6 +125,7 @@ export function AgentWebhooksTab({
         setMatrixUserId(cfg.matrix_user_id || `@${cleanSlug}:matrix-core.hmz.one`);
       }
       setDeliveries(logs);
+      setDlqItems(dlq);
     } catch (err: any) {
       console.error("[AgentWebhooksTab] load error:", err);
     } finally {
@@ -145,9 +152,18 @@ export function AgentWebhooksTab({
         });
       }
     };
+    const handleWsDlq = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail;
+      if (detail?.agent_id && detail.agent_id.toLowerCase() === cleanSlug && detail.dlq_item) {
+        setDlqItems((prev) => [detail.dlq_item, ...prev.filter((x) => x.id !== detail.dlq_item.id)].slice(0, 50));
+        showToast(detail.message || "Cảnh báo: Outbound webhook đã rơi vào hàng đợi Dead-Letter (DLQ)!", "error");
+      }
+    };
     window.addEventListener("agent:webhook_delivery", handleWsDelivery);
+    window.addEventListener("agent:webhook_dlq_alert", handleWsDlq);
     return () => {
       window.removeEventListener("agent:webhook_delivery", handleWsDelivery);
+      window.removeEventListener("agent:webhook_dlq_alert", handleWsDlq);
     };
   }, [cleanSlug]);
 
@@ -262,6 +278,20 @@ export function AgentWebhooksTab({
       showToast(err.message || "Lỗi phát lại Webhook", "error");
     } finally {
       setReplayingId(null);
+    }
+  };
+
+  
+  const handleResolveDlq = async (dlqId: string) => {
+    setResolvingDlqId(dlqId);
+    try {
+      const res = await resolveAgentWebhookDeadLetter(agentId, dlqId);
+      setDlqItems((prev) => prev.map((item) => (item.id === dlqId ? { ...item, resolved: true } : item)));
+      showToast(res.message, "success");
+    } catch (err: any) {
+      showToast(err.message || "Lỗi xử lý sự cố DLQ", "error");
+    } finally {
+      setResolvingDlqId(null);
     }
   };
 
@@ -771,6 +801,71 @@ export function AgentWebhooksTab({
           </div>
         )}
       </div>
+
+      {/* Section 3b: Dead-Letter Queue (DLQ) & Persistent Alerts */}
+      {dlqItems.some((x) => !x.resolved) && (
+        <div
+          data-testid="webhook-dlq-alert-banner"
+          className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-xs text-red-500 dark:text-red-400 flex items-center gap-2">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span>Hàng Đợi Dead-Letter Queue (DLQ) — Cảnh Báo Outbound Webhook Thất Bại ({dlqItems.filter((x) => !x.resolved).length})</span>
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-bold uppercase">
+              Action Required
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {dlqItems
+              .filter((x) => !x.resolved)
+              .map((item) => (
+                <div
+                  key={item.id}
+                  className="p-3 rounded-xl bg-white dark:bg-[#121218] border border-red-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 font-mono text-[11px]">
+                      <span className="font-semibold text-slate-900 dark:text-white">{item.target_name}</span>
+                      <span className="text-red-400 font-bold">HTTP {item.last_http_status}</span>
+                      <span className="text-neutral-500">• Đã thử {item.total_attempts} lần</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-neutral-400 truncate">{item.target_url}</div>
+                    <div className="text-[10px] font-mono text-red-400/90 truncate">Lỗi: {item.last_error}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      data-testid={`btn-replay-dlq-${item.id}`}
+                      disabled={replayingId === item.delivery_id}
+                      onClick={() => handleReplayDelivery(item.delivery_id)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-500 text-[11px] font-mono flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      title="Thử phát lại (Replay) sự kiện này"
+                    >
+                      {replayingId === item.delivery_id ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />}
+                      <span>Replay</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      data-testid={`btn-resolve-dlq-${item.id}`}
+                      disabled={resolvingDlqId === item.id}
+                      onClick={() => handleResolveDlq(item.id)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#20202c] hover:bg-slate-200 dark:hover:bg-[#2c2c3c] text-slate-700 dark:text-neutral-300 text-[11px] font-mono flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      title="Đánh dấu đã xử lý / bỏ qua cảnh báo này"
+                    >
+                      {resolvingDlqId === item.id ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                      <span>Bỏ qua / Xong</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Section 4: Recent Webhook Deliveries & Telemetry Ledger */}
       <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
