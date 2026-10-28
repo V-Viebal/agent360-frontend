@@ -5587,6 +5587,7 @@ export function GrokBotWorkspace() {
   const streamAbortControllersRef = useRef<Record<string, AbortController>>({});
   const requestQueue = (selectedChatId && requestQueues[selectedChatId]) || [];
   const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
+  const [isQueueStackOpen, setIsQueueStackOpen] = useState(false);
   const [editingQueueText, setEditingQueueText] = useState<string>("");
   const [activeQueueMenuId, setActiveQueueMenuId] = useState<string | null>(null);
 
@@ -13290,7 +13291,7 @@ const selectedAgentTheme = getAgentColorTheme(
               ? "bg-emerald-950/90 dark:bg-emerald-950/90 border-emerald-500/40 text-emerald-200 shadow-emerald-500/10"
               : loopModeToast.mode === "mission"
               ? "bg-cyan-950/90 dark:bg-cyan-950/90 border-cyan-500/40 text-cyan-200 shadow-cyan-500/10"
-              : "bg-slate-900/90 dark:bg-[#14141c]/95 border-[#f8a87c]/40 text-neutral-100 shadow-[#f8a87c]/10"
+              : "bg-slate-900/90 dark:bg-[#14141c]/95 border-[var(--agent-color)]/40 text-neutral-100 shadow-[var(--agent-color)]/10"
           }`}
         >
           <div
@@ -13299,7 +13300,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 ? "bg-emerald-500/20 text-emerald-400"
                 : loopModeToast.mode === "mission"
                 ? "bg-cyan-500/20 text-cyan-400"
-                : "bg-amber-500/20 text-[#f8a87c]"
+                : "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
             }`}
           >
             {loopModeToast.mode === "goal" ? (
@@ -13333,172 +13334,225 @@ const selectedAgentTheme = getAgentColorTheme(
         <div className={`${isCompactMode ? "px-2.5 pt-1 pb-3" : "px-4 pt-1 pb-3.5"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-1.5`}>
           {/* Rich Request Queue Stack with Steer, Edit, and Delete */}
           {requestQueue.length > 0 && selectedChatId && (
-            <div
-              data-testid="request-queue-stack"
-              className="rounded-2xl bg-[#1c1c20]/95 dark:bg-[#18181e]/95 backdrop-blur-md border border-neutral-700/60 dark:border-[#2d2d38] shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 select-none divide-y divide-neutral-800/80 dark:divide-[#242430]"
-            >
-              {requestQueue.map((item, idx) => {
-                const isEditing = editingQueueItemId === item.id;
-                const isMenuOpen = activeQueueMenuId === item.id;
-                const firstImage = item.attachedFiles?.find(f => /\.(png|jpe?g|webp|gif|svg)$/i.test(f.file_name));
-                const previewSrc = firstImage ? (firstImage.preview_url || resolveUploadedAttachmentPreviewUrl(firstImage.url, selectedAgent?.slug || selectedAgent?.id || "default")) : null;
-                const displayText = item.previewText || item.text.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message";
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-neutral-800/40 dark:hover:bg-[#20202a]/60 transition-colors group/qitem relative"
+            <div className="space-y-1.5 animate-in fade-in duration-100">
+              {/* Request Queue Indicator Pill (themed with dynamic selectedAgentTheme matching screenshot) */}
+              <div
+                data-testid="request-queue-indicator"
+                className="flex items-center justify-between px-3.5 py-1.5 rounded-2xl bg-white/95 dark:bg-[#14141c]/95 border border-slate-200/90 dark:border-[#2a2a38] text-[11px] font-mono shadow-xs select-none"
+              >
+                <div className="flex items-center gap-2 truncate min-w-0">
+                  <span
+                    className="h-1.5 w-1.5 rounded-full animate-pulse shrink-0"
+                    style={{ backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark }}
+                  />
+                  <span
+                    className="font-semibold shrink-0"
+                    style={{ color: selectedAgentTheme.light || selectedAgentTheme.primary }}
                   >
-                    {/* Left Icon & Text Content */}
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      {/* Left list/queue icon */}
-                      <span className="text-neutral-500 shrink-0 font-mono text-[11px] flex items-center justify-center">
-                        <ArrowRight size={13} className="text-neutral-400 group-hover/qitem:text-[#f8a87c] transition-colors" />
-                      </span>
+                    Queue:
+                  </span>
+                  <span className="truncate text-slate-700 dark:text-neutral-300 font-sans">
+                    {requestQueue.length} upcoming request{requestQueue.length > 1 ? "s" : ""} (Next: "{requestQueue[0]?.previewText || requestQueue[0]?.text?.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message"}")
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                  {requestQueue.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsQueueStackOpen((prev) => !prev)}
+                      className="text-neutral-400 hover:text-slate-800 dark:hover:text-white text-[10px] font-sans cursor-pointer transition-colors"
+                    >
+                      {isQueueStackOpen ? "Thu gọn" : `Xem tất cả (${requestQueue.length})`}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedChatId) setChatQueue(selectedChatId, []);
+                    }}
+                    className="text-neutral-400 hover:text-slate-800 dark:hover:text-white text-[10px] font-sans cursor-pointer transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
 
-                      {/* Thumbnail if prompt contains image */}
-                      {previewSrc && (
-                        <div className="h-6 w-6 rounded-md overflow-hidden bg-black/40 border border-white/10 shrink-0 shadow-2xs">
-                          <img src={previewSrc} alt="Thumbnail" className="h-full w-full object-cover" />
-                        </div>
-                      )}
+              {/* Rich Queue Items Stack (Steer, Edit, Delete) - Shown when expanded or during inline edit */}
+              {(isQueueStackOpen || editingQueueItemId) && (
+                <div
+                  data-testid="request-queue-stack"
+                  className="rounded-2xl bg-white/95 dark:bg-[#18181e]/95 backdrop-blur-md border border-slate-200 dark:border-[#2d2d38] shadow-lg overflow-hidden select-none divide-y divide-slate-100 dark:divide-[#242430] animate-in fade-in zoom-in-95 duration-100"
+                >
+                  {requestQueue.map((item, idx) => {
+                    const isEditing = editingQueueItemId === item.id;
+                    const isMenuOpen = activeQueueMenuId === item.id;
+                    const firstImage = item.attachedFiles?.find(f => /\.(png|jpe?g|webp|gif|svg)$/i.test(f.file_name));
+                    const previewSrc = firstImage ? (firstImage.preview_url || resolveUploadedAttachmentPreviewUrl(firstImage.url, selectedAgent?.slug || selectedAgent?.id || "default")) : null;
+                    const displayText = item.previewText || item.text.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message";
 
-                      {/* Inline Edit Input or Text View */}
-                      {isEditing ? (
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0 animate-in fade-in duration-100">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={editingQueueText}
-                            onChange={(e) => setEditingQueueText(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                handleSaveEditQueueItem(selectedChatId, item.id);
-                              } else if (e.key === "Escape") {
-                                setEditingQueueItemId(null);
-                                setEditingQueueText("");
-                              }
-                            }}
-                            className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-neutral-900 border border-[#f8a87c]/60 text-white font-sans focus:outline-none focus:ring-1 focus:ring-[#f8a87c]"
-                            placeholder="Edit queued message..."
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveEditQueueItem(selectedChatId, item.id)}
-                            className="px-2 py-1 rounded-md bg-[#f8a87c] text-neutral-950 text-[10px] font-semibold hover:opacity-90 transition-opacity cursor-pointer shrink-0"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingQueueItemId(null);
-                              setEditingQueueText("");
-                            }}
-                            className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-400 hover:text-white text-[10px] transition-colors cursor-pointer shrink-0"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <span
-                          onDoubleClick={() => handleStartEditQueueItem(item)}
-                          className="text-xs text-neutral-200 truncate font-sans cursor-pointer hover:text-white transition-colors"
-                          title="Click double để chỉnh sửa nội dung"
-                        >
-                          {displayText}
-                        </span>
-                      )}
-                    </div>
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-[#20202a]/60 transition-colors group/qitem relative"
+                      >
+                        {/* Left Icon & Text Content */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          {/* Left list/queue icon themed with agent color */}
+                          <span className="shrink-0 font-mono text-[11px] flex items-center justify-center">
+                            <ArrowRight
+                              size={13}
+                              style={{ color: selectedAgentTheme.primary }}
+                              className="transition-colors"
+                            />
+                          </span>
 
-                    {/* Right Action Buttons */}
-                    {!isEditing && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Steer action: prioritize or jump ahead */}
-                        <button
-                          type="button"
-                          onClick={() => handleSteerQueueItem(selectedChatId, item.id)}
-                          disabled={idx === 0}
-                          className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-sans font-medium transition-all ${
-                            idx === 0
-                              ? "text-neutral-600 dark:text-neutral-600 opacity-50 cursor-default"
-                              : "text-neutral-300 hover:text-white hover:bg-white/10 cursor-pointer"
-                          }`}
-                          title={idx === 0 ? "Đang là yêu cầu tiếp theo" : "Đưa lên đầu hàng đợi (Steer)"}
-                        >
-                          <CornerUpLeft size={11} className="rotate-90 text-neutral-400" />
-                          <span>Steer</span>
-                        </button>
+                          {/* Thumbnail if prompt contains image */}
+                          {previewSrc && (
+                            <div className="h-6 w-6 rounded-md overflow-hidden bg-black/40 border border-white/10 shrink-0 shadow-2xs">
+                              <img src={previewSrc} alt="Thumbnail" className="h-full w-full object-cover" />
+                            </div>
+                          )}
 
-                        {/* Delete item button */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveQueueItem(selectedChatId, item.id)}
-                          className="p-1 rounded-md text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                          title="Xóa yêu cầu khỏi hàng đợi"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-
-                        {/* More options menu (...) */}
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveQueueMenuId(isMenuOpen ? null : item.id);
-                            }}
-                            className={`p-1 rounded-md transition-colors cursor-pointer ${
-                              isMenuOpen ? "bg-white/15 text-white" : "text-neutral-400 hover:text-white hover:bg-white/10"
-                            }`}
-                            title="Tùy chọn khác"
-                          >
-                            <MoreHorizontal size={14} />
-                          </button>
-
-                          {/* Popover Menu with Edit message */}
-                          {isMenuOpen && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute right-0 bottom-full mb-1.5 w-36 rounded-xl bg-[#1c1c24] border border-neutral-700/80 shadow-2xl py-1 z-30 animate-in fade-in zoom-in-95 duration-100"
-                            >
+                          {/* Inline Edit Input or Text View */}
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0 animate-in fade-in duration-100">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingQueueText}
+                                onChange={(e) => setEditingQueueText(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSaveEditQueueItem(selectedChatId, item.id);
+                                  } else if (e.key === "Escape") {
+                                    setEditingQueueItemId(null);
+                                    setEditingQueueText("");
+                                  }
+                                }}
+                                style={{ borderColor: selectedAgentTheme.borderLight }}
+                                className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-neutral-900 text-slate-900 dark:text-white font-sans focus:outline-none focus:ring-1 focus:ring-[var(--agent-color)]"
+                                placeholder="Edit queued message..."
+                              />
                               <button
                                 type="button"
-                                onClick={() => handleSteerNowQueueItem(selectedChatId, item.id)}
-                                className="w-full px-3 py-1.5 text-left text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/15 flex items-center gap-2 cursor-pointer transition-colors font-medium"
-                                title="Ngắt lượt hiện tại và thực thi yêu cầu này ngay lập tức"
+                                onClick={() => handleSaveEditQueueItem(selectedChatId, item.id)}
+                                style={{ backgroundColor: selectedAgentTheme.primary, color: "#000000" }}
+                                className="px-2 py-1 rounded-md text-[10px] font-semibold hover:opacity-90 transition-opacity cursor-pointer shrink-0"
                               >
-                                <Sparkles size={12} className="text-amber-400" />
-                                <span>Steer now (Chạy ngay)</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleStartEditQueueItem(item)}
-                                className="w-full px-3 py-1.5 text-left text-xs text-neutral-200 hover:text-white hover:bg-white/10 flex items-center gap-2 cursor-pointer transition-colors"
-                              >
-                                <Pencil size={12} className="text-neutral-400" />
-                                <span>Edit message</span>
+                                Save
                               </button>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  handleRemoveQueueItem(selectedChatId, item.id);
-                                  setActiveQueueMenuId(null);
+                                  setEditingQueueItemId(null);
+                                  setEditingQueueText("");
                                 }}
-                                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/15 flex items-center gap-2 cursor-pointer transition-colors"
+                                className="px-2 py-1 rounded-md bg-slate-200 dark:bg-neutral-800 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white text-[10px] transition-colors cursor-pointer shrink-0"
                               >
-                                <Trash2 size={12} />
-                                <span>Delete</span>
+                                Cancel
                               </button>
                             </div>
+                          ) : (
+                            <span
+                              onDoubleClick={() => handleStartEditQueueItem(item)}
+                              className="text-xs text-slate-800 dark:text-neutral-200 truncate font-sans cursor-pointer hover:text-slate-950 dark:hover:text-white transition-colors"
+                              title="Click double để chỉnh sửa nội dung"
+                            >
+                              {displayText}
+                            </span>
                           )}
                         </div>
+
+                        {/* Right Action Buttons */}
+                        {!isEditing && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Steer action: prioritize or jump ahead */}
+                            <button
+                              type="button"
+                              onClick={() => handleSteerQueueItem(selectedChatId, item.id)}
+                              disabled={idx === 0}
+                              className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-sans font-medium transition-all ${
+                                idx === 0
+                                  ? "text-neutral-400 dark:text-neutral-600 opacity-50 cursor-default"
+                                  : "text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+                              }`}
+                              title={idx === 0 ? "Đang là yêu cầu tiếp theo" : "Đưa lên đầu hàng đợi (Steer)"}
+                            >
+                              <CornerUpLeft size={11} className="rotate-90 text-neutral-400" />
+                              <span>Steer</span>
+                            </button>
+
+                            {/* Delete item button */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQueueItem(selectedChatId, item.id)}
+                              className="p-1 rounded-md text-neutral-400 hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
+                              title="Xóa yêu cầu khỏi hàng đợi"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+
+                            {/* More options menu (...) */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveQueueMenuId(isMenuOpen ? null : item.id);
+                                }}
+                                className={`p-1 rounded-md transition-colors cursor-pointer ${
+                                  isMenuOpen ? "bg-slate-200 dark:bg-white/15 text-slate-900 dark:text-white" : "text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10"
+                                }`}
+                                title="Tùy chọn khác"
+                              >
+                                <MoreHorizontal size={14} />
+                              </button>
+
+                              {/* Popover Menu with Edit message */}
+                              {isMenuOpen && (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute right-0 bottom-full mb-1.5 w-36 rounded-xl bg-white dark:bg-[#1c1c24] border border-slate-200 dark:border-neutral-700/80 shadow-2xl py-1 z-30 animate-in fade-in zoom-in-95 duration-100"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSteerNowQueueItem(selectedChatId, item.id)}
+                                    className="w-full px-3 py-1.5 text-left text-xs text-amber-500 dark:text-amber-300 hover:text-amber-600 dark:hover:text-amber-200 hover:bg-amber-500/15 flex items-center gap-2 cursor-pointer transition-colors font-medium"
+                                    title="Ngắt lượt hiện tại và thực thi yêu cầu này ngay lập tức"
+                                  >
+                                    <Sparkles size={12} className="text-amber-500 dark:text-amber-400" />
+                                    <span>Steer now (Chạy ngay)</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditQueueItem(item)}
+                                    className="w-full px-3 py-1.5 text-left text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer transition-colors"
+                                  >
+                                    <Pencil size={12} className="text-neutral-400" />
+                                    <span>Edit message</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleRemoveQueueItem(selectedChatId, item.id);
+                                      setActiveQueueMenuId(null);
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left text-xs text-red-500 hover:bg-red-500/15 flex items-center gap-2 cursor-pointer transition-colors"
+                                  >
+                                    <Trash2 size={12} />
+                                    <span>Delete</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
           {/* Attached Files Preview Chips with Image Thumbnails & Lightbox */}
@@ -14699,13 +14753,14 @@ const selectedAgentTheme = getAgentColorTheme(
             {replyingToMsg && (
               <div
                 data-testid="composer-reply-banner"
-                className="mb-1 px-3 py-1.5 rounded-xl bg-slate-100/95 dark:bg-[#161622]/95 border border-slate-200 dark:border-[#2a2a3c] border-l-4 border-l-[#f8a87c] flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-150 shadow-xs text-left select-none"
+                style={{ borderLeftColor: selectedAgentTheme.primary }}
+                className="mb-1 px-3 py-1.5 rounded-xl bg-slate-100/95 dark:bg-[#161622]/95 border border-slate-200 dark:border-[#2a2a3c] border-l-4 flex items-center justify-between gap-2.5 animate-in fade-in slide-in-from-bottom-1 duration-150 shadow-xs text-left select-none"
               >
                 <div
                   onClick={() => scrollToOriginalMessage(replyingToMsg.id, replyingToMsg.snippet)}
                   className="min-w-0 flex-1 cursor-pointer"
                 >
-                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-[#f8a87c]">
+                  <div style={{ color: selectedAgentTheme.light || selectedAgentTheme.primary }} className="flex items-center gap-1.5 text-[11px] font-mono font-semibold">
                     <CornerUpLeft size={12} className="shrink-0" />
                     <span className="truncate">Đang trả lời {replyingToMsg.authorName}</span>
                   </div>

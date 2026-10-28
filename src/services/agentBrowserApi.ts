@@ -70,6 +70,32 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
   }
 }
 
+
+export interface BrowserInputPayload {
+  action: "click" | "scroll" | "type" | "key";
+  xRatio?: number;
+  yRatio?: number;
+  deltaX?: number;
+  deltaY?: number;
+  text?: string;
+  key?: string;
+}
+
+/** Forward touch click, wheel scroll, or key input from Mobile Fast View directly into the agent's active CDP tab. */
+export async function dispatchAgentBrowserInput(agentId: string, payload: BrowserInputPayload): Promise<boolean> {
+  try {
+    const id = bare(agentId);
+    const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/input`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    }, id);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export class DesktopAuthError extends Error {}
 
 // Pre-warmed signed desktop URLs per agentId+mode so mobile & desktop reuse valid 8h tokens without re-requesting
