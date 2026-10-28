@@ -14749,7 +14749,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         });
                       }}
                       disabled={isUploadingFile}
-                      className={`text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer p-1.5 rounded-full flex items-center justify-center shrink-0 ${
+                      className={`h-7 w-7 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer rounded-full flex items-center justify-center shrink-0 ${
                         isPlusMenuOpen ? "text-[#f8a87c] dark:text-[#f8a87c] rotate-45 scale-110" : "bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/[0.12]"
                       }`}
                       title="Add files, apps, or mention agents"
@@ -15220,19 +15220,19 @@ const selectedAgentTheme = getAgentColorTheme(
                   }}
                   className={`relative ${
                     isMultiline
-                      ? "flex flex-col gap-2 pt-2 pb-2.5 px-3 sm:pt-2 sm:pb-2.5 sm:px-3.5"
-                      : "flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5"
+                      ? "flex flex-col gap-2 pt-2 pb-2 px-2.5 sm:pt-2.5 sm:pb-2.5 sm:px-3 rounded-[22px]"
+                      : "flex items-center gap-2 px-1.5 py-1.5 rounded-full"
                   } bg-white dark:bg-[#14141c] border ${
                     isDraggingFiles
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
                       : isRecording
                       ? "border-red-500/60 ring-2 ring-red-500/20"
                       : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[var(--agent-color)]/50 focus-within:ring-1 focus-within:ring-[var(--agent-color)]/20"
-                  } rounded-[18px] shadow-xs transition-all overflow-hidden`}
+                  } shadow-xs transition-all overflow-hidden`}
                   style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
                 >
                   {isDraggingFiles && (
-                    <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-[18px] animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                    <div className={`absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] ${isMultiline ? "rounded-[22px]" : "rounded-full"} animate-in fade-in zoom-in-95 duration-150 pointer-events-none`}>
                       <Paperclip size={15} className="text-[#f8a87c] animate-bounce" />
                       <span className="text-xs font-mono font-semibold text-white tracking-wide">
                         Drop files here to attach to {selectedAgent.name}
