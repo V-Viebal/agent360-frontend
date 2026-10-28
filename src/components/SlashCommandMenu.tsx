@@ -95,7 +95,7 @@ export function SlashCommandMenu({ query, onSelect, onClose }: SlashCommandMenuP
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold text-white group-hover:text-[#f8a87c] transition-colors">
+                  <span className="font-mono text-xs font-semibold text-white group-hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors">
                     {cmd.command}
                   </span>
                   <span className="text-xs text-neutral-300 truncate">{cmd.label}</span>

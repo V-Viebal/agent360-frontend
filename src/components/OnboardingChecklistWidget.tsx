@@ -210,7 +210,7 @@ export function OnboardingChecklistWidget({
             className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 ${
               milestones.openedAgentDetail
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[var(--agent-primary)]/40"
             }`}
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -235,7 +235,7 @@ export function OnboardingChecklistWidget({
                 if (onToggleBotInfo) onToggleBotInfo();
                 recordMilestone("openedAgentDetail");
               }}
-              className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20"
+              className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)]"
             >
               <span>{isBotInfoCollapsed ? "Mở" : "Đóng"}</span>
               <ChevronRight size={11} />
@@ -247,7 +247,7 @@ export function OnboardingChecklistWidget({
             className={`p-2 rounded-xl border transition-all flex items-center justify-between gap-2 ${
               milestones.openedChatList
                 ? "bg-emerald-50/50 dark:bg-[#161622]/60 border-emerald-500/20 text-slate-700 dark:text-neutral-300"
-                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[#f8a87c]/40"
+                : "bg-slate-50 dark:bg-[#181826] border-slate-200 dark:border-[#2c2c3e] text-slate-900 dark:text-white hover:border-[var(--agent-primary)]/40"
             }`}
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -272,7 +272,7 @@ export function OnboardingChecklistWidget({
                 if (onToggleChatList) onToggleChatList();
                 recordMilestone("openedChatList");
               }}
-              className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20"
+              className="text-[10px] font-medium text-[#f8a87c] hover:underline cursor-pointer flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded bg-[#f8a87c]/10 hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)]"
             >
               <span>{isChatListCollapsed ? "Mở" : "Đóng"}</span>
               <ChevronRight size={11} />

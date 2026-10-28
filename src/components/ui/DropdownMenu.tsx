@@ -246,7 +246,7 @@ export function DropdownMenu({
             className="flex flex-col items-center justify-center pt-0.5 pb-2 cursor-grab active:cursor-grabbing shrink-0 touch-none select-none"
             aria-label="Kéo để đóng"
           >
-            <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full hover:bg-[#f8a87c] transition-colors" />
+            <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full hover:bg-[var(--agent-primary)] transition-colors" />
             {title && (
               <span className="text-[11px] font-medium text-slate-500 dark:text-neutral-400 mt-1.5 truncate max-w-[85%]">
                 {title}

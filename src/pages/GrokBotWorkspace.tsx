@@ -71,7 +71,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { chan
     <MessageSquare
       size={size}
       style={isSelected && activeColor ? { color: activeColor } : undefined}
-      className={isSelected ? (!activeColor ? "text-[#f8a87c]" : "") : "text-neutral-400"}
+      className={isSelected ? (!activeColor ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "") : "text-neutral-400"}
     />
   );
 }
@@ -683,12 +683,18 @@ function parseQuotedReplyFromContent(
     if (seenKeys.has(dedupeKey)) return;
     seenKeys.add(dedupeKey);
 
-    const previewUrl = resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
+    // If URL is an external Storage URL (e.g. https://storage.hmz.one/copaw/...), route previewUrl through Agent360 workspace file-download
+    // so authenticated blob preview & download work even if storage is private, while keeping storageUrl for external access.
+    const isExternalStorage = /^https?:\/\/[^/]*(?:storage\.|minio)/i.test(url);
+    const previewUrl = isExternalStorage
+      ? resolveUploadedAttachmentPreviewUrl(`media/${fileName}`, agentIdForUrl)
+      : resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
     const fmt = classifyAttachmentFormat(fileName || url);
     attachments.push({
       fileName,
       rawUrl: url,
       previewUrl,
+      storageUrl: isExternalStorage ? url : undefined,
       isImage: fmt.kind === "image",
       kind: fmt.kind,
       ext: fmt.ext,
@@ -1747,7 +1753,7 @@ function AgentThinkingModal({
             >
               <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
                 <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono text-slate-700 dark:text-neutral-300 font-semibold">
-                  <Sparkles size={11} className="text-[#f8a87c]" />
+                  <Sparkles size={11} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                   <span>Luồng Điều Phối & Phối Hợp Thông Minh Trong Room</span>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
@@ -1916,7 +1922,7 @@ function AgentThinkingModal({
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
                           isWaveActive
                             ? "bg-[#f8a87c]/15 border-[#f8a87c] text-slate-900 dark:text-white font-semibold shadow-2xs"
-                            : "bg-white dark:bg-[#181824] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#2a2a3a] hover:border-[#f8a87c]/50"
+                            : "bg-white dark:bg-[#181824] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#2a2a3a] hover:border-[var(--agent-primary)]/50"
                         }`}
                       >
                         <span>Đợt #{w.waveNo}</span>
@@ -1980,7 +1986,7 @@ function AgentThinkingModal({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-slate-900 dark:text-white">
-                    <span className="h-5 w-5 rounded-lg bg-[#f8a87c]/15 border border-[#f8a87c]/40 flex items-center justify-center text-[#e0682b] dark:text-[#f8a87c] shrink-0">
+                    <span className="h-5 w-5 rounded-lg bg-[#f8a87c]/15 border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0">
                       <Sparkles size={11} />
                     </span>
                     <span>
@@ -2053,7 +2059,7 @@ function AgentThinkingModal({
                         <span
                           data-testid="flow-tree-playbook-badge"
                           data-playbook={playbook}
-                          className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/35 font-semibold"
+                          className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold"
                         >
                           {playbookLabel}
                         </span>
@@ -2264,7 +2270,7 @@ function AgentThinkingModal({
                                         Vòng {branchTurn.round_no || 1}
                                       </span>
                                       {isFocusedBranch && (
-                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/20 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
+                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-semibold">
                                           Đang chọn
                                         </span>
                                       )}
@@ -2400,7 +2406,7 @@ function AgentThinkingModal({
                                       [branchTurn.id]: !prev[branchTurn.id],
                                     }))
                                   }
-                                  className="text-[10px] font-mono text-[#e0682b] dark:text-[#f8a87c] hover:underline cursor-pointer"
+                                  className="text-[10px] font-mono text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] hover:underline cursor-pointer"
                                 >
                                   {isBranchExpanded ? "Thu gọn" : "Xem chi tiết"}
                                 </button>
@@ -2458,10 +2464,10 @@ function AgentThinkingModal({
                           />
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-mono font-bold text-[#e0682b] dark:text-[#f8a87c] truncate">
+                              <span className="text-xs font-mono font-bold text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] truncate">
                                 👑 @{hostSlug}
                               </span>
-                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] font-semibold">
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-semibold">
                                 Chủ session tự chạy
                               </span>
                             </div>
@@ -2470,14 +2476,14 @@ function AgentThinkingModal({
                             </p>
                           </div>
                         </div>
-                        <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 shrink-0 font-semibold">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] shrink-0 font-semibold">
                           <Sparkles size={10} />
                           <span>Co-Execute</span>
                         </span>
                       </div>
 
                       <div className="pl-2.5 border-l-2 border-dashed border-[#f8a87c]/50 space-y-1.5">
-                        <div className="text-[10px] font-mono font-semibold text-[#e0682b] dark:text-[#f8a87c]">
+                        <div className="text-[10px] font-mono font-semibold text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)]">
                           Nhánh Tự Thực Thi Của Chủ Session (Do Manager Quyết Định)
                         </div>
                         <div className="text-[11px] text-slate-600 dark:text-neutral-300 leading-relaxed bg-slate-50 dark:bg-[#13131c] p-2 rounded-lg border border-slate-200/60 dark:border-[#242436]">
@@ -2631,7 +2637,7 @@ function AgentThinkingModal({
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 font-semibold">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold">
                       {activeWave.isMultiAgentWave
                         ? activeWave.triageMeta.hostShouldSelfExecute
                           ? "Manager: Tự chạy + Đại diện tổng hợp"
@@ -2787,8 +2793,8 @@ function AgentThinkingModal({
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2 text-neutral-600 dark:text-neutral-200 font-mono text-[11px]">
-                            <Sparkles size={12} className="text-[#f8a87c] shrink-0" />
-                            <span className="px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-[#1e1e2c] text-[#f8a87c] font-semibold">
+                            <Sparkles size={12} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0" />
+                            <span className="px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-[#1e1e2c] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-semibold">
                               #{rt.turn_no || idx + 1}
                             </span>
                             <span className="font-semibold">{flowTitle}</span>
@@ -3016,7 +3022,7 @@ function AgentThinkingModal({
           {/* Empty / Initializing Fallback */}
           {reasoningItems.length === 0 && allToolItems.length === 0 && roomWaveTurns.length === 0 && !activeWave && (
             <div className="p-8 flex flex-col items-center justify-center text-center space-y-3">
-              <Loader2 size={24} className="text-[#f8a87c] animate-spin" />
+              <Loader2 size={24} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] animate-spin" />
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-800 dark:text-neutral-200">
                   {activeRespondingAgent?.statusText || `${displayAgent} đang khởi tạo suy luận & công cụ...`}
@@ -3077,7 +3083,7 @@ function TurnExecutionAccordion({
         data-testid="open-thinking-modal-btn"
         type="button"
         onClick={handleOpen}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-[#14141c] hover:bg-neutral-200 dark:hover:bg-[#1a1a24] border border-neutral-200 dark:border-[#22222e] hover:border-[var(--agent-primary)]/40 text-xs font-mono text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer shadow-xs select-none"
       >
         {isStreamingThisTurn ? (
           <AgentAvatar
@@ -3096,7 +3102,7 @@ function TurnExecutionAccordion({
             ? `${displayAgent} đang suy nghĩ & chạy công cụ (${totalToolCount} bước)`
             : `Thinking · ${displayAgent} (${totalToolCount} ${totalToolCount === 1 ? "tool call" : "tool calls"}${reasoningItems.length > 0 ? " + suy nghĩ" : ""})`}
         </span>
-        <span className="text-[10px] text-[#f8a87c] font-sans underline ml-1">
+        <span className="text-[10px] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-sans underline ml-1">
           Xem chi tiết
         </span>
       </button>
@@ -3207,7 +3213,7 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
       >
         <div className="flex items-center gap-1.5 min-w-0">
           {isCalling ? (
-            <Loader2 size={11} className="text-[#f8a87c] animate-spin shrink-0" />
+            <Loader2 size={11} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] animate-spin shrink-0" />
           ) : isError ? (
             <span className="h-3.5 w-3.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
               <AlertCircle size={9} />
@@ -3223,7 +3229,7 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
           <span
             className={`text-[9px] px-1 py-0 rounded font-mono font-normal ${
               isCalling
-                ? "bg-[#f8a87c]/10 text-[#f8a87c]"
+                ? "bg-[#f8a87c]/10 text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                 : isError
                 ? "bg-red-500/10 text-red-400 border border-red-500/20"
                 : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
@@ -3491,7 +3497,7 @@ function InlineSmartLink({ href, label, themeColor }: { href: string; label?: st
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 my-0.5 mx-1 rounded-md bg-slate-100/90 hover:bg-slate-200/90 dark:bg-[#181824] dark:hover:bg-[#232336] border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-medium no-underline group shrink-0 max-w-full align-middle select-none shadow-2xs hover:border-[#f8a87c]/40"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 my-0.5 mx-1 rounded-md bg-slate-100/90 hover:bg-slate-200/90 dark:bg-[#181824] dark:hover:bg-[#232336] border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-medium no-underline group shrink-0 max-w-full align-middle select-none shadow-2xs hover:border-[var(--agent-primary)]/40"
       title={`${displayLabel} (${href})`}
     >
       <span className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center overflow-hidden bg-white/40 dark:bg-black/30">
@@ -3628,7 +3634,7 @@ function renderSearchMatchHighlight(text: string, query: string) {
     part.toLowerCase() === trimmed.toLowerCase() ? (
       <mark
         key={i}
-        className="bg-[#f8a87c]/30 text-[#f8a87c] font-semibold px-0.5 rounded transition-colors"
+        className="bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-semibold px-0.5 rounded transition-colors"
       >
         {part}
       </mark>
@@ -3939,7 +3945,7 @@ function FormattedMessageContent({
                   <div key={blkIdx} className="my-2.5 max-w-full">
                     <div
                       onClick={() => onImageClick?.(src, alt)}
-                      className="group relative inline-block max-w-full rounded-xl overflow-hidden border border-slate-200 dark:border-[#2b2b3c] bg-white dark:bg-[#0c0c12] shadow-sm hover:border-[#f8a87c]/50 transition-all cursor-zoom-in"
+                      className="group relative inline-block max-w-full rounded-xl overflow-hidden border border-slate-200 dark:border-[#2b2b3c] bg-white dark:bg-[#0c0c12] shadow-sm hover:border-[var(--agent-primary)]/50 transition-all cursor-zoom-in"
                     >
                       <img
                         src={src}
@@ -4086,21 +4092,45 @@ function SelkiesViewer({
     };
   }, []);
 
-  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey`
+  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey` with automatic retry on transient 5xx/network errors
   useEffect(() => {
     if (!url || !agentId) return;
     let alive = true;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let retryCount = 0;
     setError("");
     setIframeLoaded(false);
-    focusAgentBrowser(agentId).catch(() => {});
-    issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
-      .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
-      .catch((e) => {
-        if (!alive) return;
-        setSrc("");
-        setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
-      });
-    return () => { alive = false; };
+
+    const connectDesktop = () => {
+      if (!alive) return;
+      focusAgentBrowser(agentId).catch(() => {});
+      issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
+        .then((signed) => {
+          if (!alive) return;
+          setError("");
+          setSrc(`${signed}#${mode}`);
+        })
+        .catch((e) => {
+          if (!alive) return;
+          if (e instanceof DesktopAuthError) {
+            setSrc("");
+            setError("auth");
+            return;
+          }
+          const msg = String(e?.message || e);
+          setSrc("");
+          setError(msg);
+          retryCount += 1;
+          const delayMs = retryCount <= 5 ? 2000 : 5000;
+          retryTimer = setTimeout(connectDesktop, delayMs);
+        });
+    };
+
+    connectDesktop();
+    return () => {
+      alive = false;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [url, attempt, mode, reloadKey]);
 
   // When switching between agents that share the same Selkies desktop host, keep the stream alive and smoothly focus the target profile window
@@ -4136,7 +4166,7 @@ function SelkiesViewer({
     >
       {error && (
         <>
-          <AgentBrowserPreview agentId={agentId} enabled interactive={useMobileLivePreview} />
+          <AgentBrowserPreview agentId={agentId} enabled interactive />
           <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
             {error === "auth" ? (
               <>
@@ -4154,7 +4184,7 @@ function SelkiesViewer({
                   <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
                 </form>
               </>
-            ) : `Desktop unavailable (${error}) · showing preview`}
+            ) : `Desktop reconnecting (${error}) · interactive preview active`}
           </div>
         </>
       )}
@@ -4452,7 +4482,7 @@ function AgentBrowserPreview({
             <span
               key={ripple.id}
               style={{ left: `${ripple.x - 14}px`, top: `${ripple.y - 14}px` }}
-              className="pointer-events-none absolute h-7 w-7 rounded-full border-2 border-[#f8a87c] bg-[#f8a87c]/30 animate-ping"
+              className="pointer-events-none absolute h-7 w-7 rounded-full border-2 border-[#f8a87c] bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] animate-ping"
             />
           )}
           {interactive && (
@@ -5973,10 +6003,39 @@ ${targetItem.text}`;
   const [previewModalText, setPreviewModalText] = useState<string | null>(null);
   const [isLoadingPreviewModalText, setIsLoadingPreviewModalText] = useState<boolean>(false);
 
+  const triggerAttachmentDownload = async (att: ParsedChatAttachmentItem) => {
+    triggerHaptic(10);
+    // Try internal authenticated workspace download first if it's an internal endpoint or bare filename
+    const match = (att.previewUrl || att.rawUrl).match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
+    if (match) {
+      const ag = decodeURIComponent(match[1]);
+      const p = decodeURIComponent(match[2]);
+      const ok = await downloadWorkspaceFile(ag, p, att.fileName);
+      if (ok) return;
+    }
+    // If rawUrl is a relative workspace path or filename without http, try downloading from current agent workspace
+    if (!/^(https?:|blob:|data:)/i.test(att.rawUrl)) {
+      const ag = selectedAgent?.slug || selectedAgent?.id || selectedAgentId || "default";
+      const cleanRel = att.rawUrl.replace(/^\/+/, "");
+      const ok = await downloadWorkspaceFile(ag, cleanRel.includes("/") ? cleanRel : `media/${cleanRel}`, att.fileName);
+      if (ok) return;
+    }
+    // Fallback to storageUrl if present, or previewUrl
+    const targetHref = att.storageUrl || (att.previewUrl.startsWith("blob:") ? att.previewUrl : `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`);
+    const a = document.createElement("a");
+    a.href = targetHref;
+    a.download = att.fileName;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleOpenAttachmentPreview = async (att: ParsedChatAttachmentItem) => {
     let resolvedAtt = { ...att };
 
-    // If attachment points to internal workspace file, upgrade to a signed token URL
+    // If attachment points to internal workspace file, fetch authenticated Blob URL (works on all backends) or signed URL
     const isInternalDownload = att.previewUrl.includes("/workspace/file-download");
     if (isInternalDownload) {
       try {
@@ -5984,13 +6043,18 @@ ${targetItem.text}`;
         if (match) {
           const agentSlug = decodeURIComponent(match[1]);
           const filePath = decodeURIComponent(match[2]);
-          const signed = await getSignedWorkspaceFileUrl(agentSlug, filePath, true);
-          if (signed) {
-            resolvedAtt.previewUrl = signed;
+          const blobUrl = await fetchWorkspaceFileBlobUrl(agentSlug, filePath, true);
+          if (blobUrl) {
+            resolvedAtt.previewUrl = blobUrl;
+          } else {
+            const signed = await getSignedWorkspaceFileUrl(agentSlug, filePath, true);
+            if (signed) {
+              resolvedAtt.previewUrl = signed;
+            }
           }
         }
       } catch (err) {
-        console.warn("[AttachmentPreview] Failed to resolve signed file url:", err);
+        console.warn("[AttachmentPreview] Failed to resolve workspace file preview:", err);
       }
     }
 
@@ -10836,13 +10900,13 @@ const selectedAgentTheme = getAgentColorTheme(
                         }}
                         className={`h-8 w-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer select-none border ${
                           disabledAgentsExpanded
-                            ? "bg-neutral-200 dark:bg-white/[0.08] text-[#f8a87c] border-[#f8a87c]/30"
+                            ? "bg-neutral-200 dark:bg-white/[0.08] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[#f8a87c]/30"
                             : "bg-transparent hover:bg-neutral-200/50 dark:hover:bg-white/[0.04] text-neutral-400 hover:text-neutral-200 border-transparent"
                         }`}
                         title={disabledAgentsExpanded ? `Thu gọn ${disabledFilteredAgents.length} agent đã tắt` : `Mở rộng ${disabledFilteredAgents.length} agent đã tắt`}
                       >
                         {disabledAgentsExpanded ? (
-                          <ChevronDown size={14} className="text-[#f8a87c]" />
+                          <ChevronDown size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                         ) : (
                           <ChevronRight size={14} className="text-neutral-400" />
                         )}
@@ -10909,7 +10973,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             }}
                           />
                           <DropdownMenuItem
-                            icon={<Plus size={13} className="text-[#f8a87c]" />}
+                            icon={<Plus size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
                             label="Tạo Chat mới với Agent"
                             onClick={() => {
                               handleSelectAgent(activeAg);
@@ -10919,7 +10983,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             }}
                           />
                           <DropdownMenuItem
-                            icon={<Settings size={13} className="text-[#f8a87c]" />}
+                            icon={<Settings size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
                             label="Cài đặt Agent (Settings)"
                             onClick={() => {
                               handleSelectAgent(activeAg);
@@ -10984,7 +11048,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 title={`${currentUser?.name || "User"} (${currentUser?.roles?.[0] || "Operator"}) - Cài đặt`}
               >
                 {currentUser?.picture ? (
-                  <div className="h-8 w-8 rounded-full overflow-hidden border border-[#3a3a4c] hover:border-[#f8a87c] bg-[#2a2a34]">
+                  <div className="h-8 w-8 rounded-full overflow-hidden border border-[#3a3a4c] hover:border-[var(--agent-primary)] bg-[#2a2a34]">
                     <img src={currentUser.picture} alt="Avatar" className="w-full h-full object-cover" />
                   </div>
                 ) : (
@@ -11149,22 +11213,22 @@ const selectedAgentTheme = getAgentColorTheme(
               <div className="p-2 border-b border-neutral-200/80 dark:border-[#1c1c22]">
                 <a
                   href="/admin"
-                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[#f8a87c]/20 via-[#f8a87c]/10 to-transparent border border-[#f8a87c]/40 hover:border-[#f8a87c] hover:bg-[#f8a87c]/25 text-[#f8a87c] transition-all group shadow-2xs select-none cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 rounded-xl bg-gradient-to-r from-[var(--agent-bg-light)] via-[var(--agent-bg-dark)] to-transparent border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] hover:border-[var(--agent-primary)] hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-all group shadow-2xs select-none cursor-pointer"
                   title="Truy cập Bảng điều khiển Quản trị, phân quyền Member và quản lý Fleet"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/20 border border-[#f8a87c]/40 flex items-center justify-center text-[#f8a87c] shrink-0">
+                    <div className="h-7 w-7 rounded-lg bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0">
                       <Shield size={14} className="group-hover:scale-110 transition-transform" />
                     </div>
                     <div className="flex flex-col truncate text-left">
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-[#f8a87c] transition-colors flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors flex items-center gap-1.5">
                         Quản trị Hệ thống
-                        <span className="px-1.5 py-0.2 rounded-full bg-[#f8a87c]/30 text-[#f8a87c] text-[9px] font-sans font-bold uppercase">Admin</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] text-[9px] font-sans font-bold uppercase">Admin</span>
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate">Phân quyền Agent & User Directory</span>
                     </div>
                   </div>
-                  <ChevronRight size={14} className="text-[#f8a87c]/70 group-hover:translate-x-0.5 group-hover:text-[#f8a87c] transition-all shrink-0 ml-1" />
+                  <ChevronRight size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] opacity-75 group-hover:translate-x-0.5 group-hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-all shrink-0 ml-1" />
                 </a>
               </div>
             )}
@@ -11320,10 +11384,10 @@ const selectedAgentTheme = getAgentColorTheme(
                                   }}
                                   className={`hidden lg:flex p-1 rounded-lg transition-all cursor-pointer items-center justify-center ${
                                     activeAgentMenuId === ag.id
-                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)] bg-neutral-200 dark:bg-white/10 opacity-100"
                                       : ag.enabled === false || ag.status === "disabled"
-                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
-                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                      ? "text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
+                                      : "text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                                   }`}
                                   title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
                                 >
@@ -11349,7 +11413,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     }}
                                   />
                                   <DropdownMenuItem
-                                    icon={<Plus size={13} className="text-[#f8a87c]" />}
+                                    icon={<Plus size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
                                     label="Tạo Chat mới với Agent"
                                     onClick={() => {
                                       handleSelectAgent(ag);
@@ -11359,7 +11423,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     }}
                                   />
                                   <DropdownMenuItem
-                                    icon={<Settings size={13} className="text-[#f8a87c]" />}
+                                    icon={<Settings size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
                                     label="Cài đặt Agent (Settings)"
                                     onClick={() => {
                                       handleSelectAgent(ag);
@@ -11568,10 +11632,10 @@ const selectedAgentTheme = getAgentColorTheme(
                                   }}
                                   className={`hidden lg:flex p-1 rounded-lg transition-all cursor-pointer items-center justify-center ${
                                     activeAgentMenuId === ag.id
-                                      ? "text-[#f8a87c] bg-neutral-200 dark:bg-white/10 opacity-100"
+                                      ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)] bg-neutral-200 dark:bg-white/10 opacity-100"
                                       : ag.enabled === false || ag.status === "disabled"
-                                      ? "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
-                                      : "text-neutral-400 hover:text-[#f8a87c] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                      ? "text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-70 group-hover:opacity-100 focus:opacity-100"
+                                      : "text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] hover:bg-neutral-200/80 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                                   }`}
                                   title="Tùy chọn mở rộng cho Agent (Kích hoạt/Vô hiệu hóa, Ghim, Chi tiết)"
                                 >
@@ -11597,7 +11661,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     }}
                                   />
                                   <DropdownMenuItem
-                                    icon={<Plus size={13} className="text-[#f8a87c]" />}
+                                    icon={<Plus size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
                                     label="Tạo Chat mới với Agent"
                                     onClick={() => {
                                       handleSelectAgent(ag);
@@ -11607,7 +11671,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     }}
                                   />
                                   <DropdownMenuItem
-                                    icon={<Settings size={13} className="text-[#f8a87c]" />}
+                                    icon={<Settings size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
                                     label="Cài đặt Agent (Settings)"
                                     onClick={() => {
                                       handleSelectAgent(ag);
@@ -11886,7 +11950,7 @@ const selectedAgentTheme = getAgentColorTheme(
               >
                 {hasNoAgents ? (
                   <>
-                    <Shield size={14} className="text-[#f8a87c]" />
+                    <Shield size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                     <span className="truncate max-w-[160px] sm:max-w-[220px] text-xs text-neutral-900 dark:text-white font-mono">Chưa có Agent</span>
                   </>
                 ) : (
@@ -11993,7 +12057,7 @@ const selectedAgentTheme = getAgentColorTheme(
               </button>
 
               {inSessionSearchQuery && inSessionSearchQuery !== "__STARRED__" && (
-                <span className="text-[11px] text-[#f8a87c]">
+                <span className="text-[11px] text-[var(--agent-light)] dark:text-[var(--agent-dark)]">
                   {messages.filter((m) => m.content.toLowerCase().includes(inSessionSearchQuery.toLowerCase())).length} matches
                 </span>
               )}
@@ -12023,7 +12087,7 @@ const selectedAgentTheme = getAgentColorTheme(
               <EmptyState
                 size="lg"
                 badge="Skyer Autonomous Fleet • Standby"
-                icon={<Bot size={36} className="text-[#f8a87c] animate-pulse" />}
+                icon={<Bot size={36} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] animate-pulse" />}
                 title="Đang chờ phân công Agent"
                 description="Tài khoản của bạn đang được kết nối với Skyer. Vui lòng đợi Quản trị viên phân quyền hoặc làm mới để kiểm tra trạng thái."
                 action={{
@@ -12265,7 +12329,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     }}
                     className="mb-2 pl-2.5 pr-2 py-1.5 rounded-lg bg-black/[0.04] dark:bg-white/[0.06] border-l-2 border-[#f8a87c] cursor-pointer hover:bg-black/[0.08] dark:hover:bg-white/[0.1] transition-colors text-left select-none"
                   >
-                    <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-[#f8a87c]">
+                    <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-[var(--agent-light)] dark:text-[var(--agent-dark)]">
                       <CornerUpLeft size={10} className="shrink-0" />
                       <span className="truncate">{parsedReplyTo.authorName}</span>
                     </div>
@@ -12291,7 +12355,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100/90 dark:bg-[#171723] border border-slate-200/80 dark:border-[#2a2a3c] text-[10px] font-mono"
                       >
                         <div className="flex flex-wrap items-center gap-1.5 text-slate-700 dark:text-neutral-300">
-                          <Paperclip size={11} className="text-[#f8a87c] shrink-0" />
+                          <Paperclip size={11} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0" />
                           <span className="font-semibold">Bộ tài nguyên đính kèm ({parsedAttachments.length} tệp)</span>
                           {imageItems.length > 0 && (
                             <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
@@ -12322,16 +12386,11 @@ const selectedAgentTheme = getAgentColorTheme(
                             triggerHaptic(12);
                             parsedAttachments.forEach((att, idx) => {
                               setTimeout(() => {
-                                const a = document.createElement("a");
-                                a.href = `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`;
-                                a.download = att.fileName;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                              }, idx * 180);
+                                void triggerAttachmentDownload(att);
+                              }, idx * 220);
                             });
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#f8a87c]/15 hover:bg-[#f8a87c]/25 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/35 font-semibold transition-colors cursor-pointer shrink-0"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#f8a87c]/15 hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)] text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold transition-colors cursor-pointer shrink-0"
                           title="Tải xuống toàn bộ tài nguyên trong lượt phản hồi này"
                         >
                           <Download size={10} />
@@ -12348,7 +12407,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               e.stopPropagation();
                               handleOpenAttachmentPreview(att);
                             }}
-                            className="group/attimg relative rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black/10 dark:bg-black/30 max-w-[260px] sm:max-w-[320px] cursor-zoom-in shadow-xs hover:border-[#f8a87c]/60 transition-all"
+                            className="group/attimg relative rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black/10 dark:bg-black/30 max-w-[260px] sm:max-w-[320px] cursor-zoom-in shadow-xs hover:border-[var(--agent-primary)]/60 transition-all"
                             title={`Xem ảnh: ${att.fileName}`}
                           >
                             <img
@@ -12364,7 +12423,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                   href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
                                   download={att.fileName}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="hover:text-[#f8a87c] p-0.5"
+                                  className="hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] p-0.5"
                                   title="Tải ảnh"
                                 >
                                   <Download size={10} />
@@ -12391,7 +12450,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               <a
                                 href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
                                 download={att.fileName}
-                                className="text-neutral-300 hover:text-[#f8a87c] shrink-0"
+                                className="text-neutral-300 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0"
                                 title="Tải video"
                               >
                                 <Download size={11} />
@@ -12415,7 +12474,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               <a
                                 href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
                                 download={att.fileName}
-                                className="text-slate-400 hover:text-[#f8a87c] shrink-0"
+                                className="text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0"
                                 title="Tải audio"
                               >
                                 <Download size={12} />
@@ -12438,14 +12497,14 @@ const selectedAgentTheme = getAgentColorTheme(
                                 e.stopPropagation();
                                 handleOpenAttachmentPreview(att);
                               }}
-                              className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/90 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2d2d42] hover:border-[#f8a87c]/60 text-left shadow-2xs transition-all group/attfile max-w-full cursor-pointer"
+                              className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/90 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2d2d42] hover:border-[var(--agent-primary)]/60 text-left shadow-2xs transition-all group/attfile max-w-full cursor-pointer"
                               title={`Bấm để xem trước hoặc tải về: ${att.fileName}`}
                             >
                               <div className={`h-8 min-w-8 px-1.5 rounded-lg border flex items-center justify-center font-mono text-[10px] font-bold shrink-0 ${att.badgeColor}`}>
                                 {att.ext}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[240px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[#f8a87c] transition-colors">
+                                <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[240px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors">
                                   {att.fileName}
                                 </div>
                                 <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1 truncate max-w-[220px]">
@@ -12486,7 +12545,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     a.click();
                                     document.body.removeChild(a);
                                   }}
-                                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[#f8a87c] shrink-0 transition-colors cursor-pointer"
+                                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0 transition-colors cursor-pointer"
                                   title={`Tải xuống ${att.fileName}`}
                                 >
                                   <Download size={13} />
@@ -12679,7 +12738,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           }}
                           className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                             isExtendOpen
-                              ? "bg-[#f8a87c]/20 text-[#f8a87c]"
+                              ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                               : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
                           }`}
                           aria-label="Mở rộng"
@@ -13132,7 +13191,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                       handleOpenActiveThinkingModal(msg);
                                     }
                                   }}
-                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[#f8a87c]/20 border border-[#f8a87c]/30 align-middle select-none cursor-pointer transition-colors"
+                                  className="inline-flex items-center gap-1.5 ml-1.5 px-2 py-0.5 rounded-full bg-[#f8a87c]/10 hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] align-middle select-none cursor-pointer transition-colors"
                                 >
                                   <AgentAvatar
                                     agent={
@@ -13218,7 +13277,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           </div>
                           {/* Visual Karaoke sentence pill indicator during TTS readout */}
                           {speakingMsgId === msg.id && speakingSentence && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 my-1 rounded-xl bg-[#f8a87c]/10 border border-[#f8a87c]/30 text-xs font-mono text-[#f8a87c] animate-in fade-in select-none">
+                            <div className="flex items-center gap-2 px-3 py-1.5 my-1 rounded-xl bg-[#f8a87c]/10 border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] text-xs font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] animate-in fade-in select-none">
                               <Volume2 size={13} className="animate-pulse shrink-0" />
                               <span className="text-neutral-400 text-[10px] uppercase font-bold shrink-0">Reading:</span>
                               <span className="text-white italic truncate max-w-lg">"{speakingSentence}"</span>
@@ -13541,9 +13600,9 @@ const selectedAgentTheme = getAgentColorTheme(
                     setShowScrollBottomBtn(false);
                     smoothScrollToBottom();
                   }}
-                  className="h-8 w-8 rounded-full bg-white/95 dark:bg-[#181824]/95 border border-slate-200 dark:border-[#2a2a38] shadow-md hover:shadow-lg flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-[#f8a87c] hover:border-[#f8a87c]/60 transition-all cursor-pointer"
+                  className="h-8 w-8 rounded-full bg-white/95 dark:bg-[#181824]/95 border border-slate-200 dark:border-[#2a2a38] shadow-md hover:shadow-lg flex items-center justify-center text-slate-700 dark:text-neutral-200 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] hover:border-[var(--agent-primary)]/60 transition-all cursor-pointer"
                 >
-                  <ChevronDown size={16} className={isStreaming ? "animate-bounce text-[#f8a87c]" : ""} />
+                  <ChevronDown size={16} className={isStreaming ? "animate-bounce text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
                 </button>
               </Tooltip>
             </div>
@@ -13878,7 +13937,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           badgeColor: fmt.badgeColor,
                         });
                       }}
-                      className="max-w-[160px] truncate text-[11px] font-medium hover:text-[#f8a87c] cursor-pointer text-left"
+                      className="max-w-[160px] truncate text-[11px] font-medium hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] cursor-pointer text-left"
                       title={`Xem trước: ${f.file_name}`}
                     >
                       {f.file_name}
@@ -14215,7 +14274,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           id: "cmd-save-team-recipe",
                           title: "Lưu thành Team Recipe",
                           description: "Đóng gói đội hình & quy trình của phiên chat này thành Team Recipe tái sử dụng",
-                          icon: <Sparkles size={14} className="text-[#f8a87c]" />,
+                          icon: <Sparkles size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText((prev) => prev.replace(/(\/[a-zA-Z0-9_-]*)$/, "").trim());
@@ -14238,7 +14297,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           id: "cmd-attach-files",
                           title: "Attach files",
                           description: "Tải lên tệp hoặc thư mục từ máy",
-                          icon: <Paperclip size={14} className="text-[#f8a87c]" />,
+                          icon: <Paperclip size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText((prev) => prev.replace(/(\/[a-zA-Z0-9_-]*)$/, ""));
@@ -14299,7 +14358,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           id: "cmd-agent-settings",
                           title: "Agent Settings",
                           description: "Mở cài đặt chuyên sâu của Agent (Model, Apps, A2A, Cron, Memory)",
-                          icon: <Settings size={14} className="text-[#f8a87c]" />,
+                          icon: <Settings size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText("");
@@ -14379,7 +14438,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         id: "action-files-folders",
                         title: "Files and folders",
                         description: "Tải lên tệp hoặc thư mục mã nguồn từ máy",
-                        icon: <Paperclip size={14} className="text-[#f8a87c]" />,
+                        icon: <Paperclip size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
                         action: () => {
                           setIsPlusMenuOpen(false);
                           setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
@@ -14859,7 +14918,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               <span className="truncate text-[11px]">{app.name}</span>
                             </div>
                             <span className={`text-[9px] font-mono shrink-0 ${
-                              isAlreadyAdded ? "text-amber-400 font-semibold" : "text-neutral-500 group-hover:text-[#f8a87c]"
+                              isAlreadyAdded ? "text-amber-400 font-semibold" : "text-neutral-500 group-hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)]"
                             }`}>
                               {isAlreadyAdded ? "Added" : "+Tool"}
                             </span>
@@ -14899,7 +14958,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             setAgentSettingsModalTab("subagents");
                             setIsAgentSettingsModalOpen(true);
                           }}
-                          className="p-1 rounded-md text-neutral-400 hover:text-[#f8a87c] hover:bg-white/5 transition-colors cursor-pointer"
+                          className="p-1 rounded-md text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] hover:bg-white/5 transition-colors cursor-pointer"
                           aria-label="View Subagents in sidebar"
                         >
                           <ExternalLink size={12} />
@@ -15075,12 +15134,12 @@ const selectedAgentTheme = getAgentColorTheme(
                       }}
                       disabled={isUploadingFile}
                       className={`h-7 w-7 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer rounded-full flex items-center justify-center shrink-0 ${
-                        isPlusMenuOpen ? "text-[#f8a87c] dark:text-[#f8a87c] rotate-45 scale-110" : "bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/[0.12]"
+                        isPlusMenuOpen ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] rotate-45 scale-110" : "bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/[0.12]"
                       }`}
                       title="Add files, apps, or mention agents"
                     >
                       {isUploadingFile ? (
-                        <Loader2 size={16} className="animate-spin text-[#f8a87c]" />
+                        <Loader2 size={16} className="animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                       ) : (
                         <Plus size={16} className="transition-transform duration-200" />
                       )}
@@ -15100,7 +15159,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 <button
                   type="button"
                   onClick={() => setIsStarredShortcutsOpen(true)}
-                  className="text-neutral-400 hover:text-[#f8a87c] transition-colors cursor-pointer p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/[0.06] shrink-0 flex items-center justify-center relative"
+                  className="text-neutral-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/[0.06] shrink-0 flex items-center justify-center relative"
                   title="Đã đánh dấu sao & Phím tắt hệ thống (Ctrl+/)"
                 >
                   <Command size={14} />
@@ -15558,7 +15617,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 >
                   {isDraggingFiles && (
                     <div className={`absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] ${isMultiline ? "rounded-[22px]" : "rounded-full"} animate-in fade-in zoom-in-95 duration-150 pointer-events-none`}>
-                      <Paperclip size={15} className="text-[#f8a87c] animate-bounce" />
+                      <Paperclip size={15} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] animate-bounce" />
                       <span className="text-xs font-mono font-semibold text-white tracking-wide">
                         Drop files here to attach to {selectedAgent.name}
                       </span>
@@ -15955,7 +16014,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
                 {selectedChatIds.length > 0 && (
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[9px] font-mono text-[#f8a87c] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.5 rounded border border-[#f8a87c]/20">
+                    <span className="text-[9px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-semibold bg-[#f8a87c]/10 px-1.5 py-0.5 rounded border border-[#f8a87c]/20">
                       {selectedChatIds.length}/{filteredChats.length}
                     </span>
                     <Tooltip content={`Xóa ${selectedChatIds.length} phiên đã chọn`} placement="bottom" minWidth={140}>
@@ -16613,7 +16672,7 @@ ${chat.id}`);
                     className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
                     aria-label={t("computer.reloadProfileBtn")}
                   >
-                    <RefreshCw size={13} className={isReloadingBrowser ? "animate-spin text-[#f8a87c]" : ""} />
+                    <RefreshCw size={13} className={isReloadingBrowser ? "animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
                   </button>
                 </Tooltip>
 
@@ -17365,7 +17424,7 @@ ${chat.id}`);
                                         className={`px-1.5 py-0.5 rounded text-[9px] font-mono transition-colors cursor-pointer border ${
                                           isSelectedExt
                                             ? "text-black font-semibold shadow-xs"
-                                            : "bg-slate-50 dark:bg-[#121218] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#242432] hover:border-[#f8a87c]/40"
+                                            : "bg-slate-50 dark:bg-[#121218] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#242432] hover:border-[var(--agent-primary)]/40"
                                         }`}
                                       >
                                         .{ext} <span className="opacity-60">{count}</span>
@@ -17408,7 +17467,7 @@ ${chat.id}`);
                           >
                             <RefreshCw
                               size={12}
-                              className={isLoadingTree ? "animate-spin text-[#f8a87c]" : ""}
+                              className={isLoadingTree ? "animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""}
                             />
                           </button>
                         </Tooltip>
@@ -17514,7 +17573,7 @@ ${chat.id}`);
                                   {libraryGroupMode === "folder" ? (
                                     <Folder size={11} className="text-amber-400 shrink-0" />
                                   ) : (
-                                    <Clock size={11} className="text-[#f8a87c] shrink-0" />
+                                    <Clock size={11} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0" />
                                   )}
                                   <span className="truncate">{groupKey}</span>
                                 </span>
@@ -17546,7 +17605,7 @@ ${chat.id}`);
                               aria-label="Previous page"
                               disabled={safePage <= 1}
                               onClick={() => setLibraryPage((p) => Math.max(1, p - 1))}
-                              className="p-1 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
+                              className="p-1 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[var(--agent-primary)]/40 cursor-pointer disabled:cursor-not-allowed"
                             >
                               <ChevronLeft size={11} />
                             </button>
@@ -17562,7 +17621,7 @@ ${chat.id}`);
                               aria-label="Next page"
                               disabled={safePage >= totalPages}
                               onClick={() => setLibraryPage((p) => Math.min(totalPages, p + 1))}
-                              className="p-1 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[#f8a87c]/40 cursor-pointer disabled:cursor-not-allowed"
+                              className="p-1 rounded bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] text-slate-700 dark:text-neutral-300 disabled:opacity-40 hover:border-[var(--agent-primary)]/40 cursor-pointer disabled:cursor-not-allowed"
                             >
                               <ChevronRight size={11} />
                             </button>
@@ -17594,7 +17653,7 @@ ${chat.id}`);
                                     downloadWorkspaceFile(targetId, selectedFilePath, selectedFilePath.split("/").pop());
                                   }
                                 }}
-                                className="p-1 rounded bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] hover:bg-[#f8a87c]/25 cursor-pointer"
+                                className="p-1 rounded bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)] cursor-pointer"
                               >
                                 <Download size={11} />
                               </button>
@@ -17605,7 +17664,7 @@ ${chat.id}`);
                         <div className="flex-1 p-2.5 overflow-auto font-mono text-[10px] text-slate-700 dark:text-neutral-300 select-text">
                           {isLoadingFile ? (
                             <div className="flex items-center justify-center h-32 text-neutral-500 gap-2">
-                              <Loader2 size={14} className="animate-spin text-[#f8a87c]" />
+                              <Loader2 size={14} className="animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                               <span>Loading preview...</span>
                             </div>
                           ) : fileBlobUrl && (selectedLibraryNode?.previewKind === "image" || selectedLibraryNode?.category === "images") ? (
@@ -17866,16 +17925,14 @@ ${chat.id}`);
                     <span>Cloud Storage</span>
                   </a>
                 )}
-                <a
-                  href={`${previewModalFile.previewUrl}${previewModalFile.previewUrl.includes("?") ? "&" : "?"}download=1`}
-                  download={previewModalFile.fileName}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 transition-opacity"
+                <button
+                  type="button"
+                  onClick={() => triggerAttachmentDownload(previewModalFile)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 transition-opacity cursor-pointer"
                 >
                   <Download size={13} />
                   <span>Tải xuống</span>
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={() => setPreviewModalFile(null)}
@@ -17904,7 +17961,7 @@ ${chat.id}`);
                 </div>
               ) : isLoadingPreviewModalText ? (
                 <div className="m-auto flex items-center gap-2 text-xs font-mono text-neutral-400">
-                  <Loader2 size={15} className="animate-spin text-[#f8a87c]" />
+                  <Loader2 size={15} className="animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                   <span>Đang tải nội dung tệp...</span>
                 </div>
               ) : previewModalText !== null ? (
@@ -17928,16 +17985,14 @@ ${chat.id}`);
                     Định dạng .{previewModalFile.ext} sẵn sàng tải về máy để xem hoặc chỉnh sửa đầy đủ.
                   </p>
                   <div className="pt-2">
-                    <a
-                      href={`${previewModalFile.previewUrl}${previewModalFile.previewUrl.includes("?") ? "&" : "?"}download=1`}
-                      download={previewModalFile.fileName}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 transition-opacity shadow-sm"
+                    <button
+                      type="button"
+                      onClick={() => triggerAttachmentDownload(previewModalFile)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f8a87c] text-black font-semibold text-xs hover:opacity-90 transition-opacity shadow-sm cursor-pointer"
                     >
                       <Download size={14} />
                       <span>Tải xuống {previewModalFile.fileName}</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}
@@ -18105,7 +18160,7 @@ ${chat.id}`);
                 >
                   <RotateCw size={13} />
                   {lightboxRotation !== 0 && (
-                    <span className="text-[9px] text-[#f8a87c] font-bold">{lightboxRotation}°</span>
+                    <span className="text-[9px] text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-bold">{lightboxRotation}°</span>
                   )}
                 </button>
 
@@ -18189,7 +18244,7 @@ ${chat.id}`);
                 >
                   <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider border-b border-white/10 pb-1 flex items-center justify-between gap-4">
                     <span>Image Metadata</span>
-                    <span className="text-[#f8a87c]">EXIF / Info</span>
+                    <span className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]">EXIF / Info</span>
                   </div>
                   <div className="flex items-center justify-between gap-6 text-neutral-300">
                     <span className="text-neutral-500">Dimensions:</span>
@@ -18322,7 +18377,7 @@ ${chat.id}`);
                     <span className="text-xs font-medium text-white">{ag.name}</span>
                     <span className="text-[10px] text-neutral-500">{ag.node}</span>
                   </div>
-                  <ArrowRight size={13} className="text-[#f8a87c]" />
+                  <ArrowRight size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                 </div>
               ))}
             </div>
@@ -18347,7 +18402,7 @@ ${chat.id}`);
               <div>
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Xóa các phiên đã chọn?</h4>
                 <p className="text-xs text-slate-600 dark:text-neutral-400 mt-0.5 leading-relaxed">
-                  Bạn có chắc muốn xóa <span className="text-[#f8a87c] font-semibold">{selectedChatIds.length}</span> phiên hội thoại đã đánh dấu chọn không? Thao tác này không thể hoàn tác.
+                  Bạn có chắc muốn xóa <span className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] font-semibold">{selectedChatIds.length}</span> phiên hội thoại đã đánh dấu chọn không? Thao tác này không thể hoàn tác.
                 </p>
               </div>
             </div>
@@ -18505,7 +18560,7 @@ ${chat.id}`);
               <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
                 <AgentAvatar agent={mobileActionAgent} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Agent Quick Actions</span>
+                  <span className="text-[10px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] uppercase font-bold block">Agent Quick Actions</span>
                   <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{mobileActionAgent.name}</h4>
                 </div>
               </div>
@@ -18543,7 +18598,7 @@ ${chat.id}`);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Plus size={15} className="text-[#f8a87c]" />
+                <Plus size={15} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                 <span>Tạo Chat mới với Agent (New Session)</span>
               </button>
 
@@ -18558,7 +18613,7 @@ ${chat.id}`);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Settings size={15} className="text-[#f8a87c]" />
+                <Settings size={15} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                 <span>Cài đặt Chuyên sâu Agent (Agent Settings)</span>
               </button>
 
@@ -18595,7 +18650,7 @@ ${chat.id}`);
             {/* Header / Session Title */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#22222e]">
               <div className="min-w-0 flex-1 pr-2">
-                <span className="text-[10px] font-mono text-[#f8a87c] uppercase font-bold block">Session Actions</span>
+                <span className="text-[10px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] uppercase font-bold block">Session Actions</span>
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{mobileActionChat.title}</h4>
               </div>
               <button
@@ -18647,7 +18702,7 @@ ${chat.id}`);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Sparkles size={15} className="text-[#f8a87c]" />
+                <Sparkles size={15} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                 <span>Lưu thành Team Recipe (Save Team Recipe)</span>
               </button>
 
@@ -18731,7 +18786,7 @@ ${chat.id}`);
                             setMobileActionMsg(null);
                           }}
                           className={`h-6 w-6 rounded-full flex items-center justify-center text-[15px] leading-none transition-transform active:scale-125 hover:scale-115 cursor-pointer shrink-0 ${
-                            isSelected ? "bg-[#f8a87c]/30 ring-1 ring-[#f8a87c]" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                            isSelected ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] ring-1 ring-[#f8a87c]" : "hover:bg-slate-100 dark:hover:bg-white/10"
                           }`}
                           aria-label={`Thả ${emoji}`}
                         >

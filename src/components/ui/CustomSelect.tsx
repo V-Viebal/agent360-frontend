@@ -221,7 +221,7 @@ export function CustomSelect({
           title={selectedOption ? `${selectedOption.label}${selectedOption.description ? ` — ${selectedOption.description}` : ""}` : placeholder}
           className={
             iconOnly
-              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[#f8a87c]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
+              ? `flex items-center justify-center h-7 w-7 rounded-lg bg-[#161620] hover:bg-[#20202c] border border-[#262634] hover:border-[var(--agent-primary)]/40 text-neutral-400 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
               : triggerClassName
               ? `flex items-center justify-between gap-1.5 transition-all cursor-pointer min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed ${triggerClassName}`
               : `flex items-center justify-between gap-1.5 bg-white dark:bg-[#181820] hover:bg-slate-50 dark:hover:bg-[#20202a] text-slate-800 dark:text-neutral-200 border border-slate-200 dark:border-[#2a2a38] hover:border-slate-300 dark:hover:border-[#3a3a4c] rounded-lg px-2 py-1 text-[11px] font-sans transition-all cursor-pointer shadow-xs min-w-0 max-w-full disabled:opacity-50 disabled:cursor-not-allowed`

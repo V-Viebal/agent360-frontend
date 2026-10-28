@@ -37,7 +37,7 @@ export function AgentPill({
     <div
       onClick={onClick}
       className={`inline-flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-[#161620] border border-slate-200 dark:border-[#222230] select-none ${
-        onClick ? "cursor-pointer hover:border-[#f8a87c]/40 transition-colors" : ""
+        onClick ? "cursor-pointer hover:border-[var(--agent-primary)]/40 transition-colors" : ""
       } ${isSm ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-xs"} ${className}`}
     >
       {/* Avatar Icon */}

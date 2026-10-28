@@ -46,7 +46,7 @@ export function EmptyState({
     let btnClass = "px-4 py-2 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer select-none shadow-xs";
 
     if (isPrimary) {
-      btnClass += " bg-[#f8a87c] hover:bg-[#f5935f] text-black shadow-md shadow-[#f8a87c]/20 hover:scale-[1.02] active:scale-[0.98]";
+      btnClass += " bg-[#f8a87c] hover:opacity-90 text-black shadow-md shadow-[#f8a87c]/20 hover:scale-[1.02] active:scale-[0.98]";
     } else if (isOutline) {
       btnClass += " bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 border border-slate-300 dark:border-white/15 text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white";
     } else if (isSecondary) {

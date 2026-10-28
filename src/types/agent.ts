@@ -17,6 +17,8 @@ export interface AgentSession {
   status?: string;
   is_running?: boolean;
   isRunning?: boolean;
+  pinned?: boolean;
+  archived?: boolean;
 }
 
 export interface ToolCallItem {
@@ -106,6 +108,7 @@ export interface SessionCollaborationRoom {
   active_run_id?: string | null;
   active_round?: number;
   run_state?: string | null;
+  pinned_message_ids?: string[] | null;
 }
 
 export interface ReplyToMessageInfo {
@@ -122,6 +125,7 @@ export interface ChatMessage {
   textSegments?: string[];
   replyTo?: ReplyToMessageInfo;
   reactions?: string[];
+  pinned?: boolean;
   reasoning?: string;
   timestamp: string;
   evidenceStatus?: "observed" | "inferred" | "unknown";
@@ -143,6 +147,7 @@ export interface ChatMessage {
 
 export interface InfraAgent {
   enabled?: boolean;
+  pinned?: boolean;
   id: string;
   name: string;
   slug: string;

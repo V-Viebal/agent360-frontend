@@ -32,7 +32,7 @@ export function MetricStatCard({
     <div
       onClick={onClick}
       className={`p-3 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200/80 dark:border-white/[0.08] flex flex-col justify-between transition-all select-none shadow-xs ${
-        onClick ? "cursor-pointer hover:border-[#f8a87c]/40 hover:bg-slate-50 dark:hover:bg-[#181824]" : ""
+        onClick ? "cursor-pointer hover:border-[var(--agent-primary)]/40 hover:bg-slate-50 dark:hover:bg-[#181824]" : ""
       } ${className}`}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
