@@ -10247,7 +10247,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {/* Bottom blur/gradient fade edge when agent list is scrollable in collapsed rail */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-sidebar)]/50 via-[var(--bg-sidebar)]/15 to-transparent z-20 pointer-events-none"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/50 to-transparent z-20 backdrop-blur-[1px]"
               />
             </div>
 
@@ -10954,7 +10954,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {/* Bottom blur/gradient fade edge for expanded sidebar */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-sidebar)]/50 via-[var(--bg-sidebar)]/15 to-transparent z-20 pointer-events-none"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/50 to-transparent z-20 backdrop-blur-[1px]"
               />
             </div>
 
@@ -12749,7 +12749,7 @@ const selectedAgentTheme = getAgentColorTheme(
           {/* Bottom feather fade edge for chat message stream */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-page)]/60 via-[var(--bg-page)]/20 to-transparent z-20 pointer-events-none"
+            className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-page)] via-[var(--bg-page)]/60 to-transparent z-20 backdrop-blur-[1px]"
           />
           {/* Floating Scroll to Bottom Button (Always centered horizontally in Chat UI and positioned above/outside the input composer) */}
           {showScrollBottomBtn && (
@@ -14696,19 +14696,19 @@ const selectedAgentTheme = getAgentColorTheme(
                   }}
                   className={`relative ${
                     isMultiline
-                      ? "flex flex-col gap-2 pt-2 pb-2.5 px-3 sm:pt-2.5 sm:pb-3 sm:px-3.5"
-                      : "flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2"
+                      ? "flex flex-col gap-2 pt-2 pb-2.5 px-3 sm:pt-2 sm:pb-2.5 sm:px-3.5"
+                      : "flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5"
                   } bg-white dark:bg-[#14141c] border ${
                     isDraggingFiles
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
                       : isRecording
                       ? "border-red-500/60 ring-2 ring-red-500/20"
                       : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[var(--agent-color)]/50 focus-within:ring-1 focus-within:ring-[var(--agent-color)]/20"
-                  } rounded-2xl shadow-xs transition-all overflow-hidden`}
+                  } rounded-[18px] shadow-xs transition-all overflow-hidden`}
                   style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
                 >
                   {isDraggingFiles && (
-                    <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-2xl animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                    <div className="absolute inset-0 z-40 flex items-center justify-center gap-2 bg-slate-900/90 dark:bg-[#14141c]/95 border-2 border-dashed border-[#f8a87c] rounded-[18px] animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
                       <Paperclip size={15} className="text-[#f8a87c] animate-bounce" />
                       <span className="text-xs font-mono font-semibold text-white tracking-wide">
                         Drop files here to attach to {selectedAgent.name}
@@ -15612,7 +15612,7 @@ ${chat.id}`);
               {/* Bottom blur/gradient fade edge for chat list */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-sidebar)]/50 via-[var(--bg-sidebar)]/15 to-transparent z-20 pointer-events-none"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/50 to-transparent z-20 backdrop-blur-[1px]"
               />
             </div>
           </>
