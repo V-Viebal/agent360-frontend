@@ -1,5 +1,5 @@
 import React from "react";
-import { connectSessionMultiplexer, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate } from "../services/sessionMultiplexer";
+import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent } from "../services/sessionMultiplexer";
 function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { channel?: string; isSelected?: boolean; size?: number; activeColor?: string }) {
   const ch = (channel || "console").toLowerCase();
   
@@ -1549,7 +1549,6 @@ function AgentThinkingModal({
                   size="2xs"
                   alwaysAnimate={true}
                   forcedAnimation="nod.1.4,jump.1.4,wink.1.4"
-                  style={{ ringColor: hostTheme.borderLight }}
                   className="ring-1 shrink-0"
                 />
                 <span style={{ backgroundColor: hostTheme.primary }} className="h-1.5 w-1.5 rounded-full typing-dot-1" />
@@ -5412,13 +5411,35 @@ export function GrokBotWorkspace() {
         if (update.is_running) {
           updateAgentSessionRunning(normAg, [sid, update.id, aliasId], true);
           setRunningChatIds((prev) => (prev.includes(sid) ? prev : [...prev, sid]));
-          setChats((prev) =>
-            prev.map((c) =>
-              c.id === sid || c.session_id === sid
-                ? { ...c, is_running: true, isRunning: true, status: "running" }
-                : c
-            )
-          );
+          const curAg = normalizeAgentKey(selectedAgentIdRef.current);
+          setChats((prev) => {
+            const exists = prev.some((c) => c.id === sid || c.session_id === sid || (update.id && c.id === update.id));
+            if (exists) {
+              return prev.map((c) =>
+                c.id === sid || c.session_id === sid || (update.id && c.id === update.id)
+                  ? { ...c, is_running: true, isRunning: true, status: "running" }
+                  : c
+              );
+            }
+            if (normAg && curAg && normAg === curAg) {
+              const newLiveChat = {
+                id: update.id || sid,
+                session_id: sid,
+                title: update.content_snippet ? update.content_snippet.slice(0, 48) : (sid.length <= 14 ? `Hội thoại #${sid}` : "Cuộc hội thoại mới"),
+                updatedAt: "Vừa xong",
+                messageCount: 1,
+                lastMessageSnippet: update.content_snippet || "Đang xử lý...",
+                unread: true,
+                channel: update.channel || "console",
+                status: "running",
+                is_running: true,
+                isRunning: true,
+                agentId: selectedAgentIdRef.current,
+              };
+              return [newLiveChat, ...prev];
+            }
+            return prev;
+          });
         } else {
           if (!isStillStreamingLocally) {
             updateAgentSessionRunning(normAg, [sid, update.id, aliasId], false);
@@ -5475,6 +5496,79 @@ export function GrokBotWorkspace() {
           return next;
         });
         setChats((prev) => prev.map((c) => (c.id === sid || c.session_id === sid ? { ...c, unread: false } : c)));
+      },
+      onChatSessionUpsert: (ev: ChatSessionUpsertWsEvent) => {
+        if (!ev?.session?.id) return;
+        const evAgent = normalizeAgentKey(ev.agent_id);
+        const curAgent = normalizeAgentKey(selectedAgentIdRef.current);
+        const s = ev.session;
+        const sid = s.session_id || s.id;
+
+        if (evAgent) {
+          registerSessionAgent(s.id, sid, evAgent);
+        }
+
+        // Update agent recent session preview on sidebar
+        const rawTitle = (s.title || s.name || "").trim();
+        const displayTitle =
+          !rawTitle || /^[0-9a-f]{8}-[0-9a-f]{4}/i.test(rawTitle) || /^[0-9a-f]{16,}/i.test(rawTitle)
+            ? sid && !/^[0-9a-f-]{16,}/i.test(sid) && sid.length <= 14
+              ? `Hội thoại #${sid}`
+              : "Cuộc hội thoại"
+            : rawTitle;
+
+        if (evAgent && displayTitle) {
+          const fullKey = `bot:agent360:${evAgent}`;
+          setAgentRecentSessions((prev) => {
+            const next = { ...prev, [evAgent]: displayTitle, [fullKey]: displayTitle };
+            try {
+              localStorage.setItem("agent360_recent_sessions_map", JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+        }
+
+        // If this event belongs to the currently selected agent, upsert into the live chats list!
+        if (evAgent && curAgent && evAgent === curAgent) {
+          const viewed = isViewedChat(s.id) || (sid ? isViewedChat(sid) : false);
+          setChats((prev) => {
+            const existingIdx = prev.findIndex(
+              (c) => c.id === s.id || c.id === sid || (c.session_id && (c.session_id === s.id || c.session_id === sid))
+            );
+            if (existingIdx >= 0) {
+              const existing = prev[existingIdx];
+              const nextItem = {
+                ...existing,
+                title: displayTitle || existing.title,
+                channel: s.channel || existing.channel,
+                status: s.status || existing.status,
+                is_running: typeof s.is_running === "boolean" ? s.is_running : existing.is_running,
+                isRunning: typeof s.is_running === "boolean" ? s.is_running : existing.isRunning,
+                unread: viewed ? false : (typeof s.unread === "boolean" ? s.unread : existing.unread),
+              };
+              const updatedList = [...prev];
+              updatedList[existingIdx] = nextItem;
+              return updatedList;
+            } else {
+              // Brand new session from another channel (Telegram/Zalo/Webhook) or another device!
+              const newItem = {
+                id: s.id,
+                session_id: sid,
+                title: displayTitle,
+                updatedAt: "Vừa xong",
+                messageCount: 1,
+                lastMessageSnippet: displayTitle,
+                unread: !viewed,
+                channel: s.channel || "console",
+                status: s.status || "idle",
+                is_running: Boolean(s.is_running),
+                isRunning: Boolean(s.is_running),
+                agentId: selectedAgentIdRef.current,
+              };
+              return [newItem, ...prev];
+            }
+          });
+        }
       }
     });
 
@@ -7630,6 +7724,7 @@ ${targetItem.text}`;
     }
     let cancelled = false;
     const currentAgent = selectedAgentId;
+    notifyMultiplexerSubscribedAgent(currentAgent);
 
     async function loadAgentChats() {
       // SWR: Instant render from client memory/sessionStorage cache

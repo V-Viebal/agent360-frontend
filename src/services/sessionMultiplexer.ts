@@ -15,6 +15,7 @@ export interface SessionTurnUpdate {
 export interface SessionUnreadUpdate {
   type: "session_unread_update";
   session_id: string;
+  agent_id?: string;
   is_unread: boolean;
   timestamp?: string;
 }
@@ -50,13 +51,58 @@ export interface AgentWebhookDlqAlertWsEvent {
   message: string;
 }
 
-export type MultiplexerEvent = SessionTurnUpdate | SessionUnreadUpdate | ActiveSessionsSnapshot | ComposioConnectionEvent | AgentWebhookDeliveryWsEvent | AgentWebhookDlqAlertWsEvent;
+export interface ChatSessionUpsertWsEvent {
+  type: "chat_session_upsert";
+  agent_id: string;
+  is_new: boolean;
+  session: {
+    id: string;
+    session_id?: string;
+    title?: string;
+    name?: string;
+    channel?: string;
+    status?: string;
+    is_running?: boolean;
+    updated_at?: string;
+    created_at?: string;
+    unread?: boolean;
+  };
+  timestamp?: string;
+}
+
+export type MultiplexerEvent =
+  | SessionTurnUpdate
+  | SessionUnreadUpdate
+  | ActiveSessionsSnapshot
+  | ComposioConnectionEvent
+  | AgentWebhookDeliveryWsEvent
+  | AgentWebhookDlqAlertWsEvent
+  | ChatSessionUpsertWsEvent;
 
 export interface MultiplexerHandlers {
   onSnapshot?: (snapshot: ActiveSessionsSnapshot) => void;
   onTurnUpdate?: (update: SessionTurnUpdate) => void;
   onUnreadUpdate?: (update: SessionUnreadUpdate) => void;
   onComposioConnection?: (ev: ComposioConnectionEvent) => void;
+  onChatSessionUpsert?: (ev: ChatSessionUpsertWsEvent) => void;
+}
+
+let activeMultiplexerWs: WebSocket | null = null;
+let subscribedAgentId: string | null = null;
+
+/**
+ * Notifies the backend multiplexer which agent the user is currently viewing,
+ * prioritizing real-time chat session discovery for that agent.
+ */
+export function notifyMultiplexerSubscribedAgent(agentId: string | null | undefined): void {
+  if (!agentId) return;
+  const clean = agentId.replace(/^bot:agent360:/i, "").toLowerCase();
+  subscribedAgentId = clean;
+  if (activeMultiplexerWs && activeMultiplexerWs.readyState === WebSocket.OPEN) {
+    try {
+      activeMultiplexerWs.send(JSON.stringify({ action: "subscribe_agent", agent_id: clean }));
+    } catch {}
+  }
 }
 
 /**
@@ -81,14 +127,23 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
       const wsUrl = `${wsProto}//${host}/api/v1/agents/ws/sessions`;
 
       ws = new WebSocket(wsUrl);
+      activeMultiplexerWs = ws;
 
       ws.onopen = () => {
         reconnectAttempts = 0;
+        if (subscribedAgentId && ws && ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({ action: "subscribe_agent", agent_id: subscribedAgentId }));
+          } catch {}
+        }
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         heartbeatTimer = setInterval(() => {
           if (ws && ws.readyState === WebSocket.OPEN) {
             try {
               ws.send(JSON.stringify({ action: "ping" }));
+              if (subscribedAgentId) {
+                ws.send(JSON.stringify({ action: "subscribe_agent", agent_id: subscribedAgentId }));
+              }
             } catch {}
           }
         }, 20000);
@@ -103,6 +158,11 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             handlers.onTurnUpdate(data);
           } else if (data.type === "session_unread_update" && handlers.onUnreadUpdate) {
             handlers.onUnreadUpdate(data);
+          } else if (data.type === "chat_session_upsert") {
+            if (handlers.onChatSessionUpsert) handlers.onChatSessionUpsert(data);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("chat:session_upsert", { detail: data }));
+            }
           } else if (data.type === "composio_connection_activated") {
             if (handlers.onComposioConnection) handlers.onComposioConnection(data);
             if (typeof window !== "undefined") {
@@ -121,6 +181,7 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
       };
 
       ws.onclose = () => {
+        if (activeMultiplexerWs === ws) activeMultiplexerWs = null;
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         if (disposed) return;
         reconnectAttempts++;
@@ -162,6 +223,11 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             handlers.onTurnUpdate(update);
           } else if (update.type === "session_unread_update" && handlers.onUnreadUpdate) {
             handlers.onUnreadUpdate(update);
+          } else if (update.type === "chat_session_upsert") {
+            if (handlers.onChatSessionUpsert) handlers.onChatSessionUpsert(update);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("chat:session_upsert", { detail: update }));
+            }
           } else if (update.type === "composio_connection_activated") {
             if (handlers.onComposioConnection) handlers.onComposioConnection(update);
             if (typeof window !== "undefined") {
@@ -200,6 +266,7 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
     if (reconnectTimer) clearTimeout(reconnectTimer);
     if (heartbeatTimer) clearInterval(heartbeatTimer);
     if (ws) {
+      if (activeMultiplexerWs === ws) activeMultiplexerWs = null;
       try { ws.close(); } catch {}
       ws = null;
     }
