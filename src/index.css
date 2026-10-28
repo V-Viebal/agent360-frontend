@@ -454,6 +454,29 @@ svg.lucide[width="24"] {
   height: var(--icon-size-xl);
 }
 
+
+/* Ultra-smooth interactive transitions for hover, focus-visible and active states */
+button,
+a,
+input,
+textarea,
+select,
+[role="button"],
+[role="switch"],
+[role="tab"],
+.group,
+.cursor-pointer {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-duration: 150ms;
+}
+
+/* Ensure focus-visible rings cleanly adopt agent theme color */
+:focus-visible {
+  outline: 2px solid var(--agent-border-light, rgba(248, 168, 124, 0.5));
+  outline-offset: 1px;
+}
+
 /* Universal ultra-smooth transition for theme switches on interactive cards, badges & pills */
 .badge-theme-transition {
   transition-property: background-color, border-color, color, fill, stroke, box-shadow;
