@@ -4658,6 +4658,23 @@ export function GrokBotWorkspace() {
       return {};
     }
   });
+  // PWA App Badge Synchronization: Display count of unread completed sessions on PWA launcher icon
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && "setAppBadge" in navigator) {
+      try {
+        const totalUnread = Object.values(unreadCompletedSessions).reduce(
+          (acc, list) => acc + (Array.isArray(list) ? list.length : 0),
+          0
+        );
+        if (totalUnread > 0) {
+          (navigator as any).setAppBadge(totalUnread).catch(() => {});
+        } else if ("clearAppBadge" in navigator) {
+          (navigator as any).clearAppBadge().catch(() => {});
+        }
+      } catch {}
+    }
+  }, [unreadCompletedSessions]);
+
   const [selectedChatId, setSelectedChatId] = useState<string>(() => {
     if (chatParam) return chatParam;
     try {
@@ -8865,6 +8882,33 @@ const selectedAgentTheme = getAgentColorTheme(
         e.preventDefault();
         handleNewChat();
         textareaRef.current?.focus();
+        return;
+      }
+
+      // 2a-2. Quick Keyboard Navigation: Alt + [ / Alt + ] to cycle through Agents list
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "[" || e.key === "]")) {
+        const list = filteredAgentsRef.current;
+        if (list.length > 0) {
+          e.preventDefault();
+          const curId = selectedAgentIdRef.current;
+          const curIdx = list.findIndex((a) => a.id === curId);
+          let nextIdx = 0;
+          if (e.key === "]") {
+            nextIdx = curIdx >= 0 && curIdx < list.length - 1 ? curIdx + 1 : 0;
+          } else {
+            nextIdx = curIdx > 0 ? curIdx - 1 : list.length - 1;
+          }
+          const nextAgent = list[nextIdx];
+          if (nextAgent) {
+            triggerHaptic(12);
+            playMicroClick();
+            handleSelectAgent(nextAgent);
+            requestAnimationFrame(() => {
+              const el = document.querySelector(`[data-agent-item-id="${nextAgent.id}"]`);
+              el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            });
+          }
+        }
         return;
       }
 

@@ -24,6 +24,13 @@ export const DEFAULT_SHORTCUTS: ShortcutItem[] = [
     customizable: true,
   },
   {
+    id: "cycle_agents",
+    defaultKeys: ["Alt", "[ / ]"],
+    description: "Cycle between Agents in fleet sidebar",
+    category: "Navigation & Search",
+    customizable: false,
+  },
+  {
     id: "trace_user_requests",
     defaultKeys: ["Alt", "↑ / ↓"],
     description: "Navigate User Request Trace bar (quick jump to prompt)",
