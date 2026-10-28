@@ -121,6 +121,7 @@ import {
   Archive,
   ArchiveRestore,
   Edit2,
+  Pencil,
   Wifi,
   Camera, Maximize2,
   Minimize2, ZoomIn, ZoomOut, RotateCcw, RotateCw,
@@ -4281,6 +4282,14 @@ function shouldShowChatTimestampDivider(prevTs?: string, currTs?: string): boole
   return Math.abs(d2.getTime() - d1.getTime()) >= 15 * 60 * 1000;
 }
 
+export interface QueuedRequestItem {
+  id: string;
+  text: string;
+  previewText?: string;
+  attachedFiles?: UploadedFileResult[];
+  createdAt: number;
+}
+
 export function GrokBotWorkspace() {
   const { t, language } = useTranslation();
   const { agentParam, chatParam } = useParams<{ agentParam?: string; chatParam?: string }>();
@@ -5270,18 +5279,90 @@ export function GrokBotWorkspace() {
       disconnect();
     };
   }, []);
+  
+
   // Request Queue: Allows users to enter new requests while agent is in progress
-  const [requestQueues, setRequestQueues] = useState<Record<string, string[]>>({});
-  const requestQueuesRef = useRef<Record<string, string[]>>({});
+  const [requestQueues, setRequestQueues] = useState<Record<string, QueuedRequestItem[]>>({});
+  const requestQueuesRef = useRef<Record<string, QueuedRequestItem[]>>({});
   const chatAgentMapRef = useRef<Record<string, string>>({});
   const processingChatsRef = useRef<Set<string>>(new Set());
   const streamAbortControllersRef = useRef<Record<string, AbortController>>({});
   const requestQueue = (selectedChatId && requestQueues[selectedChatId]) || [];
-  const setChatQueue = (chatId: string, queue: string[], agentId?: string) => {
+  const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
+  const [editingQueueText, setEditingQueueText] = useState<string>("");
+  const [activeQueueMenuId, setActiveQueueMenuId] = useState<string | null>(null);
+
+  // Close queue menu popover when clicking outside
+  useEffect(() => {
+    if (!activeQueueMenuId) return;
+    const handleClickOutside = () => setActiveQueueMenuId(null);
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, [activeQueueMenuId]);
+
+
+  const setChatQueue = (chatId: string, queue: QueuedRequestItem[], agentId?: string) => {
     if (agentId) chatAgentMapRef.current[chatId] = agentId;
     requestQueuesRef.current = { ...requestQueuesRef.current, [chatId]: queue };
     setRequestQueues(requestQueuesRef.current);
   };
+
+  const handleRemoveQueueItem = (chatId: string, itemId: string) => {
+    const currentList = requestQueuesRef.current[chatId] || [];
+    const updated = currentList.filter((item) => item.id !== itemId);
+    setChatQueue(chatId, updated);
+    if (editingQueueItemId === itemId) {
+      setEditingQueueItemId(null);
+      setEditingQueueText("");
+    }
+  };
+
+  const handleStartEditQueueItem = (item: QueuedRequestItem) => {
+    setEditingQueueItemId(item.id);
+    // Strip attached file directives if any when editing pure text
+    let cleanText = item.text;
+    const attachIdx = cleanText.indexOf("\n\n[Attached File:");
+    if (attachIdx >= 0) {
+      cleanText = cleanText.slice(0, attachIdx);
+    }
+    setEditingQueueText(cleanText);
+    setActiveQueueMenuId(null);
+  };
+
+  const handleSaveEditQueueItem = (chatId: string, itemId: string) => {
+    if (!editingQueueText.trim()) return;
+    const currentList = requestQueuesRef.current[chatId] || [];
+    const updated = currentList.map((item) => {
+      if (item.id === itemId) {
+        // preserve attached files summary if present
+        let filesSummary = "";
+        if (item.attachedFiles && item.attachedFiles.length > 0) {
+          filesSummary = "\n\n" + item.attachedFiles.map(f => `[Attached File: ${f.file_name} (${f.url})]`).join("\n");
+        }
+        const newFullText = editingQueueText.trim() + filesSummary;
+        return {
+          ...item,
+          text: newFullText,
+          previewText: editingQueueText.trim().slice(0, 100),
+        };
+      }
+      return item;
+    });
+    setChatQueue(chatId, updated);
+    setEditingQueueItemId(null);
+    setEditingQueueText("");
+  };
+
+  const handleSteerQueueItem = (chatId: string, itemId: string) => {
+    const currentList = requestQueuesRef.current[chatId] || [];
+    const targetIdx = currentList.findIndex((item) => item.id === itemId);
+    if (targetIdx <= 0) return; // already at front or not found
+    const targetItem = currentList[targetIdx];
+    const rest = currentList.filter((_, idx) => idx !== targetIdx);
+    setChatQueue(chatId, [targetItem, ...rest]);
+    setActiveQueueMenuId(null);
+  };
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isTextareaFocusedRef = useRef<boolean>(false);
   const textareaCursorPosRef = useRef<{ start: number; end: number } | null>(null);
@@ -9480,11 +9561,11 @@ const selectedAgentTheme = getAgentColorTheme(
   const processNextInQueue = (chatId: string) => {
     const queue = requestQueuesRef.current[chatId] || [];
     if (queue.length > 0) {
-      const [nextPrompt, ...rest] = queue;
+      const [nextItem, ...rest] = queue;
       const targetAgentId = chatAgentMapRef.current[chatId] || selectedAgentId;
       setChatQueue(chatId, rest, targetAgentId);
       setTimeout(() => {
-        executeTurnStream(nextPrompt, chatId, targetAgentId);
+        executeTurnStream(nextItem.text, chatId, targetAgentId);
       }, 50);
     } else {
       processingChatsRef.current.delete(chatId);
@@ -9503,6 +9584,8 @@ const selectedAgentTheme = getAgentColorTheme(
     }
 
     let userText = inputText.trim();
+    const rawInputPreview = userText;
+    const currentTurnFiles = [...attachedFiles];
     if (replyingToMsg) {
       const safeAuthor = (replyingToMsg.authorName || "Agent").replace(/[\]:"]/g, "");
       const safeSnippet = (replyingToMsg.snippet || "").replace(/"/g, "'").replace(/\s+/g, " ").trim().slice(0, 140);
@@ -9558,7 +9641,14 @@ const selectedAgentTheme = getAgentColorTheme(
     chatAgentMapRef.current[sendChatId] = selectedAgentId;
     if (isStreaming || processingChatsRef.current.has(sendChatId)) {
       // Agent is busy: enqueue prompt into Request Queue only (do not show in chat stream until it executes)
-      setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), userText], selectedAgentId);
+      const newItem: QueuedRequestItem = {
+        id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        text: userText,
+        previewText: (rawInputPreview || userText.split('\n')[0] || userText).slice(0, 100),
+        attachedFiles: currentTurnFiles.length > 0 ? [...currentTurnFiles] : undefined,
+        createdAt: Date.now(),
+      };
+      setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), newItem], selectedAgentId);
     } else {
       processingChatsRef.current.add(sendChatId);
       executeTurnStream(userText, sendChatId, selectedAgentId);
@@ -12618,6 +12708,11 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
           );
         })()}
+          {/* Bottom feather fade edge for chat message stream */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-page)]/60 via-[var(--bg-page)]/20 to-transparent z-20 pointer-events-none"
+          />
           {/* Floating Scroll to Bottom Button (Always centered horizontally in Chat UI and positioned above/outside the input composer) */}
           {showScrollBottomBtn && (
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 animate-in fade-in zoom-in-95 duration-150">
@@ -12691,25 +12786,165 @@ const selectedAgentTheme = getAgentColorTheme(
 
       {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
         <div className={`${isCompactMode ? "px-2.5 pt-1 pb-3" : "px-4 pt-1 pb-3.5"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-1.5`}>
-          {/* Request Queue Indicator */}
-          {requestQueue.length > 0 && (
-            <div className="flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-[#14141c]/95 border border-[#2a2a38] text-[11px] font-mono text-neutral-300 shadow-md animate-in fade-in duration-100">
-              <div className="flex items-center gap-2 truncate">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c] animate-pulse" />
-                <span className="text-[#f8a87c] font-semibold">Queue:</span>
-                <span className="truncate text-neutral-300">
-                  {requestQueue.length} upcoming request{requestQueue.length > 1 ? "s" : ""} (Next: "{requestQueue[0]}")
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedChatId) setChatQueue(selectedChatId, []);
-                }}
-                className="text-neutral-500 hover:text-white text-[10px] cursor-pointer ml-2 shrink-0"
-              >
-                Clear
-              </button>
+          {/* Rich Request Queue Stack with Steer, Edit, and Delete */}
+          {requestQueue.length > 0 && selectedChatId && (
+            <div
+              data-testid="request-queue-stack"
+              className="rounded-2xl bg-[#1c1c20]/95 dark:bg-[#18181e]/95 backdrop-blur-md border border-neutral-700/60 dark:border-[#2d2d38] shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 select-none divide-y divide-neutral-800/80 dark:divide-[#242430]"
+            >
+              {requestQueue.map((item, idx) => {
+                const isEditing = editingQueueItemId === item.id;
+                const isMenuOpen = activeQueueMenuId === item.id;
+                const firstImage = item.attachedFiles?.find(f => /\.(png|jpe?g|webp|gif|svg)$/i.test(f.file_name));
+                const previewSrc = firstImage ? (firstImage.preview_url || resolveUploadedAttachmentPreviewUrl(firstImage.url, selectedAgent?.slug || selectedAgent?.id || "default")) : null;
+                const displayText = item.previewText || item.text.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message";
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-neutral-800/40 dark:hover:bg-[#20202a]/60 transition-colors group/qitem relative"
+                  >
+                    {/* Left Icon & Text Content */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {/* Left list/queue icon */}
+                      <span className="text-neutral-500 shrink-0 font-mono text-[11px] flex items-center justify-center">
+                        <ArrowRight size={13} className="text-neutral-400 group-hover/qitem:text-[#f8a87c] transition-colors" />
+                      </span>
+
+                      {/* Thumbnail if prompt contains image */}
+                      {previewSrc && (
+                        <div className="h-6 w-6 rounded-md overflow-hidden bg-black/40 border border-white/10 shrink-0 shadow-2xs">
+                          <img src={previewSrc} alt="Thumbnail" className="h-full w-full object-cover" />
+                        </div>
+                      )}
+
+                      {/* Inline Edit Input or Text View */}
+                      {isEditing ? (
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0 animate-in fade-in duration-100">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editingQueueText}
+                            onChange={(e) => setEditingQueueText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleSaveEditQueueItem(selectedChatId, item.id);
+                              } else if (e.key === "Escape") {
+                                setEditingQueueItemId(null);
+                                setEditingQueueText("");
+                              }
+                            }}
+                            className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-neutral-900 border border-[#f8a87c]/60 text-white font-sans focus:outline-none focus:ring-1 focus:ring-[#f8a87c]"
+                            placeholder="Edit queued message..."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEditQueueItem(selectedChatId, item.id)}
+                            className="px-2 py-1 rounded-md bg-[#f8a87c] text-neutral-950 text-[10px] font-semibold hover:opacity-90 transition-opacity cursor-pointer shrink-0"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingQueueItemId(null);
+                              setEditingQueueText("");
+                            }}
+                            className="px-2 py-1 rounded-md bg-neutral-800 text-neutral-400 hover:text-white text-[10px] transition-colors cursor-pointer shrink-0"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          onDoubleClick={() => handleStartEditQueueItem(item)}
+                          className="text-xs text-neutral-200 truncate font-sans cursor-pointer hover:text-white transition-colors"
+                          title="Click double để chỉnh sửa nội dung"
+                        >
+                          {displayText}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Right Action Buttons */}
+                    {!isEditing && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Steer action: prioritize or jump ahead */}
+                        <button
+                          type="button"
+                          onClick={() => handleSteerQueueItem(selectedChatId, item.id)}
+                          disabled={idx === 0}
+                          className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-sans font-medium transition-all ${
+                            idx === 0
+                              ? "text-neutral-600 dark:text-neutral-600 opacity-50 cursor-default"
+                              : "text-neutral-300 hover:text-white hover:bg-white/10 cursor-pointer"
+                          }`}
+                          title={idx === 0 ? "Đang là yêu cầu tiếp theo" : "Đưa lên đầu hàng đợi (Steer)"}
+                        >
+                          <CornerUpLeft size={11} className="rotate-90 text-neutral-400" />
+                          <span>Steer</span>
+                        </button>
+
+                        {/* Delete item button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveQueueItem(selectedChatId, item.id)}
+                          className="p-1 rounded-md text-neutral-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                          title="Xóa yêu cầu khỏi hàng đợi"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+
+                        {/* More options menu (...) */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveQueueMenuId(isMenuOpen ? null : item.id);
+                            }}
+                            className={`p-1 rounded-md transition-colors cursor-pointer ${
+                              isMenuOpen ? "bg-white/15 text-white" : "text-neutral-400 hover:text-white hover:bg-white/10"
+                            }`}
+                            title="Tùy chọn khác"
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+
+                          {/* Popover Menu with Edit message */}
+                          {isMenuOpen && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 bottom-full mb-1.5 w-36 rounded-xl bg-[#1c1c24] border border-neutral-700/80 shadow-2xl py-1 z-30 animate-in fade-in zoom-in-95 duration-100"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditQueueItem(item)}
+                                className="w-full px-3 py-1.5 text-left text-xs text-neutral-200 hover:text-white hover:bg-white/10 flex items-center gap-2 cursor-pointer transition-colors"
+                              >
+                                <Pencil size={12} className="text-neutral-400" />
+                                <span>Edit message</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleRemoveQueueItem(selectedChatId, item.id);
+                                  setActiveQueueMenuId(null);
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/15 flex items-center gap-2 cursor-pointer transition-colors"
+                              >
+                                <Trash2 size={12} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           {/* Attached Files Preview Chips with Image Thumbnails & Lightbox */}
@@ -14844,8 +15079,9 @@ const selectedAgentTheme = getAgentColorTheme(
               </div>
             )}
 
-            {/* Conversation list */}
-            <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hover">
+            {/* Conversation list with Bottom Fade */}
+            <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hover pb-3">
               {isLoadingChats ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -15321,6 +15557,12 @@ ${chat.id}`);
                   )}
                 </>
               )}
+              </div>
+              {/* Bottom blur/gradient fade edge for chat list */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-sidebar)]/50 via-[var(--bg-sidebar)]/15 to-transparent z-20 pointer-events-none"
+              />
             </div>
           </>
         )}
