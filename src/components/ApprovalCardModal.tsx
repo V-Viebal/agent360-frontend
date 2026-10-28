@@ -55,12 +55,12 @@ export function ApprovalCardModal({
       title={
         <div className="flex items-center gap-2">
           <span>Tool Guard Approval Required</span>
-          <span className="px-2 py-0.5 rounded-full bg-[#f8a87c]/10 text-[#f8a87c] text-[10px] font-mono border border-[#f8a87c]/30">
+          <span className="px-2 py-0.5 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] text-[10px] font-mono border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
             {approvals.length} pending
           </span>
         </div>
       }
-      icon={<ShieldAlert size={18} className="text-[#f8a87c]" />}
+      icon={<ShieldAlert size={18} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="lg"
     >
       <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
@@ -83,7 +83,7 @@ export function ApprovalCardModal({
             <div>
               <span className="text-neutral-500 font-mono text-[10px] block mb-0.5">{t("approval.requestedTool")}</span>
               <div className="flex items-center gap-2 font-mono text-slate-800 dark:text-white text-xs bg-white dark:bg-[#0c0a08] px-3 py-2 rounded-lg border border-slate-200 dark:border-white/5">
-                <Terminal size={13} className="text-[#f8a87c]" />
+                <Terminal size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                 <span>{app.tool_name}</span>
               </div>
             </div>
@@ -110,7 +110,7 @@ export function ApprovalCardModal({
               <button
                 disabled={submittingId === app.request_id}
                 onClick={() => handleAction(app.request_id, app.session_id, "approve")}
-                className="px-3.5 py-1.5 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs flex items-center gap-1 transition-all shadow-md cursor-pointer disabled:opacity-40"
+                className="px-3.5 py-1.5 rounded-lg bg-[var(--agent-primary)] hover:opacity-90 text-black font-semibold text-xs flex items-center gap-1 transition-all shadow-md cursor-pointer disabled:opacity-40"
               >
                 <CheckCircle size={13} />
                 <span>{t("approval.approve")}</span>

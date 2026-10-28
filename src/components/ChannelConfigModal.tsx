@@ -87,7 +87,7 @@ export function ChannelConfigModal({
       isOpen={isOpen}
       onClose={onClose}
       title={`Configure ${channel.name} Channel`}
-      icon={<Radio size={15} className="text-[#f8a87c]" />}
+      icon={<Radio size={15} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="md"
     >
       <form onSubmit={handleSave} className="p-4 space-y-4">
@@ -103,7 +103,7 @@ export function ChannelConfigModal({
         {channel.type !== "console" && (
           <div className="space-y-1.5">
             <label className="text-slate-700 dark:text-neutral-300 font-medium flex items-center gap-1.5">
-              <Key size={13} className="text-[#f8a87c]" />
+              <Key size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
               <span>{t("channelConfig.token")}</span>
             </label>
             <input
@@ -111,7 +111,7 @@ export function ChannelConfigModal({
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
               placeholder="Enter bot token (Telegram BotFather, Discord Bot Token, etc.)"
-              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70"
+              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]/70"
             />
           </div>
         )}
@@ -123,7 +123,7 @@ export function ChannelConfigModal({
             value={botPrefix}
             onChange={(e) => setBotPrefix(e.target.value)}
             placeholder="e.g. /ask, !bot, or empty"
-            className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[#f8a87c]/70"
+            className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]/70"
           />
         </div>
 
@@ -163,7 +163,7 @@ export function ChannelConfigModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-1.5 bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold px-4 py-1.5 rounded-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
+              className="flex items-center gap-1.5 bg-[var(--agent-primary)] hover:opacity-90 text-black font-semibold px-4 py-1.5 rounded-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
             >
               {saveSuccess ? (
                 <>

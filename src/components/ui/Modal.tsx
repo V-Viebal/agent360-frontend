@@ -66,7 +66,7 @@ export function Modal({
         {(title || icon) && (
           <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between shrink-0 select-none">
             <div className="flex items-center gap-2 min-w-0">
-              {icon && <span className="shrink-0 text-[#f8a87c]">{icon}</span>}
+              {icon && <span className="shrink-0 text-[var(--agent-light)] dark:text-[var(--agent-dark)]">{icon}</span>}
               {typeof title === "string" ? (
                 <span className="font-semibold text-slate-800 dark:text-white tracking-wide uppercase font-mono truncate">
                   {title}

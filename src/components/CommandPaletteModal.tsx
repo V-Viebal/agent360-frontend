@@ -65,7 +65,7 @@ export function CommandPaletteModal({
         type: "action",
         title: "Cài đặt Agent: IAM360 Identity & Org Cells (Cây Phân Quyền)",
         subtitle: "Xem & Quản lý Cây 5 Nhánh Quyền hạn, Ed25519 Signed Intents & A2A Delegation",
-        icon: <ShieldAlert size={14} className="text-[#f8a87c]" />,
+        icon: <ShieldAlert size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
         action: () => {
           onOpenAgentSettings("iam360_cells");
           onClose();
@@ -76,7 +76,7 @@ export function CommandPaletteModal({
         type: "action",
         title: "Cài đặt Agent: Hồ sơ & Mô hình AI (Agent Settings)",
         subtitle: "Đổi LLM Model, Avatar, Governance & Trạng thái hoạt động (Alt+,)",
-        icon: <Settings size={14} className="text-[#f8a87c]" />,
+        icon: <Settings size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
         action: () => {
           onOpenAgentSettings("general");
           onClose();
@@ -143,7 +143,7 @@ export function CommandPaletteModal({
       type: "action",
       title: "Interactive App Tour (Onboarding)",
       subtitle: "Start step-by-step Driver.js guided walkthrough of Skyer Agent360",
-      icon: <Sparkles size={14} className="text-[#f8a87c]" />,
+      icon: <Sparkles size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
       action: () => {
         onClose();
         setTimeout(() => startOnboardingTour({ force: true }), 300);
@@ -168,7 +168,7 @@ export function CommandPaletteModal({
       type: "action",
       title: "New Chat Session",
       subtitle: "Start a fresh interactive turn with the active bot",
-      icon: <Sparkles size={14} className="text-[#f8a87c]" />,
+      icon: <Sparkles size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
       action: () => {
         onNewChat();
         onClose();
@@ -179,7 +179,7 @@ export function CommandPaletteModal({
       type: "action",
       title: isSoundEnabled ? "Mute Audio Chime Alerts" : "Enable Audio Chime Alerts",
       subtitle: `Current state: ${isSoundEnabled ? "Sound Enabled" : "Sound Muted"}`,
-      icon: <Volume2 size={14} className="text-[#f8a87c]" />,
+      icon: <Volume2 size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />,
       action: () => {
         onToggleSound();
         onClose();
@@ -284,7 +284,7 @@ export function CommandPaletteModal({
       >
         {/* Search Input Bar */}
         <div className="h-14 px-4 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-3 bg-slate-50 dark:bg-[#161620]">
-          <Search size={18} className="text-[#f8a87c] shrink-0" />
+          <Search size={18} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -326,7 +326,7 @@ export function CommandPaletteModal({
                 onMouseEnter={() => setSelectedIndex(idx)}
                 className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
                   isSelected
-                    ? "bg-amber-500/10 text-slate-900 dark:text-white border border-[#f8a87c]/40 shadow-xs"
+                    ? "bg-amber-500/10 text-slate-900 dark:text-white border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] shadow-xs"
                     : "hover:bg-slate-50 dark:bg-[#181822] text-slate-700 dark:text-neutral-300 border border-transparent"
                 }`}
               >
@@ -341,7 +341,7 @@ export function CommandPaletteModal({
                 </div>
 
                 {isSelected && (
-                  <div className="flex items-center gap-1 text-[10px] font-mono text-[#f8a87c] shrink-0">
+                  <div className="flex items-center gap-1 text-[10px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0">
                     <span>{t("cmdPalette.jump")}</span>
                     <CornerDownLeft size={11} />
                   </div>

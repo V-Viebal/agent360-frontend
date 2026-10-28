@@ -171,7 +171,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
       isOpen={isOpen}
       onClose={onClose}
       title="Team Recipes & Workflow Templates"
-      icon={<Sparkles size={16} className="text-[#f8a87c]" />}
+      icon={<Sparkles size={16} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="xl"
     >
       {/* Search & Category Tabs */}
@@ -192,7 +192,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
               onClick={() => setSelectedCat(cat)}
               className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                 selectedCat === cat
-                  ? "bg-[#f8a87c] border-[#f8a87c] text-black font-semibold shadow-xs"
+                  ? "bg-[var(--agent-primary)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] text-black font-semibold shadow-xs"
                   : "bg-white dark:bg-[#181822] border-slate-200 dark:border-[#242432] text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
@@ -212,15 +212,15 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
               onSelectRecipe(recipe.prompt, recipe);
               onClose();
             }}
-            className="p-3.5 rounded-xl bg-white dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#22222e] hover:border-[#f8a87c]/40 transition-all cursor-pointer group shadow-xs space-y-1.5"
+            className="p-3.5 rounded-xl bg-white dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200 dark:border-[#22222e] hover:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] transition-all cursor-pointer group shadow-xs space-y-1.5"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-[#f8a87c] transition-colors truncate">
+                <span className="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors truncate">
                   {recipe.title}
                 </span>
                 {recipe.isCustomTeamRecipe && (
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[#f8a87c]/15 text-[#e0682b] dark:text-[#f8a87c] border border-[#f8a87c]/30 shrink-0 font-semibold">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] shrink-0 font-semibold">
                     Đã lưu
                   </span>
                 )}
@@ -259,7 +259,7 @@ export function PromptRecipesModal({ isOpen, onClose, onSelectRecipe }: PromptRe
             </p>
             <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-[#1c1c24] text-[10px] font-mono text-neutral-500">
               <span className="truncate max-w-[85%]">{recipe.prompt.slice(0, 95)}</span>
-              <span className="text-[#f8a87c] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 Use ↵
               </span>
             </div>

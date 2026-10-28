@@ -54,7 +54,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
       isOpen={true}
       onClose={onClose}
       title="Skill Pool & Capabilities Catalog"
-      icon={<Puzzle size={18} className="text-[#f8a87c]" />}
+      icon={<Puzzle size={18} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="2xl"
     >
       {/* Toolbar */}
@@ -107,15 +107,15 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
           filtered.map((skill) => (
             <div
               key={skill.name}
-              className="p-4 rounded-xl bg-slate-50 dark:bg-[#161310] border border-slate-200 dark:border-[#2b241e] hover:border-[#f8a87c]/40 transition-all flex flex-col gap-2 group"
+              className="p-4 rounded-xl bg-slate-50 dark:bg-[#161310] border border-slate-200 dark:border-[#2b241e] hover:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] transition-all flex flex-col gap-2 group"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-xs text-slate-800 dark:text-neutral-200 group-hover:text-[#f8a87c] transition-colors">
+                  <span className="font-semibold text-xs text-slate-800 dark:text-neutral-200 group-hover:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors">
                     {skill.name}
                   </span>
                   {skill.source && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f8a87c]/10 border border-[#f8a87c]/25 text-[#f8a87c] flex items-center gap-1">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] flex items-center gap-1">
                       <Tag size={10} />
                       {skill.source}
                     </span>
@@ -130,7 +130,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
               {skill.channels && skill.channels.length > 0 && (
                 <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex flex-wrap gap-1.5 items-center">
                   <span className="text-[10px] font-mono text-neutral-500 mr-1 flex items-center gap-1">
-                    <Sparkles size={10} className="text-[#f8a87c]" />
+                    <Sparkles size={10} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
                     Channels:
                   </span>
                   {skill.channels.map((t: string) => (
@@ -156,7 +156,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-1.5 rounded-xl bg-[#f8a87c] text-black font-semibold text-xs hover:bg-[#f5935f] transition-all cursor-pointer"
+          className="px-4 py-1.5 rounded-xl bg-[var(--agent-primary)] text-black font-semibold text-xs hover:opacity-90 transition-all cursor-pointer"
         >
           Done
         </button>
