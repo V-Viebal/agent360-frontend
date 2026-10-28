@@ -547,6 +547,7 @@ export interface ParsedChatAttachmentItem {
   fileName: string;
   rawUrl: string;
   previewUrl: string;
+  storageUrl?: string;
   isImage: boolean;
   kind: AttachmentFormatKind;
   ext: string;
@@ -562,7 +563,7 @@ function extractToolSentAttachments(
   const results: ParsedChatAttachmentItem[] = [];
   const seen = new Set<string>();
 
-  const addCandidate = (rawPath: string, rawFileName?: string, caption?: string) => {
+  const addCandidate = (rawPath: string, rawFileName?: string, caption?: string, storageUrl?: string) => {
     const cleanPath = (rawPath || "").trim();
     const cleanName = (rawFileName || cleanPath.replace(/\\/g, "/").split("/").pop() || "attachment").trim();
     if (!cleanPath && !cleanName) return;
@@ -577,6 +578,7 @@ function extractToolSentAttachments(
       fileName: cleanName,
       rawUrl: effectiveUrl,
       previewUrl,
+      storageUrl,
       isImage: fmt.kind === "image",
       kind: fmt.kind,
       ext: fmt.ext,
@@ -588,6 +590,8 @@ function extractToolSentAttachments(
   const inspectList = [...(toolCalls || []), ...(steps || []).filter((s) => s.kind === "tool_call")];
   for (const tc of inspectList) {
     const toolName = (tc.tool || "").toLowerCase();
+
+    // 1. Files explicitly sent or delivered by agent
     if (
       toolName.includes("send_telegram_file") ||
       toolName.includes("send_file") ||
@@ -605,6 +609,35 @@ function extractToolSentAttachments(
         const caption = typeof argsObj.caption === "string" ? argsObj.caption : undefined;
         if (filePath || fileName) {
           addCandidate(filePath, fileName, caption);
+        }
+      } catch {}
+    }
+
+    // 2. MinIO / S3 Storage upload tools (e.g. minio__upload_file, upload_file)
+    if (toolName.includes("minio") || toolName.includes("storage") || toolName.includes("upload")) {
+      try {
+        const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
+        const localPath = argsObj.path || argsObj.file_path || argsObj.filePath || "";
+        let storageUrl = argsObj.url || "";
+        if (!storageUrl && tc.result && typeof tc.result === "string") {
+          const urlMatch = tc.result.match(/\burl:\s*(https?:\/\/[^\s\n\r]+)/i);
+          if (urlMatch) storageUrl = urlMatch[1];
+        }
+        if (localPath || storageUrl) {
+          addCandidate(localPath || storageUrl, undefined, "Tệp đã lưu trữ trên Storage", storageUrl || undefined);
+        }
+      } catch {}
+    }
+
+    // 3. Files authored or written by agent via write_file / edit_file
+    if (toolName === "write_file" || toolName.endsWith("__write_file")) {
+      try {
+        const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
+        const filePath = argsObj.file_path || argsObj.path || "";
+        const baseName = filePath.replace(/\\/g, "/").split("/").pop() || "";
+        // Exclude system logs, memory files, and internal agent state
+        if (baseName && !baseName.endsWith(".md") && !baseName.endsWith(".jsonl") && !baseName.endsWith(".yaml")) {
+          addCandidate(filePath, baseName, "Tệp tạo từ phiên làm việc");
         }
       } catch {}
     }
@@ -705,7 +738,36 @@ function parseQuotedReplyFromContent(
   // 5. Strip [Telegram replied-message context ...] block if embedded in user content
   text = text.replace(/\[Telegram replied-message context[^\]]*\]\s*\n\{[\s\S]*?\}(?=\n|$)/gi, "");
 
-  // 6. Include any files sent by the assistant via tool calls (e.g. send_telegram_file)
+  // 6. Extract markdown file links: [Label](url) or direct Storage URLs
+  const mdLinkRegex = /\[([^\]\n\r]+)\]\((https?:\/\/[^\s\)]+|[^\s\)]+\.(?:html?|pdf|xlsx?|csv|tsv|json|txt|md|docx?|pptx?|zip|png|jpe?g|webp|gif|svg|mp4|mp3|wav))\)/gi;
+  let mdlMatch: RegExpExecArray | null;
+  while ((mdlMatch = mdLinkRegex.exec(text)) !== null) {
+    const label = mdlMatch[1].trim();
+    const linkUrl = mdlMatch[2].trim();
+    const cleanFile = linkUrl.split("?")[0].split("#")[0].replace(/\\/g, "/").split("/").pop() || label;
+    pushAttachment(cleanFile, linkUrl, label !== cleanFile ? label : "Đường dẫn tải tài liệu");
+  }
+
+  // 7. Direct MinIO / S3 Storage URLs in text body
+  const storageUrlRegex = /(https?:\/\/[^\s\)\"\'<>]+(?:storage\.[^\s\)\"\'<>]+|minio[^\s\)\"\'<>]*\/[^\s\)\"\'<>]+|\/[a-zA-Z0-9_\-\.]+\.(?:html?|pdf|xlsx?|csv|tsv|json|txt|md|docx?|pptx?|zip|png|jpe?g|webp|gif|svg|mp4|mp3|wav)))/gi;
+  let stMatch: RegExpExecArray | null;
+  while ((stMatch = storageUrlRegex.exec(text)) !== null) {
+    const rawStorageUrl = stMatch[1].replace(/[.,;:!?]+$/, "");
+    const cleanFile = rawStorageUrl.split("?")[0].split("#")[0].replace(/\\/g, "/").split("/").pop() || "storage_file";
+    pushAttachment(cleanFile, rawStorageUrl, "Đường dẫn lưu trữ Storage");
+  }
+
+  // 8. Mentions of created/sent files in backticks: `file.ext`
+  // Matches e.g. "File đã gửi: `zeroism-doanh-thu-2026.html`", "Đã xuất file `report.xlsx`"
+  const backtickFileRegex = /`([a-zA-Z0-9_\-\.\/\\]+\.(?:html?|pdf|xlsx?|csv|tsv|json|txt|md|docx?|pptx?|zip|png|jpe?g|webp|gif|svg|mp4|mp3|wav))`(?=[.,;:!?\s]|$)/gi;
+  let btMatch: RegExpExecArray | null;
+  while ((btMatch = backtickFileRegex.exec(text)) !== null) {
+    const rawFound = btMatch[1].trim();
+    const cleanFile = rawFound.replace(/\\/g, "/").split("/").pop() || rawFound;
+    pushAttachment(cleanFile, rawFound, "Tệp do Agent tạo");
+  }
+
+  // 9. Include any files sent by the assistant via tool calls (e.g. send_telegram_file, minio__upload_file, write_file)
   const toolSent = extractToolSentAttachments(toolCalls, steps, agentIdForUrl);
   for (const ts of toolSent) {
     const dedupeKey = (ts.rawUrl.replace(/\\/g, "/").split("/").pop() || ts.fileName).toLowerCase();
@@ -6921,6 +6983,71 @@ export function GrokBotWorkspace() {
       document.removeEventListener("mousedown", handleClickOutsideExport);
     };
   }, [isExportMenuOpen]);
+
+  // Helper to automatically close any open mobile sidebar drawers so the Chat UI / Modal is revealed
+  const closeMobileSidebarsForModal = () => {
+    setMobileAgentsOpen(false);
+    setMobileChatsOpen(false);
+    setMobileBotInfoOpen(false);
+    if (typeof window !== "undefined") {
+      if (window.innerWidth < 1024) {
+        setIsChatListCollapsed(true);
+      }
+      if (window.innerWidth < 1280) {
+        setIsBotInfoCollapsed(true);
+      }
+    }
+  };
+
+  // Whenever any modal or overlay is opened on mobile/tablet, automatically close the active sidebar drawer
+  useEffect(() => {
+    const anyModalOpen = Boolean(
+      isAgentSettingsModalOpen ||
+      isSettingsModalOpen ||
+      isScheduleModalOpen ||
+      isChannelModalOpen ||
+      isConnectAppsOpen ||
+      isPermissionsModalOpen ||
+      isCommandPaletteOpen ||
+      isTopologyModalOpen ||
+      isAvatarSetupModalOpen ||
+      isStarredShortcutsModalOpen ||
+      isKeyboardShortcutsOpen ||
+      isVoiceRecordSettingsOpen ||
+      isRecipesModalOpen ||
+      isBatchClearModalOpen ||
+      isSignOutConfirmOpen ||
+      isBrowserModalOpen ||
+      chatToDelete ||
+      forwardModalMsg ||
+      lightboxImageUrl ||
+      previewModalFile
+    );
+    if (anyModalOpen) {
+      closeMobileSidebarsForModal();
+    }
+  }, [
+    isAgentSettingsModalOpen,
+    isSettingsModalOpen,
+    isScheduleModalOpen,
+    isChannelModalOpen,
+    isConnectAppsOpen,
+    isPermissionsModalOpen,
+    isCommandPaletteOpen,
+    isTopologyModalOpen,
+    isAvatarSetupModalOpen,
+    isStarredShortcutsModalOpen,
+    isKeyboardShortcutsOpen,
+    isVoiceRecordSettingsOpen,
+    isRecipesModalOpen,
+    isBatchClearModalOpen,
+    isSignOutConfirmOpen,
+    isBrowserModalOpen,
+    chatToDelete,
+    forwardModalMsg,
+    lightboxImageUrl,
+    previewModalFile,
+  ]);
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [plusMenuSearch, setPlusMenuSearch] = useState("");
   const [plusMenuSelectedIndex, setPlusMenuSelectedIndex] = useState<number>(-1);
@@ -8401,6 +8528,9 @@ const selectedAgentTheme = getAgentColorTheme(
   const handleSelectChat = (chat: AgentSession) => {
     if (!chat?.id) return;
     setMobileChatsOpen(false);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setIsChatListCollapsed(true);
+    }
     if (chat.id === selectedChatId) return;
     setSelectedChatId(chat.id);
     try {
@@ -8781,6 +8911,12 @@ const selectedAgentTheme = getAgentColorTheme(
     setMessages([]);
     setShowPollCard(false);
     setMobileChatsOpen(false);
+    setMobileAgentsOpen(false);
+    setMobileBotInfoOpen(false);
+    if (typeof window !== "undefined") {
+      if (window.innerWidth < 1024) setIsChatListCollapsed(true);
+      if (window.innerWidth < 1280) setIsBotInfoCollapsed(true);
+    }
 
     // Auto-focus input for zero-latency prompt typing
     setTimeout(() => {
@@ -13315,12 +13451,19 @@ const selectedAgentTheme = getAgentColorTheme(
           {/* Plus Add Popover Menu (Spans 100% full width of chat input and sits directly on top) */}
           <div ref={plusMenuRef} className="relative w-full">
             {isPlusMenuOpen && (
+              <>
+                {/* Mobile Backdrop Overlay - closes popover on tap */}
+                <div
+                  onClick={() => setIsPlusMenuOpen(false)}
+                  className="fixed inset-0 z-[65] bg-black/50 md:hidden animate-in fade-in duration-200"
+                  aria-hidden="true"
+                />
               <div
                 style={{
                   transform: plusMenuDragY > 0 ? "translateY(" + plusMenuDragY + "px)" : undefined,
                   transition: isPlusMenuDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
-                className="fixed md:absolute inset-x-2 md:inset-x-0 bottom-20 md:bottom-full mb-2 max-h-[85vh] md:max-h-[520px] flex flex-col rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-white/[0.08] shadow-2xl p-3 sm:p-4 z-50 animate-in fade-in zoom-in-95 duration-150 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
+                className="fixed md:absolute inset-x-0 md:inset-x-0 bottom-0 md:bottom-full mb-0 md:mb-2 max-h-[92dvh] md:max-h-[520px] flex flex-col rounded-t-3xl rounded-b-none md:rounded-2xl bg-white dark:bg-[#14141c] border-t md:border border-slate-200 dark:border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.3)] md:shadow-2xl p-3.5 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 z-[70] md:z-50 animate-in fade-in slide-in-from-bottom-8 md:zoom-in-95 duration-200 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
               >
                 {/* Mobile iOS-style Swipe-down Handle (Kéo để đóng) */}
                 <div
@@ -13788,7 +13931,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   const isNarrowMenu = plusMenuWidth < 720;
 
                   return (
-                    <div className={`flex-1 overflow-y-auto max-h-[60vh] md:max-h-[460px] pr-1 sm:pr-1.5 overscroll-contain ${
+                    <div className={`flex-1 overflow-y-auto max-h-[76dvh] md:max-h-[460px] pr-1 sm:pr-1.5 overscroll-contain ${
                       isNarrowMenu
                         ? "flex flex-col space-y-4 pt-2"
                         : "grid grid-cols-3 gap-3.5 pt-2.5 items-stretch"
@@ -14214,6 +14357,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 })()}
 
                 </div>
+                </>
             )}
 
             {replyingToMsg && (
@@ -15531,6 +15675,7 @@ ${chat.id}`);
                                 onClick={() => {
                                   handleSaveChatAsTeamRecipe(chat);
                                   setActiveChatMenuId(null);
+                                  setMobileChatsOpen(false);
                                 }}
                               />
 
@@ -16805,7 +16950,7 @@ ${chat.id}`);
       {isBrowserModalOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
-          <div className="fixed inset-0 z-50 flex flex-col bg-black/90 animate-in fade-in duration-150">
+          <div className="fixed inset-0 z-[100] flex flex-col bg-black/90 animate-in fade-in duration-150">
             {/* Top Navigation Bar with Controls & Close Button */}
             <header className="h-12 border-b border-[#252532] bg-[#121218] px-4 flex items-center justify-between shrink-0 select-none">
               <div className="flex items-center gap-3 min-w-0">
@@ -16968,7 +17113,7 @@ ${chat.id}`);
       {previewModalFile && (
         <div
           onClick={() => setPreviewModalFile(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -17073,7 +17218,7 @@ ${chat.id}`);
             }
             setLightboxImageUrl(null);
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200 select-none"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 animate-in fade-in duration-200 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -17409,7 +17554,7 @@ ${chat.id}`);
       {forwardModalMsg && (
         <div
           onClick={() => setForwardModalMsg(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 animate-in fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -17451,7 +17596,7 @@ ${chat.id}`);
       {isBatchClearModalOpen && (
         <div
           onClick={() => setIsBatchClearModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-100"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 animate-in fade-in duration-100"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -17703,7 +17848,7 @@ ${chat.id}`);
       {mobileActionChat && (
         <div
           onClick={() => setMobileActionChat(null)}
-          className="fixed inset-0 z-50 flex flex-col justify-end bg-black/40 p-4 animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-[85] flex flex-col justify-end bg-black/40 p-4 animate-in fade-in duration-150 select-none"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -17760,6 +17905,7 @@ ${chat.id}`);
                 onClick={() => {
                   handleSaveChatAsTeamRecipe(mobileActionChat);
                   setMobileActionChat(null);
+                  setMobileChatsOpen(false);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
@@ -17773,6 +17919,7 @@ ${chat.id}`);
                 onClick={() => {
                   handleExportSessionMarkdown();
                   setMobileActionChat(null);
+                  setMobileChatsOpen(false);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >

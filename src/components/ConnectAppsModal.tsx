@@ -727,7 +727,7 @@ export function ConnectAppsModal({
       : [selectedCategory as any];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-200">
       <div
         className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-[#121216] border border-slate-200 dark:border-[#262632] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans transition-all duration-300"
         onClick={(e) => e.stopPropagation()}

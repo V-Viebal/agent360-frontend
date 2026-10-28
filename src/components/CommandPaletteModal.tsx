@@ -276,7 +276,7 @@ export function CommandPaletteModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-20 p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-md animate-in fade-in duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}

@@ -82,7 +82,7 @@ export function BrowserCdpViewerModal({ onClose, agentId, agentName }: BrowserCd
   const selectedTarget = cdpStatus?.targets.find((t) => t.id === selectedTargetId);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] bg-slate-900/40 dark:bg-black/80 backdrop-blur-sm backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#120f0c] border border-[#d86f4c]/50 rounded-2xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 bg-slate-50 dark:bg-[#1a1410] border-b border-[#2b241e] flex items-center justify-between select-none">

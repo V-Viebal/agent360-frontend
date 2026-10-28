@@ -218,7 +218,7 @@ export function ScheduleJobModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
       <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs text-slate-800 dark:text-neutral-200">
         {/* Header */}
         <div className="px-5 py-3.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between">
