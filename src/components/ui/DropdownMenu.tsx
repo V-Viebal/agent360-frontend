@@ -196,7 +196,8 @@ export function DropdownMenuItem({
   icon,
   label,
   badge,
-  badgeColor = "text-[#f8a87c]",
+  badgeColor = "text-[var(--agent-light)] dark:text-[var(--agent-dark)]",
+
   onClick,
   variant = "default",
   disabled = false,
@@ -257,7 +258,8 @@ export function DropdownSubMenu({
   icon,
   label,
   badge,
-  badgeColor = "text-[#f8a87c]",
+  badgeColor = "text-[var(--agent-light)] dark:text-[var(--agent-dark)]",
+
   children,
 }: DropdownSubMenuProps) {
   const [isOpen, setIsOpen] = React.useState(false);

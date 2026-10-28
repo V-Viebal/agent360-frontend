@@ -1,0 +1,21 @@
+:root {
+        --bg-page: #080a0f;
+        --text-primary: #eef0f4;
+      }
+      :root.light, [data-theme="light"] {
+        --bg-page: #f8fafc;
+        --text-primary: #0f172a;
+      }
+      html, body {
+        background-color: var(--bg-page);
+        color: var(--text-primary);
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+      /* Disable transitions during initial bootstrap frame so colors never flash */
+      html.no-transitions *, html.no-transitions *::before, html.no-transitions *::after {
+        transition: none !important;
+      }
