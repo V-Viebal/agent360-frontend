@@ -13,7 +13,7 @@ export function classifyAttachmentFormat(fileNameOrUrl: string): { kind: Attachm
   const base = clean.split("/").pop() || "";
   const ext = (base.includes(".") ? base.split(".").pop() || "FILE" : "FILE").toUpperCase().slice(0, 6);
 
-  if (/^(PNG|JPE?G|WEBP|GIF|SVG|BMP|ICO|AVIF)$/i.test(ext)) {
+  if (/^(PNG|JPE?G|WEBP|GIF|SVG|BMP|ICO|AVIF|HEIC|HEIF)$/i.test(ext)) {
     return { kind: "image", ext, badgeColor: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" };
   }
   if (/^(MP4|WEBM|MOV|AVI|MKV)$/i.test(ext)) {
@@ -52,63 +52,175 @@ export function resolveUploadedAttachmentPreviewUrl(urlOrPath: string, agentId: 
   const cleanAgent = (agentId || "default").replace(/^bot:agent360:/i, "") || "default";
   const normalized = trimmed.replace(/\\/g, "/");
 
-  // Route directly to Agent360's ACL-verified file-download endpoint: /api/agents/{agent}/workspace/file-download?path=...&inline=true
+  // Route directly to Agent360's inline console/files endpoint: /api/agents/{agent}/console/files/{relPath}
+  // This endpoint streams inline with 200 OK for browser <img>/<video>/<audio> tags while enforcing WorkspacePathAcl.
   // 1. QwenPaw absolute workspace path: /app/working/workspaces/<agent>/media/<relpath> or /app/working/workspaces/<agent>/<relpath>
   const wsMediaMatch = normalized.match(/\/workspaces\/([^/]+)\/media\/(.+)$/i);
   if (wsMediaMatch) {
     const fileAgent = wsMediaMatch[1];
-    const relPath = `media/${wsMediaMatch[2]}`;
-    return `/api/agents/${encodeURIComponent(fileAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    const mediaRel = wsMediaMatch[2];
+    return `/api/agents/${encodeURIComponent(fileAgent)}/console/files/${mediaRel.split("/").map(encodeURIComponent).join("/")}`;
   }
 
   const wsAnyMatch = normalized.match(/\/workspaces\/([^/]+)\/(.+)$/i);
   if (wsAnyMatch) {
     const fileAgent = wsAnyMatch[1];
     const relPath = wsAnyMatch[2];
-    return `/api/agents/${encodeURIComponent(fileAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(fileAgent)}/console/files/${relPath.split("/").map(encodeURIComponent).join("/")}`;
   }
 
   // 2. Relative media path: media/<filename>
   const relMediaMatch = normalized.match(/^(?:\/)?media\/(.+)$/i);
   if (relMediaMatch) {
-    const relPath = `media/${relMediaMatch[1]}`;
-    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    const mediaRel = relMediaMatch[1];
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${mediaRel.split("/").map(encodeURIComponent).join("/")}`;
   }
 
   // 3. Virtual workspace upload: virtual://workspace/uploads/<fileId>/<filename>
   const virtualMatch = normalized.match(/^virtual:\/\/workspace\/uploads\/(upl_[a-zA-Z0-9]+)\/([^/?#]+)$/i);
   if (virtualMatch) {
-    const relPath = `.tmp/agent360-uploads/${virtualMatch[1]}_${virtualMatch[2]}`;
-    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    const storageFileName = `${virtualMatch[1]}_${virtualMatch[2]}`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${encodeURIComponent(storageFileName)}`;
   }
 
   // 4. Relative subfolder path (e.g. .tmp/zeroism-slide/file.pdf)
   if (!normalized.startsWith("/") && normalized.includes("/")) {
-    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(normalized)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${normalized.split("/").map(encodeURIComponent).join("/")}`;
   }
 
-  // 5. Bare filename fallback (default to media/<filename>)
+  // 5. Bare filename fallback (default to console/files/<filename>)
   const fallbackName = normalized.split("/").filter(Boolean).pop();
   if (fallbackName) {
-    const relPath = `media/${fallbackName}`;
-    return `/api/agents/${encodeURIComponent(cleanAgent)}/workspace/file-download?path=${encodeURIComponent(relPath)}&inline=true`;
+    return `/api/agents/${encodeURIComponent(cleanAgent)}/console/files/${encodeURIComponent(fallbackName)}`;
   }
   return urlOrPath;
 }
 
-export async function uploadFileToGateway(file: File, agentId: string = "default"): Promise<UploadedFileResult> {
+
+/**
+ * Normalizes mobile camera photos:
+ * 1. Ensures missing file extensions are inferred from MIME type (e.g. Android content:// URIs).
+ * 2. Compresses oversized raster images (> 1.8MB) via HTML5 Canvas so uploads succeed even on slow LTE or strict proxies.
+ */
+async function normalizeAndOptimizeImageFile(file: File): Promise<File> {
+  let finalFile = file;
+  const hasExt = /\.[a-zA-Z0-9]{2,5}$/.test(finalFile.name || "");
+  if (!hasExt && finalFile.type) {
+    const mimeExtMap: Record<string, string> = {
+      "image/jpeg": ".jpg",
+      "image/jpg": ".jpg",
+      "image/png": ".png",
+      "image/webp": ".webp",
+      "image/gif": ".gif",
+      "image/heic": ".heic",
+      "image/heif": ".heif",
+      "image/avif": ".avif",
+      "image/svg+xml": ".svg",
+      "application/pdf": ".pdf",
+    };
+    const ext = mimeExtMap[finalFile.type.toLowerCase()] || "";
+    if (ext) {
+      const baseName = (finalFile.name || `photo-${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, "_");
+      finalFile = new File([finalFile], `${baseName}${ext}`, { type: finalFile.type, lastModified: finalFile.lastModified });
+    }
+  }
+
+  // Only compress browser-renderable raster images larger than 1.8 MB
+  const isCompressibleImage =
+    typeof window !== "undefined" &&
+    typeof document !== "undefined" &&
+    finalFile.size > 1.8 * 1024 * 1024 &&
+    (/^image\/(jpeg|jpg|png|webp|heic|heif|avif)$/i.test(finalFile.type) ||
+     /\.(jpe?g|png|webp|heic|heif|avif)$/i.test(finalFile.name));
+
+  if (!isCompressibleImage) {
+    return finalFile;
+  }
+
+  try {
+    const bitmapUrl = URL.createObjectURL(finalFile);
+    const compressed = await new Promise<File>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(bitmapUrl);
+        try {
+          const maxDim = 2048;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width >= height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(finalFile);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob || blob.size >= finalFile.size) {
+                resolve(finalFile);
+                return;
+              }
+              const cleanBase = finalFile.name.replace(/\.[a-zA-Z0-9]+$/, "");
+              resolve(new File([blob], `${cleanBase}.jpg`, { type: "image/jpeg", lastModified: Date.now() }));
+            },
+            "image/jpeg",
+            0.86
+          );
+        } catch {
+          resolve(finalFile);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(bitmapUrl);
+        resolve(finalFile);
+      };
+      img.src = bitmapUrl;
+    });
+    return compressed;
+  } catch {
+    return finalFile;
+  }
+}
+
+export async function uploadFileToGateway(rawFile: File, agentId: string = "default"): Promise<UploadedFileResult> {
+  const file = await normalizeAndOptimizeImageFile(rawFile);
   const formData = new FormData();
   formData.append("file", file);
 
-  const cleanAgent = (agentId || "default").replace(/^bot:agent360:/, "");
+  const cleanAgent = (agentId || "default").replace(/^bot:agent360:/i, "") || "default";
+  const headers: Record<string, string> = {
+    "X-Agent-Id": cleanAgent,
+  };
+  try {
+    const token = localStorage.getItem("agent360_access_token") || localStorage.getItem("logto_access_token");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch {}
 
-  let res = await fetch("/api/agents/console/upload", {
+  let res = await fetch(`/api/agents/${encodeURIComponent(cleanAgent)}/console/upload`, {
     method: "POST",
-    headers: {
-      "X-Agent-Id": cleanAgent,
-    },
+    headers,
     body: formData,
   });
+
+  if (res.status === 404) {
+    const retryForm = new FormData();
+    retryForm.append("file", file);
+    res = await fetch("/api/agents/console/upload", {
+      method: "POST",
+      headers,
+      body: retryForm,
+    });
+  }
 
   if (res.status === 404) {
     const fallbackData = new FormData();
@@ -124,7 +236,10 @@ export async function uploadFileToGateway(file: File, agentId: string = "default
 
   if (!res.ok) {
     const errorJson = await res.json().catch(() => null);
-    throw new Error(errorJson?.detail || errorJson?.error || `Upload failed: ${res.statusText}`);
+    const statusReason = res.status === 413
+      ? "Kích thước tệp vượt quá giới hạn cho phép (tối đa 25MB)"
+      : (res.statusText || `HTTP ${res.status}`);
+    throw new Error(errorJson?.detail || errorJson?.error || errorJson?.message || statusReason);
   }
 
   const data = await res.json();

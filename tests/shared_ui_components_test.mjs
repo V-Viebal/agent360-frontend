@@ -272,3 +272,13 @@ assert.ok(
   "Message reply quote header must be cleanly parsed in bubbles, stripped from sidebar chat titles/snippets, and cleared on Escape or chat switch"
 );
 console.log("✓ Test 16: Message Reply quote & header stripping verified");
+
+console.log("Testing Image Upload to Chat Composer & Inline Preview URL Resolution...");
+const uploadSrc = fs.readFileSync(path.join(rootDir, "src/services/uploadApi.ts"), "utf8");
+assert.ok(
+  uploadSrc.includes("/console/files/") &&
+  grokSrc.includes("if (!inputText.trim() && attachedFiles.length === 0) return;") &&
+  grokSrc.includes("onPaste={(e) =>"),
+  "Image upload must route preview URLs via /console/files/, allow sending image-only messages without text, and support clipboard paste"
+);
+console.log("✓ Test 17: Image Upload, Clipboard Paste & Inline Preview URL resolution verified");

@@ -4049,120 +4049,52 @@ function SelkiesViewer({
   isResizing?: boolean;
 }) {
   const [src, setSrc] = useState<string>("");
+  // Selkies treats a bare URL as the single "primary" controller: every new phone/desktop tab
+  // kicked the previous one and reconfigured the shared display. #collab joins as a co-controller
+  // and #shared as a watch-only viewer, so several devices can stay connected at once.
   const [mode, setMode] = useState<"collab" | "shared">("collab");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [preemptedByOtherTab, setPreemptedByOtherTab] = useState(false);
-  // On mobile/WebKit without WebCodecs ImageDecoder, or when the user chooses Fast View,
-  // use real-time CDP screencast WebSocket push so the phone never gets stuck on Selkies' "Waiting for stream...".
-  const [useMobileLivePreview, setUseMobileLivePreview] = useState<boolean>(() => {
+  const [isMobileOrWebKitFallback, setIsMobileOrWebKitFallback] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    const isSmallOrTouch = window.innerWidth < 768 || (navigator.maxTouchPoints > 1 && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    const ua = navigator.userAgent || "";
+    const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const lacksImageDecoder = typeof (window as any).ImageDecoder === "undefined";
-    return isSmallOrTouch && lacksImageDecoder;
+    return isMobileUA || lacksImageDecoder || window.innerWidth < 768;
   });
-  const [fitMode, setFitMode] = useState<"width" | "contain">(() => {
-    try {
-      const saved = localStorage.getItem("agent360_computer_fit_mode");
-      if (saved === "contain" || saved === "width") return saved;
-      if (typeof window !== "undefined" && window.innerWidth < 768) return "contain";
-      return "width";
-    } catch {
-      return "width";
-    }
-  });
-  const [viewportDims, setViewportDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hiddenAt = useRef<number>(0);
 
-  // Multi-tab BroadcastChannel coordination: Selkies only allows 1 primary controller per desktop host (`url`).
-  // When another tab opens or reclaims primary control on the same `url`, automatically demote this tab to
-  // `#shared` (Watch only) BEFORE Selkies kills the connection, and auto-reclaim control when the user clicks or focuses this tab!
   useEffect(() => {
-    if (!url || typeof BroadcastChannel === "undefined") return;
-    const tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const ch = new BroadcastChannel("agent360_selkies_primary_coord");
-
-    if (mode === "collab" && !useMobileLivePreview) {
-      setPreemptedByOtherTab(false);
-      ch.postMessage({ type: "CLAIM_PRIMARY", url, tabId });
-    }
-
-    const onMsg = (ev: MessageEvent) => {
-      const data = ev.data;
-      if (data?.type === "CLAIM_PRIMARY" && data.url === url && data.tabId !== tabId) {
-        setPreemptedByOtherTab(true);
-        setMode((prev) => (prev === "collab" ? "shared" : prev));
-      }
+    const checkViewport = () => {
+      const ua = navigator.userAgent || "";
+      const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const lacksImageDecoder = typeof (window as any).ImageDecoder === "undefined";
+      setIsMobileOrWebKitFallback(isMobileUA || lacksImageDecoder || window.innerWidth < 768);
     };
-    ch.addEventListener("message", onMsg);
-    return () => {
-      ch.removeEventListener("message", onMsg);
-      ch.close();
-    };
-  }, [url, mode, attempt, reloadKey, useMobileLivePreview]);
+    checkViewport();
+    window.addEventListener("resize", checkViewport);
+    return () => window.removeEventListener("resize", checkViewport);
+  }, [agentId, reloadKey]);
 
-  // Smooth ResizeObserver for automatic fit-width & aspect ratio calculation when sidebars or split-pane change
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    let rafId = 0;
-    const ro = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect;
-      if (!rect) return;
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        setViewportDims({ w: Math.round(rect.width), h: Math.round(rect.height) });
-      });
-    });
-    ro.observe(el);
-    return () => {
-      cancelAnimationFrame(rafId);
-      ro.disconnect();
-    };
-  }, []);
-
-  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey` with automatic retry on transient 5xx/network errors
+  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey` (not on every agent switch on the same host!)
   useEffect(() => {
     if (!url || !agentId) return;
     let alive = true;
-    let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    let retryCount = 0;
     setError("");
     setIframeLoaded(false);
-
-    const connectDesktop = () => {
-      if (!alive) return;
-      focusAgentBrowser(agentId).catch(() => {});
-      issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
-        .then((signed) => {
-          if (!alive) return;
-          setError("");
-          setSrc(`${signed}#${mode}`);
-        })
-        .catch((e) => {
-          if (!alive) return;
-          if (e instanceof DesktopAuthError) {
-            setSrc("");
-            setError("auth");
-            return;
-          }
-          const msg = String(e?.message || e);
-          setSrc("");
-          setError(msg);
-          retryCount += 1;
-          const delayMs = retryCount <= 5 ? 2000 : 5000;
-          retryTimer = setTimeout(connectDesktop, delayMs);
-        });
-    };
-
-    connectDesktop();
-    return () => {
-      alive = false;
-      if (retryTimer) clearTimeout(retryTimer);
-    };
+    // Fire focusAgentBrowser in parallel without blocking iframe src assignment
+    focusAgentBrowser(agentId).catch(() => {});
+    issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
+      .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
+      .catch((e) => {
+        if (!alive) return;
+        setSrc("");
+        setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
+      });
+    return () => { alive = false; };
   }, [url, attempt, mode, reloadKey]);
 
   // When switching between agents that share the same Selkies desktop host, keep the stream alive and smoothly focus the target profile window
@@ -4172,48 +4104,25 @@ function SelkiesViewer({
   }, [agentId]);
 
   useEffect(() => {
-    const reclaimIfPreempted = () => {
-      setPreemptedByOtherTab((wasPreempted) => {
-        if (wasPreempted) {
-          setMode("collab");
-          focusAgentBrowser(agentId).catch(() => {});
-        }
-        return false;
-      });
-    };
     const onVis = () => {
       if (document.hidden) { hiddenAt.current = Date.now(); return; }
-      reclaimIfPreempted();
       if (hiddenAt.current && Date.now() - hiddenAt.current > 30000) setAttempt((a) => a + 1);
       hiddenAt.current = 0;
     };
     const onOnline = () => setAttempt((a) => a + 1);
     document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("focus", reclaimIfPreempted);
     window.addEventListener("online", onOnline);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("focus", reclaimIfPreempted);
-      window.removeEventListener("online", onOnline);
-    };
-  }, [agentId]);
-
-  // Calculate smooth Fit-Width vs Contain dimensions for the 1440x900 desktop stream
-  const DESKTOP_ASPECT = 1440 / 900; // 1.6
-  const containerAspect = viewportDims.w > 0 && viewportDims.h > 0 ? viewportDims.w / viewportDims.h : DESKTOP_ASPECT;
-  const shouldForceFullWidth = fitMode === "width" && viewportDims.w > 0 && viewportDims.h > 0 && containerAspect < DESKTOP_ASPECT;
-  const targetIframeHeight = shouldForceFullWidth ? Math.round(viewportDims.w / DESKTOP_ASPECT) : undefined;
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("online", onOnline); };
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full bg-black ${
-        shouldForceFullWidth ? "overflow-y-auto overflow-x-hidden flex items-start justify-center" : "overflow-hidden flex items-center justify-center"
-      }`}
+      className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center"
     >
       {error && (
         <>
-          <AgentBrowserPreview agentId={agentId} enabled interactive />
+          <AgentBrowserPreview agentId={agentId} enabled />
           <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
             {error === "auth" ? (
               <>
@@ -4231,39 +4140,11 @@ function SelkiesViewer({
                   <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
                 </form>
               </>
-            ) : `Desktop reconnecting (${error}) · interactive preview active`}
+            ) : `Desktop unavailable (${error}) · showing preview`}
           </div>
         </>
       )}
-      {preemptedByOtherTab && mode === "shared" && !error && (
-        <div
-          onClick={() => {
-            setPreemptedByOtherTab(false);
-            setMode("collab");
-            focusAgentBrowser(agentId).catch(() => {});
-          }}
-          onMouseEnter={() => {
-            setPreemptedByOtherTab(false);
-            setMode("collab");
-            focusAgentBrowser(agentId).catch(() => {});
-          }}
-          className="absolute inset-0 z-20 flex items-start justify-start p-2 bg-black/5 hover:bg-transparent cursor-pointer"
-          title="Di chuột hoặc chạm vào màn hình để tự động lấy lại quyền điều khiển (Auto-Claim Control)"
-        >
-          <div className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-[11px] font-mono text-amber-200 flex items-center gap-2 shadow-sm">
-            <span>Đang ở chế độ Xem chung (Tab khác đang điều khiển)</span>
-            <span className="px-1.5 py-0.5 rounded bg-amber-400 text-black font-semibold text-[10px]">Chạm / Di chuột để điều khiển</span>
-          </div>
-        </div>
-      )}
-      {/* Live preview layer: uses real-time WebSocket screencast push + touch-to-CDP input when Fast View is active */}
-      <AgentBrowserPreview
-        agentId={agentId}
-        enabled={!error && (!iframeLoaded || useMobileLivePreview)}
-        intervalMs={useMobileLivePreview ? 1500 : 4000}
-        interactive={useMobileLivePreview}
-      />
-      {src && !useMobileLivePreview && (
+      {src && (
         <iframe
           ref={iframeRef}
           key={`${src}#${attempt}#${reloadKey}`}
@@ -4272,19 +4153,29 @@ function SelkiesViewer({
           onLoad={() => {
             setIframeLoaded(true);
             focusAgentBrowser(agentId).catch(() => {});
+            setTimeout(() => {
+              focusAgentBrowser(agentId).catch(() => {});
+            }, 900);
           }}
-          className={`w-full border-0 bg-black z-10 transition-[height,opacity] duration-200 ease-out ${
+          className={`w-full h-full border-0 bg-black z-10 transition-opacity duration-200 ease-out ${
             isResizing ? "pointer-events-none select-none" : ""
-          } ${shouldForceFullWidth ? "shrink-0" : "h-full"}`}
+          } ${isMobileOrWebKitFallback ? "opacity-0" : "opacity-100"}`}
           allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
           allowFullScreen
           style={{
             touchAction: "manipulation",
             width: "100%",
-            height: targetIframeHeight ? `${targetIframeHeight}px` : "100%",
+            height: "100%",
           }}
         />
       )}
+      {/* On mobile (Android / iOS) or while loading, render live screen above the transparent Selkies input surface so screen is never black while mouse/touch events still pass through to Selkies */}
+      <AgentBrowserPreview
+        agentId={agentId}
+        enabled={!error && (!iframeLoaded || isMobileOrWebKitFallback)}
+        intervalMs={isMobileOrWebKitFallback ? 1200 : 4000}
+        liveWs={isMobileOrWebKitFallback}
+      />
       {profile && (
         <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
           profile: {agentId}
@@ -4293,32 +4184,7 @@ function SelkiesViewer({
       <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
         <button
           type="button"
-          onClick={() => setUseMobileLivePreview((p) => !p)}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
-          title={useMobileLivePreview ? "Chuyển sang điều khiển Desktop Selkies trực tiếp" : "Chuyển sang chế độ CDP Stream (mở nhiều thiết bị/tab cùng lúc không bao giờ bị đá kết nối)"}
-        >
-          {useMobileLivePreview ? "Desktop Stream" : "Multi-Device View"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setFitMode((prev) => {
-              const next = prev === "width" ? "contain" : "width";
-              try { localStorage.setItem("agent360_computer_fit_mode", next); } catch {}
-              return next;
-            });
-          }}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
-          title={fitMode === "width" ? "Đang Fit Full-Width (bấm để chuyển sang Fit Toàn Màn Hình)" : "Đang Fit Toàn Màn Hình (bấm để chuyển sang Fit Full-Width)"}
-        >
-          {fitMode === "width" ? "Fit width" : "Fit screen"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setPreemptedByOtherTab(false);
-            setMode((m) => (m === "shared" ? "collab" : "shared"));
-          }}
+          onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
           className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
           title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
         >
@@ -4327,7 +4193,6 @@ function SelkiesViewer({
         <button
           type="button"
           onClick={() => {
-            setPreemptedByOtherTab(false);
             focusAgentBrowser(agentId).catch(() => {});
             setAttempt((a) => a + 1);
           }}
@@ -4341,28 +4206,20 @@ function SelkiesViewer({
   );
 }
 
-/** Real-time CDP screencast push + low-cost fallback preview with interactive touch-to-CDP forwarding. */
+/** Low-cost live preview: the agent's own tab screenshot, refreshed only while visible. */
 function AgentBrowserPreview({
   agentId,
   enabled,
   intervalMs = 5000,
-  interactive = false,
+  liveWs = false,
 }: {
   agentId: string;
   enabled: boolean;
   intervalMs?: number;
-  interactive?: boolean;
+  liveWs?: boolean;
 }) {
   const [src, setSrc] = useState<string>("");
   const [failures, setFailures] = useState(0);
-  const [refreshNonce, setRefreshNonce] = useState(0);
-  const [wsLive, setWsLive] = useState(false);
-  const [ripple, setRipple] = useState<{ x: number; y: number; id: number } | null>(null);
-  const [typingOpen, setTypingOpen] = useState(false);
-  const [typingText, setTypingText] = useState("");
-  const imgRef = useRef<HTMLImageElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
@@ -4372,11 +4229,10 @@ function AgentBrowserPreview({
     let ws: WebSocket | null = null;
     let wsConnected = false;
     const ctrl = new AbortController();
+    setSrc("");
     setFailures(0);
-    setWsLive(false);
 
-    // Connect real-time CDP screencast WebSocket push (/api/agents/{id}/browser/stream) when interactive Fast View is active
-    if (interactive && typeof WebSocket !== "undefined") {
+    if (liveWs && typeof WebSocket !== "undefined") {
       try {
         ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1280));
         ws.onmessage = (ev) => {
@@ -4386,7 +4242,6 @@ function AgentBrowserPreview({
             const b64 = msg?.params?.data;
             if (typeof b64 === "string" && b64.length > 0) {
               wsConnected = true;
-              setWsLive(true);
               fails = 0;
               setFailures(0);
               if (current) {
@@ -4397,14 +4252,8 @@ function AgentBrowserPreview({
             }
           } catch {}
         };
-        ws.onclose = () => {
-          wsConnected = false;
-          if (alive) setWsLive(false);
-        };
-        ws.onerror = () => {
-          wsConnected = false;
-          if (alive) setWsLive(false);
-        };
+        ws.onclose = () => { wsConnected = false; };
+        ws.onerror = () => { wsConnected = false; };
       } catch {}
     }
 
@@ -4424,7 +4273,7 @@ function AgentBrowserPreview({
           setFailures(fails);
         }
       }
-      if (alive) timer = setTimeout(tick, fails > 2 ? 15000 : (wsConnected ? 6000 : intervalMs));
+      if (alive) timer = setTimeout(tick, fails > 2 ? 20000 : (wsConnected ? 5000 : intervalMs));
     };
     tick();
     return () => {
@@ -4436,169 +4285,20 @@ function AgentBrowserPreview({
       }
       if (current) URL.revokeObjectURL(current);
     };
-  }, [enabled, agentId, intervalMs, interactive, refreshNonce]);
-
-  const computeImageNormalizedCoords = (clientX: number, clientY: number): { xRatio: number; yRatio: number; relX: number; relY: number } | null => {
-    const img = imgRef.current;
-    if (!img) return null;
-    const rect = img.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return null;
-
-    const natW = img.naturalWidth || 1440;
-    const natH = img.naturalHeight || 813;
-    const imgAspect = natW / natH;
-    const boxAspect = rect.width / rect.height;
-
-    let renderW = rect.width;
-    let renderH = rect.height;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (imgAspect > boxAspect) {
-      renderW = rect.width;
-      renderH = rect.width / imgAspect;
-      offsetY = (rect.height - renderH) / 2;
-    } else {
-      renderH = rect.height;
-      renderW = rect.height * imgAspect;
-      offsetX = (rect.width - renderW) / 2;
-    }
-
-    const xInImg = clientX - rect.left - offsetX;
-    const yInImg = clientY - rect.top - offsetY;
-    if (xInImg < 0 || yInImg < 0 || xInImg > renderW || yInImg > renderH) return null;
-
-    return {
-      xRatio: Math.max(0, Math.min(1, xInImg / renderW)),
-      yRatio: Math.max(0, Math.min(1, yInImg / renderH)),
-      relX: clientX - rect.left,
-      relY: clientY - rect.top,
-    };
-  };
-
-  const triggerImmediateRefresh = () => {
-    setTimeout(() => setRefreshNonce((n) => n + 1), 160);
-    setTimeout(() => setRefreshNonce((n) => n + 1), 650);
-  };
-
+  }, [enabled, agentId, intervalMs, liveWs]);
   if (!enabled) return null;
   return (
     <>
       {src && (
-        <div className="absolute inset-0 w-full h-full z-[12] select-none overflow-hidden">
-          <img
-            ref={imgRef}
-            key={agentId}
-            src={src}
-            alt="Agent browser preview"
-            draggable={false}
-            onClick={async (e) => {
-              if (!interactive) return;
-              const coords = computeImageNormalizedCoords(e.clientX, e.clientY);
-              if (!coords) return;
-              setRipple({ x: coords.relX, y: coords.relY, id: Date.now() });
-              await dispatchAgentBrowserInput(agentId, {
-                action: "click",
-                xRatio: coords.xRatio,
-                yRatio: coords.yRatio,
-              });
-              triggerImmediateRefresh();
-            }}
-            onWheel={async (e) => {
-              if (!interactive) return;
-              const coords = computeImageNormalizedCoords(e.clientX, e.clientY) || { xRatio: 0.5, yRatio: 0.5 };
-              await dispatchAgentBrowserInput(agentId, {
-                action: "scroll",
-                xRatio: coords.xRatio,
-                yRatio: coords.yRatio,
-                deltaX: e.deltaX,
-                deltaY: e.deltaY,
-              });
-              triggerImmediateRefresh();
-            }}
-            onTouchStart={(e) => {
-              if (!interactive || e.touches.length !== 1) return;
-              touchStartRef.current = {
-                x: e.touches[0].clientX,
-                y: e.touches[0].clientY,
-                time: Date.now(),
-              };
-            }}
-            onTouchEnd={async (e) => {
-              if (!interactive || !touchStartRef.current || e.changedTouches.length !== 1) return;
-              const start = touchStartRef.current;
-              touchStartRef.current = null;
-              const endTouch = e.changedTouches[0];
-              const dx = endTouch.clientX - start.x;
-              const dy = endTouch.clientY - start.y;
-              if (Math.hypot(dx, dy) > 24) {
-                const coords = computeImageNormalizedCoords(start.x, start.y) || { xRatio: 0.5, yRatio: 0.5 };
-                await dispatchAgentBrowserInput(agentId, {
-                  action: "scroll",
-                  xRatio: coords.xRatio,
-                  yRatio: coords.yRatio,
-                  deltaX: -dx * 1.6,
-                  deltaY: -dy * 1.6,
-                });
-                triggerImmediateRefresh();
-              }
-            }}
-            className={`w-full h-full object-contain ${interactive ? "cursor-pointer touch-none" : ""}`}
-          />
-          {interactive && ripple && (
-            <span
-              key={ripple.id}
-              style={{ left: `${ripple.x - 14}px`, top: `${ripple.y - 14}px` }}
-              className="pointer-events-none absolute h-7 w-7 rounded-full border-2 border-[#f8a87c] bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] animate-ping"
-            />
-          )}
-          {interactive && (
-            <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5">
-              {wsLive && (
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-mono text-emerald-300 flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  LIVE WS
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => setTypingOpen((v) => !v)}
-                className="px-2 py-0.5 rounded bg-black/75 border border-white/15 text-[10px] font-mono text-white! keep-white hover:bg-black/90 cursor-pointer"
-                title="Gửi phím hoặc văn bản xuống trình duyệt của Agent"
-              >
-                ⌨ Nhập chữ
-              </button>
-              {typingOpen && (
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (!typingText.trim()) return;
-                    const textToSend = typingText;
-                    setTypingText("");
-                    await dispatchAgentBrowserInput(agentId, { action: "type", text: textToSend });
-                    await dispatchAgentBrowserInput(agentId, { action: "key", key: "Enter" });
-                    triggerImmediateRefresh();
-                  }}
-                  className="flex items-center gap-1 bg-black/85 border border-white/20 rounded px-1.5 py-0.5"
-                >
-                  <input
-                    type="text"
-                    value={typingText}
-                    onChange={(e) => setTypingText(e.target.value)}
-                    placeholder="Gõ nội dung + Enter…"
-                    className="w-36 sm:w-48 bg-transparent text-[11px] font-sans text-white! keep-white outline-none"
-                  />
-                  <button type="submit" className="px-1.5 py-0.2 rounded bg-[#f8a87c] text-black! text-[10px] font-semibold">
-                    Gửi
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-        </div>
+        <img
+          key={agentId}
+          src={src}
+          alt="Agent browser preview"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none z-[12]"
+        />
       )}
       {!src && (
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black z-[12]">
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black pointer-events-none select-none z-[12]">
           {failures > 0 ? "Waiting for the agent's browser…" : "Loading preview…"}
         </div>
       )}
@@ -6520,7 +6220,7 @@ ${targetItem.text}`;
       }
     } catch (err: any) {
       console.error("File upload failed:", err);
-      alert(`Upload failed: ${err.message}`);
+      alert(err?.message ? (err.message.startsWith("Upload failed") ? err.message : `Tải tệp lên thất bại: ${err.message}`) : "Tải tệp lên thất bại");
     } finally {
       setIsUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -6557,7 +6257,7 @@ ${targetItem.text}`;
       }
     } catch (err: any) {
       console.error("Drag and drop file upload failed:", err);
-      alert(`Upload failed: ${err.message}`);
+      alert(err?.message ? (err.message.startsWith("Upload failed") ? err.message : `Tải tệp lên thất bại: ${err.message}`) : "Tải tệp lên thất bại");
     } finally {
       setIsUploadingFile(false);
       setIsDraggingFiles(false);
@@ -10629,7 +10329,7 @@ const selectedAgentTheme = getAgentColorTheme(
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (hasNoAgents) return;
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && attachedFiles.length === 0) return;
 
     // Request notification permission on first user interaction if supported
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
@@ -14162,7 +13862,7 @@ const selectedAgentTheme = getAgentColorTheme(
           {attachedFiles.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap pb-1 px-1">
               {attachedFiles.map((f, i) => {
-                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico)$/i.test(f.file_name);
+                const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico|avif)$/i.test(f.file_name) || Boolean(f.mime_type && f.mime_type.startsWith("image/"));
                 const previewSrc = f.preview_url || resolveUploadedAttachmentPreviewUrl(f.url, selectedAgent?.slug || selectedAgent?.id || "default");
                 return (
                   <div
@@ -15450,6 +15150,31 @@ const selectedAgentTheme = getAgentColorTheme(
                   ref={textareaRef}
                   rows={isMultiline ? 2 : 1}
                   value={inputText}
+                  onPaste={(e) => {
+                    const items = e.clipboardData?.items;
+                    if (!items) return;
+                    const pastedFiles: File[] = [];
+                    for (let i = 0; i < items.length; i++) {
+                      const item = items[i];
+                      if (item.kind === "file") {
+                        const file = item.getAsFile();
+                        if (file) {
+                          // Ensure pasted clipboard images have a clear filename with extension
+                          if (!file.name || file.name === "image.png") {
+                            const ext = (file.type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
+                            const namedFile = new File([file], `clipboard-${Date.now()}-${i}.${ext}`, { type: file.type || "image/png" });
+                            pastedFiles.push(namedFile);
+                          } else {
+                            pastedFiles.push(file);
+                          }
+                        }
+                      }
+                    }
+                    if (pastedFiles.length > 0) {
+                      e.preventDefault();
+                      void handleDropFiles(pastedFiles);
+                    }
+                  }}
                   onCompositionStart={() => {
                     isComposingRef.current = true;
                   }}
@@ -18737,28 +18462,30 @@ ${chat.id}`);
         variant="danger"
       />
 
-      <OnboardingChecklistWidget
-        isBotInfoCollapsed={isBotInfoCollapsed}
-        isChatListCollapsed={isChatListCollapsed}
-        onToggleBotInfo={() => {
-          handleToggleBotInfo();
-          if (typeof window !== "undefined" && window.innerWidth < 1024) {
-            setMobileBotInfoOpen((prev) => !prev);
-          }
-        }}
-        onToggleChatList={() => {
-          if (typeof window !== "undefined" && window.innerWidth < 1024) {
-            setMobileChatsOpen((prev) => !prev);
-            handleToggleChatList(false);
-          } else {
-            handleToggleChatList();
-          }
-        }}
-        onFocusComposer={() => {
-          const textarea = document.querySelector("#tour-prompt-composer textarea") as HTMLTextAreaElement;
-          if (textarea) textarea.focus();
-        }}
-      />
+      {!isComputerSplitOpen && !isBrowserModalOpen && (
+        <OnboardingChecklistWidget
+          isBotInfoCollapsed={isBotInfoCollapsed}
+          isChatListCollapsed={isChatListCollapsed}
+          onToggleBotInfo={() => {
+            handleToggleBotInfo();
+            if (typeof window !== "undefined" && window.innerWidth < 1024) {
+              setMobileBotInfoOpen((prev) => !prev);
+            }
+          }}
+          onToggleChatList={() => {
+            if (typeof window !== "undefined" && window.innerWidth < 1024) {
+              setMobileChatsOpen((prev) => !prev);
+              handleToggleChatList(false);
+            } else {
+              handleToggleChatList();
+            }
+          }}
+          onFocusComposer={() => {
+            const textarea = document.querySelector("#tour-prompt-composer textarea") as HTMLTextAreaElement;
+            if (textarea) textarea.focus();
+          }}
+        />
+      )}
 
       <PromptRecipesModal
         isOpen={isRecipesModalOpen}
