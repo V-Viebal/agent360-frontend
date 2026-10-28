@@ -273,7 +273,10 @@ function computeIsMultilineComposer(text: string): boolean {
   return text.length > threshold;
 }
 
-function detectSessionPronouns(messages: ChatMessage[], currentMsg: ChatMessage): { self: string; user: string; isVi: boolean } {
+function detectSessionPronouns(
+  messages: ChatMessage[],
+  currentMsg: ChatMessage
+): { self: string; user: string; lang: "vi" | "en" | "other" } {
   const sampleTexts: string[] = [];
   for (let i = Math.max(0, messages.length - 8); i < messages.length; i++) {
     if (messages[i]?.content) sampleTexts.push(messages[i].content);
@@ -283,13 +286,22 @@ function detectSessionPronouns(messages: ChatMessage[], currentMsg: ChatMessage)
   const combined = sampleTexts.join("\n");
 
   const hasViChars = /[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]/i.test(combined);
-  if (!hasViChars && /\b(the|and|for|you|please|check|what|how|list|report)\b/i.test(combined)) {
-    return { self: "I", user: "you", isVi: false };
+  if (!hasViChars) {
+    if (/\b(the|and|for|you|please|check|what|how|list|report|let)\b/i.test(combined)) {
+      return { self: "I", user: "you", lang: "en" };
+    }
+    return { self: "", user: "", lang: "other" };
   }
 
   let user = "anh";
-  if (/\bchị\b/i.test(combined) && !/\banh\b/i.test(combined)) {
+  if (/\bsếp\b/i.test(combined) && !/\b(anh|chị)\b/i.test(combined)) {
+    user = "sếp";
+  } else if (/\bchị\b/i.test(combined) && !/\banh\b/i.test(combined)) {
     user = "chị";
+  } else if (/\b(thầy|cô)\b/i.test(combined) && !/\b(anh|chị)\b/i.test(combined)) {
+    user = /\bcô\b/i.test(combined) ? "cô" : "thầy";
+  } else if (/\b(bác|chú)\b/i.test(combined) && !/\b(anh|chị)\b/i.test(combined)) {
+    user = /\bbác\b/i.test(combined) ? "bác" : "chú";
   } else if (/\bbạn\b/i.test(combined) && !/\b(anh|chị)\b/i.test(combined)) {
     user = "bạn";
   }
@@ -297,13 +309,15 @@ function detectSessionPronouns(messages: ChatMessage[], currentMsg: ChatMessage)
   let self = "em";
   if (user === "bạn") {
     self = /\btôi\b/i.test(combined) ? "tôi" : "mình";
+  } else if (user === "bác" || user === "chú") {
+    self = /\bcon\b/i.test(combined) ? "con" : "cháu";
   }
-  return { self, user, isVi: true };
+  return { self, user, lang: "vi" };
 }
 
 function transformReasonStepToLeadIn(
   rawStepText: string,
-  pronouns: { self: string; user: string; isVi: boolean },
+  pronouns: { self: string; user: string; lang: "vi" | "en" | "other" },
   isStepComplete: boolean
 ): string | null {
   if (!rawStepText) return null;
@@ -329,10 +343,12 @@ function transformReasonStepToLeadIn(
     return null;
   }
 
-  const { self, user, isVi } = pronouns;
-  const capSelf = self.charAt(0).toUpperCase() + self.slice(1);
+  const { self, user, lang } = pronouns;
+  if (lang === "other") {
+    return firstSentence.length <= 240 ? firstSentence : null;
+  }
 
-  if (!isVi) {
+  if (lang === "en") {
     const en = firstSentence.replace(/[.]+$/, "").trim();
     const mUser = en.match(/^(?:the\s+user|user)\s+(?:wants|asked|is\s+asking|needs|requested)\s+to\s+(.+)$/i);
     if (mUser) return `Let me ${mUser[1]} for you.`;
@@ -344,11 +360,12 @@ function transformReasonStepToLeadIn(
     return null;
   }
 
+  const capSelf = self.charAt(0).toUpperCase() + self.slice(1);
   let body = firstSentence.replace(/[.!…]+$/, "").trim();
   body = body.replace(/\s+(?:của|cho)\s+(?:người\s+dùng|khách\s+hàng)\b/gi, "");
 
-  // 1. Already starts with first-person conversational pronoun (Để em, Em đang, Em vừa, Mình đang...)
-  if (new RegExp(`^(?:để\\s+${self}|${self}\\s+(?:đang|vừa|sẽ|tiếp\\s+tục|kiểm\\s+tra|rà\\s+soát|đối\\s+chiếu))\\b`, "i").test(body)) {
+  // 1. Already written in first-person conversational style by SOUL.md contract
+  if (new RegExp(`^(?:để\\s+${self}|${self}\\s+(?:đang|vừa|sẽ|tiếp\\s+tục|kiểm\\s+tra|rà\\s+soát|đối\\s+chiếu|xin))\\b`, "i").test(body)) {
     return `${body}.`;
   }
 
@@ -365,14 +382,13 @@ function transformReasonStepToLeadIn(
     return `${act} cho ${user}${suffix}`;
   };
 
-  // 2. "Đã <action1>. Tiếp tục <action2>" or "Tiếp tục <action>"
+  // 2. Fallback adapter for historical / 3rd-person reasoning summaries
   const mViCont = firstLine.match(/(?:^|\.\s*)tiếp\s+tục\s+([^.!?\n]+)/i);
   if (mViCont) {
     const act = mViCont[1].trim().replace(/[.!…]+$/, "");
     return `${capSelf} tiếp tục ${attachForUser(act, "...")}`;
   }
 
-  // 3. "Người dùng muốn/yêu cầu/cần/hỏi <action>"
   const mViUser = body.match(/^(?:người\s+dùng|khách\s+hàng)\s+(?:đang\s+)?(?:muốn|yêu\s+cầu|cần|hỏi|đề\s+nghị)\s+(.+)$/i);
   if (mViUser) {
     let act = mViUser[1].trim();
@@ -380,14 +396,12 @@ function transformReasonStepToLeadIn(
     return `Để ${self} ${attachForUser(act, " nhé.")}`;
   }
 
-  // 4. "Cần (phải )?<action>"
   const mViNeed = body.match(/^cần\s+(?:phải\s+)?(.+)$/i);
   if (mViNeed) {
     const act = mViNeed[1].trim();
     return `Để ${self} ${attachForUser(act, " nhé.")}`;
   }
 
-  // 5. "Đang <action>"
   const mViDoing = body.match(/^đang\s+(.+)$/i);
   if (mViDoing) {
     const act = mViDoing[1].trim();
@@ -398,6 +412,12 @@ function transformReasonStepToLeadIn(
   return null;
 }
 
+/**
+ * Soul-Driven & Structure-Pure Solo Turn Splitter:
+ * - Priority 1 (Tool-Calling Turn with `reasonLeadIns`): Uses the pre-tool `reasonLeadIns` as the single source of truth for `leadInSegments`,
+ *   and keeps `cleanContent` intact as `mainBodyContent` (only stripping an opening paragraph if it is a redundant "Em vừa đối chiếu..." ack).
+ * - Priority 2 (Direct Turn without `reasonLeadIns`): Splits the opening conversational paragraph from `cleanContent` when separated by `\n\n`.
+ */
 function extractSoloTurnLeadInAndBody(
   msg: ChatMessage,
   cleanContent: string,
@@ -447,28 +467,36 @@ function extractSoloTurnLeadInAndBody(
     }
   }
 
-  const isShortConversationalPara = (p: string) =>
+  const isShortSingleLinePara = (p: string) =>
     p.length >= 6 &&
-    p.length <= 260 &&
+    p.length <= 240 &&
     !p.includes("\n") &&
-    !/^(?:#|\*|-|\d+\.|>|```|\|)/.test(p);
+    !/^(?:#|\*|-|•|\d+\.|>|```|\|)/.test(p);
 
-  const isExplicitConversationalLeadIn = (p: string) => {
-    if (!isShortConversationalPara(p)) return false;
-    // Must start with conversational ack/action ("Để em...", "Em vừa...", "Em đang...", "Em đã kiểm tra...", "Let me...", "I just..."),
-    // NOT a refusal ("Em không...", "Em chưa có...") or date/data conclusion ("Hôm nay **...", "Đây là sample...")
-    if (/^(?:không\b|em\s+(?:không|chưa\s+có)\b|hôm\s+nay\b|đây\s+là\b|browser\s+đã\b)/i.test(p.trim())) {
-      return false;
-    }
-    return new RegExp(
-      `^(?:để\\s+${self}|${self}\\s+(?:vừa|đang|đã\\s+(?:kiểm\\s+tra|đối\\s+chiếu|rà\\s+soát|lấy|tổng\\s+hợp)|xin\\s+báo)|giờ\\s+hệ\\s+thống\\s+${self}\\s+vừa|let\\s+me|i've\\s+just|i\\s+just\\s+checked)\\b`,
-      "i"
-    ).test(p.trim());
+  const isRedundantPostToolAckPara = (p: string) => {
+    if (!isShortSingleLinePara(p)) return false;
+    const prefix = self ? `(?:để\\s+${self}|${self}\\s+(?:vừa|đã\\s+(?:kiểm\\s+tra|đối\\s+chiếu|rà\\s+soát|lấy))|giờ\\s+hệ\\s+thống\\s+${self}\\s+vừa)` : "(?:let\\s+me|i\\s+just\\s+checked|i've\\s+just\\s+checked)";
+    return new RegExp(`^${prefix}\\b`, "i").test(p.trim());
   };
 
-  let contentLeadIns: string[] = [];
-  let mainBodyContent = cleanContent;
+  // Priority 1: Turn already has pre-tool lead-in(s) from reasoning steps -> never double-stack a 2nd lead-in from cleanContent
+  if (reasonLeadIns.length > 0) {
+    let mainBody = cleanContent;
+    if (cleanContent) {
+      const paragraphs = cleanContent.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+      if (paragraphs.length >= 2 && isRedundantPostToolAckPara(paragraphs[0])) {
+        mainBody = paragraphs.slice(1).join("\n\n");
+      } else if (paragraphs.length === 1 && isTurnActivelyRunning && isRedundantPostToolAckPara(paragraphs[0]) && !cleanContent.includes("\n\n")) {
+        mainBody = "";
+      }
+    }
+    return {
+      leadInSegments: reasonLeadIns,
+      mainBodyContent: mainBody,
+    };
+  }
 
+  // Priority 2: Direct turn (no pre-tool reasoning lead-in) -> split structured multi-segment or multi-paragraph opening
   const rawSegs = Array.isArray(msg.textSegments)
     ? msg.textSegments
         .map((s) => parseQuotedReplyFromContent(s, undefined, agentKey).cleanContent)
@@ -476,75 +504,41 @@ function extractSoloTurnLeadInAndBody(
     : [];
 
   if (rawSegs.length >= 2) {
-    const lastSeg = rawSegs[rawSegs.length - 1];
-    const lastParas = lastSeg.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-    if (lastParas.length >= 2 && isExplicitConversationalLeadIn(lastParas[0])) {
-      contentLeadIns = [...rawSegs.slice(0, -1), lastParas[0]];
-      mainBodyContent = lastParas.slice(1).join("\n\n");
-    } else {
-      contentLeadIns = rawSegs.slice(0, -1);
-      mainBodyContent = lastSeg;
-    }
-  } else if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && isShortConversationalPara(rawSegs[0])) {
-    contentLeadIns = [rawSegs[0]];
-    mainBodyContent = "";
-  } else if (cleanContent) {
-    const paragraphs = cleanContent
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter(Boolean);
+    return {
+      leadInSegments: rawSegs.slice(0, -1).slice(0, 2),
+      mainBodyContent: rawSegs[rawSegs.length - 1],
+    };
+  }
+  if (rawSegs.length === 1 && isTurnActivelyRunning && hasCallingStep && isShortSingleLinePara(rawSegs[0])) {
+    return {
+      leadInSegments: [rawSegs[0]],
+      mainBodyContent: "",
+    };
+  }
+  if (cleanContent) {
+    const paragraphs = cleanContent.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
     const firstPara = paragraphs[0] || "";
-    const secondPara = paragraphs[1] || "";
+    const isDirectConversationalOpening =
+      isShortSingleLinePara(firstPara) &&
+      !/^(?:không\b|em\s+(?:không|chưa\s+có)\b|hôm\s+nay\b|đây\s+là\b)/i.test(firstPara);
 
-    if (
-      paragraphs.length >= 3 &&
-      isExplicitConversationalLeadIn(firstPara) &&
-      isExplicitConversationalLeadIn(secondPara) &&
-      secondPara.length <= 160
-    ) {
-      contentLeadIns = [firstPara, secondPara];
-      mainBodyContent = paragraphs.slice(2).join("\n\n");
-    } else if (
-      paragraphs.length >= 2 &&
-      (isExplicitConversationalLeadIn(firstPara) || (reasonLeadIns.length === 0 && isShortConversationalPara(firstPara) && !/^(?:không\b|em\s+(?:không|chưa\s+có)\b|hôm\s+nay\b|đây\s+là\b|browser\s+đã\b)/i.test(firstPara)))
-    ) {
-      contentLeadIns = [firstPara];
-      mainBodyContent = paragraphs.slice(1).join("\n\n");
-    } else if (
-      paragraphs.length === 1 &&
-      isTurnActivelyRunning &&
-      isExplicitConversationalLeadIn(firstPara) &&
-      !cleanContent.includes("\n\n")
-    ) {
-      contentLeadIns = [firstPara];
-      mainBodyContent = "";
+    if (paragraphs.length >= 2 && isDirectConversationalOpening) {
+      return {
+        leadInSegments: [firstPara],
+        mainBodyContent: paragraphs.slice(1).join("\n\n"),
+      };
     }
-  }
-
-  const combinedLeadIns: string[] = [...reasonLeadIns];
-  const overflowContentParas: string[] = [];
-  for (const cl of contentLeadIns) {
-    const normCl = cl.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
-    const isDup = combinedLeadIns.some((prev) => {
-      const normPrev = prev.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
-      return normPrev === normCl || normPrev.includes(normCl) || normCl.includes(normPrev);
-    });
-    if (!isDup) {
-      if (combinedLeadIns.length < 2) {
-        combinedLeadIns.push(cl);
-      } else {
-        overflowContentParas.push(cl);
-      }
+    if (paragraphs.length === 1 && isTurnActivelyRunning && isRedundantPostToolAckPara(firstPara) && !cleanContent.includes("\n\n")) {
+      return {
+        leadInSegments: [firstPara],
+        mainBodyContent: "",
+      };
     }
-  }
-
-  if (overflowContentParas.length > 0) {
-    mainBodyContent = [...overflowContentParas, mainBodyContent].filter(Boolean).join("\n\n");
   }
 
   return {
-    leadInSegments: combinedLeadIns.slice(0, 2),
-    mainBodyContent,
+    leadInSegments: [],
+    mainBodyContent: cleanContent,
   };
 }
 
@@ -10161,7 +10155,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {/* Bottom blur/gradient fade edge when agent list is scrollable in collapsed rail */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-7 bg-gradient-to-t from-[var(--bg-sidebar)]/75 via-[var(--bg-sidebar)]/30 to-transparent z-20 pointer-events-none"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-sidebar)]/50 via-[var(--bg-sidebar)]/15 to-transparent z-20 pointer-events-none"
               />
             </div>
 
@@ -10866,7 +10860,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {/* Bottom blur/gradient fade edge for expanded sidebar */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-7 bg-gradient-to-t from-[var(--bg-sidebar)]/75 via-[var(--bg-sidebar)]/30 to-transparent z-20 pointer-events-none"
+                className="pointer-events-none absolute bottom-0 inset-x-0 h-5 bg-gradient-to-t from-[var(--bg-sidebar)]/50 via-[var(--bg-sidebar)]/15 to-transparent z-20 pointer-events-none"
               />
             </div>
 
@@ -12179,17 +12173,6 @@ const selectedAgentTheme = getAgentColorTheme(
                             Array.isArray(activeSessionRoom.participants) &&
                             activeSessionRoom.participants.some((p) => p.role === "collaborator"))
                         );
-
-                        const soloSteps = Array.isArray(msg.steps) ? msg.steps : [];
-                        const soloTools =
-                          Array.isArray(msg.toolCalls) && msg.toolCalls.length > 0
-                            ? msg.toolCalls
-                            : soloSteps.filter((s) => s.kind === "tool_call");
-                        const soloReasonList = soloSteps.filter((s) => s.kind === "reasoning" && s.text);
-                        const rawReasonText = (
-                          msg.reasoning ||
-                          soloReasonList.map((r) => r.text || "").join("\n")
-                        ).trim();
 
                         const { leadInSegments, mainBodyContent } = extractSoloTurnLeadInAndBody(
                           msg,
