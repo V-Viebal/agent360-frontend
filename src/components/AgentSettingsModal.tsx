@@ -405,65 +405,141 @@ export function AgentSettingsModal({
                   )}
                 </div>
 
-                {/* Active LLM Model Switcher Card */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
-                  <div className="flex items-center justify-between">
+                {/* Active LLM Model Switcher Card (Simple QwenPaw Style) */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Sparkles size={14} style={{ color: agentTheme.primary }} />
-                      <span>Mô hình AI</span>
+                      <Cpu size={14} style={{ color: agentTheme.primary }} />
+                      <span>Mô hình AI (LLM Model)</span>
                     </span>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
-                      {isChangingModel ? "Đang đổi..." : currentCleanModel}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-mono text-neutral-400">Đang chạy:</span>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center gap-1">
+                        {isChangingModel && <Loader2 size={11} className="animate-spin" />}
+                        <span>{isChangingModel ? "Đang đổi..." : currentCleanModel}</span>
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Search models */}
-                  <div className="flex items-center gap-2 bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] rounded-xl px-2.5 py-1">
-                    <Search size={12} className="text-neutral-400 shrink-0" />
-                    <input
-                      type="text"
-                      value={modelSearch}
-                      onChange={(e) => setModelSearch(e.target.value)}
-                      placeholder="Tìm mô hình..."
-                      className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none"
-                    />
-                    {modelSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setModelSearch("")}
-                        className="text-slate-400 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white cursor-pointer"
-                      >
-                        <X size={11} />
-                      </button>
+                  {/* Quick-pick flagship model pills (QwenPaw Style) */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
+                      Mô hình phổ biến (Quick Select)
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { id: "grok-4.7", label: "Grok 4.7" },
+                        { id: "gpt-5.6-luna", label: "GPT-5.6 Luna" },
+                        { id: "gpt-6-sol", label: "GPT-6 Sol" },
+                        { id: "claude-opus-4.6-thinking", label: "Claude Opus 4.6" },
+                        { id: "gemini-3.7-flash-tiered", label: "Gemini 3.7 Flash" },
+                        { id: "qwen3.7-max", label: "Qwen 3.7 Max" },
+                      ].map((preset) => {
+                        const isCurrent = currentCleanModel === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            disabled={isChangingModel}
+                            onClick={() => onSelectModel(preset.id)}
+                            className={"px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer border flex items-center gap-1.5 " + (
+                              isCurrent
+                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
+                                : "bg-white dark:bg-[#121218] hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-slate-200/80 dark:border-[#222230]"
+                            )}
+                          >
+                            <span>{preset.label}</span>
+                            {isCurrent && <Check size={11} style={{ color: agentTheme.primary }} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Clean Dropdown / Full Search Selector */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsModelDropdownOpen((prev) => !prev)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] text-slate-800 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Sparkles size={13} style={{ color: agentTheme.primary }} />
+                        <span className="font-medium">
+                          {isModelDropdownOpen ? "Thu gọn danh sách tất cả mô hình" : "Chọn từ danh sách tất cả mô hình khả dụng..."}
+                        </span>
+                      </span>
+                      {isModelDropdownOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+
+                    {isModelDropdownOpen && (
+                      <div className="mt-2 p-2 rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] space-y-2 animate-in fade-in duration-100">
+                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#222230] rounded-lg px-2.5 py-1">
+                          <Search size={12} className="text-neutral-400 shrink-0" />
+                          <input
+                            type="text"
+                            value={modelSearch}
+                            onChange={(e) => setModelSearch(e.target.value)}
+                            placeholder="Tìm kiếm model khả dụng..."
+                            className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none"
+                            autoFocus
+                          />
+                          {modelSearch && (
+                            <button
+                              type="button"
+                              onClick={() => setModelSearch("")}
+                              className="text-slate-400 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                            >
+                              <X size={11} />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="max-h-48 overflow-y-auto pr-1 space-y-1">
+                          {filteredModels.length === 0 ? (
+                            <div className="py-3 text-center text-xs text-neutral-400 font-mono">
+                              Không tìm thấy mô hình phù hợp
+                            </div>
+                          ) : (
+                            filteredModels.map((m) => {
+                              const isCurrent = currentCleanModel === m.model;
+                              return (
+                                <button
+                                  key={m.model}
+                                  type="button"
+                                  disabled={isChangingModel}
+                                  onClick={() => {
+                                    onSelectModel(m.model, m.providerId);
+                                    setIsModelDropdownOpen(false);
+                                  }}
+                                  className={"w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer border text-left " + (
+                                    isCurrent
+                                      ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
+                                      : "bg-transparent hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-transparent"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="truncate">{m.model}</span>
+                                    {m.providerName && (
+                                      <span className="text-[10px] text-neutral-400 font-mono shrink-0">
+                                        ({m.providerName})
+                                      </span>
+                                    )}
+                                  </div>
+                                  {isCurrent && <Check size={12} style={{ color: agentTheme.primary }} className="shrink-0 ml-2" />}
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-52 overflow-y-auto pr-1">
-                    {filteredModels.map((m) => {
-                      const isCurrent = currentCleanModel === m.model;
-                      return (
-                        <button
-                          key={m.model}
-                          type="button"
-                          disabled={isChangingModel}
-                          onClick={() => onSelectModel(m.model, m.providerId)}
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer border text-left ${
-                            isCurrent
-                              ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
-                              : "bg-white dark:bg-[#121218] hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-slate-200/80 dark:border-[#222230]"
-                          }`}
-                        >
-                          <span className="truncate">{m.model}</span>
-                          {isCurrent && <Check size={12} style={{ color: agentTheme.primary }} className="shrink-0" />}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
 
-                {/* System Governance & Constitution Summary */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2">
-                  <div className="flex items-center justify-between">
+                {/* System Governance & SOUL.md Profile (Expandable) */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <ShieldCheck size={14} className="text-emerald-500 dark:text-emerald-400" />
                       <span>Hồ sơ & Quản trị</span>
@@ -472,15 +548,59 @@ export function AgentSettingsModal({
                       SOUL.md ({agent.slug}) • {skills.length} skills
                     </span>
                   </div>
+
                   {agent.description && (
                     <p className="text-xs text-slate-600 dark:text-neutral-400 leading-relaxed select-text line-clamp-3">
                       {agent.description}
                     </p>
                   )}
+
+                  {/* Expand / Collapse SOUL.md file preview */}
+                  <div className="pt-1 border-t border-slate-200/60 dark:border-white/5">
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setIsSoulExpanded((prev) => !prev)}
+                        className="text-xs font-mono font-medium text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <FileText size={13} style={{ color: agentTheme.primary }} />
+                        <span>{isSoulExpanded ? "Thu gọn SOUL.md" : "Xem nội dung SOUL.md"}</span>
+                        {isSoulExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      </button>
+
+                      {isSoulExpanded && soulContent && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(soulContent);
+                            setCopiedSoul(true);
+                            setTimeout(() => setCopiedSoul(false), 2000);
+                          }}
+                          className="px-2 py-0.5 rounded text-[10px] font-mono border border-slate-200 dark:border-white/10 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          {copiedSoul ? <CheckCheck size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                          <span>{copiedSoul ? "Đã chép" : "Sao chép"}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isSoulExpanded && (
+                      <div className="mt-2 p-3 rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] max-h-60 overflow-y-auto font-mono text-[11px] leading-relaxed select-text text-slate-700 dark:text-neutral-300 whitespace-pre-wrap animate-in fade-in duration-100">
+                        {loadingSoul ? (
+                          <div className="flex items-center gap-2 text-neutral-400 py-3 justify-center">
+                            <Loader2 size={13} className="animate-spin" />
+                            <span>Đang tải SOUL.md...</span>
+                          </div>
+                        ) : (
+                          soulContent
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Turn Telemetry & Reactions: Compact 1-line statistics strip */}
-                {(turnTelemetry?.ttftMs || reactionSummary?.total_reactions) && (
+                {/* Turn Telemetry & Reactions: Compact 1-line statistics strip (Boolean guard to prevent stray 0) */}
+                {Boolean(turnTelemetry?.ttftMs || (reactionSummary && reactionSummary.total_reactions > 0)) && (
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] flex items-center justify-between gap-3 text-[11px] font-mono flex-wrap">
                     {turnTelemetry?.ttftMs && (
                       <div className="flex items-center gap-1.5 text-neutral-500">

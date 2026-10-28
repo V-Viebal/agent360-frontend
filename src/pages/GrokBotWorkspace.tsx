@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent } from "../services/sessionMultiplexer";
 function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { channel?: string; isSelected?: boolean; size?: number; activeColor?: string }) {
   const ch = (channel || "console").toLowerCase();
@@ -13109,9 +13110,19 @@ const selectedAgentTheme = getAgentColorTheme(
                     closestIdx = Number((node as HTMLElement).dataset.traceTickIdx);
                   }
                 });
-                if (closestIdx !== null && closestIdx !== hoveredTraceIdx && minDist < 28) {
-                  setHoveredTraceIdx(closestIdx);
-                  if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+                if (closestIdx !== null && minDist < 28) {
+                  const activeNode = tickNodes.find((n) => Number((n as HTMLElement).dataset.traceTickIdx) === closestIdx);
+                  if (activeNode) {
+                    const r = activeNode.getBoundingClientRect();
+                    setTraceCardPos({
+                      right: Math.round(window.innerWidth - r.left + 12),
+                      top: Math.round(r.top + r.height / 2),
+                    });
+                  }
+                  if (closestIdx !== hoveredTraceIdx) {
+                    setHoveredTraceIdx(closestIdx);
+                    if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
+                  }
                 }
               }}
             >
@@ -13149,60 +13160,17 @@ const selectedAgentTheme = getAgentColorTheme(
                           key={turn.msg.id || tIdx}
                           style={{ paddingTop: padY, paddingBottom: padY }}
                           className="relative flex items-center justify-end group/tick cursor-pointer shrink-0"
-                          onPointerEnter={() => {
+                          onPointerEnter={(e) => {
+                            const r = e.currentTarget.getBoundingClientRect();
+                            setTraceCardPos({
+                              right: Math.round(window.innerWidth - r.left + 12),
+                              top: Math.round(r.top + r.height / 2),
+                            });
                             setHoveredTraceIdx(tIdx);
                             if (traceCardTimeoutRef.current) clearTimeout(traceCardTimeoutRef.current);
                           }}
                           onClick={() => scrollToUserTurn(tIdx)}
                         >
-                          {/* Rich Card Tooltip matching Image 2, positioned directly relative to this tick item */}
-                          {isHovered && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute right-full mr-3 top-1/2 -translate-y-1/2 z-50 w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#181820]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto animate-in fade-in zoom-in-95 duration-100 select-none text-left"
-                            >
-                              {/* Header: User prompt title + Bookmark Icon */}
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-semibold text-xs text-slate-900 dark:text-white leading-snug line-clamp-2">
-                                  {turn.msg.content.trim()}
-                                </p>
-                                <button
-                                  type="button"
-                                  aria-label="Đánh dấu sao"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleStarMessage(turn.msg.id);
-                                  }}
-                                  className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
-                                >
-                                  <Bookmark
-                                    size={14}
-                                    className={starredMsgIds.includes(turn.msg.id) ? "fill-amber-400 text-amber-500 dark:text-amber-400" : ""}
-                                  />
-                                </button>
-                              </div>
-
-                              {/* Assistant Response Preview (Image 2) */}
-                              {(() => {
-                                let assistantSnippet = "";
-                                for (let i = turn.originalIdx + 1; i < displayMessages.length; i++) {
-                                  const m = displayMessages[i];
-                                  if (m.role === "user") break;
-                                  if (m.role === "assistant" && m.content) {
-                                    assistantSnippet = m.content.trim();
-                                    break;
-                                  }
-                                }
-                                if (!assistantSnippet) return null;
-                                return (
-                                  <div className="mt-2 text-[11px] text-slate-600 dark:text-neutral-300 font-sans leading-relaxed line-clamp-4 border-t border-slate-100 dark:border-white/5 pt-1.5">
-                                    {assistantSnippet}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          )}
-
                           <button
                             data-trace-tick-idx={tIdx}
                             type="button"
@@ -13224,6 +13192,62 @@ const selectedAgentTheme = getAgentColorTheme(
                   </div>
                 );
               })()}
+
+              {/* Rich Card Tooltip matching Image 2: Portaled to document.body to bypass overflow-y clipping and ancestor transform blocks */}
+              {activeTurnItem && typeof document !== "undefined" && createPortal(
+                <div
+                  style={{
+                    position: "fixed",
+                    top: `${effectiveCardPos.top}px`,
+                    right: `${effectiveCardPos.right}px`,
+                    transform: "translateY(-50%)",
+                    zIndex: 99999,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#1c1c24]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto animate-in fade-in zoom-in-95 duration-100 select-none text-left"
+                >
+                  {/* Header: User prompt title + Bookmark Icon */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-xs text-slate-900 dark:text-white leading-snug line-clamp-2">
+                      {activeTurnItem.msg.content.trim()}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label="Đánh dấu sao"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleStarMessage(activeTurnItem.msg.id);
+                      }}
+                      className="shrink-0 p-0.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                    >
+                      <Bookmark
+                        size={14}
+                        className={starredMsgIds.includes(activeTurnItem.msg.id) ? "fill-amber-400 text-amber-500 dark:text-amber-400" : ""}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Assistant Response Preview (Image 2) */}
+                  {(() => {
+                    let assistantSnippet = "";
+                    for (let i = activeTurnItem.originalIdx + 1; i < displayMessages.length; i++) {
+                      const m = displayMessages[i];
+                      if (m.role === "user") break;
+                      if (m.role === "assistant" && m.content) {
+                        assistantSnippet = m.content.trim();
+                        break;
+                      }
+                    }
+                    if (!assistantSnippet) return null;
+                    return (
+                      <div className="mt-2 text-[11px] text-slate-600 dark:text-neutral-300 font-sans leading-relaxed line-clamp-4 border-t border-slate-100 dark:border-white/5 pt-1.5">
+                        {assistantSnippet}
+                      </div>
+                    );
+                  })()}
+                </div>,
+                document.body
+              )}
 
 
             </div>
@@ -15428,17 +15452,6 @@ const selectedAgentTheme = getAgentColorTheme(
           </div>
         ) : (
           <>
-            {/* Search Input Box */}
-            {chatSearchOpen && (
-              <div className="p-2 border-b border-[#1c1c22] bg-[#14141a]">
-                <SearchInput
-                  autoFocus
-                  value={chatSearchQuery}
-                  onChange={setChatSearchQuery}
-                  placeholder="Search conversations..."
-                />
-              </div>
-            )}
 
             {/* Filter Tabs for Conversations: All / Unread / Pinned with Search & Mark All Read on right */}
             <div className="px-2 pt-2 pb-1 border-b border-slate-200 dark:border-[#1c1c24] space-y-1.5">
@@ -15566,6 +15579,17 @@ const selectedAgentTheme = getAgentColorTheme(
                 </div>
               )}
             </div>
+            {/* Search Input Box */}
+            {chatSearchOpen && (
+              <div className="p-2 border-b border-slate-200 dark:border-[#1c1c24] bg-slate-50/80 dark:bg-[#14141a] animate-in fade-in duration-150">
+                <SearchInput
+                  autoFocus
+                  value={chatSearchQuery}
+                  onChange={setChatSearchQuery}
+                  placeholder="Search conversations..."
+                />
+              </div>
+            )}
 
             {/* Select All / Batch Selection Bar: Only visible when at least 1 chat is checked */}
             {filteredChats.length > 0 && selectedChatIds.length > 0 && (
