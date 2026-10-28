@@ -1800,6 +1800,34 @@ export async function updateChatRoomTriagePolicy(
   }
 }
 
+
+export async function updateChatTitle(
+  agentId: string,
+  chatId: string,
+  title: string
+): Promise<{ success: boolean; title: string } | null> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ title, name: title }),
+      },
+      cleanId
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("updateChatTitle error:", err);
+    return null;
+  }
+}
+
 export async function updateChatRoomTitle(
   agentId: string,
   chatId: string,

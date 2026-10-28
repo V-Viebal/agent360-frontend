@@ -762,6 +762,7 @@ import {
   postChatRoomMessage,
   submitMessageReaction,
   classifyReactionEmoji,
+  updateChatTitle,
   updateChatRoomTitle,
   updateChatRoomTriagePolicy,
 } from "../services/agentApi";
@@ -8341,6 +8342,7 @@ const selectedAgentTheme = getAgentColorTheme(
       prev.map((c) => (c.id === chatId ? { ...c, title: nextTitle } : c))
     );
     setEditingChatId(null);
+    updateChatTitle(selectedAgentId, chatId, nextTitle);
     updateChatRoomTitle(selectedAgentId, chatId, nextTitle).then((r) => {
       if (r && chatId === selectedChatId) setActiveSessionRoom(r);
     }).catch(() => {});
