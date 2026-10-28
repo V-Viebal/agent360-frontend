@@ -47,6 +47,9 @@ export function A2ATopologyGraphModal({
   const [selectedNodeId, setSelectedNodeId] = useState<string>(currentAgent.id);
   const [topologySearchQuery, setTopologySearchQuery] = useState<string>("");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
+  const [includeWatermark, setIncludeWatermark] = useState<boolean>(true);
+  const [customWatermarkNote, setCustomWatermarkNote] = useState<string>("");
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
   const [agentPings, setAgentPings] = useState<Record<string, number>>({});
   const [isProbing, setIsProbing] = useState<boolean>(false);
 
@@ -118,14 +121,15 @@ export function A2ATopologyGraphModal({
 
     // Build SVG representation with Skyer branding watermark
     const svgHeader = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#0d0d12;font-family:Inter,system-ui,sans-serif;">`;
-    const watermark = `
-      <g opacity="0.85" transform="translate(${width - 220}, ${height - 40})">
-        <rect x="0" y="-18" width="200" height="32" rx="8" fill="#14141f" stroke="rgba(255,255,255,0.1)" />
+    const noteText = customWatermarkNote.trim() ? ` • ${customWatermarkNote.trim().slice(0, 32)}` : "";
+    const watermark = includeWatermark ? `
+      <g opacity="0.9" transform="translate(${width - 290}, ${height - 40})">
+        <rect x="0" y="-18" width="270" height="32" rx="8" fill="#14141f" stroke="rgba(255,255,255,0.12)" />
         <circle cx="16" cy="-2" r="6" fill="#f8a87c" />
         <text x="32" y="2" fill="#ffffff" font-size="12" font-weight="700" letter-spacing="0.5">Skyer Agent360</text>
-        <text x="140" y="2" fill="#888899" font-size="10">Topology</text>
+        <text x="145" y="2" fill="#94a3b8" font-size="10">${noteText || "Topology"}</text>
       </g>
-    `;
+    ` : "";
 
     // Clone element html into foreignObject
     const serializer = new XMLSerializer();
@@ -412,24 +416,80 @@ export function A2ATopologyGraphModal({
                 <Download size={11} className="text-cyan-400" />
                 <span>JSON</span>
               </button>
-              <button
-                type="button"
-                onClick={() => exportTopologyImage("png")}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                title="Xuất ảnh PNG có watermark Skyer"
-              >
-                <Download size={11} className="text-emerald-400" />
-                <span>PNG</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => exportTopologyImage("svg")}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-500 dark:text-neutral-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                title="Xuất vector SVG có watermark Skyer"
-              >
-                <Download size={11} className="text-purple-400" />
-                <span>SVG</span>
-              </button>
+              <div className="relative inline-block">
+                <button
+                  type="button"
+                  onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono text-slate-600 dark:text-neutral-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Tùy chọn xuất ảnh PNG / SVG & Watermark"
+                >
+                  <Download size={11} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
+                  <span>Image...</span>
+                </button>
+
+                {isExportMenuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 top-full mt-1.5 w-64 p-3 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#262634] shadow-2xl text-xs z-50 space-y-2.5 animate-in fade-in"
+                  >
+                    <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-white text-[11px]">
+                      <span>Tùy chọn xuất ảnh</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsExportMenuOpen(false)}
+                        className="text-neutral-400 hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <label className="flex items-center justify-between gap-2 cursor-pointer select-none text-[11px] text-slate-700 dark:text-neutral-300">
+                      <span>Kèm Watermark Skyer</span>
+                      <input
+                        type="checkbox"
+                        checked={includeWatermark}
+                        onChange={(e) => setIncludeWatermark(e.target.checked)}
+                        className="rounded accent-[var(--agent-primary)]"
+                      />
+                    </label>
+
+                    {includeWatermark && (
+                      <input
+                        type="text"
+                        value={customWatermarkNote}
+                        onChange={(e) => setCustomWatermarkNote(e.target.value)}
+                        placeholder="Ghi chú watermark (tùy chọn)..."
+                        className="w-full px-2 py-1 rounded-lg bg-slate-50 dark:bg-[#101016] border border-slate-200 dark:border-[#2a2a3c] text-[10.5px] font-mono text-slate-800 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
+                      />
+                    )}
+
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          exportTopologyImage("png");
+                          setIsExportMenuOpen(false);
+                        }}
+                        className="flex-1 py-1 rounded-lg bg-[var(--agent-primary)] text-black font-semibold text-[10.5px] flex items-center justify-center gap-1 cursor-pointer hover:opacity-90 transition-opacity"
+                      >
+                        <Download size={11} />
+                        <span>PNG</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          exportTopologyImage("svg");
+                          setIsExportMenuOpen(false);
+                        }}
+                        className="flex-1 py-1 rounded-lg bg-slate-100 dark:bg-[#20202e] border border-slate-200 dark:border-[#2e2e42] text-slate-800 dark:text-neutral-200 font-semibold text-[10.5px] flex items-center justify-center gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-[#28283a] transition-colors"
+                      >
+                        <Download size={11} />
+                        <span>SVG</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button

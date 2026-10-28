@@ -9,18 +9,23 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
   const [viewMode, setViewMode] = useState<"diagram" | "code">("diagram");
   const [copied, setCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [includeWatermark, setIncludeWatermark] = useState<boolean>(true);
+  const [customNote, setCustomNote] = useState<string>("");
+  const [isExportOptionsOpen, setIsExportOptionsOpen] = useState<boolean>(false);
 
   const exportDiagramImage = (format: "png" | "svg") => {
     const width = 800;
     const height = 480;
     const svgHeader = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#0c0c12;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;">`;
-    const watermark = `
-      <g opacity="0.8" transform="translate(${width - 180}, ${height - 30})">
-        <rect x="0" y="-14" width="160" height="24" rx="6" fill="#14141f" stroke="rgba(255,255,255,0.1)" />
+    const noteStr = customNote.trim() ? ` • ${customNote.trim().slice(0, 24)}` : "";
+    const watermark = includeWatermark ? `
+      <g opacity="0.85" transform="translate(${width - 220}, ${height - 30})">
+        <rect x="0" y="-14" width="200" height="24" rx="6" fill="#14141f" stroke="rgba(255,255,255,0.12)" />
         <circle cx="12" cy="-2" r="4" fill="#f8a87c" />
         <text x="24" y="2" fill="#ffffff" font-size="10" font-weight="700">Skyer Mermaid</text>
+        <text x="112" y="2" fill="#94a3b8" font-size="9">${noteStr}</text>
       </g>
-    `;
+    ` : "";
 
     const el = document.getElementById(`mermaid-flow-canvas-${code.length}`);
     const innerHtml = el ? el.innerHTML : "";
@@ -141,14 +146,71 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
             {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
           </button>
 
-          <button
-            type="button"
-            onClick={() => exportDiagramImage("png")}
-            className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-            title="Xuất ảnh PNG có watermark Skyer"
-          >
-            <Download size={12} className="text-emerald-400" />
-          </button>
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => setIsExportOptionsOpen(!isExportOptionsOpen)}
+              className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title="Xuất ảnh PNG / SVG & Tùy chọn Watermark"
+            >
+              <Download size={12} className="text-emerald-400" />
+            </button>
+
+            {isExportOptionsOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-full mt-1 w-56 p-2.5 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#262634] shadow-2xl text-xs z-50 space-y-2 select-none"
+              >
+                <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-white text-[11px]">
+                  <span>Xuất ảnh sơ đồ</span>
+                  <button type="button" onClick={() => setIsExportOptionsOpen(false)} className="text-neutral-400 hover:text-white">✕</button>
+                </div>
+
+                <label className="flex items-center justify-between gap-1.5 cursor-pointer text-[10.5px] text-slate-700 dark:text-neutral-300">
+                  <span>Watermark Skyer</span>
+                  <input
+                    type="checkbox"
+                    checked={includeWatermark}
+                    onChange={(e) => setIncludeWatermark(e.target.checked)}
+                    className="rounded accent-[var(--agent-primary)]"
+                  />
+                </label>
+
+                {includeWatermark && (
+                  <input
+                    type="text"
+                    value={customNote}
+                    onChange={(e) => setCustomNote(e.target.value)}
+                    placeholder="Ghi chú watermark..."
+                    className="w-full px-2 py-0.5 rounded-md bg-slate-50 dark:bg-[#101016] border border-slate-200 dark:border-[#2a2a3c] text-[10px] font-mono text-slate-800 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
+                  />
+                )}
+
+                <div className="flex items-center gap-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportDiagramImage("png");
+                      setIsExportOptionsOpen(false);
+                    }}
+                    className="flex-1 py-1 rounded-md bg-[var(--agent-primary)] text-black font-semibold text-[10px] flex items-center justify-center gap-1 cursor-pointer hover:opacity-90 transition-opacity"
+                  >
+                    PNG
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportDiagramImage("svg");
+                      setIsExportOptionsOpen(false);
+                    }}
+                    className="flex-1 py-1 rounded-md bg-slate-100 dark:bg-[#20202e] border border-slate-200 dark:border-[#2e2e42] text-slate-800 dark:text-neutral-200 font-semibold text-[10px] flex items-center justify-center gap-1 cursor-pointer hover:bg-slate-200 dark:hover:bg-[#28283a] transition-colors"
+                  >
+                    SVG
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
