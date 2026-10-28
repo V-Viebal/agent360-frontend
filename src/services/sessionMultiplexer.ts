@@ -76,6 +76,8 @@ export interface AgentPinUpdatedWsEvent {
   type: "agent_pin_updated";
   agent_id: string;
   pinned: boolean;
+  user_id?: number | null;
+  user_sub?: string | null;
   timestamp?: string;
 }
 

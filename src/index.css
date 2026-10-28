@@ -1688,3 +1688,13 @@ html.light,
     text-shadow: none !important;
   }
 }
+
+/* Chat input textarea clean focus reset: avoid browser blue outline or ring */
+#tour-prompt-composer textarea,
+#tour-prompt-composer textarea:focus,
+#tour-prompt-composer textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}

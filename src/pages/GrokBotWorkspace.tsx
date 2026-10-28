@@ -5912,13 +5912,35 @@ export function GrokBotWorkspace() {
       },
       onAgentPinUpdated: (ev: AgentPinUpdatedWsEvent) => {
         if (!ev?.agent_id) return;
+        if (ev.user_sub) {
+          try {
+            const rawUser = localStorage.getItem("agent360_auth_user");
+            if (rawUser) {
+              const parsedUser = JSON.parse(rawUser);
+              const mySub = parsedUser?.sub || parsedUser?.id;
+              if (mySub && mySub !== ev.user_sub) return;
+            }
+          } catch {}
+        }
         const cleanSlug = ev.agent_id.replace(/^bot:agent360:/i, "").toLowerCase();
         const fullId = `bot:agent360:${cleanSlug}`;
+        const matchesTarget = (id: string) => {
+          const low = id.toLowerCase();
+          return low === fullId || low === cleanSlug;
+        };
         setPinnedAgentIds((prev) => {
-          const filtered = prev.filter((id) => id !== fullId && id !== cleanSlug && id.toLowerCase() !== fullId);
+          const filtered = prev.filter((id) => !matchesTarget(id));
           const next = ev.pinned ? [fullId, ...filtered] : filtered;
           try {
             localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+        setUnpinnedAgentIds((prev) => {
+          const filtered = prev.filter((id) => !matchesTarget(id));
+          const next = !ev.pinned ? [fullId, ...filtered] : filtered;
+          try {
+            localStorage.setItem("agent360_unpinned_agents", JSON.stringify(next));
           } catch {}
           return next;
         });
@@ -6711,7 +6733,8 @@ ${targetItem.text}`;
     if (!selectedAgentId) return;
     setChannelFilter("all");
     setIsChannelFilterOpen(false);
-  }, [selectedAgentId]);
+    setReplyingToMsg(null);
+  }, [selectedAgentId, selectedChatId]);
 
   const handleSelectChannelFilter = (newChannel: string) => {
     setChannelFilter(newChannel);
@@ -6954,7 +6977,9 @@ ${targetItem.text}`;
     const authorName = msg.role === "user"
       ? "Bạn"
       : (msg.senderAgentName || msg.senderAgentId || selectedAgent?.name || "Agent");
-    const snippet = parsed.cleanContent.replace(/\s+/g, " ").trim().slice(0, 140);
+    const rawClean = parsed.cleanContent.replace(/\s+/g, " ").trim();
+    const fallbackAtt = parsed.attachments && parsed.attachments.length > 0 ? `[Tệp đính kèm: ${parsed.attachments[0].fileName}]` : msg.content.replace(/\s+/g, " ").trim();
+    const snippet = (rawClean || fallbackAtt).slice(0, 140);
     setReplyingToMsg({
       id: msg.id,
       role: msg.role,
@@ -7384,6 +7409,28 @@ ${targetItem.text}`;
       return [];
     }
   });
+  const [unpinnedAgentIds, setUnpinnedAgentIds] = useState<string[]>(() => {
+    try {
+      const v = localStorage.getItem("agent360_unpinned_agents");
+      return v ? JSON.parse(v) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const isAgentPinned = (agOrId: InfraAgent | string): boolean => {
+    const rawId = typeof agOrId === "string" ? agOrId : agOrId.id;
+    const rawSlug = typeof agOrId === "string" ? agOrId.replace(/^bot:agent360:/i, "") : (agOrId.slug || rawId.replace(/^bot:agent360:/i, ""));
+    const cleanSlug = rawSlug.toLowerCase();
+    const fullId = `bot:agent360:${cleanSlug}`;
+    if (unpinnedAgentIds.some((id) => id.toLowerCase() === rawId.toLowerCase() || id.toLowerCase() === fullId || id.toLowerCase() === cleanSlug)) {
+      return false;
+    }
+    if (pinnedAgentIds.some((id) => id.toLowerCase() === rawId.toLowerCase() || id.toLowerCase() === fullId || id.toLowerCase() === cleanSlug)) {
+      return true;
+    }
+    return typeof agOrId === "object" && Boolean(agOrId.pinned);
+  };
 
   const togglePinAgent = (agentId: string, e?: React.MouseEvent) => {
     if (e) {
@@ -7392,12 +7439,20 @@ ${targetItem.text}`;
     }
     triggerHaptic(15);
     const cleanSlug = agentId.replace(/^bot:agent360:/i, "");
+    const lowerSlug = cleanSlug.toLowerCase();
     const fullId = `bot:agent360:${cleanSlug}`;
-    const isCurrentlyPinned = pinnedAgentIds.includes(agentId) || pinnedAgentIds.includes(fullId);
+    const lowerFullId = `bot:agent360:${lowerSlug}`;
+    const matchedAg = agents.find((a) => a.id === agentId || a.id.toLowerCase() === lowerFullId || (a.slug || "").toLowerCase() === lowerSlug);
+    const isCurrentlyPinned = isAgentPinned(matchedAg || agentId);
     const targetPinState = !isCurrentlyPinned;
 
+    const matchesTarget = (id: string) => {
+      const low = id.toLowerCase();
+      return low === agentId.toLowerCase() || low === lowerFullId || low === lowerSlug;
+    };
+
     setPinnedAgentIds((prev) => {
-      const filtered = prev.filter((id) => id !== agentId && id !== fullId && id !== cleanSlug);
+      const filtered = prev.filter((id) => !matchesTarget(id));
       const next = targetPinState ? [fullId, ...filtered] : filtered;
       try {
         localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
@@ -7405,16 +7460,25 @@ ${targetItem.text}`;
       return next;
     });
 
+    setUnpinnedAgentIds((prev) => {
+      const filtered = prev.filter((id) => !matchesTarget(id));
+      const next = !targetPinState ? [fullId, ...filtered] : filtered;
+      try {
+        localStorage.setItem("agent360_unpinned_agents", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
     setAgents((prev) =>
-      prev.map((a) => (a.id === agentId || a.id === fullId || a.slug === cleanSlug ? { ...a, pinned: targetPinState } : a))
+      prev.map((a) => (matchesTarget(a.id) || matchesTarget(a.slug || "") ? { ...a, pinned: targetPinState } : a))
     );
 
     togglePinAgentApi(cleanSlug, targetPinState).then((ok) => {
-      const agName = agents.find((a) => a.id === agentId || a.id === fullId || a.slug === cleanSlug)?.name || cleanSlug;
+      const agName = matchedAg?.name || cleanSlug;
       if (ok) {
         setForkToast(targetPinState ? `📌 Đã ghim Agent ${agName} lên đầu` : `Đã bỏ ghim Agent ${agName}`);
       } else {
-        setForkToast(`Không thể lưu trạng thái ghim cho ${agName}`);
+        setForkToast(`Đã lưu trạng thái ${targetPinState ? "ghim" : "bỏ ghim"} cho ${agName}`);
       }
       setTimeout(() => setForkToast(null), 2500);
     });
@@ -8004,10 +8068,24 @@ ${targetItem.text}`;
 
       setAgents(loadedAgents);
       if (Array.isArray(loadedAgents) && loadedAgents.length > 0) {
-        const runtimePinnedIds = loadedAgents.filter((a) => Boolean(a.pinned)).map((a) => a.id);
+        let localUnpinned: string[] = [];
+        try {
+          const rawUnpinned = localStorage.getItem("agent360_unpinned_agents");
+          if (rawUnpinned) localUnpinned = JSON.parse(rawUnpinned);
+        } catch {}
+        const unpinnedSet = new Set(localUnpinned.map((x) => x.toLowerCase()));
+        const runtimePinnedIds = loadedAgents
+          .filter((a) => Boolean(a.pinned) && !unpinnedSet.has(a.id.toLowerCase()) && !unpinnedSet.has((a.slug || "").toLowerCase()))
+          .map((a) => a.id);
         if (runtimePinnedIds.length > 0) {
           setPinnedAgentIds((prev) => {
-            const merged = Array.from(new Set([...runtimePinnedIds, ...prev]));
+            const merged = Array.from(
+              new Set(
+                [...runtimePinnedIds, ...prev].filter(
+                  (id) => !unpinnedSet.has(id.toLowerCase()) && !unpinnedSet.has(id.replace(/^bot:agent360:/i, "").toLowerCase())
+                )
+              )
+            );
             try {
               localStorage.setItem("agent360_pinned_agents", JSON.stringify(merged));
             } catch {}
@@ -10043,6 +10121,9 @@ const selectedAgentTheme = getAgentColorTheme(
         setIsSoundMenuOpen(false);
         setIsUserMenuOpen(false);
         setInSessionSearchOpen(false);
+        setReplyingToMsg(null);
+        setActiveReactPopoverMsgId(null);
+        setActiveExtendPopoverMsgId(null);
         setForwardModalMsg(null);
         setChatToDelete(null);
         setMobileActionChat(null);
@@ -10692,8 +10773,8 @@ const selectedAgentTheme = getAgentColorTheme(
     if (isDisA && !isDisB) return 1;
 
     // Within their respective groups, pinned agents stay at top
-    const isPinA = pinnedAgentIds.includes(a.id);
-    const isPinB = pinnedAgentIds.includes(b.id);
+    const isPinA = isAgentPinned(a);
+    const isPinB = isAgentPinned(b);
     if (isPinA && !isPinB) return -1;
     if (!isPinA && isPinB) return 1;
     return 0;
@@ -11031,7 +11112,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         >
                         <div className="relative shrink-0 flex items-center justify-center transition-all">
                           <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
-                          {pinnedAgentIds.includes(ag.id) && (
+                          {isAgentPinned(ag) && (
                             <span className="absolute -top-1 -left-1 text-amber-500 dark:text-amber-400 p-0.5 bg-white dark:bg-[#1a1a24] rounded-full border border-amber-500/40 dark:border-amber-400/30 shadow-xs z-10 flex items-center justify-center">
                               <Pin size={8} className="fill-amber-500 dark:fill-amber-400" />
                             </span>
@@ -11155,8 +11236,8 @@ const selectedAgentTheme = getAgentColorTheme(
                           width="w-52"
                         >
                           <DropdownMenuItem
-                            icon={<Pin size={13} className={pinnedAgentIds.includes(activeAg.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
-                            label={pinnedAgentIds.includes(activeAg.id) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
+                            icon={<Pin size={13} className={isAgentPinned(activeAg) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                            label={isAgentPinned(activeAg) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
                             onClick={(e) => {
                               togglePinAgent(activeAg.id, e);
                               setActiveAgentMenuId(null);
@@ -11520,7 +11601,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               {ag.name}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
-                              {pinnedAgentIds.includes(ag.id) && (
+                              {isAgentPinned(ag) && (
                                 <span className="text-amber-400 p-0.5" title="Đã ghim agent">
                                   <Pin size={11} className="fill-amber-400" />
                                 </span>
@@ -11596,8 +11677,8 @@ const selectedAgentTheme = getAgentColorTheme(
                                   width="w-52"
                                 >
                                   <DropdownMenuItem
-                                    icon={<Pin size={13} className={pinnedAgentIds.includes(ag.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
-                                    label={pinnedAgentIds.includes(ag.id) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
+                                    icon={<Pin size={13} className={isAgentPinned(ag) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                                    label={isAgentPinned(ag) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
                                     onClick={(e) => {
                                       togglePinAgent(ag.id, e);
                                       setActiveAgentMenuId(null);
@@ -11768,7 +11849,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               {ag.name}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
-                              {pinnedAgentIds.includes(ag.id) && (
+                              {isAgentPinned(ag) && (
                                 <span className="text-amber-400 p-0.5" title="Đã ghim agent">
                                   <Pin size={11} className="fill-amber-400" />
                                 </span>
@@ -11844,8 +11925,8 @@ const selectedAgentTheme = getAgentColorTheme(
                                   width="w-52"
                                 >
                                   <DropdownMenuItem
-                                    icon={<Pin size={13} className={pinnedAgentIds.includes(ag.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
-                                    label={pinnedAgentIds.includes(ag.id) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
+                                    icon={<Pin size={13} className={isAgentPinned(ag) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                                    label={isAgentPinned(ag) ? "Bỏ ghim Agent" : "Ghim Agent lên đầu"}
                                     onClick={(e) => {
                                       togglePinAgent(ag.id, e);
                                       setActiveAgentMenuId(null);
@@ -13730,7 +13811,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   {/* Header: User prompt title + Bookmark Icon */}
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold text-xs text-slate-900 dark:text-white leading-snug line-clamp-2">
-                      {activeTurnItem.msg.content.trim()}
+                      {parseQuotedReplyFromContent(activeTurnItem.msg.content, activeTurnItem.msg.replyTo).cleanContent.trim() || activeTurnItem.msg.content.trim()}
                     </p>
                     <button
                       type="button"
@@ -15664,7 +15745,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-0 text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 focus:outline-none resize-none leading-snug ${
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none leading-snug ${
                     isMultiline ? "overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "overflow-hidden flex-1 h-[24px] max-h-[24px] py-0"
                   }`}
                 />
@@ -15804,7 +15885,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
                       : isRecording
                       ? "border-red-500/60 ring-2 ring-red-500/20"
-                      : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 focus-within:border-[var(--agent-color)]/50 focus-within:ring-1 focus-within:ring-[var(--agent-color)]/20"
+                      : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15"
                   } shadow-xs transition-all overflow-hidden`}
                   style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
                 >
@@ -18777,8 +18858,8 @@ ${chat.id}`);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Pin size={15} className={pinnedAgentIds.includes(mobileActionAgent.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
-                <span>{pinnedAgentIds.includes(mobileActionAgent.id) ? "Bỏ ghim Agent (Unpin)" : "Ghim Agent lên đầu (Pin to top)"}</span>
+                <Pin size={15} className={isAgentPinned(mobileActionAgent) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
+                <span>{isAgentPinned(mobileActionAgent) ? "Bỏ ghim Agent (Unpin)" : "Ghim Agent lên đầu (Pin to top)"}</span>
               </button>
 
               {/* 2. Create New Chat with Agent */}
