@@ -12059,18 +12059,6 @@ const selectedAgentTheme = getAgentColorTheme(
                     )}
                   </>
                 )}
-                {activeLoopMode !== "default" && (
-                  <span className={`hidden sm:inline-flex items-center gap-1 text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold ${
-                    activeLoopMode === 'goal'
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
-                  }`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${
-                      activeLoopMode === 'goal' ? 'bg-emerald-400' : 'bg-cyan-400'
-                    }`} />
-                    <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : 'Nhiệm vụ'}</span>
-                  </span>
-                )}
               </div>
           </div>
 
@@ -16896,18 +16884,6 @@ ${chat.id}`);
                 <h2 className="text-[16px] font-semibold text-slate-900 dark:text-white tracking-tight">
                   {selectedAgent.name}
                 </h2>
-                {activeLoopMode !== "default" && (
-                  <span className={`text-[9px] font-mono uppercase px-1.5 py-0.2 rounded-full border font-semibold inline-flex items-center gap-1 ${
-                    activeLoopMode === 'goal'
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30'
-                  }`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${
-                      activeLoopMode === 'goal' ? 'bg-emerald-400' : 'bg-cyan-400'
-                    }`} />
-                    <span>{activeLoopMode === 'goal' ? 'Mục tiêu' : 'Nhiệm vụ'}</span>
-                  </span>
-                )}
               </div>
             </div>
 
