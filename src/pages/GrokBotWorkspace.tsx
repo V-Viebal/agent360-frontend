@@ -17427,7 +17427,7 @@ ${chat.id}`);
                       : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5"
                   }`}
                 >
-                  {tab === "Library" && workspaceFiles.length > 0 ? `Library (${workspaceFiles.length})` : tab}
+                  {tab}
                 </button>
               ))}
             </div>
