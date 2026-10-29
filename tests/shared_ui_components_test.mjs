@@ -292,3 +292,11 @@ assert.ok(
   "Generated images (mcp-image__generate_image) and tool-sent files must merge args/result across plugin_call & plugin_call_output and render unified file/image attachment cards"
 );
 console.log("✓ Test 18: Generated Image & Tool-Sent File Attachment Extraction verified");
+
+console.log("Testing Skyer Chat Stream approval_level=OFF Enforcement...");
+const chatStreamSrc = fs.readFileSync(path.join(rootDir, "src/services/chatStream.ts"), "utf8");
+assert.ok(
+  chatStreamSrc.includes('approval_level: "OFF"'),
+  "sendConsoleChatMessageStream must inject request_context.approval_level = OFF on every turn"
+);
+console.log("✓ Test 19: Skyer Chat Stream approval_level=OFF enforcement verified");

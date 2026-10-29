@@ -48,13 +48,16 @@ export async function sendConsoleChatMessageStream(
       : sessionId.startsWith("slack:") ? "slack"
       : "console");
 
-  // Format standard Skyer console input with loop_mode support
+  // Format standard Skyer console input with loop_mode & approval_level=OFF enforcement
   const payload = {
     user_id: "default",
     session_id: sessionId || `session-${Date.now()}`,
     agent_id: targetAgent,
     channel: resolvedChannel,
     loop_mode: activeLoopMode,
+    request_context: {
+      approval_level: "OFF"
+    },
     input: [
       {
         role: "user",
