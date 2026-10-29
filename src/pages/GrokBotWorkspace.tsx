@@ -10009,7 +10009,7 @@ const selectedAgentTheme = getAgentColorTheme(
       // 1. Command Palette
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setIsCommandPaletteOpen((prev) => !prev);
+        setIsCommandPaletteOpen((prev) => { const n = !prev; if (n) recordMilestone("triedVoiceOrShortcuts"); return n; });
         return;
       }
 
@@ -11551,7 +11551,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             label="Xem thông số kỹ thuật"
                             onClick={() => {
                               handleSelectAgent(activeAg);
-                              handleToggleBotInfo(false);
+                              handleToggleBotInfo(false); recordMilestone("openedSpecsOrTopology");
                               setActiveAgentMenuId(null);
                               setActiveAgentMenuPos(null);
                             }}
@@ -11991,7 +11991,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     label="Xem thông số kỹ thuật"
                                     onClick={() => {
                                       handleSelectAgent(ag);
-                                      handleToggleBotInfo(false);
+                                      handleToggleBotInfo(false); recordMilestone("openedSpecsOrTopology");
                                       setActiveAgentMenuId(null);
                                       setMobileAgentsOpen(false);
                                     }}
@@ -12239,7 +12239,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     label="Xem thông số kỹ thuật"
                                     onClick={() => {
                                       handleSelectAgent(ag);
-                                      handleToggleBotInfo(false);
+                                      handleToggleBotInfo(false); recordMilestone("openedSpecsOrTopology");
                                       setActiveAgentMenuId(null);
                                       setMobileAgentsOpen(false);
                                     }}
@@ -15024,7 +15024,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         action: () => {
                           setIsPlusMenuOpen(false);
                           setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
-                          handleToggleBotInfo(false);
+                          handleToggleBotInfo(false); recordMilestone("openedSpecsOrTopology");
                           setRightTab("Computer");
                         },
                       },
@@ -16020,7 +16020,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none ${
-                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "leading-[28px] overflow-hidden flex-1 self-center h-[28px] min-h-[28px] max-h-[28px] py-0 m-0"
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "leading-[21px] overflow-hidden flex-1 self-center h-[28px] min-h-[28px] max-h-[28px] pt-[3.5px] pb-0 px-0.5 m-0"
                   }`}
                 />
               );
@@ -19471,7 +19471,7 @@ ${chat.id}`);
                 type="button"
                 onClick={() => {
                   handleSelectAgent(mobileActionAgent);
-                  handleToggleBotInfo(false);
+                  handleToggleBotInfo(false); recordMilestone("openedSpecsOrTopology");
                   setMobileActionAgent(null);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"

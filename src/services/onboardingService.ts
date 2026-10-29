@@ -1,8 +1,8 @@
 import { driver, Driver, DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 
-const STORAGE_KEY_SEEN_ONBOARDING = "agent360_has_seen_onboarding_tour";
-const STORAGE_KEY_TOUR_COMPLETED = "agent360_onboarding_completed_at";
+const STORAGE_KEY_SEEN_ONBOARDING = "agent360_has_seen_onboarding_tour_v3";
+const STORAGE_KEY_TOUR_COMPLETED = "agent360_onboarding_completed_at_v3";
 
 export interface OnboardingTourOptions {
   onTourComplete?: () => void;
@@ -35,27 +35,28 @@ export function resetOnboardingTour(): void {
 }
 
 /**
- * Start the Driver.js interactive guided tour for new users.
- * Matches the App360 frontend theme with Skyer dark aesthetics & custom accents.
+ * Lean 4-step guided tour:
+ * 1. Chọn đồng đội (Agent)
+ * 2. Giao việc (Composer)
+ * 3. Hồ sơ kỹ năng (Specs/Memory)
+ * 4. Phím tắt (Ctrl + K)
  */
 export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver | null {
   if (typeof window === "undefined") return null;
 
-  // Don't auto-start if already seen, unless forced
   if (!options.force && hasSeenOnboardingTour()) {
     return null;
   }
 
-  // Abort if screen is too narrow (mobile users get bottom sheet or manual help)
   const isMobile = window.innerWidth < 768;
 
   const driverObj = driver({
     showProgress: true,
     animate: true,
-    overlayColor: "rgba(0, 0, 0, 0.78)",
-    nextBtnText: "Tiếp tục ▸",
-    prevBtnText: "◂ Quay lại",
-    doneBtnText: "Vào việc ngay ✓",
+    overlayColor: "rgba(0, 0, 0, 0.75)",
+    nextBtnText: "Tiếp ▸",
+    prevBtnText: "◂ Trước",
+    doneBtnText: "Bắt đầu ✓",
     popoverClass: "driverjs-skyer-theme",
     onDestroyStarted: () => {
       markOnboardingTourSeen();
@@ -68,26 +69,17 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-agent-selector",
         popover: {
-          title: "🤝 Gặp gỡ Đồng đội AI của bạn",
-          description: "Mỗi bạn bot ở đây là một đồng nghiệp chuyên trách (Lập trình viên, Vận hành hệ thống, Kiểm thử, Quản trị, v.v.). Bấm vào để bắt đầu làm việc cùng bạn ấy nhé!",
+          title: "1. Đồng đội AI",
+          description: "Chọn nhân viên AI phụ trách theo từng nghiệp vụ.",
           side: "right",
-          align: "start",
-        },
-      },
-      {
-        element: "#tour-chat-sessions",
-        popover: {
-          title: "📋 Nhật ký công việc & Cuộc trò chuyện",
-          description: "Nơi lưu lại các lần trao đổi riêng với từng bạn đồng đội. Bạn có thể mở chủ đề mới, ghim việc quan trọng lên đầu hoặc tìm lại trao đổi cũ.",
-          side: isMobile ? "bottom" : "left",
           align: "start",
         },
       },
       {
         element: "#tour-prompt-composer",
         popover: {
-          title: "💬 Nhắn tin hoặc Nói chuyện trực tiếp",
-          description: "Gõ câu hỏi vào đây, hoặc bấm micro (Alt + M) để nói chuyện rảnh tay như đang gọi điện cho đồng nghiệp. Bấm Ctrl + / để xem thêm phím tắt nhanh nhé.",
+          title: "2. Giao việc",
+          description: "Nhập nội dung yêu cầu hoặc bấm mic nói chuyện rảnh tay.",
           side: "top",
           align: "center",
         },
@@ -95,8 +87,8 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-bot-spec-trigger",
         popover: {
-          title: "🔍 Xem Hồ sơ & Kỹ năng của đồng đội",
-          description: "Bấm vào tên bạn ấy ở trên để xem hồ sơ chuyên môn: Trí nhớ dự án (Memory), tài liệu tham khảo (Library), ứng dụng liên kết và công cụ hỗ trợ.",
+          title: "3. Hồ sơ & Kỹ năng",
+          description: "Xem bộ nhớ (Memory), tài liệu (Library) và công cụ liên kết.",
           side: isMobile ? "top" : "left",
           align: "start",
         },
@@ -104,14 +96,13 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-command-palette-trigger",
         popover: {
-          title: "⚡ Bảng lệnh thần tốc (Ctrl + K)",
-          description: "Bấm vào đây hoặc nhấn Ctrl + K bất cứ lúc nào để gọi nhanh đồng đội khác, tìm hội thoại cũ, hoặc chỉnh âm lượng thông báo.",
+          title: "4. Lệnh nhanh (Ctrl+K)",
+          description: "Mở bảng tìm kiếm và chuyển đổi tác vụ tức thì.",
           side: "right",
           align: "end",
         },
       },
     ] as DriveStep[]).filter((step) => {
-      // Filter out elements that may not currently exist in the DOM (e.g. collapsed tabs)
       if (typeof step.element === "string") {
         return Boolean(document.querySelector(step.element));
       }
@@ -119,15 +110,10 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
     }),
   });
 
-  // Start driving
   driverObj.drive();
   return driverObj;
 }
 
-/**
- * Highlights a single target element with a descriptive popover.
- * Aligned with App360 OnboardingService.highlightElement() standard.
- */
 export function highlightElement(
   selector: string,
   title: string,
@@ -156,25 +142,6 @@ export function highlightElement(
         },
       },
     ],
-  });
-  driverObj.drive();
-}
-
-/**
- * "Lights Off" Focus Spotlight
- * Dims the screen and focuses attention on a target element without floating popover.
- * Aligned with App360 OnboardingService.lightsOffFocus() standard.
- */
-export function lightsOffFocus(selector: string): void {
-  if (typeof window === "undefined" || window.innerWidth < 768) return;
-  const target = document.querySelector(selector);
-  if (!target) return;
-
-  const driverObj = driver({
-    showProgress: false,
-    animate: true,
-    overlayColor: "rgba(0, 0, 0, 0.8)",
-    steps: [{ element: selector }],
   });
   driverObj.drive();
 }
