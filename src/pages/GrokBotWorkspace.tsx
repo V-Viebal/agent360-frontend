@@ -292,17 +292,40 @@ function computeIsMultilineComposer(text: string, measuredWidth?: number): boole
   if (!text) return false;
   if (text.includes("\n")) return true;
 
-  // In single-line mode: composer has plus button (28px) + gap (8px) + right button (28px) + gap (8px) + padding (12px) = 84px chrome.
-  // Use exact 2D canvas text measurement so proportional characters (like "f", "i", "l") never trigger multiline prematurely.
+  // Single-line composer chrome has:
+  // Plus button (28px) + gap (8px) + right action controls (28px) + gap (8px) + padding (12px) + borders (2px) + textarea internal padding (4px) + word-boundary safety margin (8px) = 98px.
   if (measuredWidth && measuredWidth > 120) {
-    const availableTextPx = Math.max(60, measuredWidth - 88);
-    const actualTextPx = measureComposerTextWidthPx(text);
-    return actualTextPx >= availableTextPx;
+    const availableTextPx = Math.max(50, measuredWidth - 98);
+    const totalTextPx = measureComposerTextWidthPx(text);
+    if (totalTextPx >= availableTextPx) return true;
+
+    // Accurate word-wrap detection: If text has spaces, check if any word boundary wraps to line 2
+    if (text.includes(" ")) {
+      const words = text.split(" ");
+      let currentLinePx = 0;
+      const spacePx = measureComposerTextWidthPx(" ");
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (!word) {
+          currentLinePx += spacePx;
+          continue;
+        }
+        const wordPx = measureComposerTextWidthPx(word);
+        if (currentLinePx === 0) {
+          if (wordPx > availableTextPx) return true;
+          currentLinePx = wordPx;
+        } else {
+          if (currentLinePx + spacePx + wordPx > availableTextPx) return true;
+          currentLinePx += spacePx + wordPx;
+        }
+      }
+    }
+    return false;
   }
 
-  if (typeof window === 'undefined') return text.length > 60;
+  if (typeof window === "undefined") return text.length > 50;
   const w = window.innerWidth;
-  const threshold = w < 480 ? 34 : w < 640 ? 44 : w < 1024 ? 58 : 75;
+  const threshold = w < 480 ? 28 : w < 640 ? 36 : w < 1024 ? 48 : 65;
   return text.length > threshold;
 }
 
@@ -15827,7 +15850,8 @@ const selectedAgentTheme = getAgentColorTheme(
                       end: cursorPos,
                     };
                     setInputText(newVal);
-                    if (computeIsMultilineComposer(newVal, composerWidth)) {
+                    const isMulti = e.target.scrollHeight > 30 || computeIsMultilineComposer(newVal, composerWidth);
+                    if (isMulti) {
                       e.target.style.height = "auto";
                       e.target.style.height = Math.min(e.target.scrollHeight, 210) + "px";
                     } else {
