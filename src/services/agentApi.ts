@@ -1,4 +1,4 @@
-import { getCustomAgentName } from "./avatarService";
+import { getCustomAgentName, hydrateAgentCustomProfileFromDto } from "./avatarService";
 export function cleanModelDisplayName(rawModel: string): string {
   if (!rawModel) return "";
   let m = rawModel.trim();
@@ -132,6 +132,9 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         displayNode = a.node || "Node 2nd (Platform) - api.skyer.vn";
       }
 
+      if (a.avatar_config || a.avatarConfig) {
+        hydrateAgentCustomProfileFromDto(a.id, a.slug, a.avatar_config || a.avatarConfig, a.name);
+      }
       return {
         id: a.id,
         name: getCustomAgentName(a.id) || getCustomAgentName(a.slug) || a.name || a.id,

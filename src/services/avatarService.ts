@@ -253,3 +253,22 @@ export async function pushAgentProfileToBackend(agentId: string, avatarConfig: C
     console.warn("[AvatarService] Failed to push profile to backend:", err);
   }
 }
+
+export function hydrateAgentCustomProfileFromDto(agentId: string, slug: string | undefined, avatarConfig: CustomAvatarConfig | null | undefined, customName?: string): void {
+  const key = slug || agentId;
+  if (!key) return;
+  const clean = normalizeAgentIdKey(key);
+  const full = "bot:agent360:" + clean;
+
+  if (avatarConfig) {
+    try {
+      const all = getAllAgentAvatarConfigs();
+      all[clean] = avatarConfig;
+      all[full] = avatarConfig;
+      if (agentId) all[agentId] = avatarConfig;
+      if (slug) all[slug] = avatarConfig;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId: clean, cleanId: clean, fullId: full, config: avatarConfig } }));
+    } catch {}
+  }
+}

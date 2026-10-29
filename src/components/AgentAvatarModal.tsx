@@ -47,7 +47,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   useEffect(() => {
     if (!isOpen) return;
     setEditedName(agent.name || "");
-    const current = getAgentAvatarConfig(agent.id);
+    const current = getAgentAvatarConfig(agent.id) || getAgentAvatarConfig(agent.slug);
     if (current) {
       if (current.type === "image" && current.imageUrl) {
         setCustomImageUrl(current.imageUrl);
@@ -107,23 +107,31 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   })();
 
   const handleSave = () => {
+    const targetKey = agent.slug || agent.id;
     const trimmed = editedName.trim();
     if (trimmed && trimmed !== agent.name) {
-      saveCustomAgentName(agent.id, trimmed);
+      saveCustomAgentName(targetKey, trimmed);
+      if (agent.id && agent.id !== targetKey) saveCustomAgentName(agent.id, trimmed);
     }
     if (customImageUrl) {
-      saveAgentAvatarConfig(agent.id, { type: "image", imageUrl: customImageUrl });
+      saveAgentAvatarConfig(targetKey, { type: "image", imageUrl: customImageUrl });
+      if (agent.id && agent.id !== targetKey) saveAgentAvatarConfig(agent.id, { type: "image", imageUrl: customImageUrl });
     } else if (!isCustomBlob) {
-      resetAgentAvatarConfig(agent.id);
+      resetAgentAvatarConfig(targetKey);
+      if (agent.id && agent.id !== targetKey) resetAgentAvatarConfig(agent.id);
     } else if (previewConfig) {
-      saveAgentAvatarConfig(agent.id, previewConfig);
+      saveAgentAvatarConfig(targetKey, previewConfig);
+      if (agent.id && agent.id !== targetKey) saveAgentAvatarConfig(agent.id, previewConfig);
     }
     onClose();
   };
 
   const handleReset = () => {
-    resetAgentAvatarConfig(agent.id);
-    saveCustomAgentName(agent.id, "");
+    const targetKey = agent.slug || agent.id;
+    resetAgentAvatarConfig(targetKey);
+    if (agent.id && agent.id !== targetKey) resetAgentAvatarConfig(agent.id);
+    saveCustomAgentName(targetKey, "");
+    if (agent.id && agent.id !== targetKey) saveCustomAgentName(agent.id, "");
     setEditedName(agent.name || "");
     setIsCustomBlob(false);
     setSelectedBlobShape(defaultBlob.shape);

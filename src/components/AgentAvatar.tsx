@@ -535,7 +535,7 @@ export function AgentAvatar({
         } ${hoverEffects} ${cleanClassName}`}
       >
         <BlobAvatar
-          key={`${blobProps.shape || defaultBlob.shape}-${blobProps.color || defaultBlob.color}-${blobProps.expression || defaultBlob.expression}-${agent.id || agent.slug || ''}`}
+          key={`${blobProps.shape || defaultBlob.shape}-${blobProps.color || defaultBlob.color}-${blobProps.expression || defaultBlob.expression}-${blobProps.seed || defaultBlob.seed}-${customConfig?.updatedAt || 0}-${agent.id || agent.slug || ''}`}
           shape={blobProps.shape as any || defaultBlob.shape}
           expression={blobProps.expression as any || defaultBlob.expression}
           color={blobProps.color || defaultBlob.color}
