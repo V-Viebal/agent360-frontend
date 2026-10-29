@@ -416,7 +416,7 @@ export function AgentAvatar({
     };
   }, [interactive]);
   const [customConfig, setCustomConfig] = useState<CustomAvatarConfig | null>(
-    overrideConfig !== undefined ? overrideConfig : getAgentAvatarConfig(agent.id)
+    overrideConfig !== undefined ? overrideConfig : (getAgentAvatarConfig(agent.id) || getAgentAvatarConfig(agent.slug))
   );
 
   useEffect(() => {
@@ -427,13 +427,15 @@ export function AgentAvatar({
 
     const handler = (e: any) => {
       const detail = e.detail;
-      if (detail && detail.agentId === agent.id) {
+      const targetKey = normalizeAgentSeedKey(agent.id || agent.slug || "");
+      const eventKey = normalizeAgentSeedKey(detail?.agentId || "");
+      if (detail && targetKey && eventKey && targetKey === eventKey) {
         setCustomConfig(detail.config);
       }
     };
     window.addEventListener("agent-avatar-updated", handler);
     return () => window.removeEventListener("agent-avatar-updated", handler);
-  }, [agent.id, overrideConfig]);
+  }, [agent.id, agent.slug, overrideConfig]);
 
   const defaultProfile = getAgentVisualProfile(agent.roleTag, agent.name || agent.slug || agent.id);
 
@@ -528,6 +530,7 @@ export function AgentAvatar({
         } ${hoverEffects} ${cleanClassName}`}
       >
         <BlobAvatar
+          key={`${blobProps.shape || defaultBlob.shape}-${blobProps.color || defaultBlob.color}-${blobProps.expression || defaultBlob.expression}-${agent.id || agent.slug || ''}`}
           shape={blobProps.shape as any || defaultBlob.shape}
           expression={blobProps.expression as any || defaultBlob.expression}
           color={blobProps.color || defaultBlob.color}

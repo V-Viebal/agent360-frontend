@@ -38,7 +38,7 @@ export function getAgentAvatarConfig(agentId?: string): CustomAvatarConfig | nul
   if (!agentId) return null;
   const all = getAllAgentAvatarConfigs();
   const clean = normalizeAgentIdKey(agentId);
-  return all[clean] || all[agentId] || null;
+  return all[clean] || all[agentId] || all[`bot:agent360:${clean}`] || null;
 }
 
 export function saveAgentAvatarConfig(agentId: string, config: CustomAvatarConfig): void {
@@ -46,17 +46,22 @@ export function saveAgentAvatarConfig(agentId: string, config: CustomAvatarConfi
   try {
     const all = getAllAgentAvatarConfigs();
     const clean = normalizeAgentIdKey(agentId);
+    const full = `bot:agent360:${clean}`;
     const updated = {
       ...config,
       updatedAt: Date.now(),
     };
     all[clean] = updated;
+    all[full] = updated;
     all[agentId] = updated;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
     // Dispatch custom event to notify components across the workspace
     window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId, config: updated } }));
     if (clean !== agentId) {
       window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId: clean, config: updated } }));
+    }
+    if (full !== agentId) {
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId: full, config: updated } }));
     }
   } catch (err) {
     console.error("[AvatarService] Failed to save avatar config:", err);

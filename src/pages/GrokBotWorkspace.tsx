@@ -3996,7 +3996,7 @@ function FormattedMessageContent({
                   title="Double click to read this sentence aloud"
                   className="text-slate-800 dark:text-neutral-200 leading-relaxed break-words hover:text-slate-900 dark:hover:text-white transition-colors cursor-text"
                 >
-                  {renderInlineMarkdown(line)}
+                  {renderInlineMarkdown(line, themeColor)}
                 </p>
               );
             })}
@@ -13175,7 +13175,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                   >
                                     <FormattedMessageContent
                                       content={stabilizeStreamingMarkdown(seg, isTurnActivelyRunning)}
-                                      themeColor={selectedAgentTheme.primary}
+                                      themeColor={msg.senderAgentId ? getAgentColorTheme(msg.senderAgentId).primary : selectedAgentTheme.primary}
                                       agentNode={selectedAgent.node}
                                       onImageClick={(url, name) => {
                                         setLightboxRotation(0);
@@ -13210,7 +13210,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               {mainBodyContent && (
                               <FormattedMessageContent
                                 content={stabilizeStreamingMarkdown(mainBodyContent, isTurnActivelyRunning)}
-                                themeColor={selectedAgentTheme.primary}
+                                themeColor={msg.senderAgentId ? getAgentColorTheme(msg.senderAgentId).primary : selectedAgentTheme.primary}
                                 agentNode={selectedAgent.node}
                                 onImageClick={(url, name) => {
                                   setLightboxRotation(0);
@@ -16326,31 +16326,41 @@ const selectedAgentTheme = getAgentColorTheme(
                           </div>
                         )}
 
-                        {/* Action buttons on the right: floating pill visible on hover or when menu/pin/archive is active */}
+                        {/* Static Subtle Pin Indicator: visible on right edge when chat is pinned and user is NOT hovering */}
+                        {pinnedChatIds.includes(chat.id) && activeChatMenuId !== chat.id && (
+                          <div
+                            style={{ color: selectedAgentTheme.primary }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 opacity-80 group-hover/chatitem:opacity-0 transition-opacity pointer-events-none flex items-center justify-center"
+                            title="Đã ghim phiên"
+                          >
+                            <Pin size={11} style={{ fill: selectedAgentTheme.primary }} />
+                          </div>
+                        )}
+
+                        {/* Action buttons on the right: floating tool pill visible strictly on hover or when menu is open */}
                         <div
                           className={`absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 z-20 transition-all duration-150 rounded-lg px-1 py-0.5 shadow-sm border ${
                             activeChatMenuId === chat.id
                               ? "opacity-100 pointer-events-auto bg-slate-100 dark:bg-[#181822] border-slate-300 dark:border-white/15"
-                              : pinnedChatIds.includes(chat.id) || archivedChatIds.includes(chat.id)
-                              ? "opacity-100 pointer-events-auto bg-slate-100/90 dark:bg-[#181822]/95 border-slate-200 dark:border-white/10"
                               : "opacity-0 pointer-events-none group-hover/chatitem:opacity-100 group-hover/chatitem:pointer-events-auto bg-slate-100/95 dark:bg-[#14141c]/95 border-slate-200 dark:border-white/10"
                           }`}
                         >
-                          {/* Quick Pin Toggle Button (Visible on hover or when pinned) */}
+                          {/* Quick Pin Toggle Button */}
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               togglePinChat(chat.id, e);
                             }}
+                            style={pinnedChatIds.includes(chat.id) ? { color: selectedAgentTheme.primary } : undefined}
                             className={`p-1 rounded hover:bg-white/10 transition-colors cursor-pointer ${
                               pinnedChatIds.includes(chat.id)
-                                ? "text-amber-400 opacity-100"
-                                : "text-neutral-400 hover:text-amber-400"
+                                ? "opacity-100"
+                                : "text-neutral-400 hover:text-white"
                             }`}
                             title={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
                           >
-                            <Pin size={12} className={pinnedChatIds.includes(chat.id) ? "fill-amber-400" : ""} />
+                            <Pin size={12} style={pinnedChatIds.includes(chat.id) ? { fill: selectedAgentTheme.primary } : undefined} />
                           </button>
 
                           {/* Quick Archive Toggle Button (Visible on hover or when archived) */}
@@ -16476,7 +16486,7 @@ ${chat.id}`);
                               />
 
                               <DropdownMenuItem
-                                icon={<Pin size={13} className={pinnedChatIds.includes(chat.id) ? "text-amber-400 fill-amber-400" : "text-neutral-400"} />}
+                                icon={<Pin size={13} style={pinnedChatIds.includes(chat.id) ? { color: selectedAgentTheme.primary, fill: selectedAgentTheme.primary } : undefined} className={pinnedChatIds.includes(chat.id) ? "" : "text-neutral-400"} />}
                                 label={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
                                 onClick={(e) => {
                                   togglePinChat(chat.id, e);
@@ -19020,7 +19030,7 @@ ${chat.id}`);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Pin size={15} className={pinnedChatIds.includes(mobileActionChat.id) ? "fill-amber-400 text-amber-400" : "text-neutral-400"} />
+                <Pin size={15} style={pinnedChatIds.includes(mobileActionChat.id) ? { color: selectedAgentTheme.primary, fill: selectedAgentTheme.primary } : undefined} className={pinnedChatIds.includes(mobileActionChat.id) ? "" : "text-neutral-400"} />
                 <span>{pinnedChatIds.includes(mobileActionChat.id) ? "Bỏ ghim phiên hội thoại (Unpin)" : "Ghim phiên lên đầu (Pin to top)"}</span>
               </button>
 
