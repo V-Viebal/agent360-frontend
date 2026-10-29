@@ -56,12 +56,13 @@ export function saveAgentAvatarConfig(agentId: string, config: CustomAvatarConfi
     all[agentId] = updated;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
     // Dispatch custom event to notify components across the workspace
-    window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId, config: updated } }));
+    const detail = { agentId, config: updated, cleanId: clean, fullId: full };
+    window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
     if (clean !== agentId) {
-      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId: clean, config: updated } }));
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: clean } }));
     }
     if (full !== agentId) {
-      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId: full, config: updated } }));
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: full } }));
     }
   } catch (err) {
     console.error("[AvatarService] Failed to save avatar config:", err);
@@ -73,6 +74,7 @@ export function resetAgentAvatarConfig(agentId: string): void {
   try {
     const all = getAllAgentAvatarConfigs();
     const clean = normalizeAgentIdKey(agentId);
+    const full = `bot:agent360:${clean}`;
     let changed = false;
     if (all[clean]) {
       delete all[clean];
@@ -82,11 +84,19 @@ export function resetAgentAvatarConfig(agentId: string): void {
       delete all[agentId];
       changed = true;
     }
+    if (all[full]) {
+      delete all[full];
+      changed = true;
+    }
     if (changed) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId, config: null } }));
+      const detail = { agentId, config: null, cleanId: clean, fullId: full };
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
       if (clean !== agentId) {
-        window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { agentId: clean, config: null } }));
+        window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: clean } }));
+      }
+      if (full !== agentId) {
+        window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: full } }));
       }
     }
   } catch (err) {

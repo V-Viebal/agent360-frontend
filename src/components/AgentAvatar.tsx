@@ -424,11 +424,12 @@ export function AgentAvatar({
       setCustomConfig(overrideConfig);
       return;
     }
+    setCustomConfig(getAgentAvatarConfig(agent.id) || getAgentAvatarConfig(agent.slug));
 
     const handler = (e: any) => {
       const detail = e.detail;
       const targetKey = normalizeAgentSeedKey(agent.id || agent.slug || "");
-      const eventKey = normalizeAgentSeedKey(detail?.agentId || "");
+      const eventKey = normalizeAgentSeedKey(detail?.agentId || detail?.cleanId || "");
       if (detail && targetKey && eventKey && targetKey === eventKey) {
         setCustomConfig(detail.config);
       }
