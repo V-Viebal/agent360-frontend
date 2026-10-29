@@ -70,6 +70,7 @@ interface OnboardingChecklistWidgetProps {
   onToggleChatList?: () => void;
   onFocusComposer?: () => void;
   variant?: "floating" | "inline";
+  themeColor?: string;
 }
 
 export function OnboardingChecklistWidget({
@@ -79,7 +80,9 @@ export function OnboardingChecklistWidget({
   onToggleChatList,
   onFocusComposer,
   variant = "floating",
+  themeColor,
 }: OnboardingChecklistWidgetProps) {
+  const primaryColor = themeColor || "#f8a87c";
   const { t } = useTranslation();
   const [milestones, setMilestones] = useState<OnboardingMilestones>(() => getStoredMilestones());
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
@@ -202,7 +205,7 @@ export function OnboardingChecklistWidget({
           onClick={() => handleToggleCollapse()}
           className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer"
         >
-          <div className="h-5 w-5 rounded-md bg-[#f8a87c]/15 text-[#f8a87c] flex items-center justify-center shrink-0">
+          <div className="h-5 w-5 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${primaryColor}22`, color: primaryColor }}>
             <Sparkles size={11} />
           </div>
           <div className="min-w-0 flex-1 flex items-center justify-between">
@@ -237,8 +240,8 @@ export function OnboardingChecklistWidget({
       {/* Progress Line */}
       <div className="h-0.5 w-full bg-neutral-100 dark:bg-white/5">
         <div
-          className="h-full bg-[#f8a87c] transition-all duration-300"
-          style={{ width: `${progressPercent}%` }}
+          className="h-full transition-all duration-300"
+          style={{ width: `${progressPercent}%`, backgroundColor: primaryColor }}
         />
       </div>
 
@@ -277,7 +280,8 @@ export function OnboardingChecklistWidget({
             <button
               type="button"
               onClick={() => startOnboardingTour({ force: true })}
-              className="text-[#f8a87c] hover:underline flex items-center gap-1 font-medium cursor-pointer"
+              className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
+              style={{ color: primaryColor }}
             >
               <span>Tham quan 1 vòng</span>
             </button>

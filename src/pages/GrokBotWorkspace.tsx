@@ -11025,7 +11025,7 @@ const selectedAgentTheme = getAgentColorTheme(
       (a.roleTag && a.roleTag.toLowerCase().includes(query));
 
     if (!matchesSearch) return false;
-    if (selectedInstance === "all") return true;
+    if (!isAdmin || selectedInstance === "all") return true;
 
     if (a.instanceId) {
       if (a.instanceId === selectedInstance) return true;
@@ -11610,11 +11610,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 </>
               )}
               </div>
-              {/* Bottom blur/gradient fade edge when agent list is scrollable in collapsed rail */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/50 to-transparent z-20 backdrop-blur-[1px]"
-              />
+
             </div>
 
             {/* Collapsed Bottom Profile Bar */}
@@ -12317,11 +12313,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 </>
               )}
               </div>
-              {/* Bottom blur/gradient fade edge for expanded sidebar */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/50 to-transparent z-20 backdrop-blur-[1px]"
-              />
+
             </div>
 
             {/* Bottom Profile Bar with User Dropdown */}
@@ -17157,11 +17149,7 @@ ${chat.id}`);
                 </>
               )}
               </div>
-              {/* Bottom blur/gradient fade edge for chat list */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-[var(--bg-sidebar)] via-[var(--bg-sidebar)]/50 to-transparent z-20 backdrop-blur-[1px]"
-              />
+
             </div>
           </>
         )}
@@ -19353,6 +19341,7 @@ ${chat.id}`);
             const textarea = document.querySelector("#tour-prompt-composer textarea") as HTMLTextAreaElement;
             if (textarea) textarea.focus();
           }}
+          themeColor={selectedAgentTheme.primary}
         />
       )}
 
