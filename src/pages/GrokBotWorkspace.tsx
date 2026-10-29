@@ -19355,6 +19355,15 @@ ${chat.id}`);
 
       {!isComputerSplitOpen && !isBrowserModalOpen && (
         <OnboardingChecklistWidget
+          onToggleAgentsList={() => {
+            if (typeof window !== "undefined" && window.innerWidth < 1024) {
+              setMobileAgentsOpen((prev) => !prev);
+              setMobileChatsOpen(false);
+              setMobileBotInfoOpen(false);
+            } else if (isLeftSidebarCollapsed) {
+              handleToggleLeftSidebar();
+            }
+          }}
           isBotInfoCollapsed={isBotInfoCollapsed}
           isChatListCollapsed={isChatListCollapsed}
           onToggleBotInfo={() => {

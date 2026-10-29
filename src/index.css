@@ -1048,6 +1048,40 @@ html.light,
   /* backdrop-filter removed */
 }
 
+.driverjs-skyer-theme .driver-popover-close-btn,
+.driverjs-skyer-theme .driver-popover-close-btn:focus,
+.driverjs-skyer-theme .driver-popover-close-btn:focus-visible,
+.driverjs-skyer-theme .driver-popover-close-btn:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline-offset: 0 !important;
+  color: #94a3b8 !important;
+  top: 12px !important;
+  right: 12px !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.driverjs-skyer-theme .driver-popover-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+html.light .driverjs-skyer-theme .driver-popover-close-btn:hover,
+[data-theme="light"] .driverjs-skyer-theme .driver-popover-close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
 .driverjs-skyer-theme .driver-popover-title {
   font-size: var(--font-size-title) !important;
   font-weight: 700 !important;

@@ -300,3 +300,13 @@ assert.ok(
   "sendConsoleChatMessageStream must inject request_context.approval_level = OFF on every turn"
 );
 console.log("✓ Test 19: Skyer Chat Stream approval_level=OFF enforcement verified");
+
+console.log("Testing Library & Attachment Multi-Stage File Download Fallback...");
+assert.ok(
+  apiSrc.includes("function resolveEffectiveAgentId") &&
+  apiSrc.includes("getSignedWorkspaceFileUrl") &&
+  apiSrc.includes("const triggerAnchorDownload =") &&
+  apiSrc.includes("30000"),
+  "downloadWorkspaceFile must resolve custom/alias agent slugs, attempt authenticated blob download with 30s revoke grace period, and fall back to signed URL and /console/files/?download=1"
+);
+console.log("✓ Test 20: Library & Attachment Multi-Stage File Download Fallback verified");

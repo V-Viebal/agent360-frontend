@@ -1,4 +1,4 @@
-import { getCustomAgentName, hydrateAgentCustomProfileFromDto } from "./avatarService";
+import { getCustomAgentName, hydrateAgentCustomProfileFromDto, resolveCanonicalAgentSlugFromAlias } from "./avatarService";
 export function cleanModelDisplayName(rawModel: string): string {
   if (!rawModel) return "";
   let m = rawModel.trim();
@@ -553,11 +553,22 @@ function inferClientCategory(pathOrName: string, kind: string): { category: stri
   return { category: "files", previewKind: "text", ext };
 }
 
+function resolveEffectiveAgentId(agentId?: string): string {
+  const raw = (agentId || "mons").replace(/^bot:agent360:/i, "").trim() || "mons";
+  const fromAlias = resolveCanonicalAgentSlugFromAlias(raw);
+  if (fromAlias) return fromAlias;
+  const low = raw.toLowerCase();
+  if (low === "default-test" || low === "qwenpaw-test" || low === "qwenpaw-base-test") {
+    return "qwenpaw-test-ba";
+  }
+  return raw;
+}
+
 export async function fetchWorkspaceLibrary(
   agentId?: string,
   options?: { category?: string; ext?: string; search?: string; includeSystem?: boolean }
 ): Promise<WorkspaceLibraryResult> {
-  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanId = resolveEffectiveAgentId(agentId);
   const params = new URLSearchParams();
   if (options?.category && options.category !== "all") params.set("category", options.category);
   if (options?.ext) params.set("ext", options.ext);
@@ -623,7 +634,7 @@ export async function fetchWorkspaceTree(agentId?: string): Promise<WorkspaceTre
 }
 
 export async function fetchWorkspaceFileContent(agentId: string, filePath: string): Promise<string> {
-  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanId = resolveEffectiveAgentId(agentId);
   try {
     const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
       headers: { Accept: "application/json" }
@@ -640,7 +651,7 @@ export async function fetchWorkspaceFileContent(agentId: string, filePath: strin
 }
 
 export async function saveWorkspaceFileContent(agentId: string, filePath: string, content: string): Promise<boolean> {
-  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanId = resolveEffectiveAgentId(agentId);
   try {
     const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-content?path=${encodeURIComponent(filePath)}`, {
       method: "PUT",
@@ -659,7 +670,7 @@ export async function saveWorkspaceFileContent(agentId: string, filePath: string
 
 
 export async function getSignedWorkspaceFileUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
-  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanId = resolveEffectiveAgentId(agentId);
   try {
     const res = await authorizedFetch(
       `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/signed-file-url?path=${encodeURIComponent(filePath)}&inline=${inline ? "true" : "false"}`,
@@ -712,7 +723,7 @@ export interface UniversalFilePreviewResponse {
 }
 
 export async function fetchUniversalFilePreview(agentId: string, filePath: string): Promise<UniversalFilePreviewResponse | null> {
-  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanId = resolveEffectiveAgentId(agentId);
   const cleanPath = (filePath || "").replace(/^\/+/, "");
   try {
     const res = await authorizedFetch(
@@ -729,47 +740,94 @@ export async function fetchUniversalFilePreview(agentId: string, filePath: strin
 }
 
 export async function fetchWorkspaceFileBlobUrl(agentId: string, filePath: string, inline = true): Promise<string | null> {
-  const cleanId = (agentId || "mons").replace(/^bot:agent360:/, "");
+  const cleanId = resolveEffectiveAgentId(agentId);
   const cleanPath = (filePath || "").replace(/^\/+/, "");
-  try {
-    let res = await authorizedFetch(
-      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-download?path=${encodeURIComponent(cleanPath)}&inline=${inline ? "true" : "false"}`,
-      {},
-      cleanId
-    );
-    if (!res.ok) {
-      const encodedRel = cleanPath.split("/").map(encodeURIComponent).join("/");
-      res = await authorizedFetch(
-        `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/console/files/${encodedRel}${inline ? "" : "?download=1"}`,
-        {},
-        cleanId
-      );
-    }
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return URL.createObjectURL(blob);
-  } catch (err) {
-    console.warn(`fetchWorkspaceFileBlobUrl failed for ${cleanId}/${cleanPath}:`, err);
-    return null;
+  const encodedRel = cleanPath.split("/").map(encodeURIComponent).join("/");
+  const candidateUrls = [
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/workspace/file-download?path=${encodeURIComponent(cleanPath)}&inline=${inline ? "true" : "false"}`,
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/console/files/${encodedRel}${inline ? "" : "?download=1"}`,
+    `${API_BASE_URL}/agents/workspace/file-download?agentId=${encodeURIComponent(cleanId)}&path=${encodeURIComponent(cleanPath)}&inline=${inline ? "true" : "false"}`,
+  ];
+
+  for (const url of candidateUrls) {
+    try {
+      const res = await authorizedFetch(url, {}, cleanId);
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob.size > 0) {
+          return URL.createObjectURL(blob);
+        }
+      }
+    } catch {}
   }
+
+  try {
+    const signedUrl = await getSignedWorkspaceFileUrl(cleanId, cleanPath, inline);
+    if (signedUrl) {
+      const res = await fetch(signedUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob.size > 0) {
+          return URL.createObjectURL(blob);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`fetchWorkspaceFileBlobUrl signed fallback failed for ${cleanId}/${cleanPath}:`, err);
+  }
+
+  return null;
 }
 
 export async function downloadWorkspaceFile(agentId: string, filePath: string, fileName?: string): Promise<boolean> {
-  const url = await fetchWorkspaceFileBlobUrl(agentId, filePath, false);
-  if (!url) return false;
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName || filePath.split("/").pop() || "download";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  const cleanId = resolveEffectiveAgentId(agentId);
+  const cleanPath = (filePath || "").replace(/^\/+/, "");
+  const downloadName = fileName || cleanPath.split("/").pop() || "download";
+
+  const triggerAnchorDownload = (href: string, revokeAfter = false): boolean => {
+    try {
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = downloadName;
+      a.rel = "noopener noreferrer";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          if (a.parentNode) a.parentNode.removeChild(a);
+        } catch {}
+        if (revokeAfter) {
+          try { URL.revokeObjectURL(href); } catch {}
+        }
+      }, 30000);
+      return true;
+    } catch {
+      if (revokeAfter) {
+        try { URL.revokeObjectURL(href); } catch {}
+      }
+      return false;
+    }
+  };
+
+  // 1. Primary: fetch authenticated Blob and trigger download with 30s revoke grace period
+  const blobUrl = await fetchWorkspaceFileBlobUrl(cleanId, cleanPath, false);
+  if (blobUrl && triggerAnchorDownload(blobUrl, true)) {
     return true;
-  } catch {
-    URL.revokeObjectURL(url);
-    return false;
   }
+
+  // 2. Fallback: signed expiring URL (?sig=...&exp=...&inline=false)
+  try {
+    const signedUrl = await getSignedWorkspaceFileUrl(cleanId, cleanPath, false);
+    if (signedUrl && triggerAnchorDownload(signedUrl, false)) {
+      return true;
+    }
+  } catch {}
+
+  // 3. Direct attachment endpoint fallback (/console/files/...?download=1 returns Content-Disposition: attachment)
+  const encodedRel = cleanPath.split("/").map(encodeURIComponent).join("/");
+  const directDownloadUrl = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/console/files/${encodedRel}?download=1`;
+  return triggerAnchorDownload(directDownloadUrl, false);
 }
 
 // Fast Client-Side Dialogue Session Cache for Instant Navigation (User-Sub Isolated)

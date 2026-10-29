@@ -64,6 +64,7 @@ export function recordMilestone(key: keyof OnboardingMilestones) {
 }
 
 interface OnboardingChecklistWidgetProps {
+  onToggleAgentsList?: () => void;
   isBotInfoCollapsed?: boolean;
   isChatListCollapsed?: boolean;
   onToggleBotInfo?: () => void;
@@ -74,6 +75,7 @@ interface OnboardingChecklistWidgetProps {
 }
 
 export function OnboardingChecklistWidget({
+  onToggleAgentsList,
   isBotInfoCollapsed = true,
   isChatListCollapsed = false,
   onToggleBotInfo,
@@ -137,7 +139,7 @@ export function OnboardingChecklistWidget({
       icon: Bot,
       done: milestones.selectedAgent,
       action: () => {
-        if (onToggleChatList) onToggleChatList();
+        if (onToggleAgentsList) onToggleAgentsList();
         recordMilestone("selectedAgent");
       },
     },
@@ -166,11 +168,11 @@ export function OnboardingChecklistWidget({
     {
       id: "triedVoiceOrShortcuts" as const,
       num: 4,
-      title: t("onboarding.step4Title") || "4. Phím tắt (Ctrl+K) & Voice",
-      icon: Mic,
+      title: t("onboarding.step4Title") || "4. Cuộc trò chuyện & Kênh",
+      icon: MessageSquare,
       done: milestones.triedVoiceOrShortcuts,
       action: () => {
-        window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+        if (onToggleChatList) onToggleChatList();
         recordMilestone("triedVoiceOrShortcuts");
       },
     },

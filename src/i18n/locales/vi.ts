@@ -398,10 +398,10 @@ export const vi = {
   "onboarding.step3Desc": "Quan sát cây phân cấp điều phối và các chuyên viên được ủy quyền hỗ trợ phía sau.",
   "onboarding.step3Done": "Đã xem",
   "onboarding.step3Action": "Mở sơ đồ phối hợp",
-  "onboarding.step4Title": "4. Phím tắt (Ctrl+K) & Voice",
-  "onboarding.step4Desc": "Bật mic để trao đổi bằng giọng nói hoặc nhấn Ctrl + K để gọi lệnh tắt siêu tốc.",
+  "onboarding.step4Title": "4. Cuộc trò chuyện & Kênh",
+  "onboarding.step4Desc": "Xem lại toàn bộ lịch sử trao đổi và các kênh giao tiếp.",
   "onboarding.step4Done": "Đã biết",
-  "onboarding.step4Action": "Xem phím tắt (Ctrl+K)",
+  "onboarding.step4Action": "Mở cuộc trò chuyện",
   "onboarding.tourBtn": "Dẫn tôi đi tham quan 1 vòng",
 
   // Connect Apps Modal

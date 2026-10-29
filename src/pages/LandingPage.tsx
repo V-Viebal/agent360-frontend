@@ -38,6 +38,7 @@ import {
   HardDrive,
 } from "lucide-react";
 
+import { StrawberryComparisonSection } from "../components/StrawberryComparisonSection";
 interface MetricItem {
   label: string;
   value: string;
@@ -755,7 +756,7 @@ export function LandingPage() {
       <section className="relative pt-14 pb-16 sm:pt-20 sm:pb-24 border-b border-neutral-200 dark:border-[var(--border-subtle)]">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[560px] md:w-[860px] h-[300px] bg-[#f8a87c]/[0.07] blur-[110px] pointer-events-none -z-10" />
 
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
+        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 text-center">
           {/* Animated Live Kernel Pill */}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -949,15 +950,15 @@ export function LandingPage() {
       </section>
 
       {/* 3. Section #bots: Interactive AI Employee Workbench */}
-      <section id="bots" className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <section id="bots" className="py-20 sm:py-28 border-b border-neutral-200 dark:border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
+        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c] mb-2">
                 <Bot size={13} />
                 <span>ROLE WORKBENCH SIMULATOR</span>
               </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
+              <h2 className="text-3xl sm:text-[46px] font-normal leading-[1.12] tracking-[-1.8px] text-neutral-900 dark:text-white">
                 {isVi ? "Chọn vị trí nhân sự cần giao việc" : "Specialized corporate roles"}
               </h2>
             </div>
@@ -1433,6 +1434,8 @@ export function LandingPage() {
       </section>
 
       {/* 5. Section #interaction & #hierarchy */}
+      <StrawberryComparisonSection />
+
       <section id="interaction" className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)]">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">

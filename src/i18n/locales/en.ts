@@ -398,10 +398,10 @@ export const en = {
   "onboarding.step3Desc": "View the hierarchical supervision tree and sub-agents coordinated behind the scenes.",
   "onboarding.step3Done": "Viewed",
   "onboarding.step3Action": "Open Topology",
-  "onboarding.step4Title": "4. Shortcuts (Ctrl+K) & Voice",
-  "onboarding.step4Desc": "Enable hands-free audio recording or press Ctrl + K for lightning-fast command access.",
+  "onboarding.step4Title": "4. Conversations & Channels",
+  "onboarding.step4Desc": "Review past conversation sessions and connected channels.",
   "onboarding.step4Done": "Learned",
-  "onboarding.step4Action": "View Shortcuts (Ctrl+K)",
+  "onboarding.step4Action": "Open Conversations",
   "onboarding.tourBtn": "Take a Guided Tour",
 
   // Connect Apps Modal

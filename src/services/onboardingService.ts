@@ -65,11 +65,19 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       }
       driverObj.destroy();
     },
+    onPopoverRender: (popover) => {
+      // Smooth focus: ensure focus lands on the action button ('Next' / 'Start'), avoiding awkward outline ring on close button 'x'
+      setTimeout(() => {
+        if (popover.nextButton) {
+          popover.nextButton.focus({ preventScroll: true });
+        }
+      }, 30);
+    },
     steps: ([
       {
         element: "#tour-agent-selector",
         popover: {
-          title: "1. Đồng đội AI",
+          title: "1. Chọn đồng đội AI",
           description: "Chọn nhân viên AI phụ trách theo từng nghiệp vụ.",
           side: "right",
           align: "start",
@@ -78,7 +86,7 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-prompt-composer",
         popover: {
-          title: "2. Giao việc",
+          title: "2. Giao việc đầu tiên",
           description: "Nhập nội dung yêu cầu hoặc bấm mic nói chuyện rảnh tay.",
           side: "top",
           align: "center",
@@ -87,24 +95,35 @@ export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver
       {
         element: "#tour-bot-spec-trigger",
         popover: {
-          title: "3. Hồ sơ & Kỹ năng",
+          title: "3. Xem hồ sơ & kỹ năng",
           description: "Xem bộ nhớ (Memory), tài liệu (Library) và công cụ liên kết.",
           side: isMobile ? "top" : "left",
           align: "start",
         },
       },
       {
-        element: "#tour-command-palette-trigger",
+        element: () => {
+          const sessions = document.getElementById("tour-chat-sessions");
+          if (sessions && !sessions.classList.contains("w-0") && !sessions.classList.contains("hidden") && !sessions.classList.contains("pointer-events-none")) {
+            return sessions;
+          }
+          const expandBtn = document.getElementById("tour-chat-expand-btn");
+          if (expandBtn) return expandBtn;
+          return sessions || document.body;
+        },
         popover: {
-          title: "4. Lệnh nhanh (Ctrl+K)",
-          description: "Mở bảng tìm kiếm và chuyển đổi tác vụ tức thì.",
-          side: "right",
-          align: "end",
+          title: "4. Cuộc trò chuyện & Kênh",
+          description: "Xem lại toàn bộ lịch sử trao đổi và các kênh kết nối.",
+          side: isMobile ? "top" : "left",
+          align: "start",
         },
       },
     ] as DriveStep[]).filter((step) => {
       if (typeof step.element === "string") {
         return Boolean(document.querySelector(step.element));
+      }
+      if (typeof step.element === "function") {
+        return Boolean(step.element());
       }
       return true;
     }),
