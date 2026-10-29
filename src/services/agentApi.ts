@@ -974,7 +974,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         }
       } else if (mtype === "plugin_call" || mtype === "tool" || mtype === "tool_call" || mtype === "function_call") {
         const payload = m.payload || m.data || {};
-        const toolCalls = payload.tool_calls || (payload.name ? [payload] : callDatas);
+        const toolCalls = payload.tool_calls || (payload.name || payload.function ? [payload] : (callDatas.length > 0 ? callDatas : [payload]));
         for (const tc of toolCalls) {
           const stepItem = {
             kind: "tool_call" as const,

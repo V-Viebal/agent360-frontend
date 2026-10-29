@@ -282,3 +282,13 @@ assert.ok(
   "Image upload must route preview URLs via /console/files/, allow sending image-only messages without text, and support clipboard paste"
 );
 console.log("✓ Test 17: Image Upload, Clipboard Paste & Inline Preview URL resolution verified");
+
+console.log("Testing Generated Image & Tool-Sent File Attachment Extraction...");
+assert.ok(
+  grokSrc.includes("extractInlineToolResultMedia") &&
+  grokSrc.includes("generate_image") &&
+  grokSrc.includes("Ảnh do Agent tạo") &&
+  apiSrc.includes("callDatas.length > 0 ? callDatas : [payload]"),
+  "Generated images (mcp-image__generate_image) and tool-sent files must merge args/result across plugin_call & plugin_call_output and render unified file/image attachment cards"
+);
+console.log("✓ Test 18: Generated Image & Tool-Sent File Attachment Extraction verified");

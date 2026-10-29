@@ -572,6 +572,61 @@ export interface ParsedChatAttachmentItem {
   caption?: string;
 }
 
+function extractInlineToolResultMedia(
+  resultStr?: string
+): { dataUrl?: string; mediaType?: string; path?: string; storageUrl?: string; name?: string } | null {
+  if (!resultStr || typeof resultStr !== "string") return null;
+  let dataUrl: string | undefined;
+  let mediaType: string | undefined;
+  let pathVal: string | undefined;
+  let storageUrl: string | undefined;
+  let nameVal: string | undefined;
+
+  const trimmed = resultStr.trim();
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of items) {
+        if (!item || typeof item !== "object") continue;
+        if (item.type === "text" && typeof item.text === "string") {
+          const pm = item.text.match(/(?:^|\n)\s*path:\s*([^\n\r]+)/i);
+          if (pm && !pathVal) pathVal = pm[1].trim();
+          const um = item.text.match(/(?:^|\n)\s*url:\s*(https?:\/\/[^\s\n\r]+)/i);
+          if (um && !storageUrl) storageUrl = um[1].trim();
+        }
+        if ((item.type === "data" || item.type === "image") && item.source?.type === "base64" && typeof item.source?.data === "string" && item.source.data.length > 32) {
+          const mime = item.source.media_type || item.mimeType || "image/jpeg";
+          dataUrl = `data:${mime};base64,${item.source.data}`;
+          mediaType = mime;
+          if (typeof item.name === "string" && item.name.trim()) nameVal = item.name.trim();
+        } else if (item.type === "image" && typeof item.data === "string" && item.data.length > 32) {
+          const mime = item.mimeType || item.media_type || "image/png";
+          dataUrl = `data:${mime};base64,${item.data}`;
+          mediaType = mime;
+          if (typeof item.name === "string" && item.name.trim()) nameVal = item.name.trim();
+        }
+      }
+    } catch {}
+  }
+
+  if (!pathVal) {
+    const pm = resultStr.match(/(?:^|\n|\\n)\s*path:\s*([^\n\r"\\]+)/i);
+    if (pm) pathVal = pm[1].trim();
+  }
+  if (!storageUrl) {
+    const um = resultStr.match(/\burl:\s*(https?:\/\/[^\s\n\r"\\]+)/i);
+    if (um) storageUrl = um[1].trim();
+  }
+  if (!dataUrl) {
+    const directDataUrl = resultStr.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]{64,}/);
+    if (directDataUrl) dataUrl = directDataUrl[0];
+  }
+
+  if (!dataUrl && !pathVal && !storageUrl) return null;
+  return { dataUrl, mediaType, path: pathVal, storageUrl, name: nameVal };
+}
+
 function extractToolSentAttachments(
   toolCalls?: ChatMessage["toolCalls"],
   steps?: ChatMessage["steps"],
@@ -580,16 +635,34 @@ function extractToolSentAttachments(
   const results: ParsedChatAttachmentItem[] = [];
   const seen = new Set<string>();
 
-  const addCandidate = (rawPath: string, rawFileName?: string, caption?: string, storageUrl?: string) => {
+  const addCandidate = (
+    rawPath: string,
+    rawFileName?: string,
+    caption?: string,
+    storageUrl?: string,
+    explicitPreviewUrl?: string
+  ) => {
     const cleanPath = (rawPath || "").trim();
     const cleanName = (rawFileName || cleanPath.replace(/\\/g, "/").split("/").pop() || "attachment").trim();
-    if (!cleanPath && !cleanName) return;
-    const effectiveUrl = cleanPath || `media/${cleanName}`;
-    const key = (effectiveUrl.replace(/\\/g, "/").split("/").pop() || cleanName).toLowerCase();
-    if (seen.has(key)) return;
+    if (!cleanPath && !cleanName && !explicitPreviewUrl) return;
+    const isProtectedPath = /working\.secret/i.test(cleanPath);
+    const effectiveUrl = (!cleanPath || isProtectedPath)
+      ? (storageUrl || explicitPreviewUrl || `media/${cleanName}`)
+      : cleanPath;
+    const key = (cleanName || effectiveUrl.replace(/\\/g, "/").split("/").pop() || "attachment").toLowerCase();
+    if (seen.has(key)) {
+      if (explicitPreviewUrl || storageUrl) {
+        const existing = results.find((r) => r.fileName.toLowerCase() === key || (r.rawUrl.replace(/\\/g, "/").split("/").pop() || "").toLowerCase() === key);
+        if (existing) {
+          if (explicitPreviewUrl && !existing.previewUrl.startsWith("data:")) existing.previewUrl = explicitPreviewUrl;
+          if (storageUrl && !existing.storageUrl) existing.storageUrl = storageUrl;
+        }
+      }
+      return;
+    }
     seen.add(key);
 
-    const previewUrl = resolveUploadedAttachmentPreviewUrl(effectiveUrl, agentIdForUrl);
+    const previewUrl = explicitPreviewUrl || (storageUrl && isProtectedPath ? storageUrl : resolveUploadedAttachmentPreviewUrl(effectiveUrl, agentIdForUrl));
     const fmt = classifyAttachmentFormat(cleanName || effectiveUrl);
     results.push({
       fileName: cleanName,
@@ -604,11 +677,27 @@ function extractToolSentAttachments(
     });
   };
 
-  const inspectList = [...(toolCalls || []), ...(steps || []).filter((s) => s.kind === "tool_call")];
+  // Merge steps & toolCalls so that args from plugin_call and result from plugin_call_output are combined per call
+  const mergedMap = new Map<string, { tool: string; args?: string; result?: string }>();
+  const rawList = [...(steps || []).filter((s) => s.kind === "tool_call"), ...(toolCalls || [])];
+  rawList.forEach((tc, idx) => {
+    const key = tc.call_id || tc.id || `${tc.tool || "tool"}-${idx}`;
+    const prev = mergedMap.get(key);
+    if (!prev) {
+      mergedMap.set(key, { tool: tc.tool || "", args: tc.args, result: tc.result });
+    } else {
+      if (tc.tool && (!prev.tool || prev.tool === "Tool Output" || prev.tool === "Tool Call")) prev.tool = tc.tool;
+      if (tc.args && !prev.args) prev.args = tc.args;
+      if (tc.result && !prev.result) prev.result = tc.result;
+    }
+  });
+  const inspectList = Array.from(mergedMap.values());
+
   for (const tc of inspectList) {
     const toolName = (tc.tool || "").toLowerCase();
+    const inlineMedia = extractInlineToolResultMedia(tc.result);
 
-    // 1. Files explicitly sent or delivered by agent
+    // 1. Files explicitly sent or delivered by agent (send_file_to_user, send_telegram_file, etc.)
     if (
       toolName.includes("send_telegram_file") ||
       toolName.includes("send_file") ||
@@ -621,40 +710,74 @@ function extractToolSentAttachments(
     ) {
       try {
         const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
-        const filePath = argsObj.file_path || argsObj.path || argsObj.url || argsObj.media_url || "";
-        const fileName = argsObj.filename || argsObj.file_name || argsObj.name || "";
-        const caption = typeof argsObj.caption === "string" ? argsObj.caption : undefined;
-        if (filePath || fileName) {
-          addCandidate(filePath, fileName, caption);
+        const filePath = argsObj.file_path || argsObj.path || argsObj.url || argsObj.media_url || inlineMedia?.path || "";
+        const fileName = argsObj.filename || argsObj.file_name || argsObj.name || inlineMedia?.name || "";
+        const caption = typeof argsObj.caption === "string" ? argsObj.caption : "Tệp do Agent tạo";
+        if (filePath || fileName || inlineMedia?.dataUrl) {
+          addCandidate(filePath, fileName, caption, inlineMedia?.storageUrl, inlineMedia?.dataUrl);
         }
       } catch {}
     }
 
-    // 2. MinIO / S3 Storage upload tools (e.g. minio__upload_file, upload_file)
+    // 2. AI Image Generation / Editing tools (e.g. mcp-image__generate_image, generate_image, edit_image)
+    if (
+      toolName.includes("generate_image") ||
+      toolName.includes("edit_image") ||
+      toolName.includes("mcp-image") ||
+      toolName.includes("mcp_image") ||
+      toolName.includes("image_gen")
+    ) {
+      try {
+        const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
+        const outPath = inlineMedia?.path || argsObj.output_path || argsObj.path || "";
+        const extFromMime = inlineMedia?.mediaType?.includes("png")
+          ? "png"
+          : inlineMedia?.mediaType?.includes("webp")
+          ? "webp"
+          : "jpg";
+        const baseFromPath = outPath ? outPath.replace(/\\/g, "/").split("/").pop() || "" : "";
+        let reqName = String(argsObj.fileName || argsObj.file_name || argsObj.filename || inlineMedia?.name || baseFromPath || "generated-image").trim();
+        if (reqName && !/\.[a-z0-9]{2,5}$/i.test(reqName)) {
+          reqName = `${reqName}.${extFromMime}`;
+        }
+        if (outPath || inlineMedia?.dataUrl || inlineMedia?.storageUrl) {
+          addCandidate(
+            outPath || `media/${reqName}`,
+            baseFromPath || reqName,
+            "Ảnh do Agent tạo",
+            inlineMedia?.storageUrl,
+            inlineMedia?.dataUrl
+          );
+        }
+      } catch {}
+    }
+
+    // 3. MinIO / S3 Storage upload tools (e.g. minio__upload_file, upload_file)
     if (toolName.includes("minio") || toolName.includes("storage") || toolName.includes("upload")) {
       try {
         const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
-        const localPath = argsObj.path || argsObj.file_path || argsObj.filePath || "";
-        let storageUrl = argsObj.url || "";
-        if (!storageUrl && tc.result && typeof tc.result === "string") {
-          const urlMatch = tc.result.match(/\burl:\s*(https?:\/\/[^\s\n\r]+)/i);
-          if (urlMatch) storageUrl = urlMatch[1];
-        }
+        const localPath = argsObj.path || argsObj.file_path || argsObj.filePath || inlineMedia?.path || "";
+        const storageUrl = argsObj.url || inlineMedia?.storageUrl || "";
         if (localPath || storageUrl) {
-          addCandidate(localPath || storageUrl, undefined, "Tệp đã lưu trữ trên Storage", storageUrl || undefined);
+          addCandidate(localPath || storageUrl, undefined, "Tệp đã lưu trữ trên Storage", storageUrl || undefined, inlineMedia?.dataUrl);
         }
       } catch {}
     }
 
-    // 3. Files authored or written by agent via write_file / edit_file
+    // 4. Files authored or written by agent via write_file / edit_file
     if (toolName === "write_file" || toolName.endsWith("__write_file")) {
       try {
         const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
-        const filePath = argsObj.file_path || argsObj.path || "";
+        const filePath = argsObj.file_path || argsObj.path || inlineMedia?.path || "";
         const baseName = filePath.replace(/\\/g, "/").split("/").pop() || "";
-        // Exclude system logs, memory files, and internal agent state
-        if (baseName && !baseName.endsWith(".md") && !baseName.endsWith(".jsonl") && !baseName.endsWith(".yaml")) {
-          addCandidate(filePath, baseName, "Tệp tạo từ phiên làm việc");
+        // Exclude internal system logs, memory journals, and internal agent state while keeping user-facing media/docs
+        const isInternalMd =
+          baseName.endsWith(".md") &&
+          (/^(AGENTS|BOOTSTRAP|HEARTBEAT|IDENTITY|MEMORY|PROFILE|SOUL)\.md$/i.test(baseName) ||
+            /(?:^|\/)memory\//i.test(filePath) ||
+            /(?:^|\/)digest\//i.test(filePath));
+        if (baseName && !isInternalMd && !baseName.endsWith(".jsonl") && !baseName.endsWith(".yaml")) {
+          addCandidate(filePath, baseName, "Tệp do Agent tạo");
         }
       } catch {}
     }
@@ -793,10 +916,16 @@ function parseQuotedReplyFromContent(
   // 9. Include any files sent by the assistant via tool calls (e.g. send_telegram_file, minio__upload_file, write_file)
   const toolSent = extractToolSentAttachments(toolCalls, steps, agentIdForUrl);
   for (const ts of toolSent) {
-    const dedupeKey = (ts.rawUrl.replace(/\\/g, "/").split("/").pop() || ts.fileName).toLowerCase();
+    const dedupeKey = (ts.fileName || ts.rawUrl.replace(/\\/g, "/").split("/").pop() || "attachment").toLowerCase();
     if (!seenKeys.has(dedupeKey)) {
       seenKeys.add(dedupeKey);
       attachments.push(ts);
+    } else if (ts.previewUrl.startsWith("data:") || ts.storageUrl) {
+      const existing = attachments.find((a) => a.fileName.toLowerCase() === dedupeKey);
+      if (existing) {
+        if (ts.previewUrl.startsWith("data:") && !existing.previewUrl.startsWith("data:")) existing.previewUrl = ts.previewUrl;
+        if (ts.storageUrl && !existing.storageUrl) existing.storageUrl = ts.storageUrl;
+      }
     }
   }
 
@@ -5870,7 +5999,8 @@ ${targetItem.text}`;
   };
 
   const extractInternalAgentAndPath = (att: ParsedChatAttachmentItem): { agentSlug: string; filePath: string } | null => {
-    const candidate = att.previewUrl || att.rawUrl || "";
+    const candidate = (!att.previewUrl.startsWith("data:") ? att.previewUrl : "") || (!att.rawUrl.startsWith("data:") ? att.rawUrl : "");
+    if (!candidate) return null;
     const dlMatch = candidate.match(/\/agents\/([^/]+)\/workspace\/file-download\?path=([^&]+)/i);
     if (dlMatch) {
       return { agentSlug: decodeURIComponent(dlMatch[1]), filePath: decodeURIComponent(dlMatch[2]) };
@@ -5902,7 +6032,7 @@ ${targetItem.text}`;
       if (ok) return;
     }
     // Fallback to storageUrl if present, or previewUrl
-    const targetHref = att.storageUrl || (att.previewUrl.startsWith("blob:") ? att.previewUrl : `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`);
+    const targetHref = att.storageUrl || (att.previewUrl.startsWith("blob:") || att.previewUrl.startsWith("data:") ? att.previewUrl : `${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`);
     const a = document.createElement("a");
     a.href = targetHref;
     a.download = att.fileName;
@@ -12504,33 +12634,59 @@ const selectedAgentTheme = getAgentColorTheme(
                       <div className="flex flex-wrap gap-2">
                         {imageItems.map((att, aIdx) => (
                           <div
-                            key={att.rawUrl + aIdx}
+                            key={att.fileName + aIdx}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenAttachmentPreview(att);
                             }}
-                            className="group/attimg relative rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black/10 dark:bg-black/30 max-w-[260px] sm:max-w-[320px] cursor-zoom-in shadow-xs hover:border-[var(--agent-primary)]/60 transition-all"
-                            title={`Xem ảnh: ${att.fileName}`}
+                            className="group/attimg relative rounded-xl overflow-hidden border border-slate-200/90 dark:border-[#2d2d42] bg-white/90 dark:bg-[#14141f] hover:border-[var(--agent-primary)]/60 text-left shadow-2xs transition-all max-w-[260px] sm:max-w-[320px] cursor-pointer"
+                            title={`Bấm để xem ảnh hoặc tải về: ${att.fileName}`}
                           >
-                            <img
-                              src={att.previewUrl}
-                              alt={att.fileName}
-                              className="max-h-56 w-auto max-w-full object-contain block rounded-lg transition-transform duration-200 group-hover/attimg:scale-[1.02]"
-                              loading="lazy"
-                            />
-                            <div className="px-2.5 py-1 bg-slate-900/80 text-white text-[10px] font-mono truncate flex items-center justify-between gap-2">
-                              <span className="truncate">{att.fileName}</span>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <a
-                                  href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
-                                  download={att.fileName}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] p-0.5"
-                                  title="Tải ảnh"
+                            <div className="relative bg-black/5 dark:bg-black/30 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={att.previewUrl}
+                                alt={att.fileName}
+                                className="max-h-56 w-auto max-w-full object-contain block transition-transform duration-200 group-hover/attimg:scale-[1.02]"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2.5 px-3 py-2 border-t border-slate-200/70 dark:border-[#252538]">
+                              <div className={`h-8 min-w-8 px-1.5 rounded-lg border flex items-center justify-center font-mono text-[10px] font-bold shrink-0 ${att.badgeColor}`}>
+                                {att.ext}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[160px] sm:max-w-[200px] group-hover/attimg:text-[#e0682b] dark:group-hover/attimg:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors">
+                                  {att.fileName}
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1 truncate max-w-[200px]">
+                                  <Paperclip size={10} className="shrink-0" />
+                                  <span className="truncate">{att.caption || (isUser ? "Ảnh đã gửi" : "Ảnh do Agent tạo")}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {att.storageUrl && (
+                                  <a
+                                    href={att.storageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-emerald-500 shrink-0 transition-colors"
+                                    title="Mở liên kết Cloud Storage trực tiếp"
+                                  >
+                                    <ExternalLink size={13} />
+                                  </a>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void triggerAttachmentDownload(att);
+                                  }}
+                                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0 transition-colors cursor-pointer"
+                                  title={`Tải xuống ${att.fileName}`}
                                 >
-                                  <Download size={10} />
-                                </a>
-                                <Maximize2 size={10} className="opacity-80" />
+                                  <Download size={13} />
+                                </button>
                               </div>
                             </div>
                           </div>
