@@ -30,7 +30,31 @@ export function Tooltip({
 
   const calculatePosition = () => {
     if (!triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
+    const rawRect = triggerRef.current.getBoundingClientRect();
+    const parentEl = triggerRef.current.parentElement;
+
+    // Boundary-aware trigger measurement: if child is an overflowing marquee or inline element
+    // wider than its container, clamp effective trigger bounds to the visible container.
+    let effLeft = rawRect.left;
+    let effWidth = rawRect.width;
+    if (parentEl) {
+      const parentRect = parentEl.getBoundingClientRect();
+      if (rawRect.width > parentRect.width + 10) {
+        effLeft = Math.max(rawRect.left, parentRect.left);
+        const effRight = Math.min(rawRect.right, parentRect.right);
+        effWidth = Math.max(20, effRight - effLeft);
+      }
+    }
+
+    const rect = {
+      top: rawRect.top,
+      bottom: rawRect.bottom,
+      left: effLeft,
+      right: effLeft + effWidth,
+      width: effWidth,
+      height: rawRect.height,
+    };
+
     const tooltipEl = tooltipRef.current;
     const ttWidth = tooltipEl ? tooltipEl.offsetWidth : 160;
     const ttHeight = tooltipEl ? tooltipEl.offsetHeight : 30;
@@ -135,7 +159,7 @@ export function Tooltip({
               minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
               maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
             }}
-            className={`whitespace-nowrap text-nowrap [text-wrap:nowrap] rounded-lg bg-white/95 dark:bg-[#101016]/95 border border-slate-200 dark:border-white/15 px-2.5 py-0.5 text-[11px] leading-snug font-sans text-slate-800 dark:text-white shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-1.5 select-none w-max min-w-[110px] sm:min-w-[130px] max-w-sm ${className}`}
+            className={`rounded-xl bg-white/95 dark:bg-[#12121a]/95 border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] leading-relaxed font-sans text-slate-800 dark:text-neutral-100 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-1.5 select-none w-max min-w-[90px] max-w-[280px] break-words ${className}`}
           >
             <span>{content}</span>
             {shortcut && (

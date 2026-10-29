@@ -16826,7 +16826,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         ) : (
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
-                            <Tooltip content={chat.title || "Cuộc hội thoại"} placement="top" delay={350} maxWidth={320}>
+                            <Tooltip content={<span className="line-clamp-3 text-left block font-sans text-[11px] leading-relaxed">{chat.title || "Cuộc hội thoại"}</span>} placement="top" delay={350} maxWidth={280}>
                               <span
                                 style={{ "--marquee-duration": computeChatTitleMarqueeDuration(chat.title || "") } as React.CSSProperties}
                                 className={`text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
