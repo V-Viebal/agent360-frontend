@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
-  Users
+  Users,
+  Globe
 } from "lucide-react";
 import { EnterpriseDataTable, Column } from "../../components/ui/EnterpriseDataTable";
 import { SlideOverDrawer } from "../../components/ui/SlideOverDrawer";
@@ -49,6 +50,11 @@ interface AssignmentItem {
   assignedAt: string;
 }
 
+const ANYONE_USER_ID = -1;
+
+const normalizeSlug = (slug?: string) =>
+  (slug || "").replace(/^bot:agent360:/i, "").trim().toLowerCase();
+
 export function AdminAgentsPage() {
   const [agents, setAgents] = useState<AgentItem[]>([]);
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
@@ -56,9 +62,10 @@ export function AdminAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState<AgentItem | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [targetUserId, setTargetUserId] = useState<number>(0);
+  const [targetUserId, setTargetUserId] = useState<number>(ANYONE_USER_ID);
   const [targetRole, setTargetRole] = useState("Owner");
   const [submitting, setSubmitting] = useState(false);
+  const [togglingAnyoneSlug, setTogglingAnyoneSlug] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   async function loadData() {
@@ -83,9 +90,6 @@ export function AdminAgentsPage() {
       if (resUsers.ok) {
         const data = await resUsers.json();
         setUsers(Array.isArray(data) ? data : []);
-        if (data.length > 0 && targetUserId === 0) {
-          setTargetUserId(data[0].id);
-        }
       }
     } catch (e) {
       console.error(e);
@@ -98,9 +102,51 @@ export function AdminAgentsPage() {
     loadData();
   }, []);
 
+  const getAgentAssignments = (agentSlug: string) => {
+    const clean = normalizeSlug(agentSlug);
+    return assignments.filter((a) => normalizeSlug(a.agentSlug) === clean);
+  };
+
+  const getAnyoneAssignment = (agentSlug: string) => {
+    return getAgentAssignments(agentSlug).find((a) => a.userId === ANYONE_USER_ID);
+  };
+
+  async function handleToggleAnyoneAccess(agent: AgentItem, enabled: boolean, role: string = "Operator") {
+    setTogglingAnyoneSlug(agent.slug);
+    try {
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const res = await fetch("/api/admin/agents/anyone-access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          agentSlug: agent.slug,
+          enabled,
+          role,
+        }),
+      });
+
+      if (res.ok) {
+        setFeedback(
+          enabled
+            ? `Đã bật quyền "Anyone" (${role}) cho Agent ${agent.name} — tất cả tài khoản đều có quyền truy cập!`
+            : `Đã tắt quyền "Anyone" trên Agent ${agent.name}.`
+        );
+        setTimeout(() => setFeedback(null), 3500);
+        await loadData();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTogglingAnyoneSlug(null);
+    }
+  }
+
   async function handleAssignUser(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedAgent || !targetUserId) return;
+    if (!selectedAgent || (targetUserId <= 0 && targetUserId !== ANYONE_USER_ID)) return;
     setSubmitting(true);
 
     try {
@@ -119,7 +165,11 @@ export function AdminAgentsPage() {
       });
 
       if (res.ok) {
-        setFeedback(`Đã cấp quyền điều khiển Agent ${selectedAgent.name} thành công!`);
+        setFeedback(
+          targetUserId === ANYONE_USER_ID
+            ? `Đã cấp quyền Anyone (${targetRole}) cho Agent ${selectedAgent.name} thành công!`
+            : `Đã cấp quyền điều khiển Agent ${selectedAgent.name} thành công!`
+        );
         setShowAssignModal(false);
         setTimeout(() => setFeedback(null), 3500);
         await loadData();
@@ -132,7 +182,7 @@ export function AdminAgentsPage() {
   }
 
   async function handleRevokeAssignment(id: number) {
-    if (!confirm("Bạn có chắc chắn muốn thu hồi quyền truy cập của thành viên này khỏi Agent?")) return;
+    if (!confirm("Bạn có chắc chắn muốn thu hồi quyền truy cập này khỏi Agent?")) return;
     try {
       const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch(`/api/admin/agents/assignments/${id}`, {
@@ -154,7 +204,7 @@ export function AdminAgentsPage() {
       header: "AI Agent / Teammate",
       accessorKey: "name",
       sortable: true,
-      width: "25%",
+      width: "22%",
       cell: (agent) => (
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="h-7 w-7 rounded-lg bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center shrink-0">
@@ -173,7 +223,7 @@ export function AdminAgentsPage() {
       header: "Cụm VPS Node",
       accessorKey: "node",
       sortable: true,
-      width: "20%",
+      width: "16%",
       cell: (agent) => (
         <span className="font-mono text-[11px] text-slate-700 dark:text-neutral-300">
           {agent.node || "3rd-server (Core)"}
@@ -184,7 +234,7 @@ export function AdminAgentsPage() {
       header: "Mô Hình AI",
       accessorKey: "model",
       sortable: true,
-      width: "20%",
+      width: "18%",
       cell: (agent) => (
         <span className="font-mono text-[11px] text-[#f8a87c] bg-[#f8a87c]/10 px-2 py-0.5 rounded-md border border-[#f8a87c]/20">
           {agent.model || "Qwen 2.5 72B / Claude 3.7"}
@@ -192,17 +242,60 @@ export function AdminAgentsPage() {
       ),
     },
     {
+      header: "Quyền Anyone",
+      sortable: false,
+      width: "14%",
+      cell: (agent) => {
+        const anyoneAssign = getAnyoneAssignment(agent.slug);
+        const isAnyone = Boolean(anyoneAssign);
+        const isBusy = togglingAnyoneSlug === agent.slug;
+        return (
+          <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => handleToggleAnyoneAccess(agent, !isAnyone, anyoneAssign?.role || "Operator")}
+              title={
+                isAnyone
+                  ? "Đang cho phép Anyone (tất cả người dùng đã đăng nhập). Nhấn để tắt."
+                  : "Nhấn để cho phép Anyone (bất kỳ ai đăng nhập cũng có quyền dùng Agent này)"
+              }
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold border transition-all cursor-pointer disabled:opacity-50 ${
+                isAnyone
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                  : "bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-neutral-400 border-slate-200 dark:border-white/10 hover:text-slate-800 dark:hover:text-white hover:border-[#f8a87c]/40"
+              }`}
+            >
+              <Globe size={11} className={isAnyone ? "text-emerald-400" : "text-neutral-400"} />
+              <span>{isAnyone ? `Anyone (${anyoneAssign?.role || "Operator"})` : "Tắt (Restricted)"}</span>
+            </button>
+          </div>
+        );
+      },
+    },
+    {
       header: "Thành Viên Được Gán",
       sortable: false,
-      width: "20%",
+      width: "18%",
       cell: (agent) => {
-        const assigned = assignments.filter((a) => a.agentSlug === agent.slug);
+        const assigned = getAgentAssignments(agent.slug);
         return (
           <div className="flex items-center gap-1 flex-wrap">
             {assigned.length === 0 ? (
               <span className="text-[10px] text-neutral-500 font-mono">Chưa gán (Admin only)</span>
             ) : (
               assigned.map((a) => {
+                if (a.userId === ANYONE_USER_ID) {
+                  return (
+                    <span
+                      key={a.id}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono text-emerald-400 font-semibold"
+                    >
+                      <Globe size={10} />
+                      <span>Anyone (Mọi người)</span>
+                    </span>
+                  );
+                }
                 const u = users.find((x) => x.id === a.userId);
                 return (
                   <span
@@ -222,7 +315,7 @@ export function AdminAgentsPage() {
       header: "Trạng Thái",
       accessorKey: "status",
       sortable: true,
-      width: "15%",
+      width: "12%",
       className: "text-right",
       cell: (agent) => (
         <div className="flex items-center justify-end gap-1.5">
@@ -247,7 +340,7 @@ export function AdminAgentsPage() {
             </span>
           </h1>
           <p className="text-[11px] text-slate-500 dark:text-neutral-400">
-            Giám sát cụm worker runtime trên VPS fleet (3rd, 6th, 7th Server) và phân quyền agent cho thành viên.
+            Giám sát cụm worker runtime trên VPS fleet và phân quyền Agent cho từng thành viên hoặc mở quyền Anyone (tất cả người dùng).
           </p>
         </div>
 
@@ -308,55 +401,134 @@ export function AdminAgentsPage() {
           )
         }
       >
-        {selectedAgent && (
-          <div className="space-y-5">
-            {/* Header Box */}
-            <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-[#f8a87c]/20 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center font-bold">
-                <Bot size={24} />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-slate-900 dark:text-white">{selectedAgent.name}</div>
-                <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{selectedAgent.description || "Containerized Autonomous Agent"}</div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Runtime: {selectedAgent.node || "3rd-server"}</div>
-              </div>
-            </div>
+        {selectedAgent && (() => {
+          const anyoneAssign = getAnyoneAssignment(selectedAgent.slug);
+          const isAnyoneEnabled = Boolean(anyoneAssign);
+          const isToggling = togglingAnyoneSlug === selectedAgent.slug;
+          const agentAssignedList = getAgentAssignments(selectedAgent.slug);
 
-            {/* IAM360 Identity Cell & Organization Cell Hierarchy Tree */}
-            <div className="pt-2 border-t border-slate-200 dark:border-[#242434]">
-              <AgentIam360CellTab
-                agentId={selectedAgent.id}
-                agentSlug={selectedAgent.slug}
-                agentName={selectedAgent.name}
-              />
-            </div>
-
-            {/* Assigned Users Section */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 font-semibold">
-                  Thành viên có quyền truy cập
-                </span>
-                <span className="text-[10px] font-mono text-[#f8a87c]">
-                  {assignments.filter((a) => a.agentSlug === selectedAgent.slug).length} gán
-                </span>
+          return (
+            <div className="space-y-5">
+              {/* Header Box */}
+              <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-[#f8a87c]/20 text-[#f8a87c] border border-[#f8a87c]/30 flex items-center justify-center font-bold">
+                  <Bot size={24} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white">{selectedAgent.name}</div>
+                  <div className="text-slate-500 dark:text-neutral-400 font-mono text-[11px]">{selectedAgent.description || "Containerized Autonomous Agent"}</div>
+                  <div className="text-[10px] text-emerald-400 font-mono mt-0.5">Runtime: {selectedAgent.node || "3rd-server"}</div>
+                </div>
               </div>
 
-              <div className="divide-y divide-slate-200 dark:divide-[#242434] border border-slate-200 dark:border-[#242434] rounded-xl overflow-hidden bg-white dark:bg-[#161622]">
-                {assignments.filter((a) => a.agentSlug === selectedAgent.slug).length === 0 ? (
-                  <div className="p-4 text-center text-neutral-500 text-xs">
-                    Chưa có thành viên thông thường nào được gán. Hiện chỉ có Admin toàn quyền điều khiển.
+              {/* Public / Anyone Access Configuration Card */}
+              <div className="p-4 rounded-xl bg-white dark:bg-[#161622] border border-slate-200 dark:border-[#242432] space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                      isAnyoneEnabled
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                        : "bg-slate-100 dark:bg-white/5 text-neutral-400 border-slate-200 dark:border-white/10"
+                    }`}>
+                      <Globe size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Cho phép bất kỳ ai (Anyone Access)</span>
+                        {isAnyoneEnabled && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono text-[9px] uppercase">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                        Khi bật, tất cả tài khoản đăng nhập vào hệ thống đều tự động thấy và có quyền tương tác với Agent này mà không cần gán từng người.
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  assignments
-                    .filter((a) => a.agentSlug === selectedAgent.slug)
-                    .map((a) => {
+
+                  <button
+                    type="button"
+                    disabled={isToggling}
+                    onClick={() => handleToggleAnyoneAccess(selectedAgent, !isAnyoneEnabled, anyoneAssign?.role || "Operator")}
+                    className={`px-3 py-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer shrink-0 disabled:opacity-50 ${
+                      isAnyoneEnabled
+                        ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30"
+                        : "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
+                    }`}
+                  >
+                    {isToggling ? "Đang lưu..." : isAnyoneEnabled ? "Tắt Anyone" : "Bật Anyone"}
+                  </button>
+                </div>
+
+                {isAnyoneEnabled && (
+                  <div className="pt-2 border-t border-slate-200/70 dark:border-white/5 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500 dark:text-neutral-400 font-mono">Vai trò mặc định cho Anyone:</span>
+                    <div className="flex items-center gap-1.5">
+                      {(["Owner", "Operator", "Viewer"] as const).map((r) => {
+                        const active = (anyoneAssign?.role || "Operator").toLowerCase() === r.toLowerCase();
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            disabled={isToggling}
+                            onClick={() => handleToggleAnyoneAccess(selectedAgent, true, r)}
+                            className={`px-2 py-0.5 rounded-md font-mono text-[10px] border transition-all cursor-pointer ${
+                              active
+                                ? "bg-[#f8a87c] text-black font-bold border-[#f8a87c]"
+                                : "bg-white/5 text-neutral-400 border-white/10 hover:text-white"
+                            }`}
+                          >
+                            {r}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* IAM360 Identity Cell & Organization Cell Hierarchy Tree */}
+              <div className="pt-2 border-t border-slate-200 dark:border-[#242434]">
+                <AgentIam360CellTab
+                  agentId={selectedAgent.id}
+                  agentSlug={selectedAgent.slug}
+                  agentName={selectedAgent.name}
+                />
+              </div>
+
+              {/* Assigned Users Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-neutral-400 font-semibold">
+                    Thành viên có quyền truy cập
+                  </span>
+                  <span className="text-[10px] font-mono text-[#f8a87c]">
+                    {agentAssignedList.length} gán
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-200 dark:divide-[#242434] border border-slate-200 dark:border-[#242434] rounded-xl overflow-hidden bg-white dark:bg-[#161622]">
+                  {agentAssignedList.length === 0 ? (
+                    <div className="p-4 text-center text-neutral-500 text-xs">
+                      Chưa có thành viên thông thường nào được gán. Hiện chỉ có Admin toàn quyền điều khiển.
+                    </div>
+                  ) : (
+                    agentAssignedList.map((a) => {
+                      const isAnyone = a.userId === ANYONE_USER_ID;
                       const u = users.find((x) => x.id === a.userId);
                       return (
                         <div key={a.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#1a1a28] transition-colors">
                           <div>
-                            <div className="font-semibold text-slate-900 dark:text-white text-xs">
-                              {u?.displayName || u?.email || `User #${a.userId}`}
+                            <div className="font-semibold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                              {isAnyone ? (
+                                <>
+                                  <Globe size={13} className="text-emerald-400" />
+                                  <span className="text-emerald-400">Anyone (Tất cả thành viên đã đăng nhập)</span>
+                                </>
+                              ) : (
+                                <span>{u?.displayName || u?.email || `User #${a.userId}`}</span>
+                              )}
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
                               Role: {a.role} • Gán lúc: {new Date(a.assignedAt).toLocaleDateString("vi-VN")}
@@ -372,11 +544,12 @@ export function AdminAgentsPage() {
                         </div>
                       );
                     })
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </SlideOverDrawer>
 
       {/* Assign User Modal */}
@@ -389,24 +562,32 @@ export function AdminAgentsPage() {
         >
           <form onSubmit={handleAssignUser} className="space-y-5 text-xs">
             <div className="space-y-1.5">
-              <label className="text-slate-700 dark:text-neutral-300 font-medium block">Chọn thành viên thụ hưởng</label>
+              <label className="text-slate-700 dark:text-neutral-300 font-medium block">Chọn đối tượng thụ hưởng</label>
               <CustomSelect
                 value={targetUserId.toString()}
                 onChange={(val) => setTargetUserId(Number(val))}
-                placeholder="Chọn người dùng từ hệ thống..."
+                placeholder="Chọn Anyone hoặc thành viên cụ thể..."
                 searchable={true}
                 className="w-full"
                 triggerClassName="w-full p-2.5 rounded-xl bg-slate-50/80 dark:bg-[#181822] border border-slate-200 dark:border-[#282836] text-slate-900 dark:text-white hover:border-[#f8a87c]/50"
-                options={users.map((u) => {
-                  const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
-                  const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
-                  return {
-                    value: u.id.toString(),
-                    label: cleanName,
-                    badge: isAdminRole ? "Admin" : "Member",
-                    description: u.email ? `${u.email} (DB #${u.id})` : `DB #${u.id} • ${u.logtoUserId}`,
-                  };
-                })}
+                options={[
+                  {
+                    value: ANYONE_USER_ID.toString(),
+                    label: "🌐 Anyone (Tất cả người dùng đã đăng nhập)",
+                    badge: "Public / All Users",
+                    description: "Mở quyền truy cập Agent này cho mọi tài khoản trên hệ thống",
+                  },
+                  ...users.map((u) => {
+                    const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
+                    const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
+                    return {
+                      value: u.id.toString(),
+                      label: cleanName,
+                      badge: isAdminRole ? "Admin" : "Member",
+                      description: u.email ? `${u.email} (DB #${u.id})` : `DB #${u.id} • ${u.logtoUserId}`,
+                    };
+                  }),
+                ]}
               />
             </div>
 
@@ -435,7 +616,7 @@ export function AdminAgentsPage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting || targetUserId === 0}
+                disabled={submitting || (targetUserId <= 0 && targetUserId !== ANYONE_USER_ID)}
                 className="px-5 py-2.5 rounded-xl bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold transition-all shadow-md cursor-pointer disabled:opacity-50"
               >
                 {submitting ? "Đang gán..." : "Xác nhận gán quyền"}
