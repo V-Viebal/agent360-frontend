@@ -62,7 +62,7 @@ export function AdminAgentsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState<AgentItem | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [targetUserId, setTargetUserId] = useState<number>(ANYONE_USER_ID);
+  const [targetUserId, setTargetUserId] = useState<number>(0);
   const [targetRole, setTargetRole] = useState("Owner");
   const [submitting, setSubmitting] = useState(false);
   const [togglingAnyoneSlug, setTogglingAnyoneSlug] = useState<string | null>(null);
@@ -90,6 +90,9 @@ export function AdminAgentsPage() {
       if (resUsers.ok) {
         const data = await resUsers.json();
         setUsers(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length > 0 && targetUserId === 0) {
+          setTargetUserId(data[0].id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -178,6 +181,34 @@ export function AdminAgentsPage() {
       console.error(e);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleClearAllAssignments(agentSlug?: string) {
+    const msg = agentSlug
+      ? `Bạn có chắc chắn muốn gỡ toàn bộ phân quyền trên Agent "${agentSlug}" (về mặc định không gán cho ai)?`
+      : "Bạn có chắc chắn muốn đặt lại mặc định: gỡ toàn bộ phân quyền của tất cả Agent (không gán cho bất kỳ ai)?";
+    if (!confirm(msg)) return;
+    try {
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const url = agentSlug
+        ? `/api/admin/agents/assignments?agentSlug=${encodeURIComponent(agentSlug)}`
+        : `/api/admin/agents/assignments`;
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        setFeedback(
+          agentSlug
+            ? `Đã gỡ toàn bộ phân quyền trên Agent "${agentSlug}" về mặc định (Chưa gán)!`
+            : "Đã đặt lại mặc định: Tất cả Agent hiện không gán cho bất kỳ ai!"
+        );
+        setTimeout(() => setFeedback(null), 3500);
+        await loadData();
+      }
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -345,6 +376,16 @@ export function AdminAgentsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {assignments.length > 0 && (
+            <button
+              onClick={() => handleClearAllAssignments()}
+              className="px-2.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+              title="Gỡ toàn bộ phân quyền của tất cả Agent về trạng thái mặc định (không gán cho ai)"
+            >
+              <Trash2 size={13} />
+              <span className="hidden sm:inline text-[11px]">Gỡ tất cả phân quyền ({assignments.length})</span>
+            </button>
+          )}
           <button
             onClick={loadData}
             className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
