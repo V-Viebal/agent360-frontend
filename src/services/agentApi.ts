@@ -1217,6 +1217,13 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
 export async function fetchChatMessages(chatId: string, agentId?: string): Promise<ChatMessage[]> {
   try {
     const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "";
+    if (chatId.startsWith("session-")) {
+      const existingCached = getCachedChatMessages(chatId, agentId);
+      const isTurnActive = typeof window !== "undefined" && sessionStorage.getItem(`agent360_active_turn_${chatId}`) === "true";
+      if (!isTurnActive && (!existingCached || existingCached.length === 0)) {
+        return [];
+      }
+    }
     // Priority URLs: /api/agents/chats/:chatId (direct history endpoint on AgentFeaturesEndpoints)
     const urlsToTry = [
       cleanAgentId ? `${API_BASE_URL}/agents/${encodeURIComponent(cleanAgentId)}/chats/${encodeURIComponent(chatId)}` : null,
@@ -2490,5 +2497,65 @@ export async function fetchAgentPinnedMessages(
     return await res.json();
   } catch {
     return null;
+  }
+}
+
+export async function deleteChatApi(agentId: string, chatId: string): Promise<boolean> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const scopedKey = getScopedChatsCacheKey(cleanId);
+    const cached = _agentChatsCache.get(scopedKey);
+    if (cached && Array.isArray(cached.data)) {
+      const filtered = cached.data.filter((c) => c.id !== chatId && c.session_id !== chatId);
+      _agentChatsCache.set(scopedKey, { data: filtered, timestamp: Date.now() });
+      try {
+        const serialized = JSON.stringify(filtered.slice(0, 100));
+        sessionStorage.setItem(`agent360_chats_cache_${scopedKey}`, serialized);
+        localStorage.setItem(`agent360_chats_cache_${scopedKey}`, serialized);
+      } catch {}
+    }
+    if (chatId.startsWith("session-")) {
+      // Still attempt backend delete in case a turn was already persisted for this session_id
+      authorizedFetch(
+        `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}`,
+        { method: "DELETE", headers: { Accept: "application/json" } },
+        cleanId
+      ).catch(() => {});
+      return true;
+    }
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}`,
+      {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+      },
+      cleanId
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn("deleteChatApi error:", err);
+    return false;
+  }
+}
+
+export async function toggleArchiveChatApi(agentId: string, chatId: string, archived: boolean): Promise<boolean> {
+  try {
+    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const res = await authorizedFetch(
+      `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ archived }),
+      },
+      cleanId
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn("toggleArchiveChatApi error:", err);
+    return false;
   }
 }

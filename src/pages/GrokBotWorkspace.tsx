@@ -987,6 +987,8 @@ import {
   togglePinChatApi,
   togglePinMessageApi,
   fetchAgentPinnedMessages,
+  deleteChatApi,
+  toggleArchiveChatApi,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
@@ -1005,7 +1007,7 @@ import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar, getAgentColorTheme } from "../components/AgentAvatar";
 import { AgentAvatarModal } from "../components/AgentAvatarModal";
-import { syncAgentProfilesCatalogFromBackend, fetchRemoteAgentProfile, getCustomAgentName } from "../services/avatarService";
+import { syncAgentProfilesCatalogFromBackend, fetchRemoteAgentProfile, getCustomAgentName, slugifyAgentUrlAlias, getAgentRouteSegment, resolveCanonicalAgentSlugFromAlias } from "../services/avatarService";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
 import { PromptRecipesModal, getSavedTeamRecipes, saveTeamRecipe, PromptRecipe } from "../components/PromptRecipesModal";
@@ -4653,7 +4655,7 @@ export function GrokBotWorkspace() {
   const navigate = useNavigate();
   const [agents, setAgents] = useState<InfraAgent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(() => {
-    if (agentParam) return agentParam;
+    if (agentParam) return resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam;
     try {
       const params = new URLSearchParams(window.location.search);
       const urlAgent = params.get("agent");
@@ -4676,8 +4678,16 @@ export function GrokBotWorkspace() {
   // NEVER allow loading chats, MCPs, or messages before `agents` is verified from the backend!
   const isKnownAgent = (id: string | null | undefined) => {
     if (!id || agents.length === 0) return false;
-    const bare = id.replace(/^bot:agent360:/i, "").toLowerCase();
-    return agents.some((a) => a.id === id || a.slug === bare || (a.id || "").toLowerCase() === `bot:agent360:${bare}` || (a.slug || "").toLowerCase() === bare);
+    const bare = (resolveCanonicalAgentSlugFromAlias(id) || id).replace(/^bot:agent360:/i, "").toLowerCase();
+    const alias = slugifyAgentUrlAlias(id);
+    return agents.some(
+      (a) =>
+        a.id === id ||
+        a.slug === bare ||
+        (a.id || "").toLowerCase() === `bot:agent360:${bare}` ||
+        (a.slug || "").toLowerCase() === bare ||
+        (Boolean(alias) && (slugifyAgentUrlAlias(a.name) === alias || slugifyAgentUrlAlias(getCustomAgentName(a.id) || getCustomAgentName(a.slug)) === alias))
+    );
   };
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
@@ -5100,9 +5110,14 @@ export function GrokBotWorkspace() {
   // Sync with browser URL params (e.g. forward/back buttons or manual URL change)
   useEffect(() => {
     if (agentParam && agents.length > 0) {
-      const bare = agentParam.replace(/^bot:agent360:/i, "").toLowerCase();
+      const bare = (resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam).replace(/^bot:agent360:/i, "").toLowerCase();
+      const paramAlias = slugifyAgentUrlAlias(agentParam);
       const matched = agents.find(
-        (a) => a.id === agentParam || (a.id || "").toLowerCase() === agentParam.toLowerCase() || (a.slug || "").toLowerCase() === bare
+        (a) =>
+          a.id === agentParam ||
+          (a.id || "").toLowerCase() === agentParam.toLowerCase() ||
+          (a.slug || "").toLowerCase() === bare ||
+          (Boolean(paramAlias) && (slugifyAgentUrlAlias(a.name) === paramAlias || slugifyAgentUrlAlias(getCustomAgentName(a.id) || getCustomAgentName(a.slug)) === paramAlias))
       );
       if (matched) {
         const curBare = (selectedAgentIdRef.current || "").replace(/^bot:agent360:/i, "").toLowerCase();
@@ -5115,7 +5130,7 @@ export function GrokBotWorkspace() {
         const fallback = agents[0];
         if (fallback) {
           setSelectedAgentId(fallback.id);
-          navigate(`/app/${fallback.slug || fallback.id}`, { replace: true });
+          navigate(`/app/${getAgentRouteSegment(fallback)}`, { replace: true });
         } else {
           navigate("/app", { replace: true });
         }
@@ -5773,6 +5788,8 @@ export function GrokBotWorkspace() {
               const existing = prev[existingIdx];
               const nextItem = {
                 ...existing,
+                id: s.id || existing.id,
+                session_id: sid || existing.session_id,
                 title: displayTitle || existing.title,
                 channel: s.channel || existing.channel,
                 status: s.status || existing.status,
@@ -7238,10 +7255,16 @@ ${targetItem.text}`;
 
   const handleBatchDeleteSelectedChats = () => {
     if (selectedChatIds.length === 0) return;
-    setChats((prev) => prev.filter((c) => !selectedChatIds.includes(c.id)));
-    setPinnedChatIds((prev) => prev.filter((id) => !selectedChatIds.includes(id)));
-    if (selectedChatId && selectedChatIds.includes(selectedChatId)) {
-      const remaining = chats.filter((c) => !selectedChatIds.includes(c.id));
+    const idsToDelete = [...selectedChatIds];
+    if (selectedAgentId) {
+      for (const cid of idsToDelete) {
+        deleteChatApi(selectedAgentId, cid).catch(() => {});
+      }
+    }
+    setChats((prev) => prev.filter((c) => !idsToDelete.includes(c.id)));
+    setPinnedChatIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+    if (selectedChatId && idsToDelete.includes(selectedChatId)) {
+      const remaining = chats.filter((c) => !idsToDelete.includes(c.id));
       if (remaining.length > 0) {
         handleSelectChat(remaining[0]);
       } else {
@@ -7587,12 +7610,18 @@ ${targetItem.text}`;
       e.preventDefault();
     }
     triggerHaptic(15);
+    const isCurrentlyArchived = archivedChatIds.includes(chatId);
+    const nextArchivedState = !isCurrentlyArchived;
+    if (selectedAgentId && !chatId.startsWith("session-")) {
+      toggleArchiveChatApi(selectedAgentId, chatId, nextArchivedState).catch(() => {});
+    }
     setArchivedChatIds((prev) => {
-      const isArchived = prev.includes(chatId);
-      const next = isArchived ? prev.filter((id) => id !== chatId) : [...prev, chatId];
+      const next = isCurrentlyArchived ? prev.filter((id) => id !== chatId) : [...prev, chatId];
       try {
         localStorage.setItem("agent360_archived_chats", JSON.stringify(next));
       } catch {}
+      setForkToast(isCurrentlyArchived ? "Đã khôi phục phiên khỏi Lưu trữ" : "Đã chuyển phiên vào Lưu trữ");
+      setTimeout(() => setForkToast(null), 2200);
       return next;
     });
   };
@@ -8163,8 +8192,16 @@ ${targetItem.text}`;
         try { queryAgent = new URLSearchParams(window.location.search).get("agent") || ""; } catch {}
         const pick = (want: string | null | undefined) => {
           if (!want) return undefined;
-          const bare = want.replace(/^bot:agent360:/i, "").toLowerCase();
-          return loadedAgents.find((a) => a.id === want || (a.id || "").toLowerCase() === want.toLowerCase() || a.id.toLowerCase() === `bot:agent360:${bare}` || (a.slug || "").toLowerCase() === bare);
+          const bare = (resolveCanonicalAgentSlugFromAlias(want) || want).replace(/^bot:agent360:/i, "").toLowerCase();
+          const wantAlias = slugifyAgentUrlAlias(want);
+          return loadedAgents.find(
+            (a) =>
+              a.id === want ||
+              (a.id || "").toLowerCase() === want.toLowerCase() ||
+              a.id.toLowerCase() === `bot:agent360:${bare}` ||
+              (a.slug || "").toLowerCase() === bare ||
+              (Boolean(wantAlias) && (slugifyAgentUrlAlias(a.name) === wantAlias || slugifyAgentUrlAlias(getCustomAgentName(a.id) || getCustomAgentName(a.slug)) === wantAlias))
+          );
         };
         const found = pick(agentParam) || pick(queryAgent) || pick(localStorage.getItem("agent360_last_agent_id"));
         const targetId = found ? found.id : loadedAgents[0].id;
@@ -8380,26 +8417,45 @@ ${targetItem.text}`;
           const foundSaved = findChat(savedChatId);
           const activeAg = agents.find((a) => a.id === currentAgent || a.slug === currentAgent);
           const currentBare = (activeAg?.slug || activeAg?.id || currentAgent).replace(/^bot:agent360:/i, "").toLowerCase();
-          const routeAgentBare = (agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
-          const isNewSessionParam = Boolean(routeAgentBare === currentBare && chatParam && chatParam.startsWith("session-"));
-          const urlChatFound = (routeAgentBare === currentBare) ? findChat(chatParam) : undefined;
+          const currentAlias = slugifyAgentUrlAlias(activeAg?.name || getCustomAgentName(currentAgent));
+          const routeAgentBare = (resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
+          const isRouteMatchingAgent = routeAgentBare === currentBare || (Boolean(currentAlias) && slugifyAgentUrlAlias(agentParam) === currentAlias);
+          const isNewSessionParam = Boolean(isRouteMatchingAgent && chatParam && chatParam.startsWith("session-"));
+          const urlChatFound = isRouteMatchingAgent ? findChat(chatParam) : undefined;
+
+          const newSessionFallback =
+            (isNewSessionParam && chatParam)
+              ? {
+                  id: chatParam,
+                  title: "New Chat",
+                  updatedAt: "Just now",
+                  messageCount: 0,
+                  lastMessageSnippet: "Start a conversation...",
+                  session_id: chatParam,
+                  agentId: currentBare,
+                  channel: "console",
+                }
+              : (!foundSaved && savedChatId && savedChatId.startsWith("session-"))
+              ? {
+                  id: savedChatId,
+                  title: "New Chat",
+                  updatedAt: "Just now",
+                  messageCount: 0,
+                  lastMessageSnippet: "Start a conversation...",
+                  session_id: savedChatId,
+                  agentId: currentBare,
+                  channel: "console",
+                }
+              : undefined;
 
           const targetChat = urlChatFound
-            ?? (isNewSessionParam && chatParam
-                ? {
-                    id: chatParam,
-                    title: "New Chat",
-                    updatedAt: "Just now",
-                    messageCount: 0,
-                    lastMessageSnippet: "Start a conversation...",
-                    session_id: chatParam,
-                    agentId: currentBare,
-                    channel: "console",
-                  }
-                : undefined)
+            ?? newSessionFallback
             ?? foundSaved
             ?? loadedChats[0];
           const targetChatId: string = targetChat.id;
+          if (newSessionFallback && targetChatId === newSessionFallback.id && !loadedChats.some((c) => c.id === targetChatId || c.session_id === targetChatId)) {
+            setChats([newSessionFallback, ...loadedChats]);
+          }
           setSelectedChatId(targetChatId);
           try {
             localStorage.setItem("agent360_last_chat_id", targetChatId);
@@ -8423,7 +8479,7 @@ ${targetItem.text}`;
           });
 
           // Sync routing URL to /app/:agentSlug/:chatId without disrupting history
-          const agentSegment = activeAg?.slug || activeAg?.id || currentAgent;
+          const agentSegment = getAgentRouteSegment(activeAg, currentAgent);
           if (agentSegment && targetChatId) {
             const expectedPath = `/app/${agentSegment}/${targetChatId}`;
             if (window.location.pathname !== expectedPath && selectedAgentIdRef.current === currentAgent) {
@@ -8431,7 +8487,31 @@ ${targetItem.text}`;
             }
           }
         } else {
-          setSelectedChatId("");
+          const activeAg = agents.find((a) => a.id === currentAgent || a.slug === currentAgent);
+          const currentBare = (activeAg?.slug || activeAg?.id || currentAgent).replace(/^bot:agent360:/i, "").toLowerCase();
+          const savedChatKey = `agent360_last_chat_${currentAgent}`;
+          const savedChatId = localStorage.getItem(savedChatKey);
+          const freshId = (chatParam && chatParam.startsWith("session-"))
+            ? chatParam
+            : (savedChatId && savedChatId.startsWith("session-"))
+            ? savedChatId
+            : `session-${Date.now().toString().slice(-6)}`;
+          const initialNewSession: AgentSession = {
+            id: freshId,
+            title: "New Chat",
+            updatedAt: "Just now",
+            messageCount: 0,
+            lastMessageSnippet: "Start a conversation...",
+            session_id: freshId,
+            agentId: currentBare,
+            channel: "console",
+          };
+          setChats([initialNewSession]);
+          setSelectedChatId(freshId);
+          try {
+            localStorage.setItem("agent360_last_chat_id", freshId);
+            localStorage.setItem(savedChatKey, freshId);
+          } catch {}
         }
       } finally {
         if (!cancelled && selectedAgentIdRef.current === currentAgent) {
@@ -8509,7 +8589,7 @@ ${targetItem.text}`;
 
     // Load Session-Sticky Collaboration Room ONLY if this chat session actually has a multi-agent Room
     setActiveSessionRoom(null);
-    if (!agentParam || normalizeAgentKey(selectedAgentId) === normalizeAgentKey(agentParam)) {
+    if (!agentParam || normalizeAgentKey(selectedAgentId) === normalizeAgentKey(resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam)) {
       fetchChatSessionRoom(selectedAgentId, selectedChatId, false).then((r) => {
         if (mounted) setActiveSessionRoom(r || null);
       }).catch(() => {});
@@ -8899,7 +8979,8 @@ ${targetItem.text}`;
     a.id === selectedAgentId ||
     a.slug === selectedAgentId ||
     (a.id || "").toLowerCase() === `bot:agent360:${(selectedAgentId || "").toLowerCase()}` ||
-    (a.slug || "").toLowerCase() === (selectedAgentId || "").replace(/^bot:agent360:/i, "").toLowerCase()
+    (a.slug || "").toLowerCase() === (selectedAgentId || "").replace(/^bot:agent360:/i, "").toLowerCase() ||
+    (Boolean(selectedAgentId) && slugifyAgentUrlAlias(a.name) === slugifyAgentUrlAlias(selectedAgentId))
   ) || agents[0] || {
     id: "",
     name: "",
@@ -8932,17 +9013,26 @@ ${targetItem.text}`;
         );
         return;
       }
-      if (detail && detail.agentId && detail.name) {
+      if (detail && detail.agentId) {
+        const cleanT = (detail.agentId || "").replace(/^bot:agent360:/i, "").toLowerCase();
         setAgents((prev) =>
           prev.map((a) => {
             const cleanA = (a.id || "").replace(/^bot:agent360:/i, "").toLowerCase();
-            const cleanT = (detail.agentId || "").replace(/^bot:agent360:/i, "").toLowerCase();
-            if (a.id === detail.agentId || cleanA === cleanT || a.slug === detail.agentId) {
-              return { ...a, name: detail.name };
+            if (a.id === detail.agentId || cleanA === cleanT || a.slug === detail.agentId || (a.slug || "").toLowerCase() === cleanT) {
+              return { ...a, name: detail.name || a.slug || a.name };
             }
             return a;
           })
         );
+        const curSel = (selectedAgentIdRef.current || "").replace(/^bot:agent360:/i, "").toLowerCase();
+        if (curSel === cleanT) {
+          const nextSeg = slugifyAgentUrlAlias(detail.name) || cleanT;
+          const curChat = selectedChatIdRef.current;
+          const nextPath = curChat ? `/app/${nextSeg}/${curChat}` : `/app/${nextSeg}`;
+          if (window.location.pathname !== nextPath) {
+            navigate(nextPath, { replace: true });
+          }
+        }
       }
     };
     window.addEventListener("agent-avatar-updated", handleAvatarUpdated);
@@ -9411,7 +9501,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
     // Clear stale chat selection so it does not bounce back
     setSelectedChatId("");
-    const agentSegment = agent.slug || agent.id;
+    const agentSegment = getAgentRouteSegment(agent);
     const savedChatKey = `agent360_last_chat_${agent.id}`;
     const lastChatForAgent = localStorage.getItem(savedChatKey);
     if (lastChatForAgent) {
@@ -9429,6 +9519,19 @@ const selectedAgentTheme = getAgentColorTheme(
       setIsChatListCollapsed(true);
     }
     if (chat.id === selectedChatId) return;
+    // Prune any abandoned empty placeholder "New Chat" sessions so they do not clutter the sidebar
+    setChats((prev) =>
+      prev.filter((c) => {
+        if (c.id === chat.id) return true;
+        const isEmptyNewPlaceholder =
+          c.id.startsWith("session-") &&
+          c.title === "New Chat" &&
+          (c.messageCount || 0) === 0 &&
+          !streamingChatIdsRef.current.includes(c.id) &&
+          !(getCachedChatMessages(c.id, selectedAgentId)?.length);
+        return !isEmptyNewPlaceholder;
+      })
+    );
     setSelectedChatId(chat.id);
     try {
       localStorage.setItem("agent360_last_chat_id", chat.id);
@@ -9438,7 +9541,7 @@ const selectedAgentTheme = getAgentColorTheme(
     } catch {}
 
     // Update routing URL to /app/:agentSlug/:chatId
-    const agentSegment = selectedAgent.slug || selectedAgent.id || selectedAgentId;
+    const agentSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
     if (agentSegment) {
       navigate(`/app/${agentSegment}/${chat.id}`);
     }
@@ -9696,12 +9799,15 @@ const selectedAgentTheme = getAgentColorTheme(
     };
   }, []);
 
-    const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setChats((prev) => prev.filter((c) => c.id !== chatId));
+    const handleDeleteChat = (chatId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (selectedAgentId) {
+      deleteChatApi(selectedAgentId, chatId).catch(() => {});
+    }
+    setChats((prev) => prev.filter((c) => c.id !== chatId && c.session_id !== chatId));
     setPinnedChatIds((prev) => prev.filter((id) => id !== chatId));
     if (selectedChatId === chatId) {
-      const remaining = chats.filter((c) => c.id !== chatId);
+      const remaining = chats.filter((c) => c.id !== chatId && c.session_id !== chatId);
       if (remaining.length > 0) {
         handleSelectChat(remaining[0]);
       } else {
@@ -9712,6 +9818,12 @@ const selectedAgentTheme = getAgentColorTheme(
 
   const handleBatchClearChats = () => {
     // Keep pinned chats or clear all non-pinned
+    const toRemove = chats.filter((c) => !pinnedChatIds.includes(c.id));
+    if (selectedAgentId) {
+      for (const c of toRemove) {
+        deleteChatApi(selectedAgentId, c.id).catch(() => {});
+      }
+    }
     setChats((prev) => prev.filter((c) => pinnedChatIds.includes(c.id)));
     if (!pinnedChatIds.includes(selectedChatId || "")) {
       const remaining = chats.filter((c) => pinnedChatIds.includes(c.id));
@@ -9749,7 +9861,7 @@ const selectedAgentTheme = getAgentColorTheme(
     } catch {}
 
     // Sync route URL to /app/:agentSlug/:forkedChatId
-    const agentSegment = selectedAgent.slug || selectedAgent.id || selectedAgentId;
+    const agentSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
     if (agentSegment) {
       navigate(`/app/${agentSegment}/${forkedChatId}`);
     }
@@ -9782,9 +9894,18 @@ const selectedAgentTheme = getAgentColorTheme(
   // New Chat session with Optimistic Insertion and Instant UI Feedback
   const handleNewChat = () => {
     if (hasNoAgents || !selectedAgent?.id || !isKnownAgent(selectedAgent.id)) return;
+    // If already on an empty New Chat with no messages and not streaming, just focus the composer instead of stacking duplicates
+    const existingEmptyNew = chats.find(
+      (c) =>
+        c.id.startsWith("session-") &&
+        c.title === "New Chat" &&
+        (c.messageCount || 0) === 0 &&
+        !streamingChatIdsRef.current.includes(c.id) &&
+        !(getCachedChatMessages(c.id, selectedAgentId)?.length)
+    );
     const timestamp = Date.now();
-    const newChatId = `session-${timestamp.toString().slice(-6)}`;
-    const newSession: AgentSession = {
+    const newChatId = existingEmptyNew ? existingEmptyNew.id : `session-${timestamp.toString().slice(-6)}`;
+    const newSession: AgentSession = existingEmptyNew || {
       id: newChatId,
       title: "New Chat",
       updatedAt: "Just now",
@@ -9792,10 +9913,24 @@ const selectedAgentTheme = getAgentColorTheme(
       lastMessageSnippet: "Start a conversation...",
       session_id: newChatId,
       agentId: selectedAgent.slug || selectedAgent.id,
+      channel: "console",
+      _rawUpdatedAt: new Date(timestamp).toISOString(),
     };
 
-    // Optimistic UI update: unshift to front and select immediately
-    setChats((prev) => [newSession, ...prev.filter((c) => c.id !== newChatId)]);
+    // Optimistic UI update: unshift to front and prune any other empty placeholder New Chat sessions
+    setChats((prev) => [
+      newSession,
+      ...prev.filter((c) => {
+        if (c.id === newChatId) return false;
+        const isOtherEmptyNew =
+          c.id.startsWith("session-") &&
+          c.title === "New Chat" &&
+          (c.messageCount || 0) === 0 &&
+          !streamingChatIdsRef.current.includes(c.id) &&
+          !(getCachedChatMessages(c.id, selectedAgentId)?.length);
+        return !isOtherEmptyNew;
+      }),
+    ]);
     setSelectedChatId(newChatId);
     setMessages([]);
     setActiveSessionRoom(null);
@@ -9805,7 +9940,7 @@ const selectedAgentTheme = getAgentColorTheme(
     } catch {}
 
     // Sync route URL to /app/:agentSlug/:newChatId
-    const agentSegment = selectedAgent.slug || selectedAgent.id || selectedAgentId;
+    const agentSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
     if (agentSegment) {
       navigate(`/app/${agentSegment}/${newChatId}`);
     }
@@ -9821,10 +9956,11 @@ const selectedAgentTheme = getAgentColorTheme(
       if (window.innerWidth < 1280) setIsBotInfoCollapsed(true);
     }
 
-    // Auto-focus input for zero-latency prompt typing
+    // Auto-focus textarea for zero-latency prompt typing
     setTimeout(() => {
-      const input = document.querySelector("input[placeholder*=\"Message\"]") as HTMLInputElement;
-      input?.focus();
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
     }, 50);
   };
 
@@ -10246,13 +10382,51 @@ const selectedAgentTheme = getAgentColorTheme(
     setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
     setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
     updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, startSessionId], true);
-    setChats((prev) =>
-      prev.map((c) =>
-        c.id === originChatId || c.session_id === startSessionId
-          ? { ...c, is_running: true, isRunning: true, status: "running" }
-          : c
-      )
-    );
+    const cleanFirstLineTitle = userText
+      .replace(/^\[Replying to [^:\]]+:\s*"[^"]*"\]\s*/i, "")
+      .replace(/\[Attached File:[^\]]+\]/gi, "")
+      .trim()
+      .split(/\r?\n/)[0]
+      .trim()
+      .slice(0, 56);
+    setChats((prev) => {
+      const hasOrigin = prev.some((c) => c.id === originChatId || c.session_id === startSessionId);
+      const baseList = hasOrigin
+        ? prev
+        : [
+            {
+              id: originChatId,
+              session_id: startSessionId,
+              title: cleanFirstLineTitle || "Cuộc hội thoại mới",
+              updatedAt: "Just now",
+              messageCount: 1,
+              lastMessageSnippet: cleanFirstLineTitle || userText.slice(0, 80),
+              agentId: targetAgent?.slug || originAgentId,
+              channel: "console",
+              _rawUpdatedAt: new Date().toISOString(),
+            } as AgentSession,
+            ...prev,
+          ];
+      return baseList.map((c) => {
+        if (c.id === originChatId || c.session_id === startSessionId) {
+          const nextTitle =
+            (!c.title || c.title === "New Chat" || c.title === "Cuộc hội thoại") && cleanFirstLineTitle
+              ? cleanFirstLineTitle
+              : c.title;
+          return {
+            ...c,
+            title: nextTitle,
+            messageCount: Math.max(1, (c.messageCount || 0) + 1),
+            lastMessageSnippet: cleanFirstLineTitle || c.lastMessageSnippet,
+            is_running: true,
+            isRunning: true,
+            status: "running",
+            _rawUpdatedAt: new Date().toISOString(),
+          };
+        }
+        return c;
+      });
+    });
 
     // Instantiate active AbortController for this stream turn
     const abortController = new AbortController();
@@ -10605,10 +10779,17 @@ const selectedAgentTheme = getAgentColorTheme(
         });
       }
     } catch (err: any) {
-      if (err.name === "AbortError" || abortController.signal.aborted) {
+      if (err?.name === "AbortError" || abortController.signal.aborted) {
         console.log("[Stream] User cancelled generation.");
       } else {
-        throw err;
+        console.warn("[Stream] Turn stream error:", err);
+        updateTurnMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempBotMsgId && !m.content
+              ? { ...m, content: "Không thể kết nối tới Agent ngay lúc này. Vui lòng thử gửi lại.", evidenceStatus: "unknown" }
+              : m
+          )
+        );
       }
     } finally {
       if (streamAbortControllersRef.current[originChatId] === abortController) {
@@ -10637,6 +10818,45 @@ const selectedAgentTheme = getAgentColorTheme(
             : c
         )
       );
+      // Reconcile client-created session-* with the canonical QwenPaw chat UUID & generated title
+      if (originChatId.startsWith("session-")) {
+        fetchAgentChats(originAgentId)
+          .then((freshChats) => {
+            if (!Array.isArray(freshChats) || freshChats.length === 0) return;
+            const matchedServerChat = freshChats.find(
+              (fc) => fc.session_id === originChatId || fc.id === originChatId
+            );
+            if (matchedServerChat && matchedServerChat.id !== originChatId) {
+              registerSessionAgent(matchedServerChat.id, originChatId, targetAgent?.slug || originAgentId);
+              const cachedTurns = getCachedChatMessages(originChatId, originAgentId);
+              if (cachedTurns && cachedTurns.length > 0) {
+                setCachedChatMessages(matchedServerChat.id, cachedTurns, originAgentId);
+              }
+            }
+            if (selectedAgentIdRef.current === originAgentId) {
+              setChats((prev) => {
+                // Merge freshChats while keeping any other local unsent New Chat placeholder
+                const serverIds = new Set(freshChats.flatMap((fc) => [fc.id, fc.session_id].filter(Boolean)));
+                const localUnsent = prev.filter(
+                  (c) => c.id.startsWith("session-") && !serverIds.has(c.id) && (!c.session_id || !serverIds.has(c.session_id))
+                );
+                return [...localUnsent, ...freshChats];
+              });
+              if (matchedServerChat && selectedChatIdRef.current === originChatId) {
+                setSelectedChatId(matchedServerChat.id);
+                try {
+                  localStorage.setItem("agent360_last_chat_id", matchedServerChat.id);
+                  localStorage.setItem(`agent360_last_chat_${originAgentId}`, matchedServerChat.id);
+                } catch {}
+                const agSeg = getAgentRouteSegment(targetAgent, originAgentId);
+                if (agSeg) {
+                  navigate(`/app/${agSeg}/${matchedServerChat.id}`, { replace: true });
+                }
+              }
+            }
+          })
+          .catch(() => {});
+      }
       // Process next item in this chat's queue if present
       processNextInQueue(originChatId);
     }
@@ -10723,7 +10943,11 @@ const selectedAgentTheme = getAgentColorTheme(
     }
 
     // Instant Local Message Echo: append to messages immediately so user gets 0ms visual confirmation
-    const sendChatId = selectedChatId;
+    let sendChatId = selectedChatId;
+    if (!sendChatId) {
+      sendChatId = `session-${Date.now().toString().slice(-6)}`;
+      setSelectedChatId(sendChatId);
+    }
     chatAgentMapRef.current[sendChatId] = selectedAgentId;
     if (isStreaming || processingChatsRef.current.has(sendChatId)) {
       // Agent is busy: enqueue prompt into Request Queue only (do not show in chat stream until it executes)
@@ -16147,7 +16371,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     tabs={[
                       { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
                       { id: "unread", label: "Done", count: getAgentUnreadList(selectedAgent).filter(id => !archivedChatIds.includes(id)).length || undefined },
-                      { id: "pinned", label: "Pinned", count: pinnedChatIds.filter(id => !archivedChatIds.includes(id)).length || undefined },
+                      { id: "pinned", label: "Pinned", count: chats.filter(c => pinnedChatIds.includes(c.id) && !archivedChatIds.includes(c.id)).length || undefined },
                       { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
                     ]}
                   />
@@ -16705,7 +16929,7 @@ ${chat.id}`);
                                 icon={<Share2 size={13} className="text-cyan-400" />}
                                 label="Sao chép liên kết phiên"
                                 onClick={() => {
-                                  const agSegment = selectedAgent.slug || selectedAgent.id || selectedAgentId;
+                                  const agSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
                                   const shareUrl = `${window.location.origin}/app/${agSegment}/${chat.id}`;
                                   navigator.clipboard.writeText(shareUrl);
                                   setForkToast("Đã sao chép liên kết phiên chat!");
