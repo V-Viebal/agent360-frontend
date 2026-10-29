@@ -15056,17 +15056,6 @@ const selectedAgentTheme = getAgentColorTheme(
                         },
                       },
                       {
-                        id: "action-attach-browser",
-                        title: "Attach Microsoft Edge",
-                        description: `Live browser của ${selectedAgent.name}`,
-                        icon: <Globe size={14} className="text-cyan-400" />,
-                        action: () => {
-                          setIsPlusMenuOpen(false);
-                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
-                          handleSetBrowserModalOpen(true);
-                        },
-                      },
-                      {
                         id: "mode-goal",
                         title: "Goal",
                         description: "Set a goal to keep pursuing",
@@ -15086,18 +15075,6 @@ const selectedAgentTheme = getAgentColorTheme(
                           setIsPlusMenuOpen(false);
                           setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
                           handleSelectLoopMode("goal");
-                        },
-                      },
-                      {
-                        id: "mode-sketch",
-                        title: "Sketch",
-                        description: "Draw a sketch",
-                        icon: <Layers size={14} className="text-teal-400" />,
-                        action: () => {
-                          setIsPlusMenuOpen(false);
-                          setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
-                          handleToggleBotInfo(false); recordMilestone("openedSpecsOrTopology");
-                          setRightTab("Computer");
                         },
                       },
                     ];
@@ -15993,10 +15970,8 @@ const selectedAgentTheme = getAgentColorTheme(
 
                           allAtNav.push(
                             { id: "action-files-folders", type: "file", title: "Files and folders", description: "Tải lên tệp hoặc thư mục mã nguồn từ máy" },
-                            { id: "action-attach-browser", type: "browser", title: "Attach Microsoft Edge", description: "Live browser sandbox" },
                             { id: "mode-goal", type: "mode", title: "Goal", description: "Set a goal to keep pursuing" },
-                            { id: "mode-plan", type: "mode", title: "Plan mode", description: "Turn plan mode on" },
-                            { id: "mode-sketch", type: "mode", title: "Sketch", description: "Draw a sketch" }
+                            { id: "mode-plan", type: "mode", title: "Plan mode", description: "Turn plan mode on" }
                           );
 
                           const filteredAt = q
