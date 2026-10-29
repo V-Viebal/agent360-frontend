@@ -4673,8 +4673,27 @@ export interface QueuedRequestItem {
   createdAt: number;
 }
 
+function useScrollBottomIndicator() {
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const updateScrollState = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollHeight > el.clientHeight + 4;
+    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 10;
+    setCanScrollDown(hasOverflow && !isAtBottom);
+  };
+
+  return { scrollRef, canScrollDown, updateScrollState };
+}
+
 export function GrokBotWorkspace() {
   const { t, language } = useTranslation();
+  const { scrollRef: agentsListScrollRef, canScrollDown: agentsListCanScrollDown, updateScrollState: updateAgentsScroll } = useScrollBottomIndicator();
+  const { scrollRef: chatsListScrollRef, canScrollDown: chatsListCanScrollDown, updateScrollState: updateChatsScroll } = useScrollBottomIndicator();
+  const { scrollRef: railAgentsScrollRef, canScrollDown: railAgentsCanScrollDown, updateScrollState: updateRailScroll } = useScrollBottomIndicator();
+
   const { agentParam, chatParam } = useParams<{ agentParam?: string; chatParam?: string }>();
   const navigate = useNavigate();
   const [agents, setAgents] = useState<InfraAgent[]>([]);
@@ -6788,6 +6807,7 @@ ${targetItem.text}`;
   };
   const [nodePingMs, setNodePingMs] = useState<number | null>(null);
   const [chatToDelete, setChatToDelete] = useState<AgentSession | null>(null);
+
   // Mobile Hold-Touch / Long-Press Action Sheet state
   const [mobileActionAgent, setMobileActionAgent] = useState<InfraAgent | null>(null);
   const [mobileActionChat, setMobileActionChat] = useState<AgentSession | null>(null);
@@ -7665,6 +7685,17 @@ ${targetItem.text}`;
 
   // Search in agents sidebar
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
+
+  // Update sidebar bottom fade state when items change or expand/collapse
+  useEffect(() => {
+    updateAgentsScroll();
+    updateRailScroll();
+  }, [agents, disabledAgentsExpanded, agentSearchQuery]);
+
+  useEffect(() => {
+    updateChatsScroll();
+  }, [chats, chatSearchQuery, channelFilter]);
+
 
   // Mobile / Tablet Responsive Drawer States
   const [mobileAgentsOpen, setMobileAgentsOpen] = useState(false);
@@ -11346,7 +11377,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
             {/* Collapsed Agents List */}
             <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
-              <div className="flex-1 overflow-y-auto py-2.5 px-2 space-y-2 flex flex-col items-center scrollbar-none">
+              <div ref={railAgentsScrollRef} onScroll={updateRailScroll} className="flex-1 overflow-y-auto py-2.5 px-2 space-y-2 flex flex-col items-center scrollbar-none">
               {isAdmin && (
                 <a
                   href="/admin"
@@ -11610,7 +11641,8 @@ const selectedAgentTheme = getAgentColorTheme(
                 </>
               )}
               </div>
-
+              {/* Smooth feather fade edge for rail list (auto-hidden when at bottom) */}
+              <div aria-hidden="true" className={`sidebar-bottom-fade ${railAgentsCanScrollDown ? "opacity-100" : "opacity-0"}`} />
             </div>
 
             {/* Collapsed Bottom Profile Bar */}
@@ -11817,7 +11849,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
             {/* Agents List Container with Bottom Fade */}
             <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
-              <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1.5 scrollbar-hover pb-4">
+              <div ref={agentsListScrollRef} onScroll={updateAgentsScroll} className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1.5 scrollbar-hover pb-4">
               {isLoadingAgents ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -12313,7 +12345,8 @@ const selectedAgentTheme = getAgentColorTheme(
                 </>
               )}
               </div>
-
+              {/* Smooth feather fade edge for expanded agent list (auto-hidden when at bottom) */}
+              <div aria-hidden="true" className={`sidebar-bottom-fade ${agentsListCanScrollDown ? "opacity-100" : "opacity-0"}`} />
             </div>
 
             {/* Bottom Profile Bar with User Dropdown */}
@@ -16598,7 +16631,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
             {/* Conversation list with Bottom Fade */}
             <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
-              <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hover pb-3">
+              <div ref={chatsListScrollRef} onScroll={updateChatsScroll} className="flex-1 overflow-y-auto p-1.5 space-y-0.5 scrollbar-hover pb-3">
               {isLoadingChats ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -17149,7 +17182,8 @@ ${chat.id}`);
                 </>
               )}
               </div>
-
+              {/* Smooth feather fade edge for chat list (auto-hidden when at bottom) */}
+              <div aria-hidden="true" className={`sidebar-bottom-fade ${chatsListCanScrollDown ? "opacity-100" : "opacity-0"}`} />
             </div>
           </>
         )}

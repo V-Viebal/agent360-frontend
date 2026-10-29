@@ -1697,3 +1697,23 @@ html.light,
   border: none !important;
   -webkit-tap-highlight-color: transparent !important;
 }
+
+/* Smooth Feather Fade for Sidebar Bottom Scroll Edge */
+.sidebar-bottom-fade {
+  pointer-events: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.25rem;
+  background: linear-gradient(to top, var(--bg-sidebar) 0%, rgba(13, 13, 18, 0.45) 35%, transparent 100%);
+  mask-image: linear-gradient(to top, black 0%, black 25%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 0%, black 25%, transparent 100%);
+  z-index: 20;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.light .sidebar-bottom-fade,
+[data-theme="light"] .sidebar-bottom-fade {
+  background: linear-gradient(to top, var(--bg-sidebar) 0%, rgba(248, 250, 252, 0.6) 35%, transparent 100%);
+}
