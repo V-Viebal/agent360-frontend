@@ -330,11 +330,11 @@ function computeIsMultilineComposer(text: string, measuredWidth?: number): boole
 }
 
 function computeChatTitleMarqueeDuration(title: string): string {
-  if (!title) return "3.5s";
-  // At ~13.5px font, calculate approximate overflow distance and maintain constant velocity (~32px/s)
-  const approxWidth = title.length * 7.4;
-  const overflowPx = Math.max(25, approxWidth - 110);
-  const durSec = Math.max(2.0, Math.min(14.0, overflowPx / 32));
+  if (!title) return "5s";
+  // Maintain a strictly constant, comfortable slow slide velocity (~18px/s) across all titles
+  const approxWidth = title.length * 7.5;
+  const overflowPx = Math.max(30, approxWidth - 110);
+  const durSec = Math.max(4.0, overflowPx / 18);
   return durSec.toFixed(1) + "s";
 }
 
@@ -14952,16 +14952,16 @@ const selectedAgentTheme = getAgentColorTheme(
                           },
                         },
                         {
-                          id: "cmd-plan-mode",
-                          title: "Plan mode",
-                          description: "Turn plan mode on",
-                          icon: <Star size={14} className="text-neutral-400" />,
+                          id: "cmd-mission",
+                          title: "Mission",
+                          description: "Chế độ nhiệm vụ dài hạn (Multi-phase Project)",
+                          icon: <Rocket size={14} className="text-cyan-400" />,
                           action: () => {
                             setIsPlusMenuOpen(false);
                             setInputText("");
-                            handleSelectLoopMode("goal");
-                            setForkToast("Plan mode enabled");
-                            setTimeout(() => setForkToast(null), 2500);
+                            handleSelectLoopMode("mission");
+                            setForkToast("Đã kích hoạt Mission mode (Nhiệm vụ dài hạn)");
+                            setTimeout(() => setForkToast(null), 3000);
                           },
                         },
                         {
@@ -15067,14 +15067,14 @@ const selectedAgentTheme = getAgentColorTheme(
                         },
                       },
                       {
-                        id: "mode-plan",
-                        title: "Plan mode",
-                        description: "Turn plan mode on",
-                        icon: <Star size={14} className="text-amber-400" />,
+                        id: "mode-mission",
+                        title: "Mission",
+                        description: "Nhiệm vụ dài hạn đa bước",
+                        icon: <Rocket size={14} className="text-cyan-400" />,
                         action: () => {
                           setIsPlusMenuOpen(false);
                           setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
-                          handleSelectLoopMode("goal");
+                          handleSelectLoopMode("mission");
                         },
                       },
                     ];
@@ -15894,7 +15894,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             { id: "cmd-new-chat", type: "action" },
                             { id: "cmd-pin-chat", type: "action" },
                             { id: "cmd-goal", type: "action" },
-                            { id: "cmd-plan-mode", type: "action" },
+                            { id: "cmd-mission", type: "action" },
                             { id: "cmd-agent-settings", type: "action" },
                           ];
 
@@ -15903,7 +15903,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             "cmd-new-chat": { title: "New chat", desc: "Start a blank chat in the same agent" },
                             "cmd-pin-chat": { title: "Pin chat", desc: "Keep this chat in the sidebar" },
                             "cmd-goal": { title: "Goal", desc: "Set a goal to keep pursuing" },
-                            "cmd-plan-mode": { title: "Plan mode", desc: "Turn plan mode on" },
+                            "cmd-mission": { title: "Mission", desc: "Nhiệm vụ dài hạn đa bước" },
                             "cmd-agent-settings": { title: "Agent Settings", desc: "Mở cài đặt chuyên sâu của Agent" },
                           };
 
@@ -15936,8 +15936,10 @@ const selectedAgentTheme = getAgentColorTheme(
                                 handleNewChat();
                               } else if (selected.id === "cmd-pin-chat" && selectedChatId) {
                                 togglePinChat(selectedChatId);
-                              } else if (selected.id === "cmd-goal" || selected.id === "cmd-plan-mode") {
+                              } else if (selected.id === "cmd-goal") {
                                 handleSelectLoopMode("goal");
+                              } else if (selected.id === "cmd-mission") {
+                                handleSelectLoopMode("mission");
                               } else if (selected.id === "cmd-agent-settings") {
                                 setAgentSettingsModalTab("general");
                                 setIsAgentSettingsModalOpen(true);
@@ -15971,7 +15973,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           allAtNav.push(
                             { id: "action-files-folders", type: "file", title: "Files and folders", description: "Tải lên tệp hoặc thư mục mã nguồn từ máy" },
                             { id: "mode-goal", type: "mode", title: "Goal", description: "Set a goal to keep pursuing" },
-                            { id: "mode-plan", type: "mode", title: "Plan mode", description: "Turn plan mode on" }
+                            { id: "mode-mission", type: "mode", title: "Mission", description: "Nhiệm vụ dài hạn đa bước" }
                           );
 
                           const filteredAt = q
@@ -16000,7 +16002,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 handleSetBrowserModalOpen(true);
                               } else if (selected.type === "mode") {
                                 setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, ""));
-                                handleSelectLoopMode("goal");
+                                handleSelectLoopMode(selected.id === "mode-mission" ? "mission" : "goal");
                               } else if (selected.type === "app") {
                                 setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `/${selected.id} `));
                               } else if (selected.type === "agent") {
