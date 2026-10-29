@@ -198,7 +198,7 @@ export function OnboardingChecklistWidget({
 
   return (
     <div
-      className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-[60] w-[calc(100vw-24px)] max-w-[270px] shadow-lg animate-in slide-in-from-bottom-4 duration-200 bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-xl overflow-hidden font-sans select-none"
+      className="hidden sm:block fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-[60] w-[calc(100vw-24px)] max-w-[270px] shadow-lg animate-in slide-in-from-bottom-4 duration-200 bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-xl overflow-hidden font-sans select-none"
     >
       {/* Lean Header Bar */}
       <div className="px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border-b border-neutral-200 dark:border-white/10 flex items-center justify-between gap-2">

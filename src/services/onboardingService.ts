@@ -44,11 +44,16 @@ export function resetOnboardingTour(): void {
 export function startOnboardingTour(options: OnboardingTourOptions = {}): Driver | null {
   if (typeof window === "undefined") return null;
 
-  if (!options.force && hasSeenOnboardingTour()) {
+  const isMobile = window.innerWidth < 768;
+
+  // Onboarding tour and checklist are disabled on mobile
+  if (isMobile) {
     return null;
   }
 
-  const isMobile = window.innerWidth < 768;
+  if (!options.force && hasSeenOnboardingTour()) {
+    return null;
+  }
 
   const driverObj = driver({
     showProgress: true,
