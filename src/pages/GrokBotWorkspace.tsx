@@ -14337,8 +14337,8 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
           )}
 
-          {/* Interactive Human-in-the-Loop Approval Cards */}
-          {pendingApprovals.length > 0 && (
+          {/* Interactive Human-in-the-Loop Approval Cards (Temporarily disabled pending full approval logic fulfillment) */}
+          {false && pendingApprovals.length > 0 && (
             <div className="mb-3 space-y-2" data-testid="approval-cards-container">
               {pendingApprovals.length > 1 && (
                 <div className="p-2.5 rounded-xl bg-white dark:bg-[#181822] border border-slate-200 dark:border-[#2a2a3c] flex items-center justify-between text-xs font-mono shadow-xs">

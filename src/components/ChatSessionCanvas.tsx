@@ -118,7 +118,7 @@ export function ChatSessionCanvas({
         </div>
         <div className="flex items-center gap-3 text-neutral-400 text-[11px]">
           {/* Tool Guard Approvals Alert Button */}
-          {pendingApprovals.length > 0 && (
+          {false && pendingApprovals.length > 0 && (
             <button data-ux-target-min="24"
               onClick={() => setShowApprovalModal(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 font-medium transition-colors cursor-pointer animate-pulse"
