@@ -262,32 +262,47 @@ function stabilizeStreamingMarkdown(text: string, isActivelyStreaming: boolean):
   return out;
 }
 
+let _composerMeasureCtx: CanvasRenderingContext2D | null = null;
+function measureComposerTextWidthPx(text: string): number {
+  if (typeof document !== "undefined") {
+    try {
+      if (!_composerMeasureCtx) {
+        const canvas = document.createElement("canvas");
+        _composerMeasureCtx = canvas.getContext("2d");
+      }
+      if (_composerMeasureCtx) {
+        const isSmall = typeof window !== "undefined" && window.innerWidth < 640;
+        _composerMeasureCtx.font = `400 ${isSmall ? "14px" : "14.5px"} Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        return _composerMeasureCtx.measureText(text).width;
+      }
+    } catch {}
+  }
+  let fallbackPx = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if ("ilI|!.,:;'\"`()[]{} ".includes(ch)) fallbackPx += 4.2;
+    else if ("frt".includes(ch)) fallbackPx += 5.2;
+    else if ("wmWM@#%&".includes(ch)) fallbackPx += 11.5;
+    else fallbackPx += 7.5;
+  }
+  return fallbackPx;
+}
+
 function computeIsMultilineComposer(text: string, measuredWidth?: number): boolean {
   if (!text) return false;
   if (text.includes("\n")) return true;
 
-  // If actual measured pixel width of the composer is available, calculate exact capacity!
-  // In single-line mode: composer has plus button (28px) + gap (8px) + right controls (~36-40px) + padding (~16px) = ~90px chrome.
-  // Average proportional character width for 14.5px Inter/sans-serif font is ~8.2px (narrow letters ~5px, wide ~12px).
+  // In single-line mode: composer has plus button (28px) + gap (8px) + right button (28px) + gap (8px) + padding (12px) = 84px chrome.
+  // Use exact 2D canvas text measurement so proportional characters (like "f", "i", "l") never trigger multiline prematurely.
   if (measuredWidth && measuredWidth > 120) {
-    const availableTextPx = Math.max(60, measuredWidth - 92);
-    let estimatedTextPx = 0;
-    for (let i = 0; i < text.length; i++) {
-      const code = text.charCodeAt(i);
-      const ch = text[i];
-      if (code > 255) estimatedTextPx += 13.5;
-      else if ("ilI|!.,:;'\"`()[]{} ".includes(ch)) estimatedTextPx += 4.5;
-      else if ("wmWM@#%&".includes(ch)) estimatedTextPx += 12;
-      else if ("ABCDEFGHJKLMNOPQRSTUVXYZ".includes(ch)) estimatedTextPx += 9.5;
-      else estimatedTextPx += 8.2;
-    }
-    // Switch to multi-line as soon as text exceeds available single-line width
-    return estimatedTextPx >= availableTextPx;
+    const availableTextPx = Math.max(60, measuredWidth - 88);
+    const actualTextPx = measureComposerTextWidthPx(text);
+    return actualTextPx >= availableTextPx;
   }
 
   if (typeof window === 'undefined') return text.length > 60;
   const w = window.innerWidth;
-  const threshold = w < 480 ? 28 : w < 640 ? 36 : w < 1024 ? 48 : 60;
+  const threshold = w < 480 ? 34 : w < 640 ? 44 : w < 1024 ? 58 : 75;
   return text.length > threshold;
 }
 
@@ -6567,7 +6582,30 @@ ${targetItem.text}`;
 
   // Seamless focus & cursor retention when transitioning between single-line and multiline layout
   // Khi switch giữa multiple line và single line, luôn đảm bảo giữ focus và đặt con trỏ ở cuối
-  const prevIsMultilineRef = useRef<boolean>(false);
+  const composerFormRef = useRef<HTMLFormElement>(null);
+  const [composerWidth, setComposerWidth] = useState<number>(() => typeof window !== "undefined" ? window.innerWidth : 600);
+
+  useEffect(() => {
+    const el = composerFormRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const updateWidth = () => {
+      if (composerFormRef.current) {
+        const w = composerFormRef.current.clientWidth || composerFormRef.current.getBoundingClientRect().width;
+        if (w > 0) setComposerWidth(w);
+      }
+    };
+    updateWidth();
+    const ro = new ResizeObserver(() => {
+      updateWidth();
+    });
+    ro.observe(el);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
+    const prevIsMultilineRef = useRef<boolean>(false);
   useLayoutEffect(() => {
     const isMultiline = computeIsMultilineComposer(inputText, composerWidth);
     const didChangeLayoutMode = isMultiline !== prevIsMultilineRef.current;
@@ -6599,7 +6637,7 @@ ${targetItem.text}`;
         } catch {}
       }
     }
-  }, [inputText]);
+  }, [inputText, composerWidth]);
 
 
   // Track previous chatId to save draft before switching
@@ -6665,21 +6703,7 @@ ${targetItem.text}`;
       return "";
     }
   });
-  const composerFormRef = useRef<HTMLFormElement>(null);
-  const [composerWidth, setComposerWidth] = useState<number>(() => typeof window !== "undefined" ? window.innerWidth : 600);
 
-  useEffect(() => {
-    const el = composerFormRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const w = entry.contentRect.width;
-        if (w > 0) setComposerWidth(w);
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   const clearPromptParam = () => {
     setPendingPrompt("");
     try {
@@ -9915,7 +9939,7 @@ const selectedAgentTheme = getAgentColorTheme(
       agentId: selectedAgent.slug || selectedAgent.id,
       channel: "console",
       _rawUpdatedAt: new Date(timestamp).toISOString(),
-    };
+    } as AgentSession;
 
     // Optimistic UI update: unshift to front and prune any other empty placeholder New Chat sessions
     setChats((prev) => [
@@ -16132,7 +16156,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       : isRecording
                       ? "border-red-500/60 ring-2 ring-red-500/20"
                       : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15"
-                  } shadow-xs transition-all overflow-hidden`}
+                  } shadow-xs transition-colors overflow-hidden`}
                   style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
                 >
                   {isDraggingFiles && (
