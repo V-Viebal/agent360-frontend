@@ -7848,13 +7848,16 @@ ${targetItem.text}`;
     };
   }, [isPlusMenuOpen]);
 
-  // Auto-scroll highlighted popover item into view when navigating via keyboard
+  // Auto-scroll highlighted popover item into view when navigating via keyboard (debounced via requestAnimationFrame)
   useEffect(() => {
     if (plusMenuSelectedIndex < 0 || !isPlusMenuOpen) return;
-    const activeEl = document.querySelector(`[data-popover-nav-idx="${plusMenuSelectedIndex}"]`);
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
+    const rafId = requestAnimationFrame(() => {
+      const activeEl = document.querySelector(`[data-popover-nav-idx="${plusMenuSelectedIndex}"]`);
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [plusMenuSelectedIndex, isPlusMenuOpen]);
 
   useEffect(() => {
