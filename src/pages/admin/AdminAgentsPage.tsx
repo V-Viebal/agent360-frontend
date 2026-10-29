@@ -48,6 +48,9 @@ interface AssignmentItem {
   agentSlug: string;
   role: string;
   assignedAt: string;
+  userEmail?: string;
+  userDisplayName?: string;
+  logtoUserId?: string;
 }
 
 const ANYONE_USER_ID = -1;
@@ -60,6 +63,7 @@ export function AdminAgentsPage() {
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingLogto, setSyncingLogto] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<AgentItem | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [targetUserId, setTargetUserId] = useState<number>(0);
@@ -68,36 +72,65 @@ export function AdminAgentsPage() {
   const [togglingAnyoneSlug, setTogglingAnyoneSlug] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  async function loadData() {
+  async function loadData(syncFromLogtoFirst = false) {
     setLoading(true);
     const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
-      const resAgents = await fetch("/api/agents", { headers });
+      if (syncFromLogtoFirst) {
+        await fetch("/api/admin/users/sync-from-logto", { method: "POST", headers }).catch(() => {});
+      }
+
+      const [resAgents, resAssign, resUsers] = await Promise.all([
+        fetch("/api/agents", { headers }),
+        fetch("/api/admin/agents/assignments", { headers }),
+        fetch("/api/admin/users", { headers }),
+      ]);
+
       if (resAgents.ok) {
         const data = await resAgents.json();
         setAgents(Array.isArray(data) ? data : []);
       }
 
-      const resAssign = await fetch("/api/admin/agents/assignments", { headers });
       if (resAssign.ok) {
         const data = await resAssign.json();
         setAssignments(Array.isArray(data) ? data : []);
       }
 
-      const resUsers = await fetch("/api/admin/users", { headers });
       if (resUsers.ok) {
-        const data = await resUsers.json();
+        let data = await resUsers.json();
+        // If local DB only has system accounts and has not pulled Logto users yet, auto-sync once
+        if (Array.isArray(data) && data.length <= 5 && !syncFromLogtoFirst) {
+          const syncRes = await fetch("/api/admin/users/sync-from-logto", { method: "POST", headers }).catch(() => null);
+          if (syncRes && syncRes.ok) {
+            const retryUsers = await fetch("/api/admin/users", { headers });
+            if (retryUsers.ok) {
+              data = await retryUsers.json();
+            }
+          }
+        }
         setUsers(Array.isArray(data) ? data : []);
         if (Array.isArray(data) && data.length > 0 && targetUserId === 0) {
-          setTargetUserId(data[0].id);
+          const firstRealUser = data.find((u: UserItem) => !["system", "seed", "background-job", "external"].includes(u.logtoUserId)) || data[0];
+          setTargetUserId(firstRealUser.id);
         }
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSyncLogtoUsers() {
+    setSyncingLogto(true);
+    try {
+      await loadData(true);
+      setFeedback("Đã đồng bộ danh sách người dùng từ Logto thành công!");
+      setTimeout(() => setFeedback(null), 3500);
+    } finally {
+      setSyncingLogto(false);
     }
   }
 
@@ -112,6 +145,16 @@ export function AdminAgentsPage() {
 
   const getAnyoneAssignment = (agentSlug: string) => {
     return getAgentAssignments(agentSlug).find((a) => a.userId === ANYONE_USER_ID);
+  };
+
+  const resolveAssignedUserDisplay = (a: AssignmentItem) => {
+    const u = users.find((x) => x.id === a.userId || (a.logtoUserId && x.logtoUserId === a.logtoUserId));
+    const displayName = u?.displayName || a.userDisplayName;
+    const email = u?.email || a.userEmail;
+    return {
+      shortLabel: displayName || email?.split("@")[0] || `User #${a.userId}`,
+      fullLabel: displayName && email ? `${displayName} (${email})` : (displayName || email || `User #${a.userId}`),
+    };
   };
 
   async function handleToggleAnyoneAccess(agent: AgentItem, enabled: boolean, role: string = "Operator") {
@@ -181,34 +224,6 @@ export function AdminAgentsPage() {
       console.error(e);
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleClearAllAssignments(agentSlug?: string) {
-    const msg = agentSlug
-      ? `Bạn có chắc chắn muốn gỡ toàn bộ phân quyền trên Agent "${agentSlug}" (về mặc định không gán cho ai)?`
-      : "Bạn có chắc chắn muốn đặt lại mặc định: gỡ toàn bộ phân quyền của tất cả Agent (không gán cho bất kỳ ai)?";
-    if (!confirm(msg)) return;
-    try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
-      const url = agentSlug
-        ? `/api/admin/agents/assignments?agentSlug=${encodeURIComponent(agentSlug)}`
-        : `/api/admin/agents/assignments`;
-      const res = await fetch(url, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.ok) {
-        setFeedback(
-          agentSlug
-            ? `Đã gỡ toàn bộ phân quyền trên Agent "${agentSlug}" về mặc định (Chưa gán)!`
-            : "Đã đặt lại mặc định: Tất cả Agent hiện không gán cho bất kỳ ai!"
-        );
-        setTimeout(() => setFeedback(null), 3500);
-        await loadData();
-      }
-    } catch (e) {
-      console.error(e);
     }
   }
 
@@ -327,13 +342,14 @@ export function AdminAgentsPage() {
                     </span>
                   );
                 }
-                const u = users.find((x) => x.id === a.userId);
+                const resolved = resolveAssignedUserDisplay(a);
                 return (
                   <span
                     key={a.id}
+                    title={resolved.fullLabel}
                     className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[10px] font-mono text-slate-700 dark:text-neutral-300"
                   >
-                    <span>{u?.displayName || u?.email?.split("@")[0] || `User #${a.userId}`}</span>
+                    <span>{resolved.shortLabel}</span>
                   </span>
                 );
               })
@@ -376,18 +392,17 @@ export function AdminAgentsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {assignments.length > 0 && (
-            <button
-              onClick={() => handleClearAllAssignments()}
-              className="px-2.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
-              title="Gỡ toàn bộ phân quyền của tất cả Agent về trạng thái mặc định (không gán cho ai)"
-            >
-              <Trash2 size={13} />
-              <span className="hidden sm:inline text-[11px]">Gỡ tất cả phân quyền ({assignments.length})</span>
-            </button>
-          )}
           <button
-            onClick={loadData}
+            onClick={handleSyncLogtoUsers}
+            disabled={syncingLogto}
+            className="p-1.5 px-2.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs disabled:opacity-50"
+            title="Đồng bộ danh sách người dùng từ Logto"
+          >
+            <Users size={13} className={syncingLogto ? "animate-pulse text-[#f8a87c]" : "text-[#f8a87c]"} />
+            <span className="hidden sm:inline text-[11px]">{syncingLogto ? "Đang đồng bộ Logto..." : "Đồng bộ Users Logto"}</span>
+          </button>
+          <button
+            onClick={() => loadData(false)}
             className="p-1.5 rounded-xl border border-slate-200 dark:border-[#262634] bg-slate-50 dark:bg-[#161620] hover:bg-slate-100 dark:hover:bg-[#20202c] text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer flex items-center gap-1.5 text-xs"
             title="Tải lại danh sách"
           >
@@ -557,7 +572,7 @@ export function AdminAgentsPage() {
                   ) : (
                     agentAssignedList.map((a) => {
                       const isAnyone = a.userId === ANYONE_USER_ID;
-                      const u = users.find((x) => x.id === a.userId);
+                      const resolved = resolveAssignedUserDisplay(a);
                       return (
                         <div key={a.id} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#1a1a28] transition-colors">
                           <div>
@@ -568,7 +583,7 @@ export function AdminAgentsPage() {
                                   <span className="text-emerald-400">Anyone (Tất cả thành viên đã đăng nhập)</span>
                                 </>
                               ) : (
-                                <span>{u?.displayName || u?.email || `User #${a.userId}`}</span>
+                                <span>{resolved.fullLabel}</span>
                               )}
                             </div>
                             <div className="text-[10px] text-slate-500 dark:text-neutral-400 font-mono">
@@ -618,16 +633,18 @@ export function AdminAgentsPage() {
                     badge: "Public / All Users",
                     description: "Mở quyền truy cập Agent này cho mọi tài khoản trên hệ thống",
                   },
-                  ...users.map((u) => {
-                    const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
-                    const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
-                    return {
-                      value: u.id.toString(),
-                      label: cleanName,
-                      badge: isAdminRole ? "Admin" : "Member",
-                      description: u.email ? `${u.email} (DB #${u.id})` : `DB #${u.id} • ${u.logtoUserId}`,
-                    };
-                  }),
+                  ...users
+                    .filter((u) => !["seed", "background-job", "external"].includes(u.logtoUserId))
+                    .map((u) => {
+                      const isAdminRole = u.roles.some((r) => r.toUpperCase().includes("ADMIN"));
+                      const cleanName = u.displayName || `${u.firstName || ""} ${u.lastName || ""}`.trim() || (u.email ? u.email.split("@")[0] : `User #${u.id}`);
+                      return {
+                        value: u.id.toString(),
+                        label: cleanName,
+                        badge: isAdminRole ? "Admin" : "Member",
+                        description: u.email ? `${u.email} (DB #${u.id})` : `DB #${u.id} • ${u.logtoUserId}`,
+                      };
+                    }),
                 ]}
               />
             </div>
