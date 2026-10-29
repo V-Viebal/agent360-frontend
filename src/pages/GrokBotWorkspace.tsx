@@ -8733,14 +8733,33 @@ ${targetItem.text}`;
     sessions: [],
   };
 
-    // Re-render theme immediately when agent avatar config is saved or reset
+    // Re-render theme & agent names immediately when agent avatar or name is saved or reset
   const [, setAvatarUpdateTick] = useState(0);
   useEffect(() => {
     const handleAvatarUpdated = () => {
       setAvatarUpdateTick((t) => t + 1);
     };
+    const handleNameUpdated = (e: any) => {
+      const detail = e.detail;
+      if (detail && detail.agentId && detail.name) {
+        setAgents((prev) =>
+          prev.map((a) => {
+            const cleanA = (a.id || "").replace(/^bot:agent360:/i, "").toLowerCase();
+            const cleanT = (detail.agentId || "").replace(/^bot:agent360:/i, "").toLowerCase();
+            if (a.id === detail.agentId || cleanA === cleanT || a.slug === detail.agentId) {
+              return { ...a, name: detail.name };
+            }
+            return a;
+          })
+        );
+      }
+    };
     window.addEventListener("agent-avatar-updated", handleAvatarUpdated);
-    return () => window.removeEventListener("agent-avatar-updated", handleAvatarUpdated);
+    window.addEventListener("agent-name-updated", handleNameUpdated);
+    return () => {
+      window.removeEventListener("agent-avatar-updated", handleAvatarUpdated);
+      window.removeEventListener("agent-name-updated", handleNameUpdated);
+    };
   }, []);
 const selectedAgentTheme = getAgentColorTheme(
     selectedAgent?.id || selectedAgentId,

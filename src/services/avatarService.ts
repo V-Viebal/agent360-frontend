@@ -93,3 +93,44 @@ export function resetAgentAvatarConfig(agentId: string): void {
     console.error("[AvatarService] Failed to reset avatar config:", err);
   }
 }
+
+const AGENT_NAMES_KEY = "agent360_custom_agent_names";
+
+export function getAllCustomAgentNames(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(AGENT_NAMES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getCustomAgentName(agentId?: string): string | null {
+  if (!agentId) return null;
+  const all = getAllCustomAgentNames();
+  const clean = normalizeAgentIdKey(agentId);
+  return all[clean] || all[agentId] || all[`bot:agent360:${clean}`] || null;
+}
+
+export function saveCustomAgentName(agentId: string, name: string): void {
+  if (!agentId) return;
+  try {
+    const all = getAllCustomAgentNames();
+    const clean = normalizeAgentIdKey(agentId);
+    const full = `bot:agent360:${clean}`;
+    const trimmed = name.trim();
+    if (trimmed) {
+      all[clean] = trimmed;
+      all[full] = trimmed;
+      all[agentId] = trimmed;
+    } else {
+      delete all[clean];
+      delete all[full];
+      delete all[agentId];
+    }
+    localStorage.setItem(AGENT_NAMES_KEY, JSON.stringify(all));
+    window.dispatchEvent(new CustomEvent("agent-name-updated", { detail: { agentId, name: trimmed, cleanId: clean } }));
+  } catch (err) {
+    console.error("[AvatarService] Failed to save custom agent name:", err);
+  }
+}

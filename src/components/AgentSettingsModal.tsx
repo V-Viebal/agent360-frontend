@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   Smile,
   X,
+  Pencil,
+  Info,
   Bot,
   Settings,
   Layers,
@@ -29,6 +31,8 @@ import {
   Cpu,
 } from "lucide-react";
 import { fetchWorkspaceFileContent } from "../services/agentApi";
+import { Tooltip } from "./ui/Tooltip";
+import { saveCustomAgentName } from "../services/avatarService";
 import { InfraAgent } from "../types/agent";
 import { AgentAvatar, getAgentColorTheme } from "./AgentAvatar";
 import { AgentConnectedAppsTab } from "./AgentConnectedAppsTab";
@@ -125,6 +129,21 @@ export function AgentSettingsModal({
   skills,
 }: AgentSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(agent.name);
+
+  useEffect(() => {
+    setEditedName(agent.name);
+    setIsEditingName(false);
+  }, [agent.name, agent.id]);
+
+  const handleSaveName = () => {
+    const trimmed = editedName.trim();
+    if (trimmed && trimmed !== agent.name) {
+      saveCustomAgentName(agent.id, trimmed);
+    }
+    setIsEditingName(false);
+  };
   const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -292,10 +311,28 @@ export function AgentSettingsModal({
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0 bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
                   {agent.roleTag || "AI Teammate"}
                 </span>
+                <Tooltip
+                  content={
+                    <div className="text-left font-mono space-y-0.5 py-0.5">
+                      <div className="font-semibold text-slate-900 dark:text-white">Thông tin hạ tầng</div>
+                      <div>Node: {agent.node || "Node 3rd (Core)"}</div>
+                      <div>ID: {agent.id}</div>
+                      <div>Slug: {agent.slug}</div>
+                      <div>Runtime: {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}</div>
+                    </div>
+                  }
+                  placement="bottom"
+                  minWidth={220}
+                >
+                  <button
+                    type="button"
+                    className="p-1 rounded-md text-slate-400 dark:text-neutral-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    aria-label="Thông tin node & ID"
+                  >
+                    <Info size={13} />
+                  </button>
+                </Tooltip>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-neutral-400 font-mono truncate">
-                {agent.node} • {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}
-              </p>
             </div>
           </div>
 
@@ -353,34 +390,103 @@ export function AgentSettingsModal({
               <div className="space-y-4 max-w-4xl">
                 {/* Agent Identity Card */}
                 <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div
                       onClick={onOpenAvatarModal}
                       className="relative group cursor-pointer shrink-0"
-                      title="Bấm để đổi Avatar"
+                      title="Bấm để đổi Avatar & Logo Agent"
                     >
                       <AgentAvatar agent={agent} size="lg" className="shadow-xs" />
-                      <div className="absolute inset-0 rounded-2xl bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                      <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white shadow-sm">
                         <Camera size={16} />
                       </div>
-                    </div>
-                    <div className="min-w-0 space-y-0.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{agent.name}</span>
-                        <span
-                          style={{
-                            backgroundColor: agentTheme.bgLight,
-                            color: agentTheme.light,
-                            borderColor: agentTheme.borderLight,
-                          }}
-                          className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0"
-                        >
-                          {agent.roleTag || "Agent"}
-                        </span>
+                      <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white dark:bg-[#1a1a24] border border-slate-200 dark:border-white/20 shadow-xs flex items-center justify-center text-slate-600 dark:text-neutral-300 group-hover:text-[var(--agent-primary)] transition-colors">
+                        <Pencil size={10} />
                       </div>
-                      <p className="text-[11px] text-slate-400 dark:text-neutral-500 font-mono truncate">
-                        ID: {agent.id} • {agent.slug}
-                      </p>
+                    </div>
+                    <div className="min-w-0 space-y-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isEditingName ? (
+                          <div className="flex items-center gap-1.5 flex-1 max-w-sm">
+                            <input
+                              type="text"
+                              value={editedName}
+                              onChange={(e) => setEditedName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveName();
+                                else if (e.key === "Escape") {
+                                  setEditedName(agent.name);
+                                  setIsEditingName(false);
+                                }
+                              }}
+                              autoFocus
+                              className="px-2.5 py-1 text-sm font-semibold rounded-lg bg-white dark:bg-[#0e0e14] border border-slate-300 dark:border-[#2e2e40] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)] flex-1 shadow-xs"
+                              placeholder="Nhập tên mới của Agent..."
+                            />
+                            <button
+                              type="button"
+                              onClick={handleSaveName}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--agent-primary)] text-black hover:opacity-90 transition-all cursor-pointer shadow-xs"
+                            >
+                              Lưu
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditedName(agent.name);
+                                setIsEditingName(false);
+                              }}
+                              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                            >
+                              Hủy
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{agent.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingName(true)}
+                              className="p-1 rounded-md text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                              title="Chỉnh sửa tên Agent"
+                              aria-label="Đổi tên Agent"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <span
+                              style={{
+                                backgroundColor: agentTheme.bgLight,
+                                color: agentTheme.light,
+                                borderColor: agentTheme.borderLight,
+                              }}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0"
+                            >
+                              {agent.roleTag || "Agent"}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-neutral-500 font-mono">
+                        <Tooltip
+                          content={
+                            <div className="text-left font-mono space-y-0.5 py-0.5">
+                              <div className="font-semibold text-slate-900 dark:text-white">Chi tiết Định danh & Node</div>
+                              <div>Node: {agent.node || "Node 3rd (Core)"}</div>
+                              <div>ID: {agent.id}</div>
+                              <div>Slug: {agent.slug}</div>
+                              <div>Runtime: {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}</div>
+                            </div>
+                          }
+                          placement="top"
+                          minWidth={220}
+                        >
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-help transition-colors select-none">
+                            <Info size={11} className="text-slate-400 dark:text-neutral-500" />
+                            <span className="text-[10px] font-mono">{agent.node ? agent.node.split(" - ")[0] : "Node"} · {agent.slug || agent.id}</span>
+                          </div>
+                        </Tooltip>
+                      </div>
                     </div>
                   </div>
 

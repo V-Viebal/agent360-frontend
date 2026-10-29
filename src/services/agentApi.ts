@@ -1,3 +1,4 @@
+import { getCustomAgentName } from "./avatarService";
 export function cleanModelDisplayName(rawModel: string): string {
   if (!rawModel) return "";
   let m = rawModel.trim();
@@ -133,7 +134,7 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
 
       return {
         id: a.id,
-        name: a.name || a.id,
+        name: getCustomAgentName(a.id) || getCustomAgentName(a.slug) || a.name || a.id,
         slug: a.slug || a.id,
         roleTag: a.roleTag || (a.pinned ? "Core" : "Operations"),
         node: displayNode,
