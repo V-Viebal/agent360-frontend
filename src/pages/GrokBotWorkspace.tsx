@@ -15037,7 +15037,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-white/10 text-[9px] font-mono text-slate-700 dark:text-neutral-300">
                           {(() => {
                             const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
-                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
+                        const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                             let arr = currentAgentMcpClients.length > 0
                               ? currentAgentMcpClients.map((c) => {
                                   const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
@@ -15077,7 +15077,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       {(() => {
                         // Priority 1: All apps loaded from Agent's active MCP clients with instant search
                         const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
-                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
+                        const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                         let agentApps = currentAgentMcpClients.length > 0
                           ? currentAgentMcpClients.map((c) => {
                               const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
@@ -15170,7 +15170,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         <span className="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-white/10 text-[9px] font-mono text-slate-700 dark:text-neutral-300">
                           {(() => {
                             const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
-                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
+                        const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                             const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
                             const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
                             let arr = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
@@ -15206,7 +15206,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       {(() => {
                         // All subagents configured on selected agent with instant search
                         const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
-                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
+                        const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                         const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
                         const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
                         // If no direct subagents configured yet, show all team members across fleet
@@ -15227,7 +15227,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         // Calculate offset for subagents keyboard index
                         const appsCount = (() => {
                           const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
-                        const q = triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase();
+                        const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                           let arr = currentAgentMcpClients.length > 0
                             ? currentAgentMcpClients.map((c) => c.key.toLowerCase().replace(/^composio_/, ""))
                             : APPS_CATALOG.map((a) => a.id);
@@ -15475,6 +15475,10 @@ const selectedAgentTheme = getAgentColorTheme(
                     const textUpToCursor = newVal.slice(0, cursorPos);
                     const triggerMatch = textUpToCursor.match(/(@)([a-zA-Z0-9_-]*)$/);
 
+                    if (!newVal.trim()) {
+                      setPlusMenuSearch("");
+                    }
+
                     if (triggerMatch) {
                       setPlusMenuSearch(triggerMatch[2]);
                       if (!isPlusMenuOpen) {
@@ -15482,7 +15486,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         setPlusMenuSelectedIndex(0);
                       }
                     } else if (isPlusMenuOpen) {
-                      // Automatically close popover when '@' or '/' was removed or cursor moved away
+                      // Automatically close popover when '@' was removed or cursor moved away
                       setIsPlusMenuOpen(false);
                       setPlusMenuSearch("");
                       setPlusMenuSelectedIndex(-1);
