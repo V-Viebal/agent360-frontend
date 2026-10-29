@@ -6618,7 +6618,7 @@ ${targetItem.text}`;
           textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
         }
       } else {
-        textareaRef.current.style.height = "24px";
+        textareaRef.current.style.height = "28px";
       }
       if (didChangeLayoutMode || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
         textareaRef.current.focus({ preventScroll: true });
@@ -6672,7 +6672,7 @@ ${targetItem.text}`;
         const nextDraft = selectedChatId ? localStorage.getItem(`agent360_draft_${selectedChatId}`) : "";
         setInputText(nextDraft || "");
         if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = nextDraft && computeIsMultilineComposer(nextDraft, composerWidth) ? "auto" : "28px";
         }
       } catch {}
     }
@@ -10932,7 +10932,7 @@ const selectedAgentTheme = getAgentColorTheme(
       try { localStorage.removeItem(`agent360_draft_${selectedChatId}`); } catch {}
     }
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = "28px";
     }
     if (isRecording) {
       stopVoiceRecording();
@@ -15778,8 +15778,12 @@ const selectedAgentTheme = getAgentColorTheme(
                       end: cursorPos,
                     };
                     setInputText(newVal);
-                    e.target.style.height = "auto";
-                    e.target.style.height = Math.min(e.target.scrollHeight, 210) + "px";
+                    if (computeIsMultilineComposer(newVal, composerWidth)) {
+                      e.target.style.height = "auto";
+                      e.target.style.height = Math.min(e.target.scrollHeight, 210) + "px";
+                    } else {
+                      e.target.style.height = "28px";
+                    }
 
                     const textUpToCursor = newVal.slice(0, cursorPos);
                     const triggerMatch = textUpToCursor.match(/(@)([a-zA-Z0-9_-]*)$/);
@@ -16000,7 +16004,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       e.preventDefault();
                       composerFormRef.current?.requestSubmit();
                       if (textareaRef.current) {
-                        textareaRef.current.style.height = "auto";
+                        textareaRef.current.style.height = "28px";
                       }
                     }
                   }}
@@ -16015,8 +16019,8 @@ const selectedAgentTheme = getAgentColorTheme(
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none leading-snug ${
-                    isMultiline ? "overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "overflow-hidden flex-1 h-[24px] max-h-[24px] py-0"
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none ${
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "leading-[28px] overflow-hidden flex-1 self-center h-[28px] min-h-[28px] max-h-[28px] py-0 m-0"
                   }`}
                 />
               );
