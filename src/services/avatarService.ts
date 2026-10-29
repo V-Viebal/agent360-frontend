@@ -272,3 +272,37 @@ export function hydrateAgentCustomProfileFromDto(agentId: string, slug: string |
     } catch {}
   }
 }
+
+export function slugifyAgentUrlAlias(name?: string | null): string {
+  if (!name) return "";
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function getAgentRouteSegment(agent?: { id?: string; slug?: string; name?: string } | null, fallbackId?: string): string {
+  const baseSlug = (agent?.slug || agent?.id || fallbackId || "").replace(/^bot:agent360:/i, "");
+  const customName = getCustomAgentName(agent?.id) || getCustomAgentName(agent?.slug) || (fallbackId ? getCustomAgentName(fallbackId) : null);
+  const alias = slugifyAgentUrlAlias(customName);
+  return alias || baseSlug;
+}
+
+export function resolveCanonicalAgentSlugFromAlias(param?: string | null): string | null {
+  if (!param) return null;
+  const targetAlias = slugifyAgentUrlAlias(param);
+  if (!targetAlias) return null;
+  const allNames = getAllCustomAgentNames();
+  for (const [key, customName] of Object.entries(allNames)) {
+    if (slugifyAgentUrlAlias(customName) === targetAlias) {
+      return normalizeAgentIdKey(key);
+    }
+  }
+  return null;
+}
