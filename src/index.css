@@ -1457,10 +1457,9 @@ html.light .border-\[\#2e2e3e\],
 }
 
 .group\/chatitem:hover .chat-title-marquee-scroll {
-  /* Scroll smoothly and gradually to the left so overflowing end of title is revealed completely */
-  /* Takes 6 seconds with a natural ease-in-out curve */
+  /* Scroll at a fixed, constant velocity (linear timing with duration scaled to distance) */
   transform: translateX(calc(-100% + 110px));
-  transition: transform 6s cubic-bezier(0.25, 0.1, 0.25, 1) 0.2s;
+  transition: transform var(--marquee-duration, 5s) linear 0.2s;
 }
 
 /* Edge Masking: Smooth fade-out blur on the right edge */
