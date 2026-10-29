@@ -306,6 +306,15 @@ function computeIsMultilineComposer(text: string, measuredWidth?: number): boole
   return text.length > threshold;
 }
 
+function computeChatTitleMarqueeDuration(title: string): string {
+  if (!title) return "3.5s";
+  // At ~13.5px font, calculate approximate overflow distance and maintain constant velocity (~32px/s)
+  const approxWidth = title.length * 7.4;
+  const overflowPx = Math.max(25, approxWidth - 110);
+  const durSec = Math.max(2.0, Math.min(14.0, overflowPx / 32));
+  return durSec.toFixed(1) + "s";
+}
+
 function detectSessionPronouns(
   messages: ChatMessage[],
   currentMsg: ChatMessage
@@ -11064,6 +11073,21 @@ const selectedAgentTheme = getAgentColorTheme(
   var activeFilteredAgents = filteredAgents.filter((a) => a.enabled !== false && a.status !== "disabled");
   var disabledFilteredAgents = filteredAgents.filter((a) => a.enabled === false || a.status === "disabled");
 
+  const isChatUnreadCompleted = (c: AgentSession) => {
+    const isRunning = Boolean(
+      runningChatIds.includes(c.id) ||
+      (c.session_id ? runningChatIds.includes(c.session_id) : false) ||
+      streamingChatIds.includes(c.id)
+    );
+    if (isRunning) return false;
+    const unreadList = getAgentUnreadList(selectedAgent);
+    return Boolean(
+      c.unread ||
+      unreadList.includes(c.id) ||
+      (c.session_id ? unreadList.includes(c.session_id) : false)
+    );
+  };
+
   const filteredChats = chats
     .filter((c) => {
       const matchesSearch =
@@ -11092,7 +11116,7 @@ const selectedAgentTheme = getAgentColorTheme(
         return pinnedChatIds.includes(c.id);
       }
       if (chatFilterTab === "unread") {
-        return getAgentUnreadList(selectedAgent).includes(c.id);
+        return isChatUnreadCompleted(c);
       }
       return true;
     })
@@ -16397,10 +16421,10 @@ const selectedAgentTheme = getAgentColorTheme(
                     activeTab={chatFilterTab}
                     onChange={(tabId) => setChatFilterTab(tabId as any)}
                     tabs={[
-                      { id: "all", label: "All", count: chats.filter(c => !archivedChatIds.includes(c.id)).length },
-                      { id: "unread", label: "Done", count: getAgentUnreadList(selectedAgent).filter(id => !archivedChatIds.includes(id)).length || undefined },
-                      { id: "pinned", label: "Pinned", count: chats.filter(c => pinnedChatIds.includes(c.id) && !archivedChatIds.includes(c.id)).length || undefined },
-                      { id: "archived", label: "Lưu trữ", count: archivedChatIds.length || undefined },
+                      { id: "all", label: "All", count: (channelFilter === "all" ? chats : chats.filter(c => channelFilter === "other" ? !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase()) : (c.channel || "console").toLowerCase() === channelFilter)).filter(c => !archivedChatIds.includes(c.id)).length },
+                      { id: "unread", label: "Done", count: (channelFilter === "all" ? chats : chats.filter(c => channelFilter === "other" ? !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase()) : (c.channel || "console").toLowerCase() === channelFilter)).filter(c => !archivedChatIds.includes(c.id) && isChatUnreadCompleted(c)).length || undefined },
+                      { id: "pinned", label: "Pinned", count: (channelFilter === "all" ? chats : chats.filter(c => channelFilter === "other" ? !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase()) : (c.channel || "console").toLowerCase() === channelFilter)).filter(c => pinnedChatIds.includes(c.id) && !archivedChatIds.includes(c.id)).length || undefined },
+                      { id: "archived", label: "Lưu trữ", count: (channelFilter === "all" ? chats : chats.filter(c => channelFilter === "other" ? !["console", "telegram", "zalo"].includes((c.channel || "console").toLowerCase()) : (c.channel || "console").toLowerCase() === channelFilter)).filter(c => archivedChatIds.includes(c.id)).length || undefined },
                     ]}
                   />
                 </div>
@@ -16604,11 +16628,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   (chat.session_id ? runningChatIds.includes(chat.session_id) : false) ||
                   streamingChatIds.includes(chat.id)
                 );
-                const isUnreadCompleted = !isChatRunning && (
-                  Boolean(chat.unread) ||
-                  getAgentUnreadList(selectedAgent).includes(chat.id) ||
-                  (chat.session_id ? getAgentUnreadList(selectedAgent).includes(chat.session_id) : false)
-                );
+                const isUnreadCompleted = isChatUnreadCompleted(chat);
                 return (
                   <div
                     key={chat.id}
@@ -16781,6 +16801,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
+                              style={{ "--marquee-duration": computeChatTitleMarqueeDuration(chat.title || "") } as React.CSSProperties}
                               className={`text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
                                 (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
                               } ${
