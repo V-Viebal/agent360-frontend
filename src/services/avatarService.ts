@@ -58,6 +58,7 @@ export function saveAgentAvatarConfig(agentId: string, config: CustomAvatarConfi
     // Dispatch custom event to notify components across the workspace
     const detail = { agentId, config: updated, cleanId: clean, fullId: full };
     window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
+    pushAgentProfileToBackend(agentId, updated, getCustomAgentName(agentId) || undefined).catch?.(() => {});
     if (clean !== agentId) {
       window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: clean } }));
     }
@@ -92,6 +93,7 @@ export function resetAgentAvatarConfig(agentId: string): void {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
       const detail = { agentId, config: null, cleanId: clean, fullId: full };
       window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
+      pushAgentProfileToBackend(agentId, null, getCustomAgentName(agentId) || undefined).catch?.(() => {});
       if (clean !== agentId) {
         window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: clean } }));
       }
@@ -140,7 +142,114 @@ export function saveCustomAgentName(agentId: string, name: string): void {
     }
     localStorage.setItem(AGENT_NAMES_KEY, JSON.stringify(all));
     window.dispatchEvent(new CustomEvent("agent-name-updated", { detail: { agentId, name: trimmed, cleanId: clean } }));
+    pushAgentProfileToBackend(agentId, getAgentAvatarConfig(agentId), trimmed).catch?.(() => {});
   } catch (err) {
     console.error("[AvatarService] Failed to save custom agent name:", err);
+  }
+}
+
+// Sync with Skyer Backend API (/api/v1/agents/profiles-catalog and /api/v1/agents/{agentId}/profile-config)
+let isCatalogSynced = false;
+
+export async function syncAgentProfilesCatalogFromBackend(): Promise<void> {
+  if (isCatalogSynced) return;
+  try {
+    const res = await fetch("/api/v1/agents/profiles-catalog", {
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      const catalog = await res.json();
+      if (catalog && typeof catalog === "object") {
+        const localAvatars = getAllAgentAvatarConfigs();
+        const localNames = getAllCustomAgentNames();
+        let avatarsChanged = false;
+        let namesChanged = false;
+
+        for (const [key, item] of Object.entries(catalog as Record<string, any>)) {
+          if (!item) continue;
+          const clean = normalizeAgentIdKey(key);
+          const full = "bot:agent360:" + clean;
+
+          if (item.avatar) {
+            localAvatars[clean] = item.avatar;
+            localAvatars[full] = item.avatar;
+            localAvatars[key] = item.avatar;
+            avatarsChanged = true;
+          }
+          if (item.name) {
+            localNames[clean] = item.name;
+            localNames[full] = item.name;
+            localNames[key] = item.name;
+            namesChanged = true;
+          }
+        }
+
+        if (avatarsChanged) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(localAvatars));
+          window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { sync: true } }));
+        }
+        if (namesChanged) {
+          localStorage.setItem(AGENT_NAMES_KEY, JSON.stringify(localNames));
+          window.dispatchEvent(new CustomEvent("agent-name-updated", { detail: { sync: true } }));
+        }
+        isCatalogSynced = true;
+      }
+    }
+  } catch (err) {
+    console.warn("[AvatarService] Could not sync catalog from backend:", err);
+  }
+}
+
+export async function fetchRemoteAgentProfile(agentId: string): Promise<void> {
+  if (!agentId) return;
+  const clean = normalizeAgentIdKey(agentId);
+  try {
+    const res = await fetch("/api/v1/agents/" + encodeURIComponent(clean) + "/profile-config", {
+      headers: { Accept: "application/json" }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        const full = "bot:agent360:" + clean;
+        if (data.avatar) {
+          const all = getAllAgentAvatarConfigs();
+          all[clean] = data.avatar;
+          all[full] = data.avatar;
+          all[agentId] = data.avatar;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+          const detail = { agentId, config: data.avatar, cleanId: clean, fullId: full };
+          window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
+        }
+        if (data.name) {
+          const allNames = getAllCustomAgentNames();
+          allNames[clean] = data.name;
+          allNames[full] = data.name;
+          allNames[agentId] = data.name;
+          localStorage.setItem(AGENT_NAMES_KEY, JSON.stringify(allNames));
+          window.dispatchEvent(new CustomEvent("agent-name-updated", { detail: { agentId, name: data.name, cleanId: clean } }));
+        }
+      }
+    }
+  } catch {}
+}
+
+export async function pushAgentProfileToBackend(agentId: string, avatarConfig: CustomAvatarConfig | null, name?: string): Promise<void> {
+  if (!agentId) return;
+  const clean = normalizeAgentIdKey(agentId);
+  try {
+    const payload: Record<string, any> = {};
+    if (avatarConfig !== undefined) payload.avatar = avatarConfig;
+    if (name !== undefined) payload.name = name;
+
+    await fetch("/api/v1/agents/" + encodeURIComponent(clean) + "/profile-config", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    console.warn("[AvatarService] Failed to push profile to backend:", err);
   }
 }

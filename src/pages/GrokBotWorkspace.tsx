@@ -1005,6 +1005,7 @@ import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar, getAgentColorTheme } from "../components/AgentAvatar";
 import { AgentAvatarModal } from "../components/AgentAvatarModal";
+import { syncAgentProfilesCatalogFromBackend, fetchRemoteAgentProfile } from "../services/avatarService";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
 import { PromptRecipesModal, getSavedTeamRecipes, saveTeamRecipe, PromptRecipe } from "../components/PromptRecipesModal";
@@ -7997,6 +7998,7 @@ ${targetItem.text}`;
   useEffect(() => {
     async function initData() {
       setIsLoadingAgents(true);
+      syncAgentProfilesCatalogFromBackend().catch(() => {});
       let loadedAgents: any[] = [];
       let loadedSkills: any[] = [];
       try {
@@ -8174,6 +8176,7 @@ ${targetItem.text}`;
   // Fetch agent-specific MCP clients, loop mode and subagents whenever selectedAgentId changes
   useEffect(() => {
     if (!isKnownAgent(selectedAgentId)) return;
+    fetchRemoteAgentProfile(selectedAgentId).catch(() => {});
     fetchAgentMcpClients(selectedAgentId).then((clients) => {
       setCurrentAgentMcpClients(clients);
       const appIds = clients.map((c) => c.key.toLowerCase().replace(/^composio_/, ""));
