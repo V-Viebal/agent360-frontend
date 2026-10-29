@@ -20,6 +20,7 @@ import {
   getAgentAvatarConfig,
   saveAgentAvatarConfig,
   resetAgentAvatarConfig,
+  saveCustomAgentName,
 } from "../services/avatarService";
 
 interface AgentAvatarModalProps {
@@ -41,9 +42,11 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   const [selectedBlobAnimation, setSelectedBlobAnimation] = useState<string>(defaultBlob.animation);
   const [isCustomBlob, setIsCustomBlob] = useState<boolean>(false);
   const [customImageUrl, setCustomImageUrl] = useState<string>("");
+  const [editedName, setEditedName] = useState<string>(agent.name || "");
 
   useEffect(() => {
     if (!isOpen) return;
+    setEditedName(agent.name || "");
     const current = getAgentAvatarConfig(agent.id);
     if (current) {
       if (current.type === "image" && current.imageUrl) {
@@ -104,6 +107,10 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   })();
 
   const handleSave = () => {
+    const trimmed = editedName.trim();
+    if (trimmed && trimmed !== agent.name) {
+      saveCustomAgentName(agent.id, trimmed);
+    }
     if (customImageUrl) {
       saveAgentAvatarConfig(agent.id, { type: "image", imageUrl: customImageUrl });
     } else if (!isCustomBlob) {
@@ -116,6 +123,8 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
   const handleReset = () => {
     resetAgentAvatarConfig(agent.id);
+    saveCustomAgentName(agent.id, "");
+    setEditedName(agent.name || "");
     setIsCustomBlob(false);
     setSelectedBlobShape(defaultBlob.shape);
     setSelectedBlobExpression(defaultBlob.expression);
@@ -161,7 +170,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             </div>
             <div className="min-w-0">
               <h2 className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
-                Avatar & Màu sắc · {agent.name}
+                Chỉnh sửa Hồ sơ & Avatar · {editedName.trim() || agent.name}
               </h2>
             </div>
           </div>
@@ -186,7 +195,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-neutral-900 dark:text-white">
-              {agent.name}
+              {editedName.trim() || agent.name}
             </span>
             <span
               style={{
@@ -203,6 +212,26 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
         {/* Studio Controls: Lean, direct & focused */}
         <div className="p-5 overflow-y-auto max-h-[380px] space-y-4">
+          {/* 0. Tên hiển thị Agent */}
+          <div>
+            <label className="text-[11px] font-mono uppercase tracking-wider text-neutral-500 block mb-1.5 font-semibold">
+              Tên Agent (Agent Name)
+            </label>
+            <input
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSave();
+                }
+              }}
+              placeholder="Nhập tên hiển thị của Agent..."
+              className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-[#101018] border border-slate-200 dark:border-[#272738] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)] font-medium transition-colors"
+            />
+          </div>
+
           {/* 1. Body Color Palette (The single primary color of this agent) */}
           <div>
             <div className="flex items-center justify-between mb-2">

@@ -129,21 +129,6 @@ export function AgentSettingsModal({
   skills,
 }: AgentSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState(agent.name);
-
-  useEffect(() => {
-    setEditedName(agent.name);
-    setIsEditingName(false);
-  }, [agent.name, agent.id]);
-
-  const handleSaveName = () => {
-    const trimmed = editedName.trim();
-    if (trimmed && trimmed !== agent.name) {
-      saveCustomAgentName(agent.id, trimmed);
-    }
-    setIsEditingName(false);
-  };
   const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -295,13 +280,15 @@ export function AgentSettingsModal({
         {/* Modal Header */}
         <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative shrink-0">
-              <AgentAvatar agent={agent} size="md" />
-              <span
-                className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-[#161620] ${
-                  agent.status === "degraded" ? "bg-red-500" : "bg-emerald-400"
-                }`}
-              />
+            <div
+              style={{
+                backgroundColor: agentTheme.bgLight,
+                borderColor: agentTheme.borderLight,
+                color: agentTheme.light,
+              }}
+              className="h-8 w-8 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs"
+            >
+              <Bot size={16} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -394,77 +381,35 @@ export function AgentSettingsModal({
                     <div
                       onClick={onOpenAvatarModal}
                       className="relative group cursor-pointer shrink-0"
-                      title="Bấm để đổi Avatar & Logo Agent"
+                      title="Bấm để chỉnh sửa Avatar & Tên Agent"
                     >
                       <AgentAvatar agent={agent} size="lg" className="shadow-xs" />
                       <div className="absolute inset-0 rounded-2xl bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white shadow-sm">
                         <Camera size={16} />
                       </div>
-                      <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white dark:bg-[#1a1a24] border border-slate-200 dark:border-white/20 shadow-xs flex items-center justify-center text-slate-600 dark:text-neutral-300 group-hover:text-[var(--agent-primary)] transition-colors">
-                        <Pencil size={10} />
-                      </div>
                     </div>
                     <div className="min-w-0 space-y-1 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {isEditingName ? (
-                          <div className="flex items-center gap-1.5 flex-1 max-w-sm">
-                            <input
-                              type="text"
-                              value={editedName}
-                              onChange={(e) => setEditedName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSaveName();
-                                else if (e.key === "Escape") {
-                                  setEditedName(agent.name);
-                                  setIsEditingName(false);
-                                }
-                              }}
-                              autoFocus
-                              className="px-2.5 py-1 text-sm font-semibold rounded-lg bg-white dark:bg-[#0e0e14] border border-slate-300 dark:border-[#2e2e40] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)] flex-1 shadow-xs"
-                              placeholder="Nhập tên mới của Agent..."
-                            />
-                            <button
-                              type="button"
-                              onClick={handleSaveName}
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--agent-primary)] text-black hover:opacity-90 transition-all cursor-pointer shadow-xs"
-                            >
-                              Lưu
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditedName(agent.name);
-                                setIsEditingName(false);
-                              }}
-                              className="px-2 py-1 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
-                            >
-                              Hủy
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{agent.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => setIsEditingName(true)}
-                              className="p-1 rounded-md text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                              title="Chỉnh sửa tên Agent"
-                              aria-label="Đổi tên Agent"
-                            >
-                              <Pencil size={12} />
-                            </button>
-                            <span
-                              style={{
-                                backgroundColor: agentTheme.bgLight,
-                                color: agentTheme.light,
-                                borderColor: agentTheme.borderLight,
-                              }}
-                              className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0"
-                            >
-                              {agent.roleTag || "Agent"}
-                            </span>
-                          </>
-                        )}
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white truncate">{agent.name}</span>
+                        <button
+                          type="button"
+                          onClick={onOpenAvatarModal}
+                          className="p-1 rounded-md text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                          title="Chỉnh sửa Avatar & Tên Agent"
+                          aria-label="Chỉnh sửa Agent"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <span
+                          style={{
+                            backgroundColor: agentTheme.bgLight,
+                            color: agentTheme.light,
+                            borderColor: agentTheme.borderLight,
+                          }}
+                          className="px-2 py-0.5 rounded-full text-[10px] font-mono border shrink-0"
+                        >
+                          {agent.roleTag || "Agent"}
+                        </span>
                       </div>
                       
                       <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-neutral-500 font-mono">
