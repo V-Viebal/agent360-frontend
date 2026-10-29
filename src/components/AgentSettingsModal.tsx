@@ -129,6 +129,16 @@ export function AgentSettingsModal({
   skills,
 }: AgentSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<AgentSettingsTab>(initialTab);
+  const [, setModalUpdateTick] = useState(0);
+  useEffect(() => {
+    const onUpdate = () => setModalUpdateTick((t) => t + 1);
+    window.addEventListener("agent-avatar-updated", onUpdate);
+    window.addEventListener("agent-name-updated", onUpdate);
+    return () => {
+      window.removeEventListener("agent-avatar-updated", onUpdate);
+      window.removeEventListener("agent-name-updated", onUpdate);
+    };
+  }, []);
   const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);

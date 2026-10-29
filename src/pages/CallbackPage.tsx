@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authConfig } from "../config/authConfig";
-import { getCurrentUserProfile } from "../services/userService";
+import { getCurrentUserProfile, parseJwt } from "../services/userService";
 import { setStoredToken, getStoredToken } from "../services/sessionStorageHelpers";
 
 // Module-level lock to survive React 18 StrictMode double-mount without race conditions
@@ -112,7 +112,24 @@ export function CallbackPage() {
 
             // Write tokens to both sessionStorage and localStorage
             setStoredToken("skyer_access_token", tokenData.access_token);
-            if (tokenData.id_token) setStoredToken("skyer_id_token", tokenData.id_token);
+            if (tokenData.id_token) {
+              setStoredToken("skyer_id_token", tokenData.id_token);
+              try {
+                const p = parseJwt(tokenData.id_token);
+                if (p && p.sub) {
+                  const idEmail = p.email || p.primaryEmail;
+                  const idName = p.name || p.username || p.preferred_username || (idEmail ? idEmail.split("@")[0] : undefined);
+                  const initialProfile = {
+                    sub: p.sub,
+                    name: idName,
+                    email: idEmail,
+                    picture: p.picture || p.avatar,
+                    roles: Array.isArray(p.roles) ? p.roles : [],
+                  };
+                  setStoredToken("skyer_user_profile", JSON.stringify(initialProfile));
+                }
+              } catch {}
+            }
             if (tokenData.refresh_token) setStoredToken("skyer_refresh_token", tokenData.refresh_token);
 
             // Clean up transient PKCE state
@@ -120,7 +137,7 @@ export function CallbackPage() {
             sessionStorage.removeItem("skyer_oidc_state");
 
             // Warm user profile in background without blocking navigation
-            void getCurrentUserProfile().catch(() => {});
+            void getCurrentUserProfile(true).catch(() => {});
 
             const target = sessionStorage.getItem("skyer_return_url") || "/app";
             sessionStorage.removeItem("skyer_return_url");

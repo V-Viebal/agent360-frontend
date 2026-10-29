@@ -27,6 +27,25 @@ export function parseJwt(token: string): any {
   }
 }
 
+export function isPlaceholderDisplayName(name?: string | null): boolean {
+  if (!name) return true;
+  const trimmed = name.trim().toLowerCase();
+  return trimmed === "" || trimmed === "user" || trimmed === "user skyer" || trimmed === "skyer user";
+}
+
+export function isPlaceholderEmail(email?: string | null, sub?: string | null): boolean {
+  if (!email) return true;
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed || trimmed === "authorized session") return true;
+  if (trimmed.endsWith("@skyer.hmz.one")) {
+    const localPart = trimmed.split("@")[0];
+    if ((sub && localPart === sub.toLowerCase()) || /^[a-z0-9]{10,}$/i.test(localPart)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Get the current user profile from Logto id_token and backend PostgreSQL RBAC
  */
@@ -40,33 +59,47 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
       ? sessionStorage.getItem("skyer_id_token") || localStorage.getItem("skyer_id_token")
       : null;
 
-  // 1. Try from cached profile in sessionStorage / localStorage (if not forcing refresh and has roles)
+  // 1. Try from cached profile in sessionStorage / localStorage (if not forcing refresh, has roles, and is not a placeholder)
   if (!forceRefresh) {
     try {
       const cachedStr = sessionStorage.getItem("skyer_user_profile") || localStorage.getItem("skyer_user_profile");
       if (cachedStr) {
         const cached = JSON.parse(cachedStr);
-        if (cached && Array.isArray(cached.roles) && cached.roles.length > 0) {
+        if (
+          cached &&
+          Array.isArray(cached.roles) &&
+          cached.roles.length > 0 &&
+          !isPlaceholderDisplayName(cached.name) &&
+          !isPlaceholderEmail(cached.email, cached.sub)
+        ) {
           return cached;
         }
       }
     } catch {}
   }
 
-  // 2. Decode claims from id_token
-  let user: UserProfile | null = null;
+  // 2. Decode real identity claims from Logto id_token (authoritative OIDC claims from Google/Email login)
+  let idTokenUser: UserProfile | null = null;
   if (idToken) {
     const payload = parseJwt(idToken);
     if (payload && payload.sub) {
-      user = {
+      const idEmail = payload.email || payload.primaryEmail || undefined;
+      const idName =
+        payload.name ||
+        payload.username ||
+        payload.preferred_username ||
+        (idEmail && !isPlaceholderEmail(idEmail, payload.sub) ? idEmail.split("@")[0] : undefined);
+      idTokenUser = {
         sub: payload.sub,
-        name: payload.name || payload.username || payload.email?.split("@")[0],
-        email: payload.email,
+        name: idName,
+        email: idEmail,
         picture: payload.picture || payload.avatar,
         roles: Array.isArray(payload.roles) ? payload.roles : [],
       };
     }
   }
+
+  let user: UserProfile | null = idTokenUser ? { ...idTokenUser } : null;
 
   // 3. Fallback synthesis from access_token if id_token was missing
   if (!user && accessToken) {
@@ -74,7 +107,7 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
     if (payload && payload.sub) {
       user = {
         sub: payload.sub,
-        name: "User",
+        name: undefined,
         roles: Array.isArray(payload.roles) ? payload.roles : [],
       };
     }
@@ -93,14 +126,59 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
         const backendRoles = Array.isArray(backendData.roles)
           ? backendData.roles.map((r: any) => (typeof r === "string" ? r : r.code || r.name))
           : [];
+
+        const resolvedSub = backendData.externalUserId || user?.sub || "";
+        const dbFullName = `${backendData.firstName || ""} ${backendData.lastName || ""}`.trim();
+        const dbDisplayName = backendData.displayName || dbFullName;
+        const dbEmail = backendData.email;
+        const dbPicture = backendData.avatarUrl;
+
+        // Prefer real non-placeholder values: if DB has a freshly-created placeholder ("User Skyer" or "{sub}@skyer.hmz.one"),
+        // keep the real name/email/picture from id_token AND sync them back to the backend DB!
+        const finalEmail = !isPlaceholderEmail(dbEmail, resolvedSub)
+          ? dbEmail
+          : !isPlaceholderEmail(idTokenUser?.email, resolvedSub)
+          ? idTokenUser?.email
+          : dbEmail || idTokenUser?.email;
+
+        const finalName = !isPlaceholderDisplayName(dbDisplayName)
+          ? dbDisplayName
+          : !isPlaceholderDisplayName(idTokenUser?.name)
+          ? idTokenUser?.name
+          : finalEmail && !isPlaceholderEmail(finalEmail, resolvedSub)
+          ? finalEmail.split("@")[0]
+          : dbDisplayName || "Skyer Member";
+
+        const finalPicture = dbPicture || idTokenUser?.picture || user?.picture;
+
         user = {
-          sub: backendData.externalUserId || user?.sub || "",
-          name: backendData.displayName || user?.name || `${backendData.firstName || ""} ${backendData.lastName || ""}`.trim() || "User",
-          email: backendData.email || user?.email,
-          picture: backendData.avatarUrl || user?.picture,
+          sub: resolvedSub,
+          name: finalName,
+          email: finalEmail,
+          picture: finalPicture,
           roles: Array.from(new Set([...(user?.roles || []), ...backendRoles])),
           permissions: backendData.permissions || user?.permissions || [],
         };
+
+        // If DB still had placeholder name or email while id_token has real identity, self-heal DB via /api/users/me
+        if (
+          (isPlaceholderEmail(dbEmail, resolvedSub) && !isPlaceholderEmail(finalEmail, resolvedSub)) ||
+          (isPlaceholderDisplayName(dbDisplayName) && !isPlaceholderDisplayName(finalName)) ||
+          (!dbPicture && finalPicture)
+        ) {
+          void fetch("/api/users/me", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              email: finalEmail,
+              displayName: finalName,
+              avatarUrl: finalPicture,
+            }),
+          }).catch(() => {});
+        }
       }
     } catch (e) {
       // Backend unavailable or network failure
@@ -119,9 +197,9 @@ export async function getCurrentUserProfile(forceRefresh = false): Promise<UserP
 }
 
 /**
- * Update user display name and avatar (locally and via Logto /oidc/me patch if supported)
+ * Update user display name and avatar (locally, in PostgreSQL via /api/users/me, and via Logto)
  */
-export async function updateUserProfile(updates: { name?: string; picture?: string }): Promise<UserProfile | null> {
+export async function updateUserProfile(updates: { name?: string; picture?: string; email?: string }): Promise<UserProfile | null> {
   const current = await getCurrentUserProfile();
   if (!current) return null;
 
@@ -129,24 +207,28 @@ export async function updateUserProfile(updates: { name?: string; picture?: stri
     ...current,
     name: updates.name !== undefined ? updates.name : current.name,
     picture: updates.picture !== undefined ? updates.picture : current.picture,
+    email: updates.email !== undefined ? updates.email : current.email,
   };
 
   try {
-    sessionStorage.setItem('skyer_user_profile', JSON.stringify(updated));
-    localStorage.setItem('skyer_user_profile', JSON.stringify(updated));
+    sessionStorage.setItem("skyer_user_profile", JSON.stringify(updated));
+    localStorage.setItem("skyer_user_profile", JSON.stringify(updated));
   } catch {}
 
-  // Attempt to sync to Logto custom data / userinfo if available
-  const accessToken = sessionStorage.getItem('skyer_access_token') || localStorage.getItem('skyer_access_token');
-  if (accessToken && authConfig.endpoint) {
+  const accessToken = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+  if (accessToken) {
     try {
-      await fetch(new URL('/api/users/me', authConfig.endpoint).toString(), {
-        method: 'PATCH',
+      await fetch("/api/users/me", {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          displayName: updated.name,
+          email: updated.email,
+          avatarUrl: updated.picture,
+        }),
       }).catch(() => {});
     } catch {}
   }

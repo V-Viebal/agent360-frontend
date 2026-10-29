@@ -428,6 +428,10 @@ export function AgentAvatar({
 
     const handler = (e: any) => {
       const detail = e.detail;
+      if (detail?.sync) {
+        setCustomConfig(getAgentAvatarConfig(agent.id) || getAgentAvatarConfig(agent.slug));
+        return;
+      }
       const targetKey = normalizeAgentSeedKey(agent.id || agent.slug || "");
       const eventKey = normalizeAgentSeedKey(detail?.agentId || detail?.cleanId || "");
       if (detail && targetKey && eventKey && targetKey === eventKey) {

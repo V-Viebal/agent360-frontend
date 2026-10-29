@@ -76,7 +76,7 @@ function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { chan
   );
 }
 
-import { getCurrentUserProfile, UserProfile } from "../services/userService";
+import { getCurrentUserProfile, UserProfile, parseJwt, isPlaceholderDisplayName, isPlaceholderEmail } from "../services/userService";
 import { initiateSkyerSignOut } from "../services/pkceAuth";
 import { authConfig } from "../config/authConfig";
 
@@ -1005,7 +1005,7 @@ import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar, getAgentColorTheme } from "../components/AgentAvatar";
 import { AgentAvatarModal } from "../components/AgentAvatarModal";
-import { syncAgentProfilesCatalogFromBackend, fetchRemoteAgentProfile } from "../services/avatarService";
+import { syncAgentProfilesCatalogFromBackend, fetchRemoteAgentProfile, getCustomAgentName } from "../services/avatarService";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
 import { PromptRecipesModal, getSavedTeamRecipes, saveTeamRecipe, PromptRecipe } from "../components/PromptRecipesModal";
@@ -4878,8 +4878,37 @@ export function GrokBotWorkspace() {
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
-      const cached = sessionStorage.getItem("skyer_user_profile") || localStorage.getItem("skyer_user_profile");
-      return cached ? JSON.parse(cached) : null;
+      const cachedStr = sessionStorage.getItem("skyer_user_profile") || localStorage.getItem("skyer_user_profile");
+      const cached: UserProfile | null = cachedStr ? JSON.parse(cachedStr) : null;
+      const idToken = sessionStorage.getItem("skyer_id_token") || localStorage.getItem("skyer_id_token");
+      const idPayload = idToken ? parseJwt(idToken) : null;
+
+      if (cached) {
+        if (idPayload && (isPlaceholderDisplayName(cached.name) || isPlaceholderEmail(cached.email, cached.sub) || !cached.picture)) {
+          const idEmail = idPayload.email || idPayload.primaryEmail;
+          const idName = idPayload.name || idPayload.username || idPayload.preferred_username || (idEmail ? idEmail.split("@")[0] : undefined);
+          return {
+            ...cached,
+            name: !isPlaceholderDisplayName(cached.name) ? cached.name : (idName || cached.name),
+            email: !isPlaceholderEmail(cached.email, cached.sub) ? cached.email : (idEmail || cached.email),
+            picture: cached.picture || idPayload.picture || idPayload.avatar,
+          };
+        }
+        return cached;
+      }
+
+      if (idPayload && idPayload.sub) {
+        const idEmail = idPayload.email || idPayload.primaryEmail;
+        const idName = idPayload.name || idPayload.username || idPayload.preferred_username || (idEmail ? idEmail.split("@")[0] : "Skyer Member");
+        return {
+          sub: idPayload.sub,
+          name: idName,
+          email: idEmail,
+          picture: idPayload.picture || idPayload.avatar,
+          roles: Array.isArray(idPayload.roles) ? idPayload.roles : [],
+        };
+      }
+      return null;
     } catch {
       return null;
     }
@@ -4918,25 +4947,42 @@ export function GrokBotWorkspace() {
 
   // Clean user display info without exposing internal subject IDs or dummy sub emails
   const cleanDisplayName = (() => {
-    if (currentUser?.name && currentUser.name !== "User Skyer" && currentUser.name !== "User") {
+    if (currentUser?.name && !isPlaceholderDisplayName(currentUser.name)) {
       return currentUser.name;
     }
+    if (currentUser?.email && !isPlaceholderEmail(currentUser.email, currentUser?.sub)) {
+      return currentUser.email.split("@")[0];
+    }
+    try {
+      const idToken = sessionStorage.getItem("skyer_id_token") || localStorage.getItem("skyer_id_token");
+      if (idToken) {
+        const p = parseJwt(idToken);
+        if (p?.name && !isPlaceholderDisplayName(p.name)) return p.name;
+        if (p?.email && !isPlaceholderEmail(p.email, p.sub)) return p.email.split("@")[0];
+      }
+    } catch {}
     if (currentUser?.email === "hmzonehub@gmail.com" || currentUser?.sub === "1my9xeouvb48") {
       return "Tech Zone";
     }
-    return currentUser?.name || "Skyer User";
+    return currentUser?.name || "Skyer Member";
   })();
 
   const cleanDisplayEmail = (() => {
     const email = currentUser?.email || "";
-    const isInternalSubEmail = email.includes("@skyer.hmz.one") && (email.startsWith(currentUser?.sub || "###") || /^[a-z0-9]{10,}@/i.test(email));
-    if (email && !isInternalSubEmail) {
+    if (email && !isPlaceholderEmail(email, currentUser?.sub)) {
       return email;
     }
+    try {
+      const idToken = sessionStorage.getItem("skyer_id_token") || localStorage.getItem("skyer_id_token");
+      if (idToken) {
+        const p = parseJwt(idToken);
+        if (p?.email && !isPlaceholderEmail(p.email, p.sub)) return p.email;
+      }
+    } catch {}
     if (currentUser?.sub === "1my9xeouvb48") {
       return "hmzonehub@gmail.com";
     }
-    return email && !isInternalSubEmail ? email : "Authorized Session";
+    return "Thành viên đã xác thực";
   })();
 
     // User profile represented as an Agent profile for unified Blob Avatar rendering
@@ -8877,6 +8923,15 @@ ${targetItem.text}`;
     };
     const handleNameUpdated = (e: any) => {
       const detail = e.detail;
+      if (detail?.sync) {
+        setAgents((prev) =>
+          prev.map((a) => {
+            const customName = getCustomAgentName(a.id) || getCustomAgentName(a.slug);
+            return customName ? { ...a, name: customName } : a;
+          })
+        );
+        return;
+      }
       if (detail && detail.agentId && detail.name) {
         setAgents((prev) =>
           prev.map((a) => {
