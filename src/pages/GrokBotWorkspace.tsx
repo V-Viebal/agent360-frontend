@@ -11091,8 +11091,8 @@ const selectedAgentTheme = getAgentColorTheme(
                         <div className="relative shrink-0 flex items-center justify-center transition-all">
                           <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {isAgentPinned(ag) && (
-                            <span className="absolute -top-1 -left-1 text-amber-500 dark:text-amber-400 p-0.5 bg-white dark:bg-[#1a1a24] rounded-full border border-amber-500/40 dark:border-amber-400/30 shadow-xs z-10 flex items-center justify-center">
-                              <Pin size={8} className="fill-amber-500 dark:fill-amber-400" />
+                            <span className="absolute -top-0.5 -left-0.5 p-0.5 rounded-full z-10 flex items-center justify-center pointer-events-none" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} title="Đã ghim">
+                              <Pin size={7.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
                             </span>
                           )}
 
@@ -11580,8 +11580,8 @@ const selectedAgentTheme = getAgentColorTheme(
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
                               {isAgentPinned(ag) && (
-                                <span className="text-amber-400 p-0.5" title="Đã ghim agent">
-                                  <Pin size={11} className="fill-amber-400" />
+                                <span className="p-0.5 pointer-events-none opacity-80" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} title="Đã ghim">
+                                  <Pin size={9.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
                                 </span>
                               )}
 
@@ -11828,8 +11828,8 @@ const selectedAgentTheme = getAgentColorTheme(
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
                               {isAgentPinned(ag) && (
-                                <span className="text-amber-400 p-0.5" title="Đã ghim agent">
-                                  <Pin size={11} className="fill-amber-400" />
+                                <span className="p-0.5 pointer-events-none opacity-80" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} title="Đã ghim">
+                                  <Pin size={9.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
                                 </span>
                               )}
 
