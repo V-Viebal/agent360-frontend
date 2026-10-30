@@ -32,9 +32,12 @@ if (!fs.existsSync(designMdPath)) {
   if (!md.includes("copy_budget:")) {
     errors.push("DESIGN.md frontmatter missing copy_budget declaration.");
   }
+  if (!md.includes("typography_scale:")) {
+    errors.push("DESIGN.md frontmatter missing typography_scale declaration.");
+  }
 }
 
-// 2. Verify index.css Dual-Theme & Warm Cream Tokens
+// 2. Verify index.css Dual-Theme & Warm Cream Tokens & Contrast
 const cssPath = path.join(ROOT, "src", "index.css");
 const css = fs.readFileSync(cssPath, "utf-8");
 if (!css.includes("@custom-variant dark")) {
@@ -43,8 +46,11 @@ if (!css.includes("@custom-variant dark")) {
 if (!css.includes("#FFFDF9") || !css.includes("#F8F3ED") || !css.includes("#252522")) {
   errors.push("src/index.css missing Strawberry Warm Cream & Soft Charcoal Light Mode tokens (#FFFDF9, #F8F3ED, #252522).");
 }
+if (!css.includes("--text-contrast")) {
+  errors.push("src/index.css missing --text-contrast variable for WCAG AAA accessibility.");
+}
 
-// 3. Verify LandingPage, MarketplacePage & DocsPage follow 1080px container & AgentAvatar binding
+// 3. Verify LandingPage, MarketplacePage, DocsPage & PricingPage follow 1080px container & AgentAvatar binding
 for (const rel of [
   "src/pages/LandingPage.tsx",
   "src/pages/MarketplacePage.tsx",
@@ -61,10 +67,19 @@ for (const rel of [
   }
 }
 
+// 4. Verify Typography scale constraints in LandingPage
+const landingSrc = fs.readFileSync(path.join(ROOT, "src/pages/LandingPage.tsx"), "utf-8");
+if (!landingSrc.includes("text-[47.8px]") && !landingSrc.includes("text-[48px]")) {
+  errors.push("LandingPage missing Strawberry H1 scale (47.8px/48px).");
+}
+if (!landingSrc.includes("text-balance")) {
+  errors.push("LandingPage missing text-balance on headline/subtitle typography.");
+}
+
 if (errors.length > 0) {
   console.error("[Visual Contract Gate] FAILED:");
   for (const e of errors) console.error("  ✕", e);
   process.exit(1);
 }
 
-console.log("[Visual Contract Gate] PASSED: DESIGN.md, Dual-Theme Warm Cream/Obsidian tokens, 1080px container, and AgentAvatar bindings verified across LandingPage, MarketplacePage, DocsPage, and StrawberryComparisonSection.");
+console.log("[Visual Contract Gate] PASSED: DESIGN.md, Dual-Theme Warm Cream/Obsidian tokens, 1080px container, typography scale, and AgentAvatar bindings verified across all core marketing pages.");

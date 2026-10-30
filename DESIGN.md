@@ -8,6 +8,7 @@ spacing: "1080px container, 32px-38.4px grid gap, 80px-112px section rhythm"
 rounded: "100px pill CTAs, 24px-32px companion cards, 16px product frame, 12px app modals"
 components: "AgentAvatar, BlobAvatar, StrawberryComparisonSection, CustomSelect, DropdownMenu, Modal, Tooltip"
 copy_budget: "H1<=8 words, Subtitle<=2 lines, CardDesc<=22 words, Bullet<=7 words"
+typography_scale: "H1=47.8px, H2=46px, Lead=21px, Title=16px, Body=14.5px, Micro=9px"
 ---
 
 # Skyer (Agent360) Design System & One-Shot Visual Reconstruction Contract

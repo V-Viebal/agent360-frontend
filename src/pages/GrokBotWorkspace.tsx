@@ -11718,7 +11718,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     setMobileAgentsOpen(false);
                   }}
                 />
-                <DropdownMenuSection label="Hệ thống">
+                <DropdownMenuSection>
 
                   <DropdownMenuItem
                     icon={<ShieldCheck size={13} style={{ color: selectedAgentTheme.primary }} />}
@@ -11742,7 +11742,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     }}
                   />
                 </DropdownMenuSection>
-                <DropdownMenuSection label="Tài khoản & Phiên">
+                <DropdownMenuSection>
                   <DropdownMenuItem
                     icon={<LogOut size={13} className="text-rose-400" />}
                     label={t("auth.signOut")}
@@ -12434,7 +12434,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     setMobileAgentsOpen(false);
                   }}
                 />
-                <DropdownMenuSection label="Hệ thống">
+                <DropdownMenuSection>
 
                   <DropdownMenuItem
                     icon={<ShieldCheck size={13} style={{ color: selectedAgentTheme.primary }} />}
@@ -12458,7 +12458,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     }}
                   />
                 </DropdownMenuSection>
-                <DropdownMenuSection label="Tài khoản & Phiên">
+                <DropdownMenuSection>
                   <DropdownMenuItem
                     icon={<LogOut size={13} className="text-rose-400" />}
                     label={t("auth.signOut")}

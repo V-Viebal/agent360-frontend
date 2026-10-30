@@ -298,7 +298,7 @@ export function LandingPage() {
             <p
               data-testid="hero-description"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
-              className="mt-4 text-[15px] sm:text-[18px] md:text-[21.6px] leading-[1.42] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] font-normal px-1"
+              className="mt-4 text-[15px] sm:text-[17px] md:text-[19.5px] lg:text-[21px] leading-[1.42] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
             >
               {isVi ? (
                 <>
