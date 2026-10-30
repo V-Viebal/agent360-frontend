@@ -21,6 +21,7 @@ import {
   saveAgentAvatarConfig,
   resetAgentAvatarConfig,
   saveCustomAgentName,
+  uploadAgentAvatarImage,
 } from "../services/avatarService";
 
 interface AgentAvatarModalProps {
@@ -42,6 +43,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   const [selectedBlobAnimation, setSelectedBlobAnimation] = useState<string>(defaultBlob.animation);
   const [isCustomBlob, setIsCustomBlob] = useState<boolean>(false);
   const [customImageUrl, setCustomImageUrl] = useState<string>("");
+  const [isUploadingImage, setIsUploadingImage] = useState<boolean>(false);
   const [editedName, setEditedName] = useState<string>(agent.name || "");
 
   useEffect(() => {
@@ -141,24 +143,37 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     setCustomImageUrl("");
   };
 
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Vui lòng chọn ảnh dung lượng dưới 2MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Vui lòng chọn ảnh dung lượng dưới 10MB.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const base64 = uploadEvent.target?.result as string;
-      if (base64) {
-        setCustomImageUrl(base64);
-        setIsCustomBlob(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    // Instant local preview via Object URL
+    const localPreview = URL.createObjectURL(file);
+    setCustomImageUrl(localPreview);
+    setIsCustomBlob(false);
+    setIsUploadingImage(true);
+
+    try {
+      const serverUrl = await uploadAgentAvatarImage(file);
+      setCustomImageUrl(serverUrl);
+    } catch (err) {
+      console.warn("[AgentAvatarModal] Direct media upload failed, falling back to base64:", err);
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const base64 = uploadEvent.target?.result as string;
+        if (base64) {
+          setCustomImageUrl(base64);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   return (
@@ -428,7 +443,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             </div>
             <label className="mt-1.5 flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-slate-300 dark:border-[#28283a] hover:border-slate-400 cursor-pointer bg-slate-50 dark:bg-[#12121a] text-xs text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">
               <Upload size={14} />
-              <span>{customImageUrl ? "Đã tải ảnh lên (Bấm để đổi ảnh khác)" : "Tải ảnh đại diện từ máy (PNG, JPG, SVG)"}</span>
+              <span>{isUploadingImage ? "Đang tải ảnh lên máy chủ..." : customImageUrl ? "Đã tải ảnh lên (Bấm để đổi ảnh khác)" : "Tải ảnh đại diện từ máy (PNG, JPG, SVG)"}</span>
               <input
                 type="file"
                 accept="image/*"
@@ -461,6 +476,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             <button
               onClick={handleSave}
               type="button"
+              disabled={isUploadingImage}
               style={{ backgroundColor: activeColorKey, color: "#ffffff" }}
               className="px-4 py-1.5 rounded-xl text-xs font-semibold hover:opacity-90 transition-all cursor-pointer active:scale-95 shadow-sm"
             >

@@ -306,3 +306,27 @@ export function resolveCanonicalAgentSlugFromAlias(param?: string | null): strin
   }
   return null;
 }
+
+
+export async function uploadAgentAvatarImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/v1/media/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    throw new Error('Upload failed with status ' + res.status);
+  }
+  const data = await res.json();
+  const rawUrl = data.publicUrl || data.public_url || data.url || '';
+  if (rawUrl) {
+    try {
+      const parsed = new URL(rawUrl, window.location.origin);
+      return parsed.pathname;
+    } catch {
+      return rawUrl;
+    }
+  }
+  throw new Error('No public URL returned from upload');
+}

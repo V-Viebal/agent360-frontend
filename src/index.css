@@ -380,49 +380,52 @@ body {
 }
 
 /* ========================================================================== */
-/* UNIFIED TYPOGRAPHY SCALE                                                   */
-/* meta 12 / ui 13 / body 14 / title 16 / heading 20                          */
+/* UNIFIED TYPOGRAPHY SCALE - WORKSPACE / APP SURFACES ONLY                  */
+/* Scoped to .workspace-root, /app, .app-workspace, or table/settings modals  */
+/* NEVER override marketing/editorial surfaces like LandingPage, Docs, Pricing */
 /* ========================================================================== */
-.text-\[8px\],
-.text-\[9px\],
-.text-\[10px\],
-.text-\[10\.5px\],
-.text-\[11px\],
-.text-\[11\.5px\],
-.text-xs {
-  font-size: var(--font-size-meta) !important;
-  line-height: var(--line-height-meta) !important;
-}
+:where(.workspace-root, [data-type-scope=app], .grok-workspace) {
+  .text-\[8px\],
+  .text-\[9px\],
+  .text-\[10px\],
+  .text-\[10\.5px\],
+  .text-\[11px\],
+  .text-\[11\.5px\],
+  .text-xs {
+    font-size: var(--font-size-meta) !important;
+    line-height: var(--line-height-meta) !important;
+  }
 
-.text-\[12px\],
-.text-\[12\.5px\],
-.text-\[13px\],
-.text-\[13\.5px\],
-.text-sm {
-  font-size: var(--font-size-ui) !important;
-  line-height: var(--line-height-ui) !important;
-}
+  .text-\[12px\],
+  .text-\[12\.5px\],
+  .text-\[13px\],
+  .text-\[13\.5px\],
+  .text-sm {
+    font-size: var(--font-size-ui) !important;
+    line-height: var(--line-height-ui) !important;
+  }
 
-.text-\[14px\],
-.text-\[14\.5px\],
-.text-\[15px\],
-.text-\[15\.5px\],
-.text-base {
-  font-size: var(--font-size-body) !important;
-  line-height: var(--line-height-body) !important;
-}
+  .text-\[14px\],
+  .text-\[14\.5px\],
+  .text-\[15px\],
+  .text-\[15\.5px\],
+  .text-base {
+    font-size: var(--font-size-body) !important;
+    line-height: var(--line-height-body) !important;
+  }
 
-.text-\[16px\],
-.text-\[17px\],
-.text-lg {
-  font-size: var(--font-size-title) !important;
-  line-height: var(--line-height-title) !important;
-}
+  .text-\[16px\],
+  .text-\[17px\],
+  .text-lg {
+    font-size: var(--font-size-title) !important;
+    line-height: var(--line-height-title) !important;
+  }
 
-.text-xl,
-.text-2xl {
-  font-size: var(--font-size-heading) !important;
-  line-height: var(--line-height-heading) !important;
+  .text-xl,
+  .text-2xl {
+    font-size: var(--font-size-heading) !important;
+    line-height: var(--line-height-heading) !important;
+  }
 }
 
 /* Sidebars: balanced hierarchy matching reference (15px name / 13px subtext / 12px meta) */

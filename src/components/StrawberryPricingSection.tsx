@@ -162,7 +162,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
               <div className="rounded-[22px] bg-[#FFFDF9] dark:bg-[#161b26] border border-[#ECE5DC] dark:border-white/10 p-6 flex flex-col justify-between flex-1">
                 <div>
                   <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Free</h3>
-                  <p className="mt-1.5 text-[13px] text-[#252522]/65 dark:text-neutral-400 leading-relaxed min-h-[42px]">
+                  <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
                     {isVi ? "Khám phá cách nhân viên AI Skyer hỗ trợ bạn mỗi ngày." : "Explore what Skyer can do for you."}
                   </p>
                   <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -201,7 +201,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
               </div>
 
               {/* Bottom Tray: Start with the essentials */}
-              <div className="p-5 lg:h-[124px] flex flex-col justify-center space-y-2.5 text-[13px] text-[#252522] dark:text-neutral-200 shrink-0">
+              <div className="p-5 lg:h-[124px] flex flex-col justify-center space-y-2.5 text-[14px] text-[#252522] dark:text-neutral-200 shrink-0">
                 <div className="font-semibold text-[13px]">{isVi ? "Tính năng khởi đầu:" : "Start with the essentials:"}</div>
                 <div className="space-y-2.5 text-[12.5px] text-[#252522]/85 dark:text-neutral-300">
                   <div className="flex items-center gap-2.5">
@@ -223,7 +223,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
                 <div className="p-6 flex flex-col justify-between">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Intern</h3>
-                    <p className="mt-1.5 text-[13px] text-[#252522]/65 dark:text-neutral-400 leading-relaxed min-h-[42px]">
+                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
                       {isVi ? "Như một thực tập sinh phụ việc vài giờ mỗi tuần." : "Like an assistant who helps out a few hours a week."}
                     </p>
                     <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -264,7 +264,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
                 <div className="p-6 flex flex-col justify-between">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Part-Time</h3>
-                    <p className="mt-1.5 text-[13px] text-[#252522]/65 dark:text-neutral-400 leading-relaxed min-h-[42px]">
+                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
                       {isVi ? "Như một đồng nghiệp lành nghề đảm nhận trọn vẹn dự án." : "Like a capable colleague who takes on whole projects."}
                     </p>
                     <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -314,7 +314,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
                 <div className="p-6 flex flex-col justify-between">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Full-Time</h3>
-                    <p className="mt-1.5 text-[13px] text-[#252522]/65 dark:text-neutral-400 leading-relaxed min-h-[42px]">
+                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
                       {isVi ? "Như đội ngũ nhân sự chính thức tự vận hành cả luồng nghiệp vụ." : "Like a few new hires who run entire workstreams."}
                     </p>
                     <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -362,7 +362,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
               </div>
 
               {/* Bottom Shared Tray: Everything in Free, plus */}
-              <div className="p-5 lg:h-[124px] flex flex-col justify-center space-y-2.5 text-[13px] text-[#252522] dark:text-neutral-200 shrink-0">
+              <div className="p-5 lg:h-[124px] flex flex-col justify-center space-y-2.5 text-[14px] text-[#252522] dark:text-neutral-200 shrink-0">
                 <div className="font-semibold text-[13px]">
                   {isVi ? "Bao gồm mọi tính năng gói Free, cộng thêm:" : "Everything in Free, plus:"}
                 </div>
@@ -698,7 +698,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
             <h4 className="text-[14px] font-semibold text-[#252522] dark:text-white pt-1">
               {isVi ? "Không gian quản trị luôn miễn phí." : "Workspace & browsing is always free."}
             </h4>
-            <p className="text-[13px] text-[#252522]/70 dark:text-neutral-400 leading-relaxed">
+            <p className="text-[14px] text-[#252522]/75 dark:text-neutral-300 leading-relaxed">
               {isVi
                 ? "Tín chỉ chỉ được tính khi nhân viên AI bắt đầu thực thi tác vụ trên máy tính riêng như đối soát hóa đơn, trích xuất dữ liệu hay soạn thảo báo cáo."
                 : "Credits are only used when your AI teammates step in to execute tasks on their computer, like reconciling invoices or extracting data."}
@@ -712,7 +712,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
             <h4 className="text-[14px] font-semibold text-[#252522] dark:text-white pt-1">
               {isVi ? "Làm mới hạn mức mỗi đầu tháng." : "A fresh allowance every month."}
             </h4>
-            <p className="text-[13px] text-[#252522]/70 dark:text-neutral-400 leading-relaxed">
+            <p className="text-[14px] text-[#252522]/75 dark:text-neutral-300 leading-relaxed">
               {isVi
                 ? "Hạn mức tín chỉ trong gói được làm mới hàng tháng. Khi cần xử lý cao điểm, bạn có thể nạp thêm gói tín chỉ cộng dồn không giới hạn thời hạn."
                 : "Plan credits refresh monthly. Need more during peak seasons? Top up anytime and purchased top-ups roll over."}

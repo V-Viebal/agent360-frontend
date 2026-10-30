@@ -754,8 +754,8 @@ export function LandingPage() {
                         }}
                       />
                     </div>
-                    <span className="mt-2.5 text-xs font-semibold text-[#252522] dark:text-white">Minh Bốc</span>
-                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{isVi ? "Điều hành" : "Executive"}</span>
+                    <span className="mt-2.5 text-sm font-semibold text-[#252522] dark:text-white">Minh Bốc</span>
+                    <span className="text-[11.5px] text-neutral-500 dark:text-neutral-400">{isVi ? "Điều hành" : "Executive"}</span>
                   </div>
 
                   <div className="flex flex-col items-center text-center">
@@ -770,8 +770,8 @@ export function LandingPage() {
                         }}
                       />
                     </div>
-                    <span className="mt-2.5 text-xs font-semibold text-[#252522] dark:text-white">An Kế Toán</span>
-                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{isVi ? "Kế toán TT99" : "Finance"}</span>
+                    <span className="mt-2.5 text-sm font-semibold text-[#252522] dark:text-white">An Kế Toán</span>
+                    <span className="text-[11.5px] text-neutral-500 dark:text-neutral-400">{isVi ? "Kế toán TT99" : "Finance"}</span>
                   </div>
 
                   <div className="flex flex-col items-center text-center">
@@ -786,8 +786,8 @@ export function LandingPage() {
                         }}
                       />
                     </div>
-                    <span className="mt-2.5 text-xs font-semibold text-[#252522] dark:text-white">Vy Pháp Chế</span>
-                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{isVi ? "Pháp chế" : "Legal"}</span>
+                    <span className="mt-2.5 text-sm font-semibold text-[#252522] dark:text-white">Vy Pháp Chế</span>
+                    <span className="text-[11.5px] text-neutral-500 dark:text-neutral-400">{isVi ? "Pháp chế" : "Legal"}</span>
                   </div>
                 </div>
               </div>
@@ -1042,17 +1042,17 @@ export function LandingPage() {
                   <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
                     <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
                       <div className="text-sm font-bold text-[#252522] dark:text-white">Trình duyệt</div>
-                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Phiên đăng nhập riêng</div>
+                      <div className="text-[11.5px] text-neutral-500 dark:text-neutral-400">Phiên đăng nhập riêng</div>
                       <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Tự thao tác web</div>
                     </div>
                     <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
                       <div className="text-sm font-bold text-[#252522] dark:text-white">AgentCore</div>
-                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Không gian /app/working</div>
+                      <div className="text-[11.5px] text-neutral-500 dark:text-neutral-400">Không gian /app/working</div>
                       <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Xử lý file & Excel</div>
                     </div>
                     <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
                       <div className="text-sm font-bold text-[#252522] dark:text-white">Local Model</div>
-                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Self-host On-Premise</div>
+                      <div className="text-[11.5px] text-neutral-500 dark:text-neutral-400">Self-host On-Premise</div>
                       <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Bảo mật tuyệt đối</div>
                     </div>
                   </div>
@@ -1129,7 +1129,7 @@ export function LandingPage() {
       {/* 6. LEAN FAQ */}
       <section id="faq" className="py-20 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors">
         <div className="mx-auto max-w-[760px] px-4 sm:px-6">
-          <h2 className="text-2xl sm:text-[38px] font-normal tracking-[-1.5px] text-center mb-10 text-[#252522] dark:text-[#f3f4f6]">
+          <h2 className="text-3xl sm:text-[46px] font-normal tracking-[-1.85px] leading-[1.12] text-center mb-10 text-[#252522] dark:text-[#f3f4f6]">
             {isVi ? "Câu hỏi thường gặp" : "Questions & Answers"}
           </h2>
           <div className="space-y-3">
