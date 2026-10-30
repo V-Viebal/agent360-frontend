@@ -11694,10 +11694,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 placement="top"
                 width="w-64"
               >
-                <div className="px-2.5 py-1.5 border-b border-slate-200 dark:border-[#22222e] mb-1">
-                  <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
-                  <div className="text-[10px] text-neutral-400">{cleanDisplayEmail}</div>
-                </div>
+
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Cài đặt (Settings)"
@@ -12413,10 +12410,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 placement="top"
                 width="w-72"
               >
-                <div className="px-2.5 py-1.5 border-b border-slate-200 dark:border-[#22222e] mb-1">
-                  <div className="text-xs font-semibold text-white">{cleanDisplayName}</div>
-                  <div className="text-[10px] text-neutral-400">{cleanDisplayEmail}</div>
-                </div>
+
                 <DropdownMenuItem
                   icon={<Settings size={14} className="text-neutral-500 dark:text-neutral-400" />}
                   label="Cài đặt (Settings)"
