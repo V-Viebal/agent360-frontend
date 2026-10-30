@@ -134,8 +134,12 @@ export function Tooltip({
     if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
       return;
     }
+    // Calculate initial target coordinates immediately so when isVisible flips true,
+    // it never starts from a stale position or (-9999, -9999)
+    calculatePosition();
     timerRef.current = setTimeout(() => {
       if (!disabled) {
+        calculatePosition();
         setIsVisible(true);
       }
     }, delay);
@@ -144,6 +148,7 @@ export function Tooltip({
   const handleMouseLeave = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setIsVisible(false);
+    setCoords(null);
   };
 
   const trigger = React.cloneElement(children, {
@@ -169,15 +174,15 @@ export function Tooltip({
   return (
     <>
       {trigger}
-      {isVisible &&
+      {isVisible && coords &&
         createPortal(
           <div
             ref={tooltipRef}
             role="tooltip"
             style={{
               position: "absolute",
-              top: coords ? `${coords.top}px` : "-9999px",
-              left: coords ? `${coords.left}px` : "-9999px",
+              top: `${coords.top}px`,
+              left: `${coords.left}px`,
               zIndex: 99999,
               pointerEvents: "none",
               minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,

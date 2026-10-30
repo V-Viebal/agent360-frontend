@@ -138,6 +138,8 @@ export function DropdownMenu({
         updatePosition();
       });
       return () => cancelAnimationFrame(timer);
+    } else if (!isOpen) {
+      setCoords(null);
     }
   }, [isOpen, align, placement, anchorPosition, isMobile]);
 
@@ -276,25 +278,17 @@ export function DropdownMenu({
       ref={menuRef}
       role="menu"
       onClick={(e) => e.stopPropagation()}
-      style={
-        coords
-          ? {
-              position: "fixed",
-              top: `${coords.top - window.scrollY}px`,
-              left: `${coords.left - window.scrollX}px`,
-              zIndex: 999999,
-            }
-          : {
-              zIndex: 999999,
-            }
-      }
-      className={`${
-        coords
-          ? ""
-          : `absolute ${align === "left" ? "left-0" : "right-0"} ${
-              placement === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
-            }`
-      } ${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
+      style={{
+        position: "fixed",
+        top: coords ? `${coords.top - window.scrollY}px` : "0px",
+        left: coords ? `${coords.left - window.scrollX}px` : "0px",
+        zIndex: 999999,
+        visibility: coords ? "visible" : "hidden",
+        opacity: coords ? 1 : 0,
+      }}
+      className={`${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ${
+        coords ? "animate-in fade-in zoom-in-95 duration-100" : ""
+      } ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
     >
       {children}
     </div>
