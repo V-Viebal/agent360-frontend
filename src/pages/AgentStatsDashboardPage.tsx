@@ -353,7 +353,7 @@ export function AgentStatsDashboardPage() {
           ],
         }}
       />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header Banner */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[var(--border-subtle)]">
           <div>
@@ -361,7 +361,7 @@ export function AgentStatsDashboardPage() {
               <Activity size={14} className="animate-pulse" />
               <span>{t("analytics.headerSubtitle")}</span>
             </div>
-            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
+            <h1 className=" text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
               Agent Load & Telemetry
             </h1>
           </div>
@@ -437,7 +437,7 @@ export function AgentStatsDashboardPage() {
               <span>{t("analytics.activeSessions")}</span>
               <Users size={16} className="text-[#f8a87c]" />
             </div>
-            <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
+            <div className="text-3xl font-bold text-neutral-900 dark:text-white ">
               {stats.total_active_sessions.toLocaleString()}
             </div>
             <div className="text-[11px] text-neutral-500 font-mono">
@@ -450,7 +450,7 @@ export function AgentStatsDashboardPage() {
               <span>{t("analytics.llmTurns")}</span>
               <Bot size={16} className="text-blue-400" />
             </div>
-            <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
+            <div className="text-3xl font-bold text-neutral-900 dark:text-white ">
               {stats.total_llm_calls.toLocaleString()}
             </div>
             <div className="text-[11px] text-neutral-500 font-mono">
@@ -463,7 +463,7 @@ export function AgentStatsDashboardPage() {
               <span>{t("analytics.toolInvocations")}</span>
               <Zap size={16} className="text-purple-400" />
             </div>
-            <div className="text-3xl font-bold text-neutral-900 dark:text-white font-newsreader">
+            <div className="text-3xl font-bold text-neutral-900 dark:text-white ">
               {stats.total_tool_calls.toLocaleString()}
             </div>
             <div className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
@@ -477,7 +477,7 @@ export function AgentStatsDashboardPage() {
               <span>{t("analytics.cacheHitRate")}</span>
               <Database size={16} className="text-emerald-400" />
             </div>
-            <div className="text-3xl font-bold text-emerald-400 font-newsreader">
+            <div className="text-3xl font-bold text-emerald-400 ">
               {stats.agent_cache_hit_rate ? `${stats.agent_cache_hit_rate.toFixed(1)}%` : "62.9%"}
             </div>
             <div className="text-[11px] text-neutral-500 font-mono">

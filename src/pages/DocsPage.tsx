@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { DOCS_SECTIONS, DocSection } from "../data/docsContent";
 import { AgentTopologyVisualizer } from "../components/AgentTopologyVisualizer";
+import { AgentAvatar } from "../components/AgentAvatar";
 
 
 // Robust Markdown Block & Inline Formatter for Docs
@@ -47,7 +48,7 @@ function renderInlineMarkdown(rawText: string) {
     }
     if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
       return (
-        <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-[#181822] border border-neutral-200 dark:border-[#262634] font-mono text-[12px] text-[#f8a87c] mx-0.5 font-medium">
+        <code key={pIdx} className="px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-[#181822] border border-neutral-200 dark:border-[#262634] font-mono text-[11.5px] sm:text-[12px] text-[#c2540a] dark:text-[#f8a87c] mx-0.5 font-medium break-all sm:break-normal">
           {part.slice(1, -1)}
         </code>
       );
@@ -266,7 +267,7 @@ export function DocsPage() {
       />
       {/* Top Banner */}
       <div className="border-b border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3">
-        <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-4">
+        <div className="mx-auto max-w-[1080px] flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
             <Link to="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">Skyer</Link>
             <ChevronRight size={12} />
@@ -299,7 +300,68 @@ export function DocsPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Strawberry-Style Peeking Companions Docs Stage */}
+      <div className="mx-auto max-w-[1080px] w-full px-4 sm:px-6 lg:px-8 pt-10 pb-2">
+        <div className="relative rounded-3xl border border-[var(--border-card)] bg-[#F8F3ED] dark:bg-[#11151f] p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden shadow-2xs">
+          <div className="space-y-2 max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[var(--border-card)] text-[11px] font-mono text-[#c2540a] dark:text-[#f8a87c] font-semibold">
+              <span>● AGENTCORE v2.4 ARCHITECTURE</span>
+            </div>
+            <h2 className="text-2xl sm:text-[32px] font-normal tracking-[-1.2px] leading-[1.15] text-[#252522] dark:text-white">
+              Kiến trúc Đồng nghiệp AI Tự hành & Máy tính Độc lập
+            </h2>
+            <p className="text-xs sm:text-sm text-[#252522]/75 dark:text-neutral-300 leading-relaxed">
+              Tài liệu kỹ thuật vận hành AgentCore, trình duyệt tự động, kết nối ERPCore / BaseCore và triển khai 100% On-Premise.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 self-start md:self-center shrink-0">
+            <div className="flex items-center -space-x-2">
+              <div className="p-1.5 rounded-2xl bg-white dark:bg-[#181d2a] border border-[var(--border-card)] shadow-2xs">
+                <AgentAvatar
+                  agent={{ id: "docs-minh", name: "Minh Bốc" }}
+                  size="sm"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "squircle", expression: "proud", color: "#38bdf8", animation: "nod.1.4", seed: 101 },
+                  }}
+                />
+              </div>
+              <div className="p-1.5 rounded-2xl bg-white dark:bg-[#181d2a] border border-[var(--border-card)] shadow-2xs">
+                <AgentAvatar
+                  agent={{ id: "docs-an", name: "An Kế Toán" }}
+                  size="sm"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4", seed: 202 },
+                  }}
+                />
+              </div>
+              <div className="p-1.5 rounded-2xl bg-white dark:bg-[#181d2a] border border-[var(--border-card)] shadow-2xs">
+                <AgentAvatar
+                  agent={{ id: "docs-vy", name: "Vy Pháp Chế" }}
+                  size="sm"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "bunny", expression: "happy", color: "#a78bfa", animation: "wink.1.6", seed: 404 },
+                  }}
+                />
+              </div>
+            </div>
+            <Link
+              to="/marketplace"
+              className="px-4 py-2 rounded-full bg-[#252522] dark:bg-[#f8a87c] text-[#FFFCFA] dark:text-[#111318] text-xs font-semibold hover:opacity-90 transition-opacity"
+            >
+              Mẫu nhân viên →
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1080px] w-full px-4 sm:px-6 lg:px-8 py-8 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Sidebar Navigation (AI Teammates Docs Style) */}
         <aside className="lg:col-span-3 space-y-6 lg:sticky lg:top-24">
           {/* Search Bar */}
@@ -395,7 +457,7 @@ export function DocsPage() {
                 </span>
               )}
             </div>
-            <h1 className="font-newsreader text-3xl sm:text-5xl font-semibold text-neutral-900 dark:text-white tracking-tight">
+            <h1 className=" text-3xl sm:text-5xl font-semibold text-neutral-900 dark:text-white tracking-tight">
               {activeDoc.title}
             </h1>
           </div>
@@ -505,7 +567,7 @@ export function DocsPage() {
 
           {/* Interactive Code & Live Sandbox Execution Area */}
           <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[#080b11] overflow-hidden shadow-xs">
-            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2.5 text-xs font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 sm:px-4 py-2.5 text-xs font-mono">
               {/* Tab Switcher */}
               <div className="flex items-center gap-1 bg-neutral-200/60 dark:bg-white/5 p-0.5 rounded-lg border border-neutral-300/50 dark:border-white/5">
                 {activeDoc.codeSnippet && (

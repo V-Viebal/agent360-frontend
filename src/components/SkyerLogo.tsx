@@ -7,44 +7,41 @@ interface SkyerLogoProps {
   showBotBadge?: boolean;
 }
 
+// Half-disc petal from the centre to the top edge; rotated ×4 into a pinwheel.
+const PETAL = "M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z";
+
+/**
+ * Skyer mark: an open geometric pinwheel of four half-disc petals.
+ * Tightly coupled mark + wordmark with optical vertical centering.
+ * Hover interaction: gentle rotation only (30deg, fluid ease-out).
+ */
 export function SkyerLogo({ size = 32, className = "", showText = true, showBotBadge = false }: SkyerLogoProps) {
   return (
-    <div className={`flex items-center gap-2.5 group select-none ${className}`}>
-      {/* Precision Icon Mark with Light / Dark Theme Support */}
-      <div 
-        style={{ width: size, height: size }}
-        className={`rounded-[8px] bg-slate-100 dark:bg-[#0A0C13] border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-xs dark:shadow-[0_0_15px_var(--agent-border-light)] transition-all duration-300 hover:border-[var(--agent-primary)]/50 hover:shadow-[0_0_22px_var(--agent-border-light)] hover:scale-105 shrink-0 ${
-          size <= 24 ? "p-1" : size <= 28 ? "p-[4.5px]" : size <= 32 ? "p-1.5" : "p-2"
-        }`}
+    <div className={`inline-flex items-center gap-1 group select-none cursor-pointer ${className}`}>
+      <svg
+        viewBox="0 0 32 32"
+        width={size}
+        height={size}
+        role="img"
+        aria-label="Skyer"
+        className="shrink-0 block transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:rotate-[30deg]"
       >
-        <svg viewBox="0 0 36 36" width="100%" height="100%" fill="none" className="transition-transform duration-300 group-hover:rotate-6">
-          {/* Upper Blade: Deep Slate in Light Mode, Pure White in Dark Mode */}
-          <path 
-            d="M 27 7.5 L 13.5 7.5 C 10 7.5 7.5 10 7.5 13.5 L 7.5 14.5 C 7.5 18 10 20 13.5 20.5 L 21 21.5" 
-            className="stroke-slate-900 dark:stroke-white" 
-            strokeWidth="3.6" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          />
-          {/* Lower Blade: Electric Grok Ember */}
-          <path 
-            d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5" 
-            style={{ stroke: "var(--agent-primary, #f8a87c)" }} 
-            strokeWidth="3.6" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
+        <path d={PETAL} transform="rotate(0 16 16)" className="fill-[#252522] dark:fill-[#FFFDF9]" />
+        <path d={PETAL} transform="rotate(90 16 16)" className="fill-[#252522] dark:fill-[#FFFDF9]" />
+        <path d={PETAL} transform="rotate(180 16 16)" className="fill-[#252522] dark:fill-[#FFFDF9]" />
+        <path d={PETAL} transform="rotate(270 16 16)" style={{ fill: "var(--agent-primary, #F8A87C)" }} />
+      </svg>
 
-      {/* Modern Wordmark with Dynamic Light / Dark Color */}
       {showText && (
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-[17px] tracking-tight text-slate-900 dark:text-white font-sans group-hover:text-[var(--agent-light)] dark:group-hover:text-[var(--agent-dark)] transition-colors">
+        <div className="flex items-center gap-1 leading-none">
+          <span 
+            className="text-[18px] font-semibold tracking-[-0.04em] text-[#252522] dark:text-[#FFFDF9] select-none translate-y-[0.5px]"
+            style={{ fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"' }}
+          >
             Skyer
           </span>
           {showBotBadge && (
-            <span className="text-[9px] font-mono font-bold uppercase bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] px-1.5 py-0.2 rounded-full">
+            <span className="text-[9px] font-mono font-bold uppercase bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] px-1.5 py-0.5 rounded-full ml-0.5 translate-y-[0.5px]">
               BOT
             </span>
           )}

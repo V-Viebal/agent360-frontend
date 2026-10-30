@@ -1,1965 +1,1177 @@
 import { SeoHead } from "../components/SeoHead";
-import { initiateSkyerSignIn } from "../services/pkceAuth";
-import { authConfig } from "../config/authConfig";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Link, useNavigate } from "react-router-dom";
-import { LandingCommandPalette, appTaskUrl } from "../components/LandingCommandPalette";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../i18n/LanguageContext";
+import { motion, AnimatePresence } from "motion/react";
 import {
-  Terminal,
   ArrowRight,
-  Shield,
+  Play,
   Check,
   CheckCircle2,
   ChevronDown,
-  Monitor,
-  Layers,
-  Bot,
-  Sparkles,
-  Server,
-  Cpu,
-  Workflow,
-  Globe,
-  ExternalLink,
-  Zap,
-  Play,
-  RotateCcw,
-  Lock,
-  Database,
-  FileText,
-  Search,
-  Activity,
-  Network,
-  Clock,
-  Eye,
-  MousePointerClick,
-  GitBranch,
-  HardDrive,
+  Plus,
 } from "lucide-react";
-
+import { AgentAvatar } from "../components/AgentAvatar";
 import { StrawberryComparisonSection } from "../components/StrawberryComparisonSection";
-interface MetricItem {
-  label: string;
-  value: string;
-  status: "pass" | "neutral" | "warn";
-}
-
-interface StepItem {
-  label: string;
-  detail: string;
-  time: string;
-  icon: string;
-}
-
-interface LogItem {
-  time: string;
-  text: string;
-  ok: boolean;
-}
-
-interface AgentRoleDef {
-  id: string;
-  category: "Executive" | "Finance" | "Sales" | "Support" | "HR";
-  icon: any;
-  title: { en: string; vi: string };
-  tag: { en: string; vi: string };
-  headline: { en: string; vi: string };
-  promptExample: { en: string; vi: string };
-  tools: string[];
-  metrics: { en: MetricItem[]; vi: MetricItem[] };
-  previewData: {
-    file: { en: string; vi: string };
-    action: { en: string; vi: string };
-    steps: { en: StepItem[]; vi: StepItem[] };
-    logs: { en: LogItem[]; vi: LogItem[] };
-  };
-}
-
-const AGENT_ROLE_DEFS: AgentRoleDef[] = [
-  {
-    id: "cos",
-    category: "Executive",
-    icon: Sparkles,
-    title: {
-      en: "Chief of Staff",
-      vi: "Trợ Lý Điều Hành (Chief of Staff)",
-    },
-    tag: {
-      en: "Executive & Ops",
-      vi: "Vận Hành & Chiến Lược",
-    },
-    headline: {
-      en: "Synthesizes cross-department OKRs & board packs.",
-      vi: "Tổng hợp OKR các phòng ban, chuẩn bị hồ sơ báo cáo cho Ban Giám Đốc.",
-    },
-    promptExample: {
-      en: "Synthesize weekly KPI reports from Sales, CX, and Finance, flagging bottlenecks.",
-      vi: "Tổng hợp số liệu KPI tuần từ Sales, CX và Tài chính, phát hiện điểm nghẽn cần tháo gỡ.",
-    },
-    tools: ["Google Workspace", "Knowledge Base KB", "Telegram Bridge", "Plan Ledger"],
-    metrics: {
-      en: [
-        { label: "KPIs Synced", value: "28/28", status: "pass" },
-        { label: "Runway", value: "18.4 mo", status: "neutral" },
-        { label: "Bottlenecks", value: "1 Flagged", status: "warn" },
-      ],
-      vi: [
-        { label: "KPIs Đồng bộ", value: "28/28", status: "pass" },
-        { label: "Runway Tài chính", value: "18.4 tháng", status: "neutral" },
-        { label: "Điểm nghẽn", value: "1 Cảnh báo", status: "warn" },
-      ],
-    },
-    previewData: {
-      file: {
-        en: "executive-briefing // Q4 Board Sync",
-        vi: "executive-briefing // Báo Cáo Họp HĐQT Q4",
-      },
-      action: {
-        en: "OKR Synthesis",
-        vi: "Tổng hợp OKR",
-      },
-      steps: {
-        en: [
-          { label: "Ingest Dept Metrics", detail: "Sales, CX, Finance synced", time: "0.4s", icon: "db" },
-          { label: "Burn Rate vs ARR", detail: "Runway verified: 18.4 mo", time: "0.8s", icon: "chart" },
-          { label: "Bottleneck Radar", detail: "Legal SLA delay flagged", time: "1.1s", icon: "warn" },
-          { label: "Board Pack Ready", detail: "3-page PDF + citations", time: "1.5s", icon: "check" },
-        ],
-        vi: [
-          { label: "Thu thập số liệu phòng ban", detail: "Đã đồng bộ Sales, CX, Tài chính", time: "0.4s", icon: "db" },
-          { label: "Đối soát Burn Rate & ARR", detail: "Runway xác nhận: 18.4 tháng", time: "0.8s", icon: "chart" },
-          { label: "Radar phát hiện điểm nghẽn", detail: "Chậm SLA xét duyệt pháp lý", time: "1.1s", icon: "warn" },
-          { label: "Hồ sơ Báo cáo hoàn tất", detail: "PDF 3 trang kèm trích dẫn số liệu", time: "1.5s", icon: "check" },
-        ],
-      },
-      logs: {
-        en: [
-          { time: "08:30:02", text: "Ingesting weekly departmental progress reports (Sales, CX, Finance)", ok: true },
-          { time: "08:30:08", text: "Reconciling ARR growth target with operational burn rate: Runway 18.4 mo", ok: true },
-          { time: "08:30:14", text: "Flagged 1 bottleneck: Enterprise procurement turnaround in Legal", ok: false },
-          { time: "08:30:21", text: "Generated 3-page Executive Decision Pack with citation receipts", ok: true },
-        ],
-        vi: [
-          { time: "08:30:02", text: "Thu thập báo cáo tiến độ tuần từ các phòng ban (Kinh doanh, CX, Tài chính)", ok: true },
-          { time: "08:30:08", text: "Đối soát mục tiêu tăng trưởng ARR với tốc độ tiêu quỹ: Runway đạt 18.4 tháng", ok: true },
-          { time: "08:30:14", text: "Cảnh báo 1 điểm nghẽn: Thời gian duyệt hợp đồng Doanh nghiệp tại Ban Pháp lý kéo dài", ok: false },
-          { time: "08:30:21", text: "Xuất bản Hồ sơ Quyết định Ban Điều Hành 3 trang kèm biên nhận trích dẫn minh bạch", ok: true },
-        ],
-      },
-    },
-  },
-  {
-    id: "finance",
-    category: "Finance",
-    icon: Server,
-    title: {
-      en: "Financial Controller",
-      vi: "Kiểm Soát Viên Tài Chính",
-    },
-    tag: {
-      en: "Finance & ERP",
-      vi: "Tài Chính & Kế Toán ERP",
-    },
-    headline: {
-      en: "3-way PO/Invoice matching & TT99 tax vouchers.",
-      vi: "Khớp hóa đơn 3 bên (Đơn hàng/Phiếu kho) và lập bảng kê chứng từ chuẩn TT99.",
-    },
-    promptExample: {
-      en: "Reconcile 48 supplier invoices against PO records and stage TT99 payment vouchers.",
-      vi: "Đối chiếu 48 hóa đơn nhà cung cấp với đơn hàng PO, chuẩn bị phiếu thanh toán TT99.",
-    },
-    tools: ["ERPCore", "Bank Feed API", "Excel AST", "PayOS"],
-    metrics: {
-      en: [
-        { label: "Invoices", value: "48/48 Match", status: "pass" },
-        { label: "Variance", value: "$0.00", status: "pass" },
-        { label: "Tax Standard", value: "TT99 02-VT", status: "neutral" },
-      ],
-      vi: [
-        { label: "Hóa đơn", value: "48/48 Khớp", status: "pass" },
-        { label: "Chênh lệch", value: "0 VNĐ", status: "pass" },
-        { label: "Chuẩn thuế", value: "TT99 Mẫu 02-VT", status: "neutral" },
-      ],
-    },
-    previewData: {
-      file: {
-        en: "general-ledger // Cycle W42",
-        vi: "general-ledger // Sổ Cái Chu Kỳ W42",
-      },
-      action: {
-        en: "3-Way Matching",
-        vi: "Đối soát 3 bên",
-      },
-      steps: {
-        en: [
-          { label: "Scan 48 Invoices", detail: "Matched against PO & GRN", time: "0.6s", icon: "search" },
-          { label: "Variance Audit", detail: "0.00 VND discrepancy", time: "1.0s", icon: "check" },
-          { label: "TT99 Voucher Gen", detail: "Mẫu 02-VT compiled", time: "1.4s", icon: "doc" },
-          { label: "CFO Sign-Off Gate", detail: "$148,290 staged", time: "1.8s", icon: "lock" },
-        ],
-        vi: [
-          { label: "Quét 48 Hóa đơn", detail: "Khớp hồ sơ PO & Phiếu nhập kho GRN", time: "0.6s", icon: "search" },
-          { label: "Kiểm toán chênh lệch", detail: "Chênh lệch 0.00 VNĐ", time: "1.0s", icon: "check" },
-          { label: "Tạo chứng từ TT99", detail: "Đã lập bảng kê Mẫu 02-VT", time: "1.4s", icon: "doc" },
-          { label: "Cổng duyệt CFO", detail: "Sẵn sàng duyệt giải ngân $148,290", time: "1.8s", icon: "lock" },
-        ],
-      },
-      logs: {
-        en: [
-          { time: "09:00:10", text: "Scanning 48 incoming vendor invoices against PO-2026 and GRN records", ok: true },
-          { time: "09:00:15", text: "Discrepancy audit: 48/48 invoices matched within 0.00 VND tolerance", ok: true },
-          { time: "09:00:22", text: "Generated tax compliance voucher Mẫu 02-VT (TT99 standard)", ok: true },
-          { time: "09:00:28", text: "Voucher pack staged for CFO cryptographic approval", ok: true },
-        ],
-        vi: [
-          { time: "09:00:10", text: "Quét 48 hóa đơn nhà cung cấp gửi về và đối soát với đơn hàng PO-2026 & phiếu nhập kho", ok: true },
-          { time: "09:00:15", text: "Kiểm toán sai số: 48/48 hóa đơn khớp 100% dung sai 0.00 VNĐ", ok: true },
-          { time: "09:00:22", text: "Xuất chứng từ tuân thủ hóa đơn thuế điện tử Mẫu 02-VT (chuẩn Thông tư 99)", ok: true },
-          { time: "09:00:28", text: "Đóng gói hồ sơ thanh toán đưa vào Cổng Chữ Ký Số phê duyệt của Giám Đốc Tài Chính (CFO)", ok: true },
-        ],
-      },
-    },
-  },
-  {
-    id: "sales",
-    category: "Sales",
-    icon: Zap,
-    title: {
-      en: "B2B Sales Executive",
-      vi: "Chuyên Viên Bán Hàng B2B",
-    },
-    tag: {
-      en: "Revenue & CRM",
-      vi: "Doanh Thu & CRM",
-    },
-    headline: {
-      en: "Enriches leads, maps C-level buyers & drafts pitches.",
-      vi: "Tìm kiếm dữ liệu doanh nghiệp mục tiêu, liên hệ đúng người ra quyết định và gửi chào hàng.",
-    },
-    promptExample: {
-      en: "Screen 120 SEA logistics accounts and stage personalized outreach decks in CRM.",
-      vi: "Lọc 120 doanh nghiệp logistics tiềm năng, soạn nội dung giới thiệu riêng và lưu vào CRM.",
-    },
-    tools: ["HubSpot CRM", "LinkedIn Graph", "Exa Search", "Mail Sequencer"],
-    metrics: {
-      en: [
-        { label: "Qualified", value: "42 Accounts", status: "pass" },
-        { label: "Intent Score", value: "94% Match", status: "pass" },
-        { label: "Staged ARR", value: "$48,000", status: "neutral" },
-      ],
-      vi: [
-        { label: "Đủ điều kiện", value: "42 Doanh nghiệp", status: "pass" },
-        { label: "Điểm nhu cầu", value: "94% Khớp", status: "pass" },
-        { label: "ARR Ước tính", value: "$48,000", status: "neutral" },
-      ],
-    },
-    previewData: {
-      file: {
-        en: "pipeline-engine // Outbound SEA",
-        vi: "pipeline-engine // Tiếp Cận Thị Trường SEA",
-      },
-      action: {
-        en: "Lead Enrichment",
-        vi: "Làm giàu dữ liệu Lead",
-      },
-      steps: {
-        en: [
-          { label: "Screen 120 Accounts", detail: "SEA logistics segment", time: "0.5s", icon: "search" },
-          { label: "Buyer Signal Filter", detail: "42 VP Supply Chain found", time: "0.9s", icon: "db" },
-          { label: "Bespoke Deck Gen", detail: "Tailored ROI & case study", time: "1.3s", icon: "doc" },
-          { label: "CRM Deal Staged", detail: "$48k ARR pipeline synced", time: "1.7s", icon: "check" },
-        ],
-        vi: [
-          { label: "Lọc 120 Doanh nghiệp", detail: "Phân khúc chuỗi cung ứng logistics SEA", time: "0.5s", icon: "search" },
-          { label: "Phân tích tín hiệu mua", detail: "Tìm thấy 42 Phó Tổng Giám Đốc phụ trách Mua hàng", time: "0.9s", icon: "db" },
-          { label: "Soạn đề xuất cá nhân hóa", detail: "Phân tích ROI & Case Study tương ứng", time: "1.3s", icon: "doc" },
-          { label: "Khởi tạo Deal trên CRM", detail: "Đã đồng bộ đường ống cơ hội $48k ARR", time: "1.7s", icon: "check" },
-        ],
-      },
-      logs: {
-        en: [
-          { time: "09:30:11", text: "Screened 120 target enterprise logistics accounts via verified public data", ok: true },
-          { time: "09:30:19", text: "Filtered 42 accounts with active Head of Supply Chain procurement signals", ok: true },
-          { time: "09:30:28", text: "Drafted hyper-personalized demo pitches in company brand tone", ok: true },
-          { time: "09:30:35", text: "Created deal opportunities in CRM: $48,000 potential ARR staged", ok: true },
-        ],
-        vi: [
-          { time: "09:30:11", text: "Sàng lọc 120 doanh nghiệp logistics mục tiêu thông qua dữ liệu doanh nghiệp đã xác thực", ok: true },
-          { time: "09:30:19", text: "Lọc ra 42 tài khoản có tín hiệu tìm kiếm giải pháp chuyển đổi số từ Giám Đốc Chuỗi Cung Ứng", ok: true },
-          { time: "09:30:28", text: "Soạn thư chào giải pháp được may đo riêng theo nhận diện và văn phong thương hiệu", ok: true },
-          { time: "09:30:35", text: "Tạo cơ hội giao dịch trên CRM: Đồng bộ đường ống doanh thu tiềm năng $48,000 ARR", ok: true },
-        ],
-      },
-    },
-  },
-  {
-    id: "cx",
-    category: "Support",
-    icon: Shield,
-    title: {
-      en: "Customer Success",
-      vi: "Hỗ Trợ & CSKH 24/7",
-    },
-    tag: {
-      en: "24/7 Support",
-      vi: "Hỗ Trợ Trực Tuyến 24/7",
-    },
-    headline: {
-      en: "Autonomous ticket triage & root-cause resolution.",
-      vi: "Tự động phân loại và xử lý ticket hỗ trợ, không để tồn đọng yêu cầu của khách hàng.",
-    },
-    promptExample: {
-      en: "Triage Zendesk queue, resolve billing inquiries, and debug webhook timeouts.",
-      vi: "Kiểm tra hàng đợi Zendesk, giải đáp thắc mắc hóa đơn và tra cứu sự cố kỹ thuật.",
-    },
-    tools: ["Zendesk CDP", "Knowledge Base KB", "Log Inspector", "Mailer"],
-    metrics: {
-      en: [
-        { label: "Cleared", value: "14/14 Tickets", status: "pass" },
-        { label: "Response SLA", value: "22 sec", status: "pass" },
-        { label: "CSAT Score", value: "98.4%", status: "neutral" },
-      ],
-      vi: [
-        { label: "Đã xử lý", value: "14/14 Tickets", status: "pass" },
-        { label: "SLA Phản hồi", value: "22 giây", status: "pass" },
-        { label: "Điểm hài lòng CSAT", value: "98.4%", status: "neutral" },
-      ],
-    },
-    previewData: {
-      file: {
-        en: "support-queue // Zendesk Live",
-        vi: "support-queue // Zendesk Trực Tuyến",
-      },
-      action: {
-        en: "Zero-Backlog Triage",
-        vi: "Xử lý hàng đợi sạch 100%",
-      },
-      steps: {
-        en: [
-          { label: "Ingest 14 Tickets", detail: "Billing & API webhooks", time: "0.3s", icon: "db" },
-          { label: "KB Grounding", detail: "Matched retry spec v2.4", time: "0.7s", icon: "search" },
-          { label: "Dispatch Fixes", detail: "Code snippet + receipt", time: "1.2s", icon: "doc" },
-          { label: "Queue Zeroed", detail: "5/5 CSAT verified", time: "1.5s", icon: "check" },
-        ],
-        vi: [
-          { label: "Tiếp nhận 14 Tickets", detail: "Yêu cầu hóa đơn & Lỗi API Webhook", time: "0.3s", icon: "db" },
-          { label: "Đối chiếu Tri Thức KB", detail: "Khớp tài liệu kỹ thuật Retry Spec v2.4", time: "0.7s", icon: "search" },
-          { label: "Gửi phản hồi kèm giải pháp", detail: "Mã mẫu + biên bản hỗ trợ xác thực", time: "1.2s", icon: "doc" },
-          { label: "Hàng đợi về 0", detail: "Đánh giá CSAT 5/5 sao", time: "1.5s", icon: "check" },
-        ],
-      },
-      logs: {
-        en: [
-          { time: "10:20:01", text: "Ingested 14 incoming support inquiries across web and mobile apps", ok: true },
-          { time: "10:20:06", text: "Ticket #8821 (Billing receipt request): Auto-generated and dispatched", ok: true },
-          { time: "10:20:12", text: "Ticket #8824 (API webhook timeout): Diagnosed retry header mismatch", ok: true },
-          { time: "10:20:22", text: "CSAT satisfaction score confirmed: 5/5 stars (Queue cleared)", ok: true },
-        ],
-        vi: [
-          { time: "10:20:01", text: "Tiếp nhận 14 yêu cầu hỗ trợ gửi đến qua web và ứng dụng di động", ok: true },
-          { time: "10:20:06", text: "Ticket #8821 (Yêu cầu hóa đơn VAT): Tự động trích xuất biên lai và gửi phản hồi", ok: true },
-          { time: "10:20:12", text: "Ticket #8824 (Lỗi timeout webhook API): Chẩn đoán sai lệch header thử lại retry", ok: true },
-          { time: "10:20:22", text: "Điểm hài lòng khách hàng CSAT xác nhận: 5/5 sao (Hàng đợi ticket đã giải quyết dứt điểm)", ok: true },
-        ],
-      },
-    },
-  },
-  {
-    id: "hr",
-    category: "HR",
-    icon: Layers,
-    title: {
-      en: "HR & Talent Partner",
-      vi: "Trợ Lý Nhân Sự & Tuyển Dụng",
-    },
-    tag: {
-      en: "People Ops",
-      vi: "Vận Hành Nhân Sự",
-    },
-    headline: {
-      en: "Screens CVs, books interviews & runs onboarding.",
-      vi: "Chấm điểm CV theo tiêu chí tuyển dụng, tự xếp lịch phỏng vấn và gửi hướng dẫn hội nhập.",
-    },
-    promptExample: {
-      en: "Screen 25 Operations Director CVs and schedule top 4 interviews.",
-      vi: "Lọc 25 hồ sơ ứng viên Giám đốc Vận hành, chọn ra 4 ứng viên sáng giá nhất để hẹn lịch phỏng vấn.",
-    },
-    tools: ["Greenhouse", "CV AST Parser", "Calendar MCP", "Handbook KB"],
-    metrics: {
-      en: [
-        { label: "Screened", value: "25 Dossiers", status: "neutral" },
-        { label: "Shortlisted", value: "Top 4 (92%+)", status: "pass" },
-        { label: "Time Saved", value: "14.5 hrs", status: "pass" },
-      ],
-      vi: [
-        { label: "Hồ sơ đã duyệt", value: "25 Ứng viên", status: "neutral" },
-        { label: "Vào phỏng vấn", value: "Top 4 (92%+)", status: "pass" },
-        { label: "Thời gian tiết kiệm", value: "14.5 giờ", status: "pass" },
-      ],
-    },
-    previewData: {
-      file: {
-        en: "talent-hub // Q4 Hiring",
-        vi: "talent-hub // Kế Hoạch Tuyển Dụng Q4",
-      },
-      action: {
-        en: "CV Competency Match",
-        vi: "Đối soát năng lực ứng viên",
-      },
-      steps: {
-        en: [
-          { label: "Parse 25 Resumes", detail: "Ops Director role", time: "0.4s", icon: "doc" },
-          { label: "Competency Score", detail: "ERP + Multi-cloud rubric", time: "0.9s", icon: "chart" },
-          { label: "Shortlist Top 4", detail: "92%+ objective match", time: "1.3s", icon: "check" },
-          { label: "Calendar Sync", detail: "Invites & scorecards sent", time: "1.6s", icon: "check" },
-        ],
-        vi: [
-          { label: "Phân tích 25 Hồ sơ CV", detail: "Vị trí Giám Đốc Vận Hành", time: "0.4s", icon: "doc" },
-          { label: "Chấm điểm năng lực", detail: "Khung năng lực ERP & Vận hành Đa đám mây", time: "0.9s", icon: "chart" },
-          { label: "Chọn Top 4 ứng viên", detail: "Điểm tương thích khách quan trên 92%", time: "1.3s", icon: "check" },
-          { label: "Đồng bộ lịch phỏng vấn", detail: "Đã gửi thư mời kèm biểu mẫu đánh giá", time: "1.6s", icon: "check" },
-        ],
-      },
-      logs: {
-        en: [
-          { time: "10:05:02", text: "Parsed 25 applicant CVs for Operations Director position", ok: true },
-          { time: "10:05:12", text: "Evaluated core competencies: ERP logistics, leadership, multi-cloud", ok: true },
-          { time: "10:05:19", text: "Selected top 4 candidates with 92%+ objective match scores", ok: true },
-          { time: "10:05:25", text: "Dispatched calendar invitations and interview scorecards", ok: true },
-        ],
-        vi: [
-          { time: "10:05:02", text: "Phân tích cấu trúc 25 hồ sơ CV ứng tuyển cho vị trí Giám Đốc Vận Hành", ok: true },
-          { time: "10:05:12", text: "Đánh giá các năng lực cốt lõi: Quản trị ERP logistics, năng lực lãnh đạo, hạ tầng đám mây", ok: true },
-          { time: "10:05:19", text: "Lựa chọn danh sách 4 ứng viên hàng đầu có độ phù hợp khách quan từ 92% trở lên", ok: true },
-          { time: "10:05:25", text: "Gửi thư mời phỏng vấn tự động kèm phiếu đánh giá tiêu chuẩn cho Hội Đồng Tuyển Dụng", ok: true },
-        ],
-      },
-    },
-  },
-];
-
-const PRICING_PLANS = [
-  {
-    name: "Premium",
-    price: "$30",
-    period: { en: "/ mo", vi: "/ tháng" },
-    badge: { en: "Starter", vi: "Khởi đầu" },
-    description: {
-      en: "1 dedicated Linux VM & daily workflow automation.",
-      vi: "Dành cho cá nhân hoặc nhóm nhỏ bắt đầu tự động hóa công việc hàng ngày.",
-    },
-    features: {
-      en: [
-        "Persistent Linux container (/app/working)",
-        "Headless Chromium CDP browser",
-        "Scheduled cron routines",
-        "Web, Desktop & Telegram access",
-      ],
-      vi: [
-        "Container Linux bền bỉ (/app/working)",
-        "Máy tính độc lập (Linux & Trình duyệt thật)",
-        "Lên lịch quy trình tự động định kỳ (cron)",
-        "Truy cập đồng thời qua Web, Desktop & Telegram",
-      ],
-    },
-  },
-  {
-    name: "Super",
-    price: "$100",
-    period: { en: "/ mo", vi: "/ tháng" },
-    badge: { en: "Most Popular", vi: "Phổ biến nhất" },
-    description: {
-      en: "Parallel multi-bot teams & 3.5x compute quota.",
-      vi: "Nhiều Bot phối hợp cùng lúc, xử lý công việc liên phòng ban với hạn mức gấp 3.5 lần.",
-    },
-    features: {
-      en: [
-        "Everything in Premium (3.5x quota)",
-        "Multi-bot ACP supervision tree",
-        "Priority frontier model routing",
-        "Deterministic execution receipts",
-      ],
-      vi: [
-        "Bao gồm toàn bộ tính năng gói Premium (3.5x tài nguyên)",
-        "Cây giám sát đa tác nhân phối hợp (ACP)",
-        "Ưu tiên định tuyến các mô hình AI đỉnh cao (frontier)",
-        "Biên nhận thực thi nghiệm thu minh bạch có mã hóa",
-      ],
-    },
-  },
-  {
-    name: "Ultra",
-    price: "$200",
-    period: { en: "/ mo", vi: "/ tháng" },
-    badge: { en: "Scale", vi: "Mở rộng" },
-    description: {
-      en: "12x compute, IAM360 governance & dedicated storage.",
-      vi: "Hạn mức điện toán gấp 12 lần, phân quyền bảo mật cấp doanh nghiệp và lưu trữ riêng.",
-    },
-    features: {
-      en: [
-        "Everything in Super (12x quota)",
-        "Multi-tenant IAM360 guardrails",
-        "Dedicated NVMe workspace volume",
-        "Earliest frontier model access",
-      ],
-      vi: [
-        "Bao gồm toàn bộ tính năng gói Super (12x tài nguyên)",
-        "Khung quản trị phân quyền đa tổ chức IAM360",
-        "Ổ cứng NVMe chuyên dụng lưu trữ không gian làm việc",
-        "Được cấp quyền tiếp cận sớm nhất các mô hình AI mới nhất",
-      ],
-    },
-  },
-  {
-    name: "On-Premise",
-    price: { en: "Custom", vi: "Theo yêu cầu" },
-    period: { en: "Sovereign", vi: "Chủ quyền" },
-    badge: { en: "Air-Gapped", vi: "Cô lập hoàn toàn" },
-    description: {
-      en: "100% self-hosted on your hardware via App360.",
-      vi: "Triển khai độc lập 100% trên phần cứng máy chủ của doanh nghiệp qua App360.",
-    },
-    features: {
-      en: [
-        "1-Click App360 K8s / Bare-metal deploy",
-        "Local GPU inference (vLLM / Ollama)",
-        "Zero external egress (Decree 13 / GDPR)",
-        "Dedicated SLA & custom MCP drivers",
-      ],
-      vi: [
-        "Triển khai 1-Click trên K8s hoặc máy chủ vật lý qua App360",
-        "Chạy Self-hosted Model trên GPU nội bộ (vLLM / Ollama)",
-        "Không truyền dữ liệu ra Internet (Tuân thủ Nghị định 13 & GDPR)",
-        "Cam kết SLA chuyên biệt & xây dựng MCP driver tùy chỉnh",
-      ],
-    },
-  },
-];
-
-const FAQS = [
-  {
-    q: {
-      en: "Can Skyer run 100% On-Premise without internet egress?",
-      vi: "Doanh nghiệp có thể cài đặt Skyer chạy hoàn toàn nội bộ mà không cần ra Internet không?",
-    },
-    a: {
-      en: "Yes. Skyer Enterprise deploys inside your private data center via App360 using Docker or Kubernetes, connecting directly to local vLLM/Ollama GPUs and intranet ERPs with zero external traffic.",
-      vi: "Hoàn toàn được. Bản Skyer Doanh nghiệp được cài thẳng vào máy chủ hoặc cụm Kubernetes của bạn qua App360. Hệ thống kết nối trực tiếp với GPU nội bộ (vLLM/Ollama) và các phần mềm ERP sẵn có, cam kết tuyệt đối không một byte dữ liệu nào ra khỏi tường lửa công ty.",
-    },
-  },
-  {
-    q: {
-      en: "How is Skyer different from chat wrappers?",
-      vi: "Skyer khác biệt như thế nào so với các ứng dụng bọc giao diện chat thông thường?",
-    },
-    a: {
-      en: "Each Skyer Bot owns a persistent Linux computer, headless Chromium browser, and MCP tool drivers. They execute real work in parallel 24/7 and return cryptographic verification receipts.",
-      vi: "Khác với các ứng dụng chỉ trả lời câu hỏi, mỗi Bot Skyer sở hữu một máy tính Linux riêng, có trình duyệt web và công cụ chuyên môn. Bot tự tay thao tác trên phần mềm của bạn, làm việc độc lập 24/7 và chỉ báo cáo khi đã có kết quả kiểm tra thực tế.",
-    },
-  },
-  {
-    q: {
-      en: "How do Human Approval Gates work?",
-      vi: "Cổng Phê Duyệt Của Con Người (Human Approval Gate) hoạt động ra sao?",
-    },
-    a: {
-      en: "Read/research actions run autonomously. Before any production write (bank payout, DB mutation, external email), Skyer pauses and sends an interactive approval card to your web console or Telegram.",
-      vi: "Các việc đọc, tìm kiếm số liệu hay tổng hợp thông tin sẽ do Bot tự động làm. Riêng những thao tác nhạy cảm như chuyển tiền, sửa đổi cơ sở dữ liệu hoặc gửi email quan trọng, Bot sẽ luôn dừng lại hỏi ý kiến bạn trên Web hoặc Telegram trước khi bấm nút.",
-    },
-  },
-  {
-    q: {
-      en: "Do multiple Bots share context and files?",
-      vi: "Các Bot có thể chia sẻ ngữ cảnh công việc và tệp dữ liệu với nhau không?",
-    },
-    a: {
-      en: "Yes. Bots in your workspace share a unified /app/working volume, browser sessions, and ReMe vector memory (MEMORY.md), allowing seamless task handoffs without re-prompting.",
-      vi: "Có. Các Bot trong cùng không gian làm việc dùng chung ổ cứng, phiên đăng nhập trình duyệt và bộ nhớ quy trình (MEMORY.md). Nhờ vậy, một Bot hoàn thành bước này có thể chuyển tiếp ngay cho Bot khác mà bạn không cần nhắc lại ngữ cảnh.",
-    },
-  },
-];
+import { StrawberryPricingSection } from "../components/StrawberryPricingSection";
+import { ContactModal } from "../components/ContactModal";
 
 export function LandingPage() {
-  const { t, language } = useTranslation();
+  const { language } = useTranslation();
   const isVi = language === "vi";
-  const navigate = useNavigate();
-
-  // Map bilingual role definitions based on the active language
-  const roles = useMemo(() => {
-    return AGENT_ROLE_DEFS.map((def) => ({
-      id: def.id,
-      category: def.category,
-      icon: def.icon,
-      title: isVi ? def.title.vi : def.title.en,
-      tag: isVi ? def.tag.vi : def.tag.en,
-      headline: isVi ? def.headline.vi : def.headline.en,
-      promptExample: isVi ? def.promptExample.vi : def.promptExample.en,
-      tools: def.tools,
-      metrics: isVi ? def.metrics.vi : def.metrics.en,
-      previewData: {
-        file: isVi ? def.previewData.file.vi : def.previewData.file.en,
-        action: isVi ? def.previewData.action.vi : def.previewData.action.en,
-        steps: isVi ? def.previewData.steps.vi : def.previewData.steps.en,
-        logs: isVi ? def.previewData.logs.vi : def.previewData.logs.en,
-      },
-    }));
-  }, [isVi]);
-
-  // Interactive States
-  const [selectedRoleGroup, setSelectedRoleGroup] = useState<string>("All");
-  const [activeRoleId, setActiveRoleId] = useState<string>("cos");
-  const activeRole = useMemo(() => {
-    return roles.find((r) => r.id === activeRoleId) || roles[0];
-  }, [roles, activeRoleId]);
-
-  const [visibleLogs, setVisibleLogs] = useState(0);
-  const [replayKey, setReplayKey] = useState(0);
-  const [heroTask, setHeroTask] = useState("");
-  const [hasSession, setHasSession] = useState(false);
-
-  // Live Interactive Simulation States
-  const [deployMode, setDeployMode] = useState<"onprem" | "cloud">("onprem");
-  const [approvalState, setApprovalState] = useState<"pending" | "approved" | "executing">("pending");
-  const [activeRoutineStep, setActiveRoutineStep] = useState<number>(0);
-  const [activeBrowserStep, setActiveBrowserStep] = useState<number>(0);
-  const [activeAcpStep, setActiveAcpStep] = useState<number>(0);
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const roleScrollRef = useRef<HTMLDivElement>(null);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [activeFoundationTab, setActiveFoundationTab] = useState<"vm" | "onprem" | "gate">("vm");
+  const [approvedDemo, setApprovedDemo] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [heroCursorStep, setHeroCursorStep] = useState(0);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
-    setHasSession(!!token);
-  }, []);
-
-  // 1. Role Workbench Step & Log Animator
-  useEffect(() => {
-    const total = activeRole.previewData.logs.length;
-    setVisibleLogs(0);
-    let n = 0;
-    const timer = window.setInterval(() => {
-      n += 1;
-      setVisibleLogs(n);
-      if (n >= total) window.clearInterval(timer);
-    }, 550);
-    return () => window.clearInterval(timer);
-  }, [activeRole, replayKey]);
-
-  // 2. Autonomous Routine & Browser & ACP Cyclic Animators
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveRoutineStep((prev) => (prev + 1) % 4);
-      setActiveBrowserStep((prev) => (prev + 1) % 4);
-      setActiveAcpStep((prev) => (prev + 1) % 4);
+    const timer = setInterval(() => {
+      setTick((prev) => (prev + 1) % 3);
+      setHeroCursorStep((prev) => (prev + 1) % 3);
     }, 2400);
-    return () => window.clearInterval(timer);
+    return () => clearInterval(timer);
   }, []);
 
-  const handleSignIn = (e: React.MouseEvent) => {
-    e.preventDefault();
-    initiateSkyerSignIn(authConfig, "signIn").catch(console.error);
-  };
+  const appTaskUrl = (task: string) => `/app?task=${encodeURIComponent(task)}`;
 
-  const handleSignUp = (e: React.MouseEvent) => {
-    e.preventDefault();
-    initiateSkyerSignIn(authConfig, "signUp").catch(console.error);
-  };
+  const heroCursorPos = [
+    { x: 260, y: 120 },
+    { x: 340, y: 168 },
+    { x: 290, y: 215 },
+  ][heroCursorStep];
 
-  const selectRoleById = (id: string) => {
-    setActiveRoleId(id);
-  };
-
-  const submitHeroTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    navigate(appTaskUrl(heroTask));
-  };
-
-  const triggerApproveDemo = () => {
-    setApprovalState("executing");
-    setTimeout(() => {
-      setApprovalState("approved");
-    }, 900);
-  };
-
-  // Palette roles formatted for command menu
-  const paletteRoles = useMemo(() => {
-    return roles.map((r) => ({
-      id: r.id,
-      title: r.title,
-      promptExample: r.promptExample,
-    }));
-  }, [roles]);
+  const companions = [
+    {
+      id: "minh-boc",
+      marketplaceId: "agent-chief-of-staff",
+      name: isVi ? "Minh Bốc" : "Executive Minh",
+      badge: isVi ? "Trợ lý Điều hành" : "Executive Ops",
+      badgeStyle: "bg-[#e0f2fe] text-[#0369a1] dark:bg-sky-500/20 dark:text-sky-300 border-sky-200 dark:border-sky-500/30",
+      cardGradient: "from-[#f0f9ff] to-[#FFFDF9] dark:from-[#0f1d2d] dark:to-[#0c0e15]",
+      blob: { shape: "squircle", expression: "proud", color: "#38bdf8", animation: "nod.1.4,wink.1.6", seed: 101 },
+      desc: isVi
+        ? "Tổng hợp KPI mỗi sáng, soạn sẵn dự thảo trả lời email và theo sát đầu việc không để trễ hạn."
+        : "Get a brief every morning, replies drafted in your voice, and follow-ups that don't slip.",
+      hireText: isVi ? "Tuyển Minh Bốc" : "Hire Minh",
+      task: "Tổng hợp báo cáo KPI tuần từ Kinh doanh, Tài chính và dự thảo biên bản họp giao ban",
+      renderMiniUi: () => (
+        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-sky-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+          <div className="flex items-center justify-between text-[9px] text-sky-600 dark:text-sky-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
+            <span>OKR // Q4 Board</span>
+            <span>08:30 AM</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>Doanh thu B2B</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">108% ✓</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>Runway Quỹ</span>
+            <span className="font-bold">18.4 tháng</span>
+          </div>
+          <div className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[9px] truncate">
+            {tick === 0 ? "⚡ Gửi báo cáo..." : "✓ Đã đồng bộ OKR"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "an-ke-toan",
+      marketplaceId: "agent-finance-controller",
+      name: isVi ? "An Kế Toán" : "Finance An",
+      badge: isVi ? "Kế toán TT99" : "Finance & ERP",
+      badgeStyle: "bg-[#dcfce7] text-[#15803d] dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30",
+      cardGradient: "from-[#f0fdf4] to-[#FFFDF9] dark:from-[#0f241c] dark:to-[#0c0e15]",
+      blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4,jump.1.4", seed: 202 },
+      desc: isVi
+        ? "Khớp 48 hóa đơn GTGT với đơn hàng PO trên ERPCore, lập chứng từ TT99 với độ lệch 0 đồng."
+        : "Reconcile 48 vendor e-invoices against POs in ERPCore and stage TT99 tax vouchers.",
+      hireText: isVi ? "Tuyển An" : "Hire An",
+      task: "Đối soát 48 hóa đơn điện tử nhà cung cấp với đơn hàng PO trên ERPCore chuẩn TT99",
+      renderMiniUi: () => (
+        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-emerald-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+          <div className="flex items-center justify-between text-[9px] text-emerald-600 dark:text-emerald-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
+            <span>ERPCore // 02-VT</span>
+            <span>TT99</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>PO-2026-891</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Khớp 100%</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>Chênh lệch</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">0 VNĐ</span>
+          </div>
+          <div className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[9px] truncate">
+            {tick === 1 ? "⚡ Đang kiểm chữ ký..." : "✓ 48/48 HĐ hợp lệ"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "linh-sales",
+      marketplaceId: "agent-b2b-sales-exec",
+      name: isVi ? "Linh Kinh Doanh" : "Sales Linh",
+      badge: isVi ? "Kinh doanh B2B" : "Sales & Leads",
+      badgeStyle: "bg-[#ffedd5] text-[#c2410c] dark:bg-orange-500/20 dark:text-orange-300 border-orange-200 dark:border-orange-500/30",
+      cardGradient: "from-[#fff7ed] to-[#FFFDF9] dark:from-[#291811] dark:to-[#0c0e15]",
+      blob: { shape: "cat", expression: "happy", color: "#f8a87c", animation: "wink.1.6,nod.1.4", seed: 303 },
+      desc: isVi
+        ? "Tìm 100 khách hàng doanh nghiệp tiềm năng, soạn báo giá và kịch bản tiếp cận theo đúng giọng của bạn."
+        : "Get 100 qualified B2B leads with personalized outreach written in your voice, ready to send.",
+      hireText: isVi ? "Tuyển Linh" : "Hire Linh",
+      task: "Tìm 25 doanh nghiệp sản xuất khu công nghiệp cần chuyển đổi số và soạn thư chào giá",
+      renderMiniUi: () => (
+        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-orange-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+          <div className="flex items-center justify-between text-[9px] text-orange-600 dark:text-orange-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
+            <span>CRM // Lead B2B</span>
+            <span>+100</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>VinFast Supply</span>
+            <span className="text-orange-600 dark:text-orange-400 font-bold">98%</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>Thaco Logistics</span>
+            <span className="text-orange-600 dark:text-orange-400 font-bold">95%</span>
+          </div>
+          <div className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-700 dark:text-orange-300 text-[9px] truncate">
+            {tick === 2 ? "⚡ Soạn báo giá PDF..." : "✓ 15 email sẵn sàng"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "vy-phap-che",
+      marketplaceId: "agent-legal-compliance",
+      name: isVi ? "Vy Pháp Chế" : "Legal Vy",
+      badge: isVi ? "Pháp chế & HĐ" : "Legal & NDA",
+      badgeStyle: "bg-[#f3e8ff] text-[#7e22ce] dark:bg-purple-500/20 dark:text-purple-300 border-purple-200 dark:border-purple-500/30",
+      cardGradient: "from-[#faf5ff] to-[#FFFDF9] dark:from-[#22152e] dark:to-[#0c0e15]",
+      blob: { shape: "bunny", expression: "attentive", color: "#a78bfa", animation: "nod.1.4,wink.1.6", seed: 404 },
+      desc: isVi
+        ? "Rà soát hợp đồng thương mại, khoanh vùng điều khoản phạt rủi ro và đối chiếu chuẩn Nghị định 13."
+        : "Redline commercial contracts, flag risky indemnity clauses, and verify NĐ13 data compliance.",
+      hireText: isVi ? "Tuyển Vy" : "Hire Vy",
+      task: "Rà soát hợp đồng nguyên tắc dịch vụ MSA, đánh dấu các điều khoản phạt và bảo mật NĐ13",
+      renderMiniUi: () => (
+        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-purple-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+          <div className="flex items-center justify-between text-[9px] text-purple-600 dark:text-purple-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
+            <span>MSA_2026.docx</span>
+            <span>NĐ13</span>
+          </div>
+          <div className="text-rose-500 line-through text-[9px] truncate">
+            Phạt không giới hạn
+          </div>
+          <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-[9px] truncate">
+            + Trần 100% giá trị HĐ
+          </div>
+          <div className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300 text-[9px] truncate">
+            ✓ Đã bảo vệ SHTT
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "nam-nhan-su",
+      marketplaceId: "agent-hr-talent-partner",
+      name: isVi ? "Nam Tuyển Dụng" : "Talent Nam",
+      badge: isVi ? "Nhân sự & C&B" : "Talent & HR",
+      badgeStyle: "bg-[#ffe4e6] text-[#be123c] dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-500/30",
+      cardGradient: "from-[#fff1f2] to-[#FFFDF9] dark:from-[#2b141b] dark:to-[#0c0e15]",
+      blob: { shape: "clover", expression: "excited", color: "#fb7185", animation: "jump.1.4,nod.1.4", seed: 505 },
+      desc: isVi
+        ? "Chấm điểm 10 ứng viên sáng giá nhất theo JD của phòng ban và tự động xếp lịch phỏng vấn."
+        : "Get 10 strong candidates, each researched and scored against what your team needs.",
+      hireText: isVi ? "Tuyển Nam" : "Hire Nam",
+      task: "Sàng lọc 25 CV ứng viên vị trí Trưởng phòng Vận hành và xếp lịch phỏng vấn tuần này",
+      renderMiniUi: () => (
+        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-rose-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+          <div className="flex items-center justify-between text-[9px] text-rose-600 dark:text-rose-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
+            <span>Top 10 Ứng viên</span>
+            <span>Match</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>Trần M. Hoàng</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">96%</span>
+          </div>
+          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+            <span>Lê Thu Hà</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold">94%</span>
+          </div>
+          <div className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 text-[9px] truncate">
+            ✓ Đã gửi lịch PV
+          </div>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="pt-16 overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#f8a87c]/30 selection:text-white">
+    <div className="pt-16 overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#f8a87c]/30 transition-colors">
       <SeoHead
         title={
           isVi
-            ? "Skyer — Đồng nghiệp AI Tự hành cho Doanh nghiệp (Cloud & On-Premise)"
-            : "Skyer — Autonomous AI Teammates & AgentCore Workforce Platform"
+            ? "Skyer — Đồng nghiệp AI làm việc ngay cạnh bạn"
+            : "Skyer — AI teammates that work alongside you"
         }
         description={
           isVi
-            ? "Mỗi nhân viên AI Skyer sở hữu một máy trạm Linux riêng (/app/working), tự thao tác trình duyệt thật, kết nối công cụ nội bộ và ghi nhớ công việc dài hạn. Triển khai linh hoạt trên Cloud hoặc 100% On-Premise qua App360."
-            : "Every Skyer AI teammate owns a dedicated Linux container, headless Chromium browser, MCP tool drivers, and ReMe vector memory. Deploy on Managed Cloud or 100% Air-Gapped On-Premise via App360."
+            ? "Skyer là nền tảng nhân viên AI sở hữu máy tính độc lập, tự thao tác bảng tính, trình duyệt và phần mềm doanh nghiệp 24/7."
+            : "Skyer is an AI workforce platform with built-in AI companions that take real operational work off your hands."
         }
-        keywords="Skyer, AI Employees, Autonomous Agents, AgentCore, Multi-Agent ACP, On-Premise AI, App360, AI Workforce, Vietnam Enterprise AI"
         canonicalPath="/"
-        aeoSummary={{
-          question: isVi ? "Skyer là gì và hoạt động như thế nào?" : "What is Skyer and how does it work?",
-          directAnswer: isVi
-            ? "Skyer là nền tảng lực lượng lao động AI doanh nghiệp được xây dựng trên AgentCore Kernel. Hệ thống cung cấp các nhân viên AI tự hành—mỗi nhân viên sở hữu một máy trạm Linux riêng biệt (/app/working), máy tính độc lập có trình duyệt thật, kết nối công cụ MCP và bộ nhớ vector ReMe 2 tầng—có khả năng làm việc 24/7 trên Cloud hoặc On-Premise cô lập hoàn toàn qua App360."
-            : "Skyer is an enterprise AI workforce platform built on the AgentCore Kernel. It provisions autonomous AI employees—each equipped with a rootless Linux computer (/app/working), headless Chromium CDP browser, MCP tool integrations, and dual-tier ReMe vector memory—capable of collaborating 24/7 on Managed Cloud or 100% Air-Gapped On-Premise via App360.",
-          keyFacts: isVi
-            ? [
-                "Kiến trúc: AgentCore Kernel v2.4 với container Linux rootless và cơ chế cách ly mạng eBPF.",
-                "Các vị trí chuyên trách: Chánh Văn Phòng (CoS), Kiểm Soát Viên Tài Chính (đối soát hóa đơn 3 bên & chứng từ TT99), Chuyên Viên Bán Hàng B2B, Hỗ Trợ Khách Hàng 24/7, Đối Tác Tuyển Dụng Nhân Sự.",
-                "Hình thức triển khai: Cloud trọn gói hoặc 100% On-Premise cô lập mạng (Air-Gapped) qua App360 (tuân thủ Nghị định 13/NĐ-CP, HIPAA, GDPR).",
-                "Tiêu chuẩn nghiệm thu: Triết lý No-Fake-Done nghiêm ngặt, chỉ hoàn thành khi có mã trả về 0, HTTP 200 OK hoặc biên nhận hash DOM thực tế.",
-              ]
-            : [
-                "Architecture: AgentCore Kernel v2.4 with rootless Linux containers and eBPF network isolation.",
-                "Roles: Chief of Staff, Financial Controller (TT99 & ERPCore 3-way matching), B2B Sales Executive, Customer Success Lead, HR & Talent Partner.",
-                "Deployment: Turnkey Managed Cloud ($30-$200/mo) or 100% Sovereign Air-Gapped On-Premise via App360 (compliant with Decree 13/ND-CP, HIPAA, GDPR).",
-                "Verification: Strict No-Fake-Done policy requiring exit code 0, HTTP 200 OK, or visual DOM receipt hashes.",
-              ],
-        }}
       />
-      <LandingCommandPalette roles={paletteRoles} onSelectRole={selectRoleById} />
 
-      {/* 1. Compact Status Telemetry Bar */}
-      <div className="border-b border-neutral-200/80 dark:border-[var(--border-subtle)] bg-slate-50/70 dark:bg-white/[0.015] backdrop-blur-md px-4 py-2 text-center text-xs text-neutral-600 dark:text-neutral-400">
-        <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-center gap-2">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#f8a87c] shrink-0 animate-pulse" />
-          <strong className="font-medium text-neutral-900 dark:text-white flex items-center gap-1">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] to-amber-400 font-bold">
-              Skyer
-            </span>
-            <span>{isVi ? "Nền tảng Đồng nghiệp AI Tự hành" : "Autonomous AI Workforce"}</span>
-          </strong>
-          <span className="text-neutral-400 dark:text-neutral-600">•</span>
-          <span className="font-mono text-[11px] bg-neutral-200/70 dark:bg-white/[0.05] text-neutral-700 dark:text-neutral-300 px-2 py-0.5 rounded-full">
-            "Managed Cloud & 100% On-Premise"
-          </span>
-          <a
-            href="#on-premise"
-            className="font-medium text-[#f8a87c] hover:underline inline-flex items-center gap-0.5 ml-1"
+      {/* 1. EXACT STRAWBERRY HERO ARCHITECTURE:
+          H1 + 2-line Subtitle + 2 Pill CTAs + 4 Companion Avatars Peeking from Top Edge of Live 16:10 Product Frame */}
+      <section className="relative pt-14 sm:pt-20 overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
+        {/* Strawberry Mosaic Geometric Side Background Pattern (Faint on Left & Right Outer Wings, Transparent in Center) */}
+        <div
+          className="absolute inset-x-0 top-0 h-[540px] pointer-events-none select-none overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 55%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 55%, transparent 100%)",
+          }}
+        >
+          <div
+            className="w-full h-full"
+            style={{
+              maskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 18%, rgba(0,0,0,0.03) 34%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.03) 66%, rgba(0,0,0,0.5) 82%, rgba(0,0,0,0.95) 100%)",
+              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 18%, rgba(0,0,0,0.03) 34%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.03) 66%, rgba(0,0,0,0.5) 82%, rgba(0,0,0,0.95) 100%)",
+            }}
           >
-            <span>{isVi ? "Kiến trúc" : "Architecture"}</span>
-            <ArrowRight size={11} />
-          </a>
+            <svg className="w-full h-full opacity-[0.38] dark:opacity-[0.06] text-[#e5ddd2] dark:text-white" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="strawberry-mosaic" width="64" height="64" patternUnits="userSpaceOnUse">
+                {/* Row 1 */}
+                <circle cx="8" cy="8" r="5.5" fill="currentColor" />
+                <rect x="20" y="3" width="9" height="9" rx="1.5" fill="currentColor" opacity="0.7" />
+                <polygon points="40,2 46,8 40,14 34,8" fill="currentColor" opacity="0.85" />
+                <circle cx="56" cy="8" r="3" fill="currentColor" opacity="0.5" />
+                {/* Row 2 */}
+                <polygon points="8,18 13,24 8,30 3,24" fill="currentColor" opacity="0.6" />
+                <circle cx="24" cy="24" r="6" fill="currentColor" opacity="0.9" />
+                <rect x="36" y="19" width="10" height="10" rx="2" fill="currentColor" opacity="0.55" />
+                <polygon points="56,18 62,24 56,30 50,24" fill="currentColor" opacity="0.8" />
+                {/* Row 3 */}
+                <rect x="3" y="35" width="10" height="10" rx="2" fill="currentColor" opacity="0.85" />
+                <polygon points="24,34 30,40 24,46 18,40" fill="currentColor" opacity="0.65" />
+                <circle cx="40" cy="40" r="5" fill="currentColor" opacity="0.9" />
+                <rect x="52" y="36" width="8" height="8" rx="1.5" fill="currentColor" opacity="0.6" />
+                {/* Row 4 */}
+                <circle cx="8" cy="56" r="4" fill="currentColor" opacity="0.5" />
+                <rect x="19" y="51" width="10" height="10" rx="2" fill="currentColor" opacity="0.8" />
+                <polygon points="40,50 46,56 40,62 34,56" fill="currentColor" opacity="0.7" />
+                <circle cx="56" cy="56" r="5.5" fill="currentColor" opacity="0.85" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#strawberry-mosaic)" />
+            </svg>
+          </div>
         </div>
-      </div>
 
-      {/* 2. Hero Section: Punchy Headline + Interactive Live Task Router */}
-      <section className="relative pt-14 pb-16 sm:pt-20 sm:pb-24 border-b border-neutral-200 dark:border-[var(--border-subtle)]">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[560px] md:w-[860px] h-[300px] bg-[#f8a87c]/[0.07] blur-[110px] pointer-events-none -z-10" />
-
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 text-center">
-          {/* Animated Live Kernel Pill */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 text-[11px] font-mono text-neutral-600 dark:text-neutral-300 mb-6"
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>AGENTCORE KERNEL v2.4</span>
-            <span className="text-neutral-300 dark:text-neutral-600">|</span>
-            <span className="text-[#f8a87c] font-semibold">{isVi ? "NGHIỆM THU THỰC TẾ" : "NO FAKE DONE"}</span>
-          </motion.div>
-
-          <h1 className="font-newsreader text-4xl sm:text-6xl md:text-7xl font-normal tracking-tight text-neutral-900 dark:text-white leading-[1.12] max-w-4xl mx-auto">
-            <span className="block sm:inline">
-              {isVi ? "Làm quen với " : "Meet "}
-              <span className="relative inline-block font-semibold">
-                <span className="absolute -inset-1 rounded-2xl bg-[#f8a87c]/25 blur-xl pointer-events-none -z-10" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 drop-shadow-[0_0_30px_rgba(248,168,124,0.4)]">
-                  Skyer
-                </span>
-              </span>
-              .
-            </span>{" "}
-            <span className="block mt-1 sm:mt-1.5 text-balance">
+        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Hero Holder: Centered Title, 2-line Description, 2 Pill CTAs */}
+          <div className="text-center flex flex-col items-center">
+            <h1
+              data-testid="hero-heading"
+              style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
+              className="max-w-[478px] text-[36px] sm:text-[47.8px] leading-[1.1] tracking-[-1.91px] text-[#252522] dark:text-[#f3f4f6] text-balance"
+            >
               {isVi ? (
                 <>
-                  <span className="whitespace-nowrap">Đồng nghiệp AI</span>{" "}
-                  <span className="whitespace-nowrap">làm được</span>{" "}
-                  <span className="whitespace-nowrap">việc thật.</span>
+                  Đồng nghiệp AI
+                  <br />
+                  làm việc cùng bạn
                 </>
               ) : (
                 <>
-                  <span className="whitespace-nowrap">AI teammates</span>{" "}
-                  <span>that finish</span>{" "}
-                  <span className="whitespace-nowrap">the work.</span>
+                  AI teammates that
+                  <br />
+                  work alongside you
                 </>
               )}
-            </span>
-          </h1>
+            </h1>
 
-          <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-mono text-neutral-600 dark:text-neutral-400">
-            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5">
-              {isVi ? "Máy tính Linux riêng" : "Dedicated Linux VM"}
-            </span>
-            <span className="text-neutral-300 dark:text-neutral-700">•</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5">
-              {isVi ? "Trình duyệt tự động" : "Headless Browser"}
-            </span>
-            <span className="text-neutral-300 dark:text-neutral-700">•</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5">
-              {isVi ? "Bộ nhớ dài hạn" : "Persistent Memory"}
-            </span>
-            <span className="text-neutral-300 dark:text-neutral-700">•</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-neutral-200/60 dark:bg-white/5 border border-neutral-300/40 dark:border-white/5 text-[#f8a87c]">
-              {isVi ? "Nghiệm thu 24/7" : "Verifiable Receipts"}
-            </span>
-          </div>
-
-          {/* Interactive Live Command Dispatcher */}
-          <form
-            onSubmit={submitHeroTask}
-            className="mt-8 sm:mt-10 mx-auto max-w-2xl rounded-2xl border border-neutral-200 dark:border-white/[0.12] bg-white dark:bg-[#0b0d12] p-2 text-left focus-within:border-[#f8a87c] shadow-lg dark:shadow-2xl transition-all"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <div className="flex items-center gap-2.5 flex-1 px-3 py-2">
-                <Terminal size={16} className="text-[#f8a87c] shrink-0" />
-                <input
-                  id="hero-task"
-                  value={heroTask}
-                  onChange={(e) => setHeroTask(e.target.value)}
-                  placeholder={
-                    isVi
-                      ? "Giao việc cho Bot: Đối soát 48 hóa đơn, xử lý ticket Zendesk, lọc hồ sơ ứng viên..."
-                      : "Assign a real task: Reconcile 48 invoices, triage Zendesk queue..."
-                  }
-                  className="w-full bg-transparent text-xs sm:text-sm text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:outline-none font-sans"
-                />
-              </div>
-              <button
-                type="submit"
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#f8a87c] px-5 text-xs sm:text-sm font-semibold text-black hover:bg-[#f5935f] transition-all cursor-pointer shrink-0 shadow-sm"
-              >
-                <span>{isVi ? "Giao việc ngay" : "Dispatch Bot"}</span>
-                <ArrowRight size={14} />
-              </button>
-            </div>
-
-            {/* Quick Interactive Role Presets */}
-            <div className="flex flex-wrap items-center gap-1.5 px-2 pt-2 pb-1 border-t border-neutral-100 dark:border-white/[0.06] mt-1">
-              <span className="text-[10px] font-mono uppercase text-neutral-400 mr-1">
-                {isVi ? "Mẫu thử nhanh:" : "Presets:"}
-              </span>
-              {roles.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => {
-                    setHeroTask(r.promptExample);
-                    setActiveRoleId(r.id);
-                  }}
-                  className={`rounded-full border px-2.5 py-0.5 text-[11px] font-mono transition-all cursor-pointer ${
-                    heroTask === r.promptExample
-                      ? "bg-[#f8a87c]/20 border-[#f8a87c] text-[#f8a87c] font-semibold"
-                      : "border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.02] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-                  }`}
-                >
-                  {r.title}
-                </button>
-              ))}
-            </div>
-          </form>
-
-          {/* Animated Live Routing Simulation when typing or selecting a preset */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={heroTask || "default-flow"}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2 }}
-              className="mt-4 mx-auto max-w-2xl rounded-xl border border-neutral-200 dark:border-white/10 bg-slate-50/90 dark:bg-[#0d1017]/90 px-4 py-3 text-left font-mono text-[11px] shadow-sm"
+            <p
+              data-testid="hero-description"
+              style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
+              className="mt-4 text-[15px] sm:text-[18px] md:text-[21.6px] leading-[1.42] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] font-normal px-1"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-neutral-500 dark:text-neutral-400">
-                    {"ACP ROUTER:"}
+              {isVi ? (
+                <>
+                  <span className="md:whitespace-nowrap">
+                    Skyer là không gian làm việc tích hợp sẵn <span className="whitespace-nowrap">nhân viên AI</span>
+                  </span>{" "}
+                  <br className="hidden md:inline" />
+                  <span className="md:whitespace-nowrap">
+                    giúp bạn gánh vác công việc thực tế <span className="whitespace-nowrap">mỗi ngày</span>
                   </span>
-                  <span className="text-neutral-900 dark:text-white font-semibold">
-                    {heroTask.toLowerCase().includes("hóa đơn") || heroTask.toLowerCase().includes("invoice") || heroTask.toLowerCase().includes("tài chính") || heroTask.toLowerCase().includes("finance")
-                      ? (isVi ? "Kiểm Soát Viên Tài Chính" : "Financial Controller")
-                      : heroTask.toLowerCase().includes("zendesk") || heroTask.toLowerCase().includes("ticket") || heroTask.toLowerCase().includes("hỗ trợ")
-                      ? (isVi ? "Hỗ Trợ & CSKH 24/7" : "Customer Success")
-                      : heroTask.toLowerCase().includes("sales") || heroTask.toLowerCase().includes("bán hàng") || heroTask.toLowerCase().includes("sea")
-                      ? (isVi ? "Chuyên Viên Bán Hàng B2B" : "B2B Sales Executive")
-                      : heroTask.toLowerCase().includes("cv") || heroTask.toLowerCase().includes("tuyển dụng") || heroTask.toLowerCase().includes("hire")
-                      ? (isVi ? "Tuyển Dụng & Nhân Sự" : "HR & Talent Partner")
-                      : activeRole.title}
+                </>
+              ) : (
+                <>
+                  <span className="md:whitespace-nowrap">
+                    Skyer is a workspace with built-in <span className="whitespace-nowrap">AI companions</span>
+                  </span>{" "}
+                  <br className="hidden md:inline" />
+                  <span className="md:whitespace-nowrap">
+                    that take real work off <span className="whitespace-nowrap">your hands</span>
                   </span>
-                </div>
-                <div className="flex items-center gap-3 text-[10px]">
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    {"SANDBOX: /app/working"}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30">
-                    {isVi ? "HUMAN GATE: SẴN SÀNG" : "HUMAN GATE: ARMED"}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+                </>
+              )}
+            </p>
 
-          {/* Primary Action Buttons */}
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            {hasSession ? (
+            {/* 2 Pill CTAs (Primary Charcoal/White + Secondary Pill Surface) */}
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3.5">
               <Link
                 to="/app"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f8a87c] text-black hover:bg-[#f5935f] px-7 text-xs sm:text-sm font-semibold transition-all shadow-[0_0_25px_rgba(248,168,124,0.3)]"
+                className="inline-flex items-center justify-center px-7 py-3 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[15px] font-medium hover:opacity-90 transition-all shadow-sm"
               >
-                <span>{t("hero.launchApp")}</span>
-                <ArrowRight size={14} />
+                {isVi ? "Bắt đầu làm việc" : "Launch Workspace"}
               </Link>
-            ) : (
-              <>
+              <button
+                type="button"
+                onClick={() => setContactOpen(true)}
+                className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white dark:bg-[#161a24] text-[#252522] dark:text-[#f3f4f6] border border-[#ECE5DC] dark:border-white/10 text-[15px] font-medium shadow-2xs hover:bg-[#F8F3ED] dark:hover:bg-white/10 transition-all cursor-pointer"
+              >
+                {isVi ? "Liên hệ Doanh nghiệp" : "Contact Sales"}
+              </button>
+            </div>
+          </div>
+
+          {/* HERO PRODUCT STAGE: 4 Companion Avatars Peeking from Top Edge + 16:10 Live Workspace Frame */}
+          <div className="relative mt-24 sm:mt-28">
+            {/* 4 Peeking Companions Perched on Top Edge of Frame (Exact Strawberry model-pos-1..4 pattern) */}
+            <div className="pointer-events-none select-none">
+              {/* Left Outer Companion: Vy Pháp Chế (Purple) */}
+              <motion.div
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+                className="hidden md:flex flex-col items-center absolute -top-[74px] left-[8%] lg:left-[11%] z-10"
+              >
+                <span className="mb-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                  Vy Pháp Chế
+                </span>
+                <AgentAvatar
+                  agent={{ id: "peek-vy", name: "Vy Pháp Chế" }}
+                  size="lg"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "bunny", expression: "attentive", color: "#a78bfa", animation: "wink.1.6,nod.1.4", seed: 404 },
+                  }}
+                />
+              </motion.div>
+
+              {/* Left Inner Companion: Minh Bốc (Sky Blue) */}
+              <motion.div
+                animate={{ y: [0, -7, 0] }}
+                transition={{ duration: 3.0, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                className="flex flex-col items-center absolute -top-[78px] left-[16%] sm:left-[24%] lg:left-[26%] z-10"
+              >
+                <span className="mb-1 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                  Minh Bốc
+                </span>
+                <AgentAvatar
+                  agent={{ id: "peek-minh", name: "Minh Bốc" }}
+                  size="lg"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "squircle", expression: "proud", color: "#38bdf8", animation: "nod.1.4,wink.1.6", seed: 101 },
+                  }}
+                />
+              </motion.div>
+
+              {/* Right Inner Companion: An Kế Toán (Emerald Mint) */}
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
+                className="flex flex-col items-center absolute -top-[78px] right-[16%] sm:right-[24%] lg:right-[26%] z-10"
+              >
+                <span className="mb-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                  An Kế Toán
+                </span>
+                <AgentAvatar
+                  agent={{ id: "peek-an", name: "An Kế Toán" }}
+                  size="lg"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4,jump.1.4", seed: 202 },
+                  }}
+                />
+              </motion.div>
+
+              {/* Right Outer Companion: Linh Kinh Doanh (Peach Orange) */}
+              <motion.div
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut", delay: 0.9 }}
+                className="hidden md:flex flex-col items-center absolute -top-[74px] right-[8%] lg:right-[11%] z-10"
+              >
+                <span className="mb-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                  Linh B2B
+                </span>
+                <AgentAvatar
+                  agent={{ id: "peek-linh", name: "Linh Kinh Doanh" }}
+                  size="lg"
+                  alwaysAnimate
+                  overrideConfig={{
+                    type: "blob",
+                    blob: { shape: "cat", expression: "happy", color: "#f8a87c", animation: "wink.1.6,nod.1.4", seed: 303 },
+                  }}
+                />
+              </motion.div>
+            </div>
+
+            {/* 16:10 Hero Product Frame (Bleeds slightly into bottom border like Strawberry) */}
+            <div className="relative z-20 rounded-t-[16px] border border-b-0 border-[#ECE5DC] dark:border-white/15 bg-white dark:bg-[#11151f] shadow-[0_16px_34px_rgba(15,23,42,0.05),0_60px_120px_rgba(15,23,42,0.10)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.65)] overflow-hidden">
+              {/* Top Browser Window Bar */}
+              <div className="h-10 bg-[#F8F3ED] dark:bg-[#0c0f17] border-b border-[#ECE5DC] dark:border-white/10 px-3 sm:px-4 flex items-center justify-between gap-2 text-xs font-mono overflow-hidden">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
+                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#ff5f56] shrink-0" />
+                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#ffbd2e] shrink-0" />
+                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#27c93f] shrink-0" />
+                  <div className="ml-1.5 sm:ml-2 flex items-center gap-1.5 min-w-0 overflow-hidden">
+                    <span className="px-2 sm:px-2.5 py-1 rounded-md bg-white dark:bg-[#181d2a] text-[#252522] dark:text-white font-semibold text-[10px] sm:text-[11px] shadow-2xs border border-[#ECE5DC]/70 dark:border-white/10 flex items-center gap-1.5 truncate">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                      <span className="truncate">ERPCore // Đối soát Hóa đơn TT99</span>
+                    </span>
+                    <span className="hidden md:inline-block px-2.5 py-1 rounded-md text-neutral-500 dark:text-neutral-400 text-[11px] whitespace-nowrap truncate">
+                      BaseCore // MSA_2026.docx
+                    </span>
+                    <span className="hidden lg:inline-block px-2.5 py-1 rounded-md text-neutral-500 dark:text-neutral-400 text-[11px] whitespace-nowrap shrink-0">
+                      Knowledge Base KB
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[9.5px] sm:text-[10px] font-semibold whitespace-nowrap">
+                    <span className="sm:hidden">On-Premise</span>
+                    <span className="hidden sm:inline">Máy tính độc lập • On-Premise</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Workspace Body: Left AI Companion Chat + Right Live Spreadsheet & ERP Canvas */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[340px] sm:min-h-[390px]">
+                {/* Left 4 Cols: Active Companion Sidebar */}
+                <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-white/10 bg-[#FFFDF9] dark:bg-[#0e121b] p-4 sm:p-5 flex flex-col justify-between">
+                  <div className="space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AgentAvatar
+                          agent={{ id: "sidebar-an", name: "An Kế Toán" }}
+                          size="sm"
+                          alwaysAnimate
+                          overrideConfig={{
+                            type: "blob",
+                            blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4", seed: 202 },
+                          }}
+                        />
+                        <div>
+                          <div className="text-xs font-bold text-[#252522] dark:text-white">An Kế Toán</div>
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">● Đang thao tác trên tab</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F8F3ED] dark:bg-white/5 text-neutral-600 dark:text-neutral-400 border border-[#ECE5DC] dark:border-white/10">
+                        TT99
+                      </span>
+                    </div>
+
+                    {/* User instruction bubble */}
+                    <div className="p-3 rounded-2xl rounded-tl-xs bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 text-xs text-[#252522] dark:text-neutral-200">
+                      {isVi
+                        ? "Đối chiếu 48 hóa đơn GTGT tháng 10 với đơn hàng PO trên ERPCore và lập bảng kê Mẫu 02-VT."
+                        : "Reconcile 48 October VAT invoices against POs in ERPCore and stage TT99 vouchers."}
+                    </div>
+
+                    {/* Companion live step progress */}
+                    <div className="p-3 rounded-2xl bg-white dark:bg-[#151a26] border border-[#ECE5DC] dark:border-white/10 space-y-2 text-[11px]">
+                      <div className="font-semibold text-[#252522] dark:text-white">
+                        {isVi ? "Tiến độ tự hành:" : "Autonomous steps:"}
+                      </div>
+                      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
+                        <Check size={12} /> <span>1. Đọc 48 file XML/PDF Hóa đơn điện tử</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
+                        <Check size={12} /> <span>2. Khớp 3 bên PO - Phiếu kho - Hóa đơn</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[#c2540a] dark:text-[#f8a87c] font-mono text-[10px] font-semibold">
+                        <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-ping" />
+                        <span>3. Đang ghi Sổ Cái ERPCore (0 VNĐ lệch)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mini Input Bar */}
+                  <div className="mt-4 pt-3 border-t border-[#ECE5DC] dark:border-white/10 flex items-center justify-between text-[11px] text-neutral-400 font-mono">
+                    <span>{isVi ? "Giao thêm việc cho An..." : "Queue a follow-up..."}</span>
+                    <Link
+                      to="/app"
+                      className="px-2.5 py-1 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-black text-[10px] font-sans font-semibold"
+                    >
+                      {isVi ? "Mở App →" : "Open →"}
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Right 8 Cols: Live ERP Spreadsheet Viewport with Moving AI Cursor */}
+                <div className="lg:col-span-8 p-4 sm:p-6 bg-white dark:bg-[#11151f] relative flex flex-col justify-between font-mono text-xs">
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#ECE5DC] dark:border-white/10">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px]">
+                          SỔ CÁI TT99
+                        </span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">
+                          Bang_Ke_Chung_Tu_T10_2026.xlsx
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                        ✓ 48/48 Khớp • Chênh lệch: 0₫
+                      </span>
+                    </div>
+
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-1 text-[10px] text-neutral-400 dark:text-neutral-500 pb-2 border-b border-neutral-100 dark:border-white/5">
+                      <span className="col-span-5 sm:col-span-4">Nhà cung cấp</span>
+                      <span className="hidden sm:inline col-span-3">Số PO / HĐ</span>
+                      <span className="col-span-4 sm:col-span-3 text-right sm:text-left">Giá trị (VNĐ)</span>
+                      <span className="col-span-3 sm:col-span-2 text-right">Đối soát</span>
+                    </div>
+
+                    {/* Table Rows */}
+                    <div className="divide-y divide-neutral-100 dark:divide-white/5 text-[10.5px] sm:text-[11px]">
+                      {[
+                        { vendor: "VinFast Energy", po: "PO-891 / HĐ-0041", val: "482.500.000₫", status: "Khớp 100%" },
+                        { vendor: "Masan Consumer", po: "PO-892 / HĐ-0042", val: "195.000.000₫", status: "Khớp 100%" },
+                        { vendor: "FPT Smart Cloud", po: "PO-894 / HĐ-0045", val: "310.800.000₫", status: "Khớp 100%" },
+                        { vendor: "Viettel Logistics", po: "PO-899 / HĐ-0049", val: "128.400.000₫", status: "Đang ghi..." },
+                      ].map((row, idx) => {
+                        const active = idx === heroCursorStep;
+                        return (
+                          <div
+                            key={row.po}
+                            className={
+                              "grid grid-cols-12 gap-1 py-2.5 items-center px-2 rounded-lg transition-colors " +
+                              (active ? "bg-emerald-500/10 border border-emerald-500/30" : "")
+                            }
+                          >
+                            <span className="col-span-5 sm:col-span-4 font-semibold text-[#252522] dark:text-white truncate">
+                              {row.vendor}
+                            </span>
+                            <span className="hidden sm:inline col-span-3 text-neutral-500 dark:text-neutral-400 truncate text-[10px]">
+                              {row.po}
+                            </span>
+                            <span className="col-span-4 sm:col-span-3 text-right sm:text-left text-[#252522] dark:text-neutral-200 font-medium whitespace-nowrap">
+                              {row.val}
+                            </span>
+                            <span className="col-span-3 sm:col-span-2 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[10px] whitespace-nowrap">
+                              ✓ {row.status}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Named AI Cursor Floating Inside Hero Frame */}
+                  <motion.div
+                    animate={{ x: heroCursorPos.x - 100, y: heroCursorPos.y - 40 }}
+                    transition={{ type: "spring", stiffness: 110, damping: 18 }}
+                    className="absolute top-0 left-0 pointer-events-none z-30 flex items-center gap-1"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" className="drop-shadow-md">
+                      <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+                    </svg>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-sans font-bold shadow-md">
+                      An Kế Toán
+                    </span>
+                  </motion.div>
+
+                  {/* Bottom Control Bar inside Hero Viewport */}
+                  <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-[#18181b] border border-neutral-200 dark:border-white/15 text-neutral-800 dark:text-white text-[9px] shadow-xs whitespace-nowrap shrink-0">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                      <span className="font-medium whitespace-nowrap text-neutral-700 dark:text-neutral-200">{isVi ? "An Kế Toán điều khiển" : "Controlled by An"}</span>
+                      <button type="button" className="px-1.5 py-0.5 rounded-full bg-white dark:bg-white/20 border border-neutral-200 dark:border-transparent text-neutral-800 dark:text-white text-[8.5px] font-semibold shadow-xs whitespace-nowrap hover:bg-neutral-50 dark:hover:bg-white/30 transition-colors cursor-pointer">{isVi ? "Tiếp quản" : "Take over"}</button>
+                    </div>
+                    <span className="text-[9.5px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                      {isVi ? "Biên nhận thực thi lưu tự động vào Knowledge Base KB" : "Execution receipt synced to KB"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 1B. TRUSTED ENTERPRISE LOGO STRIP + "HIRE YOUR NEXT AI COLLEAGUE" 2-COLUMN SECTION */}
+      <section className="py-16 sm:py-24 border-b border-[var(--border-card)] bg-[var(--bg-page)]">
+        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
+          {/* Monochrome Logo Strip */}
+          <div className="text-center mb-16">
+            <p className="text-xs font-mono uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-6">
+              {isVi ? "Đồng hành cùng các doanh nghiệp tăng trưởng nhanh" : "Trusted by fast-growing teams"}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 text-sm font-bold tracking-tight text-neutral-400 dark:text-neutral-500 select-none">
+              <span>VINFAST</span>
+              <span>MASAN GROUP</span>
+              <span>FPT SOFTWARE</span>
+              <span>VIETTEL POST</span>
+              <span>AGENTCORE</span>
+              <span>ERPCORE</span>
+            </div>
+          </div>
+
+          {/* 2-Column Split: "Hire your next AI colleague" + Trio of Animated Companions */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center pt-4">
+            <div className="lg:col-span-6 space-y-5">
+              <h2
+                style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
+                className="text-3xl sm:text-[47.8px] tracking-[-1.91px] leading-[1.14] text-[#252522] dark:text-[#f3f4f6]"
+              >
+                {(() => {
+                  const pillVariants = [
+                    {
+                      en: "first",
+                      vi: "đầu tiên",
+                      cls: "bg-[#F5E3D3] text-[#834C43] dark:bg-[#f8a87c]/20 dark:text-[#f8a87c]",
+                    },
+                    {
+                      en: "next",
+                      vi: "tiếp theo",
+                      cls: "bg-[#E2EFE0] text-[#4E704B] dark:bg-emerald-500/20 dark:text-emerald-300",
+                    },
+                    {
+                      en: "tenth",
+                      vi: "thứ mười",
+                      cls: "bg-[#DCEBF2] text-[#4B667B] dark:bg-sky-500/20 dark:text-sky-300",
+                    },
+                  ];
+                  const activePill = pillVariants[tick % pillVariants.length];
+
+                  return isVi ? (
+                    <>
+                      <span className="block sm:inline">Tuyển đồng nghiệp AI</span>{" "}
+                      <span className="inline-flex items-center justify-center align-baseline">
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={activePill.vi}
+                            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                            transition={{ duration: 0.28, ease: [0.45, 0, 0.55, 1] }}
+                            className={`inline-block px-4 py-0.5 rounded-full font-medium transition-colors duration-300 ${activePill.cls}`}
+                          >
+                            {activePill.vi}
+                          </motion.span>
+                        </AnimatePresence>
+                      </span>
+                      <span className="block mt-1">cho đội ngũ của bạn</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Hire your </span>
+                      <span className="inline-flex items-center justify-center align-baseline">
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={activePill.en}
+                            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                            transition={{ duration: 0.28, ease: [0.45, 0, 0.55, 1] }}
+                            className={`inline-block px-4 py-0.5 rounded-full font-medium transition-colors duration-300 ${activePill.cls}`}
+                          >
+                            {activePill.en}
+                          </motion.span>
+                        </AnimatePresence>
+                      </span>
+                      <br />
+                      <span>AI colleague</span>
+                    </>
+                  );
+                })()}
+              </h2>
+
+              <div className="space-y-3 text-base sm:text-[19px] leading-[1.45] text-[#252522]/75 dark:text-neutral-300 font-normal max-w-md">
+                <p>
+                  {isVi ? (
+                    <>
+                      Trong Skyer, bạn có thể tuyển dụng hoặc tự tạo{" "}
+                      <strong className="font-semibold text-[#252522] dark:text-white">Nhân viên AI chuyên trách.</strong>
+                    </>
+                  ) : (
+                    <>
+                      In Skyer you can hire or create{" "}
+                      <strong className="font-semibold text-[#252522] dark:text-white">AI Companions.</strong>
+                    </>
+                  )}
+                </p>
+                <p>
+                  {isVi
+                    ? "Nhân viên học quy trình của bạn, ghi nhớ ngữ cảnh chung và bắt đầu làm việc 24/7."
+                    : "Companions learn your preferences and workflows, and can start working for you 24/7."}
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/app"
+                  className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-black text-[14px] font-medium hover:opacity-90 transition-all"
+                >
+                  {isVi ? "Tuyển nhân viên ngay" : "Hire now"}
+                </Link>
+                <a
+                  href="#bots"
+                  className="inline-flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full bg-white dark:bg-[#161a24] border border-[#ECE5DC] dark:border-white/10 text-[14px] font-medium text-[#252522] dark:text-white shadow-2xs hover:bg-[#F8F3ED] dark:hover:bg-white/10 transition-all"
+                >
+                  <span className="h-7 w-7 rounded-full bg-[#f8a87c]/25 flex items-center justify-center text-[#c2540a] dark:text-[#f8a87c]">
+                    <Play size={12} fill="currentColor" />
+                  </span>
+                  <span>{isVi ? "Xem hồ sơ năng lực" : "See how it works"}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Right: Trio of Animated Character Avatars */}
+            <div className="lg:col-span-6 flex items-center justify-center">
+              <div className="w-full max-w-lg rounded-3xl bg-[#F8F3ED] dark:bg-[#11151f] border border-[#ECE5DC] dark:border-white/10 p-6 sm:p-8 shadow-xs">
+                <div className="grid grid-cols-3 gap-4 items-end">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-3 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
+                      <AgentAvatar
+                        agent={{ id: "hero-minh", name: "Minh Bốc" }}
+                        size="xl"
+                        alwaysAnimate
+                        overrideConfig={{
+                          type: "blob",
+                          blob: { shape: "squircle", expression: "proud", color: "#38bdf8", animation: "nod.1.4,wink.1.6", seed: 101 },
+                        }}
+                      />
+                    </div>
+                    <span className="mt-2.5 text-xs font-semibold text-[#252522] dark:text-white">Minh Bốc</span>
+                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{isVi ? "Điều hành" : "Executive"}</span>
+                  </div>
+
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-3 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
+                      <AgentAvatar
+                        agent={{ id: "hero-an", name: "An Kế Toán" }}
+                        size="xl"
+                        alwaysAnimate
+                        overrideConfig={{
+                          type: "blob",
+                          blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4,jump.1.4", seed: 202 },
+                        }}
+                      />
+                    </div>
+                    <span className="mt-2.5 text-xs font-semibold text-[#252522] dark:text-white">An Kế Toán</span>
+                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{isVi ? "Kế toán TT99" : "Finance"}</span>
+                  </div>
+
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-3 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
+                      <AgentAvatar
+                        agent={{ id: "hero-vy", name: "Vy Pháp Chế" }}
+                        size="xl"
+                        alwaysAnimate
+                        overrideConfig={{
+                          type: "blob",
+                          blob: { shape: "bunny", expression: "happy", color: "#a78bfa", animation: "wink.1.6,nod.1.4", seed: 404 },
+                        }}
+                      />
+                    </div>
+                    <span className="mt-2.5 text-xs font-semibold text-[#252522] dark:text-white">Vy Pháp Chế</span>
+                    <span className="text-[10px] text-neutral-500 dark:text-neutral-400">{isVi ? "Pháp chế" : "Legal"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. OFFICIAL COMPANIONS 6-CARD GRID */}
+      <section id="bots" className="py-20 sm:py-28 border-b border-[var(--border-card)] bg-[var(--bg-card-subtle)] transition-colors">
+        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[32px]">
+            {companions.map((comp) => (
+              <div
+                key={comp.id}
+                className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f] p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all group"
+              >
+                <div>
+                  <div
+                    className={
+                      "h-52 rounded-2xl bg-gradient-to-br " +
+                      comp.cardGradient +
+                      " border border-[#ECE5DC]/80 dark:border-white/10 px-3.5 pt-3.5 pb-11 relative overflow-hidden flex items-center justify-between gap-2 mb-5"
+                    }
+                  >
+                    <div
+                      className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
+                      style={{
+                        backgroundImage: "radial-gradient(#252522 1px, transparent 1px)",
+                        backgroundSize: "12px 12px",
+                      }}
+                    />
+
+                    <div className="relative z-10 pl-1">
+                      <AgentAvatar
+                        agent={{ id: comp.id, name: comp.name }}
+                        size="lg"
+                        alwaysAnimate
+                        overrideConfig={{
+                          type: "blob",
+                          blob: comp.blob as any,
+                        }}
+                      />
+                    </div>
+
+                    <div className="relative z-10">{comp.renderMiniUi()}</div>
+
+                    <div
+                      className={
+                        "absolute bottom-2.5 right-3 z-20 px-3 py-1 rounded-full border text-[11px] font-semibold shadow-2xs " +
+                        comp.badgeStyle
+                      }
+                    >
+                      {comp.name} • {comp.badge}
+                    </div>
+                  </div>
+
+                  <p className="text-[15.3px] leading-[1.45] text-[#252522]/85 dark:text-neutral-300 font-normal px-1">
+                    {comp.desc}
+                  </p>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#ECE5DC]/60 dark:border-white/10 flex items-center justify-between px-1">
+                  <Link
+                    to={appTaskUrl(comp.task)}
+                    className="px-4 py-2 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[13px] font-medium hover:opacity-90 transition-opacity"
+                  >
+                    {comp.hireText}
+                  </Link>
+                  <Link
+                    to={`/marketplace/${(comp as any).marketplaceId}`}
+                    className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1 transition-colors"
+                  >
+                    <span>{isVi ? "Tìm hiểu thêm" : "Learn more"}</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+
+            {/* 6th Card: "+ Create your own" */}
+            <div className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f] p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all group">
+              <div>
+                <div className="h-52 rounded-2xl bg-gradient-to-br from-neutral-100 to-[#FFFDF9] dark:from-[#161b26] dark:to-[#0c0e15] border border-dashed border-neutral-300 dark:border-white/15 px-3.5 pt-3.5 pb-11 relative overflow-hidden flex items-center justify-between gap-2 mb-5">
+                  <div className="relative z-10 pl-1">
+                    <AgentAvatar
+                      agent={{ id: "custom-builder", name: "Custom AI" }}
+                      size="lg"
+                      alwaysAnimate
+                      overrideConfig={{
+                        type: "blob",
+                        blob: { shape: "star", expression: "wink", color: "#fbbf24", animation: "spin.1.6,wink.1.4", seed: 777 },
+                      }}
+                    />
+                  </div>
+                  <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] border border-neutral-200 dark:border-white/10 p-2.5 text-[10px] font-mono text-[#252522] dark:text-neutral-300 shadow-xs space-y-1">
+                    <div className="font-bold text-[#252522] dark:text-white">+ Kỹ năng SOP riêng</div>
+                    <div>✓ Kết nối ERPCore</div>
+                    <div>✓ Chạy tự động 24/7</div>
+                  </div>
+
+                  <div className="absolute bottom-2.5 right-3 px-3 py-1 rounded-full bg-neutral-200/80 dark:bg-white/10 text-[#252522] dark:text-neutral-200 text-[11px] font-semibold flex items-center gap-1">
+                    <Plus size={12} />
+                    <span>{isVi ? "Tự tạo nhân viên mới" : "Create your own"}</span>
+                  </div>
+                </div>
+
+                <p className="text-[15.3px] leading-[1.45] text-[#252522]/85 dark:text-neutral-300 font-normal px-1">
+                  {isVi
+                    ? "Thiết kế đồng nghiệp AI với diện mạo, công cụ MCP và quy trình duyệt chi riêng cho doanh nghiệp bạn."
+                    : "Create a teammate with its own look, built around your process and schedule."}
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-[#ECE5DC]/60 dark:border-white/10 flex items-center justify-between px-1">
                 <button
                   type="button"
-                  onClick={handleSignUp}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f8a87c] text-black hover:bg-[#f5935f] px-7 text-xs sm:text-sm font-semibold transition-all shadow-[0_0_25px_rgba(248,168,124,0.3)] cursor-pointer"
+                  onClick={() => setContactOpen(true)}
+                  className="px-4 py-2 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[13px] font-medium hover:opacity-90 transition-opacity cursor-pointer"
                 >
-                  <span>{isVi ? "Bắt đầu dùng thử miễn phí" : "Start Free Workspace"}</span>
-                  <ArrowRight size={14} />
+                  {isVi ? "Tạo từ đầu" : "Start from scratch"}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSignIn}
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-300 dark:border-white/15 bg-white dark:bg-white/[0.03] hover:bg-neutral-100 dark:hover:bg-white/[0.08] px-6 text-xs sm:text-sm font-medium text-neutral-800 dark:text-white transition-all cursor-pointer"
+                <Link
+                  to="/marketplace"
+                  className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1"
                 >
-                  {t("nav.signIn")}
-                </button>
-              </>
-            )}
+                  <span>{isVi ? "Thư viện mẫu" : "Templates"}</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
             <Link
               to="/marketplace"
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-neutral-200 dark:border-white/10 bg-neutral-100/70 dark:bg-white/[0.02] hover:border-[#f8a87c]/50 px-5 text-xs font-mono text-neutral-600 dark:text-neutral-300 transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white dark:bg-[#11151f] border border-[#ECE5DC] dark:border-white/10 text-[14px] font-medium text-[#252522] dark:text-white shadow-2xs hover:bg-[#F8F3ED] dark:hover:bg-white/10 transition-all"
             >
-              <Layers size={13} className="text-[#f8a87c]" />
-              <span>{isVi ? "Chợ Nhân viên AI" : "Role Marketplace"}</span>
+              <span>{isVi ? "Xem toàn bộ danh mục nhân sự AI" : "See all official companions"}</span>
+              <ArrowRight size={14} />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* 3. Section #bots: Interactive AI Employee Workbench */}
-      <section id="bots" className="py-20 sm:py-28 border-b border-neutral-200 dark:border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c] mb-2">
-                <Bot size={13} />
-                <span>ROLE WORKBENCH SIMULATOR</span>
-              </div>
-              <h2 className="text-3xl sm:text-[46px] font-normal leading-[1.12] tracking-[-1.8px] text-neutral-900 dark:text-white">
-                {isVi ? "Chọn vị trí nhân sự cần giao việc" : "Specialized corporate roles"}
-              </h2>
-            </div>
+      {/* 3. SIDE-BY-SIDE LIVE AUTONOMOUS COMPARISON */}
+      <StrawberryComparisonSection />
 
-            {/* Lean Category Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      {/* 4. "A NEW FOUNDATION FOR YOUR WORK" */}
+      <section id="on-premise" className="py-20 sm:py-28 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors">
+        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <h2 className="text-3xl sm:text-[46px] font-normal leading-[1.1] tracking-[-1.9px] text-[#252522] dark:text-[#f3f4f6]">
+              {isVi ? "Nền tảng mới cho vận hành tự động" : "A new foundation for your work"}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setContactOpen(true)}
+              className="self-start sm:self-auto px-5 py-2.5 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[13px] font-medium cursor-pointer"
+            >
+              {isVi ? "Triển khai On-Premise" : "Deploy On-Premise"}
+            </button>
+          </div>
+
+          <div className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-[#F8F3ED] dark:bg-[#11151f] p-6 sm:p-8">
+            <div className="flex flex-wrap items-center gap-2 mb-8">
               {[
-                { id: "All", en: "All", vi: "Tất cả" },
-                { id: "Executive", en: "Executive", vi: "Điều hành" },
-                { id: "Finance", en: "Finance", vi: "Tài chính" },
-                { id: "Sales", en: "Sales", vi: "Kinh doanh" },
-                { id: "Support", en: "Support", vi: "CSKH" },
-                { id: "HR", en: "HR", vi: "Nhân sự" },
-              ].map((grp) => {
-                const isSelected = selectedRoleGroup === grp.id;
+                { id: "vm", label: isVi ? "1. Máy tính riêng" : "1. Dedicated Computer" },
+                { id: "onprem", label: isVi ? "2. Thao tác phần mềm thật" : "2. Live App Execution" },
+                { id: "gate", label: isVi ? "3. Kiểm soát & Phê duyệt" : "3. Human Control Gate" },
+              ].map((t) => {
+                const active = activeFoundationTab === t.id;
                 return (
                   <button
-                    key={grp.id}
+                    key={t.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedRoleGroup(grp.id);
-                      const matching = roles.filter((r) => grp.id === "All" || r.category === grp.id);
-                      if (matching.length > 0 && !matching.some((m) => m.id === activeRoleId)) {
-                        setActiveRoleId(matching[0].id);
-                      }
-                    }}
-                    className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-[#f8a87c] text-black font-bold shadow-xs"
-                        : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-white/5"
-                    }`}
+                    onClick={() => setActiveFoundationTab(t.id as any)}
+                    className={
+                      "px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all cursor-pointer " +
+                      (active
+                        ? "bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] shadow-xs"
+                        : "bg-white dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border border-[#ECE5DC] dark:border-white/10")
+                    }
                   >
-                    {isVi ? grp.vi : grp.en}
+                    {t.label}
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          {/* Role Selector Bar */}
-          <div
-            ref={roleScrollRef}
-            className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar"
-          >
-            {roles.filter((role) => selectedRoleGroup === "All" || role.category === selectedRoleGroup).map((role) => {
-              const active = role.id === activeRole.id;
-              const Icon = role.icon;
-              return (
+            {activeFoundationTab === "vm" && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-5 space-y-4">
+                  <h3 className="text-2xl font-semibold text-[#252522] dark:text-white tracking-tight">
+                    {isVi ? "Mỗi nhân viên sở hữu một máy tính riêng" : "Every teammate owns a dedicated computer"}
+                  </h3>
+                  <p className="text-[15.3px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                    {isVi
+                      ? "Tự mở trình duyệt, xử lý bảng tính, chạy công cụ và lưu kết quả trực tiếp trên máy tính riêng."
+                      : "Launches browsers, processes spreadsheets, runs scripts, and saves deliverables on its own computer."}
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1 font-mono text-[11px] text-[#252522] dark:text-neutral-200">
+                    <span className="px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10">ERPCore</span>
+                    <span className="px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10">BaseCore</span>
+                    <span className="px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10">Knowledge Base KB</span>
+                    <span className="px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10">AgentCore</span>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-[#0c0f17] border border-[#ECE5DC] dark:border-white/10 p-5 text-xs font-mono text-[#252522] dark:text-slate-200 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#ECE5DC] dark:border-white/10 pb-2.5 text-[11px]">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-bold">● vm://skyer-minh-boc/app/working</span>
+                    <span className="px-2 py-0.5 rounded bg-[#F8F3ED] dark:bg-white/10 text-[10px]">Máy tính độc lập</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="p-3 rounded-xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
+                      <div className="text-[10px] text-neutral-500 dark:text-slate-400">TRÌNH DUYỆT RIÊNG</div>
+                      <div className="text-[#252522] dark:text-white font-semibold">erp.company.vn/invoices</div>
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400">✓ Đang thao tác trực tiếp</div>
+                    </div>
+                    <div className="p-3 rounded-xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
+                      <div className="text-[10px] text-neutral-500 dark:text-slate-400">BỘ NHỚ DÀI HẠN</div>
+                      <div className="text-[#252522] dark:text-white font-semibold">MEMORY.md & Knowledge Base KB</div>
+                      <div className="text-[10px] text-[#c2540a] dark:text-[#f8a87c]">✓ Đã đồng bộ quy trình</div>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#252522] dark:bg-black/60 text-[11px] text-emerald-300">
+                    $ agentcore reconcile --erpcore --tt99 → 48/48 Hóa đơn khớp (0.00₫ lệch)
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFoundationTab === "onprem" && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-5 space-y-4">
+                  <h3 className="text-2xl font-semibold text-[#252522] dark:text-white tracking-tight">
+                    {isVi ? "Tự vận hành 24/7 ngay trên máy tính nội bộ" : "Operates 24/7 on its own private workstation"}
+                  </h3>
+                  <p className="text-[15.3px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                    {isVi
+                      ? "Mỗi nhân viên AI chạy trên máy tính độc lập trong mạng nội bộ On-Premise. Dữ liệu không bao giờ rời khỏi máy chủ của bạn."
+                      : "Every AI teammate runs on an isolated computer inside your On-Premise network. Data never leaves your server."}
+                  </p>
+                </div>
+
+                <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-[#0c0f17] border border-[#ECE5DC] dark:border-white/10 p-6 shadow-sm">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-bold mb-4 flex items-center justify-between">
+                    <span>MÁY TÍNH RIÊNG NỘI BỘ (ON-PREMISE WORKSTATION)</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">100% Isolated</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-center font-mono text-xs">
+                    <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
+                      <div className="text-sm font-bold text-[#252522] dark:text-white">Trình duyệt</div>
+                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Phiên đăng nhập riêng</div>
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Tự thao tác web</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
+                      <div className="text-sm font-bold text-[#252522] dark:text-white">AgentCore</div>
+                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Không gian /app/working</div>
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Xử lý file & Excel</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 space-y-1">
+                      <div className="text-sm font-bold text-[#252522] dark:text-white">Local Model</div>
+                      <div className="text-[10px] text-neutral-500 dark:text-neutral-400">Self-host On-Premise</div>
+                      <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Bảo mật tuyệt đối</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeFoundationTab === "gate" && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-5 space-y-4">
+                  <h3 className="text-2xl font-semibold text-[#252522] dark:text-white tracking-tight">
+                    {isVi ? "Bạn luôn nắm quyền kiểm soát máy tính của AI" : "You stay in full control of the AI computer"}
+                  </h3>
+                  <p className="text-[15.3px] text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                    {isVi
+                      ? "Nhân viên AI tự hoàn tất việc chuẩn bị hồ sơ trên máy tính riêng và tạm dừng chờ bạn bấm duyệt trước khi chốt sổ."
+                      : "Your AI teammate prepares files on its dedicated computer and pauses for your 1-click sign-off before committing."}
+                  </p>
+                </div>
+
+                <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-[#0c0f17] border border-[#ECE5DC] dark:border-white/10 p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <AgentAvatar
+                        agent={{ id: "gate-an", name: "An Kế Toán" }}
+                        size="sm"
+                        alwaysAnimate
+                        overrideConfig={{
+                          type: "blob",
+                          blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4", seed: 202 },
+                        }}
+                      />
+                      <div>
+                        <div className="text-xs font-bold text-[#252522] dark:text-white">An Kế Toán • Máy tính #VM-02</div>
+                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400">Đã đối soát xong 48 hóa đơn trên ERPCore</div>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-mono font-bold">
+                      CHỜ DUYỆT
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">{isVi ? "Tác vụ trên máy tính nhân viên AI:" : "Task staged on AI workstation:"}</div>
+                      <div className="text-sm sm:text-base font-bold text-[#252522] dark:text-white font-mono">Ghi sổ ERPCore & Xuất báo cáo TT99</div>
+                    </div>
+
+                    {approvedDemo ? (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500 text-white keep-white text-xs font-semibold">
+                        <Check size={14} />
+                        <span>{isVi ? "Đã duyệt thực thi" : "Approved & Executed"}</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setApprovedDemo(true)}
+                        className="px-5 py-2.5 rounded-full bg-[#252522] dark:bg-[#f8a87c] text-[#FFFCFA] dark:text-black text-xs font-semibold hover:opacity-90 transition-all cursor-pointer shadow-sm"
+                      >
+                        {isVi ? "Duyệt thực thi →" : "Approve Execution →"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. STRAWBERRY PRICING SECTION */}
+      <StrawberryPricingSection isStandalonePage={false} />
+
+      {/* 6. LEAN FAQ */}
+      <section id="faq" className="py-20 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors">
+        <div className="mx-auto max-w-[760px] px-4 sm:px-6">
+          <h2 className="text-2xl sm:text-[38px] font-normal tracking-[-1.5px] text-center mb-10 text-[#252522] dark:text-[#f3f4f6]">
+            {isVi ? "Câu hỏi thường gặp" : "Questions & Answers"}
+          </h2>
+          <div className="space-y-3">
+            {[
+              {
+                q: isVi ? "Nhân viên AI Skyer khác gì với ChatGPT?" : "How is Skyer different from ChatGPT?",
+                a: isVi
+                  ? "ChatGPT chỉ trả lời văn bản trong khung chat. Nhân viên AI Skyer có máy tính riêng để mở trình duyệt, đăng nhập ERPCore, đọc hóa đơn PDF và điền thẳng vào bảng tính của bạn."
+                  : "ChatGPT is passive text. Skyer companions own virtual computers to operate browsers, ERPs, and spreadsheets directly.",
+              },
+              {
+                q: isVi ? "Tôi có thể tự cài đặt trên máy chủ công ty (On-Premise) không?" : "Can we deploy 100% On-Premise?",
+                a: isVi
+                  ? "Có. Skyer hỗ trợ triển khai toàn bộ hệ thống và mô hình AI (Self-host Local Model) ngay trên hạ tầng nội bộ của doanh nghiệp, không cần kết nối ra ngoài."
+                  : "Yes. Skyer supports full air-gapped on-premise deployment with self-hosted local LLMs.",
+              },
+            ].map((item, idx) => (
+              <div key={item.q} className="rounded-2xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f]">
                 <button
-                  key={role.id}
-                  onClick={() => setActiveRoleId(role.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap border ${
-                    active
-                      ? "bg-[#f8a87c]/15 text-[#f8a87c] border-[#f8a87c]/40 dark:bg-white dark:text-black dark:border-white font-semibold shadow-sm"
-                      : "bg-white dark:bg-[#0b0e14] text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/[0.08] border-neutral-200 dark:border-[var(--border-subtle)]"
-                  }`}
+                  type="button"
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full px-5 py-4 text-left flex items-center justify-between text-sm font-semibold text-[#252522] dark:text-white cursor-pointer"
                 >
-                  <Icon size={14} className="shrink-0" />
-                  <span>{role.title}</span>
+                  <span>{item.q}</span>
+                  <ChevronDown size={16} className={openFaq === idx ? "rotate-180 transition-transform" : "transition-transform"} />
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Visual Workbench Grid: Left = Animated Step Pipeline, Right = Live Execution Terminal */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mt-2">
-            {/* Left: Visual Workflow Pipeline Card */}
-            <div className="lg:col-span-5 rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[var(--bg-card)] p-5 sm:p-6 flex flex-col justify-between shadow-sm">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#f8a87c] bg-[#f8a87c]/10 border border-[#f8a87c]/25 px-2.5 py-0.5 rounded-full font-semibold">
-                    {activeRole.tag}
-                  </span>
-                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {isVi ? "Trực tuyến" : "Online"}
-                  </span>
-                </div>
-
-                <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{activeRole.title}</h3>
-
-                {/* Animated Visual Step Pipeline */}
-                <div className="mt-5 space-y-2.5">
-                  {activeRole.previewData.steps.map((st, idx) => {
-                    const isDone = idx < visibleLogs;
-                    const isCurrent = idx === visibleLogs;
-                    return (
-                      <motion.div
-                        key={`${activeRole.id}-step-${idx}`}
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.08 }}
-                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs transition-all ${
-                          isDone
-                            ? "bg-emerald-500/[0.04] border-emerald-500/25 text-neutral-900 dark:text-white"
-                            : isCurrent
-                            ? "bg-[#f8a87c]/10 border-[#f8a87c]/40 text-neutral-900 dark:text-white"
-                            : "bg-slate-50 dark:bg-white/[0.02] border-neutral-200 dark:border-white/5 text-neutral-400"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`h-6 w-6 rounded-md flex items-center justify-center text-[11px] font-mono shrink-0 ${
-                              isDone
-                                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                : isCurrent
-                                ? "bg-[#f8a87c] text-black font-bold animate-pulse"
-                                : "bg-neutral-200 dark:bg-white/5 text-neutral-500"
-                            }`}
-                          >
-                            {isDone ? <Check size={12} /> : idx + 1}
-                          </div>
-                          <div className="truncate">
-                            <div className="font-semibold text-xs truncate">{st.label}</div>
-                            <div className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">{st.detail}</div>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-mono text-neutral-400 shrink-0 ml-2">{st.time}</span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Authorized MCP Drivers */}
-              <div className="mt-5 pt-4 border-t border-neutral-200 dark:border-[var(--border-subtle)]">
-                <div className="flex flex-wrap gap-1.5">
-                  {activeRole.tools.map((tool) => (
-                    <span
-                      key={tool}
-                      className="text-[10px] font-mono bg-neutral-100 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 px-2 py-0.5 rounded text-neutral-700 dark:text-neutral-300"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Live Execution Stream + Telemetry Receipt HUD */}
-            <div className="lg:col-span-7 rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-xl overflow-hidden font-mono text-xs flex flex-col justify-between">
-              <div>
-                {/* Window Chrome */}
-                <div className="h-10 bg-slate-50 dark:bg-[#0e1117] border-b border-neutral-200 dark:border-[var(--border-subtle)] px-4 flex items-center justify-between select-none">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
-                      <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
-                    </div>
-                    <span className="ml-1.5 text-[11px] text-neutral-700 dark:text-neutral-300 truncate">
-                      {activeRole.previewData.file}
-                    </span>
+                {openFaq === idx && (
+                  <div className="px-5 pb-4 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
+                    {item.a}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setReplayKey((k) => k + 1)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-200/70 dark:bg-white/[0.06] hover:bg-[#f8a87c]/20 text-neutral-700 dark:text-neutral-300 text-[10px] cursor-pointer transition-colors"
-                    >
-                      <RotateCcw size={10} />
-                      <span>{isVi ? "Chạy lại" : "Replay"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Prompt Bar */}
-                <div className="px-5 py-3 bg-slate-100/60 dark:bg-white/[0.02] border-b border-neutral-200 dark:border-white/5 flex items-center justify-between gap-2">
-                  <div className="truncate text-[11px] text-neutral-700 dark:text-neutral-300 font-sans">
-                    <span className="font-mono text-[#f8a87c] font-semibold mr-2">{isVi ? "Tác vụ:" : "Task:"}</span>
-                    “{activeRole.promptExample}”
-                  </div>
-                </div>
-
-                {/* Animated Execution Stream */}
-                <div className="p-5 space-y-2.5 min-h-[185px]">
-                  {activeRole.previewData.logs.slice(0, visibleLogs).map((log, idx) => (
-                    <motion.div
-                      key={`${activeRole.id}-${replayKey}-${idx}`}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-start gap-2.5 leading-relaxed text-[11px]"
-                    >
-                      <span className="text-neutral-400 dark:text-neutral-600 select-none shrink-0">{log.time}</span>
-                      <span className="text-emerald-500 shrink-0">✓</span>
-                      <span className={log.ok ? "text-neutral-800 dark:text-neutral-200" : "text-amber-600 dark:text-amber-400 font-semibold"}>
-                        {log.text}
-                      </span>
-                    </motion.div>
-                  ))}
-                  {visibleLogs < activeRole.previewData.logs.length && (
-                    <div className="flex items-center gap-2 text-neutral-400 pt-1">
-                      <span className="inline-block h-3 w-1.5 bg-[#f8a87c] animate-pulse" />
-                      <span>{isVi ? "Bot đang thao tác công cụ trong môi trường an toàn..." : "Executing tool call in sandbox..."}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Visual Metric Cards Footer */}
-              <div className="bg-slate-50 dark:bg-[#0b0e14] border-t border-neutral-200 dark:border-[var(--border-subtle)] p-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  {activeRole.metrics.map((m) => (
-                    <div
-                      key={m.label}
-                      className="px-2.5 py-1 rounded-lg bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 flex items-center gap-2"
-                    >
-                      <span className="text-[10px] text-neutral-500">{m.label}:</span>
-                      <span className="text-[11px] font-bold text-neutral-900 dark:text-white">{m.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <Link
-                  to={appTaskUrl(activeRole.promptExample)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#f8a87c] text-black font-sans font-semibold text-xs hover:bg-[#f5935f] transition-all shrink-0"
-                >
-                  <span>{t("roles.tryTask")}</span>
-                  <ArrowRight size={12} />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Section #on-premise: Interactive Topology Switcher */}
-      <section
-        id="on-premise"
-        className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)] bg-gradient-to-b from-slate-100/60 via-slate-50 to-slate-100/60 dark:from-[#05070a] dark:via-[#090c13] dark:to-[#05070a] relative overflow-hidden"
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#f8a87c] bg-[#f8a87c]/10 border border-[#f8a87c]/25 px-3 py-1 rounded-full mb-3">
-                <Server size={12} />
-                <span>HYBRID DEPLOYMENT TOPOLOGY</span>
-              </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal text-balance leading-[1.15]">
-                {isVi ? (
-                  <>
-                    <span className="whitespace-nowrap">100% On-Premise</span>{" "}
-                    <span className="whitespace-nowrap">qua App360</span>{" "}
-                    <span>hoặc </span>
-                    <span className="whitespace-nowrap">Skyer Cloud.</span>
-                  </>
-                ) : (
-                  "100% Air-Gapped On-Premise or Instant Cloud."
                 )}
-              </h2>
-            </div>
-
-            {/* Interactive Mode Toggle */}
-            <div className="inline-flex p-1 rounded-xl bg-neutral-200/80 dark:bg-white/[0.05] border border-neutral-300/80 dark:border-white/10 self-start">
-              <button
-                type="button"
-                onClick={() => setDeployMode("onprem")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                  deployMode === "onprem"
-                    ? "bg-[#f8a87c] text-black font-bold shadow-xs"
-                    : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-                }`}
-              >
-                <Shield size={13} />
-                <span>On-Premise (App360)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setDeployMode("cloud")}
-                className={`px-4 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
-                  deployMode === "cloud"
-                    ? "bg-[#f8a87c] text-black font-bold shadow-xs"
-                    : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-                }`}
-              >
-                <Globe size={13} />
-                <span>{isVi ? "Skyer Đám Mây (Cloud)" : "Managed Cloud"}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Interactive Animated Architecture Diagram */}
-          <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0c1018] p-6 sm:p-8 shadow-md">
-            <AnimatePresence mode="wait">
-              {deployMode === "onprem" ? (
-                <motion.div
-                  key="onprem-diagram"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="space-y-6"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 dark:border-white/10 pb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-xl bg-[#f8a87c]/15 border border-[#f8a87c]/30 flex items-center justify-center text-[#f8a87c]">
-                        <Lock size={18} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                          {isVi
-                            ? "Mạng Nội Bộ Doanh Nghiệp / Trung Tâm Dữ Liệu Riêng (Không rò rỉ dữ liệu)"
-                            : "Corporate Intranet / Private Data Center (Zero Egress)"}
-                        </div>
-                        <div className="text-[11px] font-mono text-neutral-500">
-                          {isVi
-                            ? "Tuân thủ chặt chẽ Nghị định 13/NĐ-CP, tiêu chuẩn HIPAA & ISO-27001"
-                            : "Compliant with Decree 13/ND-CP, HIPAA, ISO-27001"}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-mono uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-bold">
-                      {isVi ? "TƯỜNG LỬA CÔ LẬP HOÀN TOÀN" : "AIR-GAPPED FIREWALL ACTIVE"}
-                    </span>
-                  </div>
-
-                  {/* Visual Node Flow */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                    {/* Node 1: App360 Control Plane */}
-                    <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#080a0f] space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-[#f8a87c]">
-                        <span>01. APP360 ORCHESTRATOR</span>
-                        <Server size={14} />
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                        {isVi ? "App360 Sovereign Node" : "App360 Sovereign Node"}
-                      </div>
-                      <div className="text-[11px] text-neutral-500">
-                        {isVi
-                          ? "Triển khai 1-Click Helm / Docker, giám sát sức khỏe & cách ly eBPF"
-                          : "1-Click Helm / Docker rollout, health guardian & eBPF isolation"}
-                      </div>
-                    </div>
-
-                    {/* Node 2: AgentCore Runtime + Local GPU */}
-                    <div className="p-4 rounded-xl border-2 border-[#f8a87c]/50 bg-[#f8a87c]/[0.05] space-y-2 relative">
-                      <div className="flex items-center justify-between text-xs font-mono text-[#f8a87c]">
-                        <span>02. SELF-HOSTED LOCAL MODELS</span>
-                        <Cpu size={14} />
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white">vLLM / Ollama / Qwen 72B</div>
-                      <div className="text-[11px] text-neutral-600 dark:text-neutral-300">
-                        {isVi
-                          ? "Cụm GPU nội bộ (Self-hosted) + ReMe Vector DB lưu trữ tại chỗ"
-                          : "On-premise GPU cluster + local ReMe Vector DB"}
-                      </div>
-                    </div>
-
-                    {/* Node 3: Internal Enterprise Systems */}
-                    <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#080a0f] space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-emerald-500">
-                        <span>03. INTRANET TOOLS & MCP</span>
-                        <Database size={14} />
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white">SAP • ERPCore • GitLab</div>
-                      <div className="text-[11px] text-neutral-500">
-                        {isVi
-                          ? "Gọi MCP trực tiếp qua mạng LAN — 0 byte ra khỏi máy chủ của bạn"
-                          : "Direct LAN MCP execution — 0 bytes leave your servers"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-neutral-600 dark:text-neutral-400">
-                      <span className="flex items-center gap-1.5"><Check size={14} className="text-[#f8a87c]" /> {isVi ? "BYOK & Lưu trữ Nội bộ" : "BYOK & Local Storage"}</span>
-                      <span className="flex items-center gap-1.5"><Check size={14} className="text-[#f8a87c]" /> {isVi ? "Container an toàn không cần quyền root" : "Rootless Containers"}</span>
-                      <span className="flex items-center gap-1.5"><Check size={14} className="text-[#f8a87c]" /> {isVi ? "Nhật ký kiểm toán đầy đủ" : "Full Audit Ledger"}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <a
-                        href="/skyer-enterprise-whitepaper.md"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-mono text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-white/10"
-                      >
-                        <FileText size={12} className="text-[#f8a87c]" />
-                        <span>{isVi ? "Whitepaper" : "Whitepaper"}</span>
-                      </a>
-                      <a
-                        href="https://app360.space/apps/skyer"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[#f8a87c] text-black px-4 py-1.5 rounded-lg hover:bg-[#f5935f]"
-                      >
-                        <span>{isVi ? "Cài đặt qua App360" : "Deploy via App360"}</span>
-                        <ArrowRight size={12} />
-                      </a>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="cloud-diagram"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="space-y-6"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 dark:border-white/10 pb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
-                        <Globe size={18} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                          {isVi ? "Skyer Đám Mây Quản Trị (Kích hoạt ngay trong 10s)" : "Skyer Managed Cloud (Instant Turnkey)"}
-                        </div>
-                        <div className="text-[11px] font-mono text-neutral-500">
-                          {isVi ? "Sẵn sàng trong 10 giây • Máy ảo MicroVM cô lập theo người dùng" : "Ready in 10 seconds • Per-user microVM isolation"}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-mono uppercase bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full font-bold">
-                      {isVi ? "CAM KẾT HOẠT ĐỘNG 99.99% UPTIME" : "99.99% UPTIME SLA"}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                    <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#080a0f] space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-blue-400">
-                        <span>01. MULTI-CHANNEL CLIENTS</span>
-                        <Monitor size={14} />
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white">Web • Telegram • Slack</div>
-                      <div className="text-[11px] text-neutral-500">
-                        {isVi ? "Giao việc từ mọi nơi với phản hồi trực tiếp theo thời gian thực" : "Dispatch tasks from anywhere with real-time streaming"}
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl border-2 border-blue-500/40 bg-blue-500/[0.05] space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-blue-400">
-                        <span>02. FRONTIER MODEL FLEET</span>
-                        <Sparkles size={14} />
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white">Grok • Claude • GPT • Qwen</div>
-                      <div className="text-[11px] text-neutral-600 dark:text-neutral-300">
-                        {isVi ? "Tự động định tuyến qua Gateway LLM360 với độ trễ tối ưu" : "Auto-routed via LLM360 gateway with zero cold-start"}
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#080a0f] space-y-2">
-                      <div className="flex items-center justify-between text-xs font-mono text-emerald-500">
-                        <span>03. CLOUD SANDBOX & CDP</span>
-                        <HardDrive size={14} />
-                      </div>
-                      <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                        {isVi ? "Container Linux & Trình duyệt CDP" : "Persistent Linux & CDP"}
-                      </div>
-                      <div className="text-[11px] text-neutral-500">
-                        {isVi ? "Lưu trữ mã hóa riêng biệt & cookie phiên làm việc bền vững" : "Encrypted storage volume & authenticated browser sessions"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-neutral-600 dark:text-neutral-400">
-                      <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-500" /> {isVi ? "Không tốn công DevOps" : "Zero DevOps"}</span>
-                      <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-500" /> {isVi ? "Không dùng dữ liệu huấn luyện" : "Training Opt-Out"}</span>
-                      <span className="flex items-center gap-1.5"><Check size={14} className="text-emerald-500" /> {isVi ? "Mở rộng tức thì" : "Instant Scaling"}</span>
-                    </div>
-                    <Link
-                      to="/app"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[#f8a87c] text-black px-4 py-1.5 rounded-lg hover:bg-[#f5935f]"
-                    >
-                      <span>{isVi ? "Mở Không Gian Làm Việc" : "Launch Cloud Workspace"}</span>
-                      <ArrowRight size={12} />
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Section #interaction & #hierarchy */}
-      <StrawberryComparisonSection />
-
-      <section id="interaction" className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)]">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left: Interactive Chat + Live Approval Gate */}
-            <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c]">
-                <CheckCircle2 size={13} />
-                <span>{isVi ? "KIỂM SOÁT BẢO MẬT" : "HUMAN-IN-THE-LOOP"}</span>
-              </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
-                {isVi ? "Tự chủ thực thi. Dừng lại khi duyệt chi." : "Autonomous work. Pauses for approval."}
-              </h2>
-
-              {/* Interactive Chat Simulation Card */}
-              <div className="rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-lg overflow-hidden font-sans">
-                <div className="h-9 bg-slate-50 dark:bg-[#0e1117] border-b border-neutral-200 dark:border-[var(--border-subtle)] px-4 flex items-center justify-between text-xs font-mono">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
-                    <span className="ml-1 text-neutral-500">
-                      {isVi ? "Skyer // Tác vụ #402" : "Skyer // Task #402"}
-                    </span>
-                  </div>
-                  <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded">
-                    {isVi ? "Mô Phỏng Trực Tiếp" : "Live Demo"}
-                  </span>
-                </div>
-
-                <div className="p-4 sm:p-5 space-y-3.5">
-                  {/* User Message */}
-                  <div className="flex items-start gap-2.5">
-                    <div className="h-7 w-7 rounded-full bg-neutral-200 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 flex items-center justify-center text-[11px] font-bold text-neutral-800 dark:text-neutral-200 shrink-0">
-                      {isVi ? "Bạn" : "You"}
-                    </div>
-                    <div className="bg-slate-50 dark:bg-[#12151d] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl rounded-tl-none p-3 text-xs text-neutral-800 dark:text-neutral-200">
-                      {isVi
-                        ? "Đối soát 48 hóa đơn nhà cung cấp và lập lệnh thanh toán $14,200 qua PayOS."
-                        : "Reconcile 48 supplier invoices and wire $14,200 payout batch via PayOS."}
-                    </div>
-                  </div>
-
-                  {/* Bot Response + Interactive Approval Gate */}
-                  <div className="flex items-start gap-2.5">
-                    <div className="h-7 w-7 rounded-full bg-[#f8a87c] flex items-center justify-center text-xs font-bold text-black shrink-0">
-                      S
-                    </div>
-                    <div className="flex-1 bg-slate-50 dark:bg-[#12151d] border border-neutral-200 dark:border-[var(--border-subtle)] rounded-xl rounded-tl-none p-3.5 space-y-3">
-                      <div className="flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-emerald-600 dark:text-emerald-400">
-                          {isVi ? "✓ 48/48 Hóa đơn khớp 100% (0.00 VNĐ lệch)" : "✓ 48/48 Invoices Matched ($0.00 diff)"}
-                        </span>
-                        <span className="text-neutral-400">TT99 02-VT</span>
-                      </div>
-
-                      {/* Interactive Human Gate Box */}
-                      <div className="rounded-lg border border-[#f8a87c]/40 bg-white dark:bg-[#090b10] p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <div className="text-[10px] font-mono uppercase text-[#f8a87c] font-bold">
-                              {isVi ? "BƯỚC PHÊ DUYỆT BẮT BUỘC" : "HUMAN APPROVAL GATE"}
-                            </div>
-                            <div className="text-xs font-semibold text-neutral-900 dark:text-white mt-0.5">
-                              {isVi ? "Xác nhận duyệt chi PayOS lô #402 ($14,200.00)" : "Execute PayOS Batch #402 ($14,200.00)"}
-                            </div>
-                          </div>
-
-                          {approvalState === "pending" && (
-                            <button
-                              type="button"
-                              onClick={triggerApproveDemo}
-                              className="px-3 py-1.5 rounded-lg bg-[#f8a87c] hover:bg-[#f5935f] text-black font-semibold text-xs flex items-center gap-1 cursor-pointer shadow-xs animate-pulse"
-                            >
-                              <MousePointerClick size={13} />
-                              <span>{isVi ? "Phê duyệt" : "Approve"}</span>
-                            </button>
-                          )}
-                          {approvalState === "executing" && (
-                            <span className="text-xs font-mono text-[#f8a87c]">
-                              {isVi ? "Đang ký lệnh chuyển khoản..." : "Signing tx..."}
-                            </span>
-                          )}
-                          {approvalState === "approved" && (
-                            <button
-                              type="button"
-                              onClick={() => setApprovalState("pending")}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-mono text-[11px] flex items-center gap-1 cursor-pointer"
-                            >
-                              <Check size={12} />
-                              <span>{isVi ? "Đã gửi lệnh thành công (Bấm để thử lại)" : "Dispatched (Reset)"}</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Section #hierarchy - Animated Multi-Agent ACP Pipeline */}
-            <div id="hierarchy" className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c]">
-                <Network size={13} />
-                <span>{isVi ? "ĐIỀU PHỐI ĐA BOT" : "MULTI-AGENT ACP"}</span>
-              </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
-                {isVi ? "Tự bàn giao công việc giữa các phòng ban." : "Autonomous cross-team task handoffs."}
-              </h2>
-
-              {/* Animated Multi-Agent Mesh Visual */}
-              <div className="rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] p-5 shadow-lg space-y-3 font-mono text-xs">
-                {[
-                  {
-                    step: 0,
-                    role: isVi ? "Chánh Văn Phòng (CoS Trưởng Nhóm)" : "Chief of Staff (Lead)",
-                    badge: isVi ? "GIAO VIỆC" : "DELEGATE",
-                    msg: isVi
-                      ? "Phân rã Hợp đồng Doanh nghiệp Q4 #88 thành 3 tiểu tác vụ cho các phòng ban"
-                      : "Decomposed Q4 Enterprise Deal #88 into 3 department sub-tasks",
-                    color: "text-[#f8a87c]",
-                  },
-                  {
-                    step: 1,
-                    role: isVi ? "Bot Bán Hàng B2B" : "B2B Sales Bot",
-                    badge: isVi ? "ĐỒNG BỘ CRM" : "CRM SYNC",
-                    msg: isVi
-                      ? "Hợp đồng đã ký tải lên BaseCore • Trạng thái Deal → Thành công (Closed Won $48k)"
-                      : "Signed MSA uploaded to BaseCore • Deal stage → Closed Won ($48k)",
-                    color: "text-blue-400",
-                  },
-                  {
-                    step: 2,
-                    role: isVi ? "Bot Kiểm Soát Tài Chính" : "Financial Controller Bot",
-                    badge: "ERPCORE",
-                    msg: isVi
-                      ? "Xuất hóa đơn VAT điện tử #INV-2026-88 & đối soát đợt chuyển khoản thanh toán đầu tiên"
-                      : "Generated VAT Invoice #INV-2026-88 & reconciled first wire transfer",
-                    color: "text-emerald-400",
-                  },
-                  {
-                    step: 3,
-                    role: isVi ? "Knowledge Base KB & BaseCore Deck" : "Knowledge Base KB & Deck",
-                    badge: isVi ? "BIÊN NHẬN" : "RECEIPT",
-                    msg: isVi
-                      ? "Đã cam kết biên nhận tri thức #b7a9 • Cập nhật sổ cái ghi nhận doanh thu"
-                      : "Epistemic receipt #b7a9 committed • Revenue ledger updated",
-                    color: "text-purple-400",
-                  },
-                ].map((item, idx) => {
-                  const isActive = activeAcpStep === idx;
-                  return (
-                    <div
-                      key={item.role}
-                      onClick={() => setActiveAcpStep(idx)}
-                      className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-[#f8a87c]/[0.07] border-[#f8a87c]/50 shadow-xs scale-[1.01]"
-                          : "bg-slate-50 dark:bg-white/[0.02] border-neutral-200 dark:border-white/5 opacity-80 hover:opacity-100"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`font-bold ${item.color} flex items-center gap-1.5`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-[#f8a87c] animate-ping" : "bg-neutral-400"}`} />
-                          {item.role}
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-neutral-200/70 dark:bg-white/5 text-neutral-600 dark:text-neutral-300">
-                          {item.badge}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-neutral-700 dark:text-neutral-300 font-sans pl-3">
-                        {item.msg}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Section #architecture & #workflow: Visual Browser CDP + Autonomous Routine & Memory Loop */}
-      <section id="architecture" className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-16">
-          {/* Part A: Headless Browser CDP Simulation */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-5 space-y-3">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-[#f8a87c]">
-                <Eye size={13} />
-                <span>{isVi ? "TRÌNH DUYỆT TỰ HÀNH" : "ISOLATED BROWSER CDP"}</span>
-              </div>
-              <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal leading-tight">
-                {isVi ? "Thao tác trực tiếp trên giao diện web của bạn." : "Navigates your web apps with 60 FPS precision."}
-              </h2>
-              <div className="pt-2 flex flex-wrap gap-1.5">
-                {["Zendesk", "ERPCore", "GitHub", "Notion", "Google Workspace", "PayOS", "Telegram"].map((tool) => (
-                  <span
-                    key={tool}
-                    className="text-[11px] font-mono bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 px-2.5 py-1 rounded-lg text-neutral-700 dark:text-neutral-300"
-                  >
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Animated Virtual Browser Viewport */}
-            <div className="lg:col-span-7 rounded-xl border border-neutral-200 dark:border-white/[0.1] bg-white dark:bg-[#090b10] shadow-xl overflow-hidden font-mono text-xs">
-              <div className="h-9 bg-slate-50 dark:bg-[#0e1117] border-b border-neutral-200 dark:border-[var(--border-subtle)] px-4 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
-                  <span className="ml-2 text-[11px] truncate text-neutral-600 dark:text-neutral-300 bg-neutral-200/60 dark:bg-white/5 px-2.5 py-0.5 rounded">
-                    https://erp.company.vn/app/purchase-invoice
-                  </span>
-                </div>
-                <span className="text-[10px] text-[#f8a87c] bg-[#f8a87c]/10 border border-[#f8a87c]/30 px-2 py-0.5 rounded">
-                  CDP: 60 FPS
-                </span>
-              </div>
-
-              {/* Interactive Simulated DOM Targets */}
-              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  {
-                    title: isVi ? "1. Xác thực Phiên" : "1. Session Auth",
-                    desc: isVi ? "Đã nạp Kho Cookie SSO an toàn" : "SSO Cookie Vault mounted",
-                    status: "200 OK",
-                  },
-                  {
-                    title: isVi ? "2. Bộ chọn DOM" : "2. DOM Selector",
-                    desc: isVi ? "Đã click [data-action='reconcile']" : "Clicked [data-action='reconcile']",
-                    status: isVi ? "Đã khớp" : "Matched",
-                  },
-                  {
-                    title: isVi ? "3. Tự điền Biểu mẫu" : "3. Form Prefill",
-                    desc: isVi ? "Nạp dữ liệu 48 dòng PO vào bảng" : "Injected 48 PO line items",
-                    status: isVi ? "0 Lỗi" : "0 Errors",
-                  },
-                  {
-                    title: isVi ? "4. Biên nhận Thị giác" : "4. Visual Receipt",
-                    desc: isVi ? "Chụp ảnh màn hình hash #a94f2" : "Captured PNG hash #a94f2",
-                    status: isVi ? "Đã xác thực" : "Verified",
-                  },
-                ].map((bStep, idx) => {
-                  const active = activeBrowserStep === idx;
-                  return (
-                    <div
-                      key={bStep.title}
-                      onClick={() => setActiveBrowserStep(idx)}
-                      className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                        active
-                          ? "border-[#f8a87c] bg-[#f8a87c]/10"
-                          : "border-neutral-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-bold text-neutral-900 dark:text-white">{bStep.title}</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 text-[10px]">{bStep.status}</span>
-                      </div>
-                      <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 font-sans">
-                        {bStep.desc}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Part B: Section #workflow - Repeatable Routines & ReMe Memory Graph */}
-          <div id="workflow" className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-            {/* Card 1: Scheduled Cron Routine Simulator */}
-            <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[var(--bg-card)] p-6 flex flex-col justify-between shadow-sm">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#f8a87c] bg-[#f8a87c]/10 px-2.5 py-0.5 rounded-full font-semibold">
-                    {t("routines.badge")}
-                  </span>
-                  <span className="text-[11px] font-mono text-neutral-400 flex items-center gap-1">
-                    <Clock size={12} className="text-[#f8a87c]" />
-                    {isVi ? "08:00 Sáng Mỗi Ngày" : "08:00 AM Daily"}
-                  </span>
-                </div>
-                <h3 className="font-newsreader text-2xl text-neutral-900 dark:text-white font-normal mb-4">
-                  {isVi ? "Tự động chạy định kỳ mỗi sáng" : "Scheduled daily routines"}
-                </h3>
-              </div>
-
-              <div className="rounded-lg border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#08090d] p-3.5 font-mono text-[11px] space-y-2">
-                {[
-                  isVi ? "01. Trích xuất sao kê ngân hàng & sổ cái ERP" : "01. Pull bank & ERP ledger",
-                  isVi ? "02. Cảnh báo các khoản lệch > $100" : "02. Flag variance > $100",
-                  isVi ? "03. Gửi thông báo tóm tắt vào nhóm Telegram" : "03. Post briefing to Telegram",
-                  isVi ? "04. Lưu trữ biên nhận vào Cơ sở Tri thức KB" : "04. Archive receipt to KB",
-                ].map((rStep, idx) => (
-                  <div
-                    key={rStep}
-                    className={`flex items-center justify-between px-2.5 py-1.5 rounded ${
-                      activeRoutineStep === idx
-                        ? "bg-[#f8a87c]/15 text-neutral-900 dark:text-white font-semibold"
-                        : "text-neutral-500"
-                    }`}
-                  >
-                    <span>{rStep}</span>
-                    <span className={activeRoutineStep === idx ? "text-[#f8a87c]" : "text-emerald-500"}>
-                      {activeRoutineStep === idx ? (isVi ? "● Đang chạy" : "● Running") : "✓"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Card 2: ReMe Persistent Memory & Self-Evolution */}
-            <div className="rounded-xl border border-neutral-200 dark:border-[var(--border-subtle)] bg-white dark:bg-[var(--bg-card)] p-6 flex flex-col justify-between shadow-sm">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full font-semibold">
-                    {t("memory.badge")}
-                  </span>
-                  <span className="text-[11px] font-mono text-neutral-400">ReMe Engine</span>
-                </div>
-                <h3 className="font-newsreader text-2xl text-neutral-900 dark:text-white font-normal mb-4">
-                  {isVi ? "Ghi nhớ quy định & thói quen làm việc" : "Persistent memory & organizational rules"}
-                </h3>
-              </div>
-
-              <div className="rounded-lg border border-neutral-200 dark:border-white/10 bg-slate-50 dark:bg-[#08090d] p-3.5 font-mono text-[11px] space-y-2">
-                <div className="flex items-center justify-between text-xs pb-1.5 border-b border-neutral-200 dark:border-white/5">
-                  <span className="text-neutral-900 dark:text-white font-bold">/app/working/MEMORY.md</span>
-                  <span className="text-emerald-500 text-[10px]">{isVi ? "Đã đồng bộ" : "Synced"}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div className="p-2 rounded bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5">
-                    <div className="text-[10px] text-[#f8a87c]">[[QuyĐịnhNhàCungCấp]]</div>
-                    <div className="text-[10px] text-neutral-500 truncate">
-                      {isVi ? "Bắt buộc khớp hóa đơn 3 bên" : "3-way match required"}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5">
-                    <div className="text-[10px] text-blue-400">[[VănPhongThươngHiệu]]</div>
-                    <div className="text-[10px] text-neutral-500 truncate">
-                      {isVi ? "Ngắn gọn, rõ ràng, phong cách quản lý" : "Executive concise tone"}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5">
-                    <div className="text-[10px] text-emerald-400">[[QuyTắcTT99]]</div>
-                    <div className="text-[10px] text-neutral-500 truncate">
-                      {isVi ? "Bảng kê chứng từ Mẫu 02-VT" : "Mẫu 02-VT template"}
-                    </div>
-                  </div>
-                  <div className="p-2 rounded bg-white dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5">
-                    <div className="text-[10px] text-purple-400">[[SLAThanhToán]]</div>
-                    <div className="text-[10px] text-neutral-500 truncate">
-                      {isVi ? "Báo cho CFO nếu khoản chi > $5,000" : "Notify CFO > $5,000"}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. Section #pricing: Clean Tiers */}
-      <section id="pricing" className="py-16 sm:py-24 border-b border-neutral-200 dark:border-[var(--border-subtle)]">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="font-newsreader text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-              {isVi ? "Bảng giá điện toán minh bạch" : "Predictable compute pricing"}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {PRICING_PLANS.map((plan) => (
-              <div
-                key={plan.name}
-                className={`rounded-xl p-6 flex flex-col justify-between border transition-all ${
-                  plan.name === "Super"
-                    ? "bg-white dark:bg-[var(--bg-card)] border-[#f8a87c] shadow-lg relative"
-                    : "bg-slate-50/70 dark:bg-[#080a0f] border-neutral-200 dark:border-[var(--border-subtle)]"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">{plan.name}</h3>
-                    <span
-                      className={`text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full ${
-                        plan.name === "Super"
-                          ? "bg-[#f8a87c] text-black"
-                          : "bg-neutral-200/70 dark:bg-white/10 text-neutral-600 dark:text-neutral-300"
-                      }`}
-                    >
-                      {isVi ? plan.badge.vi : plan.badge.en}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
-                      {typeof plan.price === "string" ? plan.price : isVi ? plan.price.vi : plan.price.en}
-                    </span>
-                    <span className="text-xs text-neutral-500 font-mono">
-                      {isVi ? plan.period.vi : plan.period.en}
-                    </span>
-                  </div>
-
-
-                  <ul className="mt-5 space-y-2.5 border-t border-neutral-200 dark:border-[var(--border-subtle)] pt-4 text-xs text-neutral-700 dark:text-neutral-300">
-                    {(isVi ? plan.features.vi : plan.features.en).map((f) => (
-                      <li key={f} className="flex items-start gap-2">
-                        <Check size={13} className="text-[#f8a87c] shrink-0 mt-0.5" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <Link
-                  to={plan.name === "On-Premise" ? "/docs" : "/app"}
-                  className={`mt-6 w-full py-2.5 rounded-lg text-xs font-semibold text-center transition-all ${
-                    plan.name === "Super"
-                      ? "bg-[#f8a87c] text-black hover:bg-[#f5935f]"
-                      : "bg-neutral-200/70 dark:bg-white/[0.06] text-neutral-900 dark:text-white hover:bg-neutral-300/70 dark:hover:bg-white/[0.12]"
-                  }`}
-                >
-                  {plan.name === "On-Premise"
-                    ? isVi
-                      ? "Tài liệu On-Prem"
-                      : "Explore On-Prem"
-                    : `${t("pricing.getPlan")} ${plan.name}`}
-                </Link>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 8. Section #faq: Compact Accordion */}
-      <section id="faq" className="py-16 sm:py-20 border-b border-neutral-200 dark:border-[var(--border-subtle)] bg-[var(--bg-card-subtle)]">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="font-newsreader text-2xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
-              {isVi ? "Câu hỏi thường gặp" : "Frequently Asked Questions"}
-            </h2>
-          </div>
-
-          <div className="divide-y divide-neutral-200 dark:divide-[var(--border-subtle)] border-t border-b border-neutral-200 dark:border-[var(--border-subtle)]">
-            {FAQS.map((item, idx) => {
-              const isOpen = openFaq === idx;
-              return (
-                <div key={idx}>
-                  <button
-                    onClick={() => setOpenFaq(isOpen ? null : idx)}
-                    className="w-full flex items-center justify-between py-4 text-left text-xs sm:text-sm font-medium text-neutral-900 dark:text-white hover:text-[#f8a87c] transition-colors cursor-pointer"
-                  >
-                    <span className="pr-4">{isVi ? item.q.vi : item.q.en}</span>
-                    <ChevronDown
-                      size={15}
-                      className={`text-neutral-500 shrink-0 transition-transform ${isOpen ? "rotate-180 text-[#f8a87c]" : ""}`}
-                    />
-                  </button>
-                  <AnimatePresence>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className="overflow-hidden"
-                      >
-                        <p className="pb-4 text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                          {isVi ? item.a.vi : item.a.en}
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* 9. Final CTA */}
-      <section id="deploy" className="py-20 text-center relative overflow-hidden">
-        <div className="mx-auto max-w-3xl px-4 relative z-10">
-          <h2 className="font-newsreader text-3xl sm:text-5xl text-neutral-900 dark:text-white font-normal leading-[1.15] text-balance">
-            {isVi ? (
-              <>
-                <span className="whitespace-nowrap">Khởi chạy</span>{" "}
-                <span className="whitespace-nowrap">Nhân viên AI</span>{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 font-semibold whitespace-nowrap">
-                  Skyer
-                </span>{" "}
-                <span className="whitespace-nowrap">ngay hôm nay.</span>
-              </>
-            ) : (
-              <>
-                <span>Deploy your first </span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f8a87c] via-[#ffa149] to-amber-300 font-semibold">
-                  Skyer
-                </span>
-                <span> teammate today.</span>
-              </>
-            )}
-          </h2>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/app"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#f8a87c] text-black hover:bg-[#f5935f] px-8 text-xs sm:text-sm font-semibold transition-all shadow-[0_0_25px_rgba(248,168,124,0.35)]"
-            >
-              <span>{t("cta.getStarted")}</span>
-              <ArrowRight size={14} />
-            </Link>
-            <Link
-              to="/docs"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-neutral-300 dark:border-white/15 bg-white dark:bg-white/[0.03] hover:bg-neutral-100 dark:hover:bg-white/[0.08] px-7 text-xs sm:text-sm font-medium text-neutral-800 dark:text-white transition-all"
-            >
-              {t("cta.readDocs")}
-            </Link>
-          </div>
-        </div>
-      </section>
+      <ContactModal
+        isOpen={contactOpen}
+        onClose={() => setContactOpen(false)}
+        defaultCategory="request_agent"
+      />
     </div>
   );
 }

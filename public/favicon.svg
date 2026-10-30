@@ -1,20 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
   <style>
-    @media (prefers-color-scheme: light) {
-      .bg-tile { fill: #F8FAFC; stroke: rgba(15, 23, 42, 0.14); }
-      .upper-blade { stroke: #0F172A; }
-      .lower-blade { stroke: #F8A87C; }
-    }
-    @media (prefers-color-scheme: dark) {
-      .bg-tile { fill: #0A0C13; stroke: rgba(255, 255, 255, 0.12); }
-      .upper-blade { stroke: #F8FAFC; }
-      .lower-blade { stroke: #F8A87C; }
-    }
+    .ink { fill: #252522; }
+    @media (prefers-color-scheme: dark) { .ink { fill: #FFFDF9; } }
   </style>
-  <rect class="bg-tile" width="36" height="36" rx="9" fill="#0A0C13"/>
-  <rect class="bg-tile" x="0.5" y="0.5" width="35" height="35" rx="8.5" stroke="rgba(255,255,255,0.12)"/>
-  <path class="upper-blade" d="M 27 7.5 L 13.5 7.5 C 10 7.5 7.5 10 7.5 13.5 L 7.5 14.5 C 7.5 18 10 20 13.5 20.5 L 21 21.5"
-        stroke="#F8FAFC" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path class="lower-blade" d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5"
-        stroke="#F8A87C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path class="ink" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z"/>
+  <path class="ink" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)"/>
+  <path class="ink" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)"/>
+  <path fill="#F8A87C" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)"/>
 </svg>

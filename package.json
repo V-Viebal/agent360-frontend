@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/verify-bundle.mjs",
+    "build": "vite build && node scripts/verify-bundle.mjs && node scripts/verify-strawberry-visual-contract.mjs",
     "typecheck": "tsc --noEmit -p .",
     "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks',{stdio:'ignore'})}catch{}\"",
     "verify-bundle": "node scripts/verify-bundle.mjs",
-    "lint:hooks": "node scripts/check-react-hooks.mjs"
+    "lint:hooks": "node scripts/check-react-hooks.mjs",
+    "verify-visual": "node scripts/verify-strawberry-visual-contract.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

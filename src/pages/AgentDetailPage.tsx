@@ -25,7 +25,8 @@ import { AgentMarketplaceItem } from "../types/marketplace";
 export function AgentDetailPage() {
   const { t, language } = useTranslation();
   const isVi = language === "vi";
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id?: string; agentId?: string }>();
+  const id = params.agentId || params.id;
   const navigate = useNavigate();
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "team" | "terminal" | "spec">("overview");
@@ -41,7 +42,7 @@ export function AgentDetailPage() {
         </p>
         <Link
           to="/marketplace"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-sm font-medium hover:border-[#ff7a00]/40 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-sm font-medium hover:border-[#c2540a]/40 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> {isVi ? "Quay lại Chợ Nhân viên" : "Back to Marketplace"}
         </Link>
@@ -88,23 +89,23 @@ export function AgentDetailPage() {
           ],
         }}
       />
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
         {/* Back Link */}
         <Link
           to="/marketplace"
-          className="inline-flex items-center gap-2 text-xs font-mono text-[var(--text-muted)] hover:text-[#ff7a00] mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-mono text-[var(--text-muted)] hover:text-[#c2540a] mb-8 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> {isVi ? "QUAY LẠI CHỢ NHÂN VIÊN" : "BACK TO MARKETPLACE"}
         </Link>
 
         {/* Hero Card */}
         <div className="relative rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 sm:p-8 backdrop-blur-xl shadow-2xl overflow-hidden mb-8">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#ff7a00]/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#c2540a]/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff7a00]/20 to-transparent border border-[#ff7a00]/30 flex items-center justify-center shrink-0">
-                <Sparkles className="w-8 h-8 text-[#ff7a00]" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c2540a]/20 to-transparent border border-[#c2540a]/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-8 h-8 text-[#c2540a]" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -120,7 +121,7 @@ export function AgentDetailPage() {
                     {agent.department}
                   </span>
                 </div>
-                <p className="text-sm font-mono text-[#ff7a00] mb-2">{agent.roleTitle}</p>
+                <p className="text-sm font-mono text-[#c2540a] mb-2">{agent.roleTitle}</p>
                 <p className="text-xs text-[var(--text-muted)] max-w-2xl">{agent.summary}</p>
               </div>
             </div>
@@ -128,7 +129,7 @@ export function AgentDetailPage() {
             <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
               <button
                 onClick={handleLaunchChat}
-                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#ff7a00] hover:bg-[#ea580c] text-white font-medium text-sm transition-all shadow-lg shadow-[#ff7a00]/20"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#252522] dark:bg-[#f8a87c] text-[#FFFCFA] dark:text-black font-medium text-xs sm:text-sm hover:opacity-90 transition-all cursor-pointer shadow-xs"
               >
                 <Play className="w-4 h-4 fill-white" /> {isVi ? "Bắt đầu làm việc cùng Bot" : "Launch AI Teammate"}
               </button>
@@ -165,13 +166,13 @@ export function AgentDetailPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] mb-8 overflow-x-auto pb-px">
+        <div className="grid grid-cols-2 sm:inline-flex items-center gap-1.5 p-1.5 rounded-2xl sm:rounded-full bg-[#F3EDE4] dark:bg-white/[0.04] border border-[#E6DFD5] dark:border-white/10 mb-8">
           {(
             [
-              { id: "overview", label: isVi ? "Tổng quan & Nhiệm vụ" : "Overview & Mission", icon: Sparkles },
-              { id: "team", label: isVi ? "Phối hợp Đội ngũ (ACP)" : "Team Pipeline (ACP)", icon: Workflow },
-              { id: "terminal", label: isVi ? "Thực thi Terminal Sandbox" : "Sandboxed Terminal Execution", icon: Terminal },
-              { id: "spec", label: isVi ? "Công cụ & Tích hợp" : "Tools & Integrations", icon: Wrench },
+              { id: "overview", label: isVi ? "Tổng quan" : "Overview", icon: Sparkles },
+              { id: "team", label: isVi ? "Phối hợp ACP" : "Team (ACP)", icon: Workflow },
+              { id: "terminal", label: isVi ? "Máy tính riêng" : "Workstation", icon: Terminal },
+              { id: "spec", label: isVi ? "Công cụ & Tích hợp" : "Integrations", icon: Wrench },
             ] as const
           ).map((tab) => {
             const Icon = tab.icon;
@@ -179,15 +180,16 @@ export function AgentDetailPage() {
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+                className={`flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-medium rounded-xl sm:rounded-full transition-all cursor-pointer ${
                   active
-                    ? "border-[#ff7a00] text-[#ff7a00]"
-                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    ? "bg-[#FFFDF9] dark:bg-[#252522] text-[#252522] dark:text-white shadow-xs border border-[#E6DFD5]/80 dark:border-white/15"
+                    : "text-[#252522]/65 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white"
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
-                {tab.label}
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -198,7 +200,7 @@ export function AgentDetailPage() {
           <div className="space-y-6">
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <div className="p-4 rounded-lg bg-black/20 border border-white/5 font-mono text-xs text-[var(--text-primary)]">
-                <span className="text-[#ff7a00] font-semibold">{isVi ? "Mục tiêu: " : "Goal: "}</span>
+                <span className="text-[#c2540a] font-semibold">{isVi ? "Mục tiêu: " : "Goal: "}</span>
                 {agent.goal}
               </div>
             </div>
@@ -208,7 +210,7 @@ export function AgentDetailPage() {
                 <h3 className="text-sm font-semibold">{isVi ? "Câu lệnh Giao việc Mẫu" : "Standard Kickoff Prompt"}</h3>
                 <button
                   onClick={handleCopyPrompt}
-                  className="text-xs font-mono text-[#ff7a00] hover:underline"
+                  className="text-xs font-mono text-[#c2540a] hover:underline"
                 >
                   {copiedPrompt ? (isVi ? "✓ Đã sao chép" : "✓ Copied to clipboard") : (isVi ? "Sao chép câu lệnh" : "Copy Prompt")}
                 </button>
@@ -236,7 +238,7 @@ export function AgentDetailPage() {
           <div className="space-y-6">
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#ff7a00]" />
+                <Users className="w-4 h-4 text-[#c2540a]" />
                 {isVi ? "Phương thức Phối hợp Đội ngũ:" : "Collaborative Team Mode:"} {agent.teamConfig.collaborationMode}
               </h3>
 
@@ -247,14 +249,14 @@ export function AgentDetailPage() {
                     key={idx}
                     className="p-3 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] flex items-center gap-2 text-xs font-mono"
                   >
-                    <div className="w-2 h-2 rounded-full bg-[#ff7a00]" />
+                    <div className="w-2 h-2 rounded-full bg-[#c2540a]" />
                     <span>{role}</span>
                   </div>
                 ))}
               </div>
 
               <div className="p-4 rounded-lg bg-black/20 border border-white/5 text-xs">
-                <span className="font-semibold text-[#ff7a00] block mb-1">{isVi ? "Kết quả Bàn giao Kỳ vọng:" : "Expected Output Deliverable:"}</span>
+                <span className="font-semibold text-[#c2540a] block mb-1">{isVi ? "Kết quả Bàn giao Kỳ vọng:" : "Expected Output Deliverable:"}</span>
                 <span className="text-[var(--text-muted)] font-mono">
                   {agent.teamConfig.expectedOutput}
                 </span>
@@ -286,7 +288,7 @@ export function AgentDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-[#ff7a00]" />
+                <Wrench className="w-4 h-4 text-[#c2540a]" />
                 {isVi ? "Công cụ MCP Được Gán" : "MCP Tools Bound"}
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -303,14 +305,14 @@ export function AgentDetailPage() {
 
             <div className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-[#ff7a00]" />
+                <Boxes className="w-4 h-4 text-[#c2540a]" />
                 {isVi ? "Hệ thống Tích hợp Kết nối" : "Connected Integrations"}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {agent.integrations.map((integration, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 py-1 rounded-md bg-[#ff7a00]/10 border border-[#ff7a00]/30 text-xs font-mono text-[#ff7a00]"
+                    className="px-2.5 py-1 rounded-md bg-[#c2540a]/10 border border-[#c2540a]/30 text-xs font-mono text-[#c2540a]"
                   >
                     {integration}
                   </span>

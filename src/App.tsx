@@ -14,6 +14,7 @@ import { OfflineBanner } from "./components/OfflineBanner";
 // Lazy-loaded secondary pages & admin portal to optimize initial bundle size
 const MarketplacePage = lazy(() => import("./pages/MarketplacePage").then(m => ({ default: m.MarketplacePage })));
 const DocsPage = lazy(() => import("./pages/DocsPage").then(m => ({ default: m.DocsPage })));
+const PricingPage = lazy(() => import("./pages/PricingPage").then(m => ({ default: m.PricingPage })));
 const AgentDetailPage = lazy(() => import("./pages/AgentDetailPage").then(m => ({ default: m.AgentDetailPage })));
 const AgentStatsDashboardPage = lazy(() => import("./pages/AgentStatsDashboardPage").then(m => ({ default: m.AgentStatsDashboardPage })));
 const DesignTokensSandboxPage = lazy(() => import("./pages/DesignTokensSandboxPage").then(m => ({ default: m.DesignTokensSandboxPage })));
@@ -83,6 +84,20 @@ export default function App() {
             <Navbar />
             <main className="flex-1">
               <AgentDetailPage />
+            </main>
+            <Footer />
+          </div>
+        }
+      />
+
+      {/* Pricing Page */}
+      <Route
+        path="/pricing"
+        element={
+          <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col font-sans transition-colors">
+            <Navbar />
+            <main className="flex-1">
+              <PricingPage />
             </main>
             <Footer />
           </div>

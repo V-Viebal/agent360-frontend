@@ -299,6 +299,7 @@
   --text-primary: #eceef2;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
+  --text-contrast: #ffffff;
   
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-card: #22222e;
@@ -342,6 +343,7 @@
   --text-primary: #252522;
   --text-secondary: #57534e;
   --text-muted: #78716c;
+  --text-contrast: #252522;
   
   --border-subtle: #ECE5DC;
   --border-card: #ECE5DC;

@@ -72,25 +72,25 @@ export function ContactModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-xl bg-[var(--bg-page)] border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[var(--text-primary)]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/40">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02]">
           <div className="flex items-center gap-2.5">
-            <div className={`p-2 rounded-lg ${category === "request_agent" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "bg-sky-500/10 text-sky-400 border border-sky-500/20"}`}>
+            <div className="p-2 rounded-xl bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30">
               {category === "request_agent" ? <Bot size={20} /> : <Mail size={20} />}
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white">
                 {category === "request_agent" ? "Yêu cầu cấu hình Nhân viên AI mới" : "Liên hệ Tư vấn & Giải pháp"}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {category === "request_agent" ? "Bespoke Autonomous AI Workforce Specification" : "Đội ngũ chuyên gia phản hồi trong 24 giờ"}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -109,7 +109,7 @@ export function ContactModal({
                   {statusMsg}
                 </p>
               </div>
-              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-400">
+              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-neutral-400">
                 Một email xác nhận chi tiết đã được gửi tới <strong>{email}</strong>. Chuyên viên Skyer sẽ liên hệ sớm nhất.
               </div>
               <button
@@ -123,25 +123,25 @@ export function ContactModal({
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Category selector chips */}
-              <div className="flex gap-2 p-1 bg-slate-950/60 rounded-xl border border-slate-800">
+              <div className="flex gap-1.5 p-1 bg-neutral-100 dark:bg-white/[0.04] rounded-full border border-neutral-200 dark:border-white/10">
                 <button
                   type="button"
                   onClick={() => setCategory("general")}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${category === "general" ? "bg-slate-800 text-white shadow" : "text-slate-400 hover:text-slate-200"}`}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-full transition-all cursor-pointer ${category === "general" ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"}`}
                 >
                   Tư vấn chung
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategory("request_agent")}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${category === "request_agent" ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:text-slate-200"}`}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-full transition-all cursor-pointer ${category === "request_agent" ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"}`}
                 >
                   Đặt hàng AI Agent
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategory("enterprise")}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${category === "enterprise" ? "bg-slate-800 text-white shadow" : "text-slate-400 hover:text-slate-200"}`}
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-full transition-all cursor-pointer ${category === "enterprise" ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs font-semibold" : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"}`}
                 >
                   On-Premise Enterprise
                 </button>
@@ -150,8 +150,8 @@ export function ContactModal({
               {/* Name & Email fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1">
-                    <User size={12} className="text-slate-400" />
+                  <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                    <User size={12} className="text-neutral-400" />
                     Họ và tên <span className="text-rose-400">*</span>
                   </label>
                   <input
@@ -160,12 +160,12 @@ export function ContactModal({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Nguyễn Văn A"
-                    className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1">
-                    <Mail size={12} className="text-slate-400" />
+                  <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                    <Mail size={12} className="text-neutral-400" />
                     Email liên hệ <span className="text-rose-400">*</span>
                   </label>
                   <input
@@ -174,7 +174,7 @@ export function ContactModal({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors"
                   />
                 </div>
               </div>
@@ -182,8 +182,8 @@ export function ContactModal({
               {/* Phone & Company */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1">
-                    <Phone size={12} className="text-slate-400" />
+                  <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                    <Phone size={12} className="text-neutral-400" />
                     Số điện thoại
                   </label>
                   <input
@@ -191,12 +191,12 @@ export function ContactModal({
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="0912 345 678"
-                    className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1">
-                    <Building size={12} className="text-slate-400" />
+                  <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                    <Building size={12} className="text-neutral-400" />
                     Tên Doanh nghiệp / Tổ chức
                   </label>
                   <input
@@ -204,16 +204,16 @@ export function ContactModal({
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
                     placeholder="Công ty CP Công Nghệ..."
-                    className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                    className="w-full px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors"
                   />
                 </div>
               </div>
 
               {/* Conditional Agent Role Field */}
               {category === "request_agent" && (
-                <div className="space-y-1 p-3 bg-purple-950/20 border border-purple-500/20 rounded-xl">
-                  <label className="text-[11px] font-medium text-purple-300 flex items-center gap-1">
-                    <Bot size={12} className="text-purple-400" />
+                <div className="space-y-1 p-3 bg-[#f8a87c]/10 border border-[#f8a87c]/30 rounded-xl">
+                  <label className="text-[11px] font-medium text-neutral-900 dark:text-white flex items-center gap-1">
+                    <Bot size={12} className="text-[#f8a87c]" />
                     Vị trí / Vai trò Nhân viên AI mong muốn <span className="text-rose-400">*</span>
                   </label>
                   <input
@@ -222,7 +222,7 @@ export function ContactModal({
                     value={agentRole}
                     onChange={(e) => setAgentRole(e.target.value)}
                     placeholder="VD: Chuyên viên Điều Phối Bán Hàng, Pháp chế & Hợp đồng, QA Tự động..."
-                    className="w-full px-3 py-2 bg-slate-950/70 border border-purple-500/30 rounded-xl text-xs text-white placeholder-purple-400/40 focus:outline-none focus:border-purple-400 transition-colors"
+                    className="w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/15 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors"
                   />
                 </div>
               )}
@@ -237,14 +237,14 @@ export function ContactModal({
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder={category === "request_agent" ? "Đào tạo nhân viên AI cho phòng kinh doanh" : "Yêu cầu tư vấn triển khai"}
-                  className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                  className="w-full px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors"
                 />
               </div>
 
               {/* Message */}
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1">
-                  <MessageSquare size={12} className="text-slate-400" />
+                <label className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1">
+                  <MessageSquare size={12} className="text-neutral-400" />
                   Mô tả chi tiết tác vụ & quy trình mong muốn <span className="text-rose-400">*</span>
                 </label>
                 <textarea
@@ -255,7 +255,7 @@ export function ContactModal({
                   placeholder={category === "request_agent"
                     ? "Mô tả quy trình cụ thể: nguồn dữ liệu đầu vào (ERP/CRM/Email), các tác vụ nhân viên AI cần làm tự động, phê duyệt của con người và kết quả cần xuất ra..."
                     : "Chia sẻ nhu cầu hoặc vướng mắc nghiệp vụ hiện tại của quý công ty..."}
-                  className="w-full px-3 py-2 bg-slate-950/50 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors resize-none"
+                  className="w-full px-3 py-2 bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/10 rounded-xl text-xs text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-[#f8a87c] transition-colors resize-none"
                 />
               </div>
 
@@ -271,18 +271,14 @@ export function ContactModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs text-slate-400 hover:text-white transition-colors"
+                  className="px-4 py-2 text-xs text-neutral-400 hover:text-white transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-semibold text-white flex items-center gap-2 transition-all shadow-lg active:scale-95 disabled:opacity-50 ${
-                    category === "request_agent"
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-purple-600/25"
-                      : "bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 shadow-sky-600/25"
-                  }`}
+                  className="px-6 py-2.5 rounded-full text-xs font-semibold text-black bg-[#f8a87c] hover:bg-[#f5935f] flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? (
                     <span className="inline-block animate-spin mr-1">↻</span>

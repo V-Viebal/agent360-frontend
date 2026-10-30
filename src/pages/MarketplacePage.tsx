@@ -1,253 +1,325 @@
 import { SeoHead } from "../components/SeoHead";
 import { useTranslation } from "../i18n/LanguageContext";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
   CheckCircle2,
-  SlidersHorizontal,
   ArrowUpRight,
   Sparkles,
   Bot,
   Users,
-  ShieldCheck,
-  Zap,
-  Terminal,
   Cpu,
-  Download,
   Play,
-  Layers,
   ArrowRight,
   BookOpen,
   X,
-  Code2,
   Workflow,
   Check,
 } from "lucide-react";
 import { MARKETPLACE_AGENTS } from "../data/mockMarketplaceAgents";
 import { AIOrgChart } from "../components/AIOrgChart";
 import { MarketplaceCustomAgentBanner } from "../components/MarketplaceCustomAgentBanner";
-import { AgentMarketplaceItem, AgentDepartment } from "../types/marketplace";
-
-
-const COMPANY_SCALES = [
-  { id: "all", label: "All Company Scales", desc: "Every tier" },
-  { id: "startup", label: "Startup (<50)", desc: "Lean & Fast" },
-  { id: "sme", label: "SME & Growth (50-250)", desc: "Scale Operations" },
-  { id: "enterprise", label: "Enterprise (250+)", desc: "Air-Gapped & Compliance" },
-];
+import { AgentAvatar } from "../components/AgentAvatar";
+import { AgentMarketplaceItem } from "../types/marketplace";
 
 const CATEGORY_DEFS: { id: string; en: string; vi: string; filter: (item: AgentMarketplaceItem) => boolean }[] = [
-  { id: "all", en: "All Positions", vi: "Tất cả vị trí", filter: () => true },
-  { id: "exec", en: "Executive & Ops", vi: "Điều hành & Vận hành", filter: (item) => item.department === "Executive & Ops" },
-  { id: "finance", en: "Finance & Accounting", vi: "Tài chính & Kế toán", filter: (item) => item.department === "Finance & Accounting" },
-  { id: "sales", en: "Sales & BizDev", vi: "Kinh doanh & B2B", filter: (item) => item.department === "Sales & BizDev" },
-  { id: "cx", en: "Customer Support", vi: "Chăm sóc Khách hàng", filter: (item) => item.department === "Customer Support & Success" },
-  { id: "marketing", en: "Marketing & Growth", vi: "Marketing & Tăng trưởng", filter: (item) => item.department === "Marketing & Creative" },
+  { id: "all", en: "All Companions", vi: "Tất cả vị trí", filter: () => true },
+  { id: "exec", en: "Executive & Ops", vi: "Điều hành", filter: (item) => item.department === "Executive & Ops" },
+  { id: "finance", en: "Finance & TT99", vi: "Kế toán & ERP", filter: (item) => item.department === "Finance & Accounting" },
+  { id: "sales", en: "Sales & B2B", vi: "Kinh doanh B2B", filter: (item) => item.department === "Sales & BizDev" },
+  { id: "cx", en: "Customer Support", vi: "Chăm sóc KH", filter: (item) => item.department === "Customer Support & Success" },
+  { id: "marketing", en: "Marketing", vi: "Marketing", filter: (item) => item.department === "Marketing & Creative" },
   { id: "hr", en: "HR & Legal", vi: "Nhân sự & Pháp chế", filter: (item) => item.department === "HR & People" || item.department === "Legal & Compliance" },
-  { id: "tech", en: "IT & Tech", vi: "CNTT & Kỹ thuật", filter: (item) => item.department === "Engineering & Tech" },
+  { id: "tech", en: "IT & Infra", vi: "CNTT & Hạ tầng", filter: (item) => item.department === "Engineering & Tech" },
 ];
 
-// Helper to render geometrical shapes like x.ai/bot/marketplace
-function GeometricAvatar({
-  shape,
-  color,
-  size = "md",
-}: {
-  shape: AgentMarketplaceItem["shape"];
-  color: AgentMarketplaceItem["color"];
-  size?: "sm" | "md" | "lg";
-}) {
-  const sizeClasses = {
-    sm: "w-8 h-8 text-xs",
-    md: "w-11 h-11 text-sm",
-    lg: "w-16 h-16 text-lg",
-  }[size];
-
-  const colorStyles = {
-    orange: "from-[#f8a87c] to-amber-300 text-black shadow-[#f8a87c]/25",
-    blue: "from-blue-500 to-cyan-300 text-white shadow-blue-500/25",
-    emerald: "from-emerald-500 to-teal-300 text-black shadow-emerald-500/25",
-    purple: "from-purple-500 to-indigo-300 text-white shadow-purple-500/25",
-    rose: "from-rose-500 to-pink-300 text-white shadow-rose-500/25",
-    amber: "from-amber-500 to-yellow-300 text-black shadow-amber-500/25",
-    cyan: "from-cyan-500 to-blue-300 text-black shadow-cyan-500/25",
-  }[color];
-
-  const shapeClasses = {
-    squircle: "rounded-[32%]",
-    hex: "rounded-lg rotate-6",
-    dome: "rounded-t-full rounded-b-xl",
-    capsule: "rounded-full",
-    crystal: "rounded-none rotate-45 scale-90",
-    blob: "rounded-[40%_60%_70%_30%/40%_50%_60%_55%]",
-    wedge: "rounded-tr-3xl rounded-bl-3xl rounded-tl-sm rounded-br-sm",
-    tablet: "rounded-2xl",
-  }[shape];
-
-  return (
-    <div
-      className={`relative flex items-center justify-center font-mono font-bold bg-gradient-to-tr shadow-lg transition-transform duration-300 group-hover:scale-105 ${sizeClasses} ${colorStyles} ${shapeClasses}`}
-    >
-      <Bot size={size === "lg" ? 28 : size === "md" ? 20 : 16} />
-    </div>
-  );
-}
+const COMPANION_STAGE_META: Record<
+  string,
+  {
+    vnName: string;
+    enName: string;
+    badgeVi: string;
+    badgeEn: string;
+    badgeStyle: string;
+    stageGradient: string;
+    blob: { shape: string; expression: string; color: string; animation: string; seed: number };
+    conciseVi: string;
+    conciseEn: string;
+    miniHeader: string;
+    miniTag: string;
+    miniRow1: [string, string];
+    miniRow2: [string, string];
+    miniStatusVi: string;
+    miniStatusEn: string;
+  }
+> = {
+  "agent-chief-of-staff": {
+    vnName: "Minh Bốc",
+    enName: "Executive Minh",
+    badgeVi: "Trợ lý Điều hành",
+    badgeEn: "Chief of Staff",
+    badgeStyle: "bg-[#e0f2fe] text-[#0369a1] dark:bg-sky-500/20 dark:text-sky-300 border-sky-200 dark:border-sky-500/30",
+    stageGradient: "from-[#f0f9ff] to-[#FFFDF9] dark:from-[#0f1d2d] dark:to-[#0c0e15]",
+    blob: { shape: "squircle", expression: "proud", color: "#38bdf8", animation: "nod.1.4,wink.1.6", seed: 101 },
+    conciseVi: "Tổng hợp KPI mỗi sáng, soạn sẵn dự thảo trả lời email và theo sát đầu việc các phòng ban.",
+    conciseEn: "Get a brief every morning, replies drafted in your voice, and cross-team OKRs tracked.",
+    miniHeader: "OKR // Q4 Board",
+    miniTag: "08:30",
+    miniRow1: ["Doanh thu B2B", "108% ✓"],
+    miniRow2: ["Runway Quỹ", "18.4 tháng"],
+    miniStatusVi: "✓ Đã đồng bộ 4 phòng",
+    miniStatusEn: "✓ 4 depts synced",
+  },
+  "agent-finance-controller": {
+    vnName: "An Kế Toán",
+    enName: "Finance An",
+    badgeVi: "Kế toán TT99",
+    badgeEn: "Finance & ERP",
+    badgeStyle: "bg-[#dcfce7] text-[#15803d] dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30",
+    stageGradient: "from-[#f0fdf4] to-[#FFFDF9] dark:from-[#0f241c] dark:to-[#0c0e15]",
+    blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4,jump.1.4", seed: 202 },
+    conciseVi: "Khớp 48 hóa đơn GTGT với đơn hàng PO trên ERPCore, lập chứng từ TT99 với độ lệch 0 đồng.",
+    conciseEn: "Reconcile 48 vendor invoices against POs in ERPCore and stage TT99 tax vouchers.",
+    miniHeader: "ERPCore // 02-VT",
+    miniTag: "TT99",
+    miniRow1: ["PO-2026-891", "Khớp 100%"],
+    miniRow2: ["Chênh lệch", "0 VNĐ"],
+    miniStatusVi: "✓ 48/48 HĐ hợp lệ",
+    miniStatusEn: "✓ 48/48 matched",
+  },
+  "agent-b2b-sales-exec": {
+    vnName: "Linh Kinh Doanh",
+    enName: "Sales Linh",
+    badgeVi: "Kinh doanh B2B",
+    badgeEn: "B2B Sales",
+    badgeStyle: "bg-[#ffedd5] text-[#c2410c] dark:bg-orange-500/20 dark:text-orange-300 border-orange-200 dark:border-orange-500/30",
+    stageGradient: "from-[#fff7ed] to-[#FFFDF9] dark:from-[#291811] dark:to-[#0c0e15]",
+    blob: { shape: "cat", expression: "happy", color: "#f8a87c", animation: "wink.1.6,nod.1.4", seed: 303 },
+    conciseVi: "Tìm 100 khách hàng doanh nghiệp tiềm năng, soạn báo giá và kịch bản tiếp cận theo đúng giọng của bạn.",
+    conciseEn: "Get 100 qualified B2B leads with personalized outreach written in your voice, ready to send.",
+    miniHeader: "CRM // Lead B2B",
+    miniTag: "+100",
+    miniRow1: ["VinFast Supply", "98% Fit"],
+    miniRow2: ["Thaco Logistics", "95% Fit"],
+    miniStatusVi: "✓ 15 báo giá sẵn sàng",
+    miniStatusEn: "✓ 15 quotes staged",
+  },
+  "agent-customer-support-lead": {
+    vnName: "Lúa CSKH",
+    enName: "Support Lua",
+    badgeVi: "CSKH 24/7",
+    badgeEn: "Customer Success",
+    badgeStyle: "bg-[#ccfbf1] text-[#0f766e] dark:bg-teal-500/20 dark:text-teal-300 border-teal-200 dark:border-teal-500/30",
+    stageGradient: "from-[#f0fdfa] to-[#FFFDF9] dark:from-[#0f2624] dark:to-[#0c0e15]",
+    blob: { shape: "droplet", expression: "laughing", color: "#2dd4bf", animation: "jump.1.4,nod.1.4", seed: 606 },
+    conciseVi: "Phản hồi yêu cầu hỗ trợ trong 15 giây, tự tra cứu đơn hàng ERPCore và xử lý đổi trả 24/7.",
+    conciseEn: "Resolve tier-2 tickets in 15s by querying ERPCore orders and knowledge base articles 24/7.",
+    miniHeader: "Ticket // #8821",
+    miniTag: "SLA 12s",
+    miniRow1: ["CSAT Tuần", "4.95 / 5 ★"],
+    miniRow2: ["Tồn đọng", "0 Ticket"],
+    miniStatusVi: "✓ Đã xuất hóa đơn VAT",
+    miniStatusEn: "✓ Receipt dispatched",
+  },
+  "agent-marketing-growth": {
+    vnName: "Martin Nội Dung",
+    enName: "Marketing Martin",
+    badgeVi: "Marketing Đa kênh",
+    badgeEn: "Growth & SEO",
+    badgeStyle: "bg-[#f3e8ff] text-[#7e22ce] dark:bg-purple-500/20 dark:text-purple-300 border-purple-200 dark:border-purple-500/30",
+    stageGradient: "from-[#faf5ff] to-[#FFFDF9] dark:from-[#22152e] dark:to-[#0c0e15]",
+    blob: { shape: "cloud", expression: "excited", color: "#c084fc", animation: "wink.1.6,nod.1.4", seed: 707 },
+    conciseVi: "Phân tích chủ đề chuyển đổi cao, viết bài chuẩn SEO/AEO và tự động lên lịch đăng đa kênh.",
+    conciseEn: "Find what worked for you, then get SEO/AEO articles and social posts in your voice.",
+    miniHeader: "Postiz // Lịch đăng",
+    miniTag: "AEO/SEO",
+    miniRow1: ["LinkedIn Series", "5 bài ✓"],
+    miniRow2: ["CTR Tự nhiên", "+42%"],
+    miniStatusVi: "✓ Đã lên lịch 09:00",
+    miniStatusEn: "✓ Queued 09:00 AM",
+  },
+  "agent-hr-talent-partner": {
+    vnName: "Nam Tuyển Dụng",
+    enName: "Talent Nam",
+    badgeVi: "Nhân sự & C&B",
+    badgeEn: "Talent & HR",
+    badgeStyle: "bg-[#ffe4e6] text-[#be123c] dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-500/30",
+    stageGradient: "from-[#fff1f2] to-[#FFFDF9] dark:from-[#2b141b] dark:to-[#0c0e15]",
+    blob: { shape: "clover", expression: "happy", color: "#fb7185", animation: "jump.1.4,nod.1.4", seed: 505 },
+    conciseVi: "Chấm điểm 10 ứng viên sáng giá nhất theo JD của phòng ban và tự động xếp lịch phỏng vấn.",
+    conciseEn: "Get 10 strong candidates, each researched and scored against what your team needs.",
+    miniHeader: "Top 10 Ứng viên",
+    miniTag: "Match",
+    miniRow1: ["Trần M. Hoàng", "96/100"],
+    miniRow2: ["Lê Thu Hà", "94/100"],
+    miniStatusVi: "✓ Đã gửi lịch PV",
+    miniStatusEn: "✓ Invites sent",
+  },
+  "agent-legal-compliance": {
+    vnName: "Vy Pháp Chế",
+    enName: "Legal Vy",
+    badgeVi: "Pháp chế & HĐ",
+    badgeEn: "Legal & NDA",
+    badgeStyle: "bg-[#fef3c7] text-[#b45309] dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30",
+    stageGradient: "from-[#fffbeb] to-[#FFFDF9] dark:from-[#292010] dark:to-[#0c0e15]",
+    blob: { shape: "bunny", expression: "attentive", color: "#fbbf24", animation: "nod.1.4,wink.1.6", seed: 404 },
+    conciseVi: "Rà soát hợp đồng thương mại, khoanh vùng điều khoản phạt rủi ro và đối chiếu chuẩn Nghị định 13.",
+    conciseEn: "Redline commercial contracts, flag risky indemnity clauses, and verify NĐ13 compliance.",
+    miniHeader: "MSA_2026.docx",
+    miniTag: "NĐ13",
+    miniRow1: ["Trần phạt HĐ", "100% GT"],
+    miniRow2: ["Rủi ro SHTT", "0 Lỗi ✓"],
+    miniStatusVi: "✓ Đã xuất bản Redline",
+    miniStatusEn: "✓ Redline DOCX ready",
+  },
+  "agent-it-systems-ops": {
+    vnName: "Kiên Hạ Tầng",
+    enName: "IT Ops Kien",
+    badgeVi: "CNTT & On-Premise",
+    badgeEn: "IT & Infra Ops",
+    badgeStyle: "bg-[#dcfce7] text-[#15803d] dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30",
+    stageGradient: "from-[#f0fdf4] to-[#FFFDF9] dark:from-[#11241a] dark:to-[#0c0e15]",
+    blob: { shape: "hexagon", expression: "focused", color: "#4ade80", animation: "nod.1.4", seed: 808 },
+    conciseVi: "Cấp phát tài khoản SSO nhân sự mới, giám sát cụm Docker On-Premise và tự động sao lưu mỗi ngày.",
+    conciseEn: "Provision SSO accounts, monitor on-premise Docker nodes, and verify daily backups 24/7.",
+    miniHeader: "On-Prem // Nodes",
+    miniTag: "99.98%",
+    miniRow1: ["Logto SSO 2FA", "Active ✓"],
+    miniRow2: ["Backup S3/DB", "Verified"],
+    miniStatusVi: "✓ 8/8 Cụm khỏe mạnh",
+    miniStatusEn: "✓ 8/8 nodes healthy",
+  },
+};
 
 export function MarketplacePage() {
   const { t, language } = useTranslation();
+  const isVi = language === "vi";
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<"catalog" | "orgchart">("catalog");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
-  const [selectedScale, setSelectedScale] = useState<string>("all");
-  const [selectedCompanyScale, setSelectedCompanyScale] = useState<"All" | "Startup" | "SME" | "Enterprise">("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeAgentModal, setActiveAgentModal] = useState<AgentMarketplaceItem | null>(null);
   const [deployedSuccess, setDeployedSuccess] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
 
-  // Filter logic: Default to All Agents (no restrictive filter)
+  useEffect(() => {
+    const timer = setInterval(() => setTick((p) => (p + 1) % 2), 2600);
+    return () => clearInterval(timer);
+  }, []);
+
   const filteredAgents = useMemo(() => {
     const categoryConfig = CATEGORY_DEFS.find((c) => c.id === selectedCategoryId);
     return MARKETPLACE_AGENTS.filter((agent) => {
       const matchesCategory =
-        selectedCategoryId === "all"
-          ? true
-          : categoryConfig
-          ? categoryConfig.filter(agent)
-          : true;
-
+        selectedCategoryId === "all" ? true : categoryConfig ? categoryConfig.filter(agent) : true;
+      const meta = COMPANION_STAGE_META[agent.id];
       const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !query ||
         agent.name.toLowerCase().includes(query) ||
+        (meta && meta.vnName.toLowerCase().includes(query)) ||
+        (meta && meta.badgeVi.toLowerCase().includes(query)) ||
         agent.roleTitle.toLowerCase().includes(query) ||
-        agent.creatorName.toLowerCase().includes(query) ||
-        agent.handle.toLowerCase().includes(query) ||
         agent.summary.toLowerCase().includes(query) ||
-        agent.tools.some((t) => t.toLowerCase().includes(query));
-
-      // Company scale matching
-      const matchesScale =
-        selectedCompanyScale === "All" ||
-        (selectedCompanyScale === "Startup" && (agent.department === "Executive & Ops" || agent.department === "Customer Support & Success" || agent.department === "Sales & BizDev")) ||
-        (selectedCompanyScale === "SME" && (agent.department === "Finance & Accounting" || agent.department === "Marketing & Creative" || agent.department === "HR & People")) ||
-        (selectedCompanyScale === "Enterprise" && (agent.department === "Legal & Compliance" || agent.department === "Engineering & Tech" || agent.department === "Executive & Ops" || agent.department === "Finance & Accounting"));
-
-      return matchesCategory && matchesSearch && matchesScale;
+        agent.tools.some((tool) => tool.toLowerCase().includes(query));
+      return matchesCategory && matchesSearch;
     });
-  }, [selectedCategoryId, searchQuery, selectedCompanyScale]);
+  }, [selectedCategoryId, searchQuery]);
 
   const handleDeployAgent = (agent: AgentMarketplaceItem) => {
-    setDeployedSuccess(agent.name);
+    const meta = COMPANION_STAGE_META[agent.id];
+    setDeployedSuccess(isVi && meta ? meta.vnName : agent.name);
     setTimeout(() => {
       setDeployedSuccess(null);
-      // Navigate to active workspace
-      navigate("/app");
-    }, 1200);
+      navigate(`/app?task=${encodeURIComponent(agent.samplePrompt)}`);
+    }, 900);
   };
 
   return (
-    <div className="pt-24 pb-28 min-h-screen text-[var(--text-primary)] font-sans">
+    <div className="pt-20 pb-28 min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] font-sans transition-colors">
       <SeoHead
-        title="Skyer Marketplace — Pre-Built Enterprise AI Employees & Role Templates"
-        description="Browse and deploy verified AI employees for Executive Ops, Finance (ERPCore & TT99), B2B Sales, 24/7 Customer Support, Marketing, HR, Legal, and IT Operations."
-        keywords="Skyer Marketplace, AI Employee Templates, Chief of Staff AI, Financial Controller Bot, B2B Sales Agent, ERPCore Bot, Chợ nhân viên AI"
+        title={
+          isVi
+            ? "Danh mục Nhân sự AI Skyer — Đồng nghiệp AI Chuyên biệt cho Doanh nghiệp"
+            : "Skyer Companions — Pre-Built Enterprise AI Teammates"
+        }
+        description={
+          isVi
+            ? "Tuyển dụng các đồng nghiệp AI sở hữu máy tính độc lập cho Điều hành, Kế toán TT99 (ERPCore), Kinh doanh B2B, CSKH 24/7, Pháp chế và Hạ tầng On-Premise."
+            : "Hire verified AI teammates with dedicated computers for Executive Ops, Finance (ERPCore & TT99), B2B Sales, Support, Legal, and IT."
+        }
         canonicalPath="/marketplace"
-        breadcrumbs={[
-          { name: "Skyer Home", url: "/" },
-          { name: "AI Employee Marketplace", url: "/marketplace" },
-        ]}
-        aeoSummary={{
-          question: "What AI employee roles are available in the Skyer Marketplace?",
-          directAnswer:
-            "The Skyer Marketplace offers pre-configured, production-ready AI employees across 8 corporate departments: Executive & Ops (Chief of Staff), Finance & Accounting (Financial Controller with TT99 & ERPCore matching), Sales & BizDev, Customer Support, Marketing & Growth, HR & People, Legal & Compliance, and IT & Systems Ops.",
-          keyFacts: [
-            "Every marketplace template includes pre-bound MCP tool drivers, role persona, and verification rubrics.",
-            "Supports 1-click deployment to Skyer Managed Cloud or On-Premise App360 clusters.",
-            "Includes interactive AI Organization Chart (ACP Supervision Tree) simulation.",
-          ],
-        }}
       />
-      {/* Top Header Banner matching x.ai and ai-teammates style */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-[var(--border-subtle)]">
-          <div>
-            <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-[#f8a87c] mb-2">
-              <Sparkles size={14} />
-              <span>{t("marketplace.badge")}</span>
-            </div>
-            <h1 className="font-newsreader text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-              {t("marketplace.title")}
-            </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-mono text-neutral-600 dark:text-neutral-400">
-              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10">
-                {language === "vi" ? "8 Phòng ban chuyên trách" : "8 Corporate Departments"}
-              </span>
-              <span className="text-neutral-300 dark:text-neutral-700">•</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10">
-                {language === "vi" ? "12 Nhân viên tự hành" : "12 Autonomous Teammates"}
-              </span>
-              <span className="text-neutral-300 dark:text-neutral-700">•</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-[#f8a87c]">
-                {language === "vi" ? "Đồng bộ BaseCore & ERPCore" : "BaseCore & ERPCore Native"}
-              </span>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              to="/app"
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/5 px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <Cpu size={14} className="text-[#f8a87c]" />
-              <span>{t("marketplace.activeControlPlane")}</span>
-            </Link>
-            <a
-              href="https://github.com/v-viebal/agent360"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#f8a87c] px-4 py-2 text-xs font-medium text-black hover:bg-[#f5935f] transition-colors shadow-[0_0_20px_rgba(248,168,124,0.3)]"
-            >
-              <span>{t("marketplace.buildCustomBot")}</span>
-              <ArrowUpRight size={13} />
-            </a>
-          </div>
+      <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
+        {/* Clean Editorial Header (Strawberry 48px Title + 2-Line Subtitle) */}
+        <div className="text-center max-w-2xl mx-auto pt-6 pb-10">
+          <h1 className="text-4xl sm:text-[48px] font-normal tracking-[-1.91px] leading-[1.1] text-[#252522] dark:text-white">
+            {isVi ? "Tuyển dụng đồng nghiệp AI chuyên trách" : "Hire specialized AI teammates"}
+          </h1>
+          <p className="mt-4 text-lg sm:text-[20px] leading-[1.4] text-[#252522]/70 dark:text-neutral-400 font-normal">
+            {isVi
+              ? "Mỗi nhân viên AI được trang bị sẵn máy tính độc lập, công cụ nghiệp vụ và bộ nhớ quy trình 24/7."
+              : "Every companion comes with a dedicated Linux computer, verified tool drivers, and 24/7 institutional memory."}
+          </p>
         </div>
 
-        {/* View Switcher: Catalog vs AI Organization Chart */}
-        <div className="mt-8 flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
-          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-[var(--border-subtle)]">
+        {/* View Switcher + Search + Category Pills Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--border-card)]">
+          {/* Catalog vs OrgChart Switcher */}
+          <div className="inline-flex items-center gap-1.5 bg-[var(--bg-card-subtle)] p-1 rounded-full border border-[var(--border-card)] self-start">
             <button
+              type="button"
               onClick={() => setActiveView("catalog")}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeView === "catalog"
-                  ? "bg-[#f8a87c] text-black shadow-md"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-[#252522] dark:bg-white text-white dark:text-black shadow-2xs"
+                  : "text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white"
               }`}
             >
-              <Bot size={14} />
-              <span>{t("marketplace.catalogTab")}</span>
+              <Bot size={13} />
+              <span>{isVi ? "Danh sách Nhân viên" : "Companions"}</span>
             </button>
             <button
+              type="button"
               onClick={() => setActiveView("orgchart")}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeView === "orgchart"
-                  ? "bg-[#f8a87c] text-black shadow-md"
-                  : "text-neutral-400 hover:text-white"
+                  ? "bg-[#252522] dark:bg-white text-white dark:text-black shadow-2xs"
+                  : "text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white"
               }`}
             >
-              <Users size={14} />
-              <span>{t("marketplace.orgChartTab")}</span>
+              <Users size={13} />
+              <span>{isVi ? "Sơ đồ Tổ chức AI" : "AI Org Chart"}</span>
             </button>
           </div>
 
-          <div className="text-xs font-mono text-neutral-400 hidden sm:block">
-            {activeView === "catalog" ? t("marketplace.catalogCountDesc") : t("marketplace.hierarchyCountDesc")}
+          {/* Search Input */}
+          <div className="relative w-full md:w-72">
+            <Search
+              size={14}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isVi ? "Tìm theo vị trí, ERPCore, TT99..." : "Search role, ERPCore, TT99..."}
+              className="w-full rounded-full border border-[var(--border-card)] bg-white dark:bg-[#11151f] pl-9 pr-8 py-2 text-xs text-[#252522] dark:text-white placeholder-neutral-400 focus:border-[#f8a87c] focus:outline-none transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-[#252522] dark:hover:text-white"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
         </div>
-
-        <MarketplaceCustomAgentBanner />
 
         {activeView === "orgchart" ? (
           <div className="mt-8">
@@ -255,408 +327,268 @@ export function MarketplacePage() {
           </div>
         ) : (
           <>
-        {/* Search Bar & Category Filter Pills */}
-        <div className="mt-8 space-y-5">
-          {/* Search Box */}
-          <div className="relative max-w-md">
-            <Search
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("marketplace.searchPlaceholder")}
-              className="w-full rounded-full border border-[var(--border-subtle)] bg-white/[0.04] pl-10 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:border-[#f8a87c] focus:bg-white/[0.08] focus:outline-none transition-all font-sans"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+            {/* Lean Category Pills */}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              {CATEGORY_DEFS.map((cat) => {
+                const active = selectedCategoryId === cat.id;
+                const label = isVi ? cat.vi : cat.en;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategoryId(cat.id)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                      active
+                        ? "bg-[#252522] dark:bg-white text-white dark:text-black border-[#252522] dark:border-white shadow-2xs"
+                        : "bg-white dark:bg-[#11151f] text-neutral-600 dark:text-neutral-400 hover:bg-[#F8F3ED] dark:hover:bg-white/10 border-[var(--border-card)]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
 
-                    {/* Company Scale Selector (Startup / SME / Enterprise) */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
-            <span className="text-xs font-mono text-neutral-400 mr-1 flex items-center gap-1.5">
-              <SlidersHorizontal size={13} className="text-[#f8a87c]" />
-              {t("marketplace.companyScale")}
-            </span>
-            {(["All", "Startup", "SME", "Enterprise"] as const).map((scale) => {
-              const active = selectedCompanyScale === scale;
-              const labels = {
-                All: "All Scales",
-                Startup: t("marketplace.startup"),
-                SME: t("marketplace.sme"),
-                Enterprise: t("marketplace.enterprise"),
-              };
-              return (
-                <button
-                  key={scale}
-                  type="button"
-                  onClick={() => setSelectedCompanyScale(scale)}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-mono transition-all border cursor-pointer ${
-                    active
-                      ? "bg-white text-black font-semibold border-white shadow-xs"
-                      : "bg-white/[0.03] text-neutral-400 hover:text-white border-white/[0.08] hover:bg-white/[0.06]"
-                  }`}
-                >
-                  {labels[scale]}
-                </button>
-              );
-            })}
-          </div>
+            {/* Strawberry 3-Column Companion Cards Grid (Real AgentAvatar + Live Mini-UI + Concise 2-Line Copy) */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[32px]">
+              {filteredAgents.map((agent) => {
+                const meta = COMPANION_STAGE_META[agent.id] || COMPANION_STAGE_META["agent-chief-of-staff"];
+                const displayName = isVi ? meta.vnName : meta.enName;
+                const displayBadge = isVi ? meta.badgeVi : meta.badgeEn;
 
-          {/* Categories Pill Navigation matching x.ai UI */}
-          <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORY_DEFS.map((cat) => {
-              const active = selectedCategoryId === cat.id;
-              const label = language === "vi" ? cat.vi : cat.en;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategoryId(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer border ${
-                    active
-                      ? "bg-[#f8a87c] text-black font-semibold border-[#f8a87c] shadow-sm shadow-[#f8a87c]/25"
-                      : "bg-white/[0.04] text-neutral-400 hover:bg-white/[0.08] hover:text-white border-white/[0.06]"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                return (
+                  <motion.div
+                    layout
+                    key={agent.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="rounded-3xl border border-[var(--border-card)] bg-white dark:bg-[#11151f] p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all group"
+                  >
+                    <div>
+                      {/* Top Stage: Dot Matrix + Real Animated BlobAvatar + Live Mini-UI + Role Pill */}
+                      <div
+                        className={
+                          "h-52 rounded-2xl bg-gradient-to-br " +
+                          meta.stageGradient +
+                          " border border-[#ECE5DC]/80 dark:border-white/10 px-3.5 pt-3.5 pb-11 relative overflow-hidden flex items-center justify-between gap-2 mb-5"
+                        }
+                      >
+                        <div
+                          className="absolute inset-0 opacity-20 dark:opacity-10 pointer-events-none"
+                          style={{
+                            backgroundImage: "radial-gradient(#252522 1px, transparent 1px)",
+                            backgroundSize: "12px 12px",
+                          }}
+                        />
 
-        {/* Status Counts */}
-        <div className="mt-4 flex items-center justify-between text-xs text-neutral-500 font-mono">
-          <div>
-            Showing <span className="text-white font-medium">{filteredAgents.length}</span> autonomous teammate templates
-          </div>
-          <div className="hidden sm:flex items-center gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span>{t("marketplace.strictEvidence")}</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#f8a87c]" />
-              <span>{t("marketplace.multiAgentReady")}</span>
-            </span>
-          </div>
-        </div>
+                        {/* Left: Real Animated AgentAvatar */}
+                        <div className="relative z-10 pl-1">
+                          <AgentAvatar
+                            agent={{ id: agent.id, name: displayName }}
+                            size="lg"
+                            alwaysAnimate
+                            overrideConfig={{
+                              type: "blob",
+                              blob: meta.blob as any,
+                            }}
+                          />
+                        </div>
 
-        {/* Grid of Agent Cards */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgents.map((agent) => (
-            <motion.div
-              layout
-              key={agent.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="group relative flex flex-col justify-between rounded-2xl border border-[var(--border-subtle)] bg-white dark:bg-[#0c1018]/90 hover:bg-neutral-50 dark:hover:bg-[#0e131d] border-neutral-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-none hover:border-white/20 p-5 transition-all duration-200 shadow-lg hover:shadow-2xl"
-            >
-              <div>
-                {/* Header: Geometry Avatar + Title + Department */}
-                <div className="flex items-start gap-3.5 mb-3.5">
-                  <GeometricAvatar shape={agent.shape} color={agent.color} size="md" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <h3 className="font-semibold text-sm sm:text-base text-neutral-900 dark:text-white truncate group-hover:text-[#f8a87c] transition-colors">
-                        {agent.name}
-                      </h3>
-                      {agent.verified && (
-                        <span title="Verified Skyer Core Template">
-                          <CheckCircle2 size={14} className="text-[#f8a87c] shrink-0" />
-                        </span>
-                      )}
+                        {/* Right: Live Autonomous Mini-UI Card */}
+                        <div className="relative z-10 w-[148px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-[#ECE5DC] dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+                          <div className="flex items-center justify-between text-[9px] text-[#c2540a] dark:text-[#f8a87c] font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
+                            <span className="truncate">{meta.miniHeader}</span>
+                            <span>{meta.miniTag}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+                            <span className="truncate">{meta.miniRow1[0]}</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">{meta.miniRow1[1]}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[#252522] dark:text-neutral-200">
+                            <span className="truncate">{meta.miniRow2[0]}</span>
+                            <span className="font-bold shrink-0">{meta.miniRow2[1]}</span>
+                          </div>
+                          <div className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[9px] truncate">
+                            {tick === 0 ? (isVi ? meta.miniStatusVi : meta.miniStatusEn) : "⚡ Live Autopilot"}
+                          </div>
+                        </div>
+
+                        {/* Floating Role Pill */}
+                        <div
+                          className={
+                            "absolute bottom-2.5 right-3 z-20 px-3 py-1 rounded-full border text-[11px] font-semibold shadow-2xs " +
+                            meta.badgeStyle
+                          }
+                        >
+                          {displayName} • {displayBadge}
+                        </div>
+                      </div>
+
+                      {/* Strictly 2-Line Outcome Description (Copy Budget <= 22 words) */}
+                      <p className="text-[15.3px] leading-[1.45] text-[#252522]/85 dark:text-neutral-300 font-normal px-1">
+                        {isVi ? meta.conciseVi : meta.conciseEn}
+                      </p>
+
+                      {/* Compact Tool Pills */}
+                      <div className="mt-3.5 flex flex-wrap gap-1.5 px-1">
+                        {agent.tools.slice(0, 3).map((tool) => (
+                          <span
+                            key={tool}
+                            className="text-[10px] font-mono bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 px-2.5 py-0.5 rounded-full text-neutral-600 dark:text-neutral-300"
+                          >
+                            {tool}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-xs text-neutral-400 truncate">{agent.roleTitle}</div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 font-mono mt-0.5">
-                      <span>by {agent.creatorName}</span>
-                      <span>•</span>
-                      <span className="text-neutral-400">@{agent.handle}</span>
+
+                    {/* Card Footer: Pill Hire + Spec Inspector */}
+                    <div className="mt-6 pt-4 border-t border-[#ECE5DC]/70 dark:border-white/10 flex items-center justify-between px-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDeployAgent(agent)}
+                        className="px-4 py-2 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[13px] font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                      >
+                        {isVi ? `Tuyển ${meta.vnName.split(" ")[0]}` : `Hire ${meta.enName.split(" ")[1]}`}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveAgentModal(agent)}
+                        className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <span>{isVi ? "Hồ sơ kỹ thuật" : "Inspect spec"}</span>
+                        <ArrowRight size={13} />
+                      </button>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                );
+              })}
+            </div>
 
-                {/* Summary */}
-                <p className="text-xs text-neutral-600 dark:text-neutral-300 line-clamp-3 leading-relaxed mb-4">
-                  {agent.summary}
-                </p>
-
-                {/* AI Teammates Orchestration Info */}
-                <div className="rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-[var(--border-subtle)] p-2.5 mb-4 space-y-1.5 font-mono text-[11px]">
-                  <div className="flex items-center justify-between text-neutral-400">
-                    <span className="flex items-center gap-1 text-neutral-300">
-                      <Workflow size={12} className="text-[#f8a87c]" />
-                      <span>{agent.teamConfig.collaborationMode}</span>
-                    </span>
-                    <span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.2 rounded">
-                      {agent.authorityGate}
-                    </span>
-                  </div>
-                  <div className="text-neutral-500 truncate">
-                    AI Team: {agent.teamConfig.teammateRoles.join(", ")}
-                  </div>
-                </div>
-
-                {/* Tools Chips */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {agent.tools.slice(0, 3).map((tool) => (
-                    <span
-                      key={tool}
-                      className="text-[10px] font-mono bg-white/[0.04] border border-[var(--border-subtle)] px-2 py-0.5 rounded text-neutral-300"
-                    >
-                      {tool}
-                    </span>
-                  ))}
-                  {agent.tools.length > 3 && (
-                    <span className="text-[10px] font-mono text-neutral-500 px-1 py-0.5">
-                      +{agent.tools.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom Actions */}
-              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3">
-                <button
-                  onClick={() => setActiveAgentModal(agent)}
-                  className="text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <BookOpen size={13} />
-                  <span>{t("marketplace.inspectSpec")}</span>
-                </button>
-
-                <button
-                  onClick={() => handleDeployAgent(agent)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 hover:bg-[#f8a87c] text-white hover:text-black px-3.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer active:scale-95"
-                >
-                  <Play size={12} fill="currentColor" />
-                  <span>{t("marketplace.deployBot")}</span>
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {filteredAgents.length === 0 && (
-          <div className="text-center py-20 border border-dashed border-[var(--border-subtle)] rounded-2xl mt-8">
-            <Bot size={40} className="mx-auto text-neutral-600 mb-3" />
-            <h3 className="text-base font-semibold text-white">{t("marketplace.noResultsTitle")}</h3>
-            <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-              {language === "vi" ? "Thử tìm kiếm theo từ khóa \"Tài chính\", \"Kinh doanh\", \"CSKH\", \"Marketing\" hoặc \"Nhân sự\"." : "Try searching for \"Finance\", \"Sales\", \"Support\", \"Marketing\", or \"HR\"."}
-            </p>
-            <button
-              onClick={() => {
-                setSelectedCategoryId("all");
-                setSelectedCompanyScale("All");
-                setSearchQuery("");
-              }}
-              className="mt-4 px-4 py-1.5 rounded-full bg-white/10 text-xs font-medium text-white hover:bg-white/20 transition-colors"
-            >
-              {t("marketplace.resetFilters")}
-            </button>
-          </div>
-        )}
+            <div className="mt-12">
+              <MarketplaceCustomAgentBanner />
+            </div>
           </>
         )}
       </div>
 
-      {/* Detail Modal / Bot Inspector (Shows AI Teammates Backstory, Goal, Tools, and Terminal Log) */}
+      {/* Spec Inspector Modal (Light & Dark Adaptive) */}
       <AnimatePresence>
         {activeAgentModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              className="relative w-full max-w-3xl rounded-2xl border border-white/15 bg-[#0b0e16] p-6 shadow-2xl text-left max-h-[90vh] overflow-y-auto"
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              className="relative w-full max-w-2xl rounded-3xl border border-[var(--border-card)] bg-white dark:bg-[#11151f] p-6 sm:p-8 shadow-2xl text-left max-h-[90vh] overflow-y-auto"
             >
-              {/* Close Button */}
               <button
+                type="button"
                 onClick={() => setActiveAgentModal(null)}
-                className="absolute top-5 right-5 p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                className="absolute top-5 right-5 p-2 text-neutral-400 hover:text-[#252522] dark:hover:text-white rounded-full hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
 
-              {/* Modal Header */}
-              <div className="flex items-start gap-4 pb-6 border-b border-[var(--border-subtle)]">
-                <GeometricAvatar
-                  shape={activeAgentModal.shape}
-                  color={activeAgentModal.color}
-                  size="lg"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl sm:text-2xl font-bold text-white">
-                      {activeAgentModal.name}
-                    </h2>
-                    {activeAgentModal.verified && (
-                      <CheckCircle2 size={16} className="text-[#f8a87c]" />
-                    )}
-                  </div>
-                  <div className="text-sm text-neutral-400 font-medium">
-                    {activeAgentModal.roleTitle}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-neutral-500 font-mono">
-                    <span>Creator: {activeAgentModal.creatorName}</span>
-                    <span>•</span>
-                    <span className="text-[#f8a87c]">@{activeAgentModal.handle}</span>
-                    <span>•</span>
-                    <span>{activeAgentModal.installCount} active instances</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* AI Teammates Specification Breakdown */}
-              <div className="mt-6 space-y-6 text-xs sm:text-sm">
-                {/* Goal & Backstory */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-[var(--border-subtle)] space-y-1.5">
-                    <div className="text-[11px] font-mono text-[#f8a87c] uppercase tracking-wider">
-                      {language === "vi" ? "Vai trò & Mục tiêu Chuyên trách (Mô hình Đồng nghiệp AI)" : "Role & Goal (AI Teammates Pattern)"}
-                    </div>
-                    <p className="text-neutral-200 leading-relaxed font-sans text-xs">
-                      {activeAgentModal.goal}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-[var(--border-subtle)] space-y-1.5">
-                    <div className="text-[11px] font-mono text-blue-400 uppercase tracking-wider">
-                      Backstory & Epistemic Stance
-                    </div>
-                    <p className="text-neutral-300 leading-relaxed font-sans text-xs">
-                      {activeAgentModal.backstory}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Multi-Agent AI Team Pipeline */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-[var(--border-subtle)] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs text-white font-semibold flex items-center gap-1.5">
-                      <Workflow size={14} className="text-[#f8a87c]" />
-                      Multi-Agent Coordination Matrix
-                    </span>
-                    <span className="text-[11px] font-mono text-neutral-400">
-                      Process: {activeAgentModal.teamConfig.collaborationMode}
-                    </span>
-                  </div>
-                  <div className="text-xs text-neutral-300">
-                    <strong className="text-neutral-400 font-mono">{t("marketplace.teammateRoles")}</strong>{" "}
-                    {activeAgentModal.teamConfig.teammateRoles.join(" ⇄ ")}
-                  </div>
-                  <div className="text-xs text-neutral-400">
-                    <strong className="text-neutral-400 font-mono">{t("marketplace.expectedOutput")}</strong>{" "}
-                    {activeAgentModal.teamConfig.expectedOutput}
-                  </div>
-                </div>
-
-                {/* Provisioned Tools & Routines */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
-                  <div>
-                    <div className="text-neutral-400 mb-2">{t("marketplace.allowedToolchain")}</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {activeAgentModal.tools.map((t) => (
-                        <span
-                          key={t}
-                          className="bg-white/5 border border-[var(--border-subtle)] px-2.5 py-1 rounded text-neutral-200"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-400 mb-2">{t("marketplace.autonomousRoutines")}</div>
-                    <ul className="space-y-1 text-neutral-300">
-                      {activeAgentModal.routines.map((r, i) => (
-                        <li key={i} className="flex items-start gap-1.5 text-[11px]">
-                          <span className="text-[#f8a87c]">↳</span>
-                          <span>{r}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Live Sandbox Execution Log Preview */}
-                <div>
-                  <div className="flex items-center justify-between text-neutral-400 font-mono text-xs mb-2">
-                    <span className="flex items-center gap-1.5">
-                      <Terminal size={13} className="text-[#f8a87c]" />
-                      Authoritative Terminal Log Preview
-                    </span>
-                    <span className="text-[11px] text-emerald-400 font-mono">
-                      Strict Exit Codes Verified
-                    </span>
-                  </div>
-                  <div className="rounded-xl border border-[var(--border-subtle)] bg-black/70 p-4 font-mono text-xs space-y-1.5 text-neutral-300">
-                    {activeAgentModal.terminalPreview.map((line, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="text-neutral-600 select-none">{idx + 1}</span>
-                        <span
-                          className={
-                            line.includes("pass") ||
-                            line.includes("healthy") ||
-                            line.includes("MATCH") ||
-                            line.includes("OBSERVED")
-                              ? "text-emerald-400 font-medium"
-                              : "text-neutral-300"
-                          }
-                        >
-                          {line}
-                        </span>
+              {(() => {
+                const meta = COMPANION_STAGE_META[activeAgentModal.id] || COMPANION_STAGE_META["agent-chief-of-staff"];
+                const displayName = isVi ? meta.vnName : meta.enName;
+                return (
+                  <>
+                    <div className="flex items-center gap-4 pb-6 border-b border-[var(--border-card)]">
+                      <div className="p-2 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[var(--border-card)]">
+                        <AgentAvatar
+                          agent={{ id: activeAgentModal.id, name: displayName }}
+                          size="lg"
+                          alwaysAnimate
+                          overrideConfig={{ type: "blob", blob: meta.blob as any }}
+                        />
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-xl font-bold text-[#252522] dark:text-white">{displayName}</h2>
+                          <span className={"px-2.5 py-0.5 rounded-full border text-[11px] font-semibold " + meta.badgeStyle}>
+                            {isVi ? meta.badgeVi : meta.badgeEn}
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{activeAgentModal.roleTitle}</p>
+                      </div>
+                    </div>
 
-              {/* Modal Footer Actions */}
-              <div className="mt-8 pt-4 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs text-neutral-400 font-mono">
-                  Memory: <span className="text-white">{activeAgentModal.memoryType}</span> | Gate:{" "}
-                  <span className="text-emerald-400">{activeAgentModal.authorityGate}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setActiveAgentModal(null)}
-                    className="px-4 py-2 rounded-full border border-[var(--border-subtle)] text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      const agentToDeploy = activeAgentModal;
-                      setActiveAgentModal(null);
-                      handleDeployAgent(agentToDeploy);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-full bg-[#f8a87c] hover:bg-[#f5935f] text-black px-6 py-2 text-xs font-semibold transition-all shadow-[0_0_20px_rgba(248,168,124,0.3)] cursor-pointer"
-                  >
-                    <Play size={13} fill="currentColor" />
-                    <span>{t("marketplace.deployThisTeammate")}</span>
-                  </button>
-                </div>
-              </div>
+                    <div className="mt-6 space-y-5 text-xs">
+                      <div className="p-4 rounded-2xl bg-[#F8F3ED] dark:bg-white/5 border border-[var(--border-card)] space-y-1.5">
+                        <div className="font-mono text-[10px] uppercase text-[#c2540a] dark:text-[#f8a87c] font-bold">
+                          {isVi ? "Cam kết đầu ra" : "Outcome Commitment"}
+                        </div>
+                        <p className="text-sm text-[#252522] dark:text-neutral-200 leading-relaxed">
+                          {isVi ? meta.conciseVi : meta.conciseEn}
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="font-mono text-[11px] text-neutral-500 dark:text-neutral-400 mb-2">
+                          {isVi ? "Công cụ & Tích hợp được cấp quyền:" : "Authorized MCP Tool Drivers:"}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {activeAgentModal.tools.map((tool) => (
+                            <span
+                              key={tool}
+                              className="px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[var(--border-card)] font-mono text-[11px] text-[#252522] dark:text-neutral-200"
+                            >
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl bg-[#18181b] text-slate-200 p-4 font-mono text-[11px] space-y-1.5">
+                        <div className="text-[10px] text-emerald-400 font-bold mb-2">
+                          ● LIVE SANDBOX RECEIPT PREVIEW
+                        </div>
+                        {activeAgentModal.terminalPreview.map((line, idx) => (
+                          <div key={idx} className="truncate">
+                            <span className="text-neutral-500 mr-2">{idx + 1}.</span>
+                            <span>{line}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-7 pt-4 border-t border-[var(--border-card)] flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setActiveAgentModal(null)}
+                        className="px-5 py-2 rounded-full border border-[var(--border-card)] text-xs font-medium text-[#252522] dark:text-white cursor-pointer"
+                      >
+                        {isVi ? "Đóng" : "Close"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = activeAgentModal;
+                          setActiveAgentModal(null);
+                          handleDeployAgent(target);
+                        }}
+                        className="px-6 py-2 rounded-full bg-[#252522] dark:bg-white text-white dark:text-black text-xs font-semibold cursor-pointer"
+                      >
+                        {isVi ? `Giao việc cho ${meta.vnName}` : `Deploy ${meta.enName}`}
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Success Toast */}
       {deployedSuccess && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-xl border border-emerald-500/40 bg-[#0a1510] px-4 py-3 text-xs text-emerald-300 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-2">
-          <Check size={16} className="text-emerald-400 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full border border-emerald-500/40 bg-[#18181b] px-5 py-3 text-xs text-white shadow-xl">
+          <Check size={15} className="text-emerald-400 shrink-0" />
           <span>
-            Successfully deployed <strong>{deployedSuccess}</strong> to your workspace session!
+            {isVi ? `Đang mở bàn làm việc cùng ${deployedSuccess}...` : `Launching workspace with ${deployedSuccess}...`}
           </span>
         </div>
       )}

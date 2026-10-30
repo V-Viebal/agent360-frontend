@@ -1,26 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 36" width="110" height="36">
   <style>
-    @media (prefers-color-scheme: light) {
-      .logo-tile { fill: #F8FAFC; stroke: rgba(15, 23, 42, 0.14); }
-      .logo-upper { stroke: #0F172A; }
-      .logo-lower { stroke: #F8A87C; }
-      .logo-text { fill: #0F172A; }
-    }
-    @media (prefers-color-scheme: dark) {
-      .logo-tile { fill: #0A0C13; stroke: rgba(255, 255, 255, 0.1); }
-      .logo-upper { stroke: #F8FAFC; }
-      .logo-lower { stroke: #F8A87C; }
-      .logo-text { fill: #F8FAFC; }
-    }
+    .ink { fill: #252522; }
+    @media (prefers-color-scheme: dark) { .ink { fill: #FFFDF9; } }
+    .word { font: 600 24px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; letter-spacing: -0.9px; }
   </style>
-  <g transform="translate(2, 2)">
-    <rect class="logo-tile" width="36" height="36" rx="9" fill="#0A0C13" stroke="rgba(255,255,255,0.1)"/>
-    <path class="logo-upper" d="M 27 7.5 L 13.5 7.5 C 10 7.5 7.5 10 7.5 13.5 L 7.5 14.5 C 7.5 18 10 20 13.5 20.5 L 21 21.5"
-          stroke="#F8FAFC" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
-    <path class="logo-lower" d="M 9 28.5 L 22.5 28.5 C 26 28.5 28.5 26 28.5 22.5 L 28.5 21.5 C 28.5 18 26 16 22.5 15.5 L 15 14.5"
-          stroke="#F8A87C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(2 2)">
+    <path class="ink" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z"/>
+    <path class="ink" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)"/>
+    <path class="ink" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)"/>
+    <path fill="#F8A87C" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)"/>
   </g>
-  <text class="logo-text" x="48" y="26" font-family="'Inter', -apple-system, sans-serif" font-weight="700" font-size="20" fill="#F8FAFC" letter-spacing="-0.5px">
-    Skyer
-  </text>
+  <text class="ink word" x="38" y="24.5">Skyer</text>
 </svg>
