@@ -5909,6 +5909,8 @@ export function GrokBotWorkspace() {
           const filtered = prev.filter((id) => !matchesTarget(id));
           const next = ev.pinned ? [fullId, ...filtered] : filtered;
           try {
+            const uKey = getUserPinStorageKey("pinned", ev.user_sub);
+            localStorage.setItem(uKey, JSON.stringify(next));
             localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
           } catch {}
           return next;
@@ -5917,6 +5919,8 @@ export function GrokBotWorkspace() {
           const filtered = prev.filter((id) => !matchesTarget(id));
           const next = !ev.pinned ? [fullId, ...filtered] : filtered;
           try {
+            const uKey = getUserPinStorageKey("unpinned", ev.user_sub);
+            localStorage.setItem(uKey, JSON.stringify(next));
             localStorage.setItem("agent360_unpinned_agents", JSON.stringify(next));
           } catch {}
           return next;
@@ -7491,9 +7495,17 @@ ${targetItem.text}`;
       return false;
     }
   });
+  // Scoped to current authenticated user profile
+  const getUserPinStorageKey = (kind: "pinned" | "unpinned", userSub?: string | null) => {
+    const sub = userSub || currentUser?.sub;
+    const cleanSub = sub ? sub.replace(/[^a-zA-Z0-9_-]/g, "_") : "global";
+    return "agent360_" + kind + "_agents_" + cleanSub;
+  };
+
   const [pinnedAgentIds, setPinnedAgentIds] = useState<string[]>(() => {
     try {
-      const v = localStorage.getItem("agent360_pinned_agents");
+      const userKey = getUserPinStorageKey("pinned");
+      const v = localStorage.getItem(userKey) || localStorage.getItem("agent360_pinned_agents");
       return v ? JSON.parse(v) : [];
     } catch {
       return [];
@@ -7501,7 +7513,8 @@ ${targetItem.text}`;
   });
   const [unpinnedAgentIds, setUnpinnedAgentIds] = useState<string[]>(() => {
     try {
-      const v = localStorage.getItem("agent360_unpinned_agents");
+      const userKey = getUserPinStorageKey("unpinned");
+      const v = localStorage.getItem(userKey) || localStorage.getItem("agent360_unpinned_agents");
       return v ? JSON.parse(v) : [];
     } catch {
       return [];
@@ -7545,6 +7558,8 @@ ${targetItem.text}`;
       const filtered = prev.filter((id) => !matchesTarget(id));
       const next = targetPinState ? [fullId, ...filtered] : filtered;
       try {
+        const uKey = getUserPinStorageKey("pinned");
+        localStorage.setItem(uKey, JSON.stringify(next));
         localStorage.setItem("agent360_pinned_agents", JSON.stringify(next));
       } catch {}
       return next;
@@ -7554,6 +7569,8 @@ ${targetItem.text}`;
       const filtered = prev.filter((id) => !matchesTarget(id));
       const next = !targetPinState ? [fullId, ...filtered] : filtered;
       try {
+        const uKey = getUserPinStorageKey("unpinned");
+        localStorage.setItem(uKey, JSON.stringify(next));
         localStorage.setItem("agent360_unpinned_agents", JSON.stringify(next));
       } catch {}
       return next;
@@ -8181,7 +8198,8 @@ ${targetItem.text}`;
       if (Array.isArray(loadedAgents) && loadedAgents.length > 0) {
         let localUnpinned: string[] = [];
         try {
-          const rawUnpinned = localStorage.getItem("agent360_unpinned_agents");
+          const uKey = getUserPinStorageKey("unpinned");
+          const rawUnpinned = localStorage.getItem(uKey) || localStorage.getItem("agent360_unpinned_agents");
           if (rawUnpinned) localUnpinned = JSON.parse(rawUnpinned);
         } catch {}
         const unpinnedSet = new Set(localUnpinned.map((x) => x.toLowerCase()));
@@ -8198,6 +8216,8 @@ ${targetItem.text}`;
               )
             );
             try {
+              const uKey = getUserPinStorageKey("pinned");
+              localStorage.setItem(uKey, JSON.stringify(merged));
               localStorage.setItem("agent360_pinned_agents", JSON.stringify(merged));
             } catch {}
             return merged;
