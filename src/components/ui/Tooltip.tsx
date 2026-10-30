@@ -182,19 +182,19 @@ export function Tooltip({
             ref={tooltipRef}
             role="tooltip"
             style={{
-              position: "absolute",
-              top: coords ? `${coords.top}px` : "0px",
-              left: coords ? `${coords.left}px` : "0px",
+              position: "fixed",
+              top: coords ? `${coords.top - window.scrollY}px` : "0px",
+              left: coords ? `${coords.left - window.scrollX}px` : "0px",
               zIndex: 99999,
               pointerEvents: "none",
               visibility: isPositioned && coords ? "visible" : "hidden",
               opacity: isPositioned && coords ? 1 : 0,
+              transition: "none",
+              animation: "none",
               minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
               maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
             }}
-            className={`rounded-xl bg-white/95 dark:bg-[#12121a]/95 border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] leading-relaxed font-sans text-slate-800 dark:text-neutral-100 shadow-xl backdrop-blur-md ${
-              isPositioned && coords ? "animate-in fade-in zoom-in-95 duration-75" : ""
-            } flex items-center justify-center gap-1.5 select-none w-max min-w-[90px] max-w-[280px] break-words ${className}`}
+            className={`rounded-xl bg-white/95 dark:bg-[#12121a]/95 border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] leading-relaxed font-sans text-slate-800 dark:text-neutral-100 shadow-xl backdrop-blur-md flex items-center justify-center gap-1.5 select-none w-max min-w-[90px] max-w-[280px] break-words ${className}`}
           >
             <span>{content}</span>
             {shortcut && (

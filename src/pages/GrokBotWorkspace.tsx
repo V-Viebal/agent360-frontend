@@ -12896,7 +12896,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       data-testid={`agent-mention-card-${cleanSlug}`}
                       onClick={openCollabHistory}
                       style={{ color: "#0f172a" }}
-                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-60 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto animate-in fade-in zoom-in-95 duration-100 dark:!text-neutral-100 [&_*]:!text-inherit"
+                      className="hidden group-hover/agchip:flex flex-col gap-1.5 absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-[70] w-60 p-2.5 rounded-xl bg-white dark:bg-[#18202c] border border-slate-200 dark:border-white/10 shadow-xl text-left font-sans normal-case pointer-events-auto dark:!text-neutral-100 [&_*]:!text-inherit"
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-xs truncate" style={{ color: "#0f172a" }}>{fullName}</span>
@@ -13250,7 +13250,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             <div
                               data-testid="msg-react-popover"
                               onClick={(e) => e.stopPropagation()}
-                              className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl animate-in zoom-in-95 duration-100 select-none left-0 text-slate-700 dark:text-neutral-200 ${
+                              className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none left-0 text-slate-700 dark:text-neutral-200 ${
                                 reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
                               }`}
                             >
@@ -13376,7 +13376,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           <div
                             data-testid="msg-extend-menu"
                             onClick={(e) => e.stopPropagation()}
-                            className={`absolute z-50 w-40 py-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/80 dark:border-white/10 shadow-lg animate-in zoom-in-95 duration-100 flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-[11px] font-sans text-left max-h-[65vh] overflow-y-auto ${
+                            className={`absolute z-50 w-40 py-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-[11px] font-sans text-left max-h-[65vh] overflow-y-auto ${
                               extendPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
                             } ${isUser ? "right-0" : "left-0"}`}
                           >
@@ -14159,7 +14159,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     zIndex: 99999,
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#1c1c24]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto animate-in fade-in zoom-in-95 duration-100 select-none text-left"
+                  className="w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#1c1c24]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto select-none text-left"
                 >
                   {/* Header: User prompt title + Bookmark Icon */}
                   <div className="flex items-start justify-between gap-2">
@@ -14469,7 +14469,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               {isMenuOpen && (
                                 <div
                                   onClick={(e) => e.stopPropagation()}
-                                  className="absolute right-0 bottom-full mb-1.5 w-36 rounded-xl bg-white dark:bg-[#1c1c24] border border-slate-200 dark:border-neutral-700/80 shadow-2xl py-1 z-30 animate-in fade-in zoom-in-95 duration-100"
+                                  className="absolute right-0 bottom-full mb-1.5 w-36 rounded-xl bg-white dark:bg-[#1c1c24] border border-slate-200 dark:border-neutral-700/80 shadow-2xl py-1 z-30"
                                 >
                                   <button
                                     type="button"

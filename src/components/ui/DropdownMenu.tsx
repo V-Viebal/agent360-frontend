@@ -136,10 +136,6 @@ export function DropdownMenu({
     if (isOpen && !isMobile) {
       updatePosition();
       setIsPositioned(true);
-      const timer = requestAnimationFrame(() => {
-        updatePosition();
-      });
-      return () => cancelAnimationFrame(timer);
     } else if (!isOpen) {
       setIsPositioned(false);
       setCoords(null);
@@ -289,10 +285,10 @@ export function DropdownMenu({
         visibility: isPositioned && coords ? "visible" : "hidden",
         opacity: isPositioned && coords ? 1 : 0,
         pointerEvents: isPositioned && coords ? "auto" : "none",
+        transition: "none",
+        animation: "none",
       }}
-      className={`${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ${
-        isPositioned && coords ? "animate-in fade-in zoom-in-95 duration-100" : ""
-      } ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
+      className={`${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
     >
       {children}
     </div>
@@ -428,19 +424,17 @@ export function DropdownSubMenu({
       {isOpen && (
         <div
           ref={subMenuRef}
-          style={
-            subCoords
-              ? {
-                  position: "fixed",
-                  top: `${subCoords.top}px`,
-                  left: `${subCoords.left}px`,
-                  zIndex: 9999999,
-                }
-              : {
-                  zIndex: 9999999,
-                }
-          }
-          className="w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/5 dark:ring-white/10 select-none pointer-events-auto"
+          style={{
+            position: "fixed",
+            top: subCoords ? `${subCoords.top}px` : "0px",
+            left: subCoords ? `${subCoords.left}px` : "0px",
+            zIndex: 9999999,
+            visibility: subCoords ? "visible" : "hidden",
+            opacity: subCoords ? 1 : 0,
+            transition: "none",
+            animation: "none",
+          }}
+          className="w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ring-1 ring-black/5 dark:ring-white/10 select-none pointer-events-auto"
         >
           {children}
         </div>
