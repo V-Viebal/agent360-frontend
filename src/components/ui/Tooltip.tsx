@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 export interface TooltipProps {
   content: React.ReactNode;
   shortcut?: string;
-  placement?: "top" | "bottom" | "left" | "right";
+  placement?: "top" | "bottom" | "left" | "right" | "auto-side";
   children: React.ReactElement;
   delay?: number;
   className?: string;
@@ -60,7 +60,12 @@ export function Tooltip({
     const ttHeight = tooltipEl ? tooltipEl.offsetHeight : 30;
 
     let actualPlacement = placement;
-    // Auto-flip: If placement is top but element is too close to top edge, flip to bottom
+    if (actualPlacement === "auto-side") {
+      // Place to the open workspace side of the sidebar, never covering list items
+      actualPlacement = rect.left > window.innerWidth / 2 ? "left" : "right";
+    }
+
+    // Auto-flip vertical placement when out of viewport bounds
     if (actualPlacement === "top" && rect.top - ttHeight - 8 < 0) {
       actualPlacement = "bottom";
     } else if (actualPlacement === "bottom" && rect.bottom + ttHeight + 8 > window.innerHeight) {
@@ -70,31 +75,45 @@ export function Tooltip({
     let top = 0;
     let left = 0;
 
-    switch (actualPlacement) {
-      case "top":
-        top = rect.top - ttHeight - 6;
-        left = rect.left + rect.width / 2 - ttWidth / 2;
-        break;
-      case "bottom":
-        top = rect.bottom + 6;
-        left = rect.left + rect.width / 2 - ttWidth / 2;
-        break;
-      case "left":
-        top = rect.top + rect.height / 2 - ttHeight / 2;
-        left = rect.left - ttWidth - 6;
-        break;
-      case "right":
-        top = rect.top + rect.height / 2 - ttHeight / 2;
-        left = rect.right + 6;
-        break;
+    const sidebarEl = triggerRef.current.closest('aside, [data-type-scope="sidebar"]');
+    if (sidebarEl && (actualPlacement === "left" || actualPlacement === "right")) {
+      const sRect = sidebarEl.getBoundingClientRect();
+      top = rect.top + rect.height / 2 - ttHeight / 2;
+      if (actualPlacement === "left") {
+        left = sRect.left - ttWidth - 10;
+      } else {
+        left = sRect.right + 10;
+      }
+    } else {
+      switch (actualPlacement) {
+        case "top":
+          top = rect.top - ttHeight - 6;
+          left = rect.left + rect.width / 2 - ttWidth / 2;
+          break;
+        case "bottom":
+          top = rect.bottom + 6;
+          left = rect.left + rect.width / 2 - ttWidth / 2;
+          break;
+        case "left":
+          top = rect.top + rect.height / 2 - ttHeight / 2;
+          left = rect.left - ttWidth - 8;
+          break;
+        case "right":
+          top = rect.top + rect.height / 2 - ttHeight / 2;
+          left = rect.right + 8;
+          break;
+      }
     }
 
-    // Boundary corrections
-    if (left < 8) left = 8;
-    if (left + ttWidth > window.innerWidth - 8) {
-      left = Math.max(8, window.innerWidth - ttWidth - 8);
+    // Boundary corrections: prevent overflowing window edges
+    if (top < 10) top = 10;
+    if (top + ttHeight > window.innerHeight - 10) {
+      top = Math.max(10, window.innerHeight - ttHeight - 10);
     }
-    if (top < 8) top = 8;
+    if (left < 10) left = 10;
+    if (left + ttWidth > window.innerWidth - 10) {
+      left = Math.max(10, window.innerWidth - ttWidth - 10);
+    }
 
     setCoords({
       top: top + window.scrollY,
