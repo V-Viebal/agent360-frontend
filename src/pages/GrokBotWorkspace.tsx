@@ -5190,6 +5190,17 @@ export function GrokBotWorkspace() {
         if (matched.id !== selectedAgentIdRef.current && (matched.slug || "").toLowerCase() !== curBare && (matched.id || "").toLowerCase() !== curBare) {
           setSelectedAgentId(matched.id);
           try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
+          const targetCached = getCachedAgentChats(matched.id);
+          if (targetCached && targetCached.length > 0) {
+            setChats(targetCached);
+            setChatsAgentId(matched.id);
+            setIsLoadingChats(false);
+          } else {
+            setChats([]);
+            setChatsAgentId("");
+            setIsLoadingChats(true);
+          }
+          setMessages([]);
         }
       } else {
         // User tried to navigate to an unowned agent URL -> redirect back to /app or their first owned agent
@@ -9606,7 +9617,18 @@ const selectedAgentTheme = getAgentColorTheme(
       localStorage.setItem("agent360_last_agent_id", agent.id);
     } catch {}
 
-    // Clear stale chat selection so it does not bounce back
+    // Instantly reset chats & messages to the new agent's cached items or empty to avoid cross-agent bleed
+    const targetCached = getCachedAgentChats(agent.id);
+    if (targetCached && targetCached.length > 0) {
+      setChats(targetCached);
+      setChatsAgentId(agent.id);
+      setIsLoadingChats(false);
+    } else {
+      setChats([]);
+      setChatsAgentId("");
+      setIsLoadingChats(true);
+    }
+    setMessages([]);
     setSelectedChatId("");
     const agentSegment = getAgentRouteSegment(agent);
     const savedChatKey = `agent360_last_chat_${agent.id}`;
@@ -11221,17 +11243,8 @@ const selectedAgentTheme = getAgentColorTheme(
       prev.map((s) => (s.id === job.id ? { ...s, enabled: nextState } : s))
     );
     try {
-      const { createOrUpdateSchedule } = await import("../services/agentApi");
-      const ok = await createOrUpdateSchedule({
-        agentId: selectedAgent.id,
-        id: job.id,
-        name: job.name,
-        cronExpr: job.cronExpr,
-        timezone: job.timezone,
-        targetChannel: job.targetChannel,
-        promptSnippet: job.promptSnippet,
-        enabled: nextState,
-      });
+      const { toggleScheduleStatus } = await import("../services/agentApi");
+      const ok = await toggleScheduleStatus(job.id, !nextState, selectedAgent.id);
       if (!ok) {
         // Rollback on failure
         setSchedules((prev) =>

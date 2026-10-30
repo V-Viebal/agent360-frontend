@@ -1565,11 +1565,12 @@ export async function createOrUpdateSchedule(jobData: any): Promise<boolean> {
       }
     };
 
-    const res = await fetch(endpoint, {
+    const cleanAgentId = jobData.agentId ? String(jobData.agentId).replace(/^bot:agent360:/, "") : "";
+    const res = await authorizedFetch(endpoint, {
       method: method,
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(payload)
-    });
+    }, cleanAgentId);
     return res.ok;
   } catch (err) {
     console.warn("createOrUpdateSchedule error", err);
@@ -1608,10 +1609,11 @@ export async function sendTurnTelemetryBeacon(payload: TurnTelemetryPayload): Pr
 
 export async function deleteSchedule(jobId: string, agentId?: string): Promise<boolean> {
   try {
-    const res = await fetch(agentScopedPath(agentId, `cron/jobs/${encodeURIComponent(jobId)}`), {
+    const cleanAgentId = agentId ? String(agentId).replace(/^bot:agent360:/, "") : "";
+    const res = await authorizedFetch(agentScopedPath(agentId, `cron/jobs/${encodeURIComponent(jobId)}`), {
       method: "DELETE",
       headers: { Accept: "application/json" }
-    });
+    }, cleanAgentId);
     return res.ok;
   } catch (err) {
     console.warn("deleteSchedule error", err);
@@ -1621,11 +1623,12 @@ export async function deleteSchedule(jobId: string, agentId?: string): Promise<b
 
 export async function toggleScheduleStatus(jobId: string, currentEnabled: boolean, agentId?: string): Promise<boolean> {
   try {
+    const cleanAgentId = agentId ? String(agentId).replace(/^bot:agent360:/, "") : "";
     const action = currentEnabled ? "pause" : "resume";
-    const res = await fetch(agentScopedPath(agentId, `cron/jobs/${encodeURIComponent(jobId)}/${action}`), {
+    const res = await authorizedFetch(agentScopedPath(agentId, `cron/jobs/${encodeURIComponent(jobId)}/${action}`), {
       method: "POST",
       headers: { Accept: "application/json" }
-    });
+    }, cleanAgentId);
     return res.ok;
   } catch (err) {
     console.warn("toggleScheduleStatus error", err);
