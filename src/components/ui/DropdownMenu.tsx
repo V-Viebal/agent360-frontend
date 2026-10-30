@@ -54,6 +54,7 @@ export function DropdownMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [isPositioned, setIsPositioned] = useState(false);
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth < 768;
@@ -134,11 +135,13 @@ export function DropdownMenu({
   useLayoutEffect(() => {
     if (isOpen && !isMobile) {
       updatePosition();
+      setIsPositioned(true);
       const timer = requestAnimationFrame(() => {
         updatePosition();
       });
       return () => cancelAnimationFrame(timer);
     } else if (!isOpen) {
+      setIsPositioned(false);
       setCoords(null);
     }
   }, [isOpen, align, placement, anchorPosition, isMobile]);
@@ -283,11 +286,12 @@ export function DropdownMenu({
         top: coords ? `${coords.top - window.scrollY}px` : "0px",
         left: coords ? `${coords.left - window.scrollX}px` : "0px",
         zIndex: 999999,
-        visibility: coords ? "visible" : "hidden",
-        opacity: coords ? 1 : 0,
+        visibility: isPositioned && coords ? "visible" : "hidden",
+        opacity: isPositioned && coords ? 1 : 0,
+        pointerEvents: isPositioned && coords ? "auto" : "none",
       }}
       className={`${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ${
-        coords ? "animate-in fade-in zoom-in-95 duration-100" : ""
+        isPositioned && coords ? "animate-in fade-in zoom-in-95 duration-100" : ""
       } ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
     >
       {children}

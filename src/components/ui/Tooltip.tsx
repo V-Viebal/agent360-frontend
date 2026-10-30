@@ -26,6 +26,7 @@ export function Tooltip({
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [isPositioned, setIsPositioned] = useState(false);
   const triggerRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,6 +127,9 @@ export function Tooltip({
   useLayoutEffect(() => {
     if (isVisible) {
       calculatePosition();
+      setIsPositioned(true);
+    } else {
+      setIsPositioned(false);
     }
   }, [isVisible, placement]);
 
@@ -134,12 +138,9 @@ export function Tooltip({
     if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
       return;
     }
-    // Calculate initial target coordinates immediately so when isVisible flips true,
-    // it never starts from a stale position or (-9999, -9999)
-    calculatePosition();
+    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       if (!disabled) {
-        calculatePosition();
         setIsVisible(true);
       }
     }, delay);
@@ -148,6 +149,7 @@ export function Tooltip({
   const handleMouseLeave = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setIsVisible(false);
+    setIsPositioned(false);
     setCoords(null);
   };
 
@@ -174,21 +176,25 @@ export function Tooltip({
   return (
     <>
       {trigger}
-      {isVisible && coords &&
+      {isVisible &&
         createPortal(
           <div
             ref={tooltipRef}
             role="tooltip"
             style={{
               position: "absolute",
-              top: `${coords.top}px`,
-              left: `${coords.left}px`,
+              top: coords ? `${coords.top}px` : "0px",
+              left: coords ? `${coords.left}px` : "0px",
               zIndex: 99999,
               pointerEvents: "none",
+              visibility: isPositioned && coords ? "visible" : "hidden",
+              opacity: isPositioned && coords ? 1 : 0,
               minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
               maxWidth: typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
             }}
-            className={`rounded-xl bg-white/95 dark:bg-[#12121a]/95 border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] leading-relaxed font-sans text-slate-800 dark:text-neutral-100 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 flex items-center justify-center gap-1.5 select-none w-max min-w-[90px] max-w-[280px] break-words ${className}`}
+            className={`rounded-xl bg-white/95 dark:bg-[#12121a]/95 border border-slate-200 dark:border-white/15 px-2.5 py-1.5 text-[11px] leading-relaxed font-sans text-slate-800 dark:text-neutral-100 shadow-xl backdrop-blur-md ${
+              isPositioned && coords ? "animate-in fade-in zoom-in-95 duration-75" : ""
+            } flex items-center justify-center gap-1.5 select-none w-max min-w-[90px] max-w-[280px] break-words ${className}`}
           >
             <span>{content}</span>
             {shortcut && (
