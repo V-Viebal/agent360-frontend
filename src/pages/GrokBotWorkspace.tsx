@@ -14387,7 +14387,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                   }
                                 }}
                                 style={{ borderColor: selectedAgentTheme.borderLight }}
-                                className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-neutral-900 text-slate-900 dark:text-white font-sans focus:outline-none focus:ring-1 focus:ring-[var(--agent-color)]"
+                                className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-neutral-900 text-slate-900 dark:text-white font-sans focus:outline-none border"
                                 placeholder="Edit queued message..."
                               />
                               <button
@@ -17434,26 +17434,28 @@ ${chat.id}`);
               </div>
             </div>
 
-            {/* 3 Streamlined Pill Tabs: Details | Library | Computer */}
-            <div className="flex items-center justify-center gap-1.5 px-3 pb-3 pt-1 border-b border-neutral-200/70 dark:border-[#1c1c22] text-[13px] font-medium shrink-0">
-              {(["Details", "Library", "Computer"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => {
-                    setRightTab(tab);
-                    if (tab === "Library" && workspaceFiles.length === 0) {
-                      loadWorkspaceTree();
-                    }
-                  }}
-                  className={`py-1.5 px-3.5 rounded-full transition-all cursor-pointer font-sans ${
-                    rightTab === tab
-                      ? "bg-neutral-200/80 dark:bg-[#22222e] text-neutral-900 dark:text-white font-semibold"
-                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
+            {/* 3 Streamlined Pill Tabs: Details | Library | Computer (Evenly spaced & centered) */}
+            <div className="flex items-center justify-center px-4 pb-3 pt-1 border-b border-neutral-200/70 dark:border-[#1c1c22] text-[13px] font-medium shrink-0">
+              <div className="grid grid-cols-3 gap-1.5 w-full max-w-[320px]">
+                {(["Details", "Library", "Computer"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      setRightTab(tab);
+                      if (tab === "Library" && workspaceFiles.length === 0) {
+                        loadWorkspaceTree();
+                      }
+                    }}
+                    className={`py-1.5 px-2 rounded-full transition-all cursor-pointer font-sans text-center flex items-center justify-center ${
+                      rightTab === tab
+                        ? "bg-neutral-200/80 dark:bg-[#22222e] text-neutral-900 dark:text-white font-semibold shadow-xs"
+                        : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Tab Content: Computer | Details | Library */}
