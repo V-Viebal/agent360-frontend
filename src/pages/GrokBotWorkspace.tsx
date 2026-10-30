@@ -16710,6 +16710,17 @@ const selectedAgentTheme = getAgentColorTheme(
                       </div>
                     )}
 
+                    <Tooltip
+                      content={
+                        <span className="line-clamp-3 text-left block font-sans text-[11px] leading-relaxed">
+                          {chat.title || "Cuộc hội thoại"}
+                        </span>
+                      }
+                      placement="auto-side"
+                      delay={250}
+                      maxWidth={280}
+                      disabled={editingChatId === chat.id || activeChatMenuId === chat.id}
+                    >
                     <div
                       data-chat-item-id={chat.id}
                       style={{
@@ -16826,30 +16837,28 @@ const selectedAgentTheme = getAgentColorTheme(
                         ) : (
                           <div className="flex-1 w-full min-w-0 overflow-hidden chat-title-mask pr-1 flex items-center justify-between">
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
-                            <Tooltip content={<span className="line-clamp-3 text-left block font-sans text-[11px] leading-relaxed">{chat.title || "Cuộc hội thoại"}</span>} placement="auto-side" delay={250} maxWidth={280}>
-                              <span
-                                style={{ "--marquee-duration": computeChatTitleMarqueeDuration(chat.title || "") } as React.CSSProperties}
-                                className={`text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
-                                  (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
-                                } ${
-                                  isSelected
-                                    ? "text-slate-900 dark:text-white font-medium"
-                                    : "text-slate-700 dark:text-neutral-200"
-                                }`}
-                              >
-                                {(() => {
-                                  let t = chat.title || "";
-                                  if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(t) || /^[0-9a-f]{16,}/i.test(t) || t.toLowerCase().startsWith('chat ') || t.toLowerCase().startsWith('session ')) {
-                                    t = "Cuộc hội thoại";
-                                  }
-                                  return (
-                                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-nowrap [text-wrap:nowrap]">
-                                      <span className="whitespace-nowrap text-nowrap [text-wrap:nowrap]">{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
-                                    </span>
-                                  );
-                                })()}
-                              </span>
-                            </Tooltip>
+                            <span
+                              style={{ "--marquee-duration": computeChatTitleMarqueeDuration(chat.title || "") } as React.CSSProperties}
+                              className={`text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
+                                (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
+                              } ${
+                                isSelected
+                                  ? "text-slate-900 dark:text-white font-medium"
+                                  : "text-slate-700 dark:text-neutral-200"
+                              }`}
+                            >
+                              {(() => {
+                                let t = chat.title || "";
+                                if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(t) || /^[0-9a-f]{16,}/i.test(t) || t.toLowerCase().startsWith('chat ') || t.toLowerCase().startsWith('session ')) {
+                                  t = "Cuộc hội thoại";
+                                }
+                                return (
+                                  <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-nowrap [text-wrap:nowrap]">
+                                    <span className="whitespace-nowrap text-nowrap [text-wrap:nowrap]">{renderSearchMatchHighlight(t, chatSearchQuery)}</span>
+                                  </span>
+                                );
+                              })()}
+                            </span>
                             {(() => {
                               const qCount = (requestQueues[chat.id] || []).length;
                               if (qCount <= 0) return null;
@@ -17136,6 +17145,7 @@ ${chat.id}`);
 {/* Subtitle snippet removed as requested for lean single-line chat header */}
                     </div>
                   </div>
+                  </Tooltip>
                   </div>
                 );
               })}

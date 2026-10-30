@@ -10,6 +10,7 @@ export interface TooltipProps {
   className?: string;
   minWidth?: number | string;
   maxWidth?: number | string;
+  disabled?: boolean;
 }
 
 export function Tooltip({
@@ -21,6 +22,7 @@ export function Tooltip({
   className = "",
   minWidth,
   maxWidth,
+  disabled = false,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
@@ -128,11 +130,14 @@ export function Tooltip({
   }, [isVisible, placement]);
 
   const handleMouseEnter = () => {
+    if (disabled) return;
     if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
       return;
     }
     timerRef.current = setTimeout(() => {
-      setIsVisible(true);
+      if (!disabled) {
+        setIsVisible(true);
+      }
     }, delay);
   };
 
