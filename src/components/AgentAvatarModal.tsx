@@ -88,12 +88,23 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     agent.roleTag
   );
   // Dynamic theme based on currently picked color in preview
-  const activeColorKey = customImageUrl ? currentTheme.primary : (isCustomBlob ? selectedBlobColor : defaultBlob.color);
+  const activeColorKey = isCustomBlob ? selectedBlobColor : (currentTheme?.primary || defaultBlob.color);
 
   // Build temporary preview config
   const previewConfig: CustomAvatarConfig | null = (() => {
     if (customImageUrl) {
-      return { type: "image", imageUrl: customImageUrl };
+      return {
+        type: "image",
+        imageUrl: customImageUrl,
+        colorPreset: selectedBlobColor,
+        blob: {
+          color: selectedBlobColor,
+          shape: selectedBlobShape,
+          expression: selectedBlobExpression,
+          animation: selectedBlobAnimation,
+          seed: defaultBlob.seed,
+        },
+      };
     }
     if (!isCustomBlob) return null;
     return {
@@ -116,8 +127,20 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
       if (agent.id && agent.id !== targetKey) saveCustomAgentName(agent.id, trimmed);
     }
     if (customImageUrl) {
-      saveAgentAvatarConfig(targetKey, { type: "image", imageUrl: customImageUrl });
-      if (agent.id && agent.id !== targetKey) saveAgentAvatarConfig(agent.id, { type: "image", imageUrl: customImageUrl });
+      const imgConfig: CustomAvatarConfig = {
+        type: "image",
+        imageUrl: customImageUrl,
+        colorPreset: selectedBlobColor,
+        blob: {
+          color: selectedBlobColor,
+          shape: selectedBlobShape,
+          expression: selectedBlobExpression,
+          animation: selectedBlobAnimation,
+          seed: defaultBlob.seed,
+        },
+      };
+      saveAgentAvatarConfig(targetKey, imgConfig);
+      if (agent.id && agent.id !== targetKey) saveAgentAvatarConfig(agent.id, imgConfig);
     } else if (!isCustomBlob) {
       resetAgentAvatarConfig(targetKey);
       if (agent.id && agent.id !== targetKey) resetAgentAvatarConfig(agent.id);
