@@ -7069,14 +7069,20 @@ ${targetItem.text}`;
       const snippet = (foundMsg.content || "").slice(0, 160).replace(/\s+/g, " ");
 
       if (isAdded) {
-        // Post background record to session room
-        postChatRoomMessage(selectedAgent.id, selectedChatId, {
-          author_id: "user",
-          author_role: "user",
-          kind: "reaction",
-          text: `[Reaction Reply ${emoji}]`,
-          target_agent_id: targetAgentId,
-        }).catch(() => {});
+        // Post background record to session room ONLY when this session already has an active multi-agent room
+        const isMultiAgentSession =
+          activeSessionRoom &&
+          Array.isArray(activeSessionRoom.participants) &&
+          activeSessionRoom.participants.some((p) => p.role === "collaborator");
+        if (isMultiAgentSession) {
+          postChatRoomMessage(selectedAgent.id, selectedChatId, {
+            author_id: "user",
+            author_role: "user",
+            kind: "reaction",
+            text: `[Reaction Reply ${emoji}]`,
+            target_agent_id: targetAgentId,
+          }).catch(() => {});
+        }
 
         // Nếu là reaction trên câu trả lời của Agent -> Gửi request ngầm để Agent treat & respond
         if (isAgentResponse && !isStreaming && !isCurrentSessionRunning) {
@@ -9888,9 +9894,16 @@ const selectedAgentTheme = getAgentColorTheme(
     );
     setEditingChatId(null);
     updateChatTitle(selectedAgentId, chatId, nextTitle);
-    updateChatRoomTitle(selectedAgentId, chatId, nextTitle).then((r) => {
-      if (r && chatId === selectedChatId) setActiveSessionRoom(r);
-    }).catch(() => {});
+    const hasMultiAgentRoomForChat =
+      chatId === selectedChatId &&
+      activeSessionRoom &&
+      Array.isArray(activeSessionRoom.participants) &&
+      activeSessionRoom.participants.some((p) => p.role === "collaborator");
+    if (hasMultiAgentRoomForChat) {
+      updateChatRoomTitle(selectedAgentId, chatId, nextTitle).then((r) => {
+        if (r && chatId === selectedChatId) setActiveSessionRoom(r);
+      }).catch(() => {});
+    }
   };
 
   const handleExportAuditCertificate = () => {
@@ -15040,15 +15053,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         action: () => {
                           setIsPlusMenuOpen(false);
                           setInputText(rec.prompt);
-                          if (rec.collaborators && rec.collaborators.length > 0 && selectedChatId && selectedAgentId) {
-                            for (const cSlug of rec.collaborators) {
-                              pullAgentIntoChatRoom(selectedAgentId, selectedChatId, cSlug, {
-                                hostSessionId: selectedChat?.session_id || selectedChatId,
-                              }).then((res) => {
-                                if (res?.room) setActiveSessionRoom(res.room);
-                              });
-                            }
-                          }
+// Room creation deferred until prompt with @mention is actually submitted
                           textareaRef.current?.focus();
                         },
                       }));
@@ -15310,13 +15315,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         action: () => {
                           setIsPlusMenuOpen(false);
                           setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${mentionSlug} `));
-                          if (selectedChatId && selectedAgentId) {
-                            pullAgentIntoChatRoom(selectedAgentId, selectedChatId, mentionSlug, {
-                              hostSessionId: selectedChat?.session_id || selectedChatId,
-                            }).then((res) => {
-                              if (res?.room) setActiveSessionRoom(res.room);
-                            });
-                          }
+// Room creation deferred until prompt with @mention is actually submitted
                           textareaRef.current?.focus();
                         },
                       };
@@ -15789,13 +15788,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 }
                                 return prev ? `${prev} @${mentionTag} ` : `@${mentionTag} `;
                               });
-                              if (selectedChatId && selectedAgentId) {
-                                pullAgentIntoChatRoom(selectedAgentId, selectedChatId, mentionTag, {
-                                  hostSessionId: selectedChat?.session_id || selectedChatId,
-                                }).then((res) => {
-                                  if (res?.room) setActiveSessionRoom(res.room);
-                                });
-                              }
+// Room creation deferred until prompt with @mention is actually submitted
                               textareaRef.current?.focus();
                             }}
                             className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
@@ -16182,13 +16175,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               } else if (selected.type === "agent") {
                                 const agSlug = selected.id.replace(/^bot:agent360:/i, "");
                                 setInputText((prev) => prev.replace(/(@[a-zA-Z0-9_-]*)$/, `@${agSlug} `));
-                                if (selectedChatId && selectedAgentId) {
-                                  pullAgentIntoChatRoom(selectedAgentId, selectedChatId, agSlug, {
-                                    hostSessionId: selectedChat?.session_id || selectedChatId,
-                                  }).then((res) => {
-                                    if (res?.room) setActiveSessionRoom(res.room);
-                                  });
-                                }
+// Room creation deferred until prompt with @mention is actually submitted
                               }
                               return;
                             }
@@ -19579,15 +19566,7 @@ ${chat.id}`);
         onClose={() => setIsRecipesModalOpen(false)}
         onSelectRecipe={(prompt, recipe) => {
           setInputText(prompt);
-          if (recipe?.collaborators && recipe.collaborators.length > 0 && selectedChatId && selectedAgentId) {
-            for (const cSlug of recipe.collaborators) {
-              pullAgentIntoChatRoom(selectedAgentId, selectedChatId, cSlug, {
-                hostSessionId: selectedChat?.session_id || selectedChatId,
-              }).then((res) => {
-                if (res?.room) setActiveSessionRoom(res.room);
-              });
-            }
-          }
+// Room creation deferred until prompt with @mention is actually submitted
           setTimeout(() => textareaRef.current?.focus(), 50);
         }}
       />
