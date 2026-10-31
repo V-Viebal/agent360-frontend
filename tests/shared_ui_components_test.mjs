@@ -310,3 +310,18 @@ assert.ok(
   "downloadWorkspaceFile must resolve custom/alias agent slugs, attempt authenticated blob download with 30s revoke grace period, and fall back to signed URL and /console/files/?download=1"
 );
 console.log("✓ Test 20: Library & Attachment Multi-Stage File Download Fallback verified");
+
+console.log("Testing Internal Runtime Notice & Headline Stripping from Chat Responses...");
+const turnStreamSrc = fs.readFileSync(path.join(rootDir, "src/services/turnStream.ts"), "utf8");
+assert.ok(
+  apiSrc.includes("function stripInternalExecutionArtifacts") &&
+  apiSrc.includes("function isInternalRuntimeMessage") &&
+  apiSrc.includes("<system-(?:notification|info|reminder)>") &&
+  turnStreamSrc.includes("isInternalRuntimeMessage(event)") &&
+  turnStreamSrc.includes("stripInternalExecutionArtifacts") &&
+  chatStreamSrc.includes("isInternalRuntimeMessage(parsed)") &&
+  chatStreamSrc.includes("stripInternalExecutionArtifacts") &&
+  grokSrc.includes("stripInternalExecutionArtifacts(stripSharedRoomContext"),
+  "Chat message history, SSE turn streams, and UI bubbles must filter out internal runtime system notices (<system-notification>, original_name=system) and scroll headlines (⟦...⟧) so execution artifacts never leak into user-facing response messages"
+);
+console.log("✓ Test 21: Internal Runtime Notice & Headline Stripping from Chat Responses verified");
