@@ -799,6 +799,29 @@ function extractToolSentAttachments(
       } catch {}
     }
 
+    // 3. Audio360 Speech Synthesis tools (e.g. audio360__audio360_synthesize_speech, audio360_create_audio_from_file)
+    if (
+      toolName.includes("audio360") ||
+      toolName.includes("synthesize_speech") ||
+      toolName.includes("create_audio")
+    ) {
+      try {
+        const argsObj = typeof tc.args === "string" && tc.args.trim().startsWith("{") ? JSON.parse(tc.args) : {};
+        const outPath = inlineMedia?.path || argsObj.outputPath || argsObj.output_path || argsObj.path || "";
+        const baseFromPath = outPath ? outPath.replace(/\\/g, "/").split("/").pop() || "" : "";
+        const reqName = baseFromPath || "audio-narration.mp3";
+        if (outPath || inlineMedia?.dataUrl || inlineMedia?.storageUrl) {
+          addCandidate(
+            outPath || `media/${reqName}`,
+            reqName,
+            "Âm thanh do Agent tạo",
+            inlineMedia?.storageUrl,
+            inlineMedia?.dataUrl
+          );
+        }
+      } catch {}
+    }
+
     // 3. MinIO / S3 Storage upload tools (e.g. minio__upload_file, upload_file)
     if (toolName.includes("minio") || toolName.includes("storage") || toolName.includes("upload")) {
       try {
