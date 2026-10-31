@@ -3,10 +3,13 @@ import { API_BASE_URL } from "./agentApi";
 export interface SessionTurnUpdate {
   type: "session_turn_update";
   session_id: string;
+  chat_id?: string;
+  event_id?: string;
   is_running: boolean;
   status: string;
   agent_id?: string;
   channel?: string;
+  /** @deprecated Legacy event record id; use event_id for telemetry record and chat_id/session_id for chat session matching. */
   id?: string;
   content_snippet?: string;
   timestamp?: string;

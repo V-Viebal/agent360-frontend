@@ -5728,26 +5728,31 @@ export function GrokBotWorkspace() {
       onTurnUpdate: (update: SessionTurnUpdate) => {
         const sid = update.session_id;
         if (!sid) return;
+        const chatId = update.chat_id && update.chat_id !== sid ? update.chat_id : undefined;
         const resolvedAgId =
           update.agent_id ||
           chatAgentMapRef.current[sid] ||
-          (update.id ? chatAgentMapRef.current[update.id] : undefined);
+          (chatId ? chatAgentMapRef.current[chatId] : undefined);
         const normAg = normalizeAgentKey(resolvedAgId);
-        const aliasId = sessionAliasesRef.current[sid];
+        if (chatId && normAg) {
+          registerSessionAgent(chatId, sid, normAg);
+        }
+        const aliasId = sessionAliasesRef.current[sid] || chatId;
         const isStillStreamingLocally =
           streamingChatIdsRef.current.includes(sid) ||
+          (chatId ? streamingChatIdsRef.current.includes(chatId) : false) ||
           (aliasId ? streamingChatIdsRef.current.includes(aliasId) : false);
 
         if (update.is_running) {
-          updateAgentSessionRunning(normAg, [sid, update.id, aliasId], true);
+          updateAgentSessionRunning(normAg, [sid, chatId, aliasId], true);
           setRunningChatIds((prev) => (prev.includes(sid) ? prev : [...prev, sid]));
           const curAg = normalizeAgentKey(selectedAgentIdRef.current);
           setChats((prev) => {
             const matchesTurn = (c: AgentSession) =>
               c.id === sid ||
               c.session_id === sid ||
-              (aliasId && (c.id === aliasId || c.session_id === aliasId)) ||
-              (update.id && (c.id === update.id || c.session_id === update.id));
+              (chatId && (c.id === chatId || c.session_id === chatId)) ||
+              (aliasId && (c.id === aliasId || c.session_id === aliasId));
             const exists = prev.some(matchesTurn);
             if (exists) {
               return prev.map((c) =>
@@ -5761,7 +5766,7 @@ export function GrokBotWorkspace() {
             }
             if (normAg && curAg && normAg === curAg) {
               const newLiveChat = {
-                id: sid,
+                id: chatId || sid,
                 session_id: sid,
                 title: update.content_snippet ? update.content_snippet.slice(0, 48) : (sid.length <= 14 ? `Hội thoại #${sid}` : "Cuộc hội thoại mới"),
                 updatedAt: "Vừa xong",
@@ -5780,16 +5785,19 @@ export function GrokBotWorkspace() {
           });
         } else {
           if (!isStillStreamingLocally) {
-            updateAgentSessionRunning(normAg, [sid, update.id, aliasId], false);
+            updateAgentSessionRunning(normAg, [sid, chatId, aliasId], false);
           }
           setRunningChatIds((prev) =>
-            prev.filter((id) => (id !== sid && id !== aliasId) || streamingChatIdsRef.current.includes(id))
+            prev.filter((id) => (id !== sid && id !== chatId && id !== aliasId) || streamingChatIdsRef.current.includes(id))
           );
-          const viewed = isViewedChat(sid) || (aliasId ? isViewedChat(aliasId) : false);
+          const viewed = isViewedChat(sid) || (chatId ? isViewedChat(chatId) : false) || (aliasId ? isViewedChat(aliasId) : false);
           if (viewed) markViewedChatRead(sid);
           setChats((prev) =>
             prev.map((c) =>
-              c.id === sid || c.session_id === sid || (aliasId && (c.id === aliasId || c.session_id === aliasId))
+              c.id === sid ||
+              c.session_id === sid ||
+              (chatId && (c.id === chatId || c.session_id === chatId)) ||
+              (aliasId && (c.id === aliasId || c.session_id === aliasId))
                 ? {
                     ...c,
                     is_running: isStillStreamingLocally,
