@@ -1,6 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
-import { Save, Radio, Check, Key, Globe } from "lucide-react";
+import { Save, Radio, Check, Key, Users, Shield, Plus, X } from "lucide-react";
 import {
   AgentChannelConfig,
   DEFAULT_TELEGRAM_API_BASE_URL,
@@ -34,6 +34,8 @@ export function ChannelConfigModal({
   const [showTyping, setShowTyping] = useState(true);
   const [dmAccessControl, setDmAccessControl] = useState(false);
   const [groupAccessControl, setGroupAccessControl] = useState(false);
+  const [whitelistUsers, setWhitelistUsers] = useState<string[]>([]);
+  const [newUserIdInput, setNewUserIdInput] = useState("");
   const [requireMention, setRequireMention] = useState(true);
   const [noTextDebounce, setNoTextDebounce] = useState(true);
   const [showThinking, setShowThinking] = useState(true);
@@ -65,6 +67,11 @@ export function ChannelConfigModal({
       setGroupAccessControl(
         Boolean(d.access_control_group || d.group_policy === "allowlist")
       );
+      const rawAllowFrom = Array.isArray(d.allow_from)
+        ? d.allow_from
+        : (d.whitelist && typeof d.whitelist === "object" ? Object.keys(d.whitelist) : []);
+      setWhitelistUsers(rawAllowFrom.map((u: any) => String(u).trim()).filter(Boolean));
+      setNewUserIdInput("");
       setRequireMention(
         d.require_mention !== undefined && d.require_mention !== null
           ? Boolean(d.require_mention)
@@ -101,6 +108,7 @@ export function ChannelConfigModal({
       access_control_group: groupAccessControl,
       dm_policy: dmAccessControl ? "allowlist" : "open",
       group_policy: groupAccessControl ? "allowlist" : "open",
+      allow_from: (dmAccessControl || groupAccessControl) ? whitelistUsers : [],
       show_thinking: showThinking,
       show_tool_calls: showTools,
     };
@@ -172,21 +180,7 @@ export function ChannelConfigModal({
           </div>
         )}
 
-        {isTelegram && (
-          <div className="space-y-1.5">
-            <label className="text-slate-700 dark:text-neutral-300 font-medium flex items-center gap-1.5">
-              <Globe size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
-              <span>{t("channelConfig.apiBaseUrl") || "API Base URL"}</span>
-            </label>
-            <input
-              type="text"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder={DEFAULT_TELEGRAM_API_BASE_URL}
-              className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]/70"
-            />
-          </div>
-        )}
+
 
         <div className="space-y-1.5">
           <label className="text-slate-700 dark:text-neutral-300 font-medium">{t("channelConfig.prefix")}</label>
@@ -227,6 +221,86 @@ export function ChannelConfigModal({
                 label={t("channelConfig.groupAccessControl") || "Group Access Control"}
               />
             </div>
+
+            {(dmAccessControl || groupAccessControl) && (
+              <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-[#13131c] border border-amber-500/20 dark:border-amber-500/30 space-y-2.5 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 flex items-center gap-1.5">
+                    <Shield size={13} className="text-amber-500" />
+                    <span>{t("channelConfig.whitelistUsers") || "Whitelisted Users (IDs)"}</span>
+                  </span>
+                  <span className="text-[11px] font-mono text-neutral-400">
+                    {whitelistUsers.length} {t("channelConfig.usersCount") || "user(s)"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-neutral-400 leading-tight">
+                  {t("channelConfig.whitelistHint") || "Only specified Telegram User IDs can interact when DM or Group access control is active."}
+                </p>
+
+                {/* Input & Add Button */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Users size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500" />
+                    <input
+                      type="text"
+                      value={newUserIdInput}
+                      onChange={(e) => setNewUserIdInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const val = newUserIdInput.trim();
+                          if (val && !whitelistUsers.includes(val)) {
+                            setWhitelistUsers([...whitelistUsers, val]);
+                            setNewUserIdInput("");
+                          }
+                        }
+                      }}
+                      placeholder="e.g. 123456789"
+                      className="w-full bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-slate-800 dark:text-white font-mono placeholder:text-neutral-500 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = newUserIdInput.trim();
+                      if (val && !whitelistUsers.includes(val)) {
+                        setWhitelistUsers([...whitelistUsers, val]);
+                        setNewUserIdInput("");
+                      }
+                    }}
+                    className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 dark:text-amber-400 text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
+                  >
+                    <Plus size={12} />
+                    <span>{t("channelConfig.add") || "Add"}</span>
+                  </button>
+                </div>
+
+                {/* Chips */}
+                {whitelistUsers.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pt-1">
+                    {whitelistUsers.map((uid) => (
+                      <span
+                        key={uid}
+                        className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded-md text-xs font-mono"
+                      >
+                        <span>{uid}</span>
+                        <button
+                          type="button"
+                          onClick={() => setWhitelistUsers(whitelistUsers.filter((u) => u !== uid))}
+                          className="hover:text-red-400 transition-colors cursor-pointer"
+                        >
+                          <X size={11} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-[11px] font-mono text-neutral-500 italic py-0.5">
+                    {t("channelConfig.noWhitelistedUsers") || "No user IDs configured yet. All non-whitelisted users will be blocked."}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-[#222230]">
               <ToggleSwitch

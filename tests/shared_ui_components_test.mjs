@@ -342,3 +342,13 @@ assert.ok(
   "Telegram ChannelConfigModal and updateAgentChannelConfig must default base_url to http://100.70.201.83:8083, show_typing=true, access_control_dm=false, access_control_group=false, require_mention=true, no_text_debounce=true, and use authorizedFetch so saves succeed"
 );
 console.log("✓ Test 22: Telegram Channel Setup Defaults & Authorized Save Contract verified");
+
+console.log("Testing Telegram Whitelist UI & Hidden Base URL Contracts...");
+assert.ok(
+  !channelModalSrc.includes("<span>{t(\"channelConfig.apiBaseUrl\")") &&
+  channelModalSrc.includes("DEFAULT_TELEGRAM_API_BASE_URL") &&
+  channelModalSrc.includes("whitelistUsers") &&
+  channelModalSrc.includes("allow_from: (dmAccessControl || groupAccessControl) ? whitelistUsers : []"),
+  "ChannelConfigModal must hide the API Base URL input from the user while keeping the default, and present whitelist user ID setup whenever DM or Group Access Control is enabled"
+);
+console.log("✓ Test 23: Telegram Whitelist UI & Hidden Base URL verified");
