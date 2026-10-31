@@ -5191,6 +5191,18 @@ export function GrokBotWorkspace() {
           setSelectedAgentId(matched.id);
           try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
           const targetCached = getCachedAgentChats(matched.id);
+          const savedChatKey = `agent360_last_chat_${matched.id}`;
+          const savedChatId = localStorage.getItem(savedChatKey);
+          const validSaved =
+            savedChatId && (!savedChatId.startsWith("session-") || Boolean(getCachedChatMessages(savedChatId, matched.id)?.length))
+              ? savedChatId
+              : null;
+          const initialChatId =
+            (chatParam && (!chatParam.startsWith("session-") || Boolean(getCachedChatMessages(chatParam, matched.id)?.length)) ? chatParam : null) ||
+            validSaved ||
+            (targetCached && targetCached.length > 0
+              ? (targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running) || targetCached[0]).id
+              : "");
           if (targetCached && targetCached.length > 0) {
             setChats(targetCached);
             setChatsAgentId(matched.id);
@@ -5200,7 +5212,8 @@ export function GrokBotWorkspace() {
             setChatsAgentId("");
             setIsLoadingChats(true);
           }
-          setMessages([]);
+          setSelectedChatId(initialChatId);
+          setMessages((initialChatId && getCachedChatMessages(initialChatId, matched.id)) || []);
         }
       } else {
         // User tried to navigate to an unowned agent URL -> redirect back to /app or their first owned agent
@@ -5217,6 +5230,13 @@ export function GrokBotWorkspace() {
 
   useEffect(() => {
     if (chatParam && chatParam !== selectedChatId && isKnownAgent(selectedAgentId)) {
+      const activeAg = agents.find((a) => a.id === selectedAgentId || a.slug === selectedAgentId);
+      const currentBare = (activeAg?.slug || activeAg?.id || selectedAgentId).replace(/^bot:agent360:/i, "").toLowerCase();
+      const currentAlias = slugifyAgentUrlAlias(activeAg?.name || getCustomAgentName(selectedAgentId));
+      const routeAgentBare = (resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
+      const isRouteMatching = !agentParam || routeAgentBare === currentBare || (Boolean(currentAlias) && slugifyAgentUrlAlias(agentParam) === currentAlias);
+      if (!isRouteMatching) return;
+
       setSelectedChatId(chatParam);
       try {
         localStorage.setItem("agent360_last_chat_id", chatParam);
@@ -5225,7 +5245,7 @@ export function GrokBotWorkspace() {
         }
       } catch {}
     }
-  }, [chatParam, selectedAgentId, agents.length]);
+  }, [chatParam, agentParam, selectedAgentId, agents.length]);
 
   // Rightmost bot info tab: 'Computer' | 'Details' | 'Library'
   const [rightTab, setRightTab] = useState<"Details" | "Computer" | "Library">("Details");
@@ -8561,19 +8581,35 @@ ${targetItem.text}`;
         }
         if (loadedChats.length > 0) {
           const savedChatKey = `agent360_last_chat_${currentAgent}`;
-          // Preference: savedChatKey for this specific agent -> first chat in list
-          // Only use chatParam if route is currently matching this agent
+          const isNonEmptyServerChat = (c: AgentSession) =>
+            c.title !== "New Chat" || Boolean(c.isRunning || c.is_running || c.status === "running");
+          const hasLocalSessionActivity = (sid: string | null | undefined) =>
+            Boolean(
+              sid &&
+                (streamingChatIdsRef.current.includes(sid) ||
+                  Boolean(getCachedChatMessages(sid, currentAgent)?.length) ||
+                  (typeof window !== "undefined" && Boolean(localStorage.getItem(`agent360_draft_${sid}`)?.trim())))
+            );
+          // Preference: savedChatKey for this specific agent -> first non-empty chat in list
           const findChat = (key: string | null | undefined) =>
             key ? loadedChats.find((c) => c.id === key) || loadedChats.find((c) => c.session_id === key) : undefined;
           const savedChatId = localStorage.getItem(savedChatKey);
-          const foundSaved = findChat(savedChatId);
+          const rawFoundSaved = findChat(savedChatId);
+          const foundSaved =
+            rawFoundSaved && (isNonEmptyServerChat(rawFoundSaved) || !loadedChats.some(isNonEmptyServerChat))
+              ? rawFoundSaved
+              : undefined;
           const activeAg = agents.find((a) => a.id === currentAgent || a.slug === currentAgent);
           const currentBare = (activeAg?.slug || activeAg?.id || currentAgent).replace(/^bot:agent360:/i, "").toLowerCase();
           const currentAlias = slugifyAgentUrlAlias(activeAg?.name || getCustomAgentName(currentAgent));
           const routeAgentBare = (resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam || "").replace(/^bot:agent360:/i, "").toLowerCase();
           const isRouteMatchingAgent = routeAgentBare === currentBare || (Boolean(currentAlias) && slugifyAgentUrlAlias(agentParam) === currentAlias);
-          const isNewSessionParam = Boolean(isRouteMatchingAgent && chatParam && chatParam.startsWith("session-"));
-          const urlChatFound = isRouteMatchingAgent ? findChat(chatParam) : undefined;
+          const isNewSessionParam = Boolean(isRouteMatchingAgent && chatParam && chatParam.startsWith("session-") && hasLocalSessionActivity(chatParam));
+          const rawUrlChatFound = isRouteMatchingAgent ? findChat(chatParam) : undefined;
+          const urlChatFound =
+            rawUrlChatFound && (isNonEmptyServerChat(rawUrlChatFound) || !loadedChats.some(isNonEmptyServerChat))
+              ? rawUrlChatFound
+              : undefined;
 
           const newSessionFallback =
             (isNewSessionParam && chatParam)
@@ -8587,7 +8623,7 @@ ${targetItem.text}`;
                   agentId: currentBare,
                   channel: "console",
                 }
-              : (!foundSaved && savedChatId && savedChatId.startsWith("session-"))
+              : (!foundSaved && savedChatId && savedChatId.startsWith("session-") && hasLocalSessionActivity(savedChatId))
               ? {
                   id: savedChatId,
                   title: "New Chat",
@@ -8600,10 +8636,11 @@ ${targetItem.text}`;
                 }
               : undefined;
 
+          const defaultRealChat = loadedChats.find(isNonEmptyServerChat) ?? loadedChats[0];
           const targetChat = urlChatFound
             ?? newSessionFallback
             ?? foundSaved
-            ?? loadedChats[0];
+            ?? defaultRealChat;
           const targetChatId: string = targetChat.id;
           if (newSessionFallback && targetChatId === newSessionFallback.id && !loadedChats.some((c) => c.id === targetChatId || c.session_id === targetChatId)) {
             setChats([newSessionFallback, ...loadedChats]);
@@ -8660,10 +8697,6 @@ ${targetItem.text}`;
           };
           setChats([initialNewSession]);
           setSelectedChatId(freshId);
-          try {
-            localStorage.setItem("agent360_last_chat_id", freshId);
-            localStorage.setItem(savedChatKey, freshId);
-          } catch {}
         }
       } finally {
         if (!cancelled && selectedAgentIdRef.current === currentAgent) {
@@ -9657,6 +9690,35 @@ const selectedAgentTheme = getAgentColorTheme(
 
     // Instantly reset chats & messages to the new agent's cached items or empty to avoid cross-agent bleed
     const targetCached = getCachedAgentChats(agent.id);
+    const savedChatKey = `agent360_last_chat_${agent.id}`;
+    const rawLastChat = localStorage.getItem(savedChatKey);
+    const isValidSavedSession = (cid: string | null): string | null => {
+      if (!cid) return null;
+      if (cid.startsWith("session-")) {
+        const hasActivity =
+          streamingChatIdsRef.current.includes(cid) ||
+          Boolean(getCachedChatMessages(cid, agent.id)?.length) ||
+          Boolean(localStorage.getItem(`agent360_draft_${cid}`)?.trim());
+        if (!hasActivity) {
+          try { localStorage.removeItem(savedChatKey); } catch {}
+          return null;
+        }
+      }
+      if (targetCached && targetCached.length > 0) {
+        const matched = targetCached.find((c) => c.id === cid || c.session_id === cid);
+        if (matched && matched.title === "New Chat" && !matched.isRunning && !matched.is_running) {
+          const realAlt = targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running);
+          if (realAlt) return realAlt.id;
+        }
+      }
+      return cid;
+    };
+    const resolvedInitialChatId =
+      isValidSavedSession(rawLastChat) ||
+      (targetCached && targetCached.length > 0
+        ? (targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running) || targetCached[0]).id
+        : "");
+
     if (targetCached && targetCached.length > 0) {
       setChats(targetCached);
       setChatsAgentId(agent.id);
@@ -9666,13 +9728,12 @@ const selectedAgentTheme = getAgentColorTheme(
       setChatsAgentId("");
       setIsLoadingChats(true);
     }
-    setMessages([]);
-    setSelectedChatId("");
+    const cachedMsgsForInitial = resolvedInitialChatId ? getCachedChatMessages(resolvedInitialChatId, agent.id) : null;
+    setMessages(cachedMsgsForInitial || []);
+    setSelectedChatId(resolvedInitialChatId);
     const agentSegment = getAgentRouteSegment(agent);
-    const savedChatKey = `agent360_last_chat_${agent.id}`;
-    const lastChatForAgent = localStorage.getItem(savedChatKey);
-    if (lastChatForAgent) {
-      navigate(`/app/${agentSegment}/${lastChatForAgent}`);
+    if (resolvedInitialChatId) {
+      navigate(`/app/${agentSegment}/${resolvedInitialChatId}`);
     } else {
       navigate(`/app/${agentSegment}`);
     }
@@ -9700,12 +9761,20 @@ const selectedAgentTheme = getAgentColorTheme(
       })
     );
     setSelectedChatId(chat.id);
-    try {
-      localStorage.setItem("agent360_last_chat_id", chat.id);
-      if (selectedAgentId) {
-        localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chat.id);
-      }
-    } catch {}
+    const isEmptyTransientNew =
+      chat.id.startsWith("session-") &&
+      chat.title === "New Chat" &&
+      (chat.messageCount || 0) === 0 &&
+      !streamingChatIdsRef.current.includes(chat.id) &&
+      !(getCachedChatMessages(chat.id, selectedAgentId)?.length);
+    if (!isEmptyTransientNew) {
+      try {
+        localStorage.setItem("agent360_last_chat_id", chat.id);
+        if (selectedAgentId) {
+          localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chat.id);
+        }
+      } catch {}
+    }
 
     // Update routing URL to /app/:agentSlug/:chatId
     const agentSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
@@ -10101,10 +10170,6 @@ const selectedAgentTheme = getAgentColorTheme(
     setSelectedChatId(newChatId);
     setMessages([]);
     setActiveSessionRoom(null);
-    try {
-      localStorage.setItem("agent360_last_chat_id", newChatId);
-      localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, newChatId);
-    } catch {}
 
     // Sync route URL to /app/:agentSlug/:newChatId
     const agentSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
@@ -10484,6 +10549,10 @@ const selectedAgentTheme = getAgentColorTheme(
     try {
       sessionStorage.setItem(`agent360_active_turn_${originChatId}`, "true");
       sessionStorage.setItem(`agent360_last_prompt_${originChatId}`, userText);
+      localStorage.setItem("agent360_last_chat_id", originChatId);
+      if (originAgentId) {
+        localStorage.setItem(`agent360_last_chat_${originAgentId}`, originChatId);
+      }
     } catch {}
 
     // Updates the origin chat: live on screen if it is still selected, otherwise in its message cache.
