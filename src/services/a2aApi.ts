@@ -42,21 +42,14 @@ export interface A2AMetrics {
 const B = "/api";
 const KEY = "agent360.a2a.operatorKey";
 function enc(s: string): string { return encodeURIComponent(s); }
-export const DEFAULT_OPERATOR_TOKEN = "fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be";
 export const operatorKey = {
   get: () => {
     try {
-      if (typeof localStorage === "undefined") return DEFAULT_OPERATOR_TOKEN;
-      const explicit = localStorage.getItem(KEY) || localStorage.getItem("operator_token");
-      if (explicit) return explicit;
-      const hasUserToken = !!(
-        (typeof sessionStorage !== "undefined" && sessionStorage.getItem("skyer_access_token")) ||
-        localStorage.getItem("skyer_access_token")
-      );
-      if (hasUserToken) return "";
-      return DEFAULT_OPERATOR_TOKEN;
+      // Operator keys are only ever entered explicitly by an operator; the bundle ships no default.
+      if (typeof localStorage === "undefined") return "";
+      return localStorage.getItem(KEY) || localStorage.getItem("operator_token") || "";
     } catch {
-      return DEFAULT_OPERATOR_TOKEN;
+      return "";
     }
   },
   set: (v: string) => (v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY)),
