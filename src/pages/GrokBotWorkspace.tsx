@@ -5588,7 +5588,12 @@ export function GrokBotWorkspace() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   // Console turns are tracked per chat: switching chats must never carry another chat's loading/queue state.
   const [streamingChatIds, setStreamingChatIds] = useState<string[]>([]);
-  const isStreaming = Boolean(selectedChatId && streamingChatIds.includes(selectedChatId));
+  const sessionAliasesRef = useRef<Record<string, string>>({});
+  const isStreaming = Boolean(
+    selectedChatId &&
+      (streamingChatIds.includes(selectedChatId) ||
+        (sessionAliasesRef.current[selectedChatId] && streamingChatIds.includes(sessionAliasesRef.current[selectedChatId])))
+  );
   const streamingChatIdsRef = useRef<string[]>([]);
   // Latest on-screen transcript of each chat with an in-flight console turn (survives chat switches and history reloads).
   const inflightMessagesRef = useRef<Record<string, ChatMessage[]>>({});
@@ -5604,7 +5609,6 @@ export function GrokBotWorkspace() {
   // Ids (chat UUID + channel session id) of the chat currently on screen; a finished turn there is already read.
   const viewedChatIdsRef = useRef<string[]>([]);
   const agentRunningSessionsRef = useRef<Record<string, Set<string>>>({});
-  const sessionAliasesRef = useRef<Record<string, string>>({});
   const normalizeAgentKey = (idOrSlug?: string | null): string =>
     (idOrSlug || "").replace(/^bot:agent360:/i, "").trim().toLowerCase();
 
@@ -5739,17 +5743,25 @@ export function GrokBotWorkspace() {
           setRunningChatIds((prev) => (prev.includes(sid) ? prev : [...prev, sid]));
           const curAg = normalizeAgentKey(selectedAgentIdRef.current);
           setChats((prev) => {
-            const exists = prev.some((c) => c.id === sid || c.session_id === sid || (update.id && c.id === update.id));
+            const matchesTurn = (c: AgentSession) =>
+              c.id === sid ||
+              c.session_id === sid ||
+              (aliasId && (c.id === aliasId || c.session_id === aliasId)) ||
+              (update.id && (c.id === update.id || c.session_id === update.id));
+            const exists = prev.some(matchesTurn);
             if (exists) {
               return prev.map((c) =>
-                c.id === sid || c.session_id === sid || (update.id && c.id === update.id)
+                matchesTurn(c)
                   ? { ...c, is_running: true, isRunning: true, status: "running" }
                   : c
               );
             }
+            if (isStillStreamingLocally) {
+              return prev;
+            }
             if (normAg && curAg && normAg === curAg) {
               const newLiveChat = {
-                id: update.id || sid,
+                id: sid,
                 session_id: sid,
                 title: update.content_snippet ? update.content_snippet.slice(0, 48) : (sid.length <= 14 ? `Hội thoại #${sid}` : "Cuộc hội thoại mới"),
                 updatedAt: "Vừa xong",
@@ -5777,13 +5789,13 @@ export function GrokBotWorkspace() {
           if (viewed) markViewedChatRead(sid);
           setChats((prev) =>
             prev.map((c) =>
-              c.id === sid || c.session_id === sid
+              c.id === sid || c.session_id === sid || (aliasId && (c.id === aliasId || c.session_id === aliasId))
                 ? {
                     ...c,
                     is_running: isStillStreamingLocally,
                     isRunning: isStillStreamingLocally,
                     status: isStillStreamingLocally ? "running" : "idle",
-                    unread: viewed ? false : true
+                    unread: (viewed || isStillStreamingLocally) ? false : true
                   }
                 : c
             )
@@ -5857,27 +5869,41 @@ export function GrokBotWorkspace() {
         // If this event belongs to the currently selected agent, upsert into the live chats list!
         if (evAgent && curAgent && evAgent === curAgent) {
           const viewed = isViewedChat(s.id) || (sid ? isViewedChat(sid) : false);
+          const isLocalStream =
+            streamingChatIdsRef.current.includes(s.id) ||
+            (sid ? streamingChatIdsRef.current.includes(sid) : false);
           setChats((prev) => {
-            const existingIdx = prev.findIndex(
-              (c) => c.id === s.id || c.id === sid || (c.session_id && (c.session_id === s.id || c.session_id === sid))
-            );
-            if (existingIdx >= 0) {
+            const matchingIndices: number[] = [];
+            prev.forEach((c, idx) => {
+              if (c.id === s.id || c.id === sid || (c.session_id && (c.session_id === s.id || c.session_id === sid))) {
+                matchingIndices.push(idx);
+              }
+            });
+            if (matchingIndices.length > 0) {
+              const existingIdx = matchingIndices[0];
               const existing = prev[existingIdx];
+              const keepLocalSessionId = existing.id.startsWith("session-") && isLocalStream;
+              const nextTitle =
+                displayTitle && displayTitle !== "New Chat" && displayTitle !== "Cuộc hội thoại"
+                  ? displayTitle
+                  : existing.title || displayTitle;
               const nextItem = {
                 ...existing,
-                id: s.id || existing.id,
+                id: keepLocalSessionId ? existing.id : (s.id || existing.id),
                 session_id: sid || existing.session_id,
-                title: displayTitle || existing.title,
+                title: nextTitle,
                 channel: s.channel || existing.channel,
-                status: s.status || existing.status,
-                is_running: typeof s.is_running === "boolean" ? s.is_running : existing.is_running,
-                isRunning: typeof s.is_running === "boolean" ? s.is_running : existing.isRunning,
-                unread: viewed ? false : (typeof s.unread === "boolean" ? s.unread : existing.unread),
+                status: isLocalStream ? "running" : (s.status || existing.status),
+                is_running: isLocalStream ? true : (typeof s.is_running === "boolean" ? s.is_running : existing.is_running),
+                isRunning: isLocalStream ? true : (typeof s.is_running === "boolean" ? s.is_running : existing.isRunning),
+                unread: (viewed || isLocalStream) ? false : (typeof s.unread === "boolean" ? s.unread : existing.unread),
               };
-              const updatedList = [...prev];
-              updatedList[existingIdx] = nextItem;
+              const updatedList = prev.filter((_, idx) => idx === existingIdx || !matchingIndices.includes(idx));
+              const targetIdx = updatedList.indexOf(existing);
+              if (targetIdx >= 0) updatedList[targetIdx] = nextItem;
               return updatedList;
             } else {
+              if (isLocalStream) return prev;
               // Brand new session from another channel (Telegram/Zalo/Webhook) or another device!
               const newItem = {
                 id: s.id,
@@ -9270,7 +9296,11 @@ const selectedAgentTheme = getAgentColorTheme(
   }, [selectedChatId, selectedAgentId, isStreaming]);
 
   useEffect(() => {
-    if (!selectedChatId || !selectedAgentId || isStreaming) return;
+    const isSelectedStreamingNow =
+      isStreaming ||
+      streamingChatIdsRef.current.includes(selectedChatId) ||
+      Boolean(sessionAliasesRef.current[selectedChatId] && streamingChatIdsRef.current.includes(sessionAliasesRef.current[selectedChatId]));
+    if (!selectedChatId || !selectedAgentId || isSelectedStreamingNow) return;
     if (selectedChatId.startsWith("session-") && !isCurrentSessionRunning && messages.length === 0) return;
 
     const key = `${normalizeAgentKey(selectedAgentId)}:${selectedChatId}`;
@@ -10508,8 +10538,10 @@ const selectedAgentTheme = getAgentColorTheme(
         statusText: "AgentTeams Manager (@agentteams-manager) đang tiếp nhận yêu cầu và phân định agent xử lý trong Room...",
       });
     }
-    setStreamingChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
-    setRunningChatIds((prev) => (prev.includes(originChatId) ? prev : [...prev, originChatId]));
+    const nextStreamIds = Array.from(new Set([...streamingChatIdsRef.current, originChatId, startSessionId].filter(Boolean)));
+    streamingChatIdsRef.current = nextStreamIds;
+    setStreamingChatIds(nextStreamIds);
+    setRunningChatIds((prev) => Array.from(new Set([...prev, originChatId, startSessionId].filter(Boolean))));
     updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, startSessionId], true);
     const cleanFirstLineTitle = userText
       .replace(/^\[Replying to [^:\]]+:\s*"[^"]*"\]\s*/i, "")
@@ -10934,15 +10966,17 @@ const selectedAgentTheme = getAgentColorTheme(
         delete inflightMessagesRef.current[originChatId];
       }
       const endSessionId = sessionAliasesRef.current[originChatId] || originChatId;
-      if (selectedChatIdRef.current === originChatId) {
+      if (selectedChatIdRef.current === originChatId || selectedChatIdRef.current === endSessionId) {
         setActiveRespondingAgent(null);
       }
-      setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId && id !== endSessionId));
+      const nextStreamAfter = streamingChatIdsRef.current.filter((id) => id !== originChatId && id !== endSessionId);
+      streamingChatIdsRef.current = nextStreamAfter;
+      setStreamingChatIds(nextStreamAfter);
       setRunningChatIds((prev) => prev.filter((id) => id !== originChatId && id !== endSessionId));
       updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, endSessionId], false);
       setChats((prev) =>
         prev.map((c) =>
-          c.id === originChatId || c.session_id === endSessionId
+          c.id === originChatId || c.id === endSessionId || c.session_id === originChatId || c.session_id === endSessionId
             ? { ...c, is_running: false, isRunning: false, status: "idle" }
             : c
         )
@@ -10964,12 +10998,29 @@ const selectedAgentTheme = getAgentColorTheme(
             }
             if (selectedAgentIdRef.current === originAgentId) {
               setChats((prev) => {
-                // Merge freshChats while keeping any other local unsent New Chat placeholder
                 const serverIds = new Set(freshChats.flatMap((fc) => [fc.id, fc.session_id].filter(Boolean)));
+                const prevOrigin = prev.find((c) => c.id === originChatId || c.session_id === originChatId);
+                const mergedServer = freshChats.map((fc) => {
+                  if (fc.id === originChatId || fc.session_id === originChatId) {
+                    const keepTitle =
+                      (fc.title === "New Chat" || fc.title === "Cuộc hội thoại" || !fc.title) &&
+                      prevOrigin?.title &&
+                      prevOrigin.title !== "New Chat"
+                        ? prevOrigin.title
+                        : fc.title;
+                    return { ...fc, title: keepTitle };
+                  }
+                  return fc;
+                });
                 const localUnsent = prev.filter(
-                  (c) => c.id.startsWith("session-") && !serverIds.has(c.id) && (!c.session_id || !serverIds.has(c.session_id))
+                  (c) =>
+                    c.id.startsWith("session-") &&
+                    c.id !== originChatId &&
+                    c.session_id !== originChatId &&
+                    !serverIds.has(c.id) &&
+                    (!c.session_id || !serverIds.has(c.session_id))
                 );
-                return [...localUnsent, ...freshChats];
+                return [...localUnsent, ...mergedServer];
               });
               if (matchedServerChat && selectedChatIdRef.current === originChatId) {
                 setSelectedChatId(matchedServerChat.id);
