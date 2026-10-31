@@ -861,17 +861,32 @@ function parseQuotedReplyFromContent(
   const attachments: ParsedChatAttachmentItem[] = [];
   const seenKeys = new Set<string>();
 
+  const decodeMimeBase64FileName = (name: string): string => {
+    const m = (name || "").match(/__utf-8_B_([A-Za-z0-9+/=]+)__/i);
+    if (m) {
+      try {
+        const b64 = m[1];
+        const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+        const bin = atob(padded);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const decoded = new TextDecoder("utf-8").decode(bytes).trim();
+        if (decoded) return decoded;
+      } catch {}
+    }
+    return name;
+  };
+
   const pushAttachment = (rawName: string, rawUrl: string, caption?: string) => {
     const url = (rawUrl || "").trim().replace(/^file:\/\/+/, "/");
-    const fallbackFile = url.replace(/\\/g, "/").split("/").pop() || "attachment";
-    const fileName = (rawName || fallbackFile).trim();
+    const fallbackFile = decodeURIComponent(url.replace(/\\/g, "/").split("/").pop() || "attachment");
+    const fileName = decodeMimeBase64FileName((rawName || fallbackFile).trim());
     const dedupeKey = (url.replace(/\\/g, "/").split("/").pop() || fileName).toLowerCase();
     if (seenKeys.has(dedupeKey)) return;
     seenKeys.add(dedupeKey);
 
-    // If URL is an external Storage URL (e.g. https://storage.hmz.one/copaw/...), route previewUrl through Agent360 workspace file-download
-    // so authenticated blob preview & download work even if storage is private, while keeping storageUrl for external access.
-    const isExternalStorage = /^https?:\/\/[^/]*(?:storage\.|minio)/i.test(url);
+    // If URL is an external Storage or Gradio artifact URL, keep storageUrl for direct download while also providing a workspace fallback previewUrl.
+    const isExternalStorage = /^https?:\/\/[^/]*(?:storage\.|minio|translate\.antares\.vn\/gradio_api\/file=)/i.test(url);
     const previewUrl = isExternalStorage
       ? resolveUploadedAttachmentPreviewUrl(`media/${fileName}`, agentIdForUrl)
       : resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
@@ -6215,7 +6230,9 @@ ${targetItem.text}`;
     }
     const wsMatch = (att.rawUrl || "").replace(/\\/g, "/").match(/\/workspaces\/([^/]+)\/(.+)$/i);
     if (wsMatch) {
-      return { agentSlug: wsMatch[1], filePath: wsMatch[2] };
+      const activeAg = selectedAgent?.slug || selectedAgent?.id || selectedAgentId || "default";
+      const agSlug = wsMatch[1].toLowerCase() === "default" && activeAg.toLowerCase() !== "default" ? activeAg : wsMatch[1];
+      return { agentSlug: agSlug, filePath: wsMatch[2] };
     }
     if (!/^(https?:|blob:|data:)/i.test(att.rawUrl)) {
       const ag = selectedAgent?.slug || selectedAgent?.id || selectedAgentId || "default";
@@ -6227,6 +6244,28 @@ ${targetItem.text}`;
 
   const triggerAttachmentDownload = async (att: ParsedChatAttachmentItem) => {
     triggerHaptic(10);
+    if (att.storageUrl && /^https?:\/\//i.test(att.storageUrl)) {
+      try {
+        const res = await fetch(att.storageUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob.size > 0) {
+            const blobHref = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobHref;
+            a.download = att.fileName;
+            a.style.display = "none";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              try { if (a.parentNode) a.parentNode.removeChild(a); } catch {}
+              try { URL.revokeObjectURL(blobHref); } catch {}
+            }, 30000);
+            return;
+          }
+        }
+      } catch {}
+    }
     const extracted = extractInternalAgentAndPath(att);
     if (extracted) {
       const ok = await downloadWorkspaceFile(extracted.agentSlug, extracted.filePath, att.fileName);
@@ -11640,7 +11679,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         <div className="relative shrink-0 flex items-center justify-center transition-all">
                           <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {isAgentPinned(ag) && (
-                            <span className="absolute -top-0.5 -left-0.5 p-0.5 rounded-full z-10 flex items-center justify-center pointer-events-none" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} title="Đã ghim">
+                            <span className="absolute -top-0.5 -left-0.5 p-0.5 rounded-full z-10 flex items-center justify-center pointer-events-none" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }}>
                               <Pin size={7.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
                             </span>
                           )}
@@ -12123,7 +12162,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
                               {isAgentPinned(ag) && (
-                                <span className="p-0.5 pointer-events-none opacity-80" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} title="Đã ghim">
+                                <span className="p-0.5 pointer-events-none opacity-80" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }}>
                                   <Pin size={9.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
                                 </span>
                               )}
@@ -12371,7 +12410,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
                               {isAgentPinned(ag) && (
-                                <span className="p-0.5 pointer-events-none opacity-80" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} title="Đã ghim">
+                                <span className="p-0.5 pointer-events-none opacity-80" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }}>
                                   <Pin size={9.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
                                 </span>
                               )}
@@ -14746,57 +14785,7 @@ const selectedAgentTheme = getAgentColorTheme(
             </div>
           )}
 
-          {/* Fork Session Branch Success Toast */}
-          {forkToast && (
-            <div className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <GitFork size={13} className="text-cyan-400" />
-                <span>{forkToast}</span>
-              </div>
-              <button type="button" onClick={() => setForkToast(null)} className="text-cyan-400 hover:text-white cursor-pointer">
-                <X size={12} />
-              </button>
-            </div>
-          )}
 
-                    {/* Hardware Device Change Notification Toast */}
-          {deviceToast && (
-            <div className="px-3.5 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
-              <div className="flex items-center gap-2 truncate">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="truncate">{deviceToast.message}</span>
-                <button
-                  type="button"
-                  onClick={() => setIsPermissionsModalOpen(true)}
-                  className="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 text-white underline text-[10px] cursor-pointer shrink-0"
-                >
-                  Configure Audio
-                </button>
-              </div>
-              <button type="button" onClick={() => setDeviceToast(null)} className="text-cyan-400 hover:text-white cursor-pointer shrink-0">
-                <X size={12} />
-              </button>
-            </div>
-          )}
-
-          {/* Voice Error Notification with Permission Quick-Fix */}
-          {voiceError && (
-            <div className="px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-[11px] font-mono flex items-center justify-between gap-2 animate-in fade-in">
-              <div className="flex items-center gap-2 truncate">
-                <span className="truncate">{voiceError}</span>
-                <button data-ux-target-min="24"
-                  type="button"
-                  onClick={() => setIsPermissionsModalOpen(true)}
-                  className="px-2 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 text-white underline text-[10px] cursor-pointer shrink-0"
-                >
-                  Manage Permissions
-                </button>
-              </div>
-              <button type="button" onClick={() => setVoiceError(null)} className="text-red-400 hover:text-white cursor-pointer shrink-0">
-                <X size={12} />
-              </button>
-            </div>
-          )}
 
           {/* Cluster Standby / Local Sandbox Alert */}
           {backendError && !hasNoAgents && (
@@ -17042,8 +17031,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           <div
                             style={{ color: selectedAgentTheme.primary }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 z-10 opacity-80 group-hover/chatitem:opacity-0 transition-opacity pointer-events-none flex items-center justify-center"
-                            title="Đã ghim phiên"
-                          >
+                            >
                             <Pin size={11} style={{ fill: selectedAgentTheme.primary }} />
                           </div>
                         )}
@@ -17069,7 +17057,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 ? "opacity-100"
                                 : "text-neutral-400 hover:text-white"
                             }`}
-                            title={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
+                            aria-label={pinnedChatIds.includes(chat.id) ? "Bỏ ghim phiên" : "Ghim lên đầu"}
                           >
                             <Pin size={12} style={pinnedChatIds.includes(chat.id) ? { fill: selectedAgentTheme.primary } : undefined} />
                           </button>
@@ -17086,7 +17074,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 ? "text-cyan-400 opacity-100"
                                 : "text-neutral-400 hover:text-cyan-400"
                             }`}
-                            title={archivedChatIds.includes(chat.id) ? "Bỏ lưu trữ (Khôi phục)" : "Lưu trữ phiên này"}
+                            aria-label={archivedChatIds.includes(chat.id) ? "Bỏ lưu trữ (Khôi phục)" : "Lưu trữ phiên này"}
                           >
                             {archivedChatIds.includes(chat.id) ? (
                               <ArchiveRestore size={12} />
@@ -17098,7 +17086,6 @@ const selectedAgentTheme = getAgentColorTheme(
                           {/* Chat Session Options Menu (3-dots on desktop hover, right click on desktop, long press on mobile) */}
                           <div className="relative" data-chat-menu-container="true">
                             <button
-                              aria-label="Tùy chọn phiên"
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -17110,7 +17097,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                   ? "text-[var(--agent-primary)] bg-white/10 opacity-100"
                                   : "text-neutral-400 hover:text-white"
                               }`}
-                              title="Tùy chọn mở rộng (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
+                              aria-label="Tùy chọn phiên (Tìm kiếm, Xuất file, Đổi tên, Xóa)"
                             >
                               <MoreVertical size={13} />
                             </button>
@@ -20308,7 +20295,18 @@ ${chat.id}`);
       <Toast
         toast={
           forkToast
-            ? { id: "fork", message: forkToast, variant: "info" }
+            ? {
+                id: "fork",
+                message: forkToast,
+                variant:
+                  forkToast.includes("📌") ||
+                  forkToast.toLowerCase().includes("lưu") ||
+                  forkToast.toLowerCase().includes("thành công") ||
+                  forkToast.toLowerCase().includes("success") ||
+                  forkToast.toLowerCase().includes("đã")
+                    ? "success"
+                    : "info",
+              }
             : deviceToast
             ? {
                 id: "device",

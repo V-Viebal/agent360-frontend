@@ -55,16 +55,19 @@ export function resolveUploadedAttachmentPreviewUrl(urlOrPath: string, agentId: 
   // Route directly to Agent360's inline console/files endpoint: /api/agents/{agent}/console/files/{relPath}
   // This endpoint streams inline with 200 OK for browser <img>/<video>/<audio> tags while enforcing WorkspacePathAcl.
   // 1. QwenPaw absolute workspace path: /app/working/workspaces/<agent>/media/<relpath> or /app/working/workspaces/<agent>/<relpath>
+  const resolveAgentSegment = (wsAgent: string) =>
+    wsAgent.toLowerCase() === "default" && cleanAgent.toLowerCase() !== "default" ? cleanAgent : wsAgent;
+
   const wsMediaMatch = normalized.match(/\/workspaces\/([^/]+)\/media\/(.+)$/i);
   if (wsMediaMatch) {
-    const fileAgent = wsMediaMatch[1];
+    const fileAgent = resolveAgentSegment(wsMediaMatch[1]);
     const mediaRel = wsMediaMatch[2];
     return `/api/agents/${encodeURIComponent(fileAgent)}/console/files/${mediaRel.split("/").map(encodeURIComponent).join("/")}`;
   }
 
   const wsAnyMatch = normalized.match(/\/workspaces\/([^/]+)\/(.+)$/i);
   if (wsAnyMatch) {
-    const fileAgent = wsAnyMatch[1];
+    const fileAgent = resolveAgentSegment(wsAnyMatch[1]);
     const relPath = wsAnyMatch[2];
     return `/api/agents/${encodeURIComponent(fileAgent)}/console/files/${relPath.split("/").map(encodeURIComponent).join("/")}`;
   }
