@@ -890,10 +890,7 @@ export async function downloadWorkspaceFile(agentId: string, filePath: string, f
     }
   } catch {}
 
-  // 3. Direct attachment endpoint fallback (/console/files/...?download=1 returns Content-Disposition: attachment)
-  const encodedRel = cleanPath.split("/").map(encodeURIComponent).join("/");
-  const directDownloadUrl = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/console/files/${encodedRel}?download=1`;
-  return triggerAnchorDownload(directDownloadUrl, false);
+  return false;
 }
 
 // Fast Client-Side Dialogue Session Cache for Instant Navigation (User-Sub Isolated)
@@ -978,6 +975,16 @@ function extractMediaTagsFromContentParts(parts: any[], existingText: string): s
     added.push(`[Attached File: ${fileName} (${cleanUrl})]`);
   }
   return added.join("\n");
+}
+
+const _BASE64_TOOL_BLOB_RE = /(\\u0022|\\"|")data\1:\s*\1[A-Za-z0-9+/=\\u]{1024,}\1/g;
+const _DATA_URL_BLOB_RE = /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]{1024,}/g;
+
+export function sanitizeToolOutputPayload(rawOut: string): string {
+  if (!rawOut || typeof rawOut !== "string" || rawOut.length < 1024) return rawOut;
+  return rawOut
+    .replace(_BASE64_TOOL_BLOB_RE, (_m, q) => `${q}data${q}:${q}[base64_image_omitted]${q}`)
+    .replace(_DATA_URL_BLOB_RE, "[data_url_image_omitted]");
 }
 
 export function parseRawChatMessages(rawList: any[], chatId: string, isSessionActive: boolean = false): ChatMessage[] {
@@ -1151,7 +1158,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         const results = Array.isArray(payload) ? payload : (callDatas.length > 0 ? callDatas : [payload]);
         for (const d of results) {
           const cid = d.call_id || d.tool_call_id || d.id;
-          const strOut = typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result || d));
+          const strOut = sanitizeToolOutputPayload(typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result || d)));
           const toolState = d.state === "success" || d.status === "completed" || (!d.error && d.status !== "error") ? "success" as const : "error" as const;
           
           if (currentAsst.steps) {
@@ -1209,7 +1216,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
               : (d.args !== undefined ? (typeof d.args === "string" ? d.args : JSON.stringify(d.args)) : "");
             const hasOutput = d.output !== undefined || d.result !== undefined;
             const strOut = hasOutput
-              ? (typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result)))
+              ? sanitizeToolOutputPayload(typeof d.output === "string" ? d.output : (typeof d.result === "string" ? d.result : JSON.stringify(d.output || d.result)))
               : undefined;
             const toolState = hasOutput
               ? ((d.state === "error" || d.status === "error" || d.error) ? "error" : "success")
@@ -1387,7 +1394,7 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
     let res: Response | null = null;
     for (const u of urlsToTry) {
       try {
-        const attempt = await fetch(u, { headers: reqHeaders });
+        const attempt = await authorizedFetch(u, { headers: reqHeaders }, cleanAgentId);
         if (attempt.status === 401 || attempt.status === 403) {
           const key = `${getCurrentCacheUserScope()}:${cleanAgentId || "default"}:${chatId}`;
           _chatMessagesCache.delete(key);
