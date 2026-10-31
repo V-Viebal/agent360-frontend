@@ -325,3 +325,20 @@ assert.ok(
   "Chat message history, SSE turn streams, and UI bubbles must filter out internal runtime system notices (<system-notification>, original_name=system) and scroll headlines (⟦...⟧) so execution artifacts never leak into user-facing response messages"
 );
 console.log("✓ Test 21: Internal Runtime Notice & Headline Stripping from Chat Responses verified");
+
+console.log("Testing Telegram Channel Setup Defaults & Authorized Save Contract...");
+const channelModalSrc = fs.readFileSync(path.join(rootDir, "src/components/ChannelConfigModal.tsx"), "utf8");
+assert.ok(
+  apiSrc.includes("DEFAULT_TELEGRAM_API_BASE_URL = \"http://100.70.201.83:8083\"") &&
+  apiSrc.includes("function normalizeTelegramChannelDefaults") &&
+  apiSrc.includes("const getRes = await authorizedFetch(channelPath") &&
+  apiSrc.includes("const putRes = await authorizedFetch(channelPath") &&
+  channelModalSrc.includes("DEFAULT_TELEGRAM_API_BASE_URL") &&
+  channelModalSrc.includes("showTyping") &&
+  channelModalSrc.includes("dmAccessControl") &&
+  channelModalSrc.includes("groupAccessControl") &&
+  channelModalSrc.includes("requireMention") &&
+  channelModalSrc.includes("noTextDebounce"),
+  "Telegram ChannelConfigModal and updateAgentChannelConfig must default base_url to http://100.70.201.83:8083, show_typing=true, access_control_dm=false, access_control_group=false, require_mention=true, no_text_debounce=true, and use authorizedFetch so saves succeed"
+);
+console.log("✓ Test 22: Telegram Channel Setup Defaults & Authorized Save Contract verified");

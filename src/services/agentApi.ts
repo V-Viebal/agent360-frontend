@@ -1527,9 +1527,37 @@ export interface AgentScheduleJob {
   promptSnippet?: string;
 }
 
+export const DEFAULT_TELEGRAM_API_BASE_URL = "http://100.70.201.83:8083";
+
+export function normalizeTelegramChannelDefaults(raw: Record<string, any> | undefined): Record<string, any> {
+  const d = { ...(raw || {}) };
+  if (typeof d.base_url !== "string" || !d.base_url.trim()) {
+    d.base_url = DEFAULT_TELEGRAM_API_BASE_URL;
+  }
+  if (d.show_typing === undefined || d.show_typing === null) {
+    d.show_typing = true;
+  }
+  if (d.access_control_dm === undefined || d.access_control_dm === null) {
+    d.access_control_dm = d.dm_policy === "allowlist";
+  }
+  if (d.access_control_group === undefined || d.access_control_group === null) {
+    d.access_control_group = d.group_policy === "allowlist";
+  }
+  if (d.require_mention === undefined || d.require_mention === null) {
+    d.require_mention = true;
+  } else if (!d.enabled && !d.bot_token && d.require_mention === false) {
+    // Unconfigured default Telegram channel should default Require @Mention to ON
+    d.require_mention = true;
+  }
+  if (d.no_text_debounce === undefined || d.no_text_debounce === null) {
+    d.no_text_debounce = true;
+  }
+  return d;
+}
+
 export async function fetchAgentChannels(agentId: string): Promise<AgentChannelConfig[]> {
   try {
-    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const cleanId = resolveEffectiveAgentId(agentId);
     const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels`, {
       headers: { Accept: "application/json" }
     }, cleanId);
@@ -1538,11 +1566,12 @@ export async function fetchAgentChannels(agentId: string): Promise<AgentChannelC
     
     const list: AgentChannelConfig[] = [];
     for (const [key, val] of Object.entries<any>(channelsObj)) {
+      const details = key === "telegram" ? normalizeTelegramChannelDefaults(val) : val;
       list.push({
         name: key.toUpperCase(),
-        enabled: Boolean(val?.enabled),
+        enabled: Boolean(details?.enabled),
         type: key,
-        details: val
+        details
       });
     }
     return list;
@@ -1554,16 +1583,17 @@ export async function fetchAgentChannels(agentId: string): Promise<AgentChannelC
 
 export async function toggleAgentChannel(agentId: string, channelType: string, enabled: boolean): Promise<boolean> {
   try {
-    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const cleanId = resolveEffectiveAgentId(agentId);
     const channelPath = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels/${encodeURIComponent(channelType)}`;
-    const getRes = await fetch(channelPath, { headers: { Accept: "application/json" } });
+    const getRes = await authorizedFetch(channelPath, { headers: { Accept: "application/json" } }, cleanId);
     if (!getRes.ok) throw new Error("Failed to fetch channel config");
     const current = await getRes.json();
-    const putRes = await fetch(channelPath, {
+    const basePayload = channelType === "telegram" ? normalizeTelegramChannelDefaults(current) : current;
+    const putRes = await authorizedFetch(channelPath, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ ...current, enabled })
-    });
+      body: JSON.stringify({ ...basePayload, enabled })
+    }, cleanId);
     return putRes.ok;
   } catch (err) {
     console.warn("toggleAgentChannel error", err);
@@ -1603,16 +1633,24 @@ export async function fetchAgentSchedules(agentId?: string): Promise<AgentSchedu
 
 export async function updateAgentChannelConfig(agentId: string, channelType: string, newConfig: Record<string, any>): Promise<boolean> {
   try {
-    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const cleanId = resolveEffectiveAgentId(agentId);
     const channelPath = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels/${encodeURIComponent(channelType)}`;
-    const getRes = await fetch(channelPath, { headers: { Accept: "application/json" } });
+    const getRes = await authorizedFetch(channelPath, { headers: { Accept: "application/json" } }, cleanId);
     if (!getRes.ok) throw new Error("Failed to fetch channel config");
     const current = await getRes.json();
-    const putRes = await fetch(channelPath, {
+    const basePayload = channelType === "telegram" ? normalizeTelegramChannelDefaults(current) : current;
+    const mergedPayload: Record<string, any> = {
+      ...basePayload,
+      ...newConfig,
+    };
+    if (channelType === "telegram" && (!mergedPayload.base_url || !String(mergedPayload.base_url).trim())) {
+      mergedPayload.base_url = DEFAULT_TELEGRAM_API_BASE_URL;
+    }
+    const putRes = await authorizedFetch(channelPath, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ ...current, ...newConfig })
-    });
+      body: JSON.stringify(mergedPayload)
+    }, cleanId);
     return putRes.ok;
   } catch (err) {
     console.warn("updateAgentChannelConfig error", err);
