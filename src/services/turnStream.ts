@@ -1,5 +1,5 @@
 import type { ChatMessage, ChatStep, ToolCallItem } from "../types/agent";
-import { API_BASE_URL, getAuthHeaders } from "./agentApi";
+import { API_BASE_URL, getAuthHeaders, isInternalRuntimeMessage, stripInternalExecutionArtifacts } from "./agentApi";
 
 /**
  * Folds AgentCore turn events (the same SSE protocol used by console/chat and by reconnect attach for any
@@ -32,6 +32,9 @@ export class TurnAccumulator {
     if (event.object === "message") {
       const id = (event.id as string) || `msg-${this.stepOrder.length}`;
       const type = event.type || event.message_type || "message";
+      if (isInternalRuntimeMessage(event)) {
+        return false;
+      }
       if (event.role === "user") {
         let text = typeof event.content === "string"
           ? event.content.trim()
@@ -121,7 +124,7 @@ export class TurnAccumulator {
   }
 
   get textSegments(): string[] {
-    return this.textOrder.map((id) => (this.textById.get(id) || "").trim()).filter(Boolean);
+    return this.textOrder.map((id) => stripInternalExecutionArtifacts(this.textById.get(id) || "")).filter(Boolean);
   }
 
   get text(): string {

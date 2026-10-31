@@ -1,3 +1,4 @@
+import { isInternalRuntimeMessage, stripInternalExecutionArtifacts } from "./agentApi";
 export interface StreamChunkEvent {
   type: "text" | "reasoning" | "tool_call" | "tool_result" | "error" | "done";
   content?: string;
@@ -173,7 +174,7 @@ export async function sendConsoleChatMessageStream(
           if (trimmed.startsWith("data:")) {
             const rawData = trimmed.replace(/^data:\s*/, "");
             if (rawData === "[DONE]") {
-              return { text: accumulatedText, reasoning: accumulatedReasoning || undefined };
+              return { text: stripInternalExecutionArtifacts(accumulatedText), reasoning: accumulatedReasoning || undefined };
             }
 
             try {
@@ -187,6 +188,10 @@ export async function sendConsoleChatMessageStream(
                 }
               }
 
+              if (isInternalRuntimeMessage(parsed)) {
+                continue;
+              }
+
               const isReasoningContentChunk =
                 parsed.type === "reasoning" ||
                 parsed.type === "thinking" ||
@@ -197,10 +202,10 @@ export async function sendConsoleChatMessageStream(
               if (!isReasoningContentChunk && ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text")) {
                 if (parsed.delta && parsed.text) {
                   accumulatedText += parsed.text;
-                  onChunk?.(accumulatedText);
+                  onChunk?.(stripInternalExecutionArtifacts(accumulatedText));
                 } else if (!parsed.delta && parsed.text) {
                   accumulatedText = parsed.text;
-                  onChunk?.(accumulatedText);
+                  onChunk?.(stripInternalExecutionArtifacts(accumulatedText));
                 }
               } else if (isReasoningContentChunk && parsed.text) {
                 if (parsed.delta) {
@@ -212,19 +217,19 @@ export async function sendConsoleChatMessageStream(
               }
 
               // 2. Direct message delta or array content compatibility
-              if (parsed.content && typeof parsed.content === "string") {
+              if (!isReasoningContentChunk && parsed.content && typeof parsed.content === "string") {
                 accumulatedText += parsed.content;
-                onChunk?.(accumulatedText);
+                onChunk?.(stripInternalExecutionArtifacts(accumulatedText));
               } else if (Array.isArray(parsed.content)) {
                 for (const part of parsed.content) {
                   if (part && typeof part === "object") {
-                    if (part.type === "text" && part.text) {
+                    if (!isReasoningContentChunk && part.type === "text" && part.text) {
                       if (part.delta) {
                         accumulatedText += part.text;
                       } else if (!accumulatedText || part.text.length > accumulatedText.length) {
                         accumulatedText = part.text;
                       }
-                      onChunk?.(accumulatedText);
+                      onChunk?.(stripInternalExecutionArtifacts(accumulatedText));
                     } else if (part.type === "data" && part.data) {
                       const d = part.data;
                       const callId = d.call_id || "call-1";
@@ -311,7 +316,7 @@ export async function sendConsoleChatMessageStream(
       }
 
       if (accumulatedText.length > 0) {
-        return { text: accumulatedText, reasoning: accumulatedReasoning || undefined };
+        return { text: stripInternalExecutionArtifacts(accumulatedText), reasoning: accumulatedReasoning || undefined };
       }
     } catch (err: any) {
       if (options.signal?.aborted || err?.name === "AbortError") {
@@ -327,7 +332,7 @@ export async function sendConsoleChatMessageStream(
   }
 
   if (accumulatedText) {
-    return { text: accumulatedText, reasoning: accumulatedReasoning || undefined };
+    return { text: stripInternalExecutionArtifacts(accumulatedText), reasoning: accumulatedReasoning || undefined };
   }
   throw lastError || new Error(`Agent ${targetAgent} returned no response`);
 }

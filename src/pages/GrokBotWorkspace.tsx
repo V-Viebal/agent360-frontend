@@ -847,7 +847,7 @@ function parseQuotedReplyFromContent(
   toolCalls?: ChatMessage["toolCalls"],
   steps?: ChatMessage["steps"]
 ): { replyTo?: ReplyToMessageInfo; cleanContent: string; attachments: ParsedChatAttachmentItem[] } {
-  let text = stripSharedRoomContext(rawContent || "");
+  let text = stripInternalExecutionArtifacts(stripSharedRoomContext(rawContent || ""));
   let resolvedReplyTo = explicitReplyTo;
   const match = text.match(/^\[Replying to ([^:\]]+):\s*"([^"]*)"\]\s*\n\n?([\s\S]*)$/);
   if (match) {
@@ -988,11 +988,15 @@ import {
   updateAgentActiveModel,
   fetchAgentChats,
   getCachedAgentChats,
+  getSavedLastChatForAgent,
+  saveLastChatForAgent,
+  clearSavedLastChatForAgent,
   markChatAsRead,
   updateCachedAgentChatsRead,
   fetchActiveChats,
   fetchChatMessages,
   parseRawChatMessages,
+  stripInternalExecutionArtifacts,
   getCachedChatMessages,
   setCachedChatMessages,
   stopConsoleChat,
@@ -5156,12 +5160,7 @@ export function GrokBotWorkspace() {
 
   const [selectedChatId, setSelectedChatId] = useState<string>(() => {
     if (chatParam) return chatParam;
-    try {
-      const lastGlobal = localStorage.getItem("agent360_last_chat_id");
-      return lastGlobal || "";
-    } catch {
-      return "";
-    }
+    return getSavedLastChatForAgent(selectedAgentId) || "";
   });
   const [skills, setSkills] = useState<string[]>([]);
   const [channels, setChannels] = useState<AgentChannelConfig[]>([]);
@@ -5191,15 +5190,18 @@ export function GrokBotWorkspace() {
           setSelectedAgentId(matched.id);
           try { localStorage.setItem("agent360_last_agent_id", matched.id); } catch {}
           const targetCached = getCachedAgentChats(matched.id);
-          const savedChatKey = `agent360_last_chat_${matched.id}`;
-          const savedChatId = localStorage.getItem(savedChatKey);
+          const savedChatId = getSavedLastChatForAgent(matched.id);
           const validSaved =
             savedChatId && (!savedChatId.startsWith("session-") || Boolean(getCachedChatMessages(savedChatId, matched.id)?.length))
               ? savedChatId
               : null;
+          const matchedCachedSaved =
+            validSaved && targetCached && targetCached.length > 0
+              ? targetCached.find((c) => c.id === validSaved || c.session_id === validSaved)
+              : undefined;
           const initialChatId =
             (chatParam && (!chatParam.startsWith("session-") || Boolean(getCachedChatMessages(chatParam, matched.id)?.length)) ? chatParam : null) ||
-            validSaved ||
+            (matchedCachedSaved ? matchedCachedSaved.id : validSaved) ||
             (targetCached && targetCached.length > 0
               ? (targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running) || targetCached[0]).id
               : "");
@@ -5238,12 +5240,9 @@ export function GrokBotWorkspace() {
       if (!isRouteMatching) return;
 
       setSelectedChatId(chatParam);
-      try {
-        localStorage.setItem("agent360_last_chat_id", chatParam);
-        if (selectedAgentId) {
-          localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chatParam);
-        }
-      } catch {}
+      if (selectedAgentId && (!chatParam.startsWith("session-") || Boolean(getCachedChatMessages(chatParam, selectedAgentId)?.length))) {
+        saveLastChatForAgent(selectedAgentId, chatParam);
+      }
     }
   }, [chatParam, agentParam, selectedAgentId, agents.length]);
 
@@ -5872,6 +5871,9 @@ export function GrokBotWorkspace() {
 
         if (evAgent) {
           registerSessionAgent(s.id, sid, evAgent);
+          if (s.id && sid && s.id !== sid && getSavedLastChatForAgent(evAgent) === sid) {
+            saveLastChatForAgent(evAgent, s.id);
+          }
         }
 
         // Update agent recent session preview on sidebar
@@ -6369,7 +6371,7 @@ ${targetItem.text}`;
     try {
       const urlPrompt = new URLSearchParams(window.location.search).get("prompt")?.slice(0, 2000);
       if (urlPrompt) return urlPrompt;
-      const lastChatId = localStorage.getItem("agent360_last_chat_id");
+      const lastChatId = chatParam || getSavedLastChatForAgent(selectedAgentId) || localStorage.getItem("agent360_last_chat_id");
       if (lastChatId) {
         const savedDraft = localStorage.getItem(`agent360_draft_${lastChatId}`);
         if (savedDraft) return savedDraft;
@@ -7408,6 +7410,9 @@ ${targetItem.text}`;
     }
     setChats((prev) => prev.filter((c) => !idsToDelete.includes(c.id)));
     setPinnedChatIds((prev) => prev.filter((id) => !idsToDelete.includes(id)));
+    for (const cid of idsToDelete) {
+      clearSavedLastChatForAgent(selectedAgentId, cid);
+    }
     if (selectedChatId && idsToDelete.includes(selectedChatId)) {
       const remaining = chats.filter((c) => !idsToDelete.includes(c.id));
       if (remaining.length > 0) {
@@ -8349,8 +8354,11 @@ ${targetItem.text}`;
               const parts = k.slice("agent360_msgcache_".length).split(":");
               const cachedPrefix = (parts.length >= 3 ? parts[1] : parts[0]).replace(/^bot:agent360:/i, "").toLowerCase();
               if (!ownedSlugs.has(cachedPrefix)) keysToPurge.push(k);
-            } else if (k.startsWith("agent360_last_chat_")) {
-              const cachedSlug = k.slice("agent360_last_chat_".length).replace(/^bot:agent360:/i, "").toLowerCase();
+            } else if (k.startsWith("agent360_last_chat_") && k !== "agent360_last_chat_id") {
+              const tail = k.slice("agent360_last_chat_".length);
+              const cachedSlug = (tail.includes("_") && !tail.startsWith("bot:") ? tail.slice(tail.indexOf("_") + 1) : tail)
+                .replace(/^bot:agent360:/i, "")
+                .toLowerCase();
               if (!ownedSlugs.has(cachedSlug)) keysToPurge.push(k);
             }
           }
@@ -8378,6 +8386,12 @@ ${targetItem.text}`;
         const found = pick(agentParam) || pick(queryAgent) || pick(localStorage.getItem("agent360_last_agent_id"));
         const targetId = found ? found.id : loadedAgents[0].id;
         setSelectedAgentId(targetId);
+        if (!chatParam) {
+          const restoredChatId = getSavedLastChatForAgent(targetId);
+          if (restoredChatId) {
+            setSelectedChatId(restoredChatId);
+          }
+        }
         try {
           localStorage.setItem("agent360_last_agent_id", targetId);
         } catch {}
@@ -8580,7 +8594,6 @@ ${targetItem.text}`;
           });
         }
         if (loadedChats.length > 0) {
-          const savedChatKey = `agent360_last_chat_${currentAgent}`;
           const isNonEmptyServerChat = (c: AgentSession) =>
             c.title !== "New Chat" || Boolean(c.isRunning || c.is_running || c.status === "running");
           const hasLocalSessionActivity = (sid: string | null | undefined) =>
@@ -8590,10 +8603,10 @@ ${targetItem.text}`;
                   Boolean(getCachedChatMessages(sid, currentAgent)?.length) ||
                   (typeof window !== "undefined" && Boolean(localStorage.getItem(`agent360_draft_${sid}`)?.trim())))
             );
-          // Preference: savedChatKey for this specific agent -> first non-empty chat in list
+          // Preference: saved last chat for this specific agent -> first non-empty chat in list
           const findChat = (key: string | null | undefined) =>
             key ? loadedChats.find((c) => c.id === key) || loadedChats.find((c) => c.session_id === key) : undefined;
-          const savedChatId = localStorage.getItem(savedChatKey);
+          const savedChatId = getSavedLastChatForAgent(currentAgent);
           const rawFoundSaved = findChat(savedChatId);
           const foundSaved =
             rawFoundSaved && (isNonEmptyServerChat(rawFoundSaved) || !loadedChats.some(isNonEmptyServerChat))
@@ -8646,10 +8659,9 @@ ${targetItem.text}`;
             setChats([newSessionFallback, ...loadedChats]);
           }
           setSelectedChatId(targetChatId);
-          try {
-            localStorage.setItem("agent360_last_chat_id", targetChatId);
-            localStorage.setItem(savedChatKey, targetChatId);
-          } catch {}
+          if (!targetChatId.startsWith("session-") || hasLocalSessionActivity(targetChatId)) {
+            saveLastChatForAgent(currentAgent, targetChatId);
+          }
 
           // Ensure channel filter does not hide loaded chats or the selected chat
           const targetChannel = (targetChat.channel || "console").toLowerCase();
@@ -8678,8 +8690,7 @@ ${targetItem.text}`;
         } else {
           const activeAg = agents.find((a) => a.id === currentAgent || a.slug === currentAgent);
           const currentBare = (activeAg?.slug || activeAg?.id || currentAgent).replace(/^bot:agent360:/i, "").toLowerCase();
-          const savedChatKey = `agent360_last_chat_${currentAgent}`;
-          const savedChatId = localStorage.getItem(savedChatKey);
+          const savedChatId = getSavedLastChatForAgent(currentAgent);
           const freshId = (chatParam && chatParam.startsWith("session-"))
             ? chatParam
             : (savedChatId && savedChatId.startsWith("session-"))
@@ -9690,8 +9701,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
     // Instantly reset chats & messages to the new agent's cached items or empty to avoid cross-agent bleed
     const targetCached = getCachedAgentChats(agent.id);
-    const savedChatKey = `agent360_last_chat_${agent.id}`;
-    const rawLastChat = localStorage.getItem(savedChatKey);
+    const rawLastChat = getSavedLastChatForAgent(agent.id);
     const isValidSavedSession = (cid: string | null): string | null => {
       if (!cid) return null;
       if (cid.startsWith("session-")) {
@@ -9700,15 +9710,23 @@ const selectedAgentTheme = getAgentColorTheme(
           Boolean(getCachedChatMessages(cid, agent.id)?.length) ||
           Boolean(localStorage.getItem(`agent360_draft_${cid}`)?.trim());
         if (!hasActivity) {
-          try { localStorage.removeItem(savedChatKey); } catch {}
+          clearSavedLastChatForAgent(agent.id, cid);
           return null;
         }
       }
       if (targetCached && targetCached.length > 0) {
         const matched = targetCached.find((c) => c.id === cid || c.session_id === cid);
-        if (matched && matched.title === "New Chat" && !matched.isRunning && !matched.is_running) {
-          const realAlt = targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running);
-          if (realAlt) return realAlt.id;
+        if (!matched && !cid.startsWith("session-")) {
+          // Stale or deleted chat UUID not present in cached list
+          const realAlt = targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running) || targetCached[0];
+          return realAlt ? realAlt.id : null;
+        }
+        if (matched) {
+          if (matched.title === "New Chat" && !matched.isRunning && !matched.is_running) {
+            const realAlt = targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running);
+            if (realAlt) return realAlt.id;
+          }
+          return matched.id;
         }
       }
       return cid;
@@ -9767,13 +9785,8 @@ const selectedAgentTheme = getAgentColorTheme(
       (chat.messageCount || 0) === 0 &&
       !streamingChatIdsRef.current.includes(chat.id) &&
       !(getCachedChatMessages(chat.id, selectedAgentId)?.length);
-    if (!isEmptyTransientNew) {
-      try {
-        localStorage.setItem("agent360_last_chat_id", chat.id);
-        if (selectedAgentId) {
-          localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, chat.id);
-        }
-      } catch {}
+    if (!isEmptyTransientNew && selectedAgentId) {
+      saveLastChatForAgent(selectedAgentId, chat.id);
     }
 
     // Update routing URL to /app/:agentSlug/:chatId
@@ -10039,6 +10052,7 @@ const selectedAgentTheme = getAgentColorTheme(
     if (e) e.stopPropagation();
     if (selectedAgentId) {
       deleteChatApi(selectedAgentId, chatId).catch(() => {});
+      clearSavedLastChatForAgent(selectedAgentId, chatId);
     }
     setChats((prev) => prev.filter((c) => c.id !== chatId && c.session_id !== chatId));
     setPinnedChatIds((prev) => prev.filter((id) => id !== chatId));
@@ -10058,6 +10072,7 @@ const selectedAgentTheme = getAgentColorTheme(
     if (selectedAgentId) {
       for (const c of toRemove) {
         deleteChatApi(selectedAgentId, c.id).catch(() => {});
+        clearSavedLastChatForAgent(selectedAgentId, c.id);
       }
     }
     setChats((prev) => prev.filter((c) => pinnedChatIds.includes(c.id)));
@@ -10091,10 +10106,7 @@ const selectedAgentTheme = getAgentColorTheme(
     setForkToast(`Branch created with ${forkedMessages.length} turns`);
     setTimeout(() => setForkToast(null), 3000);
 
-    try {
-      localStorage.setItem("agent360_last_chat_id", forkedChatId);
-      localStorage.setItem(`agent360_last_chat_${selectedAgentId}`, forkedChatId);
-    } catch {}
+    saveLastChatForAgent(selectedAgentId, forkedChatId);
 
     // Sync route URL to /app/:agentSlug/:forkedChatId
     const agentSegment = getAgentRouteSegment(selectedAgent, selectedAgentId);
@@ -10549,11 +10561,8 @@ const selectedAgentTheme = getAgentColorTheme(
     try {
       sessionStorage.setItem(`agent360_active_turn_${originChatId}`, "true");
       sessionStorage.setItem(`agent360_last_prompt_${originChatId}`, userText);
-      localStorage.setItem("agent360_last_chat_id", originChatId);
-      if (originAgentId) {
-        localStorage.setItem(`agent360_last_chat_${originAgentId}`, originChatId);
-      }
     } catch {}
+    saveLastChatForAgent(originAgentId, originChatId);
 
     // Updates the origin chat: live on screen if it is still selected, otherwise in its message cache.
     const updateTurnMessages = (fn: (prev: ChatMessage[]) => ChatMessage[]) => {
@@ -11068,6 +11077,7 @@ const selectedAgentTheme = getAgentColorTheme(
             );
             if (matchedServerChat && matchedServerChat.id !== originChatId) {
               registerSessionAgent(matchedServerChat.id, originChatId, targetAgent?.slug || originAgentId);
+              saveLastChatForAgent(originAgentId, matchedServerChat.id);
               const cachedTurns = getCachedChatMessages(originChatId, originAgentId);
               if (cachedTurns && cachedTurns.length > 0) {
                 setCachedChatMessages(matchedServerChat.id, cachedTurns, originAgentId);
@@ -11101,10 +11111,7 @@ const selectedAgentTheme = getAgentColorTheme(
               });
               if (matchedServerChat && selectedChatIdRef.current === originChatId) {
                 setSelectedChatId(matchedServerChat.id);
-                try {
-                  localStorage.setItem("agent360_last_chat_id", matchedServerChat.id);
-                  localStorage.setItem(`agent360_last_chat_${originAgentId}`, matchedServerChat.id);
-                } catch {}
+                saveLastChatForAgent(originAgentId, matchedServerChat.id);
                 const agSeg = getAgentRouteSegment(targetAgent, originAgentId);
                 if (agSeg) {
                   navigate(`/app/${agSeg}/${matchedServerChat.id}`, { replace: true });

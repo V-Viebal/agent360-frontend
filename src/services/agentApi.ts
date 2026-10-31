@@ -196,8 +196,74 @@ export function getCurrentCacheUserScope(): string {
   return "anon";
 }
 
+function normalizeAgentStorageSlug(agentId?: string | null): string {
+  return (agentId || "")
+    .replace(/^bot:agent360:/i, "")
+    .trim()
+    .toLowerCase();
+}
+
+export function getSavedLastChatForAgent(agentId?: string | null): string | null {
+  if (typeof window === "undefined") return null;
+  const slug = normalizeAgentStorageSlug(agentId);
+  if (!slug) return null;
+  try {
+    const scope = getCurrentCacheUserScope();
+    const candidateKeys = [
+      scope !== "anon" ? `agent360_last_chat_${scope}_${slug}` : null,
+      `agent360_last_chat_${slug}`,
+      `agent360_last_chat_bot:agent360:${slug}`,
+      agentId ? `agent360_last_chat_${agentId}` : null,
+    ].filter(Boolean) as string[];
+    for (const k of candidateKeys) {
+      const val = localStorage.getItem(k);
+      if (val && val.trim()) return val.trim();
+    }
+  } catch {}
+  return null;
+}
+
+export function saveLastChatForAgent(agentId: string | null | undefined, chatId: string | null | undefined): void {
+  if (typeof window === "undefined") return;
+  const slug = normalizeAgentStorageSlug(agentId);
+  const cleanChatId = (chatId || "").trim();
+  if (!slug || !cleanChatId) return;
+  try {
+    const scope = getCurrentCacheUserScope();
+    if (scope !== "anon") {
+      localStorage.setItem(`agent360_last_chat_${scope}_${slug}`, cleanChatId);
+    }
+    localStorage.setItem(`agent360_last_chat_${slug}`, cleanChatId);
+    localStorage.setItem(`agent360_last_chat_bot:agent360:${slug}`, cleanChatId);
+    localStorage.setItem("agent360_last_chat_id", cleanChatId);
+  } catch {}
+}
+
+export function clearSavedLastChatForAgent(agentId: string | null | undefined, onlyIfMatchesChatId?: string | null): void {
+  if (typeof window === "undefined") return;
+  const slug = normalizeAgentStorageSlug(agentId);
+  if (!slug) return;
+  try {
+    const scope = getCurrentCacheUserScope();
+    const candidateKeys = [
+      scope !== "anon" ? `agent360_last_chat_${scope}_${slug}` : null,
+      `agent360_last_chat_${slug}`,
+      `agent360_last_chat_bot:agent360:${slug}`,
+      agentId ? `agent360_last_chat_${agentId}` : null,
+    ].filter(Boolean) as string[];
+    for (const k of candidateKeys) {
+      if (!onlyIfMatchesChatId || localStorage.getItem(k) === onlyIfMatchesChatId) {
+        localStorage.removeItem(k);
+      }
+    }
+    if (!onlyIfMatchesChatId || localStorage.getItem("agent360_last_chat_id") === onlyIfMatchesChatId) {
+      localStorage.removeItem("agent360_last_chat_id");
+    }
+  } catch {}
+}
+
 function getScopedChatsCacheKey(agentId?: string): string {
-  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const cleanAgentId = normalizeAgentStorageSlug(agentId) || "default";
   const scope = getCurrentCacheUserScope();
   return `${scope}:${cleanAgentId}`;
 }
@@ -836,7 +902,7 @@ const _chatMessagesCache = new Map<string, { messages: ChatMessage[]; timestamp:
 export function getCachedChatMessages(chatId: string, agentId?: string): ChatMessage[] | null {
   const scope = getCurrentCacheUserScope();
   if (scope === "anon") return null;
-  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const cleanAgentId = normalizeAgentStorageSlug(agentId) || "default";
   const key = `${scope}:${cleanAgentId}:${chatId}`;
   const cached = _chatMessagesCache.get(key);
   if (cached && cached.messages) {
@@ -858,12 +924,35 @@ export function getCachedChatMessages(chatId: string, agentId?: string): ChatMes
 export function setCachedChatMessages(chatId: string, messages: ChatMessage[], agentId?: string): void {
   const scope = getCurrentCacheUserScope();
   if (scope === "anon") return;
-  const cleanAgentId = agentId ? agentId.replace(/^bot:agent360:/, "") : "default";
+  const cleanAgentId = normalizeAgentStorageSlug(agentId) || "default";
   const key = `${scope}:${cleanAgentId}:${chatId}`;
   _chatMessagesCache.set(key, { messages, timestamp: Date.now() });
   try {
     sessionStorage.setItem(`agent360_msgcache_${key}`, JSON.stringify(messages.slice(-200)));
   } catch {}
+}
+
+const _SYSTEM_NOTIFICATION_BLOCK_RE = /<system-(?:notification|info|reminder)>[\s\S]*?<\/system-(?:notification|info|reminder)>/gi;
+const _HEADLINE_LINE_RE = /^[ \t]*(?:<!--)?[ \t]*[⟦〚][ \t]*(.+?)[ \t]*[⟧〛][ \t]*(?:-->)?[ \t]*$/gm;
+const _TRAILING_HEADLINE_RE = /(?:<!--[ \t]*[⟦〚]|(?:^|\n)[ \t]*[⟦〚])[^\r\n]*$/;
+
+export function stripInternalExecutionArtifacts(rawText: string): string {
+  if (!rawText || typeof rawText !== "string") return "";
+  return rawText
+    .replace(_SYSTEM_NOTIFICATION_BLOCK_RE, "")
+    .replace(_HEADLINE_LINE_RE, "")
+    .replace(_TRAILING_HEADLINE_RE, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export function isInternalRuntimeMessage(m: any): boolean {
+  if (!m || typeof m !== "object") return false;
+  const origName = String(m.metadata?.original_name || m.name || "").trim().toLowerCase();
+  if (origName === "system" || origName === "memory" || origName === "visual_history") {
+    return true;
+  }
+  return false;
 }
 
 function extractMediaTagsFromContentParts(parts: any[], existingText: string): string {
@@ -941,6 +1030,9 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
         metadata: m.metadata || undefined,
       });
     } else if (role === "assistant") {
+      if (isInternalRuntimeMessage(m) && (mtype === "message" || !mtype)) {
+        continue;
+      }
       // Narrator Model: Specialist room turns (visibility="room" or collaborator_reply) belong in collaboration_room Flow Tree only, never as separate main chat bubbles
       const msgVisibility = m.metadata?.visibility;
       const msgTurnKind = m.metadata?.turn_kind;
@@ -1202,7 +1294,7 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
           }
         }
 
-        const t = textContent.trim();
+        const t = stripInternalExecutionArtifacts(textContent);
         if (t) {
           if (t.startsWith("The user said ") || t.startsWith("According to my activation instructions")) {
             currentAsst.reasoning = currentAsst.reasoning ? currentAsst.reasoning + "\n" + t : t;
