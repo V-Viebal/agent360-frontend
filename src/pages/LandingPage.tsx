@@ -370,10 +370,10 @@ export function LandingPage() {
 
           {/* HERO PRODUCT STAGE: 4 Companion Avatars Peeking from Top Edge + 16:10 Live Workspace Frame */}
           <motion.div
-            initial={{ opacity: 0, y: 36, scale: 0.975 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.78, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            className="relative mt-24 sm:mt-28"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className="relative mt-14 sm:mt-[54px]"
           >
             {/* 4 Peeking Companions Perched at Exact Strawberry Outer Corners (0% & 10% Left / Right) with Large Scale */}
             <div className="pointer-events-none select-none">
