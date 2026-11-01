@@ -4280,7 +4280,6 @@ function InlineLiveComputerPreviewCard({
 }) {
   const [refreshTick, setRefreshTick] = useState(0);
   const cleanAgent = (agentId || "mons").replace(/^bot:agent360:/i, "");
-  const liveSnapshotSrc = `/api/agents/${encodeURIComponent(cleanAgent)}/browser/image.jpg?t=${refreshTick}`;
   const displayHostname = (() => {
     if (!summary.url) return "computer.workspace";
     try {
@@ -4290,37 +4289,33 @@ function InlineLiveComputerPreviewCard({
     }
   })();
 
-  useEffect(() => {
-    if (!summary.isActivelyCalling) return;
-    const iv = setInterval(() => {
-      setRefreshTick((t) => t + 1);
-    }, 3500);
-    return () => clearInterval(iv);
-  }, [summary.isActivelyCalling]);
-
   return (
     <div
       data-testid="inline-live-computer-card"
       className="group/compcard relative w-full max-w-[360px] sm:max-w-[400px] my-1.5 rounded-2xl overflow-hidden border border-[#ECE5DC] dark:border-[#22222e] bg-white dark:bg-[#11151f] shadow-2xs hover:border-[var(--agent-primary)]/50 transition-all select-none"
     >
-      {/* Minimalist Top Bar: Status Dot + Domain + Icon-Only Action Dock */}
+      {/* Single Unified Top Bar: Status Dot + Domain + Step Count + Hover Action Icons */}
       <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-[#F8F3ED]/90 dark:bg-[#0b0e15] border-b border-[#ECE5DC] dark:border-[#22222e] text-[11px] font-mono">
         <div className="flex items-center gap-1.5 min-w-0">
           <span
+            title={summary.actionLabel}
             className={`h-2 w-2 rounded-full shrink-0 ${
               summary.isActivelyCalling ? "bg-emerald-400 animate-ping" : "bg-emerald-500"
             }`}
           />
           <Globe size={12} className="text-[#57534e] dark:text-neutral-400 shrink-0" />
-          <span className="font-medium text-[#252522] dark:text-[#eceef2] truncate">
+          <span className="font-medium text-[#252522] dark:text-[#eceef2] truncate" title={summary.url || summary.actionLabel}>
             {displayHostname}
           </span>
-          <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] shrink-0">
+          <span
+            title={summary.actionLabel}
+            className="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] shrink-0"
+          >
             {summary.isActivelyCalling ? "LIVE" : `${summary.stepCount}`}
           </span>
         </div>
 
-        {/* Icon-Only Toolbar with Explicit Tooltips & aria-labels */}
+        {/* Single Icon-Only Toolbar in Header (Reveals extra actions on hover, zero duplicate overlay) */}
         <div className="flex items-center gap-0.5 shrink-0">
           <button
             type="button"
@@ -4332,9 +4327,24 @@ function InlineLiveComputerPreviewCard({
               e.stopPropagation();
               setRefreshTick((t) => t + 1);
             }}
-            className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-colors cursor-pointer"
+            className="h-6 w-6 rounded-lg flex items-center justify-center opacity-0 group-hover/compcard:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-all cursor-pointer"
           >
-            <RefreshCw size={12} />
+            <RefreshCw size={11} />
+          </button>
+
+          <button
+            type="button"
+            data-ux-target-min="24"
+            data-testid="computer-hover-fullscreen-btn"
+            aria-label="Phóng to toàn màn hình Computer"
+            title="Phóng to toàn màn hình Computer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenFullscreenModal();
+            }}
+            className="h-6 w-6 rounded-lg flex items-center justify-center opacity-0 group-hover/compcard:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-all cursor-pointer"
+          >
+            <Maximize2 size={11} />
           </button>
 
           {summary.url && (
@@ -4346,9 +4356,9 @@ function InlineLiveComputerPreviewCard({
               aria-label="Mở trang web trong tab mới"
               title="Mở trang web trong tab mới"
               onClick={(e) => e.stopPropagation()}
-              className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-colors"
+              className="h-6 w-6 rounded-lg flex items-center justify-center opacity-0 group-hover/compcard:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-all"
             >
-              <ExternalLink size={12} />
+              <ExternalLink size={11} />
             </a>
           )}
 
@@ -4369,86 +4379,30 @@ function InlineLiveComputerPreviewCard({
         </div>
       </div>
 
-      {/* 16:10 Viewport with Floating Action Dock on Hover */}
+      {/* Clean 16:10 Authenticated Preview Viewport (No duplicate floating dock or dark bottom bar) */}
       <div
         onClick={(e) => {
           e.stopPropagation();
           onExtendSplitView();
         }}
-        className="relative w-full h-[168px] sm:h-[188px] bg-[#080a0f] flex items-center justify-center overflow-hidden cursor-pointer"
+        title={`${summary.actionLabel} — Bấm để mở rộng Computer`}
+        className="relative w-full h-[168px] sm:h-[188px] bg-[#FAF6F0] dark:bg-[#080a0f] flex items-center justify-center overflow-hidden cursor-pointer"
       >
-        <img
-          src={summary.screenshotUrl || liveSnapshotSrc}
-          alt={summary.actionLabel}
-          className="w-full h-full object-cover object-top transition-transform duration-300 group-hover/compcard:scale-[1.02]"
-          loading="lazy"
-          onError={(e) => {
-            const img = e.currentTarget;
-            if (summary.screenshotUrl && img.src !== liveSnapshotSrc) {
-              img.src = liveSnapshotSrc;
-            }
-          }}
-        />
-
-        {/* Minimalist Bottom Status Strip */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 py-1.5 flex items-center justify-between gap-2 text-[11px] text-white pointer-events-none">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {summary.isActivelyCalling ? (
-              <Loader2 size={11} className="animate-spin text-emerald-400 shrink-0" />
-            ) : (
-              <Check size={11} className="text-emerald-400 shrink-0" />
-            )}
-            <span className="truncate font-sans text-[11.5px] text-neutral-100">{summary.actionLabel}</span>
-          </div>
-        </div>
-
-        {/* Floating Icon-Only Hover Action Dock (Lean Content-First Pattern) */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover/compcard:opacity-100 transition-opacity duration-150 flex items-center gap-1 p-1 rounded-xl bg-[#0b0e15]/85 backdrop-blur-md border border-white/15 shadow-lg">
-          <button
-            type="button"
-            data-ux-target-min="24"
-            data-testid="computer-hover-extend-split-btn"
-            aria-label="Mở rộng Computer sang khung bên phải (Split View)"
-            title="Mở rộng Computer sang khung bên phải (Split View)"
-            onClick={(e) => {
-              e.stopPropagation();
-              onExtendSplitView();
-            }}
-            className="h-7 w-7 rounded-lg bg-white text-[#252522] hover:bg-neutral-200 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
-          >
-            <PanelLeftClose size={13} />
-          </button>
-
-          <button
-            type="button"
-            data-ux-target-min="24"
-            data-testid="computer-hover-fullscreen-btn"
-            aria-label="Phóng to toàn màn hình Computer"
-            title="Phóng to toàn màn hình Computer"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenFullscreenModal();
-            }}
-            className="h-7 w-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
-          >
-            <Maximize2 size={13} />
-          </button>
-
-          {summary.url && (
-            <a
-              href={summary.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-ux-target-min="24"
-              aria-label="Mở URL trực tiếp trong tab mới"
-              title="Mở URL trực tiếp trong tab mới"
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
-            >
-              <ExternalLink size={13} />
-            </a>
-          )}
-        </div>
+        {summary.screenshotUrl ? (
+          <img
+            src={summary.screenshotUrl}
+            alt=""
+            className="w-full h-full object-cover object-top transition-transform duration-300 group-hover/compcard:scale-[1.01]"
+            loading="lazy"
+          />
+        ) : (
+          <AgentBrowserPreview
+            key={`${cleanAgent}-${refreshTick}`}
+            agentId={cleanAgent}
+            enabled={true}
+            intervalMs={summary.isActivelyCalling ? 3500 : 12000}
+          />
+        )}
       </div>
     </div>
   );
@@ -5169,6 +5123,7 @@ function SelkiesViewer({
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
   const [isMobileOrWebKitFallback, setIsMobileOrWebKitFallback] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const ua = navigator.userAgent || "";
@@ -5237,8 +5192,15 @@ function SelkiesViewer({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center"
+      className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center touch-manipulation select-none"
     >
+      <div
+        className={`relative flex items-center justify-center transition-transform duration-300 ease-out ${
+          isLandscapeRotated
+            ? "w-[100vh] h-[100vw] rotate-90 origin-center scale-[0.98]"
+            : "w-full h-full"
+        }`}
+      >
       {error && (
         <>
           <AgentBrowserPreview agentId={agentId} enabled />
@@ -5300,7 +5262,21 @@ function SelkiesViewer({
           profile: {agentId}
         </div>
       )}
-      <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+      </div>
+
+      <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-30">
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic(12);
+            setIsLandscapeRotated((r) => !r);
+          }}
+          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer flex items-center gap-1"
+          title={isLandscapeRotated ? "Chuyển về khung dọc" : "Xoay ngang màn hình (Landscape 90°)"}
+        >
+          <RotateCw size={12} className={isLandscapeRotated ? "rotate-90 text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
+          <span>{isLandscapeRotated ? "Khung dọc" : "Xoay ngang"}</span>
+        </button>
         <button
           type="button"
           onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
@@ -8987,12 +8963,6 @@ ${targetItem.text}`;
 
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    // Dismiss soft keyboard when user scrolls chat stream on mobile
-    if (typeof window !== "undefined" && window.innerWidth < 1024 && isTextareaFocusedRef.current) {
-      if (document.activeElement === textareaRef.current) {
-        textareaRef.current?.blur();
-      }
-    }
     // Save scroll position for active session
     if (selectedChatId) {
       sessionScrollPositionsRef.current[selectedChatId] = el.scrollTop;
@@ -13708,16 +13678,70 @@ const selectedAgentTheme = getAgentColorTheme(
           flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `0 0 ${computerChatWidthPercent}%` : undefined,
         }}
         onTouchStart={(e) => {
-          if (window.innerWidth < 1024 && e.touches.length === 1) {
-            touchSwipeStartRef.current = {
-              x: e.touches[0].clientX,
-              y: e.touches[0].clientY,
-              time: Date.now(),
-            };
+          if (window.innerWidth >= 1024 || e.touches.length !== 1) return;
+          
+          // Guard: Do not trigger swipe if touching inside modals, overlays, popovers, media players, or horizontally scrollable containers
+          const target = e.target as HTMLElement | null;
+          if (target) {
+            const isInsideInteractiveOverlay = Boolean(
+              target.closest(
+                '[role="dialog"], [role="menu"], [data-testid="plus-add-popover"], [data-no-swipe="true"], ' +
+                '.overflow-x-auto, [data-testid="inline-live-computer-card"], [data-testid="lean-audio-player"], ' +
+                '[data-testid="lean-video-player"], pre, code, textarea, input, select, audio, video'
+              )
+            );
+            if (isInsideInteractiveOverlay) {
+              touchSwipeStartRef.current = null;
+              return;
+            }
           }
+
+          touchSwipeStartRef.current = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY,
+            time: Date.now(),
+          };
         }}
         onTouchEnd={(e) => {
           if (window.innerWidth < 1024 && touchSwipeStartRef.current && e.changedTouches.length === 1) {
+            // Guard: Do not trigger swipe gesture if any modal or bottom-sheet overlay is currently open
+            const anyActiveOverlay = Boolean(
+              isPlusMenuOpen ||
+              previewModalFile ||
+              lightboxImageUrl ||
+              isAgentSettingsModalOpen ||
+              isSettingsModalOpen ||
+              isScheduleModalOpen ||
+              isChannelModalOpen ||
+              isConnectAppsOpen ||
+              isPermissionsModalOpen ||
+              isCommandPaletteOpen ||
+              isBrowserModalOpen ||
+              isLiveThinkingModalOpen ||
+              isExportMenuOpen ||
+              activeChatMenuId ||
+              activeAgentMenuId
+            );
+            if (anyActiveOverlay) {
+              touchSwipeStartRef.current = null;
+              return;
+            }
+
+            const target = e.target as HTMLElement | null;
+            if (target) {
+              const isInsideInteractiveOverlay = Boolean(
+                target.closest(
+                  '[role="dialog"], [role="menu"], [data-testid="plus-add-popover"], [data-no-swipe="true"], ' +
+                  '.overflow-x-auto, [data-testid="inline-live-computer-card"], [data-testid="lean-audio-player"], ' +
+                  '[data-testid="lean-video-player"], pre, code, textarea, input, select, audio, video'
+                )
+              );
+              if (isInsideInteractiveOverlay) {
+                touchSwipeStartRef.current = null;
+                return;
+              }
+            }
+
             const touch = e.changedTouches[0];
             const deltaX = touch.clientX - touchSwipeStartRef.current.x;
             const deltaY = touch.clientY - touchSwipeStartRef.current.y;
@@ -15763,7 +15787,7 @@ const selectedAgentTheme = getAgentColorTheme(
           )}
           {/* Attached Files Preview Chips with Image Thumbnails & Lightbox */}
           {attachedFiles.length > 0 && (
-            <div className="flex items-center gap-2 flex-nowrap overflow-x-auto scrollbar-none pb-1 px-1 max-w-full">
+            <div data-no-swipe="true" className="flex items-center gap-2 flex-nowrap overflow-x-auto scrollbar-none pb-1 px-1 max-w-full">
               {attachedFiles.map((f, i) => {
                 const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico|avif)$/i.test(f.file_name) || Boolean(f.mime_type && f.mime_type.startsWith("image/"));
                 const previewSrc = f.preview_url || resolveUploadedAttachmentPreviewUrl(f.url, selectedAgent?.slug || selectedAgent?.id || "default");
@@ -15992,7 +16016,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   transform: plusMenuDragY > 0 ? "translateY(" + plusMenuDragY + "px)" : undefined,
                   transition: isPlusMenuDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
-                className="fixed md:absolute inset-x-0 md:inset-x-0 bottom-0 md:bottom-full mb-0 md:mb-2 max-h-[92dvh] md:max-h-[520px] flex flex-col rounded-t-3xl rounded-b-none md:rounded-2xl bg-white dark:bg-[#14141c] border-t md:border border-slate-200 dark:border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.3)] md:shadow-2xl p-3.5 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 z-[70] md:z-50 animate-in fade-in slide-in-from-bottom-8 md:zoom-in-95 duration-200 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
+                data-no-swipe="true" data-testid="plus-add-popover" className="fixed md:absolute inset-x-0 md:inset-x-0 bottom-0 md:bottom-full mb-0 md:mb-2 max-h-[92dvh] md:max-h-[520px] flex flex-col rounded-t-3xl rounded-b-none md:rounded-2xl bg-white dark:bg-[#14141c] border-t md:border border-slate-200 dark:border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.3)] md:shadow-2xl p-3.5 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 z-[70] md:z-50 animate-in fade-in slide-in-from-bottom-8 md:zoom-in-95 duration-200 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
               >
                 {/* Mobile iOS-style Swipe-down Handle (Kéo để đóng) */}
                 <div
@@ -19624,12 +19648,12 @@ ${chat.id}`);
         return (
           <div
             data-testid="computer-maximized-modal-backdrop"
-            className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150 select-none"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-xs animate-in fade-in duration-150 select-none overflow-hidden"
             onClick={() => handleSetBrowserModalOpen(false)}
           >
             <div
               data-testid="computer-maximized-modal"
-              className="w-[95vw] h-[95vh] max-w-[95vw] max-h-[95vh] rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+              className="w-full h-full sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Top Navigation Bar with Controls & Close Button */}
@@ -19793,6 +19817,7 @@ ${chat.id}`);
       {/* Universal File & Media Attachment Preview Modal */}
       {previewModalFile && (
         <div
+          data-no-swipe="true"
           onClick={() => setPreviewModalFile(null)}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150"
         >
