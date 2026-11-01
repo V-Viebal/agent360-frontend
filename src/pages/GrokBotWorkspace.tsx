@@ -528,11 +528,13 @@ function extractSoloTurnLeadInAndBody(
   const reasonLeadIns: string[] = [];
   for (let rIdx = 0; rIdx < rawReasonSource.length; rIdx++) {
     const rText = rawReasonSource[rIdx];
+    const hasFirstLineBreakOrPunct = /[\n.!?…]/.test(rText.trim());
     const isStepComplete =
       !isTurnActivelyRunning ||
       soloTools.length > 0 ||
       rIdx < rawReasonSource.length - 1 ||
-      Boolean(cleanContent);
+      Boolean(cleanContent) ||
+      hasFirstLineBreakOrPunct;
     const transformed = transformReasonStepToLeadIn(rText, pronouns, isStepComplete);
     if (transformed && transformed.length >= 10 && transformed.length <= 280) {
       const normNew = transformed.toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, "");
@@ -3564,8 +3566,8 @@ function AgentToolCard({ toolCall, agentId }: { toolCall: { tool: string; args?:
         </div>
       </div>
 
-      {/* Embedded Browser View Screen Preview Card for Screen Actions */}
-      {(isScreenAction || screenImage) && (
+      {/* Embedded Browser View Screen Preview Card for Screen Actions (hidden when Split Computer is open) */}
+      {(isScreenAction || screenImage) && (typeof window === "undefined" || localStorage.getItem("agent360_computer_split") !== "true") && (
         <div className="p-2.5 bg-[#09090d] border-t border-[#1e1e28] flex flex-col space-y-2">
           <div className="flex items-center justify-between text-xs font-sans text-neutral-400 select-none px-1">
             <div className="flex items-center gap-1.5">
@@ -6358,8 +6360,27 @@ export function GrokBotWorkspace() {
       selected_labels: selectedLabels,
       input_value: inputValue,
     });
-    if (promptToDispatch.trim()) {
-      executeTurnStream(promptToDispatch.trim());
+    const cleanPrompt = promptToDispatch.trim();
+    if (cleanPrompt) {
+      let sendChatId = selectedChatId;
+      if (!sendChatId) {
+        sendChatId = `session-${Date.now().toString().slice(-6)}`;
+        setSelectedChatId(sendChatId);
+      }
+      chatAgentMapRef.current[sendChatId] = selectedAgentId;
+      if (isStreaming || processingChatsRef.current.has(sendChatId)) {
+        const newItem: QueuedRequestItem = {
+          id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          text: cleanPrompt,
+          previewText: cleanPrompt.split("\n")[0].slice(0, 100),
+          createdAt: Date.now(),
+        };
+        setChatQueue(sendChatId, [...(requestQueuesRef.current[sendChatId] || []), newItem], selectedAgentId);
+      } else {
+        processingChatsRef.current.add(sendChatId);
+        void executeTurnStream(cleanPrompt, sendChatId, selectedAgentId);
+        requestAnimationFrame(() => smoothScrollToBottom());
+      }
     }
   };
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
@@ -9914,14 +9935,14 @@ ${targetItem.text}`;
     fetchChatMessages(selectedChatId, selectedAgentId).then((loadedMsgs) => {
       if (!mounted) return;
       // A console turn of this chat is still streaming: keep the in-flight turn instead of the persisted history.
-      if (streamingChatIdsRef.current.includes(selectedChatId)) {
+      if (streamingChatIdsRef.current.includes(selectedChatId) || processingChatsRef.current.has(selectedChatId)) {
         const live = inflightMessagesRef.current[selectedChatId];
         if (live) setMessages(live);
         setIsLoadingMessages(false);
         return;
       }
       if (loadedMsgs.length > 0) {
-        setMessages(loadedMsgs);
+        setMessages((prev) => (prev.length > loadedMsgs.length && streamingChatIdsRef.current.length > 0 ? prev : loadedMsgs));
         setShowPollCard(false);
         // Live update the last message snippet in chats list for active session
         const lastTurn = loadedMsgs[loadedMsgs.length - 1];
@@ -10069,10 +10090,19 @@ ${targetItem.text}`;
             payload.session_id === selectedChatId ||
             (activeChatRef && (payload.chat_id === activeChatRef.id || payload.chat_id === activeChatRef.session_id || payload.session_id === activeChatRef.session_id));
 
-          if (isTargetSession && !streamingChatIdsRef.current.includes(selectedChatId)) {
+          const isAnyAliasStreaming =
+            streamingChatIdsRef.current.includes(selectedChatId) ||
+            ids.some((id) => streamingChatIdsRef.current.includes(id)) ||
+            processingChatsRef.current.has(selectedChatId);
+
+          if (isTargetSession && !isAnyAliasStreaming) {
             const applySyncedMessages = (nextTurns: ChatMessage[]) => {
               if (!nextTurns || nextTurns.length === 0) return;
               setMessages((prev) => {
+                // Never overwrite a newer local transcript (e.g. optimistic user request or just-finished turn) with a shorter stale server snapshot
+                if (prev.length > nextTurns.length) {
+                  return prev;
+                }
                 // Preserve any existing reasoning, steps, toolCalls, and roomReceipt from prev turns when SSE session_update only carries plain message content
                 const mergedTurns = nextTurns.map((nt, idx) => {
                   const matchedPrev =
@@ -15041,7 +15071,10 @@ const selectedAgentTheme = getAgentColorTheme(
                               </div>
                             )}
 
-                            {browserExecSummary && (
+                            {browserExecSummary &&
+                              !isComputerSplitOpen &&
+                              !isBrowserModalOpen &&
+                              (isBotInfoCollapsed || rightTab !== "Computer") && (
                               <InlineLiveComputerPreviewCard
                                 summary={browserExecSummary}
                                 agentId={msg.senderAgentId || selectedAgent?.slug || selectedAgent?.id || "default"}
