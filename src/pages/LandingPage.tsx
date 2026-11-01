@@ -250,11 +250,11 @@ export function LandingPage() {
           <div
             className="w-full h-full"
             style={{
-              maskImage: "radial-gradient(ellipse 300px 155px at 50% 245px, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.65) 85%, rgba(0,0,0,1) 100%)",
-              WebkitMaskImage: "radial-gradient(ellipse 300px 155px at 50% 245px, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.65) 85%, rgba(0,0,0,1) 100%)",
+              maskImage: "radial-gradient(ellipse 520px 290px at 50% 270px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.85) 92%, rgba(0,0,0,1) 100%)",
+              WebkitMaskImage: "radial-gradient(ellipse 520px 290px at 50% 270px, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0.1) 60%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.85) 92%, rgba(0,0,0,1) 100%)",
             }}
           >
-            <svg className="w-full h-full opacity-[0.55] dark:opacity-[0.1] text-[#e5ddd2] dark:text-white" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-full h-full opacity-[0.32] dark:opacity-[0.06] text-[#e0d6c8] dark:text-white" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="strawberry-mosaic" width="64" height="64" patternUnits="userSpaceOnUse">
                 {/* Row 1 */}
@@ -310,7 +310,7 @@ export function LandingPage() {
             <motion.p
               data-testid="hero-description"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
-              className="animate-hero-rise-2 mt-2.5 text-[15.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] lg:leading-[29.81px] tracking-[-0.216px] text-[#6e6b65] dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
+              className="animate-hero-rise-2 mt-2.5 text-[15.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] leading-[1.45] lg:leading-[29.81px] tracking-[-0.216px] text-[#6e6b65] dark:text-neutral-400 w-full max-w-[340px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-2 sm:px-1 text-balance break-words"
             >
               {isVi ? (
                 <>
@@ -367,7 +367,7 @@ export function LandingPage() {
 
           {/* HERO PRODUCT STAGE: 4 Companion Avatars Peeking from Top Edge + 16:10 Live Workspace Frame */}
           <motion.div
-            className="animate-hero-rise-4 relative mt-14 sm:mt-[79.2px]"
+            className="animate-hero-rise-4 relative mt-[108px] sm:mt-[79.2px]"
           >
             {/* 4 Peeking Companions Perched at Exact Strawberry Outer Corners (0% & 10% Left / Right) with Large Scale */}
             <div className="pointer-events-none select-none">
@@ -395,7 +395,7 @@ export function LandingPage() {
               <motion.div
                 animate={{ y: [0, -7, 0] }}
                 transition={{ duration: 3.0, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
-                className="flex flex-col items-center absolute -top-[96px] left-[12%] sm:left-[98px] lg:left-[108px] z-10"
+                className="flex flex-col items-center absolute -top-[88px] sm:-top-[96px] left-[8%] sm:left-[98px] lg:left-[108px] z-10 scale-90 sm:scale-100 origin-bottom"
               >
                 <span className="mb-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10.5px] font-mono font-semibold shadow-2xs">
                   Minh Bốc
@@ -415,7 +415,7 @@ export function LandingPage() {
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
-                className="flex flex-col items-center absolute -top-[96px] right-[12%] sm:right-[98px] lg:right-[108px] z-10"
+                className="flex flex-col items-center absolute -top-[88px] sm:-top-[96px] right-[8%] sm:right-[98px] lg:right-[108px] z-10 scale-90 sm:scale-100 origin-bottom"
               >
                 <span className="mb-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10.5px] font-mono font-semibold shadow-2xs">
                   An Kế Toán
@@ -589,17 +589,20 @@ export function LandingPage() {
               return (
                 <div className="relative z-20 rounded-t-[16px] border border-b-0 border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] shadow-[0_16px_34px_rgba(15,23,42,0.05),0_60px_120px_rgba(15,23,42,0.10)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.75)] overflow-hidden">
                   <div className="grid grid-cols-1 lg:grid-cols-12 lg:h-[468px]">
-                    {/* ZONE 1: Compact Left Agents Switcher (2 Cols) */}
+                    {/* ZONE 1: Compact Left Agents Switcher (2 Cols on Desktop, Compact 2x2 Selector Grid on Mobile) */}
                     <div className="lg:col-span-2 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex flex-col justify-between select-none">
                       <div>
                         {/* Header: Skyer Brand */}
-                        <div className="h-11 px-3.5 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
+                        <div className="h-10 sm:h-11 px-3.5 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
                           <SkyerLogo size={18} showText />
-                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="lg:hidden">Live</span>
+                          </span>
                         </div>
 
-                        {/* Pure Interactive Agent List */}
-                        <div className="p-2 space-y-1.5">
+                        {/* Pure Interactive Agent List: 2x2 Grid on Mobile, Vertical Stack on Desktop */}
+                        <div className="p-2 grid grid-cols-2 lg:grid-cols-1 gap-1.5">
                           {heroAgents.map((ag, idx) => {
                             const isSelected = idx === heroAgentIdx;
                             return (
@@ -612,7 +615,7 @@ export function LandingPage() {
                                   if (e.key === "Enter" || e.key === " ") setHeroAgentIdx(idx);
                                 }}
                                 className={
-                                  "w-full px-2.5 py-2.5 rounded-xl flex items-center gap-2.5 text-left transition-all cursor-pointer " +
+                                  "w-full px-2.5 py-2 lg:py-2.5 rounded-xl flex items-center gap-2 lg:gap-2.5 text-left transition-all cursor-pointer " +
                                   (isSelected
                                     ? "bg-white dark:bg-[#1a1a26] border border-[#ECE5DC] dark:border-[#2e2e42] shadow-2xs"
                                     : "hover:bg-white/60 dark:hover:bg-white/[0.04] border border-transparent opacity-75 hover:opacity-100")
@@ -626,7 +629,7 @@ export function LandingPage() {
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center justify-between gap-1">
-                                    <span className="text-[12px] font-semibold text-[#252522] dark:text-white truncate">
+                                    <span className="text-[11.5px] sm:text-[12px] font-semibold text-[#252522] dark:text-white truncate">
                                       {ag.name}
                                     </span>
                                     <span
@@ -634,7 +637,7 @@ export function LandingPage() {
                                       style={{ backgroundColor: ag.color }}
                                     />
                                   </div>
-                                  <span className="text-[10.5px] text-neutral-500 dark:text-neutral-400 truncate block">
+                                  <span className="text-[10px] sm:text-[10.5px] text-neutral-500 dark:text-neutral-400 truncate block">
                                     {ag.role}
                                   </span>
                                 </div>
@@ -644,8 +647,8 @@ export function LandingPage() {
                         </div>
                       </div>
 
-                      {/* Minimal Member Footer */}
-                      <div className="px-3.5 py-2 border-t border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between text-[10.5px] text-neutral-500 dark:text-neutral-400">
+                      {/* Minimal Member Footer (Desktop only to save vertical space on mobile) */}
+                      <div className="hidden lg:flex px-3.5 py-2 border-t border-[#ECE5DC] dark:border-[#1c1c22] items-center justify-between text-[10.5px] text-neutral-500 dark:text-neutral-400">
                         <span className="font-medium text-[#252522] dark:text-neutral-300 truncate">Skyer Workspace</span>
                         <span className="font-mono text-[9.5px] text-emerald-600 dark:text-emerald-400 shrink-0">● Live</span>
                       </div>
@@ -846,13 +849,13 @@ export function LandingPage() {
 
                         {/* Realistic 5-Column Enterprise Data Table */}
                         <div className="my-auto rounded-xl border border-[#ECE5DC] dark:border-[#22222e] bg-[#FFFDF9] dark:bg-[#121218] overflow-hidden relative shadow-2xs">
-                          {/* Table Column Headers */}
-                          <div className="grid grid-cols-12 items-center px-3 py-1.5 bg-[#F8F3ED]/80 dark:bg-[#181822] border-b border-[#ECE5DC] dark:border-white/10 text-[9.5px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
-                            <span className="col-span-3">{activeAg.colHeaders[0]}</span>
-                            <span className="col-span-3">{activeAg.colHeaders[1]}</span>
-                            <span className="col-span-2 text-right">{activeAg.colHeaders[2]}</span>
-                            <span className="col-span-2 text-right">{activeAg.colHeaders[3]}</span>
-                            <span className="col-span-2 text-right">{activeAg.colHeaders[4]}</span>
+                          {/* Table Column Headers (Responsive: 3 cols on mobile, 5 cols on sm+) */}
+                          <div className="grid grid-cols-12 items-center px-2.5 sm:px-3 py-1.5 bg-[#F8F3ED]/80 dark:bg-[#181822] border-b border-[#ECE5DC] dark:border-white/10 text-[9px] sm:text-[9.5px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
+                            <span className="hidden sm:inline sm:col-span-3">{activeAg.colHeaders[0]}</span>
+                            <span className="col-span-5 sm:col-span-3">{activeAg.colHeaders[1]}</span>
+                            <span className="col-span-4 sm:col-span-2 text-right">{activeAg.colHeaders[2]}</span>
+                            <span className="hidden sm:inline sm:col-span-2 text-right">{activeAg.colHeaders[3]}</span>
+                            <span className="col-span-3 sm:col-span-2 text-right">{activeAg.colHeaders[4]}</span>
                           </div>
 
                           {/* Table Data Rows */}
@@ -869,19 +872,19 @@ export function LandingPage() {
                                       : "bg-white dark:bg-[#121218]")
                                   }
                                 >
-                                  <span className="col-span-3 text-[9.5px] text-neutral-500 dark:text-neutral-400 truncate pr-1">
+                                  <span className="hidden sm:inline sm:col-span-3 text-[9.5px] text-neutral-500 dark:text-neutral-400 truncate pr-1">
                                     {r.code}
                                   </span>
-                                  <span className="col-span-3 font-sans font-semibold text-[#252522] dark:text-white truncate pr-1">
+                                  <span className="col-span-5 sm:col-span-3 font-sans font-semibold text-[#252522] dark:text-white truncate pr-1">
                                     {r.name}
                                   </span>
-                                  <span className="col-span-2 text-right text-[#252522] dark:text-neutral-200 text-[10px]">
+                                  <span className="col-span-4 sm:col-span-2 text-right text-[#252522] dark:text-neutral-200 text-[10px] truncate">
                                     {r.net}
                                   </span>
-                                  <span className="col-span-2 text-right text-neutral-500 dark:text-neutral-400 text-[10px]">
+                                  <span className="hidden sm:inline sm:col-span-2 text-right text-neutral-500 dark:text-neutral-400 text-[10px]">
                                     {r.vat}
                                   </span>
-                                  <span className="col-span-2 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[9.5px] whitespace-nowrap">
+                                  <span className="col-span-3 sm:col-span-2 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[9px] sm:text-[9.5px] whitespace-nowrap">
                                     ✓ {r.tag}
                                   </span>
                                 </div>

@@ -200,7 +200,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="grok-modal-scope fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#14141e] border border-slate-200 dark:border-[#272738] shadow-2xl overflow-hidden flex flex-col font-sans select-none"

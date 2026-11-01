@@ -412,8 +412,26 @@ assert.ok(
   grokBotSrc3.includes("overscroll-contain") && grokBotSrc3.includes("handleMessagesScroll"),
   "Messages container must contain overscroll to prevent body bounce"
 );
-assert.ok(
-  grokBotSrc3.includes(`aria-label="Xóa nội dung"`) && grokBotSrc3.includes("X size={13}"),
-  "Composer must provide a quick clear button when typing text"
-);
+// Quick clear button removed to keep minimalist UI clean without duplicate clear controls
 console.log("✓ Test 29: Mobile Ergonomics & Viewport Polish Contracts verified");
+
+console.log("Testing Lean Request Queue UI Contract...");
+const grokBotSrc4 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+
+assert.ok(
+  grokBotSrc4.includes("data-testid=\"request-queue-indicator\""),
+  "GrokBotWorkspace must include request-queue-indicator testid"
+);
+assert.ok(
+  grokBotSrc4.includes("data-testid=\"request-queue-stack\""),
+  "GrokBotWorkspace must include request-queue-stack testid"
+);
+assert.ok(
+  grokBotSrc4.includes("Queue") && grokBotSrc4.includes("requestQueue.length"),
+  "Request queue indicator must display clean compact Queue label with count"
+);
+assert.ok(
+  !grokBotSrc4.includes("upcoming request"),
+  "Verbose upcoming request copy must be removed for lean minimalist UI"
+);
+console.log("✓ Test 30: Lean Request Queue UI Contract verified");

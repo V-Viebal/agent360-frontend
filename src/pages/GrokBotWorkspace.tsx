@@ -15739,34 +15739,41 @@ const selectedAgentTheme = getAgentColorTheme(
           {/* Rich Request Queue Stack with Steer, Edit, and Delete */}
           {requestQueue.length > 0 && selectedChatId && (
             <div className="space-y-1.5 animate-in fade-in duration-100">
-              {/* Request Queue Indicator Pill (themed with dynamic selectedAgentTheme matching screenshot) */}
+              {/* Lean Request Queue Bar (clean, compact, minimalist UI) */}
               <div
                 data-testid="request-queue-indicator"
-                className="flex items-center justify-between px-3.5 py-1.5 rounded-2xl bg-white/95 dark:bg-[#14141c]/95 border border-slate-200/90 dark:border-[#2a2a38] text-[11px] font-mono shadow-xs select-none"
+                className="flex items-center justify-between gap-2 px-3 py-1 rounded-xl bg-white/80 dark:bg-[#14141c]/80 backdrop-blur-xs border border-slate-200/80 dark:border-white/10 text-[11px] font-mono select-none"
               >
-                <div className="flex items-center gap-2 truncate min-w-0">
+                <div
+                  onClick={() => requestQueue.length > 1 && setIsQueueStackOpen((prev) => !prev)}
+                  className={`flex items-center gap-1.5 truncate min-w-0 ${requestQueue.length > 1 ? "cursor-pointer hover:opacity-85" : ""}`}
+                  title={requestQueue.length > 1 ? (isQueueStackOpen ? "Bấm để thu gọn danh sách" : "Bấm để xem toàn bộ hàng đợi") : undefined}
+                >
                   <span
                     className="h-1.5 w-1.5 rounded-full animate-pulse shrink-0"
                     style={{ backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark }}
                   />
                   <span
-                    className="font-semibold shrink-0"
+                    className="font-medium shrink-0"
                     style={{ color: selectedAgentTheme.light || selectedAgentTheme.primary }}
                   >
-                    Queue:
+                    Queue
                   </span>
-                  <span className="truncate text-slate-700 dark:text-neutral-300 font-sans">
-                    {requestQueue.length} upcoming request{requestQueue.length > 1 ? "s" : ""} (Next: "{requestQueue[0]?.previewText || requestQueue[0]?.text?.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message"}")
+                  <span className="text-[10px] px-1 rounded bg-black/5 dark:bg-white/10 text-slate-600 dark:text-neutral-300 font-semibold shrink-0">
+                    {requestQueue.length}
+                  </span>
+                  <span className="truncate text-slate-600 dark:text-neutral-300 font-sans text-xs">
+                    "{requestQueue[0]?.previewText || requestQueue[0]?.text?.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message"}"
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {requestQueue.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setIsQueueStackOpen((prev) => !prev)}
-                      className="text-neutral-400 hover:text-slate-800 dark:hover:text-white text-[10px] font-sans cursor-pointer transition-colors"
+                      className="px-1.5 py-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white text-[10px] font-sans cursor-pointer transition-colors"
                     >
-                      {isQueueStackOpen ? "Thu gọn" : `Xem tất cả (${requestQueue.length})`}
+                      {isQueueStackOpen ? "Thu gọn" : "Chi tiết"}
                     </button>
                   )}
                   <button
@@ -15774,7 +15781,8 @@ const selectedAgentTheme = getAgentColorTheme(
                     onClick={() => {
                       if (selectedChatId) setChatQueue(selectedChatId, []);
                     }}
-                    className="text-neutral-400 hover:text-slate-800 dark:hover:text-white text-[10px] font-sans cursor-pointer transition-colors"
+                    className="px-1.5 py-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-[10px] font-sans cursor-pointer transition-colors"
+                    title="Xóa toàn bộ hàng đợi"
                   >
                     Clear
                   </button>
@@ -17437,15 +17445,15 @@ const selectedAgentTheme = getAgentColorTheme(
                   disabled={hasNoAgents}
                   placeholder={
                     hasNoAgents
-                      ? "Chưa có Agent được gán cho tài khoản của bạn (Tính năng tạo Agent đang Incoming)..."
+                      ? "Chưa có Agent được gán cho tài khoản..."
                       : isRecording
                       ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
                       : isStreaming
-                      ? "Agent is responding • Enter to queue next request..."
-                      : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
+                      ? "Agent is responding..."
+                      : (typeof window !== "undefined" && window.innerWidth < 640 ? "Nhập tin nhắn..." : (t("composer.placeholder") || "Nhập yêu cầu công việc..."))
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none ${
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 placeholder:truncate resize-none ${
                     isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] pt-1 pb-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[30px] min-h-[30px] max-h-[30px] pt-[4px] pb-0 px-1 sm:px-0.5 m-0"
                   }`}
                 />
@@ -17458,25 +17466,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 return (
                   <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
 
-                    {/* Quick clear button when input text exists */}
-                    {inputText.length > 0 && !isRecording && (
-                      <button
-                        type="button"
-                        aria-label="Xóa nội dung"
-                        title="Xóa nội dung đang soạn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setInputText("");
-                          if (textareaRef.current) {
-                            textareaRef.current.style.height = "30px";
-                            textareaRef.current.focus();
-                          }
-                        }}
-                        className="h-6 w-6 rounded-full flex items-center justify-center text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                      >
-                        <X size={13} />
-                      </button>
-                    )}
+
                     <AudioVisualizerWaveform
                       isRecording={isRecording}
                       agentId={selectedAgent?.id}
@@ -18925,21 +18915,21 @@ ${chat.id}`);
               })()}
 
               {rightTab === "Details" && (
-                <div className="space-y-4 text-xs text-slate-700 dark:text-neutral-300 font-sans pb-4">
+                <div className="space-y-4 text-sm text-slate-700 dark:text-neutral-300 font-sans pb-4">
                   {/* 1. Concise Description: 2-3 lines by default, collapsed */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-sans text-neutral-400">
                       <span className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-xs">
                         Giới thiệu & Vai trò
                       </span>
-                      <span style={{ color: selectedAgentTheme.light }} className="text-[10px] uppercase font-semibold">
+                      <span style={{ color: selectedAgentTheme.light }} className="text-xs uppercase font-semibold">
                         {selectedAgent.roleTag || "Agent"}
                       </span>
                     </div>
 
-                    <div className="relative p-3 rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] transition-all">
+                    <div className="relative p-3.5 rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] transition-all">
                       <p
-                        className={`text-xs text-slate-600 dark:text-neutral-300 leading-relaxed select-text transition-all ${
+                        className={`text-sm text-slate-700 dark:text-neutral-200 leading-relaxed select-text transition-all ${
                           isDescExpanded ? "" : "line-clamp-3"
                         }`}
                       >
@@ -18966,7 +18956,7 @@ ${chat.id}`);
                   {/* 2. Routines (Automated Schedules) Section with clean card toggle matching user reference */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white font-sans">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white font-sans">
                         Routines
                       </span>
                       <button
@@ -18997,10 +18987,10 @@ ${chat.id}`);
                         className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[var(--agent-primary)]/50 flex items-center justify-between gap-3 cursor-pointer group transition-all"
                       >
                         <div className="flex flex-col min-w-0 pr-2">
-                          <span className="text-xs font-medium text-slate-800 dark:text-slate-900 dark:text-white truncate">
+                          <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                             Tạo Routine tự động đầu tiên
                           </span>
-                          <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
+                          <span className="text-xs text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
                             Bấm để lên lịch chạy tự động định kỳ
                           </span>
                         </div>
@@ -19032,10 +19022,10 @@ ${chat.id}`);
                               className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-slate-300 dark:hover:border-[#323242] shadow-xs flex items-center justify-between gap-3 cursor-pointer group transition-all"
                             >
                               <div className="flex flex-col min-w-0 pr-2">
-                                <span className="text-xs font-medium text-slate-900 dark:text-slate-900 dark:text-white truncate group-hover:text-[var(--agent-light)] dark:group-hover:text-[var(--agent-dark)] transition-colors">
+                                <span className="text-sm font-semibold text-slate-900 dark:text-white truncate group-hover:text-[var(--agent-light)] dark:group-hover:text-[var(--agent-dark)] transition-colors">
                                   {job.name}
                                 </span>
-                                <span className="text-[11px] text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
+                                <span className="text-xs text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
                                   {getHumanScheduleText(job.cronExpr, job.timezone)}
                                 </span>
                               </div>
@@ -19167,7 +19157,7 @@ ${chat.id}`);
                       )}
 
                       <div className="flex-1 min-w-0">
-                        <div className="truncate text-[12.5px] leading-tight font-medium text-slate-800 dark:text-neutral-200">{node.name}</div>
+                        <div className="truncate text-sm leading-tight font-medium text-slate-800 dark:text-neutral-200">{node.name}</div>
                         {folderHint && (
                           <div className="truncate text-[11px] text-slate-400 dark:text-neutral-500 leading-tight font-sans">{folderHint}</div>
                         )}

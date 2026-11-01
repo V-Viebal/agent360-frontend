@@ -55,12 +55,12 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      className="grok-modal-scope fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-150"
     >
       <div
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full ${maxWidthMap[maxWidth]} rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10 ${className}`}
+        className={`w-full ${maxWidthMap[maxWidth]} rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-[14px] flex flex-col grok-modal-scope max-h-[90vh] animate-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/10 ${className}`}
       >
         {/* Header */}
         {(title || icon) && (
@@ -68,7 +68,7 @@ export function Modal({
             <div className="flex items-center gap-2 min-w-0">
               {icon && <span className="shrink-0 text-[var(--agent-light)] dark:text-[var(--agent-dark)]">{icon}</span>}
               {typeof title === "string" ? (
-                <span className="font-semibold text-slate-800 dark:text-white tracking-wide uppercase font-mono truncate">
+                <span className="text-[14px] font-semibold text-slate-800 dark:text-white tracking-wide uppercase font-mono truncate">
                   {title}
                 </span>
               ) : (

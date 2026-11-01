@@ -33,11 +33,11 @@ export function SlideOverDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end">
+    <div className="grok-modal-scope fixed inset-0 z-[100] flex justify-end">
       {/* Dim Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="grok-modal-scope fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
       />
 
       {/* Drawer Surface */}

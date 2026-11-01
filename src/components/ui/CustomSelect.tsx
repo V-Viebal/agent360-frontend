@@ -280,7 +280,7 @@ export function CustomSelect({
         createPortal(
           <div
             ref={dropdownRef}
-            role="listbox"
+            role="listbox" data-type-scope="overlay"
             aria-label={ariaLabel || placeholder}
             style={{
               position: "absolute",
@@ -292,7 +292,7 @@ export function CustomSelect({
             className={`rounded-xl bg-white dark:bg-[#14141c] border border-slate-200 dark:border-[#262634] p-1.5 shadow-lg backdrop-blur-xl ${dropdownClassName}`}
           >
             {searchable && (
-              <div className="p-1 mb-1 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-1.5 px-2 bg-slate-50 dark:bg-[#101016] rounded-lg text-xs font-mono">
+              <div className="p-1 mb-1 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-1.5 px-2 bg-slate-50 dark:bg-[#101016] rounded-lg text-[13.5px] font-mono">
                 <Search size={12} className="text-neutral-500 shrink-0" />
                 <input
                   ref={searchInputRef}
@@ -300,7 +300,7 @@ export function CustomSelect({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search..."
-                  className="w-full bg-transparent border-0 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none py-1 text-xs"
+                  className="w-full bg-transparent border-0 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-neutral-500 focus:outline-none py-1 text-[13.5px]"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>

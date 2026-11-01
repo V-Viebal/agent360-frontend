@@ -189,12 +189,12 @@ export function DropdownMenu({
   if (isMobile) {
     const mobileContent = (
       <div
-        className="fixed inset-0 z-[999999] flex flex-col justify-end select-none animate-in fade-in duration-200"
+        className="grok-modal-scope fixed inset-0 z-[999999] flex flex-col justify-end select-none animate-in fade-in duration-200"
         onClick={onClose}
       >
         {/* Dark Backdrop Overlay */}
         <div
-          className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-xs"
+          className="grok-modal-scope fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-xs"
           aria-hidden="true"
         />
 
@@ -256,7 +256,7 @@ export function DropdownMenu({
           </div>
 
           {/* Sheet Scrollable Body */}
-          <div className="overflow-y-auto max-h-[72dvh] space-y-0.5 text-xs font-sans overscroll-contain">
+          <div className="overflow-y-auto max-h-[72dvh] space-y-1 text-[14px] font-sans overscroll-contain grok-overlay-scope">
             {children}
           </div>
         </div>
@@ -288,7 +288,7 @@ export function DropdownMenu({
         transition: "none",
         animation: "none",
       }}
-      className={`${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ring-1 ring-black/5 dark:ring-white/10 select-none ${className}`}
+      className={`${width} rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-[13.5px] font-sans space-y-0.5 ring-1 ring-black/5 dark:ring-white/10 select-none grok-overlay-scope ${className}`}
     >
       {children}
     </div>
@@ -322,7 +322,7 @@ export function DropdownMenuItem({
         if (disabled) return;
         onClick(e);
       }}
-      className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-xs disabled:opacity-40 disabled:cursor-not-allowed ${
+      className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-[13.5px] disabled:opacity-40 disabled:cursor-not-allowed ${
         isDanger
           ? "text-red-500 hover:text-red-400 hover:bg-red-500/10"
           : "text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08]"
@@ -346,7 +346,7 @@ export function DropdownMenuSection({ label, children }: DropdownMenuSectionProp
   return (
     <div className="border-t border-slate-100 dark:border-white/[0.08] my-1 pt-1 first:border-0 first:pt-0 first:my-0">
       {label && (
-        <div className="px-2.5 py-0.5 text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
+        <div className="px-2.5 py-1 text-[11.5px] font-mono text-neutral-400 uppercase tracking-wider">
           {label}
         </div>
       )}
@@ -404,7 +404,7 @@ export function DropdownSubMenu({
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08]"
+        className="w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2.5 cursor-pointer transition-colors font-medium text-[13.5px] text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08]"
       >
         <div className="flex items-center gap-2.5 min-w-0 truncate">
           {icon && <span className="shrink-0">{icon}</span>}
@@ -434,7 +434,7 @@ export function DropdownSubMenu({
             transition: "none",
             animation: "none",
           }}
-          className="w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-xs font-sans space-y-0.5 ring-1 ring-black/5 dark:ring-white/10 select-none pointer-events-auto"
+          className="w-48 rounded-xl bg-white dark:bg-[#181824] border border-slate-200 dark:border-[#2c2c3e] p-1.5 shadow-2xl text-[13.5px] font-sans space-y-0.5 ring-1 ring-black/5 dark:ring-white/10 select-none grok-overlay-scope pointer-events-auto"
         >
           {children}
         </div>
