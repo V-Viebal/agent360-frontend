@@ -238,7 +238,7 @@ export function LandingPage() {
 
       {/* 1. EXACT STRAWBERRY HERO ARCHITECTURE:
           H1 + 2-line Subtitle + 2 Pill CTAs + 4 Companion Avatars Peeking from Top Edge of Live 16:10 Product Frame */}
-      <section className="relative pt-14 sm:pt-20 lg:pt-24 overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
+      <section className="relative pt-10 sm:pt-14 lg:pt-16 overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
         {/* Strawberry Mosaic Geometric Side Background Pattern (Faint on Left & Right Outer Wings, Transparent in Center) */}
         <div
           className="absolute inset-x-0 top-0 h-[540px] pointer-events-none select-none overflow-hidden"
@@ -284,7 +284,7 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5 relative z-10">
+        <div className="mx-auto max-w-[1140px] px-4 sm:px-6 lg:px-5 relative z-10">
           {/* Hero Holder: Centered Title, 2-line Description, 2 Pill CTAs with Entrance Animation */}
           <div className="text-center flex flex-col items-center">
             <motion.h1
@@ -373,7 +373,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-14 sm:mt-[54px]"
+            className="relative mt-12 sm:mt-[46px]"
           >
             {/* 4 Peeking Companions Perched at Exact Strawberry Outer Corners (0% & 10% Left / Right) with Large Scale */}
             <div className="pointer-events-none select-none">
@@ -467,19 +467,28 @@ export function LandingPage() {
                   role: isVi ? "Kế toán TT99" : "Finance TT99",
                   color: "#10b981",
                   blob: { shape: "bear" as const, expression: "focused" as const, color: "#34d399", animation: "nod.1.4", seed: 202 },
-                  prompt: isVi ? "Đối soát 48 HĐ GTGT T10 trên ERPCore" : "Reconcile 48 Oct VAT invoices in ERPCore",
-                  reply: isVi ? "Đã khớp 48/48 PO • Chênh lệch: 0₫" : "Matched 48/48 POs • Variance: 0₫",
-                  url: "erpcore.vn/so-cai-tt99",
-                  docTitle: "MẪU 02-VT // SỔ CÁI TT99",
-                  kpiLeft: { label: isVi ? "Tổng giá trị PO" : "Total PO Value", val: "1.842.500.000₫" },
-                  kpiRight: { label: isVi ? "Độ lệch đối soát" : "Variance", val: "0₫ (100% Khớp)" },
+                  prompt: isVi
+                    ? "Đối chiếu 48 hóa đơn GTGT đầu vào tháng 10 trên ERPCore và xuất Bảng kê Mẫu 02-VT."
+                    : "Reconcile 48 October input VAT invoices in ERPCore and export Voucher 02-VT.",
+                  reply: isVi
+                    ? "Mình đã đọc xong 48 hóa đơn XML từ Tổng cục Thuế, khớp 100% với PO nhập kho (lệch 0₫) và lập sẵn chứng từ Mẫu 02-VT."
+                    : "Parsed all 48 tax XML e-invoices, matched 100% against warehouse POs (0₫ variance), and staged Voucher 02-VT.",
+                  fileName: "Bang_Ke_Chung_Tu_T10_TT99.xlsx",
+                  fileMeta: "48 Hóa đơn • 1.842.500.000₫ • Đã ký số",
+                  url: "https://erpcore.vn/accounting/tt99-reconcile",
+                  appTitle: "ERPCore Accounting",
+                  appBadge: "MẪU 02-VT // SỔ CÁI TT99",
+                  summaryLeft: { label: isVi ? "Tổng giá trị khớp" : "Matched Total", val: "1.842.500.000₫" },
+                  summaryRight: { label: isVi ? "Chênh lệch thuế" : "Tax Variance", val: "0₫ (48/48 Hợp lệ)" },
+                  colHeaders: isVi
+                    ? ["Chứng từ / MST", "Nhà cung cấp", "Trước thuế", "Thuế GTGT", "Trạng thái"]
+                    : ["Voucher / Tax ID", "Vendor", "Net Amount", "VAT (10%)", "Status"],
                   rows: [
-                    { name: "VinFast Energy", code: "HĐ-0041", val: "482.500.000₫", ok: true },
-                    { name: "Masan Consumer", code: "HĐ-0042", val: "195.000.000₫", ok: true },
-                    { name: "FPT Smart Cloud", code: "HĐ-0045", val: "310.800.000₫", ok: true },
-                    { name: "Viettel Logistics", code: "HĐ-0049", val: "128.400.000₫", ok: true },
-                    { name: "Thaco Auto Chu Lai", code: "HĐ-0052", val: "415.000.000₫", ok: true },
-                    { name: "Tân Cảng Sài Gòn", code: "HĐ-0058", val: "310.800.000₫", ok: heroCursorStep === 2 },
+                    { code: "HĐ-0041 • 0105987432", name: "VinFast Energy", net: "438.636.364₫", vat: "43.863.636₫", tag: "Khớp PO-891" },
+                    { code: "HĐ-0042 • 0301458921", name: "Masan Consumer", net: "177.272.727₫", vat: "17.727.273₫", tag: "Khớp PO-892" },
+                    { code: "HĐ-0045 • 0101248141", name: "FPT Smart Cloud", net: "282.545.455₫", vat: "28.254.545₫", tag: "Khớp PO-894" },
+                    { code: "HĐ-0049 • 0100109106", name: "Viettel Logistics", net: "116.727.273₫", vat: "11.672.727₫", tag: "Khớp PO-899" },
+                    { code: "HĐ-0052 • 4000378915", name: "Thaco Auto Chu Lai", net: "377.272.727₫", vat: "37.727.273₫", tag: "Khớp PO-903" },
                   ],
                 },
                 {
@@ -488,19 +497,28 @@ export function LandingPage() {
                   role: isVi ? "Điều hành OKR" : "Executive Ops",
                   color: "#0ea5e9",
                   blob: { shape: "squircle" as const, expression: "proud" as const, color: "#38bdf8", animation: "wink.1.6", seed: 101 },
-                  prompt: isVi ? "Tổng hợp tiến độ OKR Quý 4 toàn công ty" : "Summarize company-wide Q4 OKR progress",
-                  reply: isVi ? "Doanh thu đạt 108% • 14/14 đầu việc đúng hạn" : "Revenue at 108% • 14/14 milestones on track",
-                  url: "basecore.vn/okr-q4-board",
-                  docTitle: "OKR Q4 // EXECUTIVE BOARD",
-                  kpiLeft: { label: isVi ? "Mục tiêu Doanh thu" : "Revenue Target", val: "108.4% (Vượt KH)" },
-                  kpiRight: { label: isVi ? "Runway Dòng tiền" : "Cash Runway", val: "18.4 Tháng" },
+                  prompt: isVi
+                    ? "Tổng hợp báo cáo OKR Quý 4 toàn công ty từ BaseCore và chuẩn bị tài liệu họp giao ban."
+                    : "Compile company-wide Q4 OKR progress from BaseCore and prepare the executive deck.",
+                  reply: isVi
+                    ? "Đã đồng bộ dữ liệu từ 5 khối phòng ban. Doanh thu B2B đạt 108.4% kế hoạch, 14/14 mục tiêu trọng tâm đang bám sát tiến độ."
+                    : "Synced metrics across all 5 departments. B2B revenue reached 108.4% of target with 14/14 key results on track.",
+                  fileName: "Bao_Cao_Giao_Ban_OKR_Q4_2026.pdf",
+                  fileMeta: "5 Khối phòng ban • Runway 18.4 tháng",
+                  url: "https://basecore.vn/executive/okr-q4-dashboard",
+                  appTitle: "BaseCore Executive",
+                  appBadge: "OKR Q4 // GIAO BAN ĐIỀU HÀNH",
+                  summaryLeft: { label: isVi ? "Doanh thu lũy kế" : "YTD Revenue", val: "108.4% Kế hoạch" },
+                  summaryRight: { label: isVi ? "Quỹ tiền mặt" : "Cash Runway", val: "18.4 Tháng" },
+                  colHeaders: isVi
+                    ? ["Mã OKR", "Khối / Phòng ban", "Chỉ tiêu chính", "Tiến độ", "Đánh giá"]
+                    : ["OKR ID", "Department", "Primary Metric", "Progress", "Status"],
                   rows: [
-                    { name: "Khối Kinh doanh B2B", code: "OKR-01", val: "108% KH", ok: true },
-                    { name: "Khối Tài chính & ERP", code: "OKR-02", val: "100% KH", ok: true },
-                    { name: "Khối Pháp chế NĐ13", code: "OKR-03", val: "98% KH", ok: true },
-                    { name: "Khối Hạ tầng On-Prem", code: "OKR-04", val: "99.98% SLA", ok: true },
-                    { name: "Khối CSKH Đa kênh", code: "OKR-05", val: "96% CSAT", ok: true },
-                    { name: "Tuyển dụng Nhân sự", code: "OKR-06", val: "95% KH", ok: heroCursorStep === 2 },
+                    { code: "OKR-B2B • Sales", name: "Khối Kinh doanh B2B", net: "18.5 Tỷ VNĐ", vat: "108.4%", tag: "Vượt chỉ tiêu" },
+                    { code: "OKR-FIN • ERP", name: "Khối Tài chính Kế toán", net: "Tự động TT99", vat: "100.0%", tag: "Đúng hạn" },
+                    { code: "OKR-LEG • NĐ13", name: "Khối Pháp chế & Tuân thủ", net: "24/24 Hợp đồng", vat: "98.5%", tag: "An toàn" },
+                    { code: "OKR-INF • VM", name: "Khối Hạ tầng On-Premise", net: "Uptime 99.98%", vat: "99.9%", tag: "Ổn định" },
+                    { code: "OKR-HR • C&B", name: "Khối Tuyển dụng Nhân sự", net: "12 Kỹ sư AI", vat: "95.0%", tag: "Đang chốt" },
                   ],
                 },
                 {
@@ -509,19 +527,28 @@ export function LandingPage() {
                   role: isVi ? "Rà soát HĐ" : "Legal & NDA",
                   color: "#8b5cf6",
                   blob: { shape: "bunny" as const, expression: "attentive" as const, color: "#a78bfa", animation: "nod.1.4", seed: 404 },
-                  prompt: isVi ? "Kiểm tra rủi ro hợp đồng đại lý MSA_2026" : "Audit liability clauses in MSA_2026.docx",
-                  reply: isVi ? "Đã khoanh 2 điều khoản phạt & chuẩn hóa NĐ13" : "Flagged 2 penalty clauses & aligned Decree 13",
-                  url: "basecore.vn/msa-2026-review",
-                  docTitle: "MSA_2026.DOCX // PHÁP CHẾ",
-                  kpiLeft: { label: isVi ? "Điều khoản rà soát" : "Clauses Audited", val: "24/24 Điều khoản" },
-                  kpiRight: { label: isVi ? "Tuân thủ NĐ13" : "Decree 13 Status", val: "An toàn 100%" },
+                  prompt: isVi
+                    ? "Rà soát rủi ro pháp lý hợp đồng đại lý MSA_2026.docx và đối chiếu tiêu chuẩn Nghị định 13."
+                    : "Audit legal liabilities in MSA_2026.docx and verify compliance with Decree 13.",
+                  reply: isVi
+                    ? "Đã kiểm tra 24 điều khoản. Phát hiện 2 mục phạt chậm thanh toán vượt khung 8% và đã tự động chèn bình luận sửa đổi theo chuẩn NĐ13."
+                    : "Audited 24 clauses. Flagged 2 late-payment penalties exceeding the 8% cap and inserted redline revisions per Decree 13.",
+                  fileName: "MSA_2026_Redline_Da_Ra_Soat.docx",
+                  fileMeta: "24 Điều khoản • 2 Chỉnh sửa bảo vệ",
+                  url: "https://basecore.vn/legal/contract-review-nd13",
+                  appTitle: "BaseCore Legal Review",
+                  appBadge: "MSA_2026.DOCX // TUÂN THỦ NĐ13",
+                  summaryLeft: { label: isVi ? "Điều khoản an toàn" : "Safe Clauses", val: "24/24 Đã khóa" },
+                  summaryRight: { label: isVi ? "Trần phạt thương mại" : "Penalty Cap", val: "Tối đa 8% (Chuẩn)" },
+                  colHeaders: isVi
+                    ? ["Điều khoản", "Nội dung rà soát", "Mức rủi ro", "Đề xuất sửa", "Trạng thái"]
+                    : ["Clause", "Subject", "Risk Level", "Revision", "Status"],
                   rows: [
-                    { name: "Điều 4.2: Giới hạn bồi thường", code: "Đã sửa", val: "An toàn", ok: true },
-                    { name: "Điều 7.1: Bảo mật dữ liệu NĐ13", code: "Chuẩn", val: "Đạt 100%", ok: true },
-                    { name: "Điều 9.3: Phạt chậm thanh toán", code: "Cập nhật", val: "Trần 8%", ok: true },
-                    { name: "Điều 11.4: Quyền sở hữu trí tuệ", code: "Chuẩn", val: "Đạt 100%", ok: true },
-                    { name: "Điều 14.1: Luật điều chỉnh VN", code: "Chuẩn", val: "Hợp lệ", ok: true },
-                    { name: "Phụ lục A: SLA cam kết 99.9%", code: "Ký số", val: "Sẵn sàng", ok: heroCursorStep === 2 },
+                    { code: "Điều 4.2 • Bồi thường", name: "Giới hạn trách nhiệm", net: "Thấp", vat: "Trần 100% HĐ", tag: "Đã chuẩn hóa" },
+                    { code: "Điều 7.1 • Dữ liệu", name: "Bảo mật thông tin NĐ13", net: "Thấp", vat: "Mã hóa E2E", tag: "Đạt chuẩn" },
+                    { code: "Điều 9.3 • Chậm trả", name: "Lãi phạt quá hạn thanh toán", net: "Đã xử lý", vat: "Hạ từ 15%→8%", tag: "Đã sửa Redline" },
+                    { code: "Điều 11.4 • SHTT", name: "Quyền sở hữu sản phẩm AI", net: "Thấp", vat: "Thuộc khách hàng", tag: "Đạt chuẩn" },
+                    { code: "Phụ lục A • SLA", name: "Cam kết vận hành 99.9%", net: "Thấp", vat: "Hỗ trợ 24/7", tag: "Sẵn sàng ký" },
                   ],
                 },
                 {
@@ -530,56 +557,70 @@ export function LandingPage() {
                   role: isVi ? "Sales B2B" : "B2B Outbound",
                   color: "#f97316",
                   blob: { shape: "cat" as const, expression: "happy" as const, color: "#f8a87c", animation: "wink.1.6", seed: 303 },
-                  prompt: isVi ? "Lọc 100 khách hàng B2B và gửi báo giá" : "Qualify 100 B2B leads and draft proposals",
-                  reply: isVi ? "Đã chấm điểm 100 Lead • Gửi 15 báo giá VIP" : "Scored 100 leads • Sent 15 VIP proposals",
-                  url: "crm.skyer.vn/b2b-pipeline",
-                  docTitle: "CRM // CHIẾN DỊCH B2B",
-                  kpiLeft: { label: isVi ? "Khách hàng tiềm năng" : "Qualified Leads", val: "100 Doanh nghiệp" },
-                  kpiRight: { label: isVi ? "Tỷ lệ phản hồi" : "Reply Rate", val: "38.5% (+15 VIP)" },
+                  prompt: isVi
+                    ? "Chấm điểm 100 khách hàng doanh nghiệp tiềm năng và gửi báo giá giải pháp On-Premise."
+                    : "Score 100 enterprise B2B prospects and send tailored On-Premise proposals.",
+                  reply: isVi
+                    ? "Đã lọc ra 15 tập đoàn có điểm phù hợp >92%, cá nhân hóa báo giá PDF theo quy mô máy chủ và gửi lịch hẹn demo trực tiếp."
+                    : "Shortlisted 15 enterprises scoring >92% fit, generated custom server sizing PDF quotes, and booked demo slots.",
+                  fileName: "Danh_Sach_15_Bao_Gia_VIP_B2B.pdf",
+                  fileMeta: "100 Leads • 15 Báo giá đã gửi",
+                  url: "https://crm.skyer.vn/pipelines/enterprise-b2b",
+                  appTitle: "Skyer CRM Pipeline",
+                  appBadge: "CRM // CHIẾN DỊCH B2B VIP",
+                  summaryLeft: { label: isVi ? "Lead chất lượng cao" : "High-Fit Leads", val: "15 Tập đoàn (>92%)" },
+                  summaryRight: { label: isVi ? "Giá trị Pipeline" : "Pipeline Value", val: "4.250.000.000₫" },
+                  colHeaders: isVi
+                    ? ["Mã Lead", "Doanh nghiệp", "Quy mô gói", "Điểm AI", "Trạng thái"]
+                    : ["Lead ID", "Enterprise", "Package Size", "AI Score", "Stage"],
                   rows: [
-                    { name: "Thaco Logistics", code: "Score 98", val: "Đã gửi BG", ok: true },
-                    { name: "CJ Gemadept", code: "Score 96", val: "Đã mở mail", ok: true },
-                    { name: "Tân Cảng Sài Gòn", code: "Score 95", val: "Hẹn demo", ok: true },
-                    { name: "Becamex IDC Bình Dương", code: "Score 94", val: "Đã gửi BG", ok: true },
-                    { name: "Tổng Công ty Bưu điện", code: "Score 93", val: "Đang tư vấn", ok: true },
-                    { name: "Hoà Phát Dung Quất", code: "Score 92", val: "Đang soạn...", ok: heroCursorStep === 2 },
+                    { code: "LD-901 • Logistics", name: "Thaco Logistics", net: "25 Nhân sự AI", vat: "98/100", tag: "Đã gửi Báo giá" },
+                    { code: "LD-904 • Cảng biển", name: "CJ Gemadept", net: "18 Nhân sự AI", vat: "96/100", tag: "Đã mở hồ sơ" },
+                    { code: "LD-908 • Vận tải", name: "Tân Cảng Sài Gòn", net: "30 Nhân sự AI", vat: "95/100", tag: "Đã hẹn Demo" },
+                    { code: "LD-912 • KCN", name: "Becamex IDC Bình Dương", net: "20 Nhân sự AI", vat: "94/100", tag: "Đã gửi Báo giá" },
+                    { code: "LD-915 • Sản xuất", name: "Hoà Phát Dung Quất", net: "40 Nhân sự AI", vat: "93/100", tag: "Đang soạn HĐ" },
                   ],
                 },
               ];
 
               const activeAg = heroAgents[heroAgentIdx] || heroAgents[0];
+              // Coordinates inside the 480x240 SVG overlay corresponding to the "Trạng thái" column on the right side (never covering company names!)
               const svgCursorTargets = [
-                { x: 225, y: 88 },
-                { x: 245, y: 126 },
-                { x: 235, y: 164 },
+                { x: 382, y: 74 },
+                { x: 386, y: 112 },
+                { x: 380, y: 150 },
               ];
               const curTarget = svgCursorTargets[heroCursorStep] || svgCursorTargets[0];
 
               return (
                 <div className="relative z-20 rounded-t-[16px] border border-b-0 border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] shadow-[0_16px_34px_rgba(15,23,42,0.05),0_60px_120px_rgba(15,23,42,0.10)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.75)] overflow-hidden">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[540px] sm:min-h-[590px] lg:min-h-[651px]">
-                    {/* ZONE 1: Simple Clean Left Agents List (No All Infra, No Search Clutter, Pure Agent Switcher) */}
-                    <div className="lg:col-span-3 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex flex-col justify-between select-none">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 lg:h-[468px]">
+                    {/* ZONE 1: Compact Left Agents Switcher (2 Cols) */}
+                    <div className="lg:col-span-2 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex flex-col justify-between select-none">
                       <div>
                         {/* Header: Skyer Brand */}
-                        <div className="h-13 px-5 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
-                          <SkyerLogo size={20} showText />
+                        <div className="h-11 px-3.5 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
+                          <SkyerLogo size={18} showText />
                           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                         </div>
 
                         {/* Pure Interactive Agent List */}
-                        <div className="p-3.5 space-y-2.5">
+                        <div className="p-2 space-y-1.5">
                           {heroAgents.map((ag, idx) => {
                             const isSelected = idx === heroAgentIdx;
                             return (
-                              <button
+                              <div
                                 key={ag.id}
-                                type="button"
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => setHeroAgentIdx(idx)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") setHeroAgentIdx(idx);
+                                }}
                                 className={
-                                  "w-full px-3.5 py-3.5 rounded-2xl flex items-center gap-3.5 text-left transition-all cursor-pointer " +
+                                  "w-full px-2.5 py-2.5 rounded-xl flex items-center gap-2.5 text-left transition-all cursor-pointer " +
                                   (isSelected
-                                    ? "bg-white dark:bg-[#181822] border border-[#ECE5DC] dark:border-[#2a2a3c] shadow-xs"
+                                    ? "bg-white dark:bg-[#1a1a26] border border-[#ECE5DC] dark:border-[#2e2e42] shadow-2xs"
                                     : "hover:bg-white/60 dark:hover:bg-white/[0.04] border border-transparent opacity-75 hover:opacity-100")
                                 }
                               >
@@ -591,7 +632,7 @@ export function LandingPage() {
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center justify-between gap-1">
-                                    <span className="text-[13px] font-semibold text-[#252522] dark:text-white truncate">
+                                    <span className="text-[12px] font-semibold text-[#252522] dark:text-white truncate">
                                       {ag.name}
                                     </span>
                                     <span
@@ -599,174 +640,180 @@ export function LandingPage() {
                                       style={{ backgroundColor: ag.color }}
                                     />
                                   </div>
-                                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate block">
+                                  <span className="text-[10.5px] text-neutral-500 dark:text-neutral-400 truncate block">
                                     {ag.role}
                                   </span>
                                 </div>
-                              </button>
+                              </div>
                             );
                           })}
                         </div>
                       </div>
 
                       {/* Minimal Member Footer */}
-                      <div className="px-4 py-2.5 border-t border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
-                        <span className="font-medium text-[#252522] dark:text-neutral-300">Skyer Workspace</span>
-                        <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">● Live</span>
+                      <div className="px-3.5 py-2 border-t border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between text-[10.5px] text-neutral-500 dark:text-neutral-400">
+                        <span className="font-medium text-[#252522] dark:text-neutral-300 truncate">Skyer Workspace</span>
+                        <span className="font-mono text-[9.5px] text-emerald-600 dark:text-emerald-400 shrink-0">● Live</span>
                       </div>
                     </div>
 
-                    {/* ZONE 2: Animated Live Chat Action (Real Request -> Live Streaming Response -> SVG Action Trigger) */}
+                    {/* ZONE 2: Realistic Chat Stream (4 Cols) — User Prompt + Tool Call Accordion + Natural Reply + File Attachment Card */}
                     <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] flex flex-col justify-between">
                       <div>
                         {/* Top Centered Agent Capsule */}
-                        <div className="h-13 px-4 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-center">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8F3ED] dark:bg-[#14141c] border border-[#ECE5DC] dark:border-white/[0.08] text-xs font-semibold text-[#252522] dark:text-white">
+                        <div className="h-11 px-3 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
+                          <span className="text-[10px] font-mono text-neutral-400">Phiên #104</span>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F8F3ED] dark:bg-[#14141c] border border-[#ECE5DC] dark:border-white/[0.08] text-[11.5px] font-semibold text-[#252522] dark:text-white">
                             <AgentAvatar
                               agent={{ id: `capsule-${activeAg.id}`, name: activeAg.name }}
-                              size="xs"
+                              size="2xs"
                               alwaysAnimate
                               overrideConfig={{ type: "blob", blob: activeAg.blob }}
                             />
                             <span>{activeAg.name}</span>
                           </div>
+                          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">128ms</span>
                         </div>
 
-                        {/* Animated Request & Response Flow */}
-                        <div className="p-5 sm:p-6 space-y-5">
-                          {/* 1. User Request Bubble */}
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={`req-${activeAg.id}`}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -4 }}
-                              transition={{ duration: 0.22 }}
-                              className="ml-6 p-3 rounded-2xl rounded-tr-xs bg-[#F8F3ED] dark:bg-[#1c1c26] border border-[#ECE5DC] dark:border-white/[0.07] text-[12.5px] font-medium text-[#252522] dark:text-neutral-100 shadow-2xs"
-                            >
-                              {activeAg.prompt}
-                            </motion.div>
-                          </AnimatePresence>
+                        {/* Authentic Chat Conversation */}
+                        <div className="p-3.5 space-y-2.5">
+                          {/* 1. User Prompt Bubble */}
+                          <motion.div
+                            key={`req-${activeAg.id}`}
+                            initial={{ opacity: 0.4, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.18 }}
+                            className="ml-5 px-3 py-2 rounded-2xl rounded-tr-xs bg-[#F8F3ED] dark:bg-[#1c1c26] border border-[#ECE5DC] dark:border-white/[0.07] text-[11.5px] leading-snug font-medium text-[#252522] dark:text-neutral-100"
+                          >
+                            {activeAg.prompt}
+                          </motion.div>
 
-                          {/* 2. Agent Live Animated Response Card with SVG Progress Wave */}
-                          <AnimatePresence mode="wait">
-                            <motion.div
-                              key={`res-${activeAg.id}`}
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -4 }}
-                              transition={{ duration: 0.28, delay: 0.06 }}
-                              className="p-3.5 rounded-2xl rounded-tl-xs bg-white dark:bg-[#121218] border border-[#ECE5DC] dark:border-[#22222e] space-y-3 shadow-2xs"
-                            >
-                              {/* Live Tool Call Pill */}
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#F8F3ED] dark:bg-[#1a1a24] border border-[#ECE5DC] dark:border-white/10 text-[10.5px] font-mono text-[#252522] dark:text-neutral-200">
-                                  <span
-                                    className="h-1.5 w-1.5 rounded-full animate-ping"
-                                    style={{ backgroundColor: activeAg.color }}
-                                  />
-                                  <span>{activeAg.url}</span>
-                                </div>
-                                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                                  {heroCursorStep === 0 ? "35%" : heroCursorStep === 1 ? "78%" : "100%"}
+                          {/* 2. Assistant Message Bubble with Real Tool Execution Trace & File Artifact */}
+                          <motion.div
+                            key={`res-${activeAg.id}`}
+                            initial={{ opacity: 0.4, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.22 }}
+                            className="p-3 rounded-2xl rounded-tl-xs bg-white dark:bg-[#121218] border border-[#ECE5DC] dark:border-[#22222e] space-y-2.5 shadow-2xs"
+                          >
+                            {/* Compact SVG Tool Step Header */}
+                            <div className="px-2.5 py-1.5 rounded-lg bg-[#F8F3ED]/80 dark:bg-[#171721] border border-[#ECE5DC] dark:border-white/[0.06] flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span
+                                  className="h-1.5 w-1.5 rounded-full animate-ping shrink-0"
+                                  style={{ backgroundColor: activeAg.color }}
+                                />
+                                <span className="text-[10.5px] font-mono font-medium text-[#252522] dark:text-neutral-200 truncate">
+                                  {isVi ? "Đã thực thi 3 bước trên trình duyệt" : "Executed 3 browser actions"}
                                 </span>
                               </div>
+                              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                                3/3 ✓
+                              </span>
+                            </div>
 
-                              {/* Animated SVG Execution Flow Diagram inside Chat Bubble */}
-                              <svg viewBox="0 0 260 44" className="w-full h-11 overflow-visible">
-                                {/* Connecting Track Line */}
-                                <line
-                                  x1="24"
-                                  y1="22"
-                                  x2="236"
-                                  y2="22"
-                                  stroke="currentColor"
-                                  className="text-neutral-200 dark:text-neutral-800"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                />
-                                {/* Animated Active Progress Line */}
-                                <motion.line
-                                  x1="24"
-                                  y1="22"
-                                  animate={{ x2: heroCursorStep === 0 ? 95 : heroCursorStep === 1 ? 168 : 236 }}
-                                  transition={{ type: "spring", stiffness: 120, damping: 20 }}
-                                  y2="22"
-                                  stroke={activeAg.color}
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
-                                />
-                                {/* 3 Step Nodes: Read -> Match -> Sync */}
-                                {[
-                                  { x: 24, label: isVi ? "Đọc dữ liệu" : "Read" },
-                                  { x: 130, label: isVi ? "Đối chiếu" : "Verify" },
-                                  { x: 236, label: isVi ? "Hoàn tất" : "Sync" },
-                                ].map((node, nIdx) => {
-                                  const done = nIdx <= heroCursorStep;
-                                  return (
-                                    <g key={node.label} transform={`translate(${node.x}, 16)`}>
-                                      <circle
-                                        r="7"
-                                        fill={done ? activeAg.color : "var(--bg-card)"}
-                                        stroke={done ? activeAg.color : "rgba(150,150,150,0.35)"}
-                                        strokeWidth="2"
-                                      />
-                                      {done && (
-                                        <path
-                                          d="M-2.5 0 L-0.5 2 L3 -2"
-                                          fill="none"
-                                          stroke="#ffffff"
-                                          strokeWidth="1.6"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        />
-                                      )}
-                                      <text
-                                        y="21"
-                                        textAnchor="middle"
-                                        className="fill-neutral-500 dark:fill-neutral-400 text-[8.5px] font-mono"
-                                      >
-                                        {node.label}
-                                      </text>
-                                    </g>
-                                  );
-                                })}
-                              </svg>
+                            {/* Compact 3-Step Animated SVG Progress Bar */}
+                            <svg viewBox="0 0 260 28" className="w-full h-7 overflow-visible">
+                              <line
+                                x1="20"
+                                y1="10"
+                                x2="240"
+                                y2="10"
+                                stroke="currentColor"
+                                className="text-neutral-200 dark:text-neutral-800"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                              <motion.line
+                                x1="20"
+                                y1="10"
+                                animate={{ x2: heroCursorStep === 0 ? 95 : heroCursorStep === 1 ? 175 : 240 }}
+                                transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                                y2="10"
+                                stroke={activeAg.color}
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                              />
+                              {[
+                                { x: 20, label: isVi ? "1. Đọc XML" : "1. Read" },
+                                { x: 130, label: isVi ? "2. Khớp PO" : "2. Match" },
+                                { x: 240, label: isVi ? "3. Xuất biểu" : "3. Export" },
+                              ].map((node, nIdx) => {
+                                const done = nIdx <= heroCursorStep;
+                                return (
+                                  <g key={node.label} transform={`translate(${node.x}, 10)`}>
+                                    <circle
+                                      r="5.5"
+                                      fill={done ? activeAg.color : "var(--bg-card)"}
+                                      stroke={done ? activeAg.color : "rgba(150,150,150,0.35)"}
+                                      strokeWidth="1.8"
+                                    />
+                                    <text
+                                      y="16"
+                                      textAnchor="middle"
+                                      className="fill-neutral-500 dark:fill-neutral-400 text-[8px] font-mono"
+                                    >
+                                      {node.label}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+                            </svg>
 
-                              {/* Crisp Result Line */}
-                              <div className="pt-1 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between text-[12px] font-medium text-[#252522] dark:text-neutral-200">
-                                <span>{activeAg.reply}</span>
-                                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                            {/* Natural Vietnamese Assistant Prose Reply */}
+                            <p className="text-[11.5px] leading-relaxed text-[#252522] dark:text-neutral-200">
+                              {activeAg.reply}
+                            </p>
+
+                            {/* Real Deliverable File Attachment Card */}
+                            <div className="p-2 rounded-xl bg-[#F8F3ED]/60 dark:bg-[#161620] border border-[#ECE5DC] dark:border-white/[0.07] flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className="px-1.5 py-1 rounded text-[9px] font-mono font-bold text-white shrink-0"
+                                  style={{ backgroundColor: activeAg.color }}
+                                >
+                                  XLSX
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-semibold text-[#252522] dark:text-white truncate">
+                                    {activeAg.fileName}
+                                  </div>
+                                  <div className="text-[9.5px] text-neutral-500 dark:text-neutral-400 truncate">
+                                    {activeAg.fileMeta}
+                                  </div>
+                                </div>
                               </div>
-                            </motion.div>
-                          </AnimatePresence>
+                              <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                            </div>
+                          </motion.div>
                         </div>
                       </div>
 
                       {/* Minimal Composer Bar */}
-                      <div className="p-3">
+                      <div className="px-3.5 pb-3">
                         <Link
                           to="/app"
-                          className="h-9 px-3 rounded-full bg-[#F8F3ED] dark:bg-[#16161d] border border-[#ECE5DC] dark:border-[#242432] flex items-center justify-between gap-2 text-[11.5px] text-neutral-400 hover:border-[#f8a87c]/60 transition-colors"
+                          className="h-8.5 px-3 rounded-full bg-[#F8F3ED] dark:bg-[#16161d] border border-[#ECE5DC] dark:border-[#242432] flex items-center justify-between gap-2 text-[11px] text-neutral-400 hover:border-[#f8a87c]/60 transition-colors"
                         >
                           <div className="flex items-center gap-2 truncate">
                             <Plus size={12} className="text-neutral-500 shrink-0" />
-                            <span className="truncate">{isVi ? "Giao việc cho đồng đội AI..." : "Assign a task..."}</span>
+                            <span className="truncate">{isVi ? "Giao việc tiếp theo cho " + activeAg.name + "..." : "Assign next task..."}</span>
                           </div>
                           <Mic size={12} className="text-[#f8a87c] shrink-0" />
                         </Link>
                       </div>
                     </div>
 
-                    {/* ZONE 3: Authentic Visual Browser Screen with Animated SVG Canvas & Live AI Cursor */}
-                    <div className="lg:col-span-5 bg-white dark:bg-[#0d0d12] flex flex-col justify-between relative overflow-hidden">
+                    {/* ZONE 3: Realistic Enterprise Web App Viewport (6 Cols) with Full-Width Data Grid & Non-Overlapping SVG Pointer */}
+                    <div className="lg:col-span-6 bg-white dark:bg-[#0d0d12] flex flex-col justify-between relative overflow-hidden">
                       {/* Browser Top Toolbar */}
-                      <div className="h-13 px-4 border-b border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex items-center justify-between gap-2 select-none">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                          <span className="px-2 py-0.5 rounded bg-white dark:bg-[#181820] text-[#252522] dark:text-neutral-200 text-[10px] font-mono border border-[#ECE5DC] dark:border-[#242430] truncate">
-                            {activeAg.url}
-                          </span>
+                      <div className="h-11 px-3.5 border-b border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex items-center justify-between gap-2 select-none">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                          <div className="px-2.5 py-0.5 rounded-md bg-white dark:bg-[#181820] text-[#252522] dark:text-neutral-200 text-[10.5px] font-mono border border-[#ECE5DC] dark:border-[#242430] truncate flex items-center gap-1.5 max-w-[340px]">
+                            <span className="text-emerald-600 dark:text-emerald-400">🔒</span>
+                            <span className="truncate">{activeAg.url}</span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           {[Camera, RefreshCw, Maximize2].map((Icon, i) => (
@@ -780,127 +827,144 @@ export function LandingPage() {
                         </div>
                       </div>
 
-                      {/* Interactive SVG Browser Viewport Canvas */}
-                      <div className="flex-1 p-4 sm:p-5 flex flex-col justify-center relative">
-                        <div className="rounded-2xl border border-[#ECE5DC] dark:border-[#22222e] bg-[#FFFDF9] dark:bg-[#121218] p-4 sm:p-5 shadow-xs relative overflow-hidden">
-                          {/* Canvas Header */}
-                          <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#ECE5DC] dark:border-white/10 font-mono">
+                      {/* Full-Bleed Enterprise Web Application Screen */}
+                      <div className="flex-1 p-3.5 flex flex-col justify-between relative overflow-hidden">
+                        {/* App Subheader & Live Summary Pills */}
+                        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#ECE5DC] dark:border-white/10">
+                          <div className="flex items-center gap-2">
                             <span
-                              className="px-2 py-0.5 rounded text-[10px] font-bold"
+                              className="px-2 py-0.5 rounded text-[10px] font-mono font-bold"
                               style={{
                                 backgroundColor: `${activeAg.color}20`,
                                 color: activeAg.color,
                               }}
                             >
-                              {activeAg.docTitle}
+                              {activeAg.appBadge}
                             </span>
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                              ● Auto-Sync
+                            <span className="text-[11px] font-semibold text-[#252522] dark:text-neutral-200 hidden sm:inline">
+                              {activeAg.summaryLeft.val}
                             </span>
                           </div>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold">
+                            ✓ {activeAg.summaryRight.val}
+                          </span>
+                        </div>
 
-                          {/* Rows inside Browser Canvas */}
-                          <div className="space-y-1.5 font-mono text-[11px]">
+                        {/* Realistic 5-Column Enterprise Data Table */}
+                        <div className="my-auto rounded-xl border border-[#ECE5DC] dark:border-[#22222e] bg-[#FFFDF9] dark:bg-[#121218] overflow-hidden relative shadow-2xs">
+                          {/* Table Column Headers */}
+                          <div className="grid grid-cols-12 items-center px-3 py-1.5 bg-[#F8F3ED]/80 dark:bg-[#181822] border-b border-[#ECE5DC] dark:border-white/10 text-[9.5px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
+                            <span className="col-span-3">{activeAg.colHeaders[0]}</span>
+                            <span className="col-span-3">{activeAg.colHeaders[1]}</span>
+                            <span className="col-span-2 text-right">{activeAg.colHeaders[2]}</span>
+                            <span className="col-span-2 text-right">{activeAg.colHeaders[3]}</span>
+                            <span className="col-span-2 text-right">{activeAg.colHeaders[4]}</span>
+                          </div>
+
+                          {/* Table Data Rows */}
+                          <div className="divide-y divide-[#ECE5DC]/60 dark:divide-white/5 font-mono text-[10.5px]">
                             {activeAg.rows.map((r, rIdx) => {
                               const isHovered = rIdx === heroCursorStep;
                               return (
-                                <motion.div
-                                  key={r.name}
-                                  animate={{
-                                    scale: isHovered ? 1.01 : 1,
-                                  }}
+                                <div
+                                  key={r.code}
                                   className={
-                                    "grid grid-cols-12 items-center px-3 py-2.5 rounded-xl border transition-colors " +
+                                    "grid grid-cols-12 items-center px-3 py-2 transition-colors " +
                                     (isHovered
-                                      ? "bg-emerald-500/10 border-emerald-500/40"
-                                      : "bg-white dark:bg-[#16161f] border-[#ECE5DC]/60 dark:border-white/5")
+                                      ? "bg-emerald-500/12 dark:bg-emerald-500/15"
+                                      : "bg-white dark:bg-[#121218]")
                                   }
                                 >
-                                  <span className="col-span-6 font-sans font-semibold text-[#252522] dark:text-white truncate">
+                                  <span className="col-span-3 text-[9.5px] text-neutral-500 dark:text-neutral-400 truncate pr-1">
+                                    {r.code}
+                                  </span>
+                                  <span className="col-span-3 font-sans font-semibold text-[#252522] dark:text-white truncate pr-1">
                                     {r.name}
                                   </span>
-                                  <span className="col-span-3 text-right text-neutral-500 dark:text-neutral-400 text-[10px]">
-                                    {r.val}
+                                  <span className="col-span-2 text-right text-[#252522] dark:text-neutral-200 text-[10px]">
+                                    {r.net}
                                   </span>
-                                  <span className="col-span-3 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
-                                    ✓ {r.code}
+                                  <span className="col-span-2 text-right text-neutral-500 dark:text-neutral-400 text-[10px]">
+                                    {r.vat}
                                   </span>
-                                </motion.div>
+                                  <span className="col-span-2 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[9.5px] whitespace-nowrap">
+                                    ✓ {r.tag}
+                                  </span>
+                                </div>
                               );
                             })}
                           </div>
 
-                          {/* Animated SVG Overlay: Live Scanning Beam + AI Agent Pointer + Click Ripple */}
+                          {/* Animated SVG Overlay: Positioned cleanly on the Right Action Column so it NEVER obscures vendor names */}
                           <svg
-                            viewBox="0 0 360 210"
+                            viewBox="0 0 480 215"
                             className="absolute inset-0 w-full h-full pointer-events-none z-20"
                           >
-                            {/* Animated Click Ripple Ring at Cursor Target */}
                             <motion.circle
                               animate={{
                                 cx: curTarget.x,
                                 cy: curTarget.y,
-                                r: [4, 18, 24],
-                                opacity: [0.75, 0.25, 0],
+                                r: [3, 14, 20],
+                                opacity: [0.8, 0.25, 0],
                               }}
                               transition={{
-                                duration: 1.6,
+                                duration: 1.5,
                                 repeat: Infinity,
                                 ease: "easeOut",
                               }}
                               fill="none"
                               stroke={activeAg.color}
-                              strokeWidth="2"
+                              strokeWidth="1.8"
                             />
 
-                            {/* Animated Agent Pointer Cursor */}
                             <motion.g
+                              initial={false}
                               animate={{ x: curTarget.x, y: curTarget.y }}
-                              transition={{ type: "spring", stiffness: 110, damping: 18 }}
+                              transition={{ type: "spring", stiffness: 120, damping: 18 }}
                             >
                               <path
-                                d="M0 0 L5 16 L9 10 L16 7 Z"
+                                d="M0 0 L5 14 L8.5 9 L14 6 Z"
                                 fill={activeAg.color}
                                 stroke="#ffffff"
                                 strokeWidth="1.2"
                               />
                               <rect
-                                x="10"
-                                y="10"
-                                width="74"
-                                height="18"
-                                rx="9"
+                                x="9"
+                                y="8"
+                                width="68"
+                                height="16"
+                                rx="8"
                                 fill={activeAg.color}
                               />
                               <text
-                                x="47"
-                                y="22"
+                                x="43"
+                                y="19"
                                 textAnchor="middle"
                                 fill="#ffffff"
-                                className="text-[9px] font-sans font-bold"
+                                className="text-[8.5px] font-sans font-bold"
                               >
                                 {activeAg.name}
                               </text>
                             </motion.g>
                           </svg>
                         </div>
-                      </div>
 
-                      {/* Minimalist Bottom Control Pill */}
-                      <div className="px-3.5 py-2.5 border-t border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED]/60 dark:bg-[#0d0d12] flex items-center justify-between gap-2">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-[#181820] border border-[#ECE5DC] dark:border-[#2c2c3e] text-[#252522] dark:text-neutral-200 text-[9.5px] shadow-2xs">
-                          <span
-                            className="h-1.5 w-1.5 rounded-full animate-pulse"
-                            style={{ backgroundColor: activeAg.color }}
-                          />
-                          <span className="font-medium">{activeAg.name}</span>
-                          <span className="px-1.5 py-0.5 rounded-full bg-[#F8F3ED] dark:bg-[#252534] text-[#252522] dark:text-white text-[8.5px] font-semibold">
-                            {isVi ? "Tiếp quản" : "Take over"}
+                        {/* Bottom Control Bar */}
+                        <div className="pt-2 flex items-center justify-between gap-2 text-[9.5px]">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F8F3ED] dark:bg-[#181820] border border-[#ECE5DC] dark:border-[#2c2c3e] text-[#252522] dark:text-neutral-200">
+                            <span
+                              className="h-1.5 w-1.5 rounded-full animate-pulse"
+                              style={{ backgroundColor: activeAg.color }}
+                            />
+                            <span className="font-medium">{activeAg.name} đang thao tác</span>
+                            <span className="px-1.5 py-0.5 rounded-full bg-white dark:bg-[#252534] text-[#252522] dark:text-white text-[8.5px] font-semibold shadow-2xs">
+                              {isVi ? "Tiếp quản" : "Take over"}
+                            </span>
+                          </div>
+                          <span className="font-mono text-neutral-500 dark:text-neutral-400">
+                            Máy tính độc lập • On-Premise
                           </span>
                         </div>
-                        <span className="text-[9.5px] font-mono text-neutral-500 dark:text-neutral-400">
-                          On-Premise VM
-                        </span>
                       </div>
                     </div>
                   </div>

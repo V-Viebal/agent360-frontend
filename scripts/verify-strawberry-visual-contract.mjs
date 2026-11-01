@@ -89,8 +89,8 @@ if (!landingSrc.includes("motion.circle") || !landingSrc.includes("motion.line")
 if (!landingSrc.includes("motion.h1") || !landingSrc.includes("whileInView") || !landingSrc.includes("whileHover")) {
   errors.push("LandingPage missing Hero staggered entrance (motion.h1) or section micro-animations (whileInView / whileHover).");
 }
-if (!landingSrc.includes("lg:px-5") || !landingSrc.includes("lg:min-h-[651px]") || !landingSrc.includes("h-[228px]")) {
-  errors.push("LandingPage missing Strawberry 1040px inner container width (lg:px-5), 640px 16:10 Hero Stage (lg:min-h-[651px]), or 228px full-bleed companion cards (h-[228px]).");
+if (!landingSrc.includes("lg:px-5") || !landingSrc.includes("lg:h-[468px]") || !landingSrc.includes("h-[228px]")) {
+  errors.push("LandingPage missing Strawberry 1040px inner container width (lg:px-5), 640px 16:10 Hero Stage (lg:h-[468px]), or 228px full-bleed companion cards (h-[228px]).");
 }
 const compSrc = fs.readFileSync(path.join(ROOT, "src/components/StrawberryComparisonSection.tsx"), "utf-8");
 if (!compSrc.includes("h-[430px]") || !compSrc.includes("lg:px-5")) {
