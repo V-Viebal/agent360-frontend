@@ -104,6 +104,13 @@ if (!compSrc.includes("h-[430px]") || !compSrc.includes("lg:px-5")) {
   errors.push("StrawberryComparisonSection missing 430px viewport height (h-[430px]) or 1040px inner container width (lg:px-5).");
 }
 
+if (!css.includes("font-weight: 100 900") || !css.includes("@keyframes heroRise")) {
+  errors.push("src/index.css must declare true Variable Font range (font-weight: 100 900) and @keyframes heroRise for zero-drift Y coordinates.");
+}
+if (!landingSrc.includes("fontWeight: 480") || !landingSrc.includes("animate-hero-rise-1")) {
+  errors.push("LandingPage H1 must use exact Strawberry variable fontWeight: 480 and .animate-hero-rise-1.");
+}
+
 if (errors.length > 0) {
   console.error("[Visual Contract Gate] FAILED:");
   for (const e of errors) console.error("  ✕", e);
