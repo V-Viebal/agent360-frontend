@@ -42,7 +42,7 @@ export function StrawberryComparisonSection() {
 
         {/* Clean Minimal Header */}
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <h2 className="text-3xl sm:text-[46px] font-normal leading-[1.1] tracking-[-1.9px] text-[#252522] dark:text-[#f3f4f6]">
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }} className="text-3xl sm:text-[47.8px] leading-[52.58px] tracking-[-1.912px] text-[#252522] dark:text-[#f3f4f6]">
             {isVi ? (
               <>
                 Tạm biệt cảnh <span className="whitespace-nowrap">copy-paste</span> giữa các tab

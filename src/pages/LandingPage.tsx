@@ -221,7 +221,7 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="pt-16 overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#f8a87c]/30 transition-colors">
+    <div className="overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)] selection:bg-[#f8a87c]/30 transition-colors">
       <SeoHead
         title={
           isVi
@@ -238,20 +238,20 @@ export function LandingPage() {
 
       {/* 1. EXACT STRAWBERRY HERO ARCHITECTURE:
           H1 + 2-line Subtitle + 2 Pill CTAs + 4 Companion Avatars Peeking from Top Edge of Live 16:10 Product Frame */}
-      <section className="relative pt-14 sm:pt-20 lg:pt-[97.6px] overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
+      <section className="relative pt-24 sm:pt-32 lg:pt-[150px] overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
         {/* Strawberry Mosaic Geometric Side Background Pattern (Faint on Left & Right Outer Wings, Transparent in Center) */}
         <div
-          className="absolute inset-x-0 top-0 h-[540px] pointer-events-none select-none overflow-hidden"
+          className="absolute inset-x-0 top-0 h-[660px] pointer-events-none select-none overflow-hidden"
           style={{
-            maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 55%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 55%, transparent 100%)",
+            maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.2) 85%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.2) 85%, transparent 100%)",
           }}
         >
           <div
             className="w-full h-full"
             style={{
-              maskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 18%, rgba(0,0,0,0.03) 34%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.03) 66%, rgba(0,0,0,0.5) 82%, rgba(0,0,0,0.95) 100%)",
-              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 18%, rgba(0,0,0,0.03) 34%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.03) 66%, rgba(0,0,0,0.5) 82%, rgba(0,0,0,0.95) 100%)",
+              maskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 22%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.7) 78%, rgba(0,0,0,0.95) 100%)",
+              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 22%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.7) 78%, rgba(0,0,0,0.95) 100%)",
             }}
           >
             <svg className="w-full h-full opacity-[0.38] dark:opacity-[0.06] text-[#e5ddd2] dark:text-white" xmlns="http://www.w3.org/2000/svg">
@@ -289,7 +289,7 @@ export function LandingPage() {
           <div className="text-center flex flex-col items-center">
             <motion.h1
               data-testid="hero-heading"
-              style={{ fontFamily: "var(--font-sans)", fontWeight: 480, fontVariationSettings: '"wght" 480, "opsz" 32' }}
+              style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }}
               className="animate-hero-rise-1 max-w-[478px] text-[36px] sm:text-[47.8px] leading-[52.58px] tracking-[-1.912px] text-[#252522] dark:text-[#f3f4f6] text-balance"
             >
               {isVi ? (
@@ -998,7 +998,7 @@ export function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center pt-4">
             <div className="lg:col-span-6 space-y-5">
               <h2
-                style={{ fontFamily: "var(--font-sans)", fontWeight: 480, fontVariationSettings: '"wght" 480, "opsz" 32' }}
+                style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }}
                 className="text-3xl sm:text-[47.8px] tracking-[-1.912px] leading-[52.58px] text-[#252522] dark:text-[#f3f4f6]"
               >
                 {(() => {
@@ -1324,7 +1324,7 @@ export function LandingPage() {
       <section id="on-premise" className="py-20 sm:py-28 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors">
         <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-            <h2 className="text-3xl sm:text-[46px] font-normal leading-[1.1] tracking-[-1.9px] text-[#252522] dark:text-[#f3f4f6]">
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }} className="text-3xl sm:text-[47.8px] leading-[52.58px] tracking-[-1.912px] text-[#252522] dark:text-[#f3f4f6]">
               {isVi ? "Nền tảng mới cho vận hành tự động" : "A new foundation for your work"}
             </h2>
             <button
@@ -1519,7 +1519,7 @@ export function LandingPage() {
       {/* 6. LEAN FAQ */}
       <section id="faq" className="py-20 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors">
         <div className="mx-auto max-w-[760px] px-4 sm:px-6">
-          <h2 className="text-3xl sm:text-[46px] font-normal tracking-[-1.85px] leading-[1.12] text-center mb-10 text-[#252522] dark:text-[#f3f4f6]">
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }} className="text-3xl sm:text-[47.8px] leading-[52.58px] tracking-[-1.912px] text-center mb-10 text-[#252522] dark:text-[#f3f4f6]">
             {isVi ? "Câu hỏi thường gặp" : "Questions & Answers"}
           </h2>
           <div className="space-y-3">

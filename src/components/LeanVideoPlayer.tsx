@@ -131,7 +131,7 @@ export function LeanVideoPlayer({
       onClick={(e) => e.stopPropagation()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`rounded-2xl overflow-hidden border border-slate-200/90 dark:border-[#282838] bg-black max-w-[340px] sm:max-w-[400px] shadow-sm select-none relative group/leanvideo ${className}`}
+      className={`rounded-2xl overflow-hidden border border-slate-200/90 dark:border-[#282838] bg-white dark:bg-[#14141f] max-w-[340px] sm:max-w-[400px] shadow-2xs select-none relative group/leanvideo ${className}`}
     >
       {/* Video Viewport */}
       <div className="relative bg-black flex items-center justify-center cursor-pointer" onClick={() => togglePlay()}>
@@ -145,12 +145,12 @@ export function LeanVideoPlayer({
 
         {/* Center Big Play Button Overlay when Paused */}
         {!isPlaying && (
-          <div className="absolute inset-0 bg-black/35 flex items-center justify-center pointer-events-none transition-opacity">
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none transition-opacity">
             <div
               style={{ backgroundColor: activeColor }}
-              className="h-11 w-11 rounded-full text-black flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
+              className="h-11 w-11 rounded-full text-slate-950 flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
             >
-              <Play size={18} className="fill-black translate-x-0.5" />
+              <Play size={18} className="fill-current translate-x-0.5" />
             </div>
           </div>
         )}
@@ -160,7 +160,7 @@ export function LeanVideoPlayer({
       <div
         ref={progressBarRef}
         onClick={handleSeek}
-        className="w-full h-1.5 bg-white/20 hover:h-2 transition-all cursor-pointer overflow-hidden relative"
+        className="w-full h-1.5 bg-black/15 dark:bg-white/20 hover:h-2 transition-all cursor-pointer overflow-hidden relative"
       >
         <div
           style={{ width: `${progressPercent}%`, backgroundColor: activeColor }}
@@ -169,20 +169,20 @@ export function LeanVideoPlayer({
       </div>
 
       {/* Footer Meta & Controls Bar */}
-      <div className="px-3 py-2 bg-slate-900/95 text-white flex items-center justify-between gap-2 text-xs font-mono">
+      <div className="px-3 py-2 bg-slate-50/95 dark:bg-[#14141f] border-t border-slate-200/70 dark:border-white/5 flex items-center justify-between gap-2 text-xs font-mono">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
             type="button"
             onClick={(e) => togglePlay(e)}
-            className="p-1 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer shrink-0"
+            className="p-1 text-slate-700 dark:text-neutral-200 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer shrink-0"
             title={isPlaying ? "Tạm dừng" : "Phát"}
           >
-            {isPlaying ? <Pause size={13} className="fill-white" /> : <Play size={13} className="fill-white translate-x-0.5" />}
+            {isPlaying ? <Pause size={13} className="fill-current" /> : <Play size={13} className="fill-current translate-x-0.5" />}
           </button>
-          <span className="text-[10px] text-neutral-400 shrink-0">
+          <span className="text-[10px] text-slate-500 dark:text-neutral-400 shrink-0">
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
-          <span className="truncate text-[11px] text-neutral-200 font-medium ml-1">
+          <span className="truncate text-[11px] text-slate-800 dark:text-neutral-100 font-medium ml-1">
             {fileName}
           </span>
         </div>
@@ -191,7 +191,7 @@ export function LeanVideoPlayer({
           <button
             type="button"
             onClick={toggleMute}
-            className="p-1 text-neutral-400 hover:text-white transition-colors"
+            className="p-1 text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-white transition-colors"
             title={isMuted ? "Bật âm thanh" : "Tắt tiếng"}
           >
             {isMuted ? <VolumeX size={12} className="text-red-400" /> : <Volume2 size={12} />}
@@ -202,7 +202,7 @@ export function LeanVideoPlayer({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1 text-neutral-400 hover:text-emerald-400 transition-colors"
+              className="p-1 text-slate-400 dark:text-neutral-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
               title="Mở trên Storage"
             >
               <ExternalLink size={12} />
@@ -215,7 +215,7 @@ export function LeanVideoPlayer({
                 e.stopPropagation();
                 onDownload();
               }}
-              className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1 text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
               title={`Tải video ${fileName}`}
             >
               <Download size={12} />
@@ -224,7 +224,7 @@ export function LeanVideoPlayer({
           <button
             type="button"
             onClick={toggleFullScreen}
-            className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1 text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
             title="Xem toàn màn hình"
           >
             <Maximize2 size={12} />

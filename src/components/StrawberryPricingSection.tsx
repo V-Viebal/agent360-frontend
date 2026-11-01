@@ -92,8 +92,8 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
         {/* 1. Left-aligned Header Title & Subtitle (Exact Strawberry Pricing pattern) */}
         <div className="mb-10">
           <h1
-            style={{ fontFamily: "var(--font-sans)", fontWeight: 600 }}
-            className="text-4xl sm:text-[47.8px] leading-[1.1] tracking-[-1.91px] text-[#252522] dark:text-white"
+            style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }}
+            className="text-4xl sm:text-[47.8px] leading-[52.58px] tracking-[-1.912px] text-[#252522] dark:text-white"
           >
             {isVi ? "Bảng giá" : "Pricing"}
           </h1>

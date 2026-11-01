@@ -373,7 +373,7 @@ console.log("Testing Computer Maximize State Modal 95% & Toolbar Replacement..."
 const grokWorkspaceSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
 assert.ok(
   grokWorkspaceSrc.includes("data-testid=\"computer-maximized-modal\"") &&
-  grokWorkspaceSrc.includes("w-[95vw] h-[95vh] max-w-[95vw] max-h-[95vh]"),
+  grokWorkspaceSrc.includes("sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh]"),
   "Computer maximized state must render as a 95vw x 95vh modal"
 );
 assert.ok(

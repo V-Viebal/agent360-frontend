@@ -307,7 +307,7 @@ export function DocsPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-white/5 border border-[var(--border-card)] text-[11px] font-mono text-[#c2540a] dark:text-[#f8a87c] font-semibold">
               <span>● AGENTCORE v2.4 ARCHITECTURE</span>
             </div>
-            <h2 className="text-2xl sm:text-[32px] font-normal tracking-[-1.2px] leading-[1.15] text-[#252522] dark:text-white">
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }} className="text-2xl sm:text-[36px] tracking-[-1.5px] leading-[1.12] text-[#252522] dark:text-white">
               Kiến trúc Đồng nghiệp AI Tự hành & Máy tính Độc lập
             </h2>
             <p className="text-xs sm:text-sm text-[#252522]/75 dark:text-neutral-300 leading-relaxed">
@@ -457,7 +457,7 @@ export function DocsPage() {
                 </span>
               )}
             </div>
-            <h1 className=" text-3xl sm:text-5xl font-semibold text-neutral-900 dark:text-white tracking-tight">
+            <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }} className="text-3xl sm:text-[44px] leading-[1.12] tracking-[-1.75px] text-[#252522] dark:text-white">
               {activeDoc.title}
             </h1>
           </div>

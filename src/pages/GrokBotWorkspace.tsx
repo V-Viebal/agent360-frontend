@@ -5116,14 +5116,12 @@ function SelkiesViewer({
   isResizing?: boolean;
 }) {
   const [src, setSrc] = useState<string>("");
-  // Selkies treats a bare URL as the single "primary" controller: every new phone/desktop tab
-  // kicked the previous one and reconfigured the shared display. #collab joins as a co-controller
-  // and #shared as a watch-only viewer, so several devices can stay connected at once.
   const [mode, setMode] = useState<"collab" | "shared">("collab");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
+  const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 393, h: 780 });
   const [isMobileOrWebKitFallback, setIsMobileOrWebKitFallback] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const ua = navigator.userAgent || "";
@@ -5141,25 +5139,43 @@ function SelkiesViewer({
       const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
       const lacksImageDecoder = typeof (window as any).ImageDecoder === "undefined";
       setIsMobileOrWebKitFallback(isMobileUA || lacksImageDecoder || window.innerWidth < 768);
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setBoxSize({ w: Math.round(rect.width), h: Math.round(rect.height) });
+        }
+      }
     };
     checkViewport();
     window.addEventListener("resize", checkViewport);
-    return () => window.removeEventListener("resize", checkViewport);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      ro = new ResizeObserver((entries) => {
+        const cr = entries[0]?.contentRect;
+        if (cr && cr.width > 0 && cr.height > 0) {
+          setBoxSize({ w: Math.round(cr.width), h: Math.round(cr.height) });
+        }
+      });
+      ro.observe(containerRef.current);
+    }
+    return () => {
+      window.removeEventListener("resize", checkViewport);
+      ro?.disconnect();
+    };
   }, [agentId, reloadKey]);
 
-  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey` (not on every agent switch on the same host!)
+  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey`
   useEffect(() => {
     if (!url || !agentId) return;
     let alive = true;
     setError("");
     setIframeLoaded(false);
-    // Fire focusAgentBrowser in parallel without blocking iframe src assignment
     focusAgentBrowser(agentId).catch(() => {});
     issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
       .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
       .catch((e) => {
         if (!alive) return;
-        // Auto fallback: if forward-auth signing fails or token fails, try loading direct desktop url with mode
         if (url) {
           setSrc(`${url.replace(/#.*$/, "")}#${mode}`);
           setError("");
@@ -5171,7 +5187,6 @@ function SelkiesViewer({
     return () => { alive = false; };
   }, [url, attempt, mode, reloadKey]);
 
-  // When switching between agents that share the same Selkies desktop host, keep the stream alive and smoothly focus the target profile window
   useEffect(() => {
     if (!agentId) return;
     focusAgentBrowser(agentId).catch(() => {});
@@ -5189,90 +5204,123 @@ function SelkiesViewer({
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("online", onOnline); };
   }, []);
 
+  const isPortraitViewport = boxSize.h > boxSize.w;
+
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center touch-manipulation select-none"
+      className={`relative w-full h-full bg-black touch-manipulation select-none ${
+        isLandscapeRotated
+          ? "overflow-hidden flex items-center justify-center"
+          : isMobileOrWebKitFallback
+          ? "overflow-x-auto overflow-y-hidden flex items-stretch justify-start"
+          : "overflow-hidden flex items-center justify-center"
+      }`}
     >
       <div
-        className={`relative flex items-center justify-center transition-transform duration-300 ease-out ${
+        style={
           isLandscapeRotated
-            ? "w-[100vh] h-[100vw] rotate-90 origin-center scale-[0.98]"
-            : "w-full h-full"
+            ? {
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                width: `${boxSize.h}px`,
+                height: `${boxSize.w}px`,
+                transform: "translate(-50%, -50%) rotate(90deg)",
+                transformOrigin: "center center",
+              }
+            : undefined
+        }
+        className={`relative transition-transform duration-200 ease-out ${
+          isLandscapeRotated
+            ? "flex items-center justify-center bg-black overflow-hidden z-20"
+            : isPortraitViewport
+            ? "min-w-full w-max h-full flex items-stretch justify-start bg-black"
+            : "w-full h-full flex items-center justify-center bg-black overflow-hidden"
         }`}
       >
-      {error && (
-        <>
-          <AgentBrowserPreview agentId={agentId} enabled />
-          <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
-            {error === "auth" ? (
-              <>
-                <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
-                <form
-                  className="flex items-center gap-1"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const v = (new FormData(e.currentTarget).get("k") as string || "").trim();
-                    if (v) { operatorKey.set(v); setAttempt((a) => a + 1); }
-                  }}
-                >
-                  <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
-                    className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
-                  <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
-                </form>
-              </>
-            ) : `Desktop unavailable (${error}) · showing preview`}
-          </div>
-        </>
-      )}
-      {src && (
-        <iframe
-          ref={iframeRef}
-          key={`${src}#${attempt}#${reloadKey}`}
-          src={src}
-          title={title}
-          onLoad={() => {
-            setIframeLoaded(true);
-            focusAgentBrowser(agentId).catch(() => {});
-            setTimeout(() => {
+        {error && (
+          <>
+            <AgentBrowserPreview
+              agentId={agentId}
+              enabled
+              isLandscapeRotated={isLandscapeRotated}
+              isMobileFullHeight={isPortraitViewport && !isLandscapeRotated}
+              interactive={mode === "collab"}
+            />
+            <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
+              {error === "auth" ? (
+                <>
+                  <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
+                  <form
+                    className="flex items-center gap-1"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const v = (new FormData(e.currentTarget).get("k") as string || "").trim();
+                      if (v) { operatorKey.set(v); setAttempt((a) => a + 1); }
+                    }}
+                  >
+                    <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
+                      className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
+                    <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
+                  </form>
+                </>
+              ) : `Desktop unavailable (${error}) · showing preview`}
+            </div>
+          </>
+        )}
+        {src && !isMobileOrWebKitFallback && !isPortraitViewport && (
+          <iframe
+            ref={iframeRef}
+            key={`${src}#${attempt}#${reloadKey}`}
+            src={src}
+            title={title}
+            onLoad={() => {
+              setIframeLoaded(true);
               focusAgentBrowser(agentId).catch(() => {});
-            }, 900);
-          }}
-          className={`w-full h-full border-0 bg-black z-10 transition-opacity duration-200 ease-out ${
-            isResizing ? "pointer-events-none select-none" : ""
-          } ${isMobileOrWebKitFallback ? "opacity-0" : "opacity-100"}`}
-          allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
-          allowFullScreen
-          style={{
-            touchAction: "manipulation",
-            width: "100%",
-            height: "100%",
-          }}
+              setTimeout(() => {
+                focusAgentBrowser(agentId).catch(() => {});
+              }, 900);
+            }}
+            className={`w-full h-full border-0 bg-black z-10 transition-opacity duration-200 ease-out ${
+              isResizing ? "pointer-events-none select-none" : ""
+            }`}
+            allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
+            allowFullScreen
+            style={{
+              touchAction: "manipulation",
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        )}
+        {/* On mobile (Android / iOS) or while loading, render live CDP screen with full height & direct touch-to-CDP interaction */}
+        <AgentBrowserPreview
+          agentId={agentId}
+          enabled={!error && (!iframeLoaded || isMobileOrWebKitFallback || isPortraitViewport)}
+          intervalMs={isMobileOrWebKitFallback ? 1100 : 4000}
+          liveWs={isMobileOrWebKitFallback || isPortraitViewport}
+          isLandscapeRotated={isLandscapeRotated}
+          isMobileFullHeight={isPortraitViewport && !isLandscapeRotated}
+          interactive={(isMobileOrWebKitFallback || isPortraitViewport) && mode === "collab"}
         />
-      )}
-      {/* On mobile (Android / iOS) or while loading, render live screen above the transparent Selkies input surface so screen is never black while mouse/touch events still pass through to Selkies */}
-      <AgentBrowserPreview
-        agentId={agentId}
-        enabled={!error && (!iframeLoaded || isMobileOrWebKitFallback)}
-        intervalMs={isMobileOrWebKitFallback ? 1200 : 4000}
-        liveWs={isMobileOrWebKitFallback}
-      />
-      {profile && (
-        <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
-          profile: {agentId}
-        </div>
-      )}
+        {profile && (
+          <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
+            profile: {agentId}
+          </div>
+        )}
       </div>
 
       <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-30">
         <button
           type="button"
+          data-testid="computer-rotate-landscape-btn"
           onClick={() => {
             triggerHaptic(12);
             setIsLandscapeRotated((r) => !r);
           }}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer flex items-center gap-1"
-          title={isLandscapeRotated ? "Chuyển về khung dọc" : "Xoay ngang màn hình (Landscape 90°)"}
+          className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer flex items-center gap-1"
+          title={isLandscapeRotated ? "Chuyển về khung dọc (Full Height)" : "Xoay ngang màn hình 90° (Full Width Landscape)"}
         >
           <RotateCw size={12} className={isLandscapeRotated ? "rotate-90 text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
           <span>{isLandscapeRotated ? "Khung dọc" : "Xoay ngang"}</span>
@@ -5280,7 +5328,7 @@ function SelkiesViewer({
         <button
           type="button"
           onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
           title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
         >
           {mode === "shared" ? "Control" : "Watch only"}
@@ -5291,7 +5339,7 @@ function SelkiesViewer({
             focusAgentBrowser(agentId).catch(() => {});
             setAttempt((a) => a + 1);
           }}
-          className="px-2.5 py-1 rounded-lg bg-white/90 dark:bg-[#1c1c26]/90 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-sm transition-colors cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
           title="Reconnect stream & fit window"
         >
           Reconnect
@@ -5301,20 +5349,30 @@ function SelkiesViewer({
   );
 }
 
-/** Low-cost live preview: the agent's own tab screenshot, refreshed only while visible. */
+/** Live CDP screencast + screenshot preview with full-height portrait mode, landscape 90deg support, and direct touch interaction. */
 function AgentBrowserPreview({
   agentId,
   enabled,
   intervalMs = 5000,
   liveWs = false,
+  isLandscapeRotated = false,
+  isMobileFullHeight = false,
+  interactive = false,
 }: {
   agentId: string;
   enabled: boolean;
   intervalMs?: number;
   liveWs?: boolean;
+  isLandscapeRotated?: boolean;
+  isMobileFullHeight?: boolean;
+  interactive?: boolean;
 }) {
   const [src, setSrc] = useState<string>("");
   const [failures, setFailures] = useState(0);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [tapRipple, setTapRipple] = useState<{ x: number; y: number; id: number } | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
@@ -5324,7 +5382,6 @@ function AgentBrowserPreview({
     let ws: WebSocket | null = null;
     let wsConnected = false;
     const ctrl = new AbortController();
-    setSrc("");
     setFailures(0);
 
     if (liveWs && typeof WebSocket !== "undefined") {
@@ -5380,17 +5437,70 @@ function AgentBrowserPreview({
       }
       if (current) URL.revokeObjectURL(current);
     };
-  }, [enabled, agentId, intervalMs, liveWs]);
+  }, [enabled, agentId, intervalMs, liveWs, refreshNonce]);
+
+  const handleInteractiveTap = async (e: React.MouseEvent<HTMLImageElement>) => {
+    if (!interactive || !imgRef.current) return;
+    const img = imgRef.current;
+    const rect = img.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    let xRatio = 0.5;
+    let yRatio = 0.5;
+
+    if (isLandscapeRotated) {
+      // When rotated +90deg CW:
+      // Screen Top -> Image Right (xRatio = 1), Screen Bottom -> Image Left (xRatio = 0)
+      // Wait: +90deg CW means Image Top-Left is at Screen Top-Right!
+      // Image X axis (left->right) runs along Screen Y axis (top->bottom): xRatio = (clientY - rect.top) / rect.height
+      // Image Y axis (top->bottom) runs along Screen X axis (right->left): yRatio = (rect.right - clientX) / rect.width
+      xRatio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      yRatio = Math.max(0, Math.min(1, (rect.right - e.clientX) / rect.width));
+    } else {
+      xRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      yRatio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    }
+
+    setTapRipple({ x: e.clientX, y: e.clientY, id: Date.now() });
+    await dispatchAgentBrowserInput(agentId, {
+      action: "click",
+      xRatio,
+      yRatio,
+    });
+    setTimeout(() => setRefreshNonce((n) => n + 1), 180);
+    setTimeout(() => setRefreshNonce((n) => n + 1), 650);
+  };
+
   if (!enabled) return null;
   return (
     <>
       {src && (
-        <img
-          key={agentId}
-          src={src}
-          alt="Agent browser preview"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none z-[12]"
-        />
+        <>
+          <img
+            ref={imgRef}
+            key={agentId}
+            src={src}
+            alt="Agent browser preview"
+            draggable={false}
+            onClick={handleInteractiveTap}
+            className={`select-none z-[12] ${
+              interactive ? "cursor-pointer pointer-events-auto" : "pointer-events-none"
+            } ${
+              isLandscapeRotated
+                ? "w-full h-full object-fill"
+                : isMobileFullHeight
+                ? "h-full w-auto max-w-none object-cover object-left-top shrink-0"
+                : "absolute inset-0 w-full h-full object-contain"
+            }`}
+          />
+          {interactive && tapRipple && (
+            <span
+              key={tapRipple.id}
+              style={{ position: "fixed", left: `${tapRipple.x - 14}px`, top: `${tapRipple.y - 14}px` }}
+              className="pointer-events-none z-50 h-7 w-7 rounded-full border-2 border-[#f8a87c] bg-[#f8a87c]/25 animate-ping"
+            />
+          )}
+        </>
       )}
       {!src && (
         <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black pointer-events-none select-none z-[12]">
@@ -17279,6 +17389,25 @@ const selectedAgentTheme = getAgentColorTheme(
 
                 return (
                   <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
+                    {/* Quick clear button when input text exists */}
+                    {inputText.length > 0 && !isRecording && (
+                      <button
+                        type="button"
+                        aria-label="Xóa nội dung"
+                        title="Xóa nội dung đang soạn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInputText("");
+                          if (textareaRef.current) {
+                            textareaRef.current.style.height = "30px";
+                            textareaRef.current.focus();
+                          }
+                        }}
+                        className="h-6 w-6 rounded-full flex items-center justify-center text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
                     {/* Quick clear button when input text exists */}
                     {inputText.length > 0 && !isRecording && (
                       <button

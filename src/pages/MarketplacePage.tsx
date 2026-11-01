@@ -256,7 +256,7 @@ export function MarketplacePage() {
       <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5">
         {/* Clean Editorial Header (Strawberry 48px Title + 2-Line Subtitle) */}
         <div className="text-center max-w-2xl mx-auto pt-6 pb-10">
-          <h1 className="text-4xl sm:text-[48px] font-normal tracking-[-1.91px] leading-[1.1] text-[#252522] dark:text-white">
+          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }} className="text-4xl sm:text-[47.8px] tracking-[-1.912px] leading-[52.58px] text-[#252522] dark:text-white">
             {isVi ? "Tuyển dụng đồng nghiệp AI chuyên trách" : "Hire specialized AI teammates"}
           </h1>
           <p className="mt-4 text-lg sm:text-[20px] leading-[1.4] text-[#252522]/70 dark:text-neutral-400 font-normal">

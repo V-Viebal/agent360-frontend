@@ -114,7 +114,7 @@ export function LeanAudioPlayer({
       onClick={(e) => e.stopPropagation()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`rounded-xl px-3 py-2 bg-slate-50 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#282838] shadow-2xs text-left select-none transition-all group/leanaudio max-w-[340px] sm:max-w-[380px] w-full ${className}`}
+      className={`rounded-xl px-3 py-2 bg-white/95 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#282838] shadow-2xs text-left select-none transition-all group/leanaudio max-w-[340px] sm:max-w-[380px] w-full ${className}`}
     >
       <audio ref={audioRef} src={src} preload="metadata" />
 
@@ -122,12 +122,12 @@ export function LeanAudioPlayer({
       <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <div
-            style={{ backgroundColor: `${activeColor}20`, color: activeColor, borderColor: `${activeColor}40` }}
+            style={{ backgroundColor: `${activeColor}18`, color: activeColor, borderColor: `${activeColor}35` }}
             className="h-6 w-6 rounded-lg border flex items-center justify-center shrink-0"
           >
             <Music size={11} className={isPlaying ? "animate-pulse" : ""} />
           </div>
-          <span className="text-xs font-semibold text-slate-800 dark:text-neutral-200 truncate font-mono">
+          <span className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate font-mono">
             {fileName}
           </span>
         </div>
@@ -139,7 +139,7 @@ export function LeanAudioPlayer({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1 rounded-md text-slate-400 hover:text-emerald-500 hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors"
+              className="p-1 rounded-md text-slate-400 dark:text-neutral-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               title="Mở trên Storage"
             >
               <ExternalLink size={12} />
@@ -152,7 +152,7 @@ export function LeanAudioPlayer({
                 e.stopPropagation();
                 onDownload();
               }}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              className="p-1 rounded-md text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
               title={`Tải xuống ${fileName}`}
             >
               <Download size={12} />
@@ -167,10 +167,10 @@ export function LeanAudioPlayer({
           type="button"
           onClick={togglePlay}
           style={{ backgroundColor: activeColor }}
-          className="h-7 w-7 rounded-full text-black flex items-center justify-center shrink-0 shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+          className="h-7 w-7 rounded-full text-slate-950 dark:text-slate-950 flex items-center justify-center shrink-0 shadow-xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
           aria-label={isPlaying ? "Tạm dừng" : "Phát âm thanh"}
         >
-          {isPlaying ? <Pause size={12} className="fill-black" /> : <Play size={12} className="fill-black translate-x-0.5" />}
+          {isPlaying ? <Pause size={12} className="fill-current" /> : <Play size={12} className="fill-current translate-x-0.5" />}
         </button>
 
         <span className="text-[10px] font-mono text-slate-500 dark:text-neutral-400 min-w-[28px] text-right shrink-0">
@@ -181,7 +181,7 @@ export function LeanAudioPlayer({
         <div
           ref={progressBarRef}
           onClick={handleSeek}
-          className="relative flex-1 h-2 bg-slate-200 dark:bg-white/10 rounded-full cursor-pointer overflow-hidden group/bar"
+          className="relative flex-1 h-2 bg-slate-200/80 dark:bg-white/10 rounded-full cursor-pointer overflow-hidden group/bar"
         >
           <div
             style={{ width: `${progressPercent}%`, backgroundColor: activeColor }}
@@ -196,7 +196,7 @@ export function LeanAudioPlayer({
         <button
           type="button"
           onClick={toggleMute}
-          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-neutral-200 transition-colors shrink-0"
+          className="p-1 text-slate-400 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-neutral-200 transition-colors shrink-0"
           title={isMuted ? "Bật âm thanh" : "Tắt tiếng"}
         >
           {isMuted ? <VolumeX size={13} className="text-red-400" /> : <Volume2 size={13} />}

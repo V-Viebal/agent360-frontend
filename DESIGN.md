@@ -3,7 +3,7 @@ name: Skyer & Agent360 Design System (Strawberry Editorial + High-Density Contro
 version: "2.4"
 description: Dual-surface visual contract for Skyer marketing/editorial pages (Strawberry Warm Cream & Autonomous Canvases) and /app workspace control plane.
 colors: "#FFFDF9, #F8F3ED, #252522, #ECE5DC, #f8a87c, #080a0f, #11151f"
-typography: "Inter, Fraunces, JetBrains Mono"
+typography: "Onest, Inter, Fraunces, JetBrains Mono"
 spacing: "1080px container, 32px-38.4px grid gap, 80px-112px section rhythm"
 rounded: "100px pill CTAs, 24px-32px companion cards, 16px product frame, 12px app modals"
 components: "AgentAvatar, BlobAvatar, StrawberryComparisonSection, CustomSelect, DropdownMenu, Modal, Tooltip"
@@ -14,7 +14,7 @@ motion_choreography: "4-Step Hero Blur/Spring Entrance + Section whileInView Sta
 css_scope_isolation: ":where(.workspace-root, [data-type-scope=app], .grok-workspace)"
 spatial_volume: "HeroFrame=1100x468px (100% Above-the-Fold), InnerWidth=1040px (lg:px-5), CompanionCard=333x228px Full-Bleed, ComparisonFrame=430px"
 subpixel_y_anchors: "H1=161.6px, Subtitle=274.7px, CTAs=362.3px, HeroFrame=488.0px (+/-2.5px at 1800x1040)"
-variable_font_axis: "Inter 100..900 (H1/H2 wght=480, opsz=32, antialiased)"
+variable_font_axis: "Onest 100..900 (H1/H2 wght=530, single-story g, double-story a, CapHeight=0.707)"
 ---
 
 # Skyer (Agent360) Design System & One-Shot Visual Reconstruction Contract

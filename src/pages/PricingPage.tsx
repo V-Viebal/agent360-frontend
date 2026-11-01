@@ -27,7 +27,7 @@ export function PricingPage() {
       <section className="py-20 border-b border-[#ECE5DC] dark:border-white/10 bg-[var(--bg-page)]">
         <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
           <h2
-            style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }}
             className="text-3xl sm:text-[42px] leading-[1.12] tracking-[-1.7px] text-center text-[#252522] dark:text-white mb-12"
           >
             {isVi ? "Được tin dùng bởi các đội ngũ tham vọng" : "Loved by ambitious teams"}
@@ -78,7 +78,7 @@ export function PricingPage() {
       <section className="py-20 bg-[var(--bg-page)]">
         <div className="mx-auto max-w-[760px] px-4 sm:px-6">
           <h2
-            style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
+            style={{ fontFamily: "var(--font-display)", fontWeight: 530, fontVariationSettings: '"wght" 530' }}
             className="text-2xl sm:text-[38px] tracking-[-1.5px] text-center mb-10 text-[#252522] dark:text-white"
           >
             {isVi ? "Câu hỏi thường gặp về Bảng giá" : "Pricing FAQ"}
