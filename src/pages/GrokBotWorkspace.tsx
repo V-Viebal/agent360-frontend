@@ -1182,7 +1182,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, AgentBrowserTab, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -5320,6 +5320,12 @@ function SelkiesViewer({
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
   const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 393, h: 780 });
+  const [browserTabs, setBrowserTabs] = useState<AgentBrowserTab[]>([]);
+  const [selectedTabId, setSelectedTabId] = useState<string>("");
+  const [addressInput, setAddressInput] = useState<string>("");
+  const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
+
   const [isMobileOrWebKitFallback, setIsMobileOrWebKitFallback] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const ua = navigator.userAgent || "";
@@ -5330,6 +5336,33 @@ function SelkiesViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hiddenAt = useRef<number>(0);
+
+  // Sync agent browser tabs & current URL so the full Browser Tab & Control Bar is always visible on mobile/narrow viewports
+  const refreshBrowserTabs = async () => {
+    if (!agentId) return;
+    try {
+      const info = await fetchAgentBrowser(agentId);
+      if (info && Array.isArray(info.tabs)) {
+        const realTabs = info.tabs.filter((t) => !t.anchor);
+        const list = realTabs.length > 0 ? realTabs : info.tabs;
+        setBrowserTabs(list);
+        const activeTab =
+          (selectedTabId && list.find((t) => t.targetId === selectedTabId)) ||
+          list[list.length - 1] ||
+          list[0];
+        if (activeTab) {
+          if (!selectedTabId) setSelectedTabId(activeTab.targetId);
+          if (!isEditingAddress) setAddressInput(activeTab.url || "");
+        }
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshBrowserTabs();
+    const timer = setInterval(refreshBrowserTabs, 3000);
+    return () => clearInterval(timer);
+  }, [agentId, reloadKey, selectedTabId, isEditingAddress]);
 
   useEffect(() => {
     const checkViewport = () => {
@@ -5373,7 +5406,6 @@ function SelkiesViewer({
     issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
       .then((signed) => {
         if (!alive) return;
-        // Only signed /a360/{token}/ URLs pass Traefik forwardAuth; the bare host triggers a Basic-Auth admin prompt.
         if (isSignedAgentDesktopUrl(signed)) {
           setSrc(`${signed}#${mode}`);
         } else {
@@ -5383,7 +5415,6 @@ function SelkiesViewer({
       })
       .catch((e) => {
         if (!alive) return;
-        // Never fall back to the bare Selkies host: keep the CDP preview + operator-key form instead.
         setSrc("");
         setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
       });
@@ -5408,17 +5439,141 @@ function SelkiesViewer({
   }, []);
 
   const isPortraitViewport = boxSize.h > boxSize.w;
+  const useCdpChromeView = isMobileOrWebKitFallback || isPortraitViewport || Boolean(error) || !iframeLoaded;
+  const activeTabObj = browserTabs.find((t) => t.targetId === selectedTabId) || browserTabs[browserTabs.length - 1] || browserTabs[0];
+
+  const handleNavigateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addressInput.trim()) return;
+    setIsNavigating(true);
+    setIsEditingAddress(false);
+    await dispatchAgentBrowserInput(agentId, {
+      action: "navigate",
+      text: addressInput.trim(),
+      pageId: selectedTabId || undefined,
+    });
+    setTimeout(() => {
+      setAttempt((a) => a + 1);
+      refreshBrowserTabs();
+      setIsNavigating(false);
+    }, 450);
+  };
+
+  const handleBrowserAction = async (act: "back" | "forward" | "reload") => {
+    triggerHaptic(10);
+    setIsNavigating(true);
+    await dispatchAgentBrowserInput(agentId, {
+      action: act,
+      pageId: selectedTabId || undefined,
+    });
+    setTimeout(() => {
+      setAttempt((a) => a + 1);
+      refreshBrowserTabs();
+      setIsNavigating(false);
+    }, 350);
+  };
+
+  // Render full Browser Tab Strip + Navigation & URL Control Bar (visible in both Portrait & Landscape 90deg)
+  const renderBrowserChromeHeader = () => (
+    <div
+      data-testid="agent-browser-chrome-header"
+      className="w-full bg-[#16161f] border-b border-[#262636] flex flex-col shrink-0 select-none z-20"
+    >
+      {/* 1. Tab Strip Bar */}
+      {browserTabs.length > 0 && (
+        <div className="flex items-center gap-1 px-2 pt-1.5 overflow-x-auto no-scrollbar border-b border-[#222230]">
+          {browserTabs.map((tab, idx) => {
+            const isActive = (activeTabObj?.targetId || "") === tab.targetId;
+            return (
+              <button
+                key={tab.targetId || idx}
+                type="button"
+                onClick={() => {
+                  triggerHaptic(8);
+                  setSelectedTabId(tab.targetId);
+                  setAddressInput(tab.url || "");
+                  setAttempt((a) => a + 1);
+                }}
+                className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-t-lg text-[11px] font-sans max-w-[160px] sm:max-w-[200px] shrink-0 transition-colors cursor-pointer border-t border-x ${
+                  isActive
+                    ? "bg-[#222230] text-white border-[#34344a] font-medium"
+                    : "bg-[#12121a] text-neutral-400 border-transparent hover:bg-[#1a1a26] hover:text-neutral-200"
+                }`}
+                title={`${tab.title || "Tab"} — ${tab.url}`}
+              >
+                <Globe size={11} className={isActive ? "text-emerald-400 shrink-0" : "text-neutral-500 shrink-0"} />
+                <span className="truncate">{tab.title || tab.url || `Tab ${idx + 1}`}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 2. Navigation & URL Omnibox Control Bar */}
+      <div className="h-9 px-2 flex items-center gap-1.5 bg-[#1e1e2a]">
+        <button
+          type="button"
+          onClick={() => handleBrowserAction("back")}
+          className="h-6 w-6 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          title="Quay lại (Back)"
+          aria-label="Back"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleBrowserAction("forward")}
+          className="h-6 w-6 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          title="Tiến tới (Forward)"
+          aria-label="Forward"
+        >
+          <ChevronRight size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleBrowserAction("reload")}
+          className="h-6 w-6 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          title="Tải lại trang (Reload)"
+          aria-label="Reload"
+        >
+          <RefreshCw size={12} className={isNavigating ? "animate-spin text-emerald-400" : ""} />
+        </button>
+
+        {/* Interactive URL Bar */}
+        <form onSubmit={handleNavigateSubmit} className="flex-1 min-w-0 flex items-center">
+          <div className="w-full h-6 px-2.5 rounded-full bg-[#111118] border border-[#2e2e40] focus-within:border-[var(--agent-primary,#f8a87c)] flex items-center gap-1.5">
+            <Globe size={11} className="text-emerald-400 shrink-0" />
+            <input
+              type="text"
+              value={isEditingAddress ? addressInput : (addressInput || activeTabObj?.url || url || "")}
+              onFocus={() => {
+                setIsEditingAddress(true);
+                setAddressInput(activeTabObj?.url || addressInput || "");
+              }}
+              onBlur={() => setIsEditingAddress(false)}
+              onChange={(e) => setAddressInput(e.target.value)}
+              placeholder="Nhập URL hoặc từ khóa tìm kiếm..."
+              className="w-full bg-transparent text-[11px] font-mono text-neutral-200 placeholder:text-neutral-500 outline-none truncate"
+            />
+          </div>
+        </form>
+
+        {profile && (
+          <div
+            data-testid="agent-desktop-profile"
+            className="hidden xs:flex px-1.5 py-0.5 rounded bg-black/60 border border-white/10 text-[10px] font-mono text-neutral-300 shrink-0 pointer-events-none"
+          >
+            {profile}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full bg-black touch-manipulation select-none ${
-        isLandscapeRotated
-          ? "overflow-hidden flex items-center justify-center"
-          : isMobileOrWebKitFallback
-          ? "overflow-x-auto overflow-y-hidden flex items-stretch justify-start"
-          : "overflow-hidden flex items-center justify-center"
-      }`}
+      className="relative w-full h-full bg-black overflow-hidden touch-manipulation select-none flex flex-col"
     >
       <div
         style={
@@ -5434,84 +5589,81 @@ function SelkiesViewer({
               }
             : undefined
         }
-        className={`relative transition-transform duration-200 ease-out ${
-          isLandscapeRotated
-            ? "flex items-center justify-center bg-black overflow-hidden z-20"
-            : isPortraitViewport
-            ? "min-w-full w-max h-full flex items-stretch justify-start bg-black"
-            : "w-full h-full flex items-center justify-center bg-black overflow-hidden"
+        className={`relative transition-transform duration-200 ease-out flex flex-col bg-black overflow-hidden ${
+          isLandscapeRotated ? "z-20 shadow-2xl" : "w-full h-full flex-1"
         }`}
       >
-        {error && (
-          <>
-            <AgentBrowserPreview
-              agentId={agentId}
-              enabled
-              isLandscapeRotated={isLandscapeRotated}
-              isMobileFullHeight={isPortraitViewport && !isLandscapeRotated}
-              interactive={mode === "collab"}
-            />
-            <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
-              {error === "auth" ? (
-                <>
-                  <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
-                  <form
-                    className="flex items-center gap-1"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const v = (new FormData(e.currentTarget).get("k") as string || "").trim();
-                      if (v) { operatorKey.set(v); setAttempt((a) => a + 1); }
-                    }}
-                  >
-                    <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
-                      className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
-                    <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
-                  </form>
-                </>
-              ) : `Desktop unavailable (${error}) · showing preview`}
-            </div>
-          </>
-        )}
-        {src && !isMobileOrWebKitFallback && !isPortraitViewport && (
-          <iframe
-            ref={iframeRef}
-            key={`${src}#${attempt}#${reloadKey}`}
-            src={src}
-            title={title}
-            onLoad={() => {
-              setIframeLoaded(true);
-              focusAgentBrowser(agentId).catch(() => {});
-              setTimeout(() => {
+        {/* Top Browser Tab & URL Control Bar so mobile/portrait always shows full browser controls */}
+        {useCdpChromeView && renderBrowserChromeHeader()}
+
+        {/* Main Viewport Area */}
+        <div className="relative flex-1 w-full min-h-0 bg-[#0c0c12] overflow-hidden flex items-center justify-center">
+          {error && (
+            <>
+              <AgentBrowserPreview
+                agentId={agentId}
+                pageId={selectedTabId || undefined}
+                enabled
+                isLandscapeRotated={isLandscapeRotated}
+                interactive={mode === "collab"}
+              />
+              <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
+                {error === "auth" ? (
+                  <>
+                    <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
+                    <form
+                      className="flex items-center gap-1"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const v = (new FormData(e.currentTarget).get("k") as string || "").trim();
+                        if (v) { operatorKey.set(v); setAttempt((a) => a + 1); }
+                      }}
+                    >
+                      <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
+                        className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
+                      <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
+                    </form>
+                  </>
+                ) : `Desktop unavailable (${error}) · showing preview`}
+              </div>
+            </>
+          )}
+          {src && !isMobileOrWebKitFallback && !isPortraitViewport && !isLandscapeRotated && (
+            <iframe
+              ref={iframeRef}
+              key={`${src}#${attempt}#${reloadKey}`}
+              src={src}
+              title={title}
+              onLoad={() => {
+                setIframeLoaded(true);
                 focusAgentBrowser(agentId).catch(() => {});
-              }, 900);
-            }}
-            className={`w-full h-full border-0 bg-black z-10 transition-opacity duration-200 ease-out ${
-              isResizing ? "pointer-events-none select-none" : ""
-            }`}
-            allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
-            allowFullScreen
-            style={{
-              touchAction: "manipulation",
-              width: "100%",
-              height: "100%",
-            }}
+                setTimeout(() => {
+                  focusAgentBrowser(agentId).catch(() => {});
+                }, 900);
+              }}
+              className={`w-full h-full border-0 bg-black z-10 transition-opacity duration-200 ease-out ${
+                isResizing ? "pointer-events-none select-none" : ""
+              }`}
+              allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
+              allowFullScreen
+              style={{
+                touchAction: "manipulation",
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          )}
+          {/* Live interactive CDP viewport with full height & touch-to-CDP click/scroll */}
+          <AgentBrowserPreview
+            agentId={agentId}
+            pageId={selectedTabId || undefined}
+            enabled={!error && (!iframeLoaded || isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated)}
+            intervalMs={isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated ? 900 : 4000}
+            liveWs={isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated}
+            isLandscapeRotated={isLandscapeRotated}
+            interactive={(isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated) && mode === "collab"}
           />
-        )}
-        {/* On mobile (Android / iOS) or while loading, render live CDP screen with full height & direct touch-to-CDP interaction */}
-        <AgentBrowserPreview
-          agentId={agentId}
-          enabled={!error && (!iframeLoaded || isMobileOrWebKitFallback || isPortraitViewport)}
-          intervalMs={isMobileOrWebKitFallback ? 1100 : 4000}
-          liveWs={isMobileOrWebKitFallback || isPortraitViewport}
-          isLandscapeRotated={isLandscapeRotated}
-          isMobileFullHeight={isPortraitViewport && !isLandscapeRotated}
-          interactive={(isMobileOrWebKitFallback || isPortraitViewport) && mode === "collab"}
-        />
-        {profile && (
-          <div data-testid="agent-desktop-profile" className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded bg-black/70 border border-white/10 text-[10px] font-mono text-white! keep-white pointer-events-none">
-            profile: {agentId}
-          </div>
-        )}
+        </div>
       </div>
 
       <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-30">
@@ -5523,7 +5675,7 @@ function SelkiesViewer({
             setIsLandscapeRotated((r) => !r);
           }}
           className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer flex items-center gap-1"
-          title={isLandscapeRotated ? "Chuyển về khung dọc (Full Height)" : "Xoay ngang màn hình 90° (Full Width Landscape)"}
+          title={isLandscapeRotated ? "Chuyển về khung dọc (Portrait)" : "Xoay ngang màn hình 90° (Full Landscape)"}
         >
           <RotateCw size={12} className={isLandscapeRotated ? "rotate-90 text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
           <span>{isLandscapeRotated ? "Khung dọc" : "Xoay ngang"}</span>
@@ -5541,6 +5693,7 @@ function SelkiesViewer({
           onClick={() => {
             focusAgentBrowser(agentId).catch(() => {});
             setAttempt((a) => a + 1);
+            refreshBrowserTabs();
           }}
           className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
           title="Reconnect stream & fit window"
@@ -5552,22 +5705,22 @@ function SelkiesViewer({
   );
 }
 
-/** Live CDP screencast + screenshot preview with full-height portrait mode, landscape 90deg support, and direct touch interaction. */
+/** Live CDP screencast + screenshot preview with full-height & landscape 90deg support and direct touch interaction. */
 function AgentBrowserPreview({
   agentId,
+  pageId,
   enabled,
   intervalMs = 5000,
   liveWs = false,
   isLandscapeRotated = false,
-  isMobileFullHeight = false,
   interactive = false,
 }: {
   agentId: string;
+  pageId?: string;
   enabled: boolean;
   intervalMs?: number;
   liveWs?: boolean;
   isLandscapeRotated?: boolean;
-  isMobileFullHeight?: boolean;
   interactive?: boolean;
 }) {
   const [src, setSrc] = useState<string>("");
@@ -5575,6 +5728,7 @@ function AgentBrowserPreview({
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [tapRipple, setTapRipple] = useState<{ x: number; y: number; id: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const touchDragStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -5589,7 +5743,7 @@ function AgentBrowserPreview({
 
     if (liveWs && typeof WebSocket !== "undefined") {
       try {
-        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1280));
+        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1280, pageId));
         ws.onmessage = (ev) => {
           if (!alive || typeof ev.data !== "string") return;
           try {
@@ -5615,7 +5769,7 @@ function AgentBrowserPreview({
     const tick = async () => {
       if (!document.hidden && !wsConnected) {
         try {
-          const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now()), ctrl.signal);
+          const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), pageId), ctrl.signal);
           if (!alive) { URL.revokeObjectURL(next); return; }
           if (current) URL.revokeObjectURL(current);
           current = next;
@@ -5640,38 +5794,82 @@ function AgentBrowserPreview({
       }
       if (current) URL.revokeObjectURL(current);
     };
-  }, [enabled, agentId, intervalMs, liveWs, refreshNonce]);
+  }, [enabled, agentId, pageId, intervalMs, liveWs, refreshNonce]);
 
-  const handleInteractiveTap = async (e: React.MouseEvent<HTMLImageElement>) => {
-    if (!interactive || !imgRef.current) return;
+  const computeNormalizedCoords = (clientX: number, clientY: number): { xRatio: number; yRatio: number } | null => {
     const img = imgRef.current;
+    if (!img) return null;
     const rect = img.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-
-    let xRatio = 0.5;
-    let yRatio = 0.5;
+    if (rect.width <= 0 || rect.height <= 0) return null;
 
     if (isLandscapeRotated) {
       // When rotated +90deg CW:
-      // Screen Top -> Image Right (xRatio = 1), Screen Bottom -> Image Left (xRatio = 0)
-      // Wait: +90deg CW means Image Top-Left is at Screen Top-Right!
-      // Image X axis (left->right) runs along Screen Y axis (top->bottom): xRatio = (clientY - rect.top) / rect.height
-      // Image Y axis (top->bottom) runs along Screen X axis (right->left): yRatio = (rect.right - clientX) / rect.width
-      xRatio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-      yRatio = Math.max(0, Math.min(1, (rect.right - e.clientX) / rect.width));
-    } else {
-      xRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      yRatio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      // Image X axis (left->right) runs along Screen Y axis (top->bottom)
+      // Image Y axis (top->bottom) runs along Screen X axis (right->left)
+      return {
+        xRatio: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+        yRatio: Math.max(0, Math.min(1, (rect.right - clientX) / rect.width)),
+      };
     }
+
+    // Account for object-contain letterboxing when in portrait mode
+    const natW = img.naturalWidth || 1280;
+    const natH = img.naturalHeight || 800;
+    const imgAspect = natW / natH;
+    const boxAspect = rect.width / rect.height;
+
+    let renderW = rect.width;
+    let renderH = rect.height;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (imgAspect > boxAspect) {
+      renderW = rect.width;
+      renderH = rect.width / imgAspect;
+      offsetY = (rect.height - renderH) / 2;
+    } else {
+      renderH = rect.height;
+      renderW = rect.height * imgAspect;
+      offsetX = (rect.width - renderW) / 2;
+    }
+
+    const xInImg = clientX - rect.left - offsetX;
+    const yInImg = clientY - rect.top - offsetY;
+
+    return {
+      xRatio: Math.max(0, Math.min(1, xInImg / Math.max(1, renderW))),
+      yRatio: Math.max(0, Math.min(1, yInImg / Math.max(1, renderH))),
+    };
+  };
+
+  const handleInteractiveTap = async (e: React.MouseEvent<HTMLImageElement>) => {
+    if (!interactive) return;
+    const coords = computeNormalizedCoords(e.clientX, e.clientY);
+    if (!coords) return;
 
     setTapRipple({ x: e.clientX, y: e.clientY, id: Date.now() });
     await dispatchAgentBrowserInput(agentId, {
       action: "click",
-      xRatio,
-      yRatio,
+      xRatio: coords.xRatio,
+      yRatio: coords.yRatio,
+      pageId,
     });
-    setTimeout(() => setRefreshNonce((n) => n + 1), 180);
-    setTimeout(() => setRefreshNonce((n) => n + 1), 650);
+    setTimeout(() => setRefreshNonce((n) => n + 1), 160);
+    setTimeout(() => setRefreshNonce((n) => n + 1), 550);
+  };
+
+  const handleWheelScroll = async (e: React.WheelEvent<HTMLImageElement>) => {
+    if (!interactive) return;
+    const coords = computeNormalizedCoords(e.clientX, e.clientY) || { xRatio: 0.5, yRatio: 0.5 };
+    await dispatchAgentBrowserInput(agentId, {
+      action: "scroll",
+      xRatio: coords.xRatio,
+      yRatio: coords.yRatio,
+      deltaX: e.deltaX,
+      deltaY: e.deltaY,
+      pageId,
+    });
+    setTimeout(() => setRefreshNonce((n) => n + 1), 160);
   };
 
   if (!enabled) return null;
@@ -5681,19 +5879,43 @@ function AgentBrowserPreview({
         <>
           <img
             ref={imgRef}
-            key={agentId}
+            key={`${agentId}-${pageId || "default"}`}
             src={src}
             alt="Agent browser preview"
             draggable={false}
             onClick={handleInteractiveTap}
-            className={`select-none z-[12] ${
+            onWheel={handleWheelScroll}
+            onTouchStart={(e) => {
+              if (!interactive || e.touches.length !== 1) return;
+              touchDragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }}
+            onTouchEnd={async (e) => {
+              if (!interactive || !touchDragStartRef.current || e.changedTouches.length !== 1) return;
+              const start = touchDragStartRef.current;
+              touchDragStartRef.current = null;
+              const end = e.changedTouches[0];
+              const dx = end.clientX - start.x;
+              const dy = end.clientY - start.y;
+              if (Math.hypot(dx, dy) > 24) {
+                const coords = computeNormalizedCoords(start.x, start.y) || { xRatio: 0.5, yRatio: 0.5 };
+                const scrollDeltaX = isLandscapeRotated ? -dy * 1.6 : -dx * 1.6;
+                const scrollDeltaY = isLandscapeRotated ? dx * 1.6 : -dy * 1.6;
+                await dispatchAgentBrowserInput(agentId, {
+                  action: "scroll",
+                  xRatio: coords.xRatio,
+                  yRatio: coords.yRatio,
+                  deltaX: scrollDeltaX,
+                  deltaY: scrollDeltaY,
+                  pageId,
+                });
+                setTimeout(() => setRefreshNonce((n) => n + 1), 160);
+                setTimeout(() => setRefreshNonce((n) => n + 1), 550);
+              }
+            }}
+            className={`select-none z-[12] w-full h-full ${
               interactive ? "cursor-pointer pointer-events-auto" : "pointer-events-none"
             } ${
-              isLandscapeRotated
-                ? "w-full h-full object-fill"
-                : isMobileFullHeight
-                ? "h-full w-auto max-w-none object-cover object-left-top shrink-0"
-                : "absolute inset-0 w-full h-full object-contain"
+              isLandscapeRotated ? "object-fill" : "object-contain"
             }`}
           />
           {interactive && tapRipple && (
@@ -17656,7 +17878,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-[13px] sm:placeholder:text-[13.5px] placeholder:text-neutral-500 placeholder:truncate resize-none ${
-                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] pt-1 pb-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[30px] min-h-[30px] max-h-[30px] pt-[4px] pb-0 px-1 sm:px-0.5 m-0"
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[30px] min-h-[30px] max-h-[30px] py-1 px-1 sm:px-0.5 m-0 my-auto"
                   }`}
                 />
               );
@@ -17900,7 +18122,7 @@ const selectedAgentTheme = getAgentColorTheme(
         ) : (
           <div className="h-12 px-3 border-b border-slate-200 dark:border-[#1c1c22] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
             <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden whitespace-nowrap" title={selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}>
-              <span className="text-sm font-sans text-slate-800 dark:text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span className="text-[15px] font-sans text-slate-800 dark:text-white font-semibold tracking-tight truncate min-w-0 flex-1" style={{ whiteSpace: "nowrap", textWrap: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {selectedAgent.name ? `Chats của ${selectedAgent.name}` : "Chats"}
               </span>
             </div>
@@ -18427,7 +18649,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             {/* Inline full-width title with right-edge blur & smooth hover-to-left marquee scroll */}
                             <span
                               style={{ "--marquee-duration": computeChatTitleMarqueeDuration(chat.title || "") } as React.CSSProperties}
-                              className={`text-[13.5px] chat-title-marquee inline-block whitespace-nowrap ${
+                              className={`text-[15px] chat-title-marquee inline-block whitespace-nowrap ${
                                 (chat.title && chat.title.length > 14) ? "chat-title-marquee-scroll" : ""
                               } ${
                                 isSelected
