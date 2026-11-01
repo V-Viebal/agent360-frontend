@@ -368,3 +368,35 @@ assert.ok(
   "ScrollToTop must reset viewport to top:0 on route changes and handle anchor hash navigation"
 );
 console.log("✓ Test 24: ScrollToTop Route Scroll Restoration verified");
+
+console.log("Testing Computer Maximize State Modal 95% & Toolbar Replacement...");
+const grokWorkspaceSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokWorkspaceSrc.includes("data-testid=\"computer-maximized-modal\"") &&
+  grokWorkspaceSrc.includes("w-[95vw] h-[95vh] max-w-[95vw] max-h-[95vh]"),
+  "Computer maximized state must render as a 95vw x 95vh modal"
+);
+assert.ok(
+  !grokWorkspaceSrc.includes("openAgentDesktopTab(agentBrowserFor)"),
+  "openAgentDesktopTab new tab button must be replaced with the maximize modal trigger"
+);
+console.log("✓ Test 27: Computer Maximize 95% Modal & Toolbar Replacement verified");
+
+console.log("Testing Mobile iOS Zoom Prevention & 16px Font Contract...");
+const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const indexCss = fs.readFileSync(new URL("../src/index.css", import.meta.url), "utf8");
+const grokWorkspace = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+
+assert.ok(
+  indexHtml.includes("maximum-scale=1.0") && indexHtml.includes("user-scalable=no"),
+  "index.html must restrict auto-zoom on mobile viewport"
+);
+assert.ok(
+  indexCss.includes("@media (max-width: 639px)") && indexCss.includes("font-size: 16px !important"),
+  "src/index.css must enforce 16px font-size on inputs/textareas under 640px"
+);
+assert.ok(
+  grokWorkspace.includes("text-[16px] sm:text-[14.5px]"),
+  "GrokBotWorkspace chat textarea must use 16px on mobile viewports"
+);
+console.log("✓ Test 28: Mobile iOS Zoom Prevention & 16px Font Contract verified");

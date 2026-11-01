@@ -238,7 +238,7 @@ export function LandingPage() {
 
       {/* 1. EXACT STRAWBERRY HERO ARCHITECTURE:
           H1 + 2-line Subtitle + 2 Pill CTAs + 4 Companion Avatars Peeking from Top Edge of Live 16:10 Product Frame */}
-      <section className="relative pt-10 sm:pt-14 lg:pt-16 overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
+      <section className="relative pt-14 sm:pt-20 lg:pt-[97.6px] overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
         {/* Strawberry Mosaic Geometric Side Background Pattern (Faint on Left & Right Outer Wings, Transparent in Center) */}
         <div
           className="absolute inset-x-0 top-0 h-[540px] pointer-events-none select-none overflow-hidden"
@@ -288,12 +288,9 @@ export function LandingPage() {
           {/* Hero Holder: Centered Title, 2-line Description, 2 Pill CTAs with Entrance Animation */}
           <div className="text-center flex flex-col items-center">
             <motion.h1
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
               data-testid="hero-heading"
-              style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
-              className="max-w-[478px] text-[36px] sm:text-[47.8px] leading-[1.1] tracking-[-1.91px] text-[#252522] dark:text-[#f3f4f6] text-balance"
+              style={{ fontFamily: "var(--font-sans)", fontWeight: 480, fontVariationSettings: '"wght" 480, "opsz" 32' }}
+              className="animate-hero-rise-1 max-w-[478px] text-[36px] sm:text-[47.8px] leading-[52.58px] tracking-[-1.912px] text-[#252522] dark:text-[#f3f4f6] text-balance"
             >
               {isVi ? (
                 <>
@@ -311,12 +308,9 @@ export function LandingPage() {
             </motion.h1>
 
             <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
               data-testid="hero-description"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
-              className="mt-4 text-[15px] sm:text-[17px] md:text-[19.5px] lg:text-[21px] leading-[1.42] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
+              className="animate-hero-rise-2 mt-2 text-[15.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] lg:leading-[29.81px] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
             >
               {isVi ? (
                 <>
@@ -343,10 +337,7 @@ export function LandingPage() {
 
             {/* 2 Pill CTAs (Primary Charcoal/White + Secondary Pill Surface) */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-7 flex flex-wrap items-center justify-center gap-3.5"
+              className="animate-hero-rise-3 mt-7 flex flex-wrap items-center justify-center gap-3.5"
             >
               <motion.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Link
@@ -370,10 +361,7 @@ export function LandingPage() {
 
           {/* HERO PRODUCT STAGE: 4 Companion Avatars Peeking from Top Edge + 16:10 Live Workspace Frame */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-            className="relative mt-12 sm:mt-[46px]"
+            className="animate-hero-rise-4 relative mt-14 sm:mt-[79.2px]"
           >
             {/* 4 Peeking Companions Perched at Exact Strawberry Outer Corners (0% & 10% Left / Right) with Large Scale */}
             <div className="pointer-events-none select-none">
@@ -1010,8 +998,8 @@ export function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center pt-4">
             <div className="lg:col-span-6 space-y-5">
               <h2
-                style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
-                className="text-3xl sm:text-[47.8px] tracking-[-1.91px] leading-[1.14] text-[#252522] dark:text-[#f3f4f6]"
+                style={{ fontFamily: "var(--font-sans)", fontWeight: 480, fontVariationSettings: '"wght" 480, "opsz" 32' }}
+                className="text-3xl sm:text-[47.8px] tracking-[-1.912px] leading-[52.58px] text-[#252522] dark:text-[#f3f4f6]"
               >
                 {(() => {
                   const pillVariants = [

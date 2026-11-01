@@ -274,7 +274,7 @@ function measureComposerTextWidthPx(text: string): number {
       }
       if (_composerMeasureCtx) {
         const isSmall = typeof window !== "undefined" && window.innerWidth < 640;
-        _composerMeasureCtx.font = `400 ${isSmall ? "14px" : "14.5px"} Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        _composerMeasureCtx.font = `400 ${isSmall ? "16px" : "14.5px"} Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
         return _composerMeasureCtx.measureText(text).width;
       }
     } catch {}
@@ -4214,30 +4214,36 @@ function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: strin
   // Automatic Smart Fallback: detect structured follow-up choices at the end of assistant prose
   if (widgets.length === 0 && cleanContent && cleanContent.length > 20) {
     const lines = cleanContent.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const tailLines = lines.slice(-8);
-    const hasChoiceQuestionCue = tailLines.some((l) =>
-      /(?:bạn muốn|anh muốn|chị muốn|bước tiếp theo|hướng nào|phương án nào|chọn 1 trong|lựa chọn sau|would you like|which option|next step)/i.test(l)
-    );
+    const tailLines = lines.slice(-10);
+    const hasChoiceQuestionCue = lines.some((l) =>
+      /(?:bạn muốn|anh muốn|chị muốn|anh chọn|bạn chọn|chị chọn|chọn số|chọn hướng|chọn mục|bước tiếp theo|hướng nào|phương án nào|chọn 1 trong|lựa chọn|đưa \d+ hướng|would you like|which option|next step)/i.test(l)
+    ) || (lines[lines.length - 1] || "").endsWith("?");
     if (hasChoiceQuestionCue) {
       const extractedChoices: SkyerInteractiveOption[] = [];
       for (const line of tailLines) {
-        const m = line.match(/^(?:(\d+)[.)]|[-•*]|\[([A-D1-4])\])\s+\*{0,2}([^*:?\n]{4,72})\*{0,2}(?:\s*[:–—-].*)?$/);
+        // Match "1. **Title** — description" or "1. Title: description" or "- **Title**"
+        const boldMatch = line.match(/^(?:(\d+)[.)]|[-•*]|\[([A-D1-4])\])\s+\*\*([^*\n]{2,68})\*\*(?:\s*[:–—\-].*)?$/);
+        const plainMatch = !boldMatch
+          ? line.match(/^(?:(\d+)[.)]|[-•*]|\[([A-D1-4])\])\s+([^:*–—?\n]{3,68})(?:\s*[:–—\-]\s*(.+))?$/)
+          : null;
+        const m = boldMatch || plainMatch;
         if (m) {
           const cleanLabel = (m[3] || "").replace(/\*+/g, "").trim();
-          if (cleanLabel && cleanLabel.length >= 4 && cleanLabel.length <= 68 && !cleanLabel.endsWith("?")) {
+          const fullPrompt = line.replace(/^(?:(\d+)[.)]|[-•*]|\[([A-D1-4])\])\s+/, "").replace(/\*+/g, "").trim();
+          if (cleanLabel && cleanLabel.length >= 2 && cleanLabel.length <= 68 && !cleanLabel.endsWith("?")) {
             extractedChoices.push({
               id: `auto_opt_${extractedChoices.length}`,
               label: cleanLabel,
-              prompt: cleanLabel,
+              prompt: fullPrompt.length <= 160 ? fullPrompt : cleanLabel,
             });
           }
         }
       }
-      if (extractedChoices.length >= 2 && extractedChoices.length <= 5) {
+      if (extractedChoices.length >= 2 && extractedChoices.length <= 6) {
         widgets.push({
           interactionId: `ix_auto_${msg.id}`,
           kind: "options",
-          promptText: "Gợi ý hành động tiếp theo",
+          promptText: "Chọn hướng thực hiện",
           actionType: "auto_followup",
           columns: 2,
           options: extractedChoices,
@@ -5189,8 +5195,14 @@ function SelkiesViewer({
       .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
       .catch((e) => {
         if (!alive) return;
-        setSrc("");
-        setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
+        // Auto fallback: if forward-auth signing fails or token fails, try loading direct desktop url with mode
+        if (url) {
+          setSrc(`${url.replace(/#.*$/, "")}#${mode}`);
+          setError("");
+        } else {
+          setSrc("");
+          setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
+        }
       });
     return () => { alive = false; };
   }, [url, attempt, mode, reloadKey]);
@@ -7731,7 +7743,7 @@ ${targetItem.text}`;
       if (isMultiline) {
         textareaRef.current.style.height = "auto";
         if (inputText) {
-          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
         }
       } else {
         textareaRef.current.style.height = "28px";
@@ -8954,6 +8966,12 @@ ${targetItem.text}`;
 
   const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
+    // Dismiss soft keyboard when user scrolls chat stream on mobile
+    if (typeof window !== "undefined" && window.innerWidth < 1024 && isTextareaFocusedRef.current) {
+      if (document.activeElement === textareaRef.current) {
+        textareaRef.current?.blur();
+      }
+    }
     // Save scroll position for active session
     if (selectedChatId) {
       sessionScrollPositionsRef.current[selectedChatId] = el.scrollTop;
@@ -14557,7 +14575,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                       textareaRef.current.focus();
                                       setTimeout(() => {
                                         if (textareaRef.current) {
-                                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+                                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                                           textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
                                         }
                                       }, 0);
@@ -15492,7 +15510,7 @@ const selectedAgentTheme = getAgentColorTheme(
       )}
 
       {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
-        <div className={`${isCompactMode ? "px-2.5 pt-1 pb-3" : "px-4 pt-1 pb-3.5"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-1.5`}>
+        <div className={`${isCompactMode ? "px-3 sm:px-2.5 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-3" : "px-3.5 sm:px-4 pt-1.5 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] sm:pb-3.5"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-1.5`}>
           {/* Rich Request Queue Stack with Steer, Edit, and Delete */}
           {requestQueue.length > 0 && selectedChatId && (
             <div className="space-y-1.5 animate-in fade-in duration-100">
@@ -15718,7 +15736,7 @@ const selectedAgentTheme = getAgentColorTheme(
           )}
           {/* Attached Files Preview Chips with Image Thumbnails & Lightbox */}
           {attachedFiles.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap pb-1 px-1">
+            <div className="flex items-center gap-2 flex-nowrap overflow-x-auto scrollbar-none pb-1 px-1 max-w-full">
               {attachedFiles.map((f, i) => {
                 const isImage = /\.(png|jpe?g|webp|gif|svg|bmp|ico|avif)$/i.test(f.file_name) || Boolean(f.mime_type && f.mime_type.startsWith("image/"));
                 const previewSrc = f.preview_url || resolveUploadedAttachmentPreviewUrl(f.url, selectedAgent?.slug || selectedAgent?.id || "default");
@@ -16855,7 +16873,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         });
                       }}
                       disabled={isUploadingFile}
-                      className={`h-7 w-7 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer rounded-full flex items-center justify-center shrink-0 ${
+                      className={`h-8 w-8 sm:h-7 sm:w-7 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer rounded-full flex items-center justify-center shrink-0 ${
                         isPlusMenuOpen ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] rotate-45 scale-110" : "bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/[0.12]"
                       }`}
                       title="Add files, apps, or mention agents"
@@ -16965,7 +16983,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     const isMulti = e.target.scrollHeight > 30 || computeIsMultilineComposer(newVal, composerWidth);
                     if (isMulti) {
                       e.target.style.height = "auto";
-                      e.target.style.height = Math.min(e.target.scrollHeight, 210) + "px";
+                      e.target.style.height = Math.min(e.target.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                     } else {
                       e.target.style.height = "28px";
                     }
@@ -17003,7 +17021,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           textareaRef.current.style.height = "auto";
                           setTimeout(() => {
                             if (textareaRef.current) {
-                              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+                              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                               textareaRef.current.setSelectionRange(lastUserMsg.content.length, lastUserMsg.content.length);
                             }
                           }, 0);
@@ -17169,7 +17187,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       setTimeout(() => {
                         target.selectionStart = target.selectionEnd = start + 1;
                         target.style.height = "auto";
-                        target.style.height = Math.min(target.scrollHeight, 210) + "px";
+                        target.style.height = Math.min(target.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                       }, 0);
                       return;
                     }
@@ -17198,8 +17216,8 @@ const selectedAgentTheme = getAgentColorTheme(
                       : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[14px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none ${
-                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[210px] pt-1 pb-1 px-0.5" : "leading-[21px] overflow-hidden flex-1 self-center h-[28px] min-h-[28px] max-h-[28px] pt-[3.5px] pb-0 px-0.5 m-0"
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 resize-none ${
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] pt-1 pb-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[30px] min-h-[30px] max-h-[30px] pt-[4px] pb-0 px-1 sm:px-0.5 m-0"
                   }`}
                 />
               );
@@ -17210,6 +17228,25 @@ const selectedAgentTheme = getAgentColorTheme(
 
                 return (
                   <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
+                    {/* Quick clear button when input text exists */}
+                    {inputText.length > 0 && !isRecording && (
+                      <button
+                        type="button"
+                        aria-label="Xóa nội dung"
+                        title="Xóa nội dung đang soạn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInputText("");
+                          if (textareaRef.current) {
+                            textareaRef.current.style.height = "30px";
+                            textareaRef.current.focus();
+                          }
+                        }}
+                        className="h-6 w-6 rounded-full flex items-center justify-center text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                      >
+                        <X size={13} />
+                      </button>
+                    )}
                     <AudioVisualizerWaveform
                       isRecording={isRecording}
                       agentId={selectedAgent?.id}
@@ -17263,7 +17300,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : (selectedAgentTheme.primary || selectedAgentTheme.dark))
                             : undefined,
                         }}
-                        className={`h-7 w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border ${
+                        className={`h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border ${
                           isRecording
                             ? liveVoiceEnergy > 45
                               ? "bg-gradient-to-r from-[#ff3366] to-[var(--agent-color)] text-white border-transparent"
@@ -17283,7 +17320,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
                           color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
                         }}
-                        className="h-7 w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title={isStreaming ? "Add to request queue" : "Send Message"}
                         aria-label={isStreaming ? "Add to request queue" : "Send Message"}
                       >
@@ -17331,8 +17368,8 @@ const selectedAgentTheme = getAgentColorTheme(
                   }}
                   className={`relative ${
                     isMultiline
-                      ? "flex flex-col gap-2 pt-2 pb-2 px-2.5 sm:pt-2.5 sm:pb-2.5 sm:px-3 rounded-[22px]"
-                      : "flex items-center gap-2 px-1.5 py-1.5 rounded-full"
+                      ? "flex flex-col gap-2 pt-2 pb-2 px-3 sm:pt-2.5 sm:pb-2.5 sm:px-3 rounded-[22px]"
+                      : "flex items-center gap-2 px-2.5 sm:px-2 py-2 sm:py-1.5 rounded-full"
                   } bg-white dark:bg-[#14141c] border ${
                     isDraggingFiles
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
@@ -20951,7 +20988,7 @@ ${chat.id}`);
                         textareaRef.current.focus();
                         setTimeout(() => {
                           if (textareaRef.current) {
-                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 210) + "px";
+                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                             textareaRef.current.setSelectionRange(text.length, text.length);
                           }
                         }, 0);
