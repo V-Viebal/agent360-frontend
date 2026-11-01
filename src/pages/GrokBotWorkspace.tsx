@@ -4414,6 +4414,7 @@ function InteractiveTurnWidgetsSection({
   widgets,
   messageId,
   claimedMap,
+  isTurnBusy,
   onSelectOption,
   onSubmitPoll,
   onSubmitInput,
@@ -4422,6 +4423,7 @@ function InteractiveTurnWidgetsSection({
   widgets: SkyerInteractiveWidget[];
   messageId: string;
   claimedMap: Record<string, ClaimedInteractionRecord>;
+  isTurnBusy?: boolean;
   onSelectOption: (widget: SkyerInteractiveWidget, opt: SkyerInteractiveOption) => void;
   onSubmitPoll: (widget: SkyerInteractiveWidget, selectedOpts: SkyerInteractiveOption[]) => void;
   onSubmitInput: (widget: SkyerInteractiveWidget, value: string) => void;
@@ -4429,6 +4431,8 @@ function InteractiveTurnWidgetsSection({
 }) {
   const [pollSelections, setPollSelections] = useState<Record<string, string[]>>({});
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [focusedInputId, setFocusedInputId] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   if (!widgets || widgets.length === 0) return null;
@@ -4441,12 +4445,29 @@ function InteractiveTurnWidgetsSection({
       {widgets.map((w) => {
         const claimed = claimedMap[w.interactionId];
         const isCardClaimed = Boolean(claimed);
-        const cardBlurClass = isCardClaimed
-          ? "opacity-45 blur-[1.2px] hover:opacity-100 hover:blur-none focus-within:opacity-100 focus-within:blur-none transition-all duration-200"
-          : "transition-all duration-200";
+        const isSubmittingThis = submittingId === w.interactionId && Boolean(isTurnBusy);
+
+        const triggerSubmitState = () => {
+          setSubmittingId(w.interactionId);
+          setTimeout(() => {
+            setSubmittingId((prev) => (prev === w.interactionId ? null : prev));
+          }, 1800);
+        };
 
         if (w.kind === "poll") {
           const currentSelected = pollSelections[w.interactionId] || claimed?.selected_ids || [];
+          const hasDirtyPollSelection =
+            Boolean(pollSelections[w.interactionId]) &&
+            pollSelections[w.interactionId].length > 0 &&
+            JSON.stringify(pollSelections[w.interactionId]) !== JSON.stringify(claimed?.selected_ids || []);
+          const isPollActivelyInteracting = (!isCardClaimed && currentSelected.length > 0) || hasDirtyPollSelection;
+
+          const pollCardSurfaceClass = isPollActivelyInteracting
+            ? "ring-1 ring-[var(--agent-primary)]/45 border-[var(--agent-primary)]/60 opacity-100 blur-none shadow-sm transition-all duration-200"
+            : isCardClaimed
+            ? "opacity-45 blur-[1.2px] hover:opacity-100 hover:blur-none focus-within:opacity-100 focus-within:blur-none border-neutral-200/90 dark:border-[#22222e] transition-all duration-200"
+            : "border-neutral-200/90 dark:border-[#22222e] transition-all duration-200";
+
           const togglePollChoice = (optId: string) => {
             setPollSelections((prev) => {
               const cur = prev[w.interactionId] || claimed?.selected_ids || [];
@@ -4464,17 +4485,41 @@ function InteractiveTurnWidgetsSection({
             <div
               key={w.interactionId}
               data-testid={`interactive-poll-card-${w.interactionId}`}
-              className={`group/ixcard w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans ${cardBlurClass}`}
+              className={`group/ixcard w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border shadow-2xs space-y-2 font-sans ${pollCardSurfaceClass}`}
             >
               <div className="flex items-center justify-between gap-2 px-1">
-                <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug">
-                  {w.promptText}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    title={
+                      isSubmittingThis
+                        ? "Đang gửi lựa chọn..."
+                        : isPollActivelyInteracting
+                        ? `Đang chọn ${currentSelected.length} mục — bấm Gửi để xác nhận`
+                        : isCardClaimed
+                        ? "Đã gửi lựa chọn — rê chuột vào để chọn lại"
+                        : "Chờ bạn chọn phương án"
+                    }
+                    className={`h-2 w-2 rounded-full shrink-0 ${
+                      isSubmittingThis || isPollActivelyInteracting
+                        ? "bg-amber-400 animate-pulse"
+                        : isCardClaimed
+                        ? "bg-emerald-500"
+                        : "bg-neutral-300 dark:bg-neutral-600"
+                    }`}
+                  />
+                  <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug truncate">
+                    {w.promptText}
+                  </span>
+                </div>
                 <span
                   title={w.allowsMultiple ? "Cho phép chọn nhiều phương án" : "Chỉ chọn 1 phương án"}
-                  className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-[#1c1c26] border border-neutral-200/80 dark:border-[#2b2b3a] text-neutral-500 dark:text-neutral-400 shrink-0"
+                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md border shrink-0 transition-colors ${
+                    isPollActivelyInteracting
+                      ? "bg-[var(--agent-primary)]/15 border-[var(--agent-primary)]/40 text-[#252522] dark:text-white font-semibold"
+                      : "bg-neutral-100 dark:bg-[#1c1c26] border-neutral-200/80 dark:border-[#2b2b3a] text-neutral-500 dark:text-neutral-400"
+                  }`}
                 >
-                  {w.allowsMultiple ? "Multi" : "1x"}
+                  {isPollActivelyInteracting ? `${currentSelected.length} chọn` : w.allowsMultiple ? "Multi" : "1x"}
                 </span>
               </div>
 
@@ -4491,7 +4536,9 @@ function InteractiveTurnWidgetsSection({
                       onClick={() => togglePollChoice(opt.id)}
                       className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer group/ixbtn flex items-center justify-between gap-2.5 min-w-0 border ${
                         isChecked
-                          ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/50 text-slate-950 dark:text-white font-medium opacity-55 blur-[0.8px] group-hover/ixcard:opacity-100 group-hover/ixcard:blur-none hover:opacity-100 hover:blur-none"
+                          ? isCardClaimed && !isPollActivelyInteracting
+                            ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/50 text-slate-950 dark:text-white font-medium opacity-55 blur-[0.8px] group-hover/ixcard:opacity-100 group-hover/ixcard:blur-none hover:opacity-100 hover:blur-none"
+                            : "bg-[var(--agent-primary)]/15 border-[var(--agent-primary)]/60 text-slate-950 dark:text-white font-medium shadow-2xs"
                           : "border-transparent hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-slate-800 dark:text-neutral-200"
                       }`}
                     >
@@ -4513,7 +4560,7 @@ function InteractiveTurnWidgetsSection({
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-1 px-1">
-                {claimed ? (
+                {claimed && !isPollActivelyInteracting ? (
                   <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 truncate">
                     <Check size={11} className="shrink-0" />
                     <span className="truncate">{(claimed.selected_labels || []).join(", ")}</span>
@@ -4528,14 +4575,17 @@ function InteractiveTurnWidgetsSection({
                   disabled={currentSelected.length === 0}
                   onClick={() => {
                     const chosen = w.options.filter((o) => currentSelected.includes(o.id));
-                    if (chosen.length > 0) onSubmitPoll(w, chosen);
+                    if (chosen.length > 0) {
+                      triggerSubmitState();
+                      onSubmitPoll(w, chosen);
+                    }
                   }}
                   style={{ backgroundColor: themePrimary }}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-white text-xs font-semibold shadow-2xs disabled:opacity-40 transition-all cursor-pointer ${
-                    claimed ? "opacity-0 group-hover/ixcard:opacity-100" : ""
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-white text-xs font-semibold shadow-2xs disabled:opacity-40 transition-all cursor-pointer active:scale-95 ${
+                    claimed && !isPollActivelyInteracting ? "opacity-0 group-hover/ixcard:opacity-100" : "opacity-100"
                   }`}
                 >
-                  <Send size={11} />
+                  {isSubmittingThis ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
                   <span>{currentSelected.length}</span>
                 </button>
               </div>
@@ -4545,42 +4595,157 @@ function InteractiveTurnWidgetsSection({
 
         if (w.kind === "force_reply") {
           const val = inputValues[w.interactionId] ?? claimed?.input_value ?? "";
+          const trimmedVal = val.trim();
+          const isFocused = focusedInputId === w.interactionId;
+          const isEditedSinceClaim =
+            inputValues[w.interactionId] !== undefined &&
+            trimmedVal !== (claimed?.input_value || "").trim();
+          const isInputActivelyInteracting =
+            isFocused || (!isCardClaimed && trimmedVal.length > 0) || (isCardClaimed && isEditedSinceClaim && trimmedVal.length > 0);
+          const isUrlLike = /^https?:\/\/[^\s]+$/i.test(trimmedVal);
+
+          const inputCardSurfaceClass = isInputActivelyInteracting
+            ? "ring-1 ring-[var(--agent-primary)]/45 border-[var(--agent-primary)]/60 opacity-100 blur-none shadow-sm transition-all duration-200"
+            : isCardClaimed
+            ? "opacity-45 blur-[1.2px] hover:opacity-100 hover:blur-none focus-within:opacity-100 focus-within:blur-none border-neutral-200/90 dark:border-[#22222e] transition-all duration-200"
+            : "border-neutral-200/90 dark:border-[#22222e] transition-all duration-200";
+
           return (
             <div
               key={w.interactionId}
               data-testid={`interactive-input-card-${w.interactionId}`}
-              className={`group/ixcard w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans ${cardBlurClass}`}
+              className={`group/ixcard w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border shadow-2xs space-y-2 font-sans ${inputCardSurfaceClass}`}
             >
-              <div className="text-[13px] font-semibold text-slate-800 dark:text-neutral-200 px-0.5">
-                {w.promptText}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  value={val}
-                  placeholder={w.placeholder || "Nhập phản hồi..."}
-                  onChange={(e) => setInputValues((prev) => ({ ...prev, [w.interactionId]: e.target.value }))}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && val.trim()) {
-                      e.preventDefault();
-                      onSubmitInput(w, val.trim());
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    title={
+                      isSubmittingThis
+                        ? "Đang gửi phản hồi..."
+                        : isInputActivelyInteracting
+                        ? "Đang nhập liệu — nhấn Enter hoặc bấm nút Gửi"
+                        : isCardClaimed
+                        ? `Đã gửi: ${claimed?.input_value || ""}`
+                        : "Đang chờ bạn nhập thông tin"
                     }
-                  }}
-                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-[#181822] border border-neutral-200/90 dark:border-[#2b2b3a] text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
-                />
+                    className={`h-2 w-2 rounded-full shrink-0 transition-colors ${
+                      isSubmittingThis || isInputActivelyInteracting
+                        ? "bg-amber-400 animate-pulse"
+                        : isCardClaimed
+                        ? "bg-emerald-500"
+                        : "bg-neutral-300 dark:bg-neutral-600"
+                    }`}
+                  />
+                  <span className="text-[13px] font-semibold text-slate-800 dark:text-neutral-200 truncate">
+                    {w.promptText}
+                  </span>
+                </div>
+
+                {/* Live Contextual Micro-Indicator (Icon-Only + Tooltip) */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {isSubmittingThis ? (
+                    <span
+                      title="Đang gửi phản hồi..."
+                      className="h-5 w-5 rounded-md bg-[var(--agent-primary)]/15 text-[var(--agent-primary)] flex items-center justify-center"
+                    >
+                      <Loader2 size={11} className="animate-spin" />
+                    </span>
+                  ) : isInputActivelyInteracting && trimmedVal.length > 0 ? (
+                    <span
+                      title="Nhấn Enter để gửi nhanh"
+                      className="px-1.5 py-0.2 rounded-md bg-neutral-100 dark:bg-[#1c1c26] border border-neutral-200/80 dark:border-[#2b2b3a] text-[9.5px] font-mono text-neutral-500 dark:text-neutral-400 select-none"
+                    >
+                      ↵
+                    </span>
+                  ) : isCardClaimed ? (
+                    <span
+                      title={`Đã gửi: ${claimed?.input_value || ""} — Bấm vào ô để sửa và gửi lại`}
+                      className="h-5 w-5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center"
+                    >
+                      <Check size={11} />
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <div className="relative flex-1 flex items-center min-w-0">
+                  {isUrlLike && (
+                    <Globe
+                      size={12}
+                      style={{ color: themePrimary }}
+                      className="absolute left-2.5 pointer-events-none shrink-0 transition-opacity"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    value={val}
+                    placeholder={w.placeholder || "Nhập phản hồi..."}
+                    onFocus={() => setFocusedInputId(w.interactionId)}
+                    onBlur={() => setFocusedInputId((prev) => (prev === w.interactionId ? null : prev))}
+                    onChange={(e) => setInputValues((prev) => ({ ...prev, [w.interactionId]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && trimmedVal) {
+                        e.preventDefault();
+                        triggerSubmitState();
+                        onSubmitInput(w, trimmedVal);
+                      }
+                    }}
+                    className={`w-full ${isUrlLike ? "pl-7" : "pl-2.5"} ${
+                      trimmedVal && isInputActivelyInteracting ? "pr-7" : "pr-2.5"
+                    } py-1.5 rounded-lg bg-neutral-50 dark:bg-[#181822] border text-[13px] text-slate-900 dark:text-white focus:outline-none transition-all ${
+                      isInputActivelyInteracting
+                        ? "border-[var(--agent-primary)] bg-white dark:bg-[#14141d] ring-2 ring-[var(--agent-primary)]/15"
+                        : isCardClaimed
+                        ? "border-emerald-500/35 text-slate-700 dark:text-neutral-300"
+                        : "border-neutral-200/90 dark:border-[#2b2b3a]"
+                    }`}
+                  />
+                  {trimmedVal && isInputActivelyInteracting && (
+                    <button
+                      type="button"
+                      aria-label="Xóa nội dung đang nhập"
+                      title="Xóa nội dung đang nhập"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setInputValues((prev) => ({ ...prev, [w.interactionId]: "" }));
+                      }}
+                      className="absolute right-1.5 h-5 w-5 rounded-md hover:bg-neutral-200/70 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   data-ux-target-min="24"
-                  aria-label="Gửi thông tin"
-                  title="Gửi thông tin"
-                  disabled={!val.trim()}
+                  data-testid={`interactive-input-submit-${w.interactionId}`}
+                  aria-label={isCardClaimed && !isEditedSinceClaim ? "Đã gửi (Bấm để gửi lại)" : "Gửi thông tin"}
+                  title={isCardClaimed && !isEditedSinceClaim ? "Đã gửi (Bấm để gửi lại)" : "Gửi thông tin (Enter)"}
+                  disabled={!trimmedVal}
                   onClick={() => {
-                    if (val.trim()) onSubmitInput(w, val.trim());
+                    if (trimmedVal) {
+                      triggerSubmitState();
+                      onSubmitInput(w, trimmedVal);
+                    }
                   }}
-                  style={{ backgroundColor: themePrimary }}
-                  className="h-8 w-8 rounded-lg text-white flex items-center justify-center disabled:opacity-40 cursor-pointer shrink-0 transition-transform active:scale-95"
+                  style={{
+                    backgroundColor: isCardClaimed && !isInputActivelyInteracting ? undefined : themePrimary,
+                  }}
+                  className={`h-8 w-8 rounded-lg flex items-center justify-center disabled:opacity-35 cursor-pointer shrink-0 transition-all active:scale-95 ${
+                    isCardClaimed && !isInputActivelyInteracting
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
+                      : "text-white shadow-2xs hover:brightness-105"
+                  }`}
                 >
-                  <Send size={12} />
+                  {isSubmittingThis ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : isCardClaimed && !isInputActivelyInteracting ? (
+                    <Check size={13} />
+                  ) : (
+                    <Send size={12} />
+                  )}
                 </button>
               </div>
             </div>
@@ -4588,17 +4753,39 @@ function InteractiveTurnWidgetsSection({
         }
 
         // Default: "options" or "reply_keyboard" -> Blur when claimed, unblur on hover to allow re-selection
+        const optionsCardSurfaceClass = isCardClaimed
+          ? "opacity-45 blur-[1.2px] hover:opacity-100 hover:blur-none focus-within:opacity-100 focus-within:blur-none border-neutral-200/90 dark:border-[#22222e] transition-all duration-200"
+          : "border-neutral-200/90 dark:border-[#22222e] hover:border-[var(--agent-primary)]/40 transition-all duration-200";
+
         return (
           <div
             key={w.interactionId}
             data-testid={`interactive-options-card-${w.interactionId}`}
-            className={`group/ixcard w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] p-3 sm:p-3.5 shadow-2xs space-y-2 font-sans ${cardBlurClass}`}
+            className={`group/ixcard w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border p-3 sm:p-3.5 shadow-2xs space-y-2 font-sans ${optionsCardSurfaceClass}`}
           >
             {w.promptText && w.actionType !== "auto_followup" && (
               <div className="flex items-center justify-between gap-2 px-1">
-                <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug truncate">
-                  {w.promptText}
-                </span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    title={
+                      isSubmittingThis
+                        ? "Đang gửi lựa chọn..."
+                        : isCardClaimed
+                        ? "Đã chọn — rê chuột vào để chọn lại"
+                        : "Chọn một phương án bên dưới"
+                    }
+                    className={`h-2 w-2 rounded-full shrink-0 ${
+                      isSubmittingThis
+                        ? "bg-amber-400 animate-pulse"
+                        : isCardClaimed
+                        ? "bg-emerald-500"
+                        : "bg-[var(--agent-primary)]"
+                    }`}
+                  />
+                  <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug truncate">
+                    {w.promptText}
+                  </span>
+                </div>
                 {claimed && (
                   <span
                     title="Đã chọn — Rê chuột vào để chọn lại"
@@ -4676,8 +4863,11 @@ function InteractiveTurnWidgetsSection({
                     type="button"
                     data-testid={`cta-option-btn-${opt.id}`}
                     title={isSelected ? `Đã chọn: ${opt.label} (Bấm để chọn lại)` : (opt.prompt || opt.label)}
-                    onClick={() => onSelectOption(w, opt)}
-                    className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer group/ixbtn flex items-center justify-between gap-2.5 min-w-0 border ${
+                    onClick={() => {
+                      triggerSubmitState();
+                      onSelectOption(w, opt);
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer group/ixbtn flex items-center justify-between gap-2.5 min-w-0 border active:scale-[0.99] ${
                       isSelected
                         ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/40 text-slate-950 dark:text-white font-medium opacity-50 blur-[0.8px] hover:opacity-100 hover:blur-none"
                         : "border-transparent hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-slate-800 dark:text-neutral-200"
@@ -4691,7 +4881,13 @@ function InteractiveTurnWidgetsSection({
                             : "bg-neutral-100 dark:bg-[#1c1c26] border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300 group-hover/ixbtn:border-[var(--agent-primary)]/50 group-hover/ixbtn:text-slate-900 dark:group-hover/ixbtn:text-white"
                         }`}
                       >
-                        {isSelected ? <Check size={12} /> : optionLetter}
+                        {isSelected && isSubmittingThis ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : isSelected ? (
+                          <Check size={12} />
+                        ) : (
+                          optionLetter
+                        )}
                       </span>
                       <span className="text-[13.5px] group-hover/ixbtn:text-slate-950 dark:group-hover/ixbtn:text-white transition-colors block truncate">
                         {opt.label}
@@ -15288,6 +15484,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               widgets={interactiveWidgets}
                               messageId={msg.id}
                               claimedMap={claimedInteractionsMap}
+                              isTurnBusy={isStreaming || isCurrentSessionRunning}
                               themePrimary={selectedAgentTheme.primary}
                               onSelectOption={(w, opt) =>
                                 handleRecordAndDispatchInteraction(
@@ -15333,6 +15530,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           widgets={interactiveWidgets}
                           messageId={msg.id}
                           claimedMap={claimedInteractionsMap}
+                          isTurnBusy={isStreaming || isCurrentSessionRunning}
                           themePrimary={selectedAgentTheme.primary}
                           onSelectOption={(w, opt) =>
                             handleRecordAndDispatchInteraction(
@@ -17445,15 +17643,19 @@ const selectedAgentTheme = getAgentColorTheme(
                   disabled={hasNoAgents}
                   placeholder={
                     hasNoAgents
-                      ? "Chưa có Agent được gán cho tài khoản..."
+                      ? "Chưa có Agent được gán..."
                       : isRecording
                       ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
                       : isStreaming
                       ? "Agent is responding..."
-                      : (typeof window !== "undefined" && window.innerWidth < 640 ? "Nhập tin nhắn..." : (t("composer.placeholder") || "Nhập yêu cầu công việc..."))
+                      : composerWidth < 380
+                      ? "Nhập tin nhắn..."
+                      : composerWidth < 520
+                      ? "Nhập yêu cầu công việc..."
+                      : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
                   }
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-neutral-500 placeholder:truncate resize-none ${
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-[13px] sm:placeholder:text-[13.5px] placeholder:text-neutral-500 placeholder:truncate resize-none ${
                     isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] pt-1 pb-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[30px] min-h-[30px] max-h-[30px] pt-[4px] pb-0 px-1 sm:px-0.5 m-0"
                   }`}
                 />
