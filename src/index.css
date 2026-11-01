@@ -428,10 +428,12 @@ select:focus-visible {
   ::before,
   ::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
-  --canvas-transition: none !important;
+    --canvas-transition: none !important;
   }
 }
 
@@ -440,8 +442,10 @@ html[data-reduced-motion="true"] *,
 html[data-reduced-motion="true"] ::before,
 html[data-reduced-motion="true"] ::after {
   animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
   scroll-behavior: auto !important;
 }
 
@@ -464,17 +468,19 @@ html[data-reduced-motion="true"] ::after {
   }
 }
 
-.animate-hero-rise-1 {
-  animation: heroRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.animate-hero-rise-2 {
-  animation: heroRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
-}
-.animate-hero-rise-3 {
-  animation: heroRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
-}
-.animate-hero-rise-4 {
-  animation: heroRise 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+@media (prefers-reduced-motion: no-preference) {
+  .animate-hero-rise-1 {
+    animation: heroRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-hero-rise-2 {
+    animation: heroRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+  }
+  .animate-hero-rise-3 {
+    animation: heroRise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+  }
+  .animate-hero-rise-4 {
+    animation: heroRise 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+  }
 }
 
 .font-newsreader {
