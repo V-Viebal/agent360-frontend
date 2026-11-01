@@ -52,7 +52,7 @@ if (!css.includes(":where(.workspace-root,") || !css.includes(".grok-workspace")
   errors.push("src/index.css must scope compact workspace typography inside :where(.workspace-root, [data-type-scope=\"app\"], .grok-workspace) so marketing typography is never shrunk.");
 }
 
-// 3. Verify LandingPage, MarketplacePage, DocsPage & StrawberryComparisonSection follow 1080px container & AgentAvatar binding
+// 3. Verify LandingPage, MarketplacePage, DocsPage & StrawberryComparisonSection follow 1080px/1140px container & AgentAvatar binding
 for (const rel of [
   "src/pages/LandingPage.tsx",
   "src/pages/MarketplacePage.tsx",
@@ -69,7 +69,7 @@ for (const rel of [
   }
 }
 
-// 4. Verify Hero Authentic 3-Zone UI, Live Animated SVG & Entrance/Micro-Animations in LandingPage
+// 4. Verify Hero Above-the-Fold 1100x468 Stage, 5-Col Realistic ERP Table, Non-Occluding SVG Pointer & Crisp Entrance in LandingPage
 const landingSrc = fs.readFileSync(path.join(ROOT, "src/pages/LandingPage.tsx"), "utf-8");
 if (!landingSrc.includes("text-[47.8px]") && !landingSrc.includes("text-[48px]")) {
   errors.push("LandingPage missing Strawberry H1 scale (47.8px/48px).");
@@ -89,9 +89,16 @@ if (!landingSrc.includes("motion.circle") || !landingSrc.includes("motion.line")
 if (!landingSrc.includes("motion.h1") || !landingSrc.includes("whileInView") || !landingSrc.includes("whileHover")) {
   errors.push("LandingPage missing Hero staggered entrance (motion.h1) or section micro-animations (whileInView / whileHover).");
 }
-if (!landingSrc.includes("lg:px-5") || !landingSrc.includes("lg:h-[468px]") || !landingSrc.includes("h-[228px]")) {
-  errors.push("LandingPage missing Strawberry 1040px inner container width (lg:px-5), 640px 16:10 Hero Stage (lg:h-[468px]), or 228px full-bleed companion cards (h-[228px]).");
+if (landingSrc.includes('filter: "blur(')) {
+  errors.push("LandingPage must not use CSS filter:blur() on Hero typography entrance animation (causes blurry text capture).");
 }
+if (!landingSrc.includes("max-w-[1140px]") || !landingSrc.includes("lg:h-[468px]") || !landingSrc.includes("h-[228px]")) {
+  errors.push("LandingPage missing 1140px Hero container (max-w-[1140px]), 468px Above-the-Fold Hero height (lg:h-[468px]), or 228px full-bleed companion cards (h-[228px]).");
+}
+if (!landingSrc.includes("colHeaders") || !landingSrc.includes("fileName")) {
+  errors.push("LandingPage Hero Frame missing realistic 5-column domain table (colHeaders) or chat deliverable attachment card (fileName).");
+}
+
 const compSrc = fs.readFileSync(path.join(ROOT, "src/components/StrawberryComparisonSection.tsx"), "utf-8");
 if (!compSrc.includes("h-[430px]") || !compSrc.includes("lg:px-5")) {
   errors.push("StrawberryComparisonSection missing 430px viewport height (h-[430px]) or 1040px inner container width (lg:px-5).");
@@ -103,4 +110,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log("[Visual Contract Gate] PASSED: DESIGN.md, Scoped Typography, Dual-Theme Contrast, Authentic 3-Zone Hero SVG UI, and Entrance/Micro-Animations verified across all surfaces.");
+console.log("[Visual Contract Gate] PASSED: DESIGN.md, Above-the-Fold 1100x468 Hero Stage, Realistic 5-Col ERP UI, Non-Occluding SVG Pointer, Unboxed 333px Cards, and Crisp Micro-Animations verified.");
