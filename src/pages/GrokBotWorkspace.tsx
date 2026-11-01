@@ -4484,13 +4484,16 @@ function InteractiveTurnWidgetsSection({
     >
       {widgets.map((w) => {
         const claimed = claimedMap[w.interactionId];
+        const isCardClaimed = Boolean(claimed);
+        const cardBlurClass = isCardClaimed
+          ? "opacity-45 blur-[1.2px] hover:opacity-100 hover:blur-none focus-within:opacity-100 focus-within:blur-none transition-all duration-200"
+          : "transition-all duration-200";
 
         if (w.kind === "poll") {
-          const currentSelected = claimed?.selected_ids || pollSelections[w.interactionId] || [];
+          const currentSelected = pollSelections[w.interactionId] || claimed?.selected_ids || [];
           const togglePollChoice = (optId: string) => {
-            if (claimed) return;
             setPollSelections((prev) => {
-              const cur = prev[w.interactionId] || [];
+              const cur = prev[w.interactionId] || claimed?.selected_ids || [];
               if (w.allowsMultiple) {
                 return {
                   ...prev,
@@ -4505,7 +4508,7 @@ function InteractiveTurnWidgetsSection({
             <div
               key={w.interactionId}
               data-testid={`interactive-poll-card-${w.interactionId}`}
-              className="w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans"
+              className={`group/ixcard w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans ${cardBlurClass}`}
             >
               <div className="flex items-center justify-between gap-2 px-1">
                 <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug">
@@ -4522,16 +4525,17 @@ function InteractiveTurnWidgetsSection({
               <div className="space-y-1">
                 {w.options.map((opt, oIdx) => {
                   const optionLetter = String.fromCharCode(65 + (oIdx % 26));
-                  const isChecked = currentSelected.includes(opt.id) || (claimed?.selected_labels || []).includes(opt.label);
+                  const isChecked =
+                    currentSelected.includes(opt.id) ||
+                    (!pollSelections[w.interactionId] && (claimed?.selected_labels || []).includes(opt.label));
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      disabled={Boolean(claimed)}
                       onClick={() => togglePollChoice(opt.id)}
-                      className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer group flex items-center justify-between gap-2.5 min-w-0 border ${
+                      className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer group/ixbtn flex items-center justify-between gap-2.5 min-w-0 border ${
                         isChecked
-                          ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/60 text-slate-950 dark:text-white font-medium"
+                          ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/50 text-slate-950 dark:text-white font-medium opacity-55 blur-[0.8px] group-hover/ixcard:opacity-100 group-hover/ixcard:blur-none hover:opacity-100 hover:blur-none"
                           : "border-transparent hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-slate-800 dark:text-neutral-200"
                       }`}
                     >
@@ -4552,93 +4556,87 @@ function InteractiveTurnWidgetsSection({
                 })}
               </div>
 
-              {!claimed ? (
-                <div className="flex justify-end pt-1 px-1">
-                  <button
-                    type="button"
-                    data-ux-target-min="24"
-                    data-testid={`interactive-poll-submit-${w.interactionId}`}
-                    aria-label="Gửi lựa chọn khảo sát"
-                    title="Gửi lựa chọn khảo sát"
-                    disabled={currentSelected.length === 0}
-                    onClick={() => {
-                      const chosen = w.options.filter((o) => currentSelected.includes(o.id));
-                      if (chosen.length > 0) onSubmitPoll(w, chosen);
-                    }}
-                    style={{ backgroundColor: themePrimary }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-white text-xs font-semibold shadow-2xs disabled:opacity-40 transition-all cursor-pointer"
-                  >
-                    <Send size={11} />
-                    <span>{currentSelected.length}</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 px-1 pt-0.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
-                  <Check size={11} className="shrink-0" />
-                  <span className="truncate">{(claimed.selected_labels || []).join(", ")}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-2 pt-1 px-1">
+                {claimed ? (
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 truncate">
+                    <Check size={11} className="shrink-0" />
+                    <span className="truncate">{(claimed.selected_labels || []).join(", ")}</span>
+                  </div>
+                ) : <span />}
+                <button
+                  type="button"
+                  data-ux-target-min="24"
+                  data-testid={`interactive-poll-submit-${w.interactionId}`}
+                  aria-label="Gửi lựa chọn khảo sát"
+                  title="Gửi lựa chọn khảo sát"
+                  disabled={currentSelected.length === 0}
+                  onClick={() => {
+                    const chosen = w.options.filter((o) => currentSelected.includes(o.id));
+                    if (chosen.length > 0) onSubmitPoll(w, chosen);
+                  }}
+                  style={{ backgroundColor: themePrimary }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-white text-xs font-semibold shadow-2xs disabled:opacity-40 transition-all cursor-pointer ${
+                    claimed ? "opacity-0 group-hover/ixcard:opacity-100" : ""
+                  }`}
+                >
+                  <Send size={11} />
+                  <span>{currentSelected.length}</span>
+                </button>
+              </div>
             </div>
           );
         }
 
         if (w.kind === "force_reply") {
-          const val = claimed?.input_value ?? inputValues[w.interactionId] ?? "";
+          const val = inputValues[w.interactionId] ?? claimed?.input_value ?? "";
           return (
             <div
               key={w.interactionId}
               data-testid={`interactive-input-card-${w.interactionId}`}
-              className="w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans"
+              className={`group/ixcard w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans ${cardBlurClass}`}
             >
               <div className="text-[13px] font-semibold text-slate-800 dark:text-neutral-200 px-0.5">
                 {w.promptText}
               </div>
-              {!claimed ? (
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    value={val}
-                    placeholder={w.placeholder || "Nhập phản hồi..."}
-                    onChange={(e) => setInputValues((prev) => ({ ...prev, [w.interactionId]: e.target.value }))}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && val.trim()) {
-                        e.preventDefault();
-                        onSubmitInput(w, val.trim());
-                      }
-                    }}
-                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-[#181822] border border-neutral-200/90 dark:border-[#2b2b3a] text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
-                  />
-                  <button
-                    type="button"
-                    data-ux-target-min="24"
-                    aria-label="Gửi thông tin"
-                    title="Gửi thông tin"
-                    disabled={!val.trim()}
-                    onClick={() => {
-                      if (val.trim()) onSubmitInput(w, val.trim());
-                    }}
-                    style={{ backgroundColor: themePrimary }}
-                    className="h-8 w-8 rounded-lg text-white flex items-center justify-center disabled:opacity-40 cursor-pointer shrink-0 transition-transform active:scale-95"
-                  >
-                    <Send size={12} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 px-0.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
-                  <Check size={11} className="shrink-0" />
-                  <span className="truncate">{claimed.input_value}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={val}
+                  placeholder={w.placeholder || "Nhập phản hồi..."}
+                  onChange={(e) => setInputValues((prev) => ({ ...prev, [w.interactionId]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && val.trim()) {
+                      e.preventDefault();
+                      onSubmitInput(w, val.trim());
+                    }
+                  }}
+                  className="flex-1 px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-[#181822] border border-neutral-200/90 dark:border-[#2b2b3a] text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
+                />
+                <button
+                  type="button"
+                  data-ux-target-min="24"
+                  aria-label="Gửi thông tin"
+                  title="Gửi thông tin"
+                  disabled={!val.trim()}
+                  onClick={() => {
+                    if (val.trim()) onSubmitInput(w, val.trim());
+                  }}
+                  style={{ backgroundColor: themePrimary }}
+                  className="h-8 w-8 rounded-lg text-white flex items-center justify-center disabled:opacity-40 cursor-pointer shrink-0 transition-transform active:scale-95"
+                >
+                  <Send size={12} />
+                </button>
+              </div>
             </div>
           );
         }
 
-        // Default: "options" or "reply_keyboard" -> Match First-Turn Suggested Tasks Card Pattern (A/B/C/D Badge + Title + Hover ArrowRight)
+        // Default: "options" or "reply_keyboard" -> Blur when claimed, unblur on hover to allow re-selection
         return (
           <div
             key={w.interactionId}
             data-testid={`interactive-options-card-${w.interactionId}`}
-            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] p-3 sm:p-3.5 shadow-2xs space-y-2 font-sans"
+            className={`group/ixcard w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] p-3 sm:p-3.5 shadow-2xs space-y-2 font-sans ${cardBlurClass}`}
           >
             {w.promptText && w.actionType !== "auto_followup" && (
               <div className="flex items-center justify-between gap-2 px-1">
@@ -4647,8 +4645,8 @@ function InteractiveTurnWidgetsSection({
                 </span>
                 {claimed && (
                   <span
-                    title="Đã chọn phương án"
-                    aria-label="Đã chọn phương án"
+                    title="Đã chọn — Rê chuột vào để chọn lại"
+                    aria-label="Đã chọn — Rê chuột vào để chọn lại"
                     className="h-5 w-5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0"
                   >
                     <Check size={11} />
@@ -4721,11 +4719,11 @@ function InteractiveTurnWidgetsSection({
                     key={opt.id + oIdx}
                     type="button"
                     data-testid={`cta-option-btn-${opt.id}`}
-                    title={opt.prompt || opt.label}
+                    title={isSelected ? `Đã chọn: ${opt.label} (Bấm để chọn lại)` : (opt.prompt || opt.label)}
                     onClick={() => onSelectOption(w, opt)}
-                    className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer group flex items-center justify-between gap-2.5 min-w-0 border ${
+                    className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all duration-150 cursor-pointer group/ixbtn flex items-center justify-between gap-2.5 min-w-0 border ${
                       isSelected
-                        ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/50 text-slate-950 dark:text-white font-medium"
+                        ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/40 text-slate-950 dark:text-white font-medium opacity-50 blur-[0.8px] hover:opacity-100 hover:blur-none"
                         : "border-transparent hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-slate-800 dark:text-neutral-200"
                     }`}
                   >
@@ -4734,23 +4732,19 @@ function InteractiveTurnWidgetsSection({
                         className={`h-6 w-6 rounded-md border text-[12px] font-medium flex items-center justify-center shrink-0 transition-colors ${
                           isSelected
                             ? "bg-[var(--agent-primary)] border-[var(--agent-primary)] text-white"
-                            : "bg-neutral-100 dark:bg-[#1c1c26] border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300 group-hover:border-[var(--agent-primary)]/50 group-hover:text-slate-900 dark:group-hover:text-white"
+                            : "bg-neutral-100 dark:bg-[#1c1c26] border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300 group-hover/ixbtn:border-[var(--agent-primary)]/50 group-hover/ixbtn:text-slate-900 dark:group-hover/ixbtn:text-white"
                         }`}
                       >
                         {isSelected ? <Check size={12} /> : optionLetter}
                       </span>
-                      <span className="text-[13.5px] group-hover:text-slate-950 dark:group-hover:text-white transition-colors block truncate">
+                      <span className="text-[13.5px] group-hover/ixbtn:text-slate-950 dark:group-hover/ixbtn:text-white transition-colors block truncate">
                         {opt.label}
                       </span>
                     </div>
                     <ArrowRight
                       size={13}
                       style={{ color: themePrimary }}
-                      className={`transition-all shrink-0 ${
-                        isSelected
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5"
-                      }`}
+                      className="transition-all shrink-0 opacity-0 group-hover/ixbtn:opacity-100 group-hover/ixbtn:translate-x-0.5"
                     />
                   </button>
                 );
