@@ -250,11 +250,11 @@ export function LandingPage() {
           <div
             className="w-full h-full"
             style={{
-              maskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 22%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.7) 78%, rgba(0,0,0,0.95) 100%)",
-              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 22%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.08) 60%, rgba(0,0,0,0.7) 78%, rgba(0,0,0,0.95) 100%)",
+              maskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.25) 43%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.25) 57%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%)",
+              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.25) 43%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.25) 57%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%)",
             }}
           >
-            <svg className="w-full h-full opacity-[0.38] dark:opacity-[0.06] text-[#e5ddd2] dark:text-white" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-full h-full opacity-[0.55] dark:opacity-[0.1] text-[#e5ddd2] dark:text-white" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <pattern id="strawberry-mosaic" width="64" height="64" patternUnits="userSpaceOnUse">
                 {/* Row 1 */}

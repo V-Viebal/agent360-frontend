@@ -17422,25 +17422,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
                 return (
                   <div className="flex items-center gap-1.5 text-neutral-400 shrink-0">
-                    {/* Quick clear button when input text exists */}
-                    {inputText.length > 0 && !isRecording && (
-                      <button
-                        type="button"
-                        aria-label="Xóa nội dung"
-                        title="Xóa nội dung đang soạn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setInputText("");
-                          if (textareaRef.current) {
-                            textareaRef.current.style.height = "30px";
-                            textareaRef.current.focus();
-                          }
-                        }}
-                        className="h-6 w-6 rounded-full flex items-center justify-center text-neutral-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                      >
-                        <X size={13} />
-                      </button>
-                    )}
+
                     {/* Quick clear button when input text exists */}
                     {inputText.length > 0 && !isRecording && (
                       <button
