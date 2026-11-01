@@ -70,11 +70,11 @@ export function Toast({ toast, onDismiss, className = "" }: ToastProps) {
     <div
       role="status"
       aria-live="polite"
-      className={`fixed bottom-5 right-5 z-[100000] max-w-sm w-auto rounded-xl p-3 shadow-2xl backdrop-blur-md border font-sans text-xs flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150 select-none ${style.bg} ${style.border} ${style.text} ${className}`}
+      className={`grok-overlay-scope fixed bottom-5 right-5 z-[100000] max-w-sm w-auto rounded-xl p-3 shadow-2xl backdrop-blur-md border font-sans text-[13.5px] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150 select-none ${style.bg} ${style.border} ${style.text} ${className}`}
     >
       <div className="flex items-center gap-2.5 min-w-0 pr-1">
         {style.icon}
-        <div className="text-[11px] font-medium leading-tight truncate">{toast.message}</div>
+        <div className="text-[13.5px] font-medium leading-tight truncate">{toast.message}</div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">

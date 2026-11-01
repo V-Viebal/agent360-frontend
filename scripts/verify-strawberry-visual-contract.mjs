@@ -111,6 +111,36 @@ if ((!landingSrc.includes("fontWeight: 530") && !landingSrc.includes("fontWeight
   errors.push("LandingPage H1 must use Onest variable fontWeight: 530/480 and .animate-hero-rise-1.");
 }
 
+
+// 5. Verify Portal Scope Gate (Every file using createPortal must include grok-modal-scope, grok-overlay-scope, or data-type-scope="overlay")
+function walkTsxFiles(dir, acc = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkTsxFiles(full, acc);
+    else if (entry.isFile() && full.endsWith(".tsx")) acc.push(full);
+  }
+  return acc;
+}
+
+for (const file of walkTsxFiles(path.join(ROOT, "src"))) {
+  const content = fs.readFileSync(file, "utf-8");
+  if (content.includes("createPortal(")) {
+    const hasScope =
+      content.includes("grok-modal-scope") ||
+      content.includes("grok-overlay-scope") ||
+      content.includes('data-type-scope="overlay"');
+    if (!hasScope) {
+      errors.push(`${path.relative(ROOT, file)} uses createPortal() without .grok-modal-scope or .grok-overlay-scope.`);
+    }
+  }
+}
+
+// 6. Verify User Message Bubble does not use harsh solid primary background with black bold text
+const workspaceSrc = fs.readFileSync(path.join(ROOT, "src/pages/GrokBotWorkspace.tsx"), "utf-8");
+if (workspaceSrc.includes('isColorBright(selectedAgentTheme.primary || selectedAgentTheme.dark) ? "#18181b"')) {
+  errors.push("GrokBotWorkspace.tsx user-message-bubble must not use harsh solid accent background with #18181b black bold text.");
+}
+
 if (errors.length > 0) {
   console.error("[Visual Contract Gate] FAILED:");
   for (const e of errors) console.error("  ✕", e);

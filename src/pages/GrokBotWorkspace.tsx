@@ -16027,7 +16027,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     zIndex: 99999,
                   }}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#1c1c24]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto select-none text-left"
+                  className="grok-overlay-scope w-72 sm:w-80 p-3.5 rounded-2xl bg-white/95 dark:bg-[#1c1c24]/95 border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-neutral-200 shadow-xl dark:shadow-2xl backdrop-blur-md pointer-events-auto select-none text-left"
                 >
                   {/* Header: User prompt title + Bookmark Icon */}
                   <div className="flex items-start justify-between gap-2">
