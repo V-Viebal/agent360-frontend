@@ -93,6 +93,8 @@ Self-hosted native WOFF2 variable fonts (`Inter`, `Fraunces`, `JetBrains Mono`) 
    - `CustomSelect`, `DropdownMenu`, `Modal`, `ToggleSwitch`, `Tabs`, `Tooltip`, `ConfirmDialog`, `CodeBlock`, `AgentPill`, `StatusBadge`, `SearchInput`, `IconButton`.
 
 ## Do's and Don'ts
+- **DO (Mobile Hero Ergonomics):** Enforce a minimum >= 24px vertical clearance between the bottom of the stacked Hero CTA buttons and the top of the Peeking Companion Avatars on mobile viewports (<640px) using `mt-[108px] sm:mt-[79.2px]` and `-top-[88px] sm:-top-[96px]`. Ensure Zone 1 agent switcher collapses into a 2x2 grid and Zone 3 data table condenses to 3 columns to avoid horizontal clipping.
+
 - **DO** build the Hero Product Stage as an authentic 3-zone interactive Skyer `/app` workspace (Zone 1: Pure Interactive Agent List without `All Agents (Infra)` clutter; Zone 2: Live Request Bubble + Animated 3-node SVG Execution Progress Wave; Zone 3: Visual Browser Canvas with Animated SVG Agent Pointer & Click Ripple Ring).
 - **DO** apply 4-step staggered entrance choreography on the Hero (`motion.h1` blur-up -> `motion.p` blur-up -> `motion.div` CTA spring -> `motion.div` Hero Product Stage elevation) and `whileInView` + `whileHover={{ y: -5 }}` micro-animations across all secondary sections.
 - **DO** isolate compact workspace typography overrides inside `:where(.workspace-root, [data-type-scope="app"], .grok-workspace)` so marketing/editorial H1 (`47.8px`), H2 (`46px`), and Lead (`21px`) scales are never shrunk.

@@ -141,6 +141,21 @@ if (workspaceSrc.includes('isColorBright(selectedAgentTheme.primary || selectedA
   errors.push("GrokBotWorkspace.tsx user-message-bubble must not use harsh solid accent background with #18181b black bold text.");
 }
 
+
+// 7. Verify Mobile Responsive & Peeking Avatar Clearance Gate
+if (!landingSrc.includes("mt-[108px] sm:mt-[79.2px]")) {
+  errors.push("LandingPage Hero Stage missing mobile CTA-to-Avatar clearance margin (mt-[108px] sm:mt-[79.2px]).");
+}
+if (!landingSrc.includes("-top-[88px] sm:-top-[96px]")) {
+  errors.push("LandingPage Hero Peeking Avatars missing responsive top offset (-top-[88px] sm:-top-[96px]).");
+}
+if (!landingSrc.includes("grid grid-cols-2 lg:grid-cols-1")) {
+  errors.push("LandingPage Hero Agent Switcher missing responsive 2x2 grid on mobile viewports (grid grid-cols-2 lg:grid-cols-1).");
+}
+if (!landingSrc.includes("hidden sm:inline sm:col-span-3")) {
+  errors.push("LandingPage Hero ERP Table missing responsive 3-column condensing on mobile viewports (hidden sm:inline sm:col-span-3).");
+}
+
 if (errors.length > 0) {
   console.error("[Visual Contract Gate] FAILED:");
   for (const e of errors) console.error("  ✕", e);

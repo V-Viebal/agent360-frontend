@@ -5319,6 +5319,13 @@ function SelkiesViewer({
   const [error, setError] = useState<string>("");
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
+  const [preferNativeDesktop, setPreferNativeDesktop] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const hasWebCodecs = typeof (window as any).ImageDecoder !== "undefined";
+    return !isIOS && hasWebCodecs;
+  });
   const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 393, h: 780 });
   const [browserTabs, setBrowserTabs] = useState<AgentBrowserTab[]>([]);
   const [selectedTabId, setSelectedTabId] = useState<string>("");
@@ -5439,7 +5446,8 @@ function SelkiesViewer({
   }, []);
 
   const isPortraitViewport = boxSize.h > boxSize.w;
-  const useCdpChromeView = isMobileOrWebKitFallback || isPortraitViewport || Boolean(error) || !iframeLoaded;
+  const isNativeStreamActive = Boolean(src && !error && preferNativeDesktop);
+  const useCdpChromeView = !isNativeStreamActive;
   const activeTabObj = browserTabs.find((t) => t.targetId === selectedTabId) || browserTabs[browserTabs.length - 1] || browserTabs[0];
 
   const handleNavigateSubmit = async (e: React.FormEvent) => {
@@ -5597,7 +5605,13 @@ function SelkiesViewer({
         {useCdpChromeView && renderBrowserChromeHeader()}
 
         {/* Main Viewport Area */}
-        <div className="relative flex-1 w-full min-h-0 bg-[#0c0c12] overflow-hidden flex items-center justify-center">
+        <div
+          className={`relative flex-1 w-full min-h-0 bg-[#0c0c12] flex ${
+            isNativeStreamActive && isPortraitViewport && !isLandscapeRotated
+              ? "overflow-x-auto overflow-y-hidden items-stretch justify-start"
+              : "overflow-hidden items-center justify-center"
+          }`}
+        >
           {error && (
             <>
               <AgentBrowserPreview
@@ -5628,7 +5642,7 @@ function SelkiesViewer({
               </div>
             </>
           )}
-          {src && !isMobileOrWebKitFallback && !isPortraitViewport && !isLandscapeRotated && (
+          {isNativeStreamActive && (
             <iframe
               ref={iframeRef}
               key={`${src}#${attempt}#${reloadKey}`}
@@ -5648,7 +5662,14 @@ function SelkiesViewer({
               allowFullScreen
               style={{
                 touchAction: "manipulation",
-                width: "100%",
+                width:
+                  isNativeStreamActive && isPortraitViewport && !isLandscapeRotated
+                    ? `${Math.max(boxSize.w, Math.round(boxSize.h * 1.6))}px`
+                    : "100%",
+                minWidth:
+                  isNativeStreamActive && isPortraitViewport && !isLandscapeRotated
+                    ? `${Math.max(boxSize.w, Math.round(boxSize.h * 1.6))}px`
+                    : "100%",
                 height: "100%",
               }}
             />
@@ -5657,16 +5678,30 @@ function SelkiesViewer({
           <AgentBrowserPreview
             agentId={agentId}
             pageId={selectedTabId || undefined}
-            enabled={!error && (!iframeLoaded || isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated)}
-            intervalMs={isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated ? 900 : 4000}
-            liveWs={isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated}
+            enabled={!error && (!isNativeStreamActive || !iframeLoaded)}
+            intervalMs={900}
+            liveWs={!isNativeStreamActive}
             isLandscapeRotated={isLandscapeRotated}
-            interactive={(isMobileOrWebKitFallback || isPortraitViewport || isLandscapeRotated) && mode === "collab"}
+            interactive={!isNativeStreamActive && mode === "collab"}
           />
         </div>
       </div>
 
       <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-30">
+        {src && !error && (
+          <button
+            type="button"
+            data-testid="computer-native-mode-toggle"
+            onClick={() => {
+              triggerHaptic(10);
+              setPreferNativeDesktop((prev) => !prev);
+            }}
+            className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
+            title={preferNativeDesktop ? "Đang dùng luồng Native Selkies Desktop (bấm để chuyển sang CDP Tab View)" : "Đang dùng CDP Tab View (bấm để mở Native Selkies Desktop trực tiếp)"}
+          >
+            {preferNativeDesktop ? "Native Desktop" : "CDP View"}
+          </button>
+        )}
         <button
           type="button"
           data-testid="computer-rotate-landscape-btn"
@@ -7547,6 +7582,23 @@ export function GrokBotWorkspace() {
   const processingChatsRef = useRef<Set<string>>(new Set());
   const streamAbortControllersRef = useRef<Record<string, AbortController>>({});
   const requestQueue = (selectedChatId && requestQueues[selectedChatId]) || [];
+  const [isQueueFadingOut, setIsQueueFadingOut] = useState(false);
+  const queueDisappearTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const prevQueueLengthRef = useRef(requestQueue.length);
+
+  useEffect(() => {
+    if (prevQueueLengthRef.current > 0 && requestQueue.length === 0) {
+      setIsQueueFadingOut(true);
+      if (queueDisappearTimerRef.current) clearTimeout(queueDisappearTimerRef.current);
+      queueDisappearTimerRef.current = setTimeout(() => {
+        setIsQueueFadingOut(false);
+      }, 240);
+    } else if (requestQueue.length > 0) {
+      setIsQueueFadingOut(false);
+      if (queueDisappearTimerRef.current) clearTimeout(queueDisappearTimerRef.current);
+    }
+    prevQueueLengthRef.current = requestQueue.length;
+  }, [requestQueue.length]);
   const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
   const [isQueueStackOpen, setIsQueueStackOpen] = useState(false);
   const [editingQueueText, setEditingQueueText] = useState<string>("");
@@ -8285,7 +8337,7 @@ ${targetItem.text}`;
           textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
         }
       } else {
-        textareaRef.current.style.height = "28px";
+        textareaRef.current.style.height = "24px";
       }
       if (didChangeLayoutMode || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
         textareaRef.current.focus({ preventScroll: true });
@@ -8339,7 +8391,7 @@ ${targetItem.text}`;
         const nextDraft = selectedChatId ? localStorage.getItem(`agent360_draft_${selectedChatId}`) : "";
         setInputText(nextDraft || "");
         if (textareaRef.current) {
-          textareaRef.current.style.height = nextDraft && computeIsMultilineComposer(nextDraft, composerWidth) ? "auto" : "28px";
+          textareaRef.current.style.height = nextDraft && computeIsMultilineComposer(nextDraft, composerWidth) ? "auto" : "24px";
         }
       } catch {}
     }
@@ -12780,7 +12832,7 @@ const selectedAgentTheme = getAgentColorTheme(
       try { localStorage.removeItem(`agent360_draft_${selectedChatId}`); } catch {}
     }
     if (textareaRef.current) {
-      textareaRef.current.style.height = "28px";
+      textareaRef.current.style.height = "24px";
     }
     if (isRecording) {
       stopVoiceRecording();
@@ -16157,8 +16209,8 @@ const selectedAgentTheme = getAgentColorTheme(
       {/* Bottom Floating Pill Composer (Lean padding in compact mode) */}
         <div className={`${isCompactMode ? "px-3 sm:px-2.5 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:pb-3" : "px-3.5 sm:px-4 pt-1.5 pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] sm:pb-3.5"} bg-transparent shrink-0 max-w-3xl mx-auto w-full space-y-1.5`}>
           {/* Rich Request Queue Stack with Steer, Edit, and Delete */}
-          {requestQueue.length > 0 && selectedChatId && (
-            <div className="space-y-1.5 animate-in fade-in duration-100">
+          {(requestQueue.length > 0 || isQueueFadingOut) && selectedChatId && (
+            <div className={`space-y-1.5 transition-all duration-200 ease-out ${isQueueFadingOut ? "opacity-0 -translate-y-1 pointer-events-none" : "opacity-100 translate-y-0 animate-in fade-in duration-150"}`}>
               {/* Lean Request Queue Bar (clean, compact, minimalist UI) */}
               <div
                 data-testid="request-queue-indicator"
@@ -17641,7 +17693,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       e.target.style.height = "auto";
                       e.target.style.height = Math.min(e.target.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                     } else {
-                      e.target.style.height = "28px";
+                      e.target.style.height = "24px";
                     }
 
                     const textUpToCursor = newVal.slice(0, cursorPos);
@@ -17858,7 +17910,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       e.preventDefault();
                       composerFormRef.current?.requestSubmit();
                       if (textareaRef.current) {
-                        textareaRef.current.style.height = "28px";
+                        textareaRef.current.style.height = "24px";
                       }
                     }
                   }}
@@ -17878,7 +17930,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-[13px] sm:placeholder:text-[13.5px] placeholder:text-neutral-500 placeholder:truncate resize-none ${
-                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[30px] min-h-[30px] max-h-[30px] py-1 px-1 sm:px-0.5 m-0 my-auto"
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[24px] overflow-hidden flex-1 self-center h-[24px] min-h-[24px] max-h-[24px] py-0 px-1 sm:px-0.5 m-0 my-auto block"
                   }`}
                 />
               );
