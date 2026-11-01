@@ -61,7 +61,7 @@ export function Navbar() {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-50 bg-[var(--bg-nav)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] transition-colors select-none">
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5 h-16 flex items-center justify-between">
           {/* Left: Brand Logo */}
           <Link to="/" className="shrink-0 flex items-center">
             <SkyerLogo size={30} showText={true} showBotBadge={false} />

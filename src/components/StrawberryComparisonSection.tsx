@@ -37,8 +37,8 @@ export function StrawberryComparisonSection() {
   const currentCursor = cursorPositions[cursorRowIdx] || cursorPositions[0];
 
   return (
-    <section className="py-20 sm:py-28 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors select-none">
-      <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
+    <section className="py-24 sm:py-32 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors select-none">
+      <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5">
 
         {/* Clean Minimal Header */}
         <div className="text-center max-w-2xl mx-auto mb-14">
@@ -57,7 +57,14 @@ export function StrawberryComparisonSection() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-[38.4px] items-stretch">
 
           {/* LEFT COLUMN: Working with chatbots */}
-          <div className="flex flex-col justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -3 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col justify-between"
+          >
             <div>
               {/* Top Icon Cluster + Title */}
               <div className="text-center mb-6">
@@ -78,7 +85,7 @@ export function StrawberryComparisonSection() {
               </div>
 
               {/* Visual Viewport Frame: Tilted Cluttered Windows */}
-              <div className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-[#F8F3ED] dark:bg-[#0d1017] p-5 h-[340px] relative overflow-hidden shadow-xs">
+              <div className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-[#F8F3ED] dark:bg-[#0d1017] p-5 h-[430px] relative overflow-hidden shadow-xs">
 
                 {/* Window 1: Underlying LinkedIn / ERP Tab (Tilted Left) */}
                 <div className="absolute top-5 left-5 w-[68%] rounded-xl bg-white dark:bg-[#151924] border border-[#ECE5DC] dark:border-white/10 p-3 shadow-md rotate-[-2deg] opacity-80">
@@ -144,10 +151,17 @@ export function StrawberryComparisonSection() {
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* RIGHT COLUMN: Working with Skyer */}
-          <div className="flex flex-col justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -4 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col justify-between"
+          >
             <div>
               {/* Top Skyer Avatar + Title */}
               <div className="text-center mb-6">
@@ -171,7 +185,7 @@ export function StrawberryComparisonSection() {
               </div>
 
               {/* Visual Viewport Frame: Unified Autonomous Browser + Live Cursor */}
-              <div className="rounded-3xl border-2 border-[#f8a87c]/50 bg-[#F8F3ED] dark:bg-[#0d1017] p-4 h-[340px] relative overflow-hidden shadow-md flex flex-col justify-between">
+              <div className="rounded-3xl border-2 border-[#f8a87c]/50 bg-[#F8F3ED] dark:bg-[#0d1017] p-4 h-[430px] relative overflow-hidden shadow-md flex flex-col justify-between">
 
                 {/* Unified Browser Window */}
                 <div className="rounded-2xl bg-white dark:bg-[#131722] border border-[#ECE5DC] dark:border-white/10 shadow-sm flex-1 flex flex-col overflow-hidden relative">
@@ -310,7 +324,7 @@ export function StrawberryComparisonSection() {
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
         </div>
       </div>

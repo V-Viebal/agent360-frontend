@@ -69,7 +69,7 @@ export function LandingPage() {
       hireText: isVi ? "Tuyển Minh Bốc" : "Hire Minh",
       task: "Tổng hợp báo cáo KPI tuần từ Kinh doanh, Tài chính và dự thảo biên bản họp giao ban",
       renderMiniUi: () => (
-        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-sky-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+        <div className="w-[184px] sm:w-[196px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-sky-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
           <div className="flex items-center justify-between text-[9px] text-sky-600 dark:text-sky-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
             <span>OKR // Q4 Board</span>
             <span>08:30 AM</span>
@@ -102,7 +102,7 @@ export function LandingPage() {
       hireText: isVi ? "Tuyển An" : "Hire An",
       task: "Đối soát 48 hóa đơn điện tử nhà cung cấp với đơn hàng PO trên ERPCore chuẩn TT99",
       renderMiniUi: () => (
-        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-emerald-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+        <div className="w-[184px] sm:w-[196px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-emerald-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
           <div className="flex items-center justify-between text-[9px] text-emerald-600 dark:text-emerald-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
             <span>ERPCore // 02-VT</span>
             <span>TT99</span>
@@ -135,7 +135,7 @@ export function LandingPage() {
       hireText: isVi ? "Tuyển Linh" : "Hire Linh",
       task: "Tìm 25 doanh nghiệp sản xuất khu công nghiệp cần chuyển đổi số và soạn thư chào giá",
       renderMiniUi: () => (
-        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-orange-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+        <div className="w-[184px] sm:w-[196px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-orange-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
           <div className="flex items-center justify-between text-[9px] text-orange-600 dark:text-orange-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
             <span>CRM // Lead B2B</span>
             <span>+100</span>
@@ -168,7 +168,7 @@ export function LandingPage() {
       hireText: isVi ? "Tuyển Vy" : "Hire Vy",
       task: "Rà soát hợp đồng nguyên tắc dịch vụ MSA, đánh dấu các điều khoản phạt và bảo mật NĐ13",
       renderMiniUi: () => (
-        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-purple-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+        <div className="w-[184px] sm:w-[196px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-purple-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
           <div className="flex items-center justify-between text-[9px] text-purple-600 dark:text-purple-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
             <span>MSA_2026.docx</span>
             <span>NĐ13</span>
@@ -199,7 +199,7 @@ export function LandingPage() {
       hireText: isVi ? "Tuyển Nam" : "Hire Nam",
       task: "Sàng lọc 25 CV ứng viên vị trí Trưởng phòng Vận hành và xếp lịch phỏng vấn tuần này",
       renderMiniUi: () => (
-        <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-rose-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
+        <div className="w-[184px] sm:w-[196px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] backdrop-blur-xs border border-rose-200/80 dark:border-white/10 p-2.5 shadow-sm text-[10px] font-mono space-y-1.5">
           <div className="flex items-center justify-between text-[9px] text-rose-600 dark:text-rose-400 font-bold border-b border-neutral-100 dark:border-white/5 pb-1">
             <span>Top 10 Ứng viên</span>
             <span>Match</span>
@@ -238,7 +238,7 @@ export function LandingPage() {
 
       {/* 1. EXACT STRAWBERRY HERO ARCHITECTURE:
           H1 + 2-line Subtitle + 2 Pill CTAs + 4 Companion Avatars Peeking from Top Edge of Live 16:10 Product Frame */}
-      <section className="relative pt-14 sm:pt-20 overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
+      <section className="relative pt-14 sm:pt-20 lg:pt-24 overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
         {/* Strawberry Mosaic Geometric Side Background Pattern (Faint on Left & Right Outer Wings, Transparent in Center) */}
         <div
           className="absolute inset-x-0 top-0 h-[540px] pointer-events-none select-none overflow-hidden"
@@ -284,10 +284,13 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 relative z-10">
-          {/* Hero Holder: Centered Title, 2-line Description, 2 Pill CTAs */}
+        <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5 relative z-10">
+          {/* Hero Holder: Centered Title, 2-line Description, 2 Pill CTAs with Entrance Animation */}
           <div className="text-center flex flex-col items-center">
-            <h1
+            <motion.h1
+              initial={{ opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
               data-testid="hero-heading"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 500 }}
               className="max-w-[478px] text-[36px] sm:text-[47.8px] leading-[1.1] tracking-[-1.91px] text-[#252522] dark:text-[#f3f4f6] text-balance"
@@ -305,9 +308,12 @@ export function LandingPage() {
                   work alongside you
                 </>
               )}
-            </h1>
+            </motion.h1>
 
-            <p
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.65, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
               data-testid="hero-description"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
               className="mt-4 text-[15px] sm:text-[17px] md:text-[19.5px] lg:text-[21px] leading-[1.42] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
@@ -333,42 +339,56 @@ export function LandingPage() {
                   </span>
                 </>
               )}
-            </p>
+            </motion.p>
 
             {/* 2 Pill CTAs (Primary Charcoal/White + Secondary Pill Surface) */}
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3.5">
-              <Link
-                to="/app"
-                className="inline-flex items-center justify-center px-7 py-3 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[15px] font-medium hover:opacity-90 transition-all shadow-sm"
-              >
-                <span className="text-[#FFFCFA] dark:text-[#111318]">{isVi ? "Bắt đầu làm việc" : "Launch Workspace"}</span>
-              </Link>
-              <button
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-7 flex flex-wrap items-center justify-center gap-3.5"
+            >
+              <motion.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Link
+                  to="/app"
+                  className="inline-flex items-center justify-center px-7 py-3 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[15px] font-medium hover:opacity-95 transition-all shadow-sm"
+                >
+                  <span className="text-[#FFFCFA] dark:text-[#111318]">{isVi ? "Bắt đầu làm việc" : "Launch Workspace"}</span>
+                </Link>
+              </motion.div>
+              <motion.button
+                whileHover={{ y: -2, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={() => setContactOpen(true)}
                 className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white dark:bg-[#161a24] text-[#252522] dark:text-[#f3f4f6] border border-[#ECE5DC] dark:border-white/10 text-[15px] font-medium shadow-2xs hover:bg-[#F8F3ED] dark:hover:bg-white/10 transition-all cursor-pointer"
               >
                 <span className="text-[#252522] dark:text-[#f3f4f6]">{isVi ? "Liên hệ Doanh nghiệp" : "Contact Sales"}</span>
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </div>
 
           {/* HERO PRODUCT STAGE: 4 Companion Avatars Peeking from Top Edge + 16:10 Live Workspace Frame */}
-          <div className="relative mt-24 sm:mt-28">
-            {/* 4 Peeking Companions Perched on Top Edge of Frame (Exact Strawberry model-pos-1..4 pattern) */}
+          <motion.div
+            initial={{ opacity: 0, y: 36, scale: 0.975 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.78, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
+            className="relative mt-24 sm:mt-28"
+          >
+            {/* 4 Peeking Companions Perched at Exact Strawberry Outer Corners (0% & 10% Left / Right) with Large Scale */}
             <div className="pointer-events-none select-none">
-              {/* Left Outer Companion: Vy Pháp Chế (Purple) */}
+              {/* Left Outer Companion (pos-1: flush with left frame edge): Vy Pháp Chế */}
               <motion.div
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
-                className="hidden md:flex flex-col items-center absolute -top-[74px] left-[8%] lg:left-[11%] z-10"
+                className="hidden md:flex flex-col items-center absolute -top-[92px] left-[2px] lg:left-[4px] z-10"
               >
-                <span className="mb-1 px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                <span className="mb-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30 text-[10.5px] font-mono font-semibold shadow-2xs">
                   Vy Pháp Chế
                 </span>
                 <AgentAvatar
                   agent={{ id: "peek-vy", name: "Vy Pháp Chế" }}
-                  size="lg"
+                  size="xl"
                   alwaysAnimate
                   overrideConfig={{
                     type: "blob",
@@ -377,18 +397,18 @@ export function LandingPage() {
                 />
               </motion.div>
 
-              {/* Left Inner Companion: Minh Bốc (Sky Blue) */}
+              {/* Left Inner Companion (pos-2: ~104px from left edge): Minh Bốc */}
               <motion.div
                 animate={{ y: [0, -7, 0] }}
                 transition={{ duration: 3.0, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
-                className="flex flex-col items-center absolute -top-[78px] left-[16%] sm:left-[24%] lg:left-[26%] z-10"
+                className="flex flex-col items-center absolute -top-[96px] left-[12%] sm:left-[98px] lg:left-[108px] z-10"
               >
-                <span className="mb-1 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                <span className="mb-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 text-[10.5px] font-mono font-semibold shadow-2xs">
                   Minh Bốc
                 </span>
                 <AgentAvatar
                   agent={{ id: "peek-minh", name: "Minh Bốc" }}
-                  size="lg"
+                  size="xl"
                   alwaysAnimate
                   overrideConfig={{
                     type: "blob",
@@ -397,18 +417,18 @@ export function LandingPage() {
                 />
               </motion.div>
 
-              {/* Right Inner Companion: An Kế Toán (Emerald Mint) */}
+              {/* Right Inner Companion (pos-3: ~108px from right edge): An Kế Toán */}
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
-                className="flex flex-col items-center absolute -top-[78px] right-[16%] sm:right-[24%] lg:right-[26%] z-10"
+                className="flex flex-col items-center absolute -top-[96px] right-[12%] sm:right-[98px] lg:right-[108px] z-10"
               >
-                <span className="mb-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                <span className="mb-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10.5px] font-mono font-semibold shadow-2xs">
                   An Kế Toán
                 </span>
                 <AgentAvatar
                   agent={{ id: "peek-an", name: "An Kế Toán" }}
-                  size="lg"
+                  size="xl"
                   alwaysAnimate
                   overrideConfig={{
                     type: "blob",
@@ -417,18 +437,18 @@ export function LandingPage() {
                 />
               </motion.div>
 
-              {/* Right Outer Companion: Linh Kinh Doanh (Peach Orange) */}
+              {/* Right Outer Companion (pos-4: flush with right frame edge): Linh Kinh Doanh */}
               <motion.div
                 animate={{ y: [0, -5, 0] }}
                 transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut", delay: 0.9 }}
-                className="hidden md:flex flex-col items-center absolute -top-[74px] right-[8%] lg:right-[11%] z-10"
+                className="hidden md:flex flex-col items-center absolute -top-[92px] right-[2px] lg:right-[4px] z-10"
               >
-                <span className="mb-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-500/30 text-[10px] font-mono font-semibold shadow-2xs">
+                <span className="mb-1.5 px-2.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-500/30 text-[10.5px] font-mono font-semibold shadow-2xs">
                   Linh B2B
                 </span>
                 <AgentAvatar
                   agent={{ id: "peek-linh", name: "Linh Kinh Doanh" }}
-                  size="lg"
+                  size="xl"
                   alwaysAnimate
                   overrideConfig={{
                     type: "blob",
@@ -450,12 +470,16 @@ export function LandingPage() {
                   prompt: isVi ? "Đối soát 48 HĐ GTGT T10 trên ERPCore" : "Reconcile 48 Oct VAT invoices in ERPCore",
                   reply: isVi ? "Đã khớp 48/48 PO • Chênh lệch: 0₫" : "Matched 48/48 POs • Variance: 0₫",
                   url: "erpcore.vn/so-cai-tt99",
-                  docTitle: "MẪU 02-VT // SỔ CÁI",
+                  docTitle: "MẪU 02-VT // SỔ CÁI TT99",
+                  kpiLeft: { label: isVi ? "Tổng giá trị PO" : "Total PO Value", val: "1.842.500.000₫" },
+                  kpiRight: { label: isVi ? "Độ lệch đối soát" : "Variance", val: "0₫ (100% Khớp)" },
                   rows: [
-                    { name: "VinFast Energy", code: "HĐ-0041", val: "482.5M", ok: true },
-                    { name: "Masan Consumer", code: "HĐ-0042", val: "195.0M", ok: true },
-                    { name: "FPT Smart Cloud", code: "HĐ-0045", val: "310.8M", ok: true },
-                    { name: "Viettel Post", code: "HĐ-0049", val: "128.4M", ok: heroCursorStep === 2 },
+                    { name: "VinFast Energy", code: "HĐ-0041", val: "482.500.000₫", ok: true },
+                    { name: "Masan Consumer", code: "HĐ-0042", val: "195.000.000₫", ok: true },
+                    { name: "FPT Smart Cloud", code: "HĐ-0045", val: "310.800.000₫", ok: true },
+                    { name: "Viettel Logistics", code: "HĐ-0049", val: "128.400.000₫", ok: true },
+                    { name: "Thaco Auto Chu Lai", code: "HĐ-0052", val: "415.000.000₫", ok: true },
+                    { name: "Tân Cảng Sài Gòn", code: "HĐ-0058", val: "310.800.000₫", ok: heroCursorStep === 2 },
                   ],
                 },
                 {
@@ -468,11 +492,15 @@ export function LandingPage() {
                   reply: isVi ? "Doanh thu đạt 108% • 14/14 đầu việc đúng hạn" : "Revenue at 108% • 14/14 milestones on track",
                   url: "basecore.vn/okr-q4-board",
                   docTitle: "OKR Q4 // EXECUTIVE BOARD",
+                  kpiLeft: { label: isVi ? "Mục tiêu Doanh thu" : "Revenue Target", val: "108.4% (Vượt KH)" },
+                  kpiRight: { label: isVi ? "Runway Dòng tiền" : "Cash Runway", val: "18.4 Tháng" },
                   rows: [
-                    { name: "Khối Kinh doanh B2B", code: "OKR-01", val: "108%", ok: true },
-                    { name: "Khối Tài chính & ERP", code: "OKR-02", val: "100%", ok: true },
-                    { name: "Khối Pháp chế NĐ13", code: "OKR-03", val: "98%", ok: true },
-                    { name: "Tuyển dụng Nhân sự", code: "OKR-04", val: "95%", ok: heroCursorStep === 2 },
+                    { name: "Khối Kinh doanh B2B", code: "OKR-01", val: "108% KH", ok: true },
+                    { name: "Khối Tài chính & ERP", code: "OKR-02", val: "100% KH", ok: true },
+                    { name: "Khối Pháp chế NĐ13", code: "OKR-03", val: "98% KH", ok: true },
+                    { name: "Khối Hạ tầng On-Prem", code: "OKR-04", val: "99.98% SLA", ok: true },
+                    { name: "Khối CSKH Đa kênh", code: "OKR-05", val: "96% CSAT", ok: true },
+                    { name: "Tuyển dụng Nhân sự", code: "OKR-06", val: "95% KH", ok: heroCursorStep === 2 },
                   ],
                 },
                 {
@@ -485,10 +513,14 @@ export function LandingPage() {
                   reply: isVi ? "Đã khoanh 2 điều khoản phạt & chuẩn hóa NĐ13" : "Flagged 2 penalty clauses & aligned Decree 13",
                   url: "basecore.vn/msa-2026-review",
                   docTitle: "MSA_2026.DOCX // PHÁP CHẾ",
+                  kpiLeft: { label: isVi ? "Điều khoản rà soát" : "Clauses Audited", val: "24/24 Điều khoản" },
+                  kpiRight: { label: isVi ? "Tuân thủ NĐ13" : "Decree 13 Status", val: "An toàn 100%" },
                   rows: [
                     { name: "Điều 4.2: Giới hạn bồi thường", code: "Đã sửa", val: "An toàn", ok: true },
                     { name: "Điều 7.1: Bảo mật dữ liệu NĐ13", code: "Chuẩn", val: "Đạt 100%", ok: true },
-                    { name: "Điều 9.3: Phạt chậm thanh toán", code: "Cập nhật", val: "Tối đa 8%", ok: true },
+                    { name: "Điều 9.3: Phạt chậm thanh toán", code: "Cập nhật", val: "Trần 8%", ok: true },
+                    { name: "Điều 11.4: Quyền sở hữu trí tuệ", code: "Chuẩn", val: "Đạt 100%", ok: true },
+                    { name: "Điều 14.1: Luật điều chỉnh VN", code: "Chuẩn", val: "Hợp lệ", ok: true },
                     { name: "Phụ lục A: SLA cam kết 99.9%", code: "Ký số", val: "Sẵn sàng", ok: heroCursorStep === 2 },
                   ],
                 },
@@ -502,11 +534,15 @@ export function LandingPage() {
                   reply: isVi ? "Đã chấm điểm 100 Lead • Gửi 15 báo giá VIP" : "Scored 100 leads • Sent 15 VIP proposals",
                   url: "crm.skyer.vn/b2b-pipeline",
                   docTitle: "CRM // CHIẾN DỊCH B2B",
+                  kpiLeft: { label: isVi ? "Khách hàng tiềm năng" : "Qualified Leads", val: "100 Doanh nghiệp" },
+                  kpiRight: { label: isVi ? "Tỷ lệ phản hồi" : "Reply Rate", val: "38.5% (+15 VIP)" },
                   rows: [
                     { name: "Thaco Logistics", code: "Score 98", val: "Đã gửi BG", ok: true },
                     { name: "CJ Gemadept", code: "Score 96", val: "Đã mở mail", ok: true },
                     { name: "Tân Cảng Sài Gòn", code: "Score 95", val: "Hẹn demo", ok: true },
-                    { name: "Hoà Phát Dung Quất", code: "Score 94", val: "Đang soạn...", ok: heroCursorStep === 2 },
+                    { name: "Becamex IDC Bình Dương", code: "Score 94", val: "Đã gửi BG", ok: true },
+                    { name: "Tổng Công ty Bưu điện", code: "Score 93", val: "Đang tư vấn", ok: true },
+                    { name: "Hoà Phát Dung Quất", code: "Score 92", val: "Đang soạn...", ok: heroCursorStep === 2 },
                   ],
                 },
               ];
@@ -521,18 +557,18 @@ export function LandingPage() {
 
               return (
                 <div className="relative z-20 rounded-t-[16px] border border-b-0 border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] shadow-[0_16px_34px_rgba(15,23,42,0.05),0_60px_120px_rgba(15,23,42,0.10)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.75)] overflow-hidden">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[390px] sm:min-h-[410px]">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[540px] sm:min-h-[590px] lg:min-h-[651px]">
                     {/* ZONE 1: Simple Clean Left Agents List (No All Infra, No Search Clutter, Pure Agent Switcher) */}
                     <div className="lg:col-span-3 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex flex-col justify-between select-none">
                       <div>
                         {/* Header: Skyer Brand */}
-                        <div className="h-11 px-4 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
+                        <div className="h-13 px-5 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
                           <SkyerLogo size={20} showText />
                           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                         </div>
 
                         {/* Pure Interactive Agent List */}
-                        <div className="p-2.5 space-y-1.5">
+                        <div className="p-3.5 space-y-2.5">
                           {heroAgents.map((ag, idx) => {
                             const isSelected = idx === heroAgentIdx;
                             return (
@@ -541,7 +577,7 @@ export function LandingPage() {
                                 type="button"
                                 onClick={() => setHeroAgentIdx(idx)}
                                 className={
-                                  "w-full px-3 py-2.5 rounded-xl flex items-center gap-3 text-left transition-all cursor-pointer " +
+                                  "w-full px-3.5 py-3.5 rounded-2xl flex items-center gap-3.5 text-left transition-all cursor-pointer " +
                                   (isSelected
                                     ? "bg-white dark:bg-[#181822] border border-[#ECE5DC] dark:border-[#2a2a3c] shadow-xs"
                                     : "hover:bg-white/60 dark:hover:bg-white/[0.04] border border-transparent opacity-75 hover:opacity-100")
@@ -584,7 +620,7 @@ export function LandingPage() {
                     <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] flex flex-col justify-between">
                       <div>
                         {/* Top Centered Agent Capsule */}
-                        <div className="h-11 px-3 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-center">
+                        <div className="h-13 px-4 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-center">
                           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8F3ED] dark:bg-[#14141c] border border-[#ECE5DC] dark:border-white/[0.08] text-xs font-semibold text-[#252522] dark:text-white">
                             <AgentAvatar
                               agent={{ id: `capsule-${activeAg.id}`, name: activeAg.name }}
@@ -597,7 +633,7 @@ export function LandingPage() {
                         </div>
 
                         {/* Animated Request & Response Flow */}
-                        <div className="p-4 space-y-3.5">
+                        <div className="p-5 sm:p-6 space-y-5">
                           {/* 1. User Request Bubble */}
                           <AnimatePresence mode="wait">
                             <motion.div
@@ -725,7 +761,7 @@ export function LandingPage() {
                     {/* ZONE 3: Authentic Visual Browser Screen with Animated SVG Canvas & Live AI Cursor */}
                     <div className="lg:col-span-5 bg-white dark:bg-[#0d0d12] flex flex-col justify-between relative overflow-hidden">
                       {/* Browser Top Toolbar */}
-                      <div className="h-11 px-3.5 border-b border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex items-center justify-between gap-2 select-none">
+                      <div className="h-13 px-4 border-b border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex items-center justify-between gap-2 select-none">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                           <span className="px-2 py-0.5 rounded bg-white dark:bg-[#181820] text-[#252522] dark:text-neutral-200 text-[10px] font-mono border border-[#ECE5DC] dark:border-[#242430] truncate">
@@ -745,8 +781,8 @@ export function LandingPage() {
                       </div>
 
                       {/* Interactive SVG Browser Viewport Canvas */}
-                      <div className="flex-1 p-3.5 sm:p-4 flex flex-col justify-center relative">
-                        <div className="rounded-xl border border-[#ECE5DC] dark:border-[#22222e] bg-[#FFFDF9] dark:bg-[#121218] p-3 shadow-2xs relative overflow-hidden">
+                      <div className="flex-1 p-4 sm:p-5 flex flex-col justify-center relative">
+                        <div className="rounded-2xl border border-[#ECE5DC] dark:border-[#22222e] bg-[#FFFDF9] dark:bg-[#121218] p-4 sm:p-5 shadow-xs relative overflow-hidden">
                           {/* Canvas Header */}
                           <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#ECE5DC] dark:border-white/10 font-mono">
                             <span
@@ -774,7 +810,7 @@ export function LandingPage() {
                                     scale: isHovered ? 1.01 : 1,
                                   }}
                                   className={
-                                    "grid grid-cols-12 items-center px-2.5 py-2 rounded-lg border transition-colors " +
+                                    "grid grid-cols-12 items-center px-3 py-2.5 rounded-xl border transition-colors " +
                                     (isHovered
                                       ? "bg-emerald-500/10 border-emerald-500/40"
                                       : "bg-white dark:bg-[#16161f] border-[#ECE5DC]/60 dark:border-white/5")
@@ -871,27 +907,40 @@ export function LandingPage() {
                 </div>
               );
             })()}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* 1B. TRUSTED ENTERPRISE LOGO STRIP + "HIRE YOUR NEXT AI COLLEAGUE" 2-COLUMN SECTION */}
       <section className="py-16 sm:py-24 border-b border-[var(--border-card)] bg-[var(--bg-page)]">
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
-          {/* Monochrome Logo Strip */}
-          <div className="text-center mb-16">
+        <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5">
+          {/* Monochrome Logo Strip with Staggered Reveal */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.55 }}
+            className="text-center mb-16"
+          >
             <p className="text-xs font-mono uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-6">
               {isVi ? "Đồng hành cùng các doanh nghiệp tăng trưởng nhanh" : "Trusted by fast-growing teams"}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-14 text-sm font-bold tracking-tight text-neutral-400 dark:text-neutral-500 select-none">
-              <span>VINFAST</span>
-              <span>MASAN GROUP</span>
-              <span>FPT SOFTWARE</span>
-              <span>VIETTEL POST</span>
-              <span>AGENTCORE</span>
-              <span>ERPCORE</span>
+              {["VINFAST", "MASAN GROUP", "FPT SOFTWARE", "VIETTEL POST", "AGENTCORE", "ERPCORE"].map((brand, bIdx) => (
+                <motion.span
+                  key={brand}
+                  initial={{ opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -2, scale: 1.04 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: bIdx * 0.06 }}
+                  className="hover:text-[#252522] dark:hover:text-neutral-200 transition-colors cursor-default"
+                >
+                  {brand}
+                </motion.span>
+              ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* 2-Column Split: "Hire your next AI colleague" + Trio of Animated Companions */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center pt-4">
@@ -1004,11 +1053,17 @@ export function LandingPage() {
             </div>
 
             {/* Right: Trio of Animated Character Avatars */}
-            <div className="lg:col-span-6 flex items-center justify-center">
-              <div className="w-full max-w-lg rounded-3xl bg-[#F8F3ED] dark:bg-[#11151f] border border-[#ECE5DC] dark:border-white/10 p-6 sm:p-8 shadow-xs">
-                <div className="grid grid-cols-3 gap-4 items-end">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-6 flex items-center justify-center"
+            >
+              <div className="w-full max-w-[548px] min-h-[320px] rounded-[28px] bg-[#F8F3ED] dark:bg-[#11151f] border border-[#ECE5DC] dark:border-white/10 p-7 sm:p-10 flex flex-col justify-center shadow-xs hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-3 gap-6 sm:gap-8 items-end">
                   <div className="flex flex-col items-center text-center">
-                    <div className="p-3 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
+                    <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
                       <AgentAvatar
                         agent={{ id: "hero-minh", name: "Minh Bốc" }}
                         size="xl"
@@ -1024,7 +1079,7 @@ export function LandingPage() {
                   </div>
 
                   <div className="flex flex-col items-center text-center">
-                    <div className="p-3 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
+                    <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
                       <AgentAvatar
                         agent={{ id: "hero-an", name: "An Kế Toán" }}
                         size="xl"
@@ -1040,7 +1095,7 @@ export function LandingPage() {
                   </div>
 
                   <div className="flex flex-col items-center text-center">
-                    <div className="p-3 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
+                    <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#181d2a] border border-[#ECE5DC] dark:border-white/10 shadow-xs">
                       <AgentAvatar
                         agent={{ id: "hero-vy", name: "Vy Pháp Chế" }}
                         size="xl"
@@ -1056,26 +1111,31 @@ export function LandingPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* 2. OFFICIAL COMPANIONS 6-CARD GRID */}
-      <section id="bots" className="py-20 sm:py-28 border-b border-[var(--border-card)] bg-[var(--bg-card-subtle)] transition-colors">
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[32px]">
-            {companions.map((comp) => (
-              <div
+      {/* 2. OFFICIAL COMPANIONS 6-CARD GRID (Exact Strawberry 333px Full-Bleed Visual Anatomy — Zero Box-in-Box Padding Loss) */}
+      <section id="bots" className="py-24 sm:py-32 border-b border-[var(--border-card)] bg-[var(--bg-card-subtle)] transition-colors">
+        <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-[20px] gap-y-[44px]">
+            {companions.map((comp, idx) => (
+              <motion.div
                 key={comp.id}
-                className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f] p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all group"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -5 }}
+                viewport={{ once: true, amount: 0.15 }}
+                transition={{ duration: 0.48, delay: idx * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                className="flex flex-col justify-between group"
               >
                 <div>
                   <div
                     className={
-                      "h-52 rounded-2xl bg-gradient-to-br " +
+                      "h-[228px] rounded-[22px] bg-gradient-to-br " +
                       comp.cardGradient +
-                      " border border-[#ECE5DC]/80 dark:border-white/10 px-3.5 pt-3.5 pb-11 relative overflow-hidden flex items-center justify-between gap-2 mb-5"
+                      " border border-[#ECE5DC] dark:border-white/10 px-5 pt-4 pb-12 relative overflow-hidden flex items-center justify-between gap-3 mb-5 shadow-xs group-hover:shadow-lg group-hover:border-[#f8a87c]/50 transition-all"
                     }
                   >
                     <div
@@ -1124,19 +1184,26 @@ export function LandingPage() {
                   </Link>
                   <Link
                     to={`/marketplace/${(comp as any).marketplaceId}`}
-                    className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1 transition-colors"
+                    className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1 transition-colors group/link"
                   >
                     <span>{isVi ? "Tìm hiểu thêm" : "Learn more"}</span>
-                    <ArrowRight size={13} />
+                    <ArrowRight size={13} className="transition-transform duration-200 group-hover/link:translate-x-1" />
                   </Link>
                 </div>
-              </div>
+              </motion.div>
             ))}
 
             {/* 6th Card: "+ Create your own" */}
-            <div className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f] p-5 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all group">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -5 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.48, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col justify-between group"
+            >
               <div>
-                <div className="h-52 rounded-2xl bg-gradient-to-br from-neutral-100 to-[#FFFDF9] dark:from-[#161b26] dark:to-[#0c0e15] border border-dashed border-neutral-300 dark:border-white/15 px-3.5 pt-3.5 pb-11 relative overflow-hidden flex items-center justify-between gap-2 mb-5">
+                <div className="h-[228px] rounded-[22px] bg-gradient-to-br from-neutral-100 to-[#FFFDF9] dark:from-[#161b26] dark:to-[#0c0e15] border border-dashed border-neutral-300 dark:border-white/15 px-5 pt-4 pb-12 relative overflow-hidden flex items-center justify-between gap-3 mb-5 shadow-xs group-hover:shadow-lg group-hover:border-[#f8a87c]/50 transition-all">
                   <div className="relative z-10 pl-1">
                     <AgentAvatar
                       agent={{ id: "custom-builder", name: "Custom AI" }}
@@ -1148,7 +1215,7 @@ export function LandingPage() {
                       }}
                     />
                   </div>
-                  <div className="w-[156px] sm:w-[164px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] border border-neutral-200 dark:border-white/10 p-2.5 text-[10px] font-mono text-[#252522] dark:text-neutral-300 shadow-xs space-y-1">
+                  <div className="w-[184px] sm:w-[196px] shrink-0 rounded-xl bg-white/95 dark:bg-[#161b26] border border-neutral-200 dark:border-white/10 p-2.5 text-[10px] font-mono text-[#252522] dark:text-neutral-300 shadow-xs space-y-1">
                     <div className="font-bold text-[#252522] dark:text-white">+ Kỹ năng SOP riêng</div>
                     <div>✓ Kết nối ERPCore</div>
                     <div>✓ Chạy tự động 24/7</div>
@@ -1177,13 +1244,13 @@ export function LandingPage() {
                 </button>
                 <Link
                   to="/marketplace"
-                  className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1"
+                  className="text-[13px] font-medium text-neutral-600 dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white flex items-center gap-1 group/link"
                 >
                   <span>{isVi ? "Thư viện mẫu" : "Templates"}</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={13} className="transition-transform duration-200 group-hover/link:translate-x-1" />
                 </Link>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           <div className="mt-12 text-center">
@@ -1203,7 +1270,7 @@ export function LandingPage() {
 
       {/* 4. "A NEW FOUNDATION FOR YOUR WORK" */}
       <section id="on-premise" className="py-20 sm:py-28 border-b border-[var(--border-card)] bg-[var(--bg-page)] transition-colors">
-        <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
             <h2 className="text-3xl sm:text-[46px] font-normal leading-[1.1] tracking-[-1.9px] text-[#252522] dark:text-[#f3f4f6]">
               {isVi ? "Nền tảng mới cho vận hành tự động" : "A new foundation for your work"}
@@ -1217,7 +1284,13 @@ export function LandingPage() {
             </button>
           </div>
 
-          <div className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-[#F8F3ED] dark:bg-[#11151f] p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="rounded-3xl border border-[#ECE5DC] dark:border-white/10 bg-[#F8F3ED] dark:bg-[#11151f] p-6 sm:p-8 shadow-2xs"
+          >
             <div className="flex flex-wrap items-center gap-2 mb-8">
               {[
                 { id: "vm", label: isVi ? "1. Máy tính riêng" : "1. Dedicated Computer" },
@@ -1384,7 +1457,7 @@ export function LandingPage() {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -1412,21 +1485,37 @@ export function LandingPage() {
                   : "Yes. Skyer supports full air-gapped on-premise deployment with self-hosted local LLMs.",
               },
             ].map((item, idx) => (
-              <div key={item.q} className="rounded-2xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f]">
+              <motion.div
+                key={item.q}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.08 }}
+                className="rounded-2xl border border-[#ECE5DC] dark:border-white/10 bg-white dark:bg-[#11151f] hover:border-[#f8a87c]/40 transition-colors overflow-hidden"
+              >
                 <button
                   type="button"
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                   className="w-full px-5 py-4 text-left flex items-center justify-between text-sm font-semibold text-[#252522] dark:text-white cursor-pointer"
                 >
                   <span>{item.q}</span>
-                  <ChevronDown size={16} className={openFaq === idx ? "rotate-180 transition-transform" : "transition-transform"} />
+                  <ChevronDown size={16} className={openFaq === idx ? "rotate-180 transition-transform duration-200" : "transition-transform duration-200"} />
                 </button>
-                {openFaq === idx && (
-                  <div className="px-5 pb-4 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                    {item.a}
-                  </div>
-                )}
-              </div>
+                <AnimatePresence initial={false}>
+                  {openFaq === idx && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                      className="px-5 pb-4 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed"
+                    >
+                      {item.a}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             ))}
           </div>
         </div>

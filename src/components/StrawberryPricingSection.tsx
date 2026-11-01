@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "motion/react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../i18n/LanguageContext";
 import { AgentAvatar } from "./AgentAvatar";
@@ -81,7 +82,13 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1080px] px-4 sm:px-6 lg:px-8 relative z-10">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.15 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5 relative z-10"
+      >
         {/* 1. Left-aligned Header Title & Subtitle (Exact Strawberry Pricing pattern) */}
         <div className="mb-10">
           <h1
@@ -719,7 +726,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       <ContactModal
         isOpen={contactOpen}

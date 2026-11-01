@@ -29,15 +29,14 @@ if (!fs.existsSync(designMdPath)) {
       errors.push(`DESIGN.md missing canonical section: ${sec}`);
     }
   }
-  if (!md.includes("copy_budget:")) {
-    errors.push("DESIGN.md frontmatter missing copy_budget declaration.");
-  }
-  if (!md.includes("typography_scale:")) {
-    errors.push("DESIGN.md frontmatter missing typography_scale declaration.");
+  for (const fmKey of ["copy_budget:", "typography_scale:", "hero_frame_contract:", "motion_choreography:", "css_scope_isolation:", "spatial_volume:"]) {
+    if (!md.includes(fmKey)) {
+      errors.push(`DESIGN.md frontmatter missing ${fmKey} declaration.`);
+    }
   }
 }
 
-// 2. Verify index.css Dual-Theme & Warm Cream Tokens & Contrast
+// 2. Verify index.css Dual-Theme, Warm Cream Tokens, Contrast & Scoped Typography
 const cssPath = path.join(ROOT, "src", "index.css");
 const css = fs.readFileSync(cssPath, "utf-8");
 if (!css.includes("@custom-variant dark")) {
@@ -49,8 +48,11 @@ if (!css.includes("#FFFDF9") || !css.includes("#F8F3ED") || !css.includes("#2525
 if (!css.includes("--text-contrast")) {
   errors.push("src/index.css missing --text-contrast variable for WCAG AAA accessibility.");
 }
+if (!css.includes(":where(.workspace-root,") || !css.includes(".grok-workspace")) {
+  errors.push("src/index.css must scope compact workspace typography inside :where(.workspace-root, [data-type-scope=\"app\"], .grok-workspace) so marketing typography is never shrunk.");
+}
 
-// 3. Verify LandingPage, MarketplacePage, DocsPage & PricingPage follow 1080px container & AgentAvatar binding
+// 3. Verify LandingPage, MarketplacePage, DocsPage & StrawberryComparisonSection follow 1080px container & AgentAvatar binding
 for (const rel of [
   "src/pages/LandingPage.tsx",
   "src/pages/MarketplacePage.tsx",
@@ -67,13 +69,32 @@ for (const rel of [
   }
 }
 
-// 4. Verify Typography scale constraints in LandingPage
+// 4. Verify Hero Authentic 3-Zone UI, Live Animated SVG & Entrance/Micro-Animations in LandingPage
 const landingSrc = fs.readFileSync(path.join(ROOT, "src/pages/LandingPage.tsx"), "utf-8");
 if (!landingSrc.includes("text-[47.8px]") && !landingSrc.includes("text-[48px]")) {
   errors.push("LandingPage missing Strawberry H1 scale (47.8px/48px).");
 }
 if (!landingSrc.includes("text-balance")) {
   errors.push("LandingPage missing text-balance on headline/subtitle typography.");
+}
+if (landingSrc.includes("All Agents (Infra)")) {
+  errors.push("LandingPage Hero Frame must not include cluttered 'All Agents (Infra)' bar; keep pure agent list.");
+}
+if (!landingSrc.includes("setHeroAgentIdx")) {
+  errors.push("LandingPage Hero Frame missing interactive agent switcher (setHeroAgentIdx).");
+}
+if (!landingSrc.includes("motion.circle") || !landingSrc.includes("motion.line")) {
+  errors.push("LandingPage Hero Frame missing animated SVG progress wave (motion.line) or browser click ripple (motion.circle).");
+}
+if (!landingSrc.includes("motion.h1") || !landingSrc.includes("whileInView") || !landingSrc.includes("whileHover")) {
+  errors.push("LandingPage missing Hero staggered entrance (motion.h1) or section micro-animations (whileInView / whileHover).");
+}
+if (!landingSrc.includes("lg:px-5") || !landingSrc.includes("lg:min-h-[651px]") || !landingSrc.includes("h-[228px]")) {
+  errors.push("LandingPage missing Strawberry 1040px inner container width (lg:px-5), 640px 16:10 Hero Stage (lg:min-h-[651px]), or 228px full-bleed companion cards (h-[228px]).");
+}
+const compSrc = fs.readFileSync(path.join(ROOT, "src/components/StrawberryComparisonSection.tsx"), "utf-8");
+if (!compSrc.includes("h-[430px]") || !compSrc.includes("lg:px-5")) {
+  errors.push("StrawberryComparisonSection missing 430px viewport height (h-[430px]) or 1040px inner container width (lg:px-5).");
 }
 
 if (errors.length > 0) {
@@ -82,4 +103,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log("[Visual Contract Gate] PASSED: DESIGN.md, Dual-Theme Warm Cream/Obsidian tokens, 1080px container, typography scale, and AgentAvatar bindings verified across all core marketing pages.");
+console.log("[Visual Contract Gate] PASSED: DESIGN.md, Scoped Typography, Dual-Theme Contrast, Authentic 3-Zone Hero SVG UI, and Entrance/Micro-Animations verified across all surfaces.");

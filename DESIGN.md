@@ -9,6 +9,10 @@ rounded: "100px pill CTAs, 24px-32px companion cards, 16px product frame, 12px a
 components: "AgentAvatar, BlobAvatar, StrawberryComparisonSection, CustomSelect, DropdownMenu, Modal, Tooltip"
 copy_budget: "H1<=8 words, Subtitle<=2 lines, CardDesc<=22 words, Bullet<=7 words"
 typography_scale: "H1=47.8px, H2=46px, Lead=21px, Title=16px, Body=14.5px, Micro=9px"
+hero_frame_contract: "3-Zone Authentic Workspace (Left Pure Agent Switcher + Center Animated Request/Response SVG Flow + Right Live SVG Browser Pointer & Ripple)"
+motion_choreography: "4-Step Hero Blur/Spring Entrance + Section whileInView Stagger + Card Hover Elevation (-5px) + AnimatePresence FAQ"
+css_scope_isolation: ":where(.workspace-root, [data-type-scope=app], .grok-workspace)"
+spatial_volume: "InnerWidth=1040px (lg:px-5), HeroStage=1040x640px (16:10), CompanionCard=333x228px Full-Bleed, ComparisonFrame=430px"
 ---
 
 # Skyer (Agent360) Design System & One-Shot Visual Reconstruction Contract
@@ -87,6 +91,11 @@ Self-hosted native WOFF2 variable fonts (`Inter`, `Fraunces`, `JetBrains Mono`) 
    - `CustomSelect`, `DropdownMenu`, `Modal`, `ToggleSwitch`, `Tabs`, `Tooltip`, `ConfirmDialog`, `CodeBlock`, `AgentPill`, `StatusBadge`, `SearchInput`, `IconButton`.
 
 ## Do's and Don'ts
+- **DO** build the Hero Product Stage as an authentic 3-zone interactive Skyer `/app` workspace (Zone 1: Pure Interactive Agent List without `All Agents (Infra)` clutter; Zone 2: Live Request Bubble + Animated 3-node SVG Execution Progress Wave; Zone 3: Visual Browser Canvas with Animated SVG Agent Pointer & Click Ripple Ring).
+- **DO** apply 4-step staggered entrance choreography on the Hero (`motion.h1` blur-up -> `motion.p` blur-up -> `motion.div` CTA spring -> `motion.div` Hero Product Stage elevation) and `whileInView` + `whileHover={{ y: -5 }}` micro-animations across all secondary sections.
+- **DO** isolate compact workspace typography overrides inside `:where(.workspace-root, [data-type-scope="app"], .grok-workspace)` so marketing/editorial H1 (`47.8px`), H2 (`46px`), and Lead (`21px`) scales are never shrunk.
+- **DON'T** use `.keep-white` on light-background pills or buttons in Light Mode; always bind to `--text-contrast` or `text-[#252522] dark:text-white`.
+
 - **DO (Copy Budget Lock):** Keep H1 `<= 8 words`, Subtitle `<= 2 lines`, Companion Card descriptions `<= 22 words`, and Comparison bullets `<= 7 words`.
 - **DO (Show, Don't Tell):** Always pair `<AgentAvatar>` (`BlobAvatar`) with a live autonomous mini-UI or moving named cursor.
 - **DO (Vietnam Enterprise Context):** Ground all examples in authentic Vietnamese enterprise workflows (`ERPCore`, `BaseCore`, `Knowledge Base KB`, `TT99 Mẫu 02-VT`, `PayOS`, `Nghị định 13/CP`).
