@@ -344,7 +344,7 @@ body {
 /* Scoped to .workspace-root, /app, .app-workspace, or table/settings modals  */
 /* NEVER override marketing/editorial surfaces like LandingPage, Docs, Pricing */
 /* ========================================================================== */
-:where(.workspace-root, [data-type-scope="app"], [data-type-scope="sidebar"], [data-type-scope="overlay"], .grok-workspace, .grok-modal-scope, .grok-overlay-scope, [role="dialog"], [role="menu"], [role="listbox"]) {
+:where(.workspace-root, [data-type-scope="app"], [data-type-scope="sidebar"], [data-type-scope="overlay"], [data-type-scope="admin"], .admin-scope, .grok-workspace, .grok-modal-scope, .grok-overlay-scope, [role="dialog"], [role="menu"], [role="listbox"]) {
   .text-\[8px\],
   .text-\[9px\],
   .text-\[10px\],
@@ -1794,6 +1794,15 @@ html.light,
   box-shadow: none !important;
   border: none !important;
   -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Ensure single-line textarea placeholder and text baseline is strictly centered */
+#tour-prompt-composer textarea {
+  vertical-align: middle;
+}
+#tour-prompt-composer textarea::placeholder {
+  line-height: inherit;
+  vertical-align: middle;
 }
 
 /* iOS Safari auto-zoom prevention: Input controls must be at least 16px on mobile viewports (< 640px) */

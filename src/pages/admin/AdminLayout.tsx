@@ -237,7 +237,7 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex overflow-hidden font-sans select-none transition-colors">
+    <div className="admin-scope h-screen w-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex overflow-hidden font-sans select-none transition-colors" data-type-scope="admin">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div

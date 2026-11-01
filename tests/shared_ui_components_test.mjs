@@ -427,12 +427,12 @@ assert.ok(
   "GrokBotWorkspace must include request-queue-stack testid"
 );
 assert.ok(
-  grokBotSrc4.includes("Queue") && grokBotSrc4.includes("requestQueue.length"),
-  "Request queue indicator must display clean compact Queue label with count"
+  grokBotSrc4.includes("requestQueue[0]?.previewText") || grokBotSrc4.includes("requestQueue[0]?.text"),
+  "Request queue indicator must display clean prompt content directly"
 );
 assert.ok(
-  !grokBotSrc4.includes("upcoming request"),
-  "Verbose upcoming request copy must be removed for lean minimalist UI"
+  !grokBotSrc4.includes("upcoming request") && !grokBotSrc4.includes(">Queue:<"),
+  "Verbose labels like upcoming request or Queue: must be eliminated for ultra-lean content-first UI"
 );
 console.log("✓ Test 30: Lean Request Queue UI Contract verified");
 

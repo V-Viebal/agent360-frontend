@@ -16211,41 +16211,40 @@ const selectedAgentTheme = getAgentColorTheme(
           {/* Rich Request Queue Stack with Steer, Edit, and Delete */}
           {(requestQueue.length > 0 || isQueueFadingOut) && selectedChatId && (
             <div className={`space-y-1.5 transition-all duration-200 ease-out ${isQueueFadingOut ? "opacity-0 -translate-y-1 pointer-events-none" : "opacity-100 translate-y-0 animate-in fade-in duration-150"}`}>
-              {/* Lean Request Queue Bar (clean, compact, minimalist UI) */}
+              {/* Ultra-Lean Request Queue Bar: Pure Content First (Minimalist Dot + Prompt Snippet + Quick Clear) */}
               <div
                 data-testid="request-queue-indicator"
-                className="flex items-center justify-between gap-2 px-3 py-1 rounded-xl bg-white/80 dark:bg-[#14141c]/80 backdrop-blur-xs border border-slate-200/80 dark:border-white/10 text-[11px] font-mono select-none"
+                className="flex items-center justify-between gap-2 px-2.5 py-1 rounded-xl bg-white/70 dark:bg-[#14141c]/70 backdrop-blur-xs border border-slate-200/60 dark:border-white/5 text-[11px] select-none group/qbar"
               >
                 <div
                   onClick={() => requestQueue.length > 1 && setIsQueueStackOpen((prev) => !prev)}
-                  className={`flex items-center gap-1.5 truncate min-w-0 ${requestQueue.length > 1 ? "cursor-pointer hover:opacity-85" : ""}`}
-                  title={requestQueue.length > 1 ? (isQueueStackOpen ? "Bấm để thu gọn danh sách" : "Bấm để xem toàn bộ hàng đợi") : undefined}
+                  className={`flex items-center gap-1.5 truncate min-w-0 flex-1 ${requestQueue.length > 1 ? "cursor-pointer hover:opacity-80" : ""}`}
+                  title={requestQueue.length > 1 ? (isQueueStackOpen ? "Thu gọn danh sách" : `Xem tất cả ${requestQueue.length} yêu cầu`) : undefined}
                 >
                   <span
                     className="h-1.5 w-1.5 rounded-full animate-pulse shrink-0"
                     style={{ backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark }}
                   />
-                  <span
-                    className="font-medium shrink-0"
-                    style={{ color: selectedAgentTheme.light || selectedAgentTheme.primary }}
-                  >
-                    Queue
-                  </span>
-                  <span className="text-[10px] px-1 rounded bg-black/5 dark:bg-white/10 text-slate-600 dark:text-neutral-300 font-semibold shrink-0">
-                    {requestQueue.length}
-                  </span>
-                  <span className="truncate text-slate-600 dark:text-neutral-300 font-sans text-xs">
-                    "{requestQueue[0]?.previewText || requestQueue[0]?.text?.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message"}"
+                  {requestQueue.length > 1 && (
+                    <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-black/5 dark:bg-white/10 text-slate-600 dark:text-neutral-400 font-semibold shrink-0">
+                      +{requestQueue.length - 1}
+                    </span>
+                  )}
+                  <span className="truncate text-slate-700 dark:text-neutral-300 font-sans text-xs">
+                    {requestQueue[0]?.previewText || requestQueue[0]?.text?.replace(/\n\n\[Attached File:.*?\]/gs, "").trim() || "Message"}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+
+                <div className="flex items-center gap-1 shrink-0">
                   {requestQueue.length > 1 && (
                     <button
                       type="button"
                       onClick={() => setIsQueueStackOpen((prev) => !prev)}
-                      className="px-1.5 py-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-white text-[10px] font-sans cursor-pointer transition-colors"
+                      className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                      title={isQueueStackOpen ? "Thu gọn hàng đợi" : `Xem chi tiết (${requestQueue.length})`}
+                      aria-label="Toggle queue stack"
                     >
-                      {isQueueStackOpen ? "Thu gọn" : "Chi tiết"}
+                      <ChevronDown size={12} className={`transition-transform duration-150 ${isQueueStackOpen ? "rotate-180" : ""}`} />
                     </button>
                   )}
                   <button
@@ -16253,10 +16252,11 @@ const selectedAgentTheme = getAgentColorTheme(
                     onClick={() => {
                       if (selectedChatId) setChatQueue(selectedChatId, []);
                     }}
-                    className="px-1.5 py-0.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-[10px] font-sans cursor-pointer transition-colors"
-                    title="Xóa toàn bộ hàng đợi"
+                    className="p-1 rounded-md text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Xóa hàng đợi"
+                    aria-label="Clear queue"
                   >
-                    Clear
+                    <X size={12} />
                   </button>
                 </div>
               </div>
@@ -17930,7 +17930,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   }
                   aria-label={`Message ${selectedAgent.name}`}
                   className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-[13px] sm:placeholder:text-[13.5px] placeholder:text-neutral-500 placeholder:truncate resize-none ${
-                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[24px] overflow-hidden flex-1 self-center h-[24px] min-h-[24px] max-h-[24px] py-0 px-1 sm:px-0.5 m-0 my-auto block"
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[28px] min-h-[28px] max-h-[28px] pt-[5.5px] pb-0 px-1 sm:px-0.5 m-0 my-auto block"
                   }`}
                 />
               );

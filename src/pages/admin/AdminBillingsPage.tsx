@@ -680,7 +680,7 @@ export function AdminBillingsPage() {
 
       {/* Adjust Wallet Modal */}
       {adjustTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+        <div className="grok-modal-scope fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#262634] rounded-2xl p-6 shadow-2xl space-y-4 text-xs font-sans">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#262634] pb-3">
               <div className="flex items-center gap-2">

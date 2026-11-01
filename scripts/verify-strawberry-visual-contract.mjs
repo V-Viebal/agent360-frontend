@@ -156,6 +156,13 @@ if (!landingSrc.includes("hidden sm:inline sm:col-span-3")) {
   errors.push("LandingPage Hero ERP Table missing responsive 3-column condensing on mobile viewports (hidden sm:inline sm:col-span-3).");
 }
 
+
+// 8. Verify Admin Surface Scope Gate (AdminLayout and admin modals must be scoped to typography system)
+const adminLayoutSrc = fs.readFileSync(path.join(ROOT, 'src/pages/admin/AdminLayout.tsx'), 'utf-8');
+if (!adminLayoutSrc.includes('data-type-scope="admin"') && !adminLayoutSrc.includes('admin-scope')) {
+  errors.push('AdminLayout.tsx missing data-type-scope="admin" or admin-scope typography scope.');
+}
+
 if (errors.length > 0) {
   console.error("[Visual Contract Gate] FAILED:");
   for (const e of errors) console.error("  ✕", e);

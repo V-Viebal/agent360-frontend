@@ -403,7 +403,7 @@ export function AdminUsersPage() {
       </SlideOverDrawer>
       {/* Modal Đồng bộ tài khoản */}
       {showSyncModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+        <div className="grok-modal-scope fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-[#14141c] border border-[#262636] p-6 shadow-2xl text-white space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#22222e]">
               <div className="flex items-center gap-2">

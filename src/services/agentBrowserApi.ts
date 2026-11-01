@@ -74,7 +74,7 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
 
 
 export interface BrowserInputPayload {
-  action: "click" | "scroll" | "type" | "key" | "navigate" | "reload" | "back" | "forward";
+  action: "click" | "scroll" | "type" | "key" | "navigate" | "reload" | "back" | "forward" | "new_tab" | "close_tab";
   xRatio?: number;
   yRatio?: number;
   deltaX?: number;
