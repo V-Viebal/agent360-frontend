@@ -290,6 +290,18 @@ function measureComposerTextWidthPx(text: string): number {
   return fallbackPx;
 }
 
+
+function isColorBright(hexColor?: string): boolean {
+  if (!hexColor || !hexColor.startsWith("#")) return false;
+  const hex = hexColor.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16) || 0;
+  const g = parseInt(hex.substring(2, 4), 16) || 0;
+  const b = parseInt(hex.substring(4, 6), 16) || 0;
+  // Perceived brightness formula (YIQ)
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 170;
+}
+
 function computeIsMultilineComposer(text: string, measuredWidth?: number): boolean {
   if (!text) return false;
   if (text.includes("\n")) return true;
@@ -4946,7 +4958,8 @@ function FormattedMessageContent({
             {blockItems.map((blk, blkIdx) => {
               if (blk.type === "table") {
                 return (
-                  <div key={blkIdx} className="my-2.5 max-w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-[#252532] bg-white/70 dark:bg-[#0e0e14]/90 shadow-2xs">
+                  <div key={blkIdx} className="relative group/tbl my-2.5 max-w-full">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#252532] bg-white/70 dark:bg-[#0e0e14]/90 shadow-2xs">
                     <table className="w-full text-left text-xs border-collapse">
                       {blk.headers.length > 0 && (
                         <thead>
@@ -4972,6 +4985,8 @@ function FormattedMessageContent({
                       </tbody>
                     </table>
                   </div>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-6 rounded-r-xl bg-gradient-to-l from-black/20 dark:from-black/40 to-transparent opacity-0 sm:group-hover/tbl:opacity-100 transition-opacity" />
+                </div>
                 );
               }
 
@@ -5020,25 +5035,25 @@ function FormattedMessageContent({
                 );
               }
               if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ") || trimmed.startsWith("↳ ")) {
-                const bulletSymbol = trimmed.startsWith("↳ ") ? "↳" : "↳";
-                const sliceLen = trimmed.startsWith("↳ ") ? 2 : 2;
+                const bulletSymbol = trimmed.startsWith("↳ ") ? "↳" : "•";
+                const sliceLen = trimmed.startsWith("↳ ") ? 2 : (trimmed.startsWith("• ") ? 2 : 2);
                 return (
-                  <div key={blkIdx} className="flex items-start gap-2 pl-1 py-0.5 text-slate-700 dark:text-neutral-300">
-                    <span style={{ color: themeColor || "#f8a87c" }} className="shrink-0 text-[11px] font-mono select-none mt-0.5 opacity-85">{bulletSymbol}</span>
-                    <span className="flex-1 break-words">{renderInlineMarkdown(trimmed.slice(sliceLen), themeColor)}</span>
+                  <div key={blkIdx} className="flex items-start gap-2.5 pl-1.5 py-1 text-slate-700 dark:text-neutral-300 leading-relaxed">
+                    <span style={{ color: themeColor || "#f8a87c" }} className="shrink-0 text-[12px] font-mono select-none mt-0.5 opacity-90 font-bold">{bulletSymbol}</span>
+                    <span className="flex-1 break-words leading-relaxed">{renderInlineMarkdown(trimmed.slice(sliceLen), themeColor)}</span>
                   </div>
                 );
               }
 
-              // Numbered list items: 1. 2. 3.
+              // Numbered list items: 1. 2. 3. (Với khoảng thở rõ ràng chuẩn Claude/Grok)
               const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
               if (numMatch) {
                 return (
-                  <div key={blkIdx} className="flex items-start gap-2 pl-1 py-0.5 text-slate-700 dark:text-neutral-300">
-                    <span style={{ color: themeColor || "#f8a87c" }} className="font-mono text-[11px] shrink-0 select-none mt-0.5 opacity-90 font-medium">
+                  <div key={blkIdx} className="flex items-start gap-2.5 pl-1.5 py-1 text-slate-700 dark:text-neutral-300 leading-relaxed">
+                    <span style={{ color: themeColor || "#f8a87c" }} className="font-mono text-[12px] shrink-0 select-none mt-0.5 opacity-95 font-bold">
                       {numMatch[1]}.
                     </span>
-                    <span className="flex-1 break-words">{renderInlineMarkdown(numMatch[2], themeColor)}</span>
+                    <span className="flex-1 break-words leading-relaxed">{renderInlineMarkdown(numMatch[2], themeColor)}</span>
                   </div>
                 );
               }
@@ -8309,20 +8324,32 @@ ${targetItem.text}`;
     }, 380);
   };
 
-  const handleTouchMoveMsg = (e: React.TouchEvent) => {
+  const swipeReplyTriggeredRef = useRef<boolean>(false);
+  const handleTouchMoveMsg = (e: React.TouchEvent, msgData?: any) => {
     if (!touchStartPosRef.current || e.touches.length === 0) return;
-    const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
-    const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
-    if (dx > 10 || dy > 10) {
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const dx = currentX - touchStartPosRef.current.x;
+    const dy = Math.abs(currentY - touchStartPosRef.current.y);
+
+    if (Math.abs(dx) > 10 || dy > 10) {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
     }
+
+    // Swipe right >= 60px with minimal vertical deviation triggers quick reply
+    if (dx > 60 && dy < 25 && !swipeReplyTriggeredRef.current && msgData) {
+      swipeReplyTriggeredRef.current = true;
+      triggerHaptic(12);
+      handleStartReply(msgData.rawMsg || { id: msgData.id, role: msgData.role, content: msgData.content });
+    }
   };
 
   const handleTouchEndMsg = () => {
     touchStartPosRef.current = null;
+    swipeReplyTriggeredRef.current = false;
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -12509,7 +12536,7 @@ const selectedAgentTheme = getAgentColorTheme(
         ["--agent-border-light" as any]: selectedAgentTheme.borderLight,
         ["--agent-border-dark" as any]: selectedAgentTheme.borderDark,
       } as React.CSSProperties}
-      className="flex h-screen w-screen overflow-hidden bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors selection:bg-[var(--agent-border-light)]">
+      className="flex h-[100dvh] max-h-[100dvh] w-screen overflow-hidden overscroll-none bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors selection:bg-[var(--agent-border-light)]">
       {/* ========================================================= */}
       {/* DEDICATED OVERLAY BACKDROPS FOR MOBILE RESPONSIVE DRAWERS */}
       {/* ========================================================= */}
@@ -13880,7 +13907,7 @@ const selectedAgentTheme = getAgentColorTheme(
         <div
           ref={messagesContainerRef}
           onScroll={handleMessagesScroll}
-          className={`flex-1 overflow-y-auto scrollbar-hover ${isCompactMode ? "px-3 pt-2 pb-6 space-y-3" : "px-4 md:px-8 pt-3 pb-8 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
+          className={`flex-1 overflow-y-auto overscroll-contain scrollbar-hover ${isCompactMode ? "px-3 pt-2 pb-6 space-y-3" : "px-4 md:px-8 pt-3 pb-8 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
         >
           {hasNoAgents ? (
             <div className="h-full min-h-[460px] flex items-center justify-center p-4">
@@ -14277,8 +14304,12 @@ const selectedAgentTheme = getAgentColorTheme(
                                 {att.ext}
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[240px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors">
+                                <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[210px] sm:max-w-[280px] group-hover/attfile:text-[var(--agent-light)] dark:group-hover/attfile:text-[var(--agent-dark)] transition-colors">
                                   {att.fileName}
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1.5 mt-0.5">
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                  <span>Báo cáo hoàn tất · Nhấn để xem</span>
                                 </div>
                                 
                               </div>
@@ -14703,7 +14734,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     <div
                       onTouchStart={(e) => handleTouchStartMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg })}
                       onTouchEnd={handleTouchEndMsg}
-                      onTouchMove={handleTouchMoveMsg}
+                      onTouchMove={(e) => handleTouchMoveMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg })}
                       onTouchCancel={handleTouchEndMsg}
                       onClick={() => {
                         if (longPressPreventClickRef.current) {
@@ -14725,9 +14756,11 @@ const selectedAgentTheme = getAgentColorTheme(
                         style={{
                           backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
                           borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
-                          color: "#ffffff",
+                          color: isColorBright(selectedAgentTheme.primary || selectedAgentTheme.dark) ? "#18181b" : "#ffffff",
                         }}
-                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] !text-white font-medium border shadow-xs font-sans ml-auto break-words  ${
+                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] ${
+                          isColorBright(selectedAgentTheme.primary || selectedAgentTheme.dark) ? "text-zinc-900 font-semibold" : "!text-white font-medium"
+                        } border shadow-xs font-sans ml-auto break-words ${
                           isHighlighted ? "ring-2 ring-white/60 shadow-lg" : ""
                         }`}
                       >
@@ -14788,7 +14821,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         rawMsg: msg,
                       })}
                       onTouchEnd={handleTouchEndMsg}
-                      onTouchMove={handleTouchMoveMsg}
+                      onTouchMove={(e) => handleTouchMoveMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "assistant", rawMsg: msg })}
                       onTouchCancel={handleTouchEndMsg}
                       onClick={() => {
                         if (longPressPreventClickRef.current) {
@@ -16873,7 +16906,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         });
                       }}
                       disabled={isUploadingFile}
-                      className={`h-8 w-8 sm:h-7 sm:w-7 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer rounded-full flex items-center justify-center shrink-0 ${
+                      className={`h-9 w-9 sm:h-7 sm:w-7 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer rounded-full flex items-center justify-center shrink-0 ${
                         isPlusMenuOpen ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] rotate-45 scale-110" : "bg-black/5 dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/[0.12]"
                       }`}
                       title="Add files, apps, or mention agents"
@@ -17320,7 +17353,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
                           color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
                         }}
-                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        className="h-9 w-9 sm:h-7 sm:w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title={isStreaming ? "Add to request queue" : "Send Message"}
                         aria-label={isStreaming ? "Add to request queue" : "Send Message"}
                       >
@@ -17376,7 +17409,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       : isRecording
                       ? "border-red-500/60 ring-2 ring-red-500/20"
                       : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15"
-                  } shadow-xs transition-colors overflow-hidden`}
+                  } shadow-[0_4px_20px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.45)] transition-all overflow-hidden`}
                   style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
                 >
                   {isDraggingFiles && (

@@ -400,3 +400,20 @@ assert.ok(
   "GrokBotWorkspace chat textarea must use 16px on mobile viewports"
 );
 console.log("✓ Test 28: Mobile iOS Zoom Prevention & 16px Font Contract verified");
+
+console.log("Testing Mobile Ergonomics & Viewport Polish Contracts...");
+const grokBotSrc3 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+
+assert.ok(
+  grokBotSrc3.includes("h-[100dvh] max-h-[100dvh]") && grokBotSrc3.includes("overscroll-none"),
+  "GrokBotWorkspace root container must adopt 100dvh and overscroll-none"
+);
+assert.ok(
+  grokBotSrc3.includes("overscroll-contain") && grokBotSrc3.includes("handleMessagesScroll"),
+  "Messages container must contain overscroll to prevent body bounce"
+);
+assert.ok(
+  grokBotSrc3.includes(`aria-label="Xóa nội dung"`) && grokBotSrc3.includes("X size={13}"),
+  "Composer must provide a quick clear button when typing text"
+);
+console.log("✓ Test 29: Mobile Ergonomics & Viewport Polish Contracts verified");
