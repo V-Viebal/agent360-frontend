@@ -241,17 +241,17 @@ export function LandingPage() {
       <section className="relative pt-24 sm:pt-32 lg:pt-[150px] overflow-hidden border-b border-[var(--border-card)] bg-[var(--bg-page)]">
         {/* Strawberry Mosaic Geometric Side Background Pattern (Faint on Left & Right Outer Wings, Transparent in Center) */}
         <div
-          className="absolute inset-x-0 top-0 h-[660px] pointer-events-none select-none overflow-hidden"
+          className="absolute inset-x-0 top-0 h-[640px] pointer-events-none select-none overflow-hidden"
           style={{
-            maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.2) 85%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.2) 85%, transparent 100%)",
+            maskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 58%, rgba(0,0,0,0.25) 82%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 58%, rgba(0,0,0,0.25) 82%, transparent 100%)",
           }}
         >
           <div
             className="w-full h-full"
             style={{
-              maskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.25) 43%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.25) 57%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%)",
-              WebkitMaskImage: "linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.25) 43%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.25) 57%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%)",
+              maskImage: "radial-gradient(ellipse 300px 155px at 50% 245px, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.65) 85%, rgba(0,0,0,1) 100%)",
+              WebkitMaskImage: "radial-gradient(ellipse 300px 155px at 50% 245px, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.18) 55%, rgba(0,0,0,0.65) 85%, rgba(0,0,0,1) 100%)",
             }}
           >
             <svg className="w-full h-full opacity-[0.55] dark:opacity-[0.1] text-[#e5ddd2] dark:text-white" xmlns="http://www.w3.org/2000/svg">
@@ -310,7 +310,7 @@ export function LandingPage() {
             <motion.p
               data-testid="hero-description"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
-              className="animate-hero-rise-2 mt-2 text-[15.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] lg:leading-[29.81px] tracking-[-0.216px] text-[#252522]/70 dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
+              className="animate-hero-rise-2 mt-2.5 text-[15.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] lg:leading-[29.81px] tracking-[-0.216px] text-[#6e6b65] dark:text-neutral-400 max-w-[320px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-1 text-balance"
             >
               {isVi ? (
                 <>
@@ -342,8 +342,14 @@ export function LandingPage() {
               <motion.div whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Link
                   to="/app"
-                  className="inline-flex items-center justify-center px-7 py-3 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[15px] font-medium hover:opacity-95 transition-all shadow-sm"
+                  className="inline-flex items-center justify-center gap-2.5 px-7 py-3 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[15px] font-medium hover:opacity-95 transition-all shadow-sm"
                 >
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" className="shrink-0 text-[#FFFCFA] dark:text-[#111318]">
+                    <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" />
+                    <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" />
+                    <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" />
+                    <rect x="9" y="9" width="5.5" height="5.5" rx="1" />
+                  </svg>
                   <span className="text-[#FFFCFA] dark:text-[#111318]">{isVi ? "Bắt đầu làm việc" : "Launch Workspace"}</span>
                 </Link>
               </motion.div>

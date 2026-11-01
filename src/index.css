@@ -206,10 +206,10 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Typography scale: keep app UI on 5 sizes; display sizes are opt-in */
-  --font-size-meta: 13px;
-  --font-size-ui: 14px;
+  --font-size-meta: 13.5px;
+  --font-size-ui: 14.5px;
   --font-size-body: 15.5px;
-  --font-size-title: 16.5px;
+  --font-size-title: 17px;
   --font-size-heading: 20px;
   --line-height-meta: 1.4;
   --line-height-ui: 1.45;
@@ -344,7 +344,7 @@ body {
 /* Scoped to .workspace-root, /app, .app-workspace, or table/settings modals  */
 /* NEVER override marketing/editorial surfaces like LandingPage, Docs, Pricing */
 /* ========================================================================== */
-:where(.workspace-root, [data-type-scope=app], .grok-workspace) {
+:where(.workspace-root, [data-type-scope="app"], [data-type-scope="sidebar"], [data-type-scope="overlay"], .grok-workspace, .grok-modal-scope, .grok-overlay-scope, [role="dialog"], [role="menu"], [role="listbox"]) {
   .text-\[8px\],
   .text-\[9px\],
   .text-\[10px\],
@@ -389,11 +389,16 @@ body {
 }
 
 /* Sidebars: balanced hierarchy matching reference (15px name / 13px subtext / 12px meta) */
-[data-type-scope="sidebar"] {
-  --font-size-meta: 13px;
-  --font-size-ui: 14px;
+[data-type-scope="sidebar"],
+.grok-modal-scope,
+.grok-overlay-scope,
+[role="dialog"],
+[role="menu"],
+[role="listbox"] {
+  --font-size-meta: 13.5px;
+  --font-size-ui: 14.5px;
   --font-size-body: 15.5px;
-  --font-size-title: 16px;
+  --font-size-title: 17px;
   --icon-size-xs: 12px;
   --icon-size-sm: 14px;
   --icon-size-md: 16px;
@@ -1381,10 +1386,19 @@ html.light aside,
   border-color: var(--border-card) !important;
 }
 
-html.light header,
-[data-theme="light"] header {
+html.light header:not([data-testid="landing-navbar"]),
+[data-theme="light"] header:not([data-testid="landing-navbar"]) {
   background-color: var(--bg-nav) !important;
   border-color: var(--border-card) !important;
+}
+
+html.light header[data-testid="landing-navbar"],
+[data-theme="light"] header[data-testid="landing-navbar"],
+header[data-testid="landing-navbar"] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 html.light .bg-\[\#0a0a0d\],
@@ -1810,4 +1824,20 @@ html.light,
 html.light .sidebar-bottom-fade,
 [data-theme="light"] .sidebar-bottom-fade {
   background: linear-gradient(to top, var(--bg-sidebar) 0%, rgba(248, 250, 252, 0.6) 35%, transparent 100%);
+}
+
+
+/* Clean User Message Bubble — Soft Pastel Tint in Light Mode, Elevated Slate in Dark Mode, Crisp Text */
+html.light [data-testid="user-message-bubble"],
+[data-theme="light"] [data-testid="user-message-bubble"] {
+  color: #1e293b !important;
+  font-weight: 450 !important;
+}
+html.dark [data-testid="user-message-bubble"],
+[data-theme="dark"] [data-testid="user-message-bubble"],
+.dark [data-testid="user-message-bubble"] {
+  background-color: var(--agent-bg-dark, rgba(248, 168, 124, 0.18)) !important;
+  border-color: var(--agent-border-dark, rgba(248, 168, 124, 0.35)) !important;
+  color: #f8fafc !important;
+  font-weight: 450 !important;
 }

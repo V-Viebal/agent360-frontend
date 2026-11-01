@@ -60,7 +60,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="fixed top-0 inset-x-0 z-50 bg-[var(--bg-nav)]/90 backdrop-blur-xl border-b border-transparent transition-colors select-none">
+      <header data-testid="landing-navbar" className="fixed top-0 inset-x-0 z-50 bg-transparent backdrop-blur-[2px] border-0 transition-colors select-none">
         <div className="mx-auto max-w-[1080px] px-5 sm:px-7 lg:px-5 h-16 flex items-center justify-between">
           {/* Left: Brand Logo */}
           <Link to="/" className="shrink-0 flex items-center">
@@ -183,9 +183,15 @@ export function Navbar() {
                 </button>
                 <Link
                   to="/app"
-                  className="px-5 py-2 rounded-full text-[13px] font-medium bg-[#252522] text-[#FFFCFA] hover:opacity-90 dark:bg-[#f8a87c] dark:text-black dark:hover:bg-[#f5935f] transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13.5px] font-medium bg-[#252522] text-[#FFFCFA] hover:opacity-90 dark:bg-[#f8a87c] dark:text-black dark:hover:bg-[#f5935f] transition-all cursor-pointer"
                 >
-                  {isVi ? "Mở ứng dụng" : "Launch App"}
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" className="shrink-0 opacity-95">
+                    <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" />
+                    <rect x="9" y="1.5" width="5.5" height="5.5" rx="1" />
+                    <rect x="1.5" y="9" width="5.5" height="5.5" rx="1" />
+                    <rect x="9" y="9" width="5.5" height="5.5" rx="1" />
+                  </svg>
+                  <span>{isVi ? "Mở ứng dụng" : "Launch App"}</span>
                 </Link>
               </>
             ) : (
