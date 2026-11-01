@@ -29,7 +29,7 @@ if (!fs.existsSync(designMdPath)) {
       errors.push(`DESIGN.md missing canonical section: ${sec}`);
     }
   }
-  for (const fmKey of ["copy_budget:", "typography_scale:", "hero_frame_contract:", "motion_choreography:", "css_scope_isolation:", "spatial_volume:"]) {
+  for (const fmKey of ["copy_budget:", "typography_scale:", "hero_frame_contract:", "motion_choreography:", "css_scope_isolation:", "spatial_volume:", "subpixel_y_anchors:", "variable_font_axis:"]) {
     if (!md.includes(fmKey)) {
       errors.push(`DESIGN.md frontmatter missing ${fmKey} declaration.`);
     }

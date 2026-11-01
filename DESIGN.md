@@ -13,6 +13,8 @@ hero_frame_contract: "3-Zone Authentic Workspace (Left Pure Agent Switcher + Cen
 motion_choreography: "4-Step Hero Blur/Spring Entrance + Section whileInView Stagger + Card Hover Elevation (-5px) + AnimatePresence FAQ"
 css_scope_isolation: ":where(.workspace-root, [data-type-scope=app], .grok-workspace)"
 spatial_volume: "HeroFrame=1100x468px (100% Above-the-Fold), InnerWidth=1040px (lg:px-5), CompanionCard=333x228px Full-Bleed, ComparisonFrame=430px"
+subpixel_y_anchors: "H1=161.6px, Subtitle=274.7px, CTAs=362.3px, HeroFrame=488.0px (+/-2.5px at 1800x1040)"
+variable_font_axis: "Inter 100..900 (H1/H2 wght=480, opsz=32, antialiased)"
 ---
 
 # Skyer (Agent360) Design System & One-Shot Visual Reconstruction Contract
