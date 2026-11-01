@@ -4264,7 +4264,7 @@ function InlineLiveComputerPreviewCard({
   const cleanAgent = (agentId || "mons").replace(/^bot:agent360:/i, "");
   const liveSnapshotSrc = `/api/agents/${encodeURIComponent(cleanAgent)}/browser/image.jpg?t=${refreshTick}`;
   const displayHostname = (() => {
-    if (!summary.url) return "Agent Computer Workspace";
+    if (!summary.url) return "computer.workspace";
     try {
       return new URL(summary.url).hostname;
     } catch {
@@ -4283,59 +4283,81 @@ function InlineLiveComputerPreviewCard({
   return (
     <div
       data-testid="inline-live-computer-card"
-      className="group/compcard relative w-full max-w-[380px] sm:max-w-[420px] my-1.5 rounded-2xl overflow-hidden border border-slate-200/90 dark:border-[#282838] bg-white/95 dark:bg-[#111118] shadow-sm hover:shadow-md hover:border-[var(--agent-primary)]/60 transition-all select-none"
+      className="group/compcard relative w-full max-w-[360px] sm:max-w-[400px] my-1.5 rounded-2xl overflow-hidden border border-[#ECE5DC] dark:border-[#22222e] bg-white dark:bg-[#11151f] shadow-2xs hover:border-[var(--agent-primary)]/50 transition-all select-none"
     >
-      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-100/90 dark:bg-[#171722] border-b border-slate-200/80 dark:border-[#242434] text-[11px] font-mono">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Minimalist Top Bar: Status Dot + Domain + Icon-Only Action Dock */}
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-[#F8F3ED]/90 dark:bg-[#0b0e15] border-b border-[#ECE5DC] dark:border-[#22222e] text-[11px] font-mono">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span
             className={`h-2 w-2 rounded-full shrink-0 ${
               summary.isActivelyCalling ? "bg-emerald-400 animate-ping" : "bg-emerald-500"
             }`}
           />
-          <Globe size={12} className="text-slate-500 dark:text-neutral-400 shrink-0" />
-          <span className="font-semibold text-slate-800 dark:text-neutral-200 truncate">
+          <Globe size={12} className="text-[#57534e] dark:text-neutral-400 shrink-0" />
+          <span className="font-medium text-[#252522] dark:text-[#eceef2] truncate">
             {displayHostname}
           </span>
-          <span className="px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[9px] shrink-0">
-            {summary.isActivelyCalling ? "LIVE" : `${summary.stepCount} bước`}
+          <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] shrink-0">
+            {summary.isActivelyCalling ? "LIVE" : `${summary.stepCount}`}
           </span>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        {/* Icon-Only Toolbar with Explicit Tooltips & aria-labels */}
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
             type="button"
+            data-ux-target-min="24"
             data-testid="computer-card-refresh-btn"
+            aria-label="Làm mới màn hình Computer"
+            title="Làm mới màn hình Computer"
             onClick={(e) => {
               e.stopPropagation();
               setRefreshTick((t) => t + 1);
             }}
-            className="p-1 rounded-lg hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Làm mới ảnh chụp màn hình Computer"
+            className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-colors cursor-pointer"
           >
-            <RefreshCw size={11} />
+            <RefreshCw size={12} />
           </button>
+
+          {summary.url && (
+            <a
+              href={summary.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-ux-target-min="24"
+              aria-label="Mở trang web trong tab mới"
+              title="Mở trang web trong tab mới"
+              onClick={(e) => e.stopPropagation()}
+              className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-[#57534e] dark:text-neutral-400 hover:text-[#252522] dark:hover:text-white transition-colors"
+            >
+              <ExternalLink size={12} />
+            </a>
+          )}
+
           <button
             type="button"
+            data-ux-target-min="24"
             data-testid="computer-card-extend-btn"
+            aria-label="Mở rộng Computer sang khung bên phải (Extend Split View)"
+            title="Mở rộng Computer sang khung bên phải (Extend Split View)"
             onClick={(e) => {
               e.stopPropagation();
               onExtendSplitView();
             }}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--agent-primary)]/15 hover:bg-[var(--agent-primary)]/25 text-slate-800 dark:text-white border border-[var(--agent-primary)]/40 text-[10px] font-sans font-semibold transition-colors cursor-pointer"
-            title="Mở rộng khung Computer song song bên phải (Extend Split View)"
+            className="h-6 w-6 rounded-lg flex items-center justify-center bg-[var(--agent-primary)]/15 hover:bg-[var(--agent-primary)]/25 text-[#252522] dark:text-white border border-[var(--agent-primary)]/30 transition-colors cursor-pointer"
           >
-            <Maximize2 size={10} />
-            <span>Extend</span>
+            <PanelLeftClose size={12} />
           </button>
         </div>
       </div>
 
+      {/* 16:10 Viewport with Floating Action Dock on Hover */}
       <div
         onClick={(e) => {
           e.stopPropagation();
           onExtendSplitView();
         }}
-        className="relative w-full h-[175px] sm:h-[195px] bg-[#09090f] flex items-center justify-center overflow-hidden cursor-pointer"
+        className="relative w-full h-[168px] sm:h-[188px] bg-[#080a0f] flex items-center justify-center overflow-hidden cursor-pointer"
       >
         <img
           src={summary.screenshotUrl || liveSnapshotSrc}
@@ -4350,48 +4372,48 @@ function InlineLiveComputerPreviewCard({
           }}
         />
 
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-3 py-2 flex items-center justify-between gap-2 text-[11px] text-white">
+        {/* Minimalist Bottom Status Strip */}
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 py-1.5 flex items-center justify-between gap-2 text-[11px] text-white pointer-events-none">
           <div className="flex items-center gap-1.5 min-w-0">
             {summary.isActivelyCalling ? (
-              <Loader2 size={12} className="animate-spin text-emerald-400 shrink-0" />
+              <Loader2 size={11} className="animate-spin text-emerald-400 shrink-0" />
             ) : (
-              <CheckCircle size={12} className="text-emerald-400 shrink-0" />
+              <Check size={11} className="text-emerald-400 shrink-0" />
             )}
-            <span className="truncate font-sans">{summary.actionLabel}</span>
+            <span className="truncate font-sans text-[11.5px] text-neutral-100">{summary.actionLabel}</span>
           </div>
-          {summary.url && (
-            <span className="text-[10px] font-mono text-neutral-300 truncate max-w-[140px] opacity-85">
-              {summary.url}
-            </span>
-          )}
         </div>
 
-        <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] opacity-0 group-hover/compcard:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-2.5 p-3">
+        {/* Floating Icon-Only Hover Action Dock (Lean Content-First Pattern) */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover/compcard:opacity-100 transition-opacity duration-150 flex items-center gap-1 p-1 rounded-xl bg-[#0b0e15]/85 backdrop-blur-md border border-white/15 shadow-lg">
           <button
             type="button"
+            data-ux-target-min="24"
             data-testid="computer-hover-extend-split-btn"
+            aria-label="Mở rộng Computer sang khung bên phải (Split View)"
+            title="Mở rộng Computer sang khung bên phải (Split View)"
             onClick={(e) => {
               e.stopPropagation();
               onExtendSplitView();
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-slate-900 hover:bg-neutral-100 font-sans text-xs font-semibold shadow-lg transition-transform active:scale-95 cursor-pointer"
+            className="h-7 w-7 rounded-lg bg-white text-[#252522] hover:bg-neutral-200 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
           >
-            <Maximize2 size={13} />
-            <span>Mở rộng Computer (Split View)</span>
+            <PanelLeftClose size={13} />
           </button>
 
           <button
             type="button"
+            data-ux-target-min="24"
             data-testid="computer-hover-fullscreen-btn"
+            aria-label="Phóng to toàn màn hình Computer"
+            title="Phóng to toàn màn hình Computer"
             onClick={(e) => {
               e.stopPropagation();
               onOpenFullscreenModal();
             }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 font-sans text-xs font-medium shadow-lg transition-transform active:scale-95 cursor-pointer"
-            title="Phóng to toàn màn hình"
+            className="h-7 w-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
           >
-            <ArrowUpRight size={13} />
-            <span>Toàn màn hình</span>
+            <Maximize2 size={13} />
           </button>
 
           {summary.url && (
@@ -4399,9 +4421,11 @@ function InlineLiveComputerPreviewCard({
               href={summary.url}
               target="_blank"
               rel="noopener noreferrer"
+              data-ux-target-min="24"
+              aria-label="Mở URL trực tiếp trong tab mới"
+              title="Mở URL trực tiếp trong tab mới"
               onClick={(e) => e.stopPropagation()}
-              className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 shadow-lg transition-colors"
-              title="Mở trang web trong tab mới"
+              className="h-7 w-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
             >
               <ExternalLink size={13} />
             </a>
@@ -4463,19 +4487,23 @@ function InteractiveTurnWidgetsSection({
             <div
               key={w.interactionId}
               data-testid={`interactive-poll-card-${w.interactionId}`}
-              className="w-full max-w-md rounded-2xl p-3.5 bg-white/95 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2a2a3c] shadow-xs space-y-2.5 font-sans"
+              className="w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white leading-snug">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug">
                   {w.promptText}
                 </span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#202030] text-slate-500 dark:text-neutral-400 shrink-0">
-                  {w.allowsMultiple ? "Chọn nhiều" : "Chọn 1"}
+                <span
+                  title={w.allowsMultiple ? "Cho phép chọn nhiều phương án" : "Chỉ chọn 1 phương án"}
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-[#1c1c26] border border-neutral-200/80 dark:border-[#2b2b3a] text-neutral-500 dark:text-neutral-400 shrink-0"
+                >
+                  {w.allowsMultiple ? "Multi" : "1x"}
                 </span>
               </div>
 
-              <div className="space-y-1.5">
-                {w.options.map((opt) => {
+              <div className="space-y-1">
+                {w.options.map((opt, oIdx) => {
+                  const optionLetter = String.fromCharCode(65 + (oIdx % 26));
                   const isChecked = currentSelected.includes(opt.id) || (claimed?.selected_labels || []).includes(opt.label);
                   return (
                     <button
@@ -4483,48 +4511,53 @@ function InteractiveTurnWidgetsSection({
                       type="button"
                       disabled={Boolean(claimed)}
                       onClick={() => togglePollChoice(opt.id)}
-                      className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                      className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer group flex items-center justify-between gap-2.5 min-w-0 border ${
                         isChecked
-                          ? "bg-[var(--agent-primary)]/15 border-[var(--agent-primary)] text-slate-900 dark:text-white font-semibold"
-                          : "bg-slate-50/80 dark:bg-[#191926] border-slate-200/80 dark:border-[#262638] text-slate-700 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-white/20"
+                          ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/60 text-slate-950 dark:text-white font-medium"
+                          : "border-transparent hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-slate-800 dark:text-neutral-200"
                       }`}
                     >
-                      <span className="truncate">{opt.label}</span>
-                      <span
-                        className={`h-4 w-4 rounded-md border flex items-center justify-center shrink-0 ${
-                          isChecked
-                            ? "bg-[var(--agent-primary)] border-[var(--agent-primary)] text-white"
-                            : "border-slate-300 dark:border-neutral-600"
-                        }`}
-                      >
-                        {isChecked && <Check size={10} />}
-                      </span>
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span
+                          className={`h-5 w-5 rounded-md border text-[11px] font-mono font-medium flex items-center justify-center shrink-0 transition-colors ${
+                            isChecked
+                              ? "bg-[var(--agent-primary)] border-[var(--agent-primary)] text-white"
+                              : "bg-neutral-100 dark:bg-[#1c1c26] border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300"
+                          }`}
+                        >
+                          {isChecked ? <Check size={11} /> : optionLetter}
+                        </span>
+                        <span className="text-[13.5px] truncate">{opt.label}</span>
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
               {!claimed ? (
-                <div className="flex justify-end pt-1">
+                <div className="flex justify-end pt-1 px-1">
                   <button
                     type="button"
+                    data-ux-target-min="24"
                     data-testid={`interactive-poll-submit-${w.interactionId}`}
+                    aria-label="Gửi lựa chọn khảo sát"
+                    title="Gửi lựa chọn khảo sát"
                     disabled={currentSelected.length === 0}
                     onClick={() => {
                       const chosen = w.options.filter((o) => currentSelected.includes(o.id));
                       if (chosen.length > 0) onSubmitPoll(w, chosen);
                     }}
                     style={{ backgroundColor: themePrimary }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-semibold shadow-xs disabled:opacity-40 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-white text-xs font-semibold shadow-2xs disabled:opacity-40 transition-all cursor-pointer"
                   >
                     <Send size={11} />
-                    <span>Gửi lựa chọn ({currentSelected.length})</span>
+                    <span>{currentSelected.length}</span>
                   </button>
                 </div>
               ) : (
-                <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 pt-0.5">
-                  <CheckCircle size={12} />
-                  <span>Đã gửi lựa chọn: {(claimed.selected_labels || []).join(", ")}</span>
+                <div className="flex items-center gap-1.5 px-1 pt-0.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                  <Check size={11} className="shrink-0" />
+                  <span className="truncate">{(claimed.selected_labels || []).join(", ")}</span>
                 </div>
               )}
             </div>
@@ -4537,17 +4570,17 @@ function InteractiveTurnWidgetsSection({
             <div
               key={w.interactionId}
               data-testid={`interactive-input-card-${w.interactionId}`}
-              className="w-full max-w-md rounded-2xl p-3.5 bg-white/95 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2a2a3c] shadow-xs space-y-2 font-sans"
+              className="w-full max-w-md rounded-2xl p-3 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] shadow-2xs space-y-2 font-sans"
             >
-              <div className="text-xs font-semibold text-slate-800 dark:text-neutral-200">
+              <div className="text-[13px] font-semibold text-slate-800 dark:text-neutral-200 px-0.5">
                 {w.promptText}
               </div>
               {!claimed ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <input
                     type="text"
                     value={val}
-                    placeholder={w.placeholder || "Nhập câu trả lời..."}
+                    placeholder={w.placeholder || "Nhập phản hồi..."}
                     onChange={(e) => setInputValues((prev) => ({ ...prev, [w.interactionId]: e.target.value }))}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && val.trim()) {
@@ -4555,53 +4588,60 @@ function InteractiveTurnWidgetsSection({
                         onSubmitInput(w, val.trim());
                       }
                     }}
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#1b1b28] border border-slate-200 dark:border-[#2d2d40] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-[#181822] border border-neutral-200/90 dark:border-[#2b2b3a] text-[13px] text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
                   />
                   <button
                     type="button"
+                    data-ux-target-min="24"
+                    aria-label="Gửi thông tin"
+                    title="Gửi thông tin"
                     disabled={!val.trim()}
                     onClick={() => {
                       if (val.trim()) onSubmitInput(w, val.trim());
                     }}
                     style={{ backgroundColor: themePrimary }}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-white text-xs font-semibold disabled:opacity-40 cursor-pointer shrink-0"
+                    className="h-8 w-8 rounded-lg text-white flex items-center justify-center disabled:opacity-40 cursor-pointer shrink-0 transition-transform active:scale-95"
                   >
-                    <Send size={11} />
-                    <span>Gửi</span>
+                    <Send size={12} />
                   </button>
                 </div>
               ) : (
-                <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <CheckCircle size={12} />
-                  <span>Đã phản hồi: {claimed.input_value}</span>
+                <div className="flex items-center gap-1.5 px-0.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                  <Check size={11} className="shrink-0" />
+                  <span className="truncate">{claimed.input_value}</span>
                 </div>
               )}
             </div>
           );
         }
 
+        // Default: "options" or "reply_keyboard" -> Match First-Turn Suggested Tasks Card Pattern (A/B/C/D Badge + Title + Hover ArrowRight)
         return (
           <div
             key={w.interactionId}
             data-testid={`interactive-options-card-${w.interactionId}`}
-            className="w-full max-w-lg rounded-2xl p-3 bg-white/95 dark:bg-[#13131d] border border-slate-200/90 dark:border-[#262638] shadow-xs space-y-2 font-sans"
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] p-3 sm:p-3.5 shadow-2xs space-y-2 font-sans"
           >
-            {w.promptText && (
-              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-500 dark:text-neutral-400 px-0.5">
-                <span className="truncate font-sans font-medium text-slate-700 dark:text-neutral-300">
+            {w.promptText && w.actionType !== "auto_followup" && (
+              <div className="flex items-center justify-between gap-2 px-1">
+                <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug truncate">
                   {w.promptText}
                 </span>
                 {claimed && (
-                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <span
+                    title="Đã chọn phương án"
+                    aria-label="Đã chọn phương án"
+                    className="h-5 w-5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0"
+                  >
                     <Check size={11} />
-                    <span>Đã chọn</span>
                   </span>
                 )}
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="space-y-1">
               {w.options.map((opt, oIdx) => {
+                const optionLetter = String.fromCharCode(65 + (oIdx % 26));
                 const isSelected =
                   (claimed?.selected_ids || []).includes(opt.id) ||
                   (claimed?.selected_labels || []).includes(opt.label);
@@ -4614,10 +4654,18 @@ function InteractiveTurnWidgetsSection({
                       target="_blank"
                       rel="noopener noreferrer"
                       data-testid={`cta-option-url-${opt.id}`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-[#1c1c2a] dark:hover:bg-[#252538] border border-slate-200/90 dark:border-[#2f2f46] text-xs font-medium text-slate-800 dark:text-neutral-100 transition-all cursor-pointer"
+                      title={`Mở liên kết: ${opt.url}`}
+                      className="w-full px-2.5 py-1.5 rounded-xl hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-left transition-all cursor-pointer group flex items-center justify-between gap-2.5 min-w-0"
                     >
-                      <span>{opt.label}</span>
-                      <ExternalLink size={11} className="text-slate-400 shrink-0" />
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className="h-6 w-6 rounded-md bg-neutral-100 dark:bg-[#1c1c26] border border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300 group-hover:border-[var(--agent-primary)]/50 flex items-center justify-center shrink-0 transition-colors">
+                          <ExternalLink size={11} />
+                        </span>
+                        <span className="text-[13.5px] text-slate-800 dark:text-neutral-200 group-hover:text-slate-950 dark:group-hover:text-white truncate">
+                          {opt.label}
+                        </span>
+                      </div>
+                      <ArrowUpRight size={13} style={{ color: themePrimary }} className="transition-all opacity-0 group-hover:opacity-100 shrink-0" />
                     </a>
                   );
                 }
@@ -4629,15 +4677,23 @@ function InteractiveTurnWidgetsSection({
                       key={opt.id + oIdx}
                       type="button"
                       data-testid={`cta-option-copy-${opt.id}`}
+                      title={`Sao chép: ${opt.copy_text}`}
+                      aria-label={`Sao chép ${opt.label}`}
                       onClick={() => {
                         navigator.clipboard.writeText(opt.copy_text!);
                         setCopiedId(`${w.interactionId}:${opt.id}`);
                         setTimeout(() => setCopiedId(null), 1800);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-[#1c1c2a] dark:hover:bg-[#252538] border border-slate-200/90 dark:border-[#2f2f46] text-xs font-medium text-slate-800 dark:text-neutral-100 transition-all cursor-pointer"
+                      className="w-full px-2.5 py-1.5 rounded-xl hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-left transition-all cursor-pointer group flex items-center justify-between gap-2.5 min-w-0"
                     >
-                      {isCopied ? <Check size={11} className="text-emerald-400 shrink-0" /> : <Copy size={11} className="text-slate-400 shrink-0" />}
-                      <span>{isCopied ? "Đã chép!" : opt.label}</span>
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className="h-6 w-6 rounded-md bg-neutral-100 dark:bg-[#1c1c26] border border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300 flex items-center justify-center shrink-0">
+                          {isCopied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                        </span>
+                        <span className="text-[13.5px] text-slate-800 dark:text-neutral-200 truncate">
+                          {opt.label}
+                        </span>
+                      </div>
                     </button>
                   );
                 }
@@ -4647,19 +4703,37 @@ function InteractiveTurnWidgetsSection({
                     key={opt.id + oIdx}
                     type="button"
                     data-testid={`cta-option-btn-${opt.id}`}
+                    title={opt.prompt || opt.label}
                     onClick={() => onSelectOption(w, opt)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer active:scale-95 ${
+                    className={`w-full px-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer group flex items-center justify-between gap-2.5 min-w-0 border ${
                       isSelected
-                        ? "bg-[var(--agent-primary)]/20 border-[var(--agent-primary)] text-slate-950 dark:text-white font-semibold shadow-2xs"
-                        : "bg-slate-50 hover:bg-slate-100 dark:bg-[#1a1a28] dark:hover:bg-[#232336] border-slate-200/90 dark:border-[#2d2d42] hover:border-[var(--agent-primary)]/60 text-slate-800 dark:text-neutral-200"
+                        ? "bg-[var(--agent-primary)]/10 border-[var(--agent-primary)]/50 text-slate-950 dark:text-white font-medium"
+                        : "border-transparent hover:bg-neutral-100/80 dark:hover:bg-[#1a1a24] text-slate-800 dark:text-neutral-200"
                     }`}
                   >
-                    {isSelected ? (
-                      <Check size={12} className="text-emerald-500 shrink-0" />
-                    ) : (
-                      <ArrowRight size={11} style={{ color: themePrimary }} className="shrink-0 opacity-80" />
-                    )}
-                    <span>{opt.label}</span>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span
+                        className={`h-6 w-6 rounded-md border text-[12px] font-medium flex items-center justify-center shrink-0 transition-colors ${
+                          isSelected
+                            ? "bg-[var(--agent-primary)] border-[var(--agent-primary)] text-white"
+                            : "bg-neutral-100 dark:bg-[#1c1c26] border-neutral-200/90 dark:border-[#2b2b3a] text-neutral-600 dark:text-neutral-300 group-hover:border-[var(--agent-primary)]/50 group-hover:text-slate-900 dark:group-hover:text-white"
+                        }`}
+                      >
+                        {isSelected ? <Check size={12} /> : optionLetter}
+                      </span>
+                      <span className="text-[13.5px] group-hover:text-slate-950 dark:group-hover:text-white transition-colors block truncate">
+                        {opt.label}
+                      </span>
+                    </div>
+                    <ArrowRight
+                      size={13}
+                      style={{ color: themePrimary }}
+                      className={`transition-all shrink-0 ${
+                        isSelected
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5"
+                      }`}
+                    />
                   </button>
                 );
               })}
