@@ -9987,12 +9987,16 @@ ${targetItem.text}`;
 
 
 
-    // Real-time bidirectional Telegram & external turn sync listener
+    // Monotonic sequence & revision tracking per session to discard out-of-order SSE updates
+  const sessionSyncSeqRef = useRef<Record<string, { seq: number; revTs: number; msgCount: number }>>({});
+
+  // Real-time bidirectional Telegram & external turn sync listener
   useEffect(() => {
     if (!selectedChatId || !selectedAgentId || !selectedChatKnown) return;
     if (selectedChatId.startsWith("session-") && !isCurrentSessionRunning && messages.length === 0) return;
 
     let sse: EventSource | null = null;
+    let connectionSyncSeq = -1;
     try {
       let sseUrl = `/api/agents/${encodeURIComponent(selectedAgentId)}/chats/${encodeURIComponent(selectedChatId)}/stream`;
       try {
@@ -10022,6 +10026,31 @@ ${targetItem.text}`;
       sse.addEventListener("session_update", (e) => {
         try {
           const payload = JSON.parse(e.data);
+          // 1. Out-of-order / stale SSE frame guard via monotonic sync_seq & revision_ts
+          if (typeof payload.sync_seq === "number") {
+            if (payload.sync_seq <= connectionSyncSeq) {
+              return;
+            }
+            connectionSyncSeq = payload.sync_seq;
+          }
+          const trackKey = payload.chat_id || payload.session_id || selectedChatId;
+          const prevTrack = sessionSyncSeqRef.current[trackKey];
+          const incomingRevTs = typeof payload.revision_ts === "number" ? payload.revision_ts : 0;
+          const incomingMsgCount = typeof payload.message_count === "number" ? payload.message_count : 0;
+          if (prevTrack) {
+            if (incomingRevTs > 0 && prevTrack.revTs > 0 && incomingRevTs < prevTrack.revTs) {
+              return;
+            }
+            if (incomingMsgCount > 0 && prevTrack.msgCount > 0 && incomingMsgCount < prevTrack.msgCount && !payload.is_running) {
+              return;
+            }
+          }
+          sessionSyncSeqRef.current[trackKey] = {
+            seq: typeof payload.sync_seq === "number" ? payload.sync_seq : (prevTrack?.seq || 0) + 1,
+            revTs: incomingRevTs || Date.now(),
+            msgCount: Math.max(incomingMsgCount, prevTrack?.msgCount || 0),
+          };
+
           registerSessionAgent(payload.chat_id || selectedChatId, payload.session_id, payload.agent_id || selectedAgentId);
           const ids = [payload.chat_id, payload.session_id].filter(Boolean) as string[];
           const isTurnRunning = payload.is_running ?? (payload.last_message && (payload.last_message.status === "in_progress" || payload.last_message.status === "running"));
@@ -12640,7 +12669,7 @@ const selectedAgentTheme = getAgentColorTheme(
         ["--agent-border-light" as any]: selectedAgentTheme.borderLight,
         ["--agent-border-dark" as any]: selectedAgentTheme.borderDark,
       } as React.CSSProperties}
-      className="flex h-[100dvh] max-h-[100dvh] w-screen overflow-hidden overscroll-none bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors selection:bg-[var(--agent-border-light)]">
+      className="grok-workspace flex h-[100dvh] max-h-[100dvh] w-screen overflow-hidden overscroll-none bg-[var(--bg-page)] text-[var(--text-primary)] font-sans select-none antialiased relative transition-colors selection:bg-[var(--agent-border-light)]">
       {/* ========================================================= */}
       {/* DEDICATED OVERLAY BACKDROPS FOR MOBILE RESPONSIVE DRAWERS */}
       {/* ========================================================= */}
@@ -14912,14 +14941,11 @@ const selectedAgentTheme = getAgentColorTheme(
                       <div
                         data-testid="user-message-bubble"
                         style={{
-                          backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
-                          borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
-                          color: isColorBright(selectedAgentTheme.primary || selectedAgentTheme.dark) ? "#18181b" : "#ffffff",
+                          backgroundColor: selectedAgentTheme.bgLight || "rgba(248, 168, 124, 0.16)",
+                          borderColor: selectedAgentTheme.borderLight || "rgba(248, 168, 124, 0.38)",
                         }}
-                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 text-[14.5px] sm:text-[15px] leading-snug max-w-[85%] sm:max-w-[80%] ${
-                          isColorBright(selectedAgentTheme.primary || selectedAgentTheme.dark) ? "text-zinc-900 font-semibold" : "!text-white font-medium"
-                        } border shadow-xs font-sans ml-auto break-words ${
-                          isHighlighted ? "ring-2 ring-white/60 shadow-lg" : ""
+                        className={`inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] text-slate-800 dark:text-neutral-100 font-normal border shadow-2xs font-sans ml-auto break-words ${
+                          isHighlighted ? "ring-2 ring-[var(--agent-primary)]/60 shadow-md" : ""
                         }`}
                       >
                         {renderQuotedReplyBox()}
@@ -16473,10 +16499,11 @@ const selectedAgentTheme = getAgentColorTheme(
                       },
                     }));
 
-                    // Group 3: Agents (Subagents & Team Agents)
+                    // Group 3: Agents (Subagents & Team Agents — bound subagents prioritized first, followed by all other fleet agents)
                     const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
-                    const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
-                    const displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+                    const subAgentsList = agents.filter((ag) => ag.id !== selectedAgent.id && (boundChildren.includes(ag.id) || boundChildren.includes(ag.slug)));
+                    const otherFleetAgents = agents.filter((ag) => ag.id !== selectedAgent.id && !boundChildren.includes(ag.id) && !boundChildren.includes(ag.slug));
+                    const displayAgents = [...subAgentsList, ...otherFleetAgents];
 
                     const agentActions = displayAgents.map((ag) => {
                       const mentionSlug = ag.slug || ag.id.replace(/^bot:agent360:/i, "");
@@ -16883,8 +16910,9 @@ const selectedAgentTheme = getAgentColorTheme(
                             const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
                         const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                             const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
-                            const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
-                            let arr = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+                            const subAgentsList = agents.filter((ag) => ag.id !== selectedAgent.id && (boundChildren.includes(ag.id) || boundChildren.includes(ag.slug)));
+                            const otherFleetAgents = agents.filter((ag) => ag.id !== selectedAgent.id && !boundChildren.includes(ag.id) && !boundChildren.includes(ag.slug));
+                            let arr = [...subAgentsList, ...otherFleetAgents];
                             if (q) arr = arr.filter((ag) => ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q) || ag.id.toLowerCase().includes(q));
                             return arr.length;
                           })()}
@@ -16919,9 +16947,10 @@ const selectedAgentTheme = getAgentColorTheme(
                         const triggerMatch = inputText.match(/(@|\/)([a-zA-Z0-9_-]*)$/);
                         const q = !inputText.trim() ? "" : (triggerMatch ? triggerMatch[2].toLowerCase() : plusMenuSearch.trim().toLowerCase());
                         const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
-                        const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
-                        // If no direct subagents configured yet, show all team members across fleet
-                        let displayList = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+                        const subAgentsList = agents.filter((ag) => ag.id !== selectedAgent.id && (boundChildren.includes(ag.id) || boundChildren.includes(ag.slug)));
+                        const otherFleetAgents = agents.filter((ag) => ag.id !== selectedAgent.id && !boundChildren.includes(ag.id) && !boundChildren.includes(ag.slug));
+                        // Prioritize bound subagents first, followed by all other team members across fleet
+                        let displayList = [...subAgentsList, ...otherFleetAgents];
 
                         if (q) {
                           displayList = displayList.filter((ag) => ag.name.toLowerCase().includes(q) || (ag.roleTag || "").toLowerCase().includes(q) || ag.id.toLowerCase().includes(q));
@@ -17309,8 +17338,9 @@ const selectedAgentTheme = getAgentColorTheme(
                             : APPS_CATALOG.map((a) => ({ id: a.id, title: a.name, description: a.description }));
 
                           const boundChildren = currentAgentSubBindings.map((b) => b.child_agent_id);
-                          const subAgentsList = agents.filter((ag) => boundChildren.includes(ag.id) || boundChildren.includes(ag.slug));
-                          const displayAgents = subAgentsList.length > 0 ? subAgentsList : agents.filter((ag) => ag.id !== selectedAgent.id);
+                          const subAgentsList = agents.filter((ag) => ag.id !== selectedAgent.id && (boundChildren.includes(ag.id) || boundChildren.includes(ag.slug)));
+                          const otherFleetAgents = agents.filter((ag) => ag.id !== selectedAgent.id && !boundChildren.includes(ag.id) && !boundChildren.includes(ag.slug));
+                          const displayAgents = [...subAgentsList, ...otherFleetAgents];
 
                           const allAtNav: Array<{ id: string; type: "file" | "browser" | "mode" | "app" | "agent"; title: string; description: string }> = [];
 
