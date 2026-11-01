@@ -619,6 +619,15 @@ export interface ParsedChatAttachmentItem {
   caption?: string;
 }
 
+function normalizeAttachmentDedupeKey(rawNameOrUrl: string): string {
+  const base = decodeURIComponent((rawNameOrUrl || "").split("?")[0].split("#")[0].replace(/\\/g, "/").split("/").pop() || "attachment")
+    .trim()
+    .toLowerCase();
+  return base
+    .replace(/^[0-9a-f]{32}_+/i, "")
+    .replace(/^upl_[a-z0-9]+_+/i, "");
+}
+
 function extractInlineToolResultMedia(
   resultStr?: string
 ): { dataUrl?: string; mediaType?: string; path?: string; storageUrl?: string; name?: string } | null {
@@ -696,10 +705,10 @@ function extractToolSentAttachments(
     const effectiveUrl = (!cleanPath || isProtectedPath)
       ? (storageUrl || explicitPreviewUrl || `media/${cleanName}`)
       : cleanPath;
-    const key = (cleanName || effectiveUrl.replace(/\\/g, "/").split("/").pop() || "attachment").toLowerCase();
+    const key = normalizeAttachmentDedupeKey(cleanName || effectiveUrl);
     if (seen.has(key)) {
       if (explicitPreviewUrl || storageUrl) {
-        const existing = results.find((r) => r.fileName.toLowerCase() === key || (r.rawUrl.replace(/\\/g, "/").split("/").pop() || "").toLowerCase() === key);
+        const existing = results.find((r) => normalizeAttachmentDedupeKey(r.fileName) === key || normalizeAttachmentDedupeKey(r.rawUrl) === key);
         if (existing) {
           if (explicitPreviewUrl && !existing.previewUrl.startsWith("data:")) existing.previewUrl = explicitPreviewUrl;
           if (storageUrl && !existing.storageUrl) existing.storageUrl = storageUrl;
@@ -834,6 +843,48 @@ function extractToolSentAttachments(
       } catch {}
     }
 
+    // 3b. Translate360 PDF Book Translation tools (e.g. translate__translate_book)
+    if (toolName.includes("translate_book") || toolName.includes("translate__")) {
+      try {
+        if (tc.result && typeof tc.result === "string") {
+          const parsedRes = JSON.parse(tc.result);
+          const outerList = Array.isArray(parsedRes) ? parsedRes : [parsedRes];
+          for (const outer of outerList) {
+            const payload =
+              outer?.type === "text" && typeof outer.text === "string" && outer.text.trim().startsWith("{")
+                ? JSON.parse(outer.text)
+                : outer;
+            if (Array.isArray(payload?.artifacts)) {
+              for (const art of payload.artifacts) {
+                const localPath = art.local_media_path || art.path || "";
+                const dlUrl = art.url || "";
+                const artName = art.name || (localPath || dlUrl).split("/").pop() || "translated.pdf";
+                const variantLabel = art.variant === "dual" ? "Bản dịch song ngữ (Dual PDF)" : art.variant === "mono" ? "Bản dịch tiếng Việt (Mono PDF)" : "Tài liệu đã dịch";
+                if (localPath || dlUrl) {
+                  addCandidate(localPath || dlUrl, artName, variantLabel, dlUrl || undefined);
+                }
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 3c. Studio360 Video Composition tools (e.g. studio360__compose_project_video)
+    if (toolName.includes("studio360") && (toolName.includes("compose") || toolName.includes("video"))) {
+      try {
+        if (tc.result && typeof tc.result === "string") {
+          const mp4Match = tc.result.match(/(?:https?:\/\/[^\s"\x27<>]+\.mp4|\/[^\s"\x27<>]+\.mp4)/i);
+          if (mp4Match) {
+            const rawVid = mp4Match[0];
+            const vidName = rawVid.split("/").pop() || "studio360-video.mp4";
+            const isHttp = /^https?:\/\//i.test(rawVid);
+            addCandidate(rawVid, vidName, "Video quảng cáo Studio360", isHttp ? rawVid : undefined);
+          }
+        }
+      } catch {}
+    }
+
     // 4. Files authored or written by agent via write_file / edit_file
     if (toolName === "write_file" || toolName.endsWith("__write_file")) {
       try {
@@ -904,8 +955,15 @@ function parseQuotedReplyFromContent(
     const url = (rawUrl || "").trim().replace(/^file:\/\/+/, "/");
     const fallbackFile = decodeURIComponent(url.replace(/\\/g, "/").split("/").pop() || "attachment");
     const fileName = decodeMimeBase64FileName((rawName || fallbackFile).trim());
-    const dedupeKey = (url.replace(/\\/g, "/").split("/").pop() || fileName).toLowerCase();
-    if (seenKeys.has(dedupeKey)) return;
+    const dedupeKey = normalizeAttachmentDedupeKey(fileName || url);
+    if (seenKeys.has(dedupeKey)) {
+      const isExternalStorageDup = /^https?:\/\/[^/]*(?:storage\.|minio|translate\.antares\.vn\/gradio_api\/file=)/i.test(url);
+      if (isExternalStorageDup) {
+        const existing = attachments.find((a) => normalizeAttachmentDedupeKey(a.fileName) === dedupeKey);
+        if (existing && !existing.storageUrl) existing.storageUrl = url;
+      }
+      return;
+    }
     seenKeys.add(dedupeKey);
 
     // If URL is an external Storage or Gradio artifact URL, keep storageUrl for direct download while also providing a workspace fallback previewUrl.
@@ -1001,12 +1059,12 @@ function parseQuotedReplyFromContent(
   // 9. Include any files sent by the assistant via tool calls (e.g. send_telegram_file, minio__upload_file, write_file)
   const toolSent = extractToolSentAttachments(toolCalls, steps, agentIdForUrl);
   for (const ts of toolSent) {
-    const dedupeKey = (ts.fileName || ts.rawUrl.replace(/\\/g, "/").split("/").pop() || "attachment").toLowerCase();
+    const dedupeKey = normalizeAttachmentDedupeKey(ts.fileName || ts.rawUrl);
     if (!seenKeys.has(dedupeKey)) {
       seenKeys.add(dedupeKey);
       attachments.push(ts);
     } else if (ts.previewUrl.startsWith("data:") || ts.storageUrl) {
-      const existing = attachments.find((a) => a.fileName.toLowerCase() === dedupeKey);
+      const existing = attachments.find((a) => normalizeAttachmentDedupeKey(a.fileName) === dedupeKey);
       if (existing) {
         if (ts.previewUrl.startsWith("data:") && !existing.previewUrl.startsWith("data:")) existing.previewUrl = ts.previewUrl;
         if (ts.storageUrl && !existing.storageUrl) existing.storageUrl = ts.storageUrl;

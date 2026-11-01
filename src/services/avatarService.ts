@@ -182,6 +182,14 @@ export async function syncAgentProfilesCatalogFromBackend(): Promise<void> {
             localNames[key] = item.name;
             namesChanged = true;
           }
+          if (Array.isArray(item.previous_aliases)) {
+            for (const prevAlias of item.previous_aliases) {
+              if (typeof prevAlias === "string" && prevAlias.trim()) {
+                localNames[`alias:${prevAlias.trim().toLowerCase()}`] = clean;
+                namesChanged = true;
+              }
+            }
+          }
         }
 
         if (avatarsChanged) {
@@ -298,10 +306,29 @@ export function resolveCanonicalAgentSlugFromAlias(param?: string | null): strin
   if (!param) return null;
   const targetAlias = slugifyAgentUrlAlias(param);
   if (!targetAlias) return null;
+  if (
+    targetAlias === "default-test" ||
+    targetAlias === "test-default" ||
+    targetAlias === "qwenpaw-test" ||
+    targetAlias === "qwenpaw-test-ba" ||
+    targetAlias === "agentcore-test" ||
+    targetAlias === "agentcore-test-ba" ||
+    targetAlias === "qwenpaw-base-test"
+  ) {
+    return "agentcore-test-ba";
+  }
   const allNames = getAllCustomAgentNames();
+  if (allNames[`alias:${targetAlias}`]) {
+    return normalizeAgentIdKey(allNames[`alias:${targetAlias}`]);
+  }
   for (const [key, customName] of Object.entries(allNames)) {
+    if (key.startsWith("alias:")) continue;
     if (slugifyAgentUrlAlias(customName) === targetAlias) {
-      return normalizeAgentIdKey(key);
+      const resolved = normalizeAgentIdKey(key);
+      if (resolved === "qwenpaw-test-ba" || resolved === "default-test" || resolved === "test-default") {
+        return "agentcore-test-ba";
+      }
+      return resolved;
     }
   }
   return null;
