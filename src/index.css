@@ -1668,6 +1668,20 @@ html.dark [data-testid^="agent-mention-card-"] span[class*="text-blue-400"],
   color: #60a5fa !important;
 }
 
+/* Explicit protection for agent mention chips in user & assistant bubbles across light & dark themes */
+[data-testid^="agent-mention-chip-"] > span.font-semibold,
+[data-testid^="agent-mention-chip-"] .keep-white,
+[data-testid="user-bubble-mention-chips"] [data-testid^="agent-mention-chip-"] span.font-semibold {
+  color: #ffffff !important;
+}
+
+html.light [data-testid^="agent-mention-chip-"] > span.font-semibold,
+[data-theme="light"] [data-testid^="agent-mention-chip-"] > span.font-semibold,
+html.light [data-testid="user-bubble-mention-chips"] [data-testid^="agent-mention-chip-"] span.font-semibold,
+[data-theme="light"] [data-testid="user-bubble-mention-chips"] [data-testid^="agent-mention-chip-"] span.font-semibold {
+  color: #ffffff !important;
+}
+
 /* Agent browser profile badge styling across modes */
 [data-testid="agent-browser-profile"],
 div[data-testid="agent-browser-profile"] {

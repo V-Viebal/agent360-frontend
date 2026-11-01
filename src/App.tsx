@@ -1,3 +1,4 @@
+import { ScrollToTop } from "./components/ScrollToTop";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { lazy, Suspense } from "react";
 import { AuthGuard } from "./components/AuthGuard";
@@ -34,6 +35,7 @@ export default function App() {
       <ThemeProvider>
         <LanguageProvider>
           <OfflineBanner />
+          <ScrollToTop />
         <Suspense fallback={<div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-secondary)] flex items-center justify-center text-xs font-mono">Loading...</div>}>
       <Routes>
       {/* 1. Public Marketing Landing Page at "/" */}

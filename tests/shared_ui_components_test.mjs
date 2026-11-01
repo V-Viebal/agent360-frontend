@@ -352,3 +352,19 @@ assert.ok(
   "ChannelConfigModal must hide the API Base URL input from the user while keeping the default, and present whitelist user ID setup whenever DM or Group Access Control is enabled"
 );
 console.log("✓ Test 23: Telegram Whitelist UI & Hidden Base URL verified");
+
+console.log("Testing ScrollToTop Route Scroll Restoration Contract...");
+const appSrc = fs.readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+const scrollToTopSrc = fs.readFileSync(new URL("../src/components/ScrollToTop.tsx", import.meta.url), "utf8");
+assert.ok(
+  appSrc.includes("ScrollToTop") && appSrc.includes("<ScrollToTop />"),
+  "App.tsx must mount ScrollToTop inside the router tree"
+);
+assert.ok(
+  scrollToTopSrc.includes("window.scrollTo({") &&
+  scrollToTopSrc.includes("top: 0") &&
+  scrollToTopSrc.includes("useLocation") &&
+  scrollToTopSrc.includes("hash"),
+  "ScrollToTop must reset viewport to top:0 on route changes and handle anchor hash navigation"
+);
+console.log("✓ Test 24: ScrollToTop Route Scroll Restoration verified");

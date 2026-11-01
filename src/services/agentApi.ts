@@ -197,10 +197,14 @@ export function getCurrentCacheUserScope(): string {
 }
 
 function normalizeAgentStorageSlug(agentId?: string | null): string {
-  return (agentId || "")
+  const clean = (agentId || "")
     .replace(/^bot:agent360:/i, "")
     .trim()
     .toLowerCase();
+  if (clean === "default-test" || clean === "test-default" || clean === "qwenpaw-test" || clean === "agentcore-test" || clean === "qwenpaw-base-test") {
+    return "qwenpaw-test-ba";
+  }
+  return clean;
 }
 
 export function getSavedLastChatForAgent(agentId?: string | null): string | null {
@@ -624,7 +628,7 @@ function resolveEffectiveAgentId(agentId?: string): string {
   const fromAlias = resolveCanonicalAgentSlugFromAlias(raw);
   if (fromAlias) return fromAlias;
   const low = raw.toLowerCase();
-  if (low === "default-test" || low === "qwenpaw-test" || low === "qwenpaw-base-test") {
+  if (low === "default-test" || low === "test-default" || low === "qwenpaw-test" || low === "agentcore-test" || low === "qwenpaw-base-test") {
     return "qwenpaw-test-ba";
   }
   return raw;

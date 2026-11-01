@@ -13267,6 +13267,12 @@ const selectedAgentTheme = getAgentColorTheme(
                                 alt={att.fileName}
                                 className="max-h-56 w-auto max-w-full object-contain block transition-transform duration-200 group-hover/attimg:scale-[1.02]"
                                 loading="lazy"
+                                onError={(e) => {
+                                  const img = e.currentTarget;
+                                  if (att.storageUrl && img.src !== att.storageUrl) {
+                                    img.src = att.storageUrl;
+                                  }
+                                }}
                               />
                             </div>
                             <div className="flex items-center gap-2.5 px-3 py-2 border-t border-slate-200/70 dark:border-[#252538]">
@@ -13321,17 +13327,45 @@ const selectedAgentTheme = getAgentColorTheme(
                             onClick={(e) => e.stopPropagation()}
                             className="rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black max-w-[320px] shadow-xs"
                           >
-                            <video src={att.previewUrl} controls preload="metadata" className="max-h-56 w-full object-contain" />
+                            <video
+                              src={att.previewUrl}
+                              controls
+                              preload="metadata"
+                              className="max-h-56 w-full object-contain"
+                              onError={(e) => {
+                                const v = e.currentTarget;
+                                if (att.storageUrl && v.src !== att.storageUrl) {
+                                  v.src = att.storageUrl;
+                                }
+                              }}
+                            />
                             <div className="px-2.5 py-1 bg-slate-900/90 text-white text-[10px] font-mono flex items-center justify-between gap-2">
                               <span className="truncate">{att.fileName}</span>
-                              <a
-                                href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
-                                download={att.fileName}
-                                className="text-neutral-300 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0"
-                                title="Tải video"
-                              >
-                                <Download size={11} />
-                              </a>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {att.storageUrl && (
+                                  <a
+                                    href={att.storageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-emerald-400 transition-colors"
+                                    title="Mở liên kết Cloud Storage trực tiếp"
+                                  >
+                                    <ExternalLink size={11} />
+                                  </a>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void triggerAttachmentDownload(att);
+                                  }}
+                                  className="p-1 rounded hover:bg-white/10 text-neutral-300 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer"
+                                  title={`Tải video ${att.fileName}`}
+                                >
+                                  <Download size={11} />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -13348,16 +13382,44 @@ const selectedAgentTheme = getAgentColorTheme(
                           >
                             <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
                               <span className="truncate font-medium text-slate-800 dark:text-neutral-200">{att.fileName}</span>
-                              <a
-                                href={`${att.previewUrl}${att.previewUrl.includes("?") ? "&" : "?"}download=1`}
-                                download={att.fileName}
-                                className="text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] shrink-0"
-                                title="Tải audio"
-                              >
-                                <Download size={12} />
-                              </a>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {att.storageUrl && (
+                                  <a
+                                    href={att.storageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-emerald-500 transition-colors"
+                                    title="Mở liên kết Cloud Storage trực tiếp"
+                                  >
+                                    <ExternalLink size={12} />
+                                  </a>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void triggerAttachmentDownload(att);
+                                  }}
+                                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer"
+                                  title={`Tải audio ${att.fileName}`}
+                                >
+                                  <Download size={12} />
+                                </button>
+                              </div>
                             </div>
-                            <audio src={att.previewUrl} controls preload="metadata" className="w-full h-8" />
+                            <audio
+                              src={att.previewUrl}
+                              controls
+                              preload="metadata"
+                              className="w-full h-8"
+                              onError={(e) => {
+                                const a = e.currentTarget;
+                                if (att.storageUrl && a.src !== att.storageUrl) {
+                                  a.src = att.storageUrl;
+                                }
+                              }}
+                            />
                           </div>
                         ))}
                       </div>

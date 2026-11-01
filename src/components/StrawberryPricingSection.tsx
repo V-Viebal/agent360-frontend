@@ -162,7 +162,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
               <div className="rounded-[22px] bg-[#FFFDF9] dark:bg-[#161b26] border border-[#ECE5DC] dark:border-white/10 p-6 flex flex-col justify-between flex-1">
                 <div>
                   <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Free</h3>
-                  <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
+                  <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[72px]">
                     {isVi ? "Khám phá cách nhân viên AI Skyer hỗ trợ bạn mỗi ngày." : "Explore what Skyer can do for you."}
                   </p>
                   <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -223,7 +223,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
                 <div className="p-6 flex flex-col justify-between">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Intern</h3>
-                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
+                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[72px]">
                       {isVi ? "Như một thực tập sinh phụ việc vài giờ mỗi tuần." : "Like an assistant who helps out a few hours a week."}
                     </p>
                     <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -264,7 +264,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
                 <div className="p-6 flex flex-col justify-between">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Part-Time</h3>
-                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
+                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[72px]">
                       {isVi ? "Như một đồng nghiệp lành nghề đảm nhận trọn vẹn dự án." : "Like a capable colleague who takes on whole projects."}
                     </p>
                     <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">
@@ -314,7 +314,7 @@ export function StrawberryPricingSection({ isStandalonePage = false }: Strawberr
                 <div className="p-6 flex flex-col justify-between">
                   <div>
                     <h3 className="text-[22px] font-semibold text-[#252522] dark:text-white tracking-tight">Full-Time</h3>
-                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[44px]">
+                    <p className="mt-1.5 text-[14.5px] text-[#252522]/70 dark:text-neutral-300 leading-relaxed min-h-[72px]">
                       {isVi ? "Như đội ngũ nhân sự chính thức tự vận hành cả luồng nghiệp vụ." : "Like a few new hires who run entire workstreams."}
                     </p>
                     <div className="mt-4 text-[13px] text-[#252522]/80 dark:text-neutral-300">

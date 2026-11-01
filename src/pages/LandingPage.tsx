@@ -10,7 +10,18 @@ import {
   CheckCircle2,
   ChevronDown,
   Plus,
+  Search,
+  Pin,
+  Camera,
+  RefreshCw,
+  Maximize2,
+  ExternalLink,
+  X,
+  Mic,
+  MessageSquare,
+  PanelLeftClose,
 } from "lucide-react";
+import { SkyerLogo } from "../components/SkyerLogo";
 import { AgentAvatar } from "../components/AgentAvatar";
 import { StrawberryComparisonSection } from "../components/StrawberryComparisonSection";
 import { StrawberryPricingSection } from "../components/StrawberryPricingSection";
@@ -25,6 +36,7 @@ export function LandingPage() {
   const [approvedDemo, setApprovedDemo] = useState(false);
   const [tick, setTick] = useState(0);
   const [heroCursorStep, setHeroCursorStep] = useState(0);
+  const [heroAgentIdx, setHeroAgentIdx] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -37,9 +49,9 @@ export function LandingPage() {
   const appTaskUrl = (task: string) => `/app?task=${encodeURIComponent(task)}`;
 
   const heroCursorPos = [
-    { x: 260, y: 120 },
-    { x: 340, y: 168 },
-    { x: 290, y: 215 },
+    { x: 150, y: 128 },
+    { x: 210, y: 166 },
+    { x: 175, y: 204 },
   ][heroCursorStep];
 
   const companions = [
@@ -329,14 +341,14 @@ export function LandingPage() {
                 to="/app"
                 className="inline-flex items-center justify-center px-7 py-3 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-[#111318] text-[15px] font-medium hover:opacity-90 transition-all shadow-sm"
               >
-                {isVi ? "Bắt đầu làm việc" : "Launch Workspace"}
+                <span className="text-[#FFFCFA] dark:text-[#111318]">{isVi ? "Bắt đầu làm việc" : "Launch Workspace"}</span>
               </Link>
               <button
                 type="button"
                 onClick={() => setContactOpen(true)}
                 className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-white dark:bg-[#161a24] text-[#252522] dark:text-[#f3f4f6] border border-[#ECE5DC] dark:border-white/10 text-[15px] font-medium shadow-2xs hover:bg-[#F8F3ED] dark:hover:bg-white/10 transition-all cursor-pointer"
               >
-                {isVi ? "Liên hệ Doanh nghiệp" : "Contact Sales"}
+                <span className="text-[#252522] dark:text-[#f3f4f6]">{isVi ? "Liên hệ Doanh nghiệp" : "Contact Sales"}</span>
               </button>
             </div>
           </div>
@@ -426,186 +438,439 @@ export function LandingPage() {
               </motion.div>
             </div>
 
-            {/* 16:10 Hero Product Frame (Bleeds slightly into bottom border like Strawberry) */}
-            <div className="relative z-20 rounded-t-[16px] border border-b-0 border-[#ECE5DC] dark:border-white/15 bg-white dark:bg-[#11151f] shadow-[0_16px_34px_rgba(15,23,42,0.05),0_60px_120px_rgba(15,23,42,0.10)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.65)] overflow-hidden">
-              {/* Top Browser Window Bar */}
-              <div className="h-10 bg-[#F8F3ED] dark:bg-[#0c0f17] border-b border-[#ECE5DC] dark:border-white/10 px-3 sm:px-4 flex items-center justify-between gap-2 text-xs font-mono overflow-hidden">
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
-                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#ff5f56] shrink-0" />
-                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#ffbd2e] shrink-0" />
-                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#27c93f] shrink-0" />
-                  <div className="ml-1.5 sm:ml-2 flex items-center gap-1.5 min-w-0 overflow-hidden">
-                    <span className="px-2 sm:px-2.5 py-1 rounded-md bg-white dark:bg-[#181d2a] text-[#252522] dark:text-white font-semibold text-[10px] sm:text-[11px] shadow-2xs border border-[#ECE5DC]/70 dark:border-white/10 flex items-center gap-1.5 truncate">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                      <span className="truncate">ERPCore // Đối soát Hóa đơn TT99</span>
-                    </span>
-                    <span className="hidden md:inline-block px-2.5 py-1 rounded-md text-neutral-500 dark:text-neutral-400 text-[11px] whitespace-nowrap truncate">
-                      BaseCore // MSA_2026.docx
-                    </span>
-                    <span className="hidden lg:inline-block px-2.5 py-1 rounded-md text-neutral-500 dark:text-neutral-400 text-[11px] whitespace-nowrap shrink-0">
-                      Knowledge Base KB
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[9.5px] sm:text-[10px] font-semibold whitespace-nowrap">
-                    <span className="sm:hidden">On-Premise</span>
-                    <span className="hidden sm:inline">Máy tính độc lập • On-Premise</span>
-                  </span>
-                </div>
-              </div>
+            {/* 16:10 Hero Product Frame — Ultra-Simple Authentic Skyer /app UI with Live Animated Request/Response & SVG Browser Canvas */}
+            {(() => {
+              const heroAgents = [
+                {
+                  id: "an",
+                  name: "An Kế Toán",
+                  role: isVi ? "Kế toán TT99" : "Finance TT99",
+                  color: "#10b981",
+                  blob: { shape: "bear" as const, expression: "focused" as const, color: "#34d399", animation: "nod.1.4", seed: 202 },
+                  prompt: isVi ? "Đối soát 48 HĐ GTGT T10 trên ERPCore" : "Reconcile 48 Oct VAT invoices in ERPCore",
+                  reply: isVi ? "Đã khớp 48/48 PO • Chênh lệch: 0₫" : "Matched 48/48 POs • Variance: 0₫",
+                  url: "erpcore.vn/so-cai-tt99",
+                  docTitle: "MẪU 02-VT // SỔ CÁI",
+                  rows: [
+                    { name: "VinFast Energy", code: "HĐ-0041", val: "482.5M", ok: true },
+                    { name: "Masan Consumer", code: "HĐ-0042", val: "195.0M", ok: true },
+                    { name: "FPT Smart Cloud", code: "HĐ-0045", val: "310.8M", ok: true },
+                    { name: "Viettel Post", code: "HĐ-0049", val: "128.4M", ok: heroCursorStep === 2 },
+                  ],
+                },
+                {
+                  id: "minh",
+                  name: "Minh Bốc",
+                  role: isVi ? "Điều hành OKR" : "Executive Ops",
+                  color: "#0ea5e9",
+                  blob: { shape: "squircle" as const, expression: "proud" as const, color: "#38bdf8", animation: "wink.1.6", seed: 101 },
+                  prompt: isVi ? "Tổng hợp tiến độ OKR Quý 4 toàn công ty" : "Summarize company-wide Q4 OKR progress",
+                  reply: isVi ? "Doanh thu đạt 108% • 14/14 đầu việc đúng hạn" : "Revenue at 108% • 14/14 milestones on track",
+                  url: "basecore.vn/okr-q4-board",
+                  docTitle: "OKR Q4 // EXECUTIVE BOARD",
+                  rows: [
+                    { name: "Khối Kinh doanh B2B", code: "OKR-01", val: "108%", ok: true },
+                    { name: "Khối Tài chính & ERP", code: "OKR-02", val: "100%", ok: true },
+                    { name: "Khối Pháp chế NĐ13", code: "OKR-03", val: "98%", ok: true },
+                    { name: "Tuyển dụng Nhân sự", code: "OKR-04", val: "95%", ok: heroCursorStep === 2 },
+                  ],
+                },
+                {
+                  id: "vy",
+                  name: "Vy Pháp Chế",
+                  role: isVi ? "Rà soát HĐ" : "Legal & NDA",
+                  color: "#8b5cf6",
+                  blob: { shape: "bunny" as const, expression: "attentive" as const, color: "#a78bfa", animation: "nod.1.4", seed: 404 },
+                  prompt: isVi ? "Kiểm tra rủi ro hợp đồng đại lý MSA_2026" : "Audit liability clauses in MSA_2026.docx",
+                  reply: isVi ? "Đã khoanh 2 điều khoản phạt & chuẩn hóa NĐ13" : "Flagged 2 penalty clauses & aligned Decree 13",
+                  url: "basecore.vn/msa-2026-review",
+                  docTitle: "MSA_2026.DOCX // PHÁP CHẾ",
+                  rows: [
+                    { name: "Điều 4.2: Giới hạn bồi thường", code: "Đã sửa", val: "An toàn", ok: true },
+                    { name: "Điều 7.1: Bảo mật dữ liệu NĐ13", code: "Chuẩn", val: "Đạt 100%", ok: true },
+                    { name: "Điều 9.3: Phạt chậm thanh toán", code: "Cập nhật", val: "Tối đa 8%", ok: true },
+                    { name: "Phụ lục A: SLA cam kết 99.9%", code: "Ký số", val: "Sẵn sàng", ok: heroCursorStep === 2 },
+                  ],
+                },
+                {
+                  id: "linh",
+                  name: "Linh Kinh Doanh",
+                  role: isVi ? "Sales B2B" : "B2B Outbound",
+                  color: "#f97316",
+                  blob: { shape: "cat" as const, expression: "happy" as const, color: "#f8a87c", animation: "wink.1.6", seed: 303 },
+                  prompt: isVi ? "Lọc 100 khách hàng B2B và gửi báo giá" : "Qualify 100 B2B leads and draft proposals",
+                  reply: isVi ? "Đã chấm điểm 100 Lead • Gửi 15 báo giá VIP" : "Scored 100 leads • Sent 15 VIP proposals",
+                  url: "crm.skyer.vn/b2b-pipeline",
+                  docTitle: "CRM // CHIẾN DỊCH B2B",
+                  rows: [
+                    { name: "Thaco Logistics", code: "Score 98", val: "Đã gửi BG", ok: true },
+                    { name: "CJ Gemadept", code: "Score 96", val: "Đã mở mail", ok: true },
+                    { name: "Tân Cảng Sài Gòn", code: "Score 95", val: "Hẹn demo", ok: true },
+                    { name: "Hoà Phát Dung Quất", code: "Score 94", val: "Đang soạn...", ok: heroCursorStep === 2 },
+                  ],
+                },
+              ];
 
-              {/* Workspace Body: Left AI Companion Chat + Right Live Spreadsheet & ERP Canvas */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[340px] sm:min-h-[390px]">
-                {/* Left 4 Cols: Active Companion Sidebar */}
-                <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-white/10 bg-[#FFFDF9] dark:bg-[#0e121b] p-4 sm:p-5 flex flex-col justify-between">
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AgentAvatar
-                          agent={{ id: "sidebar-an", name: "An Kế Toán" }}
-                          size="sm"
-                          alwaysAnimate
-                          overrideConfig={{
-                            type: "blob",
-                            blob: { shape: "bear", expression: "focused", color: "#34d399", animation: "nod.1.4", seed: 202 },
-                          }}
-                        />
-                        <div>
-                          <div className="text-xs font-bold text-[#252522] dark:text-white">An Kế Toán</div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">● Đang thao tác trên tab</div>
+              const activeAg = heroAgents[heroAgentIdx] || heroAgents[0];
+              const svgCursorTargets = [
+                { x: 225, y: 88 },
+                { x: 245, y: 126 },
+                { x: 235, y: 164 },
+              ];
+              const curTarget = svgCursorTargets[heroCursorStep] || svgCursorTargets[0];
+
+              return (
+                <div className="relative z-20 rounded-t-[16px] border border-b-0 border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] shadow-[0_16px_34px_rgba(15,23,42,0.05),0_60px_120px_rgba(15,23,42,0.10)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.75)] overflow-hidden">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[390px] sm:min-h-[410px]">
+                    {/* ZONE 1: Simple Clean Left Agents List (No All Infra, No Search Clutter, Pure Agent Switcher) */}
+                    <div className="lg:col-span-3 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex flex-col justify-between select-none">
+                      <div>
+                        {/* Header: Skyer Brand */}
+                        <div className="h-11 px-4 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between">
+                          <SkyerLogo size={20} showText />
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                        </div>
+
+                        {/* Pure Interactive Agent List */}
+                        <div className="p-2.5 space-y-1.5">
+                          {heroAgents.map((ag, idx) => {
+                            const isSelected = idx === heroAgentIdx;
+                            return (
+                              <button
+                                key={ag.id}
+                                type="button"
+                                onClick={() => setHeroAgentIdx(idx)}
+                                className={
+                                  "w-full px-3 py-2.5 rounded-xl flex items-center gap-3 text-left transition-all cursor-pointer " +
+                                  (isSelected
+                                    ? "bg-white dark:bg-[#181822] border border-[#ECE5DC] dark:border-[#2a2a3c] shadow-xs"
+                                    : "hover:bg-white/60 dark:hover:bg-white/[0.04] border border-transparent opacity-75 hover:opacity-100")
+                                }
+                              >
+                                <AgentAvatar
+                                  agent={{ id: `hero-list-${ag.id}`, name: ag.name }}
+                                  size="sm"
+                                  alwaysAnimate={isSelected}
+                                  overrideConfig={{ type: "blob", blob: ag.blob }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[13px] font-semibold text-[#252522] dark:text-white truncate">
+                                      {ag.name}
+                                    </span>
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: ag.color }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate block">
+                                    {ag.role}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F8F3ED] dark:bg-white/5 text-neutral-600 dark:text-neutral-400 border border-[#ECE5DC] dark:border-white/10">
-                        TT99
-                      </span>
-                    </div>
 
-                    {/* User instruction bubble */}
-                    <div className="p-3 rounded-2xl rounded-tl-xs bg-[#F8F3ED] dark:bg-white/5 border border-[#ECE5DC] dark:border-white/10 text-xs text-[#252522] dark:text-neutral-200">
-                      {isVi
-                        ? "Đối chiếu 48 hóa đơn GTGT tháng 10 với đơn hàng PO trên ERPCore và lập bảng kê Mẫu 02-VT."
-                        : "Reconcile 48 October VAT invoices against POs in ERPCore and stage TT99 vouchers."}
-                    </div>
-
-                    {/* Companion live step progress */}
-                    <div className="p-3 rounded-2xl bg-white dark:bg-[#151a26] border border-[#ECE5DC] dark:border-white/10 space-y-2 text-[11px]">
-                      <div className="font-semibold text-[#252522] dark:text-white">
-                        {isVi ? "Tiến độ tự hành:" : "Autonomous steps:"}
-                      </div>
-                      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
-                        <Check size={12} /> <span>1. Đọc 48 file XML/PDF Hóa đơn điện tử</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-mono text-[10px]">
-                        <Check size={12} /> <span>2. Khớp 3 bên PO - Phiếu kho - Hóa đơn</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[#c2540a] dark:text-[#f8a87c] font-mono text-[10px] font-semibold">
-                        <span className="h-2 w-2 rounded-full bg-[#f8a87c] animate-ping" />
-                        <span>3. Đang ghi Sổ Cái ERPCore (0 VNĐ lệch)</span>
+                      {/* Minimal Member Footer */}
+                      <div className="px-4 py-2.5 border-t border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
+                        <span className="font-medium text-[#252522] dark:text-neutral-300">Skyer Workspace</span>
+                        <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">● Live</span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Mini Input Bar */}
-                  <div className="mt-4 pt-3 border-t border-[#ECE5DC] dark:border-white/10 flex items-center justify-between text-[11px] text-neutral-400 font-mono">
-                    <span>{isVi ? "Giao thêm việc cho An..." : "Queue a follow-up..."}</span>
-                    <Link
-                      to="/app"
-                      className="px-2.5 py-1 rounded-full bg-[#252522] dark:bg-white text-[#FFFCFA] dark:text-black text-[10px] font-sans font-semibold"
-                    >
-                      {isVi ? "Mở App →" : "Open →"}
-                    </Link>
-                  </div>
-                </div>
+                    {/* ZONE 2: Animated Live Chat Action (Real Request -> Live Streaming Response -> SVG Action Trigger) */}
+                    <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-[#ECE5DC] dark:border-[#1c1c22] bg-[#FFFDF9] dark:bg-[#0c0c0e] flex flex-col justify-between">
+                      <div>
+                        {/* Top Centered Agent Capsule */}
+                        <div className="h-11 px-3 border-b border-[#ECE5DC] dark:border-[#1c1c22] flex items-center justify-center">
+                          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F8F3ED] dark:bg-[#14141c] border border-[#ECE5DC] dark:border-white/[0.08] text-xs font-semibold text-[#252522] dark:text-white">
+                            <AgentAvatar
+                              agent={{ id: `capsule-${activeAg.id}`, name: activeAg.name }}
+                              size="xs"
+                              alwaysAnimate
+                              overrideConfig={{ type: "blob", blob: activeAg.blob }}
+                            />
+                            <span>{activeAg.name}</span>
+                          </div>
+                        </div>
 
-                {/* Right 8 Cols: Live ERP Spreadsheet Viewport with Moving AI Cursor */}
-                <div className="lg:col-span-8 p-4 sm:p-6 bg-white dark:bg-[#11151f] relative flex flex-col justify-between font-mono text-xs">
-                  <div>
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-[#ECE5DC] dark:border-white/10">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px]">
-                          SỔ CÁI TT99
-                        </span>
-                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">
-                          Bang_Ke_Chung_Tu_T10_2026.xlsx
-                        </span>
+                        {/* Animated Request & Response Flow */}
+                        <div className="p-4 space-y-3.5">
+                          {/* 1. User Request Bubble */}
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={`req-${activeAg.id}`}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.22 }}
+                              className="ml-6 p-3 rounded-2xl rounded-tr-xs bg-[#F8F3ED] dark:bg-[#1c1c26] border border-[#ECE5DC] dark:border-white/[0.07] text-[12.5px] font-medium text-[#252522] dark:text-neutral-100 shadow-2xs"
+                            >
+                              {activeAg.prompt}
+                            </motion.div>
+                          </AnimatePresence>
+
+                          {/* 2. Agent Live Animated Response Card with SVG Progress Wave */}
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={`res-${activeAg.id}`}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.28, delay: 0.06 }}
+                              className="p-3.5 rounded-2xl rounded-tl-xs bg-white dark:bg-[#121218] border border-[#ECE5DC] dark:border-[#22222e] space-y-3 shadow-2xs"
+                            >
+                              {/* Live Tool Call Pill */}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#F8F3ED] dark:bg-[#1a1a24] border border-[#ECE5DC] dark:border-white/10 text-[10.5px] font-mono text-[#252522] dark:text-neutral-200">
+                                  <span
+                                    className="h-1.5 w-1.5 rounded-full animate-ping"
+                                    style={{ backgroundColor: activeAg.color }}
+                                  />
+                                  <span>{activeAg.url}</span>
+                                </div>
+                                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  {heroCursorStep === 0 ? "35%" : heroCursorStep === 1 ? "78%" : "100%"}
+                                </span>
+                              </div>
+
+                              {/* Animated SVG Execution Flow Diagram inside Chat Bubble */}
+                              <svg viewBox="0 0 260 44" className="w-full h-11 overflow-visible">
+                                {/* Connecting Track Line */}
+                                <line
+                                  x1="24"
+                                  y1="22"
+                                  x2="236"
+                                  y2="22"
+                                  stroke="currentColor"
+                                  className="text-neutral-200 dark:text-neutral-800"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                />
+                                {/* Animated Active Progress Line */}
+                                <motion.line
+                                  x1="24"
+                                  y1="22"
+                                  animate={{ x2: heroCursorStep === 0 ? 95 : heroCursorStep === 1 ? 168 : 236 }}
+                                  transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                                  y2="22"
+                                  stroke={activeAg.color}
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                />
+                                {/* 3 Step Nodes: Read -> Match -> Sync */}
+                                {[
+                                  { x: 24, label: isVi ? "Đọc dữ liệu" : "Read" },
+                                  { x: 130, label: isVi ? "Đối chiếu" : "Verify" },
+                                  { x: 236, label: isVi ? "Hoàn tất" : "Sync" },
+                                ].map((node, nIdx) => {
+                                  const done = nIdx <= heroCursorStep;
+                                  return (
+                                    <g key={node.label} transform={`translate(${node.x}, 16)`}>
+                                      <circle
+                                        r="7"
+                                        fill={done ? activeAg.color : "var(--bg-card)"}
+                                        stroke={done ? activeAg.color : "rgba(150,150,150,0.35)"}
+                                        strokeWidth="2"
+                                      />
+                                      {done && (
+                                        <path
+                                          d="M-2.5 0 L-0.5 2 L3 -2"
+                                          fill="none"
+                                          stroke="#ffffff"
+                                          strokeWidth="1.6"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                      )}
+                                      <text
+                                        y="21"
+                                        textAnchor="middle"
+                                        className="fill-neutral-500 dark:fill-neutral-400 text-[8.5px] font-mono"
+                                      >
+                                        {node.label}
+                                      </text>
+                                    </g>
+                                  );
+                                })}
+                              </svg>
+
+                              {/* Crisp Result Line */}
+                              <div className="pt-1 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between text-[12px] font-medium text-[#252522] dark:text-neutral-200">
+                                <span>{activeAg.reply}</span>
+                                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                              </div>
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
                       </div>
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                        ✓ 48/48 Khớp • Chênh lệch: 0₫
-                      </span>
+
+                      {/* Minimal Composer Bar */}
+                      <div className="p-3">
+                        <Link
+                          to="/app"
+                          className="h-9 px-3 rounded-full bg-[#F8F3ED] dark:bg-[#16161d] border border-[#ECE5DC] dark:border-[#242432] flex items-center justify-between gap-2 text-[11.5px] text-neutral-400 hover:border-[#f8a87c]/60 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <Plus size={12} className="text-neutral-500 shrink-0" />
+                            <span className="truncate">{isVi ? "Giao việc cho đồng đội AI..." : "Assign a task..."}</span>
+                          </div>
+                          <Mic size={12} className="text-[#f8a87c] shrink-0" />
+                        </Link>
+                      </div>
                     </div>
 
-                    {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-1 text-[10px] text-neutral-400 dark:text-neutral-500 pb-2 border-b border-neutral-100 dark:border-white/5">
-                      <span className="col-span-5 sm:col-span-4">Nhà cung cấp</span>
-                      <span className="hidden sm:inline col-span-3">Số PO / HĐ</span>
-                      <span className="col-span-4 sm:col-span-3 text-right sm:text-left">Giá trị (VNĐ)</span>
-                      <span className="col-span-3 sm:col-span-2 text-right">Đối soát</span>
-                    </div>
-
-                    {/* Table Rows */}
-                    <div className="divide-y divide-neutral-100 dark:divide-white/5 text-[10.5px] sm:text-[11px]">
-                      {[
-                        { vendor: "VinFast Energy", po: "PO-891 / HĐ-0041", val: "482.500.000₫", status: "Khớp 100%" },
-                        { vendor: "Masan Consumer", po: "PO-892 / HĐ-0042", val: "195.000.000₫", status: "Khớp 100%" },
-                        { vendor: "FPT Smart Cloud", po: "PO-894 / HĐ-0045", val: "310.800.000₫", status: "Khớp 100%" },
-                        { vendor: "Viettel Logistics", po: "PO-899 / HĐ-0049", val: "128.400.000₫", status: "Đang ghi..." },
-                      ].map((row, idx) => {
-                        const active = idx === heroCursorStep;
-                        return (
-                          <div
-                            key={row.po}
-                            className={
-                              "grid grid-cols-12 gap-1 py-2.5 items-center px-2 rounded-lg transition-colors " +
-                              (active ? "bg-emerald-500/10 border border-emerald-500/30" : "")
-                            }
-                          >
-                            <span className="col-span-5 sm:col-span-4 font-semibold text-[#252522] dark:text-white truncate">
-                              {row.vendor}
+                    {/* ZONE 3: Authentic Visual Browser Screen with Animated SVG Canvas & Live AI Cursor */}
+                    <div className="lg:col-span-5 bg-white dark:bg-[#0d0d12] flex flex-col justify-between relative overflow-hidden">
+                      {/* Browser Top Toolbar */}
+                      <div className="h-11 px-3.5 border-b border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED] dark:bg-[#0d0d12] flex items-center justify-between gap-2 select-none">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                          <span className="px-2 py-0.5 rounded bg-white dark:bg-[#181820] text-[#252522] dark:text-neutral-200 text-[10px] font-mono border border-[#ECE5DC] dark:border-[#242430] truncate">
+                            {activeAg.url}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {[Camera, RefreshCw, Maximize2].map((Icon, i) => (
+                            <span
+                              key={i}
+                              className="h-6 w-6 rounded-md bg-white dark:bg-[#181820] border border-[#ECE5DC] dark:border-[#242430] text-neutral-600 dark:text-neutral-300 flex items-center justify-center"
+                            >
+                              <Icon size={11} className={i === 0 ? "text-cyan-500 dark:text-cyan-400" : ""} />
                             </span>
-                            <span className="hidden sm:inline col-span-3 text-neutral-500 dark:text-neutral-400 truncate text-[10px]">
-                              {row.po}
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Interactive SVG Browser Viewport Canvas */}
+                      <div className="flex-1 p-3.5 sm:p-4 flex flex-col justify-center relative">
+                        <div className="rounded-xl border border-[#ECE5DC] dark:border-[#22222e] bg-[#FFFDF9] dark:bg-[#121218] p-3 shadow-2xs relative overflow-hidden">
+                          {/* Canvas Header */}
+                          <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#ECE5DC] dark:border-white/10 font-mono">
+                            <span
+                              className="px-2 py-0.5 rounded text-[10px] font-bold"
+                              style={{
+                                backgroundColor: `${activeAg.color}20`,
+                                color: activeAg.color,
+                              }}
+                            >
+                              {activeAg.docTitle}
                             </span>
-                            <span className="col-span-4 sm:col-span-3 text-right sm:text-left text-[#252522] dark:text-neutral-200 font-medium whitespace-nowrap">
-                              {row.val}
-                            </span>
-                            <span className="col-span-3 sm:col-span-2 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[10px] whitespace-nowrap">
-                              ✓ {row.status}
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                              ● Auto-Sync
                             </span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
 
-                  {/* Named AI Cursor Floating Inside Hero Frame */}
-                  <motion.div
-                    animate={{ x: heroCursorPos.x - 100, y: heroCursorPos.y - 40 }}
-                    transition={{ type: "spring", stiffness: 110, damping: 18 }}
-                    className="absolute top-0 left-0 pointer-events-none z-30 flex items-center gap-1"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#10b981" className="drop-shadow-md">
-                      <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-                    </svg>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-sans font-bold shadow-md">
-                      An Kế Toán
-                    </span>
-                  </motion.div>
+                          {/* Rows inside Browser Canvas */}
+                          <div className="space-y-1.5 font-mono text-[11px]">
+                            {activeAg.rows.map((r, rIdx) => {
+                              const isHovered = rIdx === heroCursorStep;
+                              return (
+                                <motion.div
+                                  key={r.name}
+                                  animate={{
+                                    scale: isHovered ? 1.01 : 1,
+                                  }}
+                                  className={
+                                    "grid grid-cols-12 items-center px-2.5 py-2 rounded-lg border transition-colors " +
+                                    (isHovered
+                                      ? "bg-emerald-500/10 border-emerald-500/40"
+                                      : "bg-white dark:bg-[#16161f] border-[#ECE5DC]/60 dark:border-white/5")
+                                  }
+                                >
+                                  <span className="col-span-6 font-sans font-semibold text-[#252522] dark:text-white truncate">
+                                    {r.name}
+                                  </span>
+                                  <span className="col-span-3 text-right text-neutral-500 dark:text-neutral-400 text-[10px]">
+                                    {r.val}
+                                  </span>
+                                  <span className="col-span-3 text-right text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                                    ✓ {r.code}
+                                  </span>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
 
-                  {/* Bottom Control Bar inside Hero Viewport */}
-                  <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-[#18181b] border border-neutral-200 dark:border-white/15 text-neutral-800 dark:text-white text-[9px] shadow-xs whitespace-nowrap shrink-0">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                      <span className="font-medium whitespace-nowrap text-neutral-700 dark:text-neutral-200">{isVi ? "An Kế Toán điều khiển" : "Controlled by An"}</span>
-                      <button type="button" className="px-1.5 py-0.5 rounded-full bg-white dark:bg-white/20 border border-neutral-200 dark:border-transparent text-neutral-800 dark:text-white text-[8.5px] font-semibold shadow-xs whitespace-nowrap hover:bg-neutral-50 dark:hover:bg-white/30 transition-colors cursor-pointer">{isVi ? "Tiếp quản" : "Take over"}</button>
+                          {/* Animated SVG Overlay: Live Scanning Beam + AI Agent Pointer + Click Ripple */}
+                          <svg
+                            viewBox="0 0 360 210"
+                            className="absolute inset-0 w-full h-full pointer-events-none z-20"
+                          >
+                            {/* Animated Click Ripple Ring at Cursor Target */}
+                            <motion.circle
+                              animate={{
+                                cx: curTarget.x,
+                                cy: curTarget.y,
+                                r: [4, 18, 24],
+                                opacity: [0.75, 0.25, 0],
+                              }}
+                              transition={{
+                                duration: 1.6,
+                                repeat: Infinity,
+                                ease: "easeOut",
+                              }}
+                              fill="none"
+                              stroke={activeAg.color}
+                              strokeWidth="2"
+                            />
+
+                            {/* Animated Agent Pointer Cursor */}
+                            <motion.g
+                              animate={{ x: curTarget.x, y: curTarget.y }}
+                              transition={{ type: "spring", stiffness: 110, damping: 18 }}
+                            >
+                              <path
+                                d="M0 0 L5 16 L9 10 L16 7 Z"
+                                fill={activeAg.color}
+                                stroke="#ffffff"
+                                strokeWidth="1.2"
+                              />
+                              <rect
+                                x="10"
+                                y="10"
+                                width="74"
+                                height="18"
+                                rx="9"
+                                fill={activeAg.color}
+                              />
+                              <text
+                                x="47"
+                                y="22"
+                                textAnchor="middle"
+                                fill="#ffffff"
+                                className="text-[9px] font-sans font-bold"
+                              >
+                                {activeAg.name}
+                              </text>
+                            </motion.g>
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Minimalist Bottom Control Pill */}
+                      <div className="px-3.5 py-2.5 border-t border-[#ECE5DC] dark:border-[#1c1c22] bg-[#F8F3ED]/60 dark:bg-[#0d0d12] flex items-center justify-between gap-2">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-[#181820] border border-[#ECE5DC] dark:border-[#2c2c3e] text-[#252522] dark:text-neutral-200 text-[9.5px] shadow-2xs">
+                          <span
+                            className="h-1.5 w-1.5 rounded-full animate-pulse"
+                            style={{ backgroundColor: activeAg.color }}
+                          />
+                          <span className="font-medium">{activeAg.name}</span>
+                          <span className="px-1.5 py-0.5 rounded-full bg-[#F8F3ED] dark:bg-[#252534] text-[#252522] dark:text-white text-[8.5px] font-semibold">
+                            {isVi ? "Tiếp quản" : "Take over"}
+                          </span>
+                        </div>
+                        <span className="text-[9.5px] font-mono text-neutral-500 dark:text-neutral-400">
+                          On-Premise VM
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-[9.5px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                      {isVi ? "Biên nhận thực thi lưu tự động vào Knowledge Base KB" : "Execution receipt synced to KB"}
-                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
       </section>
