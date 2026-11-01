@@ -1182,7 +1182,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -5175,16 +5175,21 @@ function SelkiesViewer({
     setIframeLoaded(false);
     focusAgentBrowser(agentId).catch(() => {});
     issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
-      .then((signed) => { if (alive) setSrc(`${signed}#${mode}`); })
-      .catch((e) => {
+      .then((signed) => {
         if (!alive) return;
-        if (url) {
-          setSrc(`${url.replace(/#.*$/, "")}#${mode}`);
-          setError("");
+        // Only signed /a360/{token}/ URLs pass Traefik forwardAuth; the bare host triggers a Basic-Auth admin prompt.
+        if (isSignedAgentDesktopUrl(signed)) {
+          setSrc(`${signed}#${mode}`);
         } else {
           setSrc("");
-          setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
+          setError("unsigned viewer URL");
         }
+      })
+      .catch((e) => {
+        if (!alive) return;
+        // Never fall back to the bare Selkies host: keep the CDP preview + operator-key form instead.
+        setSrc("");
+        setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
       });
     return () => { alive = false; };
   }, [url, attempt, mode, reloadKey]);

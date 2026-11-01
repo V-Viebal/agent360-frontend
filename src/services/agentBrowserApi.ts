@@ -117,6 +117,17 @@ export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1280): strin
 
 export class DesktopAuthError extends Error {}
 
+/** True only for Agent360-signed desktop URLs (`https://host/a360/{token}/`), the sole path that avoids the Selkies admin prompt. */
+export function isSignedAgentDesktopUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && /^\/a360\/[^/]+\/?$/.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
 // Pre-warmed signed desktop URLs per agentId+mode so mobile & desktop reuse valid 8h tokens without re-requesting
 const cachedSignedDesktopUrls = new Map<string, { url: string; expiresAt: number }>();
 
@@ -140,6 +151,7 @@ export async function issueAgentDesktopUrl(agentId: string, mode: "control" | "w
   if (res.status === 401) throw new DesktopAuthError("Operator key required to open the agent desktop");
   if (!res.ok) throw new Error(`viewer ${res.status}`);
   const body = (await res.json()) as { url: string };
+  if (!isSignedAgentDesktopUrl(body.url)) throw new Error("viewer returned an unsigned desktop URL");
   cachedSignedDesktopUrls.set(cacheKey, { url: body.url, expiresAt: Date.now() + 7 * 3600 * 1000 });
   return body.url;
 }
