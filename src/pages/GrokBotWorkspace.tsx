@@ -1,3 +1,5 @@
+import { LeanAudioPlayer } from "../components/LeanAudioPlayer";
+import { LeanVideoPlayer } from "../components/LeanVideoPlayer";
 import React from "react";
 import { createPortal } from "react-dom";
 import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent, AgentPinUpdatedWsEvent, ChatMessagePinUpdatedWsEvent } from "../services/sessionMultiplexer";
@@ -1136,6 +1138,8 @@ import {
   fetchAgentPinnedMessages,
   deleteChatApi,
   toggleArchiveChatApi,
+  submitChatInteraction,
+  ClaimedInteractionRecord,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
@@ -1164,7 +1168,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, openAgentDesktopTab, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -3945,6 +3949,728 @@ function renderSearchMatchHighlight(text: string, query: string) {
   );
 }
 
+export interface SkyerInteractiveOption {
+  id: string;
+  label: string;
+  prompt?: string;
+  url?: string;
+  copy_text?: string;
+}
+
+export interface SkyerInteractiveWidget {
+  interactionId: string;
+  kind: "options" | "poll" | "force_reply" | "reply_keyboard";
+  promptText: string;
+  actionType?: string;
+  columns?: number;
+  allowsMultiple?: boolean;
+  placeholder?: string;
+  options: SkyerInteractiveOption[];
+}
+
+export interface BrowserExecutionSummary {
+  hasBrowserAction: boolean;
+  isActivelyCalling: boolean;
+  activeToolName: string;
+  actionLabel: string;
+  url?: string;
+  screenshotUrl?: string;
+  stepCount: number;
+}
+
+function extractBrowserExecutionSummary(msg: ChatMessage): BrowserExecutionSummary | null {
+  const rawSteps = [
+    ...(Array.isArray(msg.steps) ? msg.steps.filter((s) => s.kind === "tool_call") : []),
+    ...(Array.isArray(msg.toolCalls) ? msg.toolCalls : []),
+  ];
+  if (rawSteps.length === 0) return null;
+
+  const mergedMap = new Map<string, { tool: string; args?: string; result?: string; state?: string }>();
+  rawSteps.forEach((tc: any, idx: number) => {
+    const k = tc.call_id || tc.id || `${tc.tool || "tool"}-${idx}`;
+    const prev = mergedMap.get(k);
+    if (!prev) {
+      mergedMap.set(k, { tool: tc.tool || "", args: tc.args, result: tc.result, state: tc.state });
+    } else {
+      if (tc.tool && (!prev.tool || prev.tool === "Tool Output" || prev.tool === "Tool Call")) prev.tool = tc.tool;
+      if (tc.args && !prev.args) prev.args = tc.args;
+      if (tc.result && !prev.result) prev.result = tc.result;
+      if (tc.state === "calling" || (!prev.state && tc.state)) prev.state = tc.state;
+    }
+  });
+
+  const browserSteps: Array<{ tool: string; args?: string; result?: string; state?: string }> = [];
+  for (const item of mergedMap.values()) {
+    const tLow = (item.tool || "").toLowerCase();
+    const isBrowserTool =
+      tLow.includes("browser") ||
+      tLow.includes("cdp") ||
+      tLow.includes("playwright") ||
+      tLow.includes("navigate") ||
+      tLow.includes("take_screenshot") ||
+      tLow.includes("take_snapshot") ||
+      tLow.includes("open_url") ||
+      tLow.includes("select_page") ||
+      tLow.includes("click") ||
+      tLow.includes("hover") ||
+      tLow.includes("type_text") ||
+      tLow.includes("evaluate_script");
+    if (isBrowserTool) {
+      browserSteps.push(item);
+    }
+  }
+
+  if (browserSteps.length === 0) return null;
+
+  let latestUrl: string | undefined;
+  let latestScreenshot: string | undefined;
+  let isCalling = false;
+  let lastTool = browserSteps[browserSteps.length - 1].tool || "browser";
+
+  for (const bs of browserSteps) {
+    if (bs.state === "calling") {
+      isCalling = true;
+      lastTool = bs.tool || lastTool;
+    }
+    const combinedText = `${bs.args || ""} ${bs.result || ""}`;
+    const urlMatches = combinedText.match(/https?:\/\/[^\s"',}\]\\]+/gi);
+    if (urlMatches) {
+      for (const u of urlMatches) {
+        if (!/localhost:1922|127\.0\.0\.1|browser-test:922/i.test(u)) {
+          if (/\.(?:png|jpe?g|webp)$/i.test(u)) {
+            latestScreenshot = u;
+          } else {
+            latestUrl = u.replace(/[.,;]+$/, "");
+          }
+        }
+      }
+    }
+    if (bs.result) {
+      const b64 = bs.result.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]{64,}/);
+      if (b64) latestScreenshot = b64[0];
+    }
+  }
+
+  const shortTool = lastTool.includes("__") ? lastTool.split("__").pop()! : lastTool;
+  let actionLabel = isCalling ? `Đang thao tác trên Web (${shortTool})...` : `Đã thực thi ${browserSteps.length} thao tác trên Computer`;
+  if (shortTool.includes("navigate") || shortTool.includes("open")) {
+    actionLabel = isCalling ? "Đang truy cập trang web..." : "Đã mở và kiểm tra trang web";
+  } else if (shortTool.includes("screenshot") || shortTool.includes("snapshot")) {
+    actionLabel = isCalling ? "Đang chụp màn hình trình duyệt..." : "Đã chụp màn hình và phân tích giao diện";
+  } else if (shortTool.includes("click") || shortTool.includes("type") || shortTool.includes("fill")) {
+    actionLabel = isCalling ? "Đang tương tác phần tử trên trang..." : "Đã điền biểu mẫu & tương tác trên Web";
+  }
+
+  return {
+    hasBrowserAction: true,
+    isActivelyCalling: isCalling,
+    activeToolName: shortTool,
+    actionLabel,
+    url: latestUrl,
+    screenshotUrl: latestScreenshot,
+    stepCount: browserSteps.length,
+  };
+}
+
+function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: string): SkyerInteractiveWidget[] {
+  const widgets: SkyerInteractiveWidget[] = [];
+  const seenIds = new Set<string>();
+
+  const rawSteps = [
+    ...(Array.isArray(msg.steps) ? msg.steps.filter((s) => s.kind === "tool_call") : []),
+    ...(Array.isArray(msg.toolCalls) ? msg.toolCalls : []),
+  ];
+  const mergedMap = new Map<string, { tool: string; args?: string; result?: string }>();
+  rawSteps.forEach((tc: any, idx: number) => {
+    const k = tc.call_id || tc.id || `${tc.tool || "tool"}-${idx}`;
+    const prev = mergedMap.get(k);
+    if (!prev) {
+      mergedMap.set(k, { tool: tc.tool || "", args: tc.args, result: tc.result });
+    } else {
+      if (tc.tool && (!prev.tool || prev.tool === "Tool Output" || prev.tool === "Tool Call")) prev.tool = tc.tool;
+      if (tc.args && !prev.args) prev.args = tc.args;
+      if (tc.result && !prev.result) prev.result = tc.result;
+    }
+  });
+
+  for (const tc of mergedMap.values()) {
+    const tLow = (tc.tool || "").toLowerCase();
+    const isPresentationTool =
+      tLow.includes("present_interactive_options") ||
+      tLow.includes("present_telegram_poll") ||
+      tLow.includes("present_telegram_input") ||
+      tLow === "present" ||
+      tLow.endsWith("__present");
+
+    if (!isPresentationTool && (!tc.result || !tc.result.includes("skyer-interaction/v1"))) {
+      continue;
+    }
+
+    let parsedObj: any = null;
+    if (tc.result && typeof tc.result === "string") {
+      try {
+        const rawParsed = JSON.parse(tc.result);
+        const items = Array.isArray(rawParsed) ? rawParsed : [rawParsed];
+        for (const item of items) {
+          if (item?.schema === "skyer-interaction/v1" || item?.options || item?.menu_token) {
+            parsedObj = item;
+            break;
+          }
+          if (item?.type === "text" && typeof item.text === "string" && item.text.trim().startsWith("{")) {
+            const inner = JSON.parse(item.text);
+            if (inner?.schema === "skyer-interaction/v1" || inner?.options || inner?.menu_token) {
+              parsedObj = inner;
+              break;
+            }
+          }
+        }
+      } catch {}
+    }
+
+    let argsObj: any = null;
+    if (tc.args && typeof tc.args === "string" && tc.args.trim().startsWith("{")) {
+      try {
+        argsObj = JSON.parse(tc.args);
+      } catch {}
+    }
+
+    const source = parsedObj || argsObj;
+    if (!source) continue;
+
+    const effective = source.intent && typeof source.intent === "object" ? source.intent : source;
+    const rawOpts =
+      effective.options ||
+      effective.interaction?.options ||
+      effective.content?.options ||
+      argsObj?.options ||
+      [];
+
+    const kindRaw = String(
+      effective.kind ||
+        effective.interaction?.type ||
+        effective.mode ||
+        (tLow.includes("poll") ? "poll" : tLow.includes("input") ? argsObj?.mode || "force_reply" : "options")
+    ).toLowerCase();
+
+    const kind: SkyerInteractiveWidget["kind"] =
+      kindRaw === "poll"
+        ? "poll"
+        : kindRaw === "force_reply"
+        ? "force_reply"
+        : kindRaw === "reply_keyboard"
+        ? "reply_keyboard"
+        : "options";
+
+    const promptText = String(
+      effective.prompt_text ||
+        effective.question ||
+        effective.text ||
+        effective.content?.text ||
+        argsObj?.text ||
+        argsObj?.question ||
+        "Chọn thao tác tiếp theo:"
+    ).trim();
+
+    const normOptions: SkyerInteractiveOption[] = [];
+    if (Array.isArray(rawOpts)) {
+      rawOpts.forEach((o: any, idx: number) => {
+        if (typeof o === "string" && o.trim()) {
+          normOptions.push({ id: `opt_${idx}`, label: o.trim(), prompt: o.trim() });
+        } else if (o && typeof o === "object") {
+          const label = String(o.label || o.text || o.title || o.id || "").trim();
+          if (label) {
+            normOptions.push({
+              id: String(o.id || `opt_${idx}`).trim(),
+              label,
+              prompt: typeof o.prompt === "string" && o.prompt.trim() ? o.prompt.trim() : label,
+              url: typeof o.url === "string" && /^https?:\/\//i.test(o.url.trim()) ? o.url.trim() : undefined,
+              copy_text: typeof o.copy_text === "string" && o.copy_text.trim() ? o.copy_text.trim() : undefined,
+            });
+          }
+        }
+      });
+    }
+
+    if (kind !== "force_reply" && normOptions.length === 0) continue;
+
+    const interactionId = String(
+      effective.interaction_id || effective.menu_token || `ix_${msg.id}_${widgets.length}`
+    );
+    if (seenIds.has(interactionId)) continue;
+    seenIds.add(interactionId);
+
+    widgets.push({
+      interactionId,
+      kind,
+      promptText,
+      actionType: String(effective.action_type || "general"),
+      columns: Number(effective.columns) || 2,
+      allowsMultiple: Boolean(effective.allows_multiple || effective.allows_multiple_answers || argsObj?.allows_multiple),
+      placeholder: String(effective.placeholder || argsObj?.placeholder || "Nhập thông tin phản hồi..."),
+      options: normOptions,
+    });
+  }
+
+  // Automatic Smart Fallback: detect structured follow-up choices at the end of assistant prose
+  if (widgets.length === 0 && cleanContent && cleanContent.length > 20) {
+    const lines = cleanContent.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const tailLines = lines.slice(-8);
+    const hasChoiceQuestionCue = tailLines.some((l) =>
+      /(?:bạn muốn|anh muốn|chị muốn|bước tiếp theo|hướng nào|phương án nào|chọn 1 trong|lựa chọn sau|would you like|which option|next step)/i.test(l)
+    );
+    if (hasChoiceQuestionCue) {
+      const extractedChoices: SkyerInteractiveOption[] = [];
+      for (const line of tailLines) {
+        const m = line.match(/^(?:(\d+)[.)]|[-•*]|\[([A-D1-4])\])\s+\*{0,2}([^*:?\n]{4,72})\*{0,2}(?:\s*[:–—-].*)?$/);
+        if (m) {
+          const cleanLabel = (m[3] || "").replace(/\*+/g, "").trim();
+          if (cleanLabel && cleanLabel.length >= 4 && cleanLabel.length <= 68 && !cleanLabel.endsWith("?")) {
+            extractedChoices.push({
+              id: `auto_opt_${extractedChoices.length}`,
+              label: cleanLabel,
+              prompt: cleanLabel,
+            });
+          }
+        }
+      }
+      if (extractedChoices.length >= 2 && extractedChoices.length <= 5) {
+        widgets.push({
+          interactionId: `ix_auto_${msg.id}`,
+          kind: "options",
+          promptText: "Gợi ý hành động tiếp theo",
+          actionType: "auto_followup",
+          columns: 2,
+          options: extractedChoices,
+        });
+      }
+    }
+  }
+
+  return widgets;
+}
+
+function InlineLiveComputerPreviewCard({
+  summary,
+  agentId,
+  onExtendSplitView,
+  onOpenFullscreenModal,
+}: {
+  summary: BrowserExecutionSummary;
+  agentId: string;
+  onExtendSplitView: () => void;
+  onOpenFullscreenModal: () => void;
+}) {
+  const [refreshTick, setRefreshTick] = useState(0);
+  const cleanAgent = (agentId || "mons").replace(/^bot:agent360:/i, "");
+  const liveSnapshotSrc = `/api/agents/${encodeURIComponent(cleanAgent)}/browser/image.jpg?t=${refreshTick}`;
+  const displayHostname = (() => {
+    if (!summary.url) return "Agent Computer Workspace";
+    try {
+      return new URL(summary.url).hostname;
+    } catch {
+      return summary.url;
+    }
+  })();
+
+  useEffect(() => {
+    if (!summary.isActivelyCalling) return;
+    const iv = setInterval(() => {
+      setRefreshTick((t) => t + 1);
+    }, 3500);
+    return () => clearInterval(iv);
+  }, [summary.isActivelyCalling]);
+
+  return (
+    <div
+      data-testid="inline-live-computer-card"
+      className="group/compcard relative w-full max-w-[380px] sm:max-w-[420px] my-1.5 rounded-2xl overflow-hidden border border-slate-200/90 dark:border-[#282838] bg-white/95 dark:bg-[#111118] shadow-sm hover:shadow-md hover:border-[var(--agent-primary)]/60 transition-all select-none"
+    >
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-slate-100/90 dark:bg-[#171722] border-b border-slate-200/80 dark:border-[#242434] text-[11px] font-mono">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={`h-2 w-2 rounded-full shrink-0 ${
+              summary.isActivelyCalling ? "bg-emerald-400 animate-ping" : "bg-emerald-500"
+            }`}
+          />
+          <Globe size={12} className="text-slate-500 dark:text-neutral-400 shrink-0" />
+          <span className="font-semibold text-slate-800 dark:text-neutral-200 truncate">
+            {displayHostname}
+          </span>
+          <span className="px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[9px] shrink-0">
+            {summary.isActivelyCalling ? "LIVE" : `${summary.stepCount} bước`}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            data-testid="computer-card-refresh-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRefreshTick((t) => t + 1);
+            }}
+            className="p-1 rounded-lg hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+            title="Làm mới ảnh chụp màn hình Computer"
+          >
+            <RefreshCw size={11} />
+          </button>
+          <button
+            type="button"
+            data-testid="computer-card-extend-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExtendSplitView();
+            }}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--agent-primary)]/15 hover:bg-[var(--agent-primary)]/25 text-slate-800 dark:text-white border border-[var(--agent-primary)]/40 text-[10px] font-sans font-semibold transition-colors cursor-pointer"
+            title="Mở rộng khung Computer song song bên phải (Extend Split View)"
+          >
+            <Maximize2 size={10} />
+            <span>Extend</span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onExtendSplitView();
+        }}
+        className="relative w-full h-[175px] sm:h-[195px] bg-[#09090f] flex items-center justify-center overflow-hidden cursor-pointer"
+      >
+        <img
+          src={summary.screenshotUrl || liveSnapshotSrc}
+          alt={summary.actionLabel}
+          className="w-full h-full object-cover object-top transition-transform duration-300 group-hover/compcard:scale-[1.02]"
+          loading="lazy"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (summary.screenshotUrl && img.src !== liveSnapshotSrc) {
+              img.src = liveSnapshotSrc;
+            }
+          }}
+        />
+
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-3 py-2 flex items-center justify-between gap-2 text-[11px] text-white">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {summary.isActivelyCalling ? (
+              <Loader2 size={12} className="animate-spin text-emerald-400 shrink-0" />
+            ) : (
+              <CheckCircle size={12} className="text-emerald-400 shrink-0" />
+            )}
+            <span className="truncate font-sans">{summary.actionLabel}</span>
+          </div>
+          {summary.url && (
+            <span className="text-[10px] font-mono text-neutral-300 truncate max-w-[140px] opacity-85">
+              {summary.url}
+            </span>
+          )}
+        </div>
+
+        <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] opacity-0 group-hover/compcard:opacity-100 transition-opacity duration-150 flex items-center justify-center gap-2.5 p-3">
+          <button
+            type="button"
+            data-testid="computer-hover-extend-split-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExtendSplitView();
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-slate-900 hover:bg-neutral-100 font-sans text-xs font-semibold shadow-lg transition-transform active:scale-95 cursor-pointer"
+          >
+            <Maximize2 size={13} />
+            <span>Mở rộng Computer (Split View)</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="computer-hover-fullscreen-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenFullscreenModal();
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 font-sans text-xs font-medium shadow-lg transition-transform active:scale-95 cursor-pointer"
+            title="Phóng to toàn màn hình"
+          >
+            <ArrowUpRight size={13} />
+            <span>Toàn màn hình</span>
+          </button>
+
+          {summary.url && (
+            <a
+              href={summary.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 shadow-lg transition-colors"
+              title="Mở trang web trong tab mới"
+            >
+              <ExternalLink size={13} />
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InteractiveTurnWidgetsSection({
+  widgets,
+  messageId,
+  claimedMap,
+  onSelectOption,
+  onSubmitPoll,
+  onSubmitInput,
+  themePrimary,
+}: {
+  widgets: SkyerInteractiveWidget[];
+  messageId: string;
+  claimedMap: Record<string, ClaimedInteractionRecord>;
+  onSelectOption: (widget: SkyerInteractiveWidget, opt: SkyerInteractiveOption) => void;
+  onSubmitPoll: (widget: SkyerInteractiveWidget, selectedOpts: SkyerInteractiveOption[]) => void;
+  onSubmitInput: (widget: SkyerInteractiveWidget, value: string) => void;
+  themePrimary?: string;
+}) {
+  const [pollSelections, setPollSelections] = useState<Record<string, string[]>>({});
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  if (!widgets || widgets.length === 0) return null;
+
+  return (
+    <div
+      data-testid={`chat-interactive-widgets-${messageId}`}
+      className="flex flex-col items-start gap-2 w-full max-w-[85%] sm:max-w-[80%] mt-1"
+    >
+      {widgets.map((w) => {
+        const claimed = claimedMap[w.interactionId];
+
+        if (w.kind === "poll") {
+          const currentSelected = claimed?.selected_ids || pollSelections[w.interactionId] || [];
+          const togglePollChoice = (optId: string) => {
+            if (claimed) return;
+            setPollSelections((prev) => {
+              const cur = prev[w.interactionId] || [];
+              if (w.allowsMultiple) {
+                return {
+                  ...prev,
+                  [w.interactionId]: cur.includes(optId) ? cur.filter((x) => x !== optId) : [...cur, optId],
+                };
+              }
+              return { ...prev, [w.interactionId]: [optId] };
+            });
+          };
+
+          return (
+            <div
+              key={w.interactionId}
+              data-testid={`interactive-poll-card-${w.interactionId}`}
+              className="w-full max-w-md rounded-2xl p-3.5 bg-white/95 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2a2a3c] shadow-xs space-y-2.5 font-sans"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white leading-snug">
+                  {w.promptText}
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#202030] text-slate-500 dark:text-neutral-400 shrink-0">
+                  {w.allowsMultiple ? "Chọn nhiều" : "Chọn 1"}
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                {w.options.map((opt) => {
+                  const isChecked = currentSelected.includes(opt.id) || (claimed?.selected_labels || []).includes(opt.label);
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      disabled={Boolean(claimed)}
+                      onClick={() => togglePollChoice(opt.id)}
+                      className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border text-left text-xs transition-all cursor-pointer ${
+                        isChecked
+                          ? "bg-[var(--agent-primary)]/15 border-[var(--agent-primary)] text-slate-900 dark:text-white font-semibold"
+                          : "bg-slate-50/80 dark:bg-[#191926] border-slate-200/80 dark:border-[#262638] text-slate-700 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-white/20"
+                      }`}
+                    >
+                      <span className="truncate">{opt.label}</span>
+                      <span
+                        className={`h-4 w-4 rounded-md border flex items-center justify-center shrink-0 ${
+                          isChecked
+                            ? "bg-[var(--agent-primary)] border-[var(--agent-primary)] text-white"
+                            : "border-slate-300 dark:border-neutral-600"
+                        }`}
+                      >
+                        {isChecked && <Check size={10} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {!claimed ? (
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    data-testid={`interactive-poll-submit-${w.interactionId}`}
+                    disabled={currentSelected.length === 0}
+                    onClick={() => {
+                      const chosen = w.options.filter((o) => currentSelected.includes(o.id));
+                      if (chosen.length > 0) onSubmitPoll(w, chosen);
+                    }}
+                    style={{ backgroundColor: themePrimary }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-white text-xs font-semibold shadow-xs disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    <Send size={11} />
+                    <span>Gửi lựa chọn ({currentSelected.length})</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 pt-0.5">
+                  <CheckCircle size={12} />
+                  <span>Đã gửi lựa chọn: {(claimed.selected_labels || []).join(", ")}</span>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        if (w.kind === "force_reply") {
+          const val = claimed?.input_value ?? inputValues[w.interactionId] ?? "";
+          return (
+            <div
+              key={w.interactionId}
+              data-testid={`interactive-input-card-${w.interactionId}`}
+              className="w-full max-w-md rounded-2xl p-3.5 bg-white/95 dark:bg-[#14141f] border border-slate-200/90 dark:border-[#2a2a3c] shadow-xs space-y-2 font-sans"
+            >
+              <div className="text-xs font-semibold text-slate-800 dark:text-neutral-200">
+                {w.promptText}
+              </div>
+              {!claimed ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={val}
+                    placeholder={w.placeholder || "Nhập câu trả lời..."}
+                    onChange={(e) => setInputValues((prev) => ({ ...prev, [w.interactionId]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && val.trim()) {
+                        e.preventDefault();
+                        onSubmitInput(w, val.trim());
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#1b1b28] border border-slate-200 dark:border-[#2d2d40] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[var(--agent-primary)]"
+                  />
+                  <button
+                    type="button"
+                    disabled={!val.trim()}
+                    onClick={() => {
+                      if (val.trim()) onSubmitInput(w, val.trim());
+                    }}
+                    style={{ backgroundColor: themePrimary }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-white text-xs font-semibold disabled:opacity-40 cursor-pointer shrink-0"
+                  >
+                    <Send size={11} />
+                    <span>Gửi</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle size={12} />
+                  <span>Đã phản hồi: {claimed.input_value}</span>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div
+            key={w.interactionId}
+            data-testid={`interactive-options-card-${w.interactionId}`}
+            className="w-full max-w-lg rounded-2xl p-3 bg-white/95 dark:bg-[#13131d] border border-slate-200/90 dark:border-[#262638] shadow-xs space-y-2 font-sans"
+          >
+            {w.promptText && (
+              <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-500 dark:text-neutral-400 px-0.5">
+                <span className="truncate font-sans font-medium text-slate-700 dark:text-neutral-300">
+                  {w.promptText}
+                </span>
+                {claimed && (
+                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Check size={11} />
+                    <span>Đã chọn</span>
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {w.options.map((opt, oIdx) => {
+                const isSelected =
+                  (claimed?.selected_ids || []).includes(opt.id) ||
+                  (claimed?.selected_labels || []).includes(opt.label);
+
+                if (opt.url) {
+                  return (
+                    <a
+                      key={opt.id + oIdx}
+                      href={opt.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid={`cta-option-url-${opt.id}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-[#1c1c2a] dark:hover:bg-[#252538] border border-slate-200/90 dark:border-[#2f2f46] text-xs font-medium text-slate-800 dark:text-neutral-100 transition-all cursor-pointer"
+                    >
+                      <span>{opt.label}</span>
+                      <ExternalLink size={11} className="text-slate-400 shrink-0" />
+                    </a>
+                  );
+                }
+
+                if (opt.copy_text) {
+                  const isCopied = copiedId === `${w.interactionId}:${opt.id}`;
+                  return (
+                    <button
+                      key={opt.id + oIdx}
+                      type="button"
+                      data-testid={`cta-option-copy-${opt.id}`}
+                      onClick={() => {
+                        navigator.clipboard.writeText(opt.copy_text!);
+                        setCopiedId(`${w.interactionId}:${opt.id}`);
+                        setTimeout(() => setCopiedId(null), 1800);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-[#1c1c2a] dark:hover:bg-[#252538] border border-slate-200/90 dark:border-[#2f2f46] text-xs font-medium text-slate-800 dark:text-neutral-100 transition-all cursor-pointer"
+                    >
+                      {isCopied ? <Check size={11} className="text-emerald-400 shrink-0" /> : <Copy size={11} className="text-slate-400 shrink-0" />}
+                      <span>{isCopied ? "Đã chép!" : opt.label}</span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <button
+                    key={opt.id + oIdx}
+                    type="button"
+                    data-testid={`cta-option-btn-${opt.id}`}
+                    onClick={() => onSelectOption(w, opt)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer active:scale-95 ${
+                      isSelected
+                        ? "bg-[var(--agent-primary)]/20 border-[var(--agent-primary)] text-slate-950 dark:text-white font-semibold shadow-2xs"
+                        : "bg-slate-50 hover:bg-slate-100 dark:bg-[#1a1a28] dark:hover:bg-[#232336] border-slate-200/90 dark:border-[#2d2d42] hover:border-[var(--agent-primary)]/60 text-slate-800 dark:text-neutral-200"
+                    }`}
+                  >
+                    {isSelected ? (
+                      <Check size={12} className="text-emerald-500 shrink-0" />
+                    ) : (
+                      <ArrowRight size={11} style={{ color: themePrimary }} className="shrink-0 opacity-80" />
+                    )}
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Formatted assistant message content with word wrapping and code block containment
 function FormattedMessageContent({
   content,
@@ -5375,13 +6101,86 @@ export function GrokBotWorkspace() {
         });
       }
     };
+    const onClaimedInteractionsSynced = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail;
+      if (detail && detail.chatId === selectedChatId && Array.isArray(detail.claimedInteractions)) {
+        setClaimedInteractionsMap((prev) => {
+          const next = { ...prev };
+          for (const rec of detail.claimedInteractions as ClaimedInteractionRecord[]) {
+            if (rec && rec.interaction_id) {
+              next[rec.interaction_id] = rec;
+            }
+          }
+          try {
+            localStorage.setItem(`agent360_claimed_ix_${selectedChatId}`, JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+      }
+    };
     window.addEventListener("agent360_room_synced", onRoomSynced);
     window.addEventListener("agent360_pinned_messages_synced", onPinnedMessagesSynced);
+    window.addEventListener("agent360_claimed_interactions_synced", onClaimedInteractionsSynced);
     return () => {
       window.removeEventListener("agent360_room_synced", onRoomSynced);
       window.removeEventListener("agent360_pinned_messages_synced", onPinnedMessagesSynced);
+      window.removeEventListener("agent360_claimed_interactions_synced", onClaimedInteractionsSynced);
     };
   }, [selectedChatId]);
+
+  const [claimedInteractionsMap, setClaimedInteractionsMap] = useState<Record<string, ClaimedInteractionRecord>>({});
+  useEffect(() => {
+    if (!selectedChatId) {
+      setClaimedInteractionsMap({});
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(`agent360_claimed_ix_${selectedChatId}`);
+      setClaimedInteractionsMap(raw ? JSON.parse(raw) : {});
+    } catch {
+      setClaimedInteractionsMap({});
+    }
+  }, [selectedChatId]);
+
+  const handleRecordAndDispatchInteraction = (
+    messageId: string,
+    widget: SkyerInteractiveWidget,
+    selectedIds: string[],
+    selectedLabels: string[],
+    promptToDispatch: string,
+    inputValue?: string
+  ) => {
+    triggerHaptic(12);
+    const activeAg = selectedAgent?.slug || selectedAgent?.id || selectedAgentId || "default";
+    const activeChat = selectedChatId || "default";
+    const record: ClaimedInteractionRecord = {
+      interaction_id: widget.interactionId,
+      message_id: messageId,
+      kind: widget.kind,
+      selected_ids: selectedIds,
+      selected_labels: selectedLabels,
+      input_value: inputValue || null,
+      claimed_at: new Date().toISOString(),
+    };
+    setClaimedInteractionsMap((prev) => {
+      const next = { ...prev, [widget.interactionId]: record };
+      try {
+        localStorage.setItem(`agent360_claimed_ix_${activeChat}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    void submitChatInteraction(activeAg, activeChat, {
+      interaction_id: widget.interactionId,
+      message_id: messageId,
+      kind: widget.kind,
+      selected_ids: selectedIds,
+      selected_labels: selectedLabels,
+      input_value: inputValue,
+    });
+    if (promptToDispatch.trim()) {
+      executeTurnStream(promptToDispatch.trim());
+    }
+  };
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
     try {
       const saved = selectedAgentId ? localStorage.getItem(`skyer_loop_mode_${selectedAgentId}`) : null;
@@ -13136,7 +13935,7 @@ const selectedAgentTheme = getAgentColorTheme(
               const isExtendOpen = activeExtendPopoverMsgId === msg.id;
               const isHighlighted = highlightedReplyMsgId === msg.id;
 
-              const renderAgentMentionChip = (rawSlugOrId: string, fallbackName?: string, variant: "inline" | "meta" = "inline") => {
+              const renderAgentMentionChip = (rawSlugOrId: string, fallbackName?: string, variant: "inline" | "meta" | "receipt" = "inline") => {
                 const cleanSlug = rawSlugOrId.replace(/^@/, "").replace(/^bot:agent360:/i, "").toLowerCase();
                 const matchedAg = agents.find(
                   (a) => (a.slug || "").toLowerCase() === cleanSlug || a.id.replace(/^bot:agent360:/i, "").toLowerCase() === cleanSlug
@@ -13164,6 +13963,8 @@ const selectedAgentTheme = getAgentColorTheme(
 
                 const agentTheme = getAgentColorTheme(matchedAg?.id || cleanSlug, fullName, roleLabel);
 
+                const isReceiptOrMeta = variant === "receipt" || variant === "meta";
+
                 return (
                   <span
                     data-testid={`agent-mention-chip-${cleanSlug}`}
@@ -13176,7 +13977,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         : "font-semibold hover:underline dark:!text-[var(--dark-theme-color)]"
                     }`}
                   >
-                    <style>{`[data-testid=\"agent-mention-chip-${cleanSlug}\"] { --dark-theme-color: ${agentTheme.dark}; }`}</style>
+                    <style>{`[data-testid="agent-mention-chip-${cleanSlug}"] { --dark-theme-color: ${agentTheme.dark}; }`}</style>
                     <span className="inline-flex items-center justify-center shrink-0 [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.95))_drop-shadow(0_0_1px_rgba(255,255,255,0.95))]">
                       <AgentAvatar
                         agent={matchedAg || { id: cleanSlug, name: fullName, roleTag: roleLabel }}
@@ -13185,7 +13986,16 @@ const selectedAgentTheme = getAgentColorTheme(
                         className="shrink-0"
                       />
                     </span>
-                    <span style={{ color: "#ffffff" }} className="font-semibold leading-none !text-white keep-white">{shortName}</span>
+                    <span
+                      style={isReceiptOrMeta ? undefined : { color: "#ffffff" }}
+                      className={`font-semibold leading-none ${
+                        isReceiptOrMeta
+                          ? "text-slate-800 dark:text-neutral-200"
+                          : "!text-white keep-white"
+                      }`}
+                    >
+                      {shortName}
+                    </span>
 
                     {/* Hover / Focus Popover Card showing Bot Role, Model, Live Status & Click to Open Shared History */}
                     <span
@@ -13258,55 +14068,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
                 return (
                   <div data-testid="chat-message-attachments" className={`flex flex-col gap-2 ${cleanContent ? "mb-2" : ""}`}>
-                    {parsedAttachments.length >= 2 && (
-                      <div
-                        data-testid="chat-attachments-summary-bar"
-                        className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100/90 dark:bg-[#171723] border border-slate-200/80 dark:border-[#2a2a3c] text-[10px] font-mono"
-                      >
-                        <div className="flex flex-wrap items-center gap-1.5 text-slate-700 dark:text-neutral-300">
-                          <Paperclip size={11} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0" />
-                          <span className="font-semibold">Bộ tài nguyên đính kèm ({parsedAttachments.length} tệp)</span>
-                          {imageItems.length > 0 && (
-                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
-                              {imageItems.length} Ảnh
-                            </span>
-                          )}
-                          {videoItems.length > 0 && (
-                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
-                              {videoItems.length} Video
-                            </span>
-                          )}
-                          {audioItems.length > 0 && (
-                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
-                              {audioItems.length} Audio
-                            </span>
-                          )}
-                          {fileItems.length > 0 && (
-                            <span className="px-1.5 py-0.2 rounded bg-white dark:bg-[#222232] border border-slate-200 dark:border-white/10 text-[9px]">
-                              {fileItems.length} Tài liệu
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          data-testid="download-all-attachments-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            triggerHaptic(12);
-                            parsedAttachments.forEach((att, idx) => {
-                              setTimeout(() => {
-                                void triggerAttachmentDownload(att);
-                              }, idx * 220);
-                            });
-                          }}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#f8a87c]/15 hover:bg-[var(--agent-bg-light)] dark:hover:bg-[var(--agent-bg-dark)] text-[#e0682b] dark:text-[var(--agent-light)] dark:text-[var(--agent-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold transition-colors cursor-pointer shrink-0"
-                          title="Tải xuống toàn bộ tài nguyên trong lượt phản hồi này"
-                        >
-                          <Download size={10} />
-                          <span>Tải tất cả</span>
-                        </button>
-                      </div>
-                    )}
+                    
                     {imageItems.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {imageItems.map((att, aIdx) => (
@@ -13341,10 +14103,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[160px] sm:max-w-[200px] group-hover/attimg:text-[#e0682b] dark:group-hover/attimg:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors">
                                   {att.fileName}
                                 </div>
-                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1 truncate max-w-[200px]">
-                                  <Paperclip size={10} className="shrink-0" />
-                                  <span className="truncate">{att.caption || (isUser ? "Ảnh đã gửi" : "Ảnh do Agent tạo")}</span>
-                                </div>
+                                
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
                                 {att.storageUrl && (
@@ -13380,52 +14139,15 @@ const selectedAgentTheme = getAgentColorTheme(
                     {videoItems.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {videoItems.map((att, vIdx) => (
-                          <div
+                          <LeanVideoPlayer
                             key={att.rawUrl + vIdx}
-                            onClick={(e) => e.stopPropagation()}
-                            className="rounded-xl overflow-hidden border border-slate-200 dark:border-[#2e2e42] bg-black max-w-[320px] shadow-xs"
-                          >
-                            <video
-                              src={att.previewUrl}
-                              controls
-                              preload="metadata"
-                              className="max-h-56 w-full object-contain"
-                              onError={(e) => {
-                                const v = e.currentTarget;
-                                if (att.storageUrl && v.src !== att.storageUrl) {
-                                  v.src = att.storageUrl;
-                                }
-                              }}
-                            />
-                            <div className="px-2.5 py-1 bg-slate-900/90 text-white text-[10px] font-mono flex items-center justify-between gap-2">
-                              <span className="truncate">{att.fileName}</span>
-                              <div className="flex items-center gap-1 shrink-0">
-                                {att.storageUrl && (
-                                  <a
-                                    href={att.storageUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-emerald-400 transition-colors"
-                                    title="Mở liên kết Cloud Storage trực tiếp"
-                                  >
-                                    <ExternalLink size={11} />
-                                  </a>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void triggerAttachmentDownload(att);
-                                  }}
-                                  className="p-1 rounded hover:bg-white/10 text-neutral-300 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer"
-                                  title={`Tải video ${att.fileName}`}
-                                >
-                                  <Download size={11} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
+                            src={att.previewUrl}
+                            fileName={att.fileName}
+                            fallbackUrl={att.storageUrl}
+                            themeColor={selectedAgentTheme.primary}
+                            onDownload={() => void triggerAttachmentDownload(att)}
+                            onExpand={() => void handleOpenAttachmentPreview(att)}
+                          />
                         ))}
                       </div>
                     )}
@@ -13433,52 +14155,14 @@ const selectedAgentTheme = getAgentColorTheme(
                     {audioItems.length > 0 && (
                       <div className="flex flex-col gap-1.5">
                         {audioItems.map((att, auIdx) => (
-                          <div
+                          <LeanAudioPlayer
                             key={att.rawUrl + auIdx}
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2.5 rounded-xl bg-white/85 dark:bg-[#14141f] border border-slate-200 dark:border-[#2d2d42] max-w-[320px] space-y-1.5"
-                          >
-                            <div className="flex items-center justify-between gap-2 text-[11px] font-mono">
-                              <span className="truncate font-medium text-slate-800 dark:text-neutral-200">{att.fileName}</span>
-                              <div className="flex items-center gap-1 shrink-0">
-                                {att.storageUrl && (
-                                  <a
-                                    href={att.storageUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-emerald-500 transition-colors"
-                                    title="Mở liên kết Cloud Storage trực tiếp"
-                                  >
-                                    <ExternalLink size={12} />
-                                  </a>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void triggerAttachmentDownload(att);
-                                  }}
-                                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-[var(--agent-light)] dark:hover:text-[var(--agent-dark)] transition-colors cursor-pointer"
-                                  title={`Tải audio ${att.fileName}`}
-                                >
-                                  <Download size={12} />
-                                </button>
-                              </div>
-                            </div>
-                            <audio
-                              src={att.previewUrl}
-                              controls
-                              preload="metadata"
-                              className="w-full h-8"
-                              onError={(e) => {
-                                const a = e.currentTarget;
-                                if (att.storageUrl && a.src !== att.storageUrl) {
-                                  a.src = att.storageUrl;
-                                }
-                              }}
-                            />
-                          </div>
+                            src={att.previewUrl}
+                            fileName={att.fileName}
+                            fallbackUrl={att.storageUrl}
+                            themeColor={selectedAgentTheme.primary}
+                            onDownload={() => void triggerAttachmentDownload(att)}
+                          />
                         ))}
                       </div>
                     )}
@@ -13504,10 +14188,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[180px] sm:max-w-[240px] group-hover/attfile:text-[#e0682b] dark:group-hover/attfile:text-[var(--agent-light)] dark:text-[var(--agent-dark)] transition-colors">
                                   {att.fileName}
                                 </div>
-                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1 truncate max-w-[220px]">
-                                  <Paperclip size={10} className="shrink-0" />
-                                  <span className="truncate">{att.caption || (isUser ? "Tệp đã gửi" : "Tệp phản hồi từ Agent")}</span>
-                                </div>
+                                
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
                                 {att.storageUrl && (
@@ -13948,6 +14629,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       className="flex flex-col items-end w-full max-w-full min-w-0"
                     >
                       <div
+                        data-testid="user-message-bubble"
                         style={{
                           backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
                           borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark,
@@ -14076,6 +14758,8 @@ const selectedAgentTheme = getAgentColorTheme(
                         );
 
                         const showRespondingPill = Boolean(isTurnActivelyRunning);
+                        const browserExecSummary = extractBrowserExecutionSummary(msg);
+                        const interactiveWidgets = extractInteractiveWidgetsFromTurn(msg, mainBodyContent || cleanContent);
 
                         return (
                           <>
@@ -14102,6 +14786,21 @@ const selectedAgentTheme = getAgentColorTheme(
                                   </div>
                                 ))}
                               </div>
+                            )}
+
+                            {browserExecSummary && (
+                              <InlineLiveComputerPreviewCard
+                                summary={browserExecSummary}
+                                agentId={msg.senderAgentId || selectedAgent?.slug || selectedAgent?.id || "default"}
+                                onExtendSplitView={() => {
+                                  triggerHaptic(12);
+                                  handleToggleComputerSplit(true);
+                                }}
+                                onOpenFullscreenModal={() => {
+                                  triggerHaptic(12);
+                                  setIsBrowserModalOpen(true);
+                                }}
+                              />
                             )}
 
                             {(mainBodyContent || parsedAttachments.length > 0) && (
@@ -14250,7 +14949,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                         </span>
                                       )}
                                       <span className="pointer-events-none inline-flex items-center">
-                                        {renderAgentMentionChip(pSlug, undefined, "inline")}
+                                        {renderAgentMentionChip(pSlug, undefined, "receipt")}
                                       </span>
                                     </React.Fragment>
                                   ))}
@@ -14267,12 +14966,86 @@ const selectedAgentTheme = getAgentColorTheme(
                             </div>
                           )}
 
+                          {interactiveWidgets.length > 0 && (
+                            <InteractiveTurnWidgetsSection
+                              widgets={interactiveWidgets}
+                              messageId={msg.id}
+                              claimedMap={claimedInteractionsMap}
+                              themePrimary={selectedAgentTheme.primary}
+                              onSelectOption={(w, opt) =>
+                                handleRecordAndDispatchInteraction(
+                                  msg.id,
+                                  w,
+                                  [opt.id],
+                                  [opt.label],
+                                  opt.prompt || opt.label
+                                )
+                              }
+                              onSubmitPoll={(w, chosen) =>
+                                handleRecordAndDispatchInteraction(
+                                  msg.id,
+                                  w,
+                                  chosen.map((c) => c.id),
+                                  chosen.map((c) => c.label),
+                                  `Tôi chọn: ${chosen.map((c) => c.label).join(", ")}`
+                                )
+                              }
+                              onSubmitInput={(w, val) =>
+                                handleRecordAndDispatchInteraction(
+                                  msg.id,
+                                  w,
+                                  [],
+                                  [val],
+                                  val,
+                                  val
+                                )
+                              }
+                            />
+                          )}
+
                           {!showRespondingPill && (
                             <div className="min-h-[28px] flex items-center">
                               {renderMessageReactionsAndActions()}
                             </div>
                           )}
                         </>
+                      )}
+
+                      {!mainBodyContent && parsedAttachments.length === 0 && interactiveWidgets.length > 0 && (
+                        <InteractiveTurnWidgetsSection
+                          widgets={interactiveWidgets}
+                          messageId={msg.id}
+                          claimedMap={claimedInteractionsMap}
+                          themePrimary={selectedAgentTheme.primary}
+                          onSelectOption={(w, opt) =>
+                            handleRecordAndDispatchInteraction(
+                              msg.id,
+                              w,
+                              [opt.id],
+                              [opt.label],
+                              opt.prompt || opt.label
+                            )
+                          }
+                          onSubmitPoll={(w, chosen) =>
+                            handleRecordAndDispatchInteraction(
+                              msg.id,
+                              w,
+                              chosen.map((c) => c.id),
+                              chosen.map((c) => c.label),
+                              `Tôi chọn: ${chosen.map((c) => c.label).join(", ")}`
+                            )
+                          }
+                          onSubmitInput={(w, val) =>
+                            handleRecordAndDispatchInteraction(
+                              msg.id,
+                              w,
+                              [],
+                              [val],
+                              val,
+                              val
+                            )
+                          }
+                        />
                       )}
 
                             {showRespondingPill && (
@@ -17581,21 +18354,7 @@ ${chat.id}`);
                   </button>
                 </Tooltip>
 
-                {/* 4. Open External Window Button */}
-                <Tooltip content={t("computer.openExternal")} placement="bottom">
-                  <a
-                    href={browserTarget.url ? "#" : undefined}
-                    onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
-                    aria-label={t("computer.openExternal")}
-                  >
-                    <ExternalLink size={13} />
-                  </a>
-                </Tooltip>
-
-                {/* 5. Close Split Button */}
+                                {/* 5. Close Split Button */}
                 <Tooltip content={t("computer.closeComputer")} placement="bottom">
                   <button
                     type="button"
@@ -17775,21 +18534,19 @@ ${chat.id}`);
                       )}
                       {browserTarget.isLive && (
                         <div className="absolute top-2 right-2 z-[15] flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <a
-                            aria-label="Open in new window"
-                            href={browserTarget.url ? "#" : undefined}
+                          <button
+                            type="button"
+                            aria-label="Phóng to Computer"
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              if (browserTarget.url) openAgentDesktopTab(agentBrowserFor);
+                              handleSetBrowserModalOpen(true);
                             }}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 bg-black/70 text-neutral-300 hover:text-white rounded-lg border border-white/10 transition-colors cursor-pointer"
-                            title="Open in new window"
+                            className="p-1.5 bg-black/70 hover:bg-black/90 text-neutral-300 hover:text-white rounded-lg border border-white/10 transition-colors cursor-pointer"
+                            title="Phóng to Computer (95%)"
                           >
-                            <ExternalLink size={13} />
-                          </a>
+                            <Maximize2 size={13} />
+                          </button>
                         </div>
                       )}
                       {!browserTarget.isLive && (
@@ -18727,56 +19484,64 @@ ${chat.id}`);
       {isBrowserModalOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
-          <div className="fixed inset-0 z-[100] flex flex-col bg-black/90 animate-in fade-in duration-150">
-            {/* Top Navigation Bar with Controls & Close Button */}
-            <header className="h-12 border-b border-[#252532] bg-[#121218] px-4 flex items-center justify-between shrink-0 select-none">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-1.5">
-                <Tooltip content={t("computer.openExternal") || "Mở trong tab mới"} placement="bottom">
-                  <a aria-label="Open in new browser tab"
-                    href={browserTarget.url ? "#" : undefined}
-                    onClick={(e) => { e.preventDefault(); if (browserTarget.url) openAgentDesktopTab(agentBrowserFor); }}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-8 w-8 rounded-lg bg-[#1c1c26] hover:bg-[#252534] border border-[#2c2c3e] text-neutral-300 hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
-                  >
-                    <ExternalLink size={13} />
-                  </a>
-                </Tooltip>
-                
-                <Tooltip content={t("computer.closeComputer") || "Close (Esc)"} placement="bottom">
-                  <button aria-label="Close Fullscreen View (Esc)" data-ux-target-min="24"
-                    type="button"
-                    onClick={() => handleSetBrowserModalOpen(false)}
-                    className="h-8 w-8 rounded-lg bg-[#22222e] hover:bg-red-500/20 hover:text-red-400 border border-[#303042] hover:border-red-500/30 text-neutral-300 flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    <X size={16} />
-                  </button>
-                </Tooltip>
-              </div>
-            </header>
-
-            {/* Interactive Browser Viewport */}
-            <main className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative transition-colors">
-              {browserTarget.url ? (
-                <SelkiesViewer
-                  key={`modal-${browserTarget.url}`}
-                  agentId={agentBrowserFor}
-                  url={browserTarget.url}
-                  title={`${selectedAgent.name} Interactive Workspace`}
-                  profile={browserTarget.profile}
-                  reloadKey={browserIframeKey}
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-black transition-colors">
-                  {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+          <div
+            data-testid="computer-maximized-modal-backdrop"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150 select-none"
+            onClick={() => handleSetBrowserModalOpen(false)}
+          >
+            <div
+              data-testid="computer-maximized-modal"
+              className="w-[95vw] h-[95vh] max-w-[95vw] max-h-[95vh] rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top Navigation Bar with Controls & Close Button */}
+              <header className="h-11 sm:h-12 border-b border-slate-200 dark:border-[#22222e] bg-slate-50 dark:bg-[#14141c] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-neutral-200 truncate">
+                    {selectedAgent.name} · Computer Workspace
+                  </span>
+                  {browserTarget.profile && (
+                    <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-white/10 text-[11px] font-mono text-slate-600 dark:text-neutral-300">
+                      {browserTarget.profile}
+                    </span>
+                  )}
                 </div>
-              )}
-            </main>
+
+                {/* Action buttons */}
+                <div className="flex items-center gap-1.5">
+                  <Tooltip content={t("computer.closeComputer") || "Đóng (Esc)"} placement="bottom">
+                    <button
+                      aria-label="Close (Esc)"
+                      data-ux-target-min="24"
+                      type="button"
+                      onClick={() => handleSetBrowserModalOpen(false)}
+                      className="h-8 w-8 rounded-lg bg-slate-200/80 hover:bg-red-500/10 hover:text-red-500 dark:bg-[#22222e] dark:hover:bg-red-500/20 dark:hover:text-red-400 border border-slate-300 dark:border-[#303042] hover:border-red-500/30 text-slate-700 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </Tooltip>
+                </div>
+              </header>
+
+              {/* Interactive Browser Viewport */}
+              <main className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative transition-colors overflow-hidden">
+                {browserTarget.url ? (
+                  <SelkiesViewer
+                    key={`modal-${browserTarget.url}`}
+                    agentId={agentBrowserFor}
+                    url={browserTarget.url}
+                    title={`${selectedAgent.name} Interactive Workspace`}
+                    profile={browserTarget.profile}
+                    reloadKey={browserIframeKey}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-black transition-colors">
+                    {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+                  </div>
+                )}
+              </main>
+            </div>
           </div>
         );
       })()}

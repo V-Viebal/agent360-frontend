@@ -1433,6 +1433,14 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
           detail: { agentId: cleanAgentId, chatId, pinnedMessageIds: pinnedIds }
         }));
       }
+      const claimedInteractions = Array.isArray(data?.claimed_interactions)
+        ? data.claimed_interactions
+        : (Array.isArray(candidateRoom?.claimed_interactions) ? candidateRoom.claimed_interactions : null);
+      if (claimedInteractions) {
+        window.dispatchEvent(new CustomEvent("agent360_claimed_interactions_synced", {
+          detail: { agentId: cleanAgentId, chatId, claimedInteractions }
+        }));
+      }
     }
     const isRunningOnServer = Boolean(data && !Array.isArray(data) && (data.status === "running" || data.status === "in_progress" || data.is_running));
     const rawList = Array.isArray(data) ? data : (data.messages || []);
@@ -2758,6 +2766,46 @@ export async function toggleArchiveChatApi(agentId: string, chatId: string, arch
     return res.ok;
   } catch (err) {
     console.warn("toggleArchiveChatApi error:", err);
+    return false;
+  }
+}
+
+export interface ClaimedInteractionRecord {
+  interaction_id: string;
+  message_id?: string | null;
+  kind: string;
+  selected_ids: string[];
+  selected_labels: string[];
+  input_value?: string | null;
+  claimed_by?: string;
+  claimed_at?: string;
+}
+
+export async function submitChatInteraction(
+  agentId: string,
+  chatId: string,
+  payload: {
+    interaction_id: string;
+    message_id?: string;
+    kind: string;
+    selected_ids?: string[];
+    selected_labels?: string[];
+    input_value?: string;
+  }
+): Promise<boolean> {
+  try {
+    const cleanId = resolveEffectiveAgentId(agentId);
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/chats/${encodeURIComponent(chatId)}/interactions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    }, cleanId);
+    return res.ok;
+  } catch (err) {
+    console.warn("submitChatInteraction failed", err);
     return false;
   }
 }
