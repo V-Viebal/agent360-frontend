@@ -435,3 +435,15 @@ assert.ok(
   "Verbose upcoming request copy must be removed for lean minimalist UI"
 );
 console.log("✓ Test 30: Lean Request Queue UI Contract verified");
+
+console.log("Testing Browser Chrome Header (Tab Strip & Omnibox) & Landscape Rotation Contract...");
+const grokBrowserSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokBrowserSrc.includes("data-testid=\"agent-browser-chrome-header\"") &&
+  grokBrowserSrc.includes("handleNavigateSubmit") &&
+  grokBrowserSrc.includes("handleBrowserAction(\"back\")") &&
+  grokBrowserSrc.includes("handleBrowserAction(\"forward\")") &&
+  grokBrowserSrc.includes("handleBrowserAction(\"reload\")"),
+  "SelkiesViewer must render the full Browser Chrome Header with Tab Strip, Back/Forward/Reload controls, and interactive URL Omnibox"
+);
+console.log("✓ Test 31: Browser Chrome Header (Tab Strip & Omnibox) & Landscape Rotation verified");

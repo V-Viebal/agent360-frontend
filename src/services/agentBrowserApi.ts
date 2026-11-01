@@ -45,8 +45,10 @@ export async function fetchAgentBrowser(agentId: string, signal?: AbortSignal): 
 }
 
 /** Screenshot URL of the agent's own active tab (cache-busted). */
-export function agentBrowserImageUrl(agentId: string, nonce: number): string {
-  return `/api/agents/${encodeURIComponent(bare(agentId))}/browser/image.jpg?t=${nonce}`;
+export function agentBrowserImageUrl(agentId: string, nonce: number, pageId?: string): string {
+  const qs = new URLSearchParams({ t: String(nonce) });
+  if (pageId) qs.set("pageId", pageId);
+  return `/api/agents/${encodeURIComponent(bare(agentId))}/browser/image.jpg?${qs.toString()}`;
 }
 
 /**
@@ -72,13 +74,14 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
 
 
 export interface BrowserInputPayload {
-  action: "click" | "scroll" | "type" | "key";
+  action: "click" | "scroll" | "type" | "key" | "navigate" | "reload" | "back" | "forward";
   xRatio?: number;
   yRatio?: number;
   deltaX?: number;
   deltaY?: number;
   text?: string;
   key?: string;
+  pageId?: string;
 }
 
 /** Forward touch click, wheel scroll, or key input from Mobile Fast View directly into the agent's active CDP tab. */
@@ -98,11 +101,12 @@ export async function dispatchAgentBrowserInput(agentId: string, payload: Browse
 
 
 /** Build an authenticated WebSocket URL for real-time CDP screencast push (/api/agents/{id}/browser/stream). */
-export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1280): string {
+export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1280, pageId?: string): string {
   const id = bare(agentId);
   const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = typeof window !== "undefined" ? window.location.host : "localhost:3000";
   const qs = new URLSearchParams({ maxWidth: String(maxWidth) });
+  if (pageId) qs.set("pageId", pageId);
   try {
     const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
     const opToken = operatorKey.get();

@@ -310,15 +310,15 @@ export function LandingPage() {
             <motion.p
               data-testid="hero-description"
               style={{ fontFamily: "var(--font-sans)", fontWeight: 400 }}
-              className="animate-hero-rise-2 mt-2.5 text-[15.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] leading-[1.45] lg:leading-[29.81px] tracking-[-0.216px] text-[#6e6b65] dark:text-neutral-400 w-full max-w-[340px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-2 sm:px-1 text-balance break-words"
+              className="animate-hero-rise-2 mt-2.5 text-[14.5px] sm:text-[18px] md:text-[20px] lg:text-[21.6px] leading-[1.45] lg:leading-[29.81px] tracking-[-0.216px] text-[#6e6b65] dark:text-neutral-400 w-full max-w-[350px] sm:max-w-[540px] md:max-w-[640px] lg:max-w-[680px] font-normal px-2 sm:px-1 text-center break-words"
             >
               {isVi ? (
                 <>
-                  <span className="md:whitespace-nowrap">
+                  <span className="block sm:inline md:whitespace-nowrap">
                     Skyer là không gian làm việc tích hợp sẵn <span className="whitespace-nowrap">nhân viên AI</span>
                   </span>{" "}
-                  <br className="hidden md:inline" />
-                  <span className="md:whitespace-nowrap">
+                  <br className="hidden sm:inline" />
+                  <span className="block sm:inline md:whitespace-nowrap">
                     giúp bạn gánh vác công việc thực tế <span className="whitespace-nowrap">mỗi ngày</span>
                   </span>
                 </>
