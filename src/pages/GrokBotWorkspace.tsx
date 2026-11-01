@@ -1182,7 +1182,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, AgentBrowserTab, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, hasNoBrowser, AgentBrowserTab, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -5282,7 +5282,8 @@ export function inferAgentViewerUrlFallback(agent?: InfraAgent | null): string {
 }
 
 export function getAgentBrowserUrl(agent: InfraAgent, info?: AgentBrowserInfo | null): AgentBrowserMeta {
-  const fallbackUrl = inferAgentViewerUrlFallback(agent);
+  // The backend is authoritative: an agent without a browser MCP binding (404) gets no guessed desktop host.
+  const fallbackUrl = info || hasNoBrowser(agent.slug || agent.id || "") ? "" : inferAgentViewerUrlFallback(agent);
   return {
     url: info?.viewerUrl || fallbackUrl,
     label: `${agent.name} Computer`,
@@ -11315,6 +11316,8 @@ const selectedAgentTheme = getAgentColorTheme(
 
   // The selected agent's own browser (service + Chromium profile); refreshed while the Computer surface is visible.
   const [agentBrowser, setAgentBrowser] = useState<AgentBrowserInfo | null>(null);
+  // Bumped when the backend reports "no browser" (404) so the Computer pane re-renders its placeholder.
+  const [, setAgentBrowserMissingTick] = useState(0);
   // Resolve only once the agent list has loaded: before that `selectedAgent` is the first agent / a
   // placeholder, and its browser would flash in for the agent the user actually selected.
   const agentBrowserFor = isLoadingAgents || !agents.some((a) => a.id === selectedAgent?.id) ? "" : (selectedAgent?.slug || selectedAgent?.id || "");
@@ -11333,7 +11336,11 @@ const selectedAgentTheme = getAgentColorTheme(
       if (document.hidden) return;
       fetchAgentBrowser(agentBrowserFor, ctrl.signal)
         // Never show another agent's browser if a late response races an agent switch.
-        .then((info) => alive && setAgentBrowser(info && info.agentId.toLowerCase() === want ? info : null))
+        .then((info) => {
+          if (!alive) return;
+          setAgentBrowser(info && info.agentId.toLowerCase() === want ? info : null);
+          if (!info) setAgentBrowserMissingTick((n) => n + 1);
+        })
         .catch(() => {});
     };
     load();
@@ -19189,7 +19196,7 @@ ${chat.id}`);
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
-                  {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+                  {agentBrowser === null && !hasNoBrowser(agentBrowserFor) ? "Resolving agent browser…" : "This agent has no browser MCP bound yet — Computer view unavailable"}
                 </div>
               )}
             </div>
@@ -20344,7 +20351,7 @@ ${chat.id}`);
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-black transition-colors">
-                    {agentBrowser === null ? "Resolving agent browser…" : "This agent has no browser"}
+                    {agentBrowser === null && !hasNoBrowser(agentBrowserFor) ? "Resolving agent browser…" : "This agent has no browser MCP bound yet — Computer view unavailable"}
                   </div>
                 )}
               </main>

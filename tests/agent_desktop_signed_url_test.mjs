@@ -18,10 +18,17 @@ assert.ok(!re.test("/vnc.html"));
 
 assert.ok(api.includes("if (!isSignedAgentDesktopUrl(body.url)) throw"), "issueAgentDesktopUrl must reject unsigned URLs");
 
+// No Selkies iframe/window may ever point at a bare desktop host. Either the page issues signed URLs
+// (and the failure path keeps the CDP preview) or it does not iframe the desktop at all (CDP screencast).
 const start = page.indexOf('issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")');
-assert.ok(start > 0, "desktop iframe must issue a signed URL");
-const block = page.slice(start, page.indexOf("return () => { alive = false; };", start));
-assert.ok(!/setSrc\(`\$\{url/.test(block), "failure path must never iframe the bare viewer host");
-assert.ok(block.includes('setError(e instanceof DesktopAuthError ? "auth"'), "failure path must show the auth/preview fallback");
+if (start > 0) {
+  const block = page.slice(start, page.indexOf("return () => { alive = false; };", start));
+  assert.ok(!/setSrc\(`\$\{url/.test(block), "failure path must never iframe the bare viewer host");
+  assert.ok(block.includes('setError(e instanceof DesktopAuthError ? "auth"'), "failure path must show the auth/preview fallback");
+}
+for (const m of page.matchAll(/<iframe[\s\S]{0,400}?src=\{([^}]+)\}/g)) {
+  assert.ok(!/browserTarget\.url|\burl\b(?!\w)/.test(m[1]) || /src\b/.test(m[1]), `iframe must not load a bare desktop URL: ${m[1]}`);
+}
+assert.ok(!/window\.open\(\s*(browserTarget\.url|info\.viewerUrl)/.test(page), "never open a bare desktop host in a new tab");
 
 console.log("✔ agent desktop signed-URL contract passed");

@@ -22,22 +22,31 @@ export interface AgentBrowserInfo {
 
 function bare(agentId: string): string { return agentId.replace(/^bot:agent360:/i, ""); }
 
-// Agents without a mapped browser (404) are remembered for the session so polling never re-asks.
-const noBrowser = new Set<string>();
+// Agents without a mapped browser (404) are remembered briefly so polling does not hammer the API,
+// but a browser MCP wired later (QwenPaw agent gains a binding) is picked up within NO_BROWSER_TTL_MS.
+const NO_BROWSER_TTL_MS = 60_000;
+const noBrowser = new Map<string, number>();
+const isNoBrowser = (id: string) => {
+  const until = noBrowser.get(id);
+  if (until === undefined) return false;
+  if (until > Date.now()) return true;
+  noBrowser.delete(id);
+  return false;
+};
 
-/** True once the API has said this agent has no browser profile. */
-export const hasNoBrowser = (agentId: string) => noBrowser.has(bare(agentId));
+/** True while the API has recently said this agent has no browser profile. */
+export const hasNoBrowser = (agentId: string) => isNoBrowser(bare(agentId));
 
 /** Browser identity of one agent (its own Selkies desktop + Chromium profile). */
 export async function fetchAgentBrowser(agentId: string, signal?: AbortSignal): Promise<AgentBrowserInfo | null> {
   const id = bare(agentId);
-  if (noBrowser.has(id)) return null;
+  if (isNoBrowser(id)) return null;
   const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser`, {
     headers: { Accept: "application/json" },
     signal,
   }, id);
   if (res.status === 404) {
-    noBrowser.add(id);
+    noBrowser.set(id, Date.now() + NO_BROWSER_TTL_MS);
     return null;
   }
   if (!res.ok) throw new Error(`browser ${res.status}`);
