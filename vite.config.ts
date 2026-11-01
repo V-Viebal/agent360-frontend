@@ -71,7 +71,7 @@ export default defineConfig({
       overlay: true,
     },
     // Unified local dev proxy: defaults to local backend http://127.0.0.1:5290 (paths mapped to /api/v1 like production nginx).
-    // Override with AGENT360_API_TARGET=https://agent360.antares.vn when intentionally testing against remote.
+    // Override with AGENT360_API_TARGET=https://skyer.vn when intentionally testing against remote.
     proxy: {
       "/api": (() => {
         const apiTarget = process.env.AGENT360_API_TARGET || "http://127.0.0.1:5290";
