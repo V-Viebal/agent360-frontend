@@ -150,7 +150,11 @@ import {
   MessageSquare,
   Play,
   Command,
+  ArrowLeft,
   ArrowRight,
+  MousePointer2,
+  Hand,
+  Smartphone,
   ArrowUpRight,
   Share2,
   Volume2,
@@ -306,14 +310,16 @@ function computeIsMultilineComposer(text: string, measuredWidth?: number): boole
   if (!text) return false;
   if (text.includes("\n")) return true;
 
-  // Single-line composer chrome has:
-  // Plus button (28px) + gap (8px) + right action controls (28px) + gap (8px) + padding (12px) + borders (2px) + textarea internal padding (4px) + word-boundary safety margin (8px) = 98px.
+  const isSmallScreen = typeof window !== "undefined" && window.innerWidth < 640;
+  if (isSmallScreen && text.length > 26) return true;
+  if (!isSmallScreen && text.length > 62) return true;
+
+  const chromeDeductionPx = isSmallScreen ? 142 : 120;
   if (measuredWidth && measuredWidth > 120) {
-    const availableTextPx = Math.max(50, measuredWidth - 98);
+    const availableTextPx = Math.max(40, measuredWidth - chromeDeductionPx);
     const totalTextPx = measureComposerTextWidthPx(text);
     if (totalTextPx >= availableTextPx) return true;
 
-    // Accurate word-wrap detection: If text has spaces, check if any word boundary wraps to line 2
     if (text.includes(" ")) {
       const words = text.split(" ");
       let currentLinePx = 0;
@@ -337,9 +343,9 @@ function computeIsMultilineComposer(text: string, measuredWidth?: number): boole
     return false;
   }
 
-  if (typeof window === "undefined") return text.length > 50;
+  if (typeof window === "undefined") return text.length > 45;
   const w = window.innerWidth;
-  const threshold = w < 480 ? 28 : w < 640 ? 36 : w < 1024 ? 48 : 65;
+  const threshold = w < 480 ? 24 : w < 640 ? 30 : w < 1024 ? 44 : 60;
   return text.length > threshold;
 }
 
@@ -623,6 +629,13 @@ function extractSoloTurnLeadInAndBody(
   };
 }
 
+export interface AttachmentFormatVariant {
+  ext: string;
+  fileName: string;
+  url: string;
+  storageUrl?: string;
+}
+
 export interface ParsedChatAttachmentItem {
   fileName: string;
   rawUrl: string;
@@ -633,15 +646,23 @@ export interface ParsedChatAttachmentItem {
   ext: string;
   badgeColor: string;
   caption?: string;
+  variants?: AttachmentFormatVariant[];
 }
 
 function normalizeAttachmentDedupeKey(rawNameOrUrl: string): string {
   const base = decodeURIComponent((rawNameOrUrl || "").split("?")[0].split("#")[0].replace(/\\/g, "/").split("/").pop() || "attachment")
     .trim()
-    .toLowerCase();
-  return base
+    .toLowerCase()
     .replace(/^[0-9a-f]{32}_+/i, "")
     .replace(/^upl_[a-z0-9]+_+/i, "");
+  // Unify format variants across images, audio, video, and documents (e.g. heo-de-thuong.png vs heo-de-thuong.jpg, voice.wav vs voice.mp3)
+  const imgMatch = base.match(/^(.+)\.(png|jpe?g|webp|gif|bmp|avif|heic|heif)$/i);
+  if (imgMatch && imgMatch[1]) return `img:${imgMatch[1]}`;
+  const audioMatch = base.match(/^(.+)\.(mp3|wav|ogg|m4a|aac|flac)$/i);
+  if (audioMatch && audioMatch[1]) return `aud:${audioMatch[1]}`;
+  const videoMatch = base.match(/^(.+)\.(mp4|webm|mov|avi|mkv)$/i);
+  if (videoMatch && videoMatch[1]) return `vid:${videoMatch[1]}`;
+  return base;
 }
 
 function extractInlineToolResultMedia(
@@ -721,21 +742,31 @@ function extractToolSentAttachments(
     const effectiveUrl = (!cleanPath || isProtectedPath)
       ? (storageUrl || explicitPreviewUrl || `media/${cleanName}`)
       : cleanPath;
+    const previewUrl = explicitPreviewUrl || storageUrl || resolveUploadedAttachmentPreviewUrl(effectiveUrl, agentIdForUrl);
+    const fmt = classifyAttachmentFormat(cleanName || effectiveUrl);
+    const variantItem: AttachmentFormatVariant = {
+      ext: fmt.ext,
+      fileName: cleanName,
+      url: previewUrl,
+      storageUrl,
+    };
     const key = normalizeAttachmentDedupeKey(cleanName || effectiveUrl);
     if (seen.has(key)) {
-      if (explicitPreviewUrl || storageUrl) {
-        const existing = results.find((r) => normalizeAttachmentDedupeKey(r.fileName) === key || normalizeAttachmentDedupeKey(r.rawUrl) === key);
-        if (existing) {
-          if (explicitPreviewUrl && !existing.previewUrl.startsWith("data:")) existing.previewUrl = explicitPreviewUrl;
-          if (storageUrl && !existing.storageUrl) existing.storageUrl = storageUrl;
+      const existing = results.find((r) => normalizeAttachmentDedupeKey(r.fileName) === key || normalizeAttachmentDedupeKey(r.rawUrl) === key);
+      if (existing) {
+        if (!existing.variants) {
+          existing.variants = [{ ext: existing.ext, fileName: existing.fileName, url: existing.previewUrl, storageUrl: existing.storageUrl }];
         }
+        if (!existing.variants.some((v) => v.ext === variantItem.ext)) {
+          existing.variants.push(variantItem);
+        }
+        if (explicitPreviewUrl && !existing.previewUrl.startsWith("data:")) existing.previewUrl = explicitPreviewUrl;
+        if (storageUrl && !existing.storageUrl) existing.storageUrl = storageUrl;
       }
       return;
     }
     seen.add(key);
 
-    const previewUrl = explicitPreviewUrl || (storageUrl && isProtectedPath ? storageUrl : resolveUploadedAttachmentPreviewUrl(effectiveUrl, agentIdForUrl));
-    const fmt = classifyAttachmentFormat(cleanName || effectiveUrl);
     results.push({
       fileName: cleanName,
       rawUrl: effectiveUrl,
@@ -746,6 +777,7 @@ function extractToolSentAttachments(
       ext: fmt.ext,
       badgeColor: fmt.badgeColor,
       caption: caption?.trim() || undefined,
+      variants: [variantItem],
     });
   };
 
@@ -971,23 +1003,34 @@ function parseQuotedReplyFromContent(
     const url = (rawUrl || "").trim().replace(/^file:\/\/+/, "/");
     const fallbackFile = decodeURIComponent(url.replace(/\\/g, "/").split("/").pop() || "attachment");
     const fileName = decodeMimeBase64FileName((rawName || fallbackFile).trim());
+    const isExternalStorage = /^https?:\/\/[^/]*(?:storage\.|minio|translate\.antares\.vn\/gradio_api\/file=)/i.test(url);
+    const previewUrl = isExternalStorage
+      ? url
+      : resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
+    const fmt = classifyAttachmentFormat(fileName || url);
+    const variantItem: AttachmentFormatVariant = {
+      ext: fmt.ext,
+      fileName,
+      url: previewUrl,
+      storageUrl: isExternalStorage ? url : undefined,
+    };
+
     const dedupeKey = normalizeAttachmentDedupeKey(fileName || url);
     if (seenKeys.has(dedupeKey)) {
-      const isExternalStorageDup = /^https?:\/\/[^/]*(?:storage\.|minio|translate\.antares\.vn\/gradio_api\/file=)/i.test(url);
-      if (isExternalStorageDup) {
-        const existing = attachments.find((a) => normalizeAttachmentDedupeKey(a.fileName) === dedupeKey);
-        if (existing && !existing.storageUrl) existing.storageUrl = url;
+      const existing = attachments.find((a) => normalizeAttachmentDedupeKey(a.fileName || a.rawUrl) === dedupeKey);
+      if (existing) {
+        if (!existing.variants) {
+          existing.variants = [{ ext: existing.ext, fileName: existing.fileName, url: existing.previewUrl, storageUrl: existing.storageUrl }];
+        }
+        if (!existing.variants.some((v) => v.ext === variantItem.ext)) {
+          existing.variants.push(variantItem);
+        }
+        if (isExternalStorage && !existing.storageUrl) existing.storageUrl = url;
       }
       return;
     }
     seenKeys.add(dedupeKey);
 
-    // If URL is an external Storage or Gradio artifact URL, keep storageUrl for direct download while also providing a workspace fallback previewUrl.
-    const isExternalStorage = /^https?:\/\/[^/]*(?:storage\.|minio|translate\.antares\.vn\/gradio_api\/file=)/i.test(url);
-    const previewUrl = isExternalStorage
-      ? resolveUploadedAttachmentPreviewUrl(`media/${fileName}`, agentIdForUrl)
-      : resolveUploadedAttachmentPreviewUrl(url, agentIdForUrl);
-    const fmt = classifyAttachmentFormat(fileName || url);
     attachments.push({
       fileName,
       rawUrl: url,
@@ -998,6 +1041,7 @@ function parseQuotedReplyFromContent(
       ext: fmt.ext,
       badgeColor: fmt.badgeColor,
       caption,
+      variants: [variantItem],
     });
   };
 
@@ -1043,8 +1087,17 @@ function parseQuotedReplyFromContent(
   // 5. Strip [Telegram replied-message context ...] block if embedded in user content
   text = text.replace(/\[Telegram replied-message context[^\]]*\]\s*\n\{[\s\S]*?\}(?=\n|$)/gi, "");
 
-  // 6. Extract markdown file links: [Label](url) or direct Storage URLs
-  const mdLinkRegex = /\[([^\]\n\r]+)\]\((https?:\/\/[^\s\)]+|[^\s\)]+\.(?:html?|pdf|xlsx?|csv|tsv|json|txt|md|docx?|pptx?|zip|png|jpe?g|webp|gif|svg|mp4|mp3|wav))\)/gi;
+  // 5b. Extract markdown images ![alt](url) into attachment cards and remove from body text to avoid double image rendering
+  const mdImgRegex = /!\[([^\]\n\r]*)\]\((https?:\/\/[^\s\)]+|\/[^\s\)]+|[^\s\)]+\.(?:png|jpe?g|webp|gif|svg|bmp|avif|heic|heif))\)/gi;
+  text = text.replace(mdImgRegex, (_full, rawAlt: string, rawUrl: string) => {
+    const cleanUrl = rawUrl.trim();
+    const cleanFile = cleanUrl.split("?")[0].split("#")[0].replace(/\\/g, "/").split("/").pop() || rawAlt.trim() || "image.png";
+    pushAttachment(cleanFile, cleanUrl, rawAlt.trim() || "Ảnh đính kèm");
+    return "";
+  });
+
+  // 6. Extract markdown file links: [Label](url) or direct Storage URLs (negative lookbehind for !)
+  const mdLinkRegex = /(?<!!)\[([^\]\n\r]+)\]\((https?:\/\/[^\s\)]+|[^\s\)]+\.(?:html?|pdf|xlsx?|csv|tsv|json|txt|md|docx?|pptx?|zip|png|jpe?g|webp|gif|svg|mp4|mp3|wav))\)/gi;
   let mdlMatch: RegExpExecArray | null;
   while ((mdlMatch = mdLinkRegex.exec(text)) !== null) {
     const label = mdlMatch[1].trim();
@@ -1079,10 +1132,22 @@ function parseQuotedReplyFromContent(
     if (!seenKeys.has(dedupeKey)) {
       seenKeys.add(dedupeKey);
       attachments.push(ts);
-    } else if (ts.previewUrl.startsWith("data:") || ts.storageUrl) {
-      const existing = attachments.find((a) => normalizeAttachmentDedupeKey(a.fileName) === dedupeKey);
+    } else {
+      const existing = attachments.find((a) => normalizeAttachmentDedupeKey(a.fileName || a.rawUrl) === dedupeKey);
       if (existing) {
-        if (ts.previewUrl.startsWith("data:") && !existing.previewUrl.startsWith("data:")) existing.previewUrl = ts.previewUrl;
+        if (!existing.variants) {
+          existing.variants = [{ ext: existing.ext, fileName: existing.fileName, url: existing.previewUrl, storageUrl: existing.storageUrl }];
+        }
+        for (const v of ts.variants || [{ ext: ts.ext, fileName: ts.fileName, url: ts.previewUrl, storageUrl: ts.storageUrl }]) {
+          if (!existing.variants.some((ev) => ev.ext === v.ext)) {
+            existing.variants.push(v);
+          }
+        }
+        if (ts.previewUrl.startsWith("data:") && !existing.previewUrl.startsWith("data:")) {
+          existing.previewUrl = ts.previewUrl;
+        } else if (ts.storageUrl && !existing.previewUrl.startsWith("data:") && !existing.previewUrl.startsWith("http")) {
+          existing.previewUrl = ts.storageUrl;
+        }
         if (ts.storageUrl && !existing.storageUrl) existing.storageUrl = ts.storageUrl;
       }
     }
@@ -1182,7 +1247,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, hasNoBrowser, AgentBrowserTab, DesktopAuthError, agentBrowserImageUrl, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, AgentBrowserTab, AgentBrowserHistoryItem, BrowserInputPayload, fetchAgentBrowserHistory, fetchAgentBrowserSuggestions, detectAdaptiveNetworkQuality, DesktopAuthError, agentBrowserImageUrl, hasNoBrowser, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -5314,53 +5379,231 @@ function SelkiesViewer({
   reloadKey?: number;
   isResizing?: boolean;
 }) {
-  const [src, setSrc] = useState<string>("");
-  const [mode, setMode] = useState<"collab" | "shared">("collab");
-  const [attempt, setAttempt] = useState(0);
-  const [error, setError] = useState<string>("");
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
-  const [preferNativeDesktop, setPreferNativeDesktop] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    const ua = navigator.userAgent || "";
-    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const hasWebCodecs = typeof (window as any).ImageDecoder !== "undefined";
-    return !isIOS && hasWebCodecs;
+  const [mobileInteractionMode, setMobileInteractionMode] = useState<"touch" | "mouse">(() => {
+    if (typeof window !== "undefined") {
+      const isCoarseMobile =
+        window.innerWidth < 768 ||
+        (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
+      return isCoarseMobile ? "mouse" : "touch";
+    }
+    return "touch";
   });
-  const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 393, h: 780 });
+  const [attempt, setAttempt] = useState(0);
+  const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
+  const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [browserTabs, setBrowserTabs] = useState<AgentBrowserTab[]>([]);
   const [selectedTabId, setSelectedTabId] = useState<string>("");
   const [addressInput, setAddressInput] = useState<string>("");
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [historyItems, setHistoryItems] = useState<AgentBrowserHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
+  const [isFindOpen, setIsFindOpen] = useState<boolean>(false);
+  const [findQuery, setFindQuery] = useState<string>("");
+  const [browserZoomPercent, setBrowserZoomPercent] = useState<number>(100);
+  const findInputRef = useRef<HTMLInputElement>(null);
 
-  const [isMobileOrWebKitFallback, setIsMobileOrWebKitFallback] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    const ua = navigator.userAgent || "";
-    const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const lacksImageDecoder = typeof (window as any).ImageDecoder === "undefined";
-    return isMobileUA || lacksImageDecoder || window.innerWidth < 768;
+  // Stream Engine Mode: "canvas" (CDP GPU <canvas> + predictive 120Hz scroll) vs "webrtc" (Selkies WebRTC H.264/VP9 60fps stream)
+  const [streamEngineMode, setStreamEngineMode] = useState<"canvas" | "webrtc">("canvas");
+  const [webrtcSignedUrl, setWebrtcSignedUrl] = useState<string>("");
+  const [webrtcStatus, setWebrtcStatus] = useState<"idle" | "connecting" | "ready" | "fallback">("idle");
+  const [webrtcErrorMsg, setWebrtcErrorMsg] = useState<string>("");
+
+  // Chrome Omnibox Autocomplete State (History + Recent Searches + Live Google Suggestions)
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [omniboxActiveIdx, setOmniboxActiveIdx] = useState<number>(0);
+  const [localHistoryEntries, setLocalHistoryEntries] = useState<Array<{ title: string; url: string; isSearch?: boolean }>>(() => {
+    try {
+      const raw = localStorage.getItem(`skyer_browser_omnibox_hist_${agentId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    return [];
   });
-  const containerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const hiddenAt = useRef<number>(0);
 
-  // Sync agent browser tabs & current URL so the full Browser Tab & Control Bar is always visible on mobile/narrow viewports
-  const refreshBrowserTabs = async () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const hiddenAt = useRef<number>(0);
+  const tabFrameCacheRef = useRef<Record<string, string>>({});
+  const tabOrderRef = useRef<string[]>([]);
+  const tabOrderLoadedForRef = useRef<string>("");
+  if (tabOrderLoadedForRef.current !== agentId) {
+    tabOrderLoadedForRef.current = agentId;
+    try {
+      const saved = sessionStorage.getItem(`skyer_browser_tab_order_${agentId}`);
+      const parsed = saved ? JSON.parse(saved) : null;
+      tabOrderRef.current = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      tabOrderRef.current = [];
+    }
+  }
+  const closedTabsUntilRef = useRef<Map<string, number>>(new Map());
+  const tabMutationLockUntilRef = useRef<number>(0);
+  const draggingTabIdRef = useRef<string | null>(null);
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
+
+  const persistTabOrder = (order: string[]) => {
+    tabOrderRef.current = order;
+    try {
+      sessionStorage.setItem(`skyer_browser_tab_order_${agentId}`, JSON.stringify(order));
+    } catch {}
+  };
+
+  const reconcileTabsWithOrder = (incoming: AgentBrowserTab[]): AgentBrowserTab[] => {
+    const now = Date.now();
+    for (const [cid, exp] of closedTabsUntilRef.current.entries()) {
+      if (now > exp) closedTabsUntilRef.current.delete(cid);
+    }
+    const filtered = incoming.filter((t) => !closedTabsUntilRef.current.has(t.targetId));
+    const currentOrder = tabOrderRef.current;
+    const byId = new Map<string, AgentBrowserTab>();
+    filtered.forEach((t) => byId.set(t.targetId, t));
+
+    const ordered: AgentBrowserTab[] = [];
+    for (const tid of currentOrder) {
+      const found = byId.get(tid);
+      if (found) {
+        ordered.push(found);
+        byId.delete(tid);
+      }
+    }
+    for (const remaining of byId.values()) {
+      ordered.push(remaining);
+    }
+    persistTabOrder(ordered.map((t) => t.targetId));
+    return ordered;
+  };
+
+  const reorderTabsInPlace = (sourceId: string, targetId: string) => {
+    if (!sourceId || !targetId || sourceId === targetId) return;
+    setBrowserTabs((prev) => {
+      const fromIdx = prev.findIndex((t) => t.targetId === sourceId);
+      const toIdx = prev.findIndex((t) => t.targetId === targetId);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      persistTabOrder(next.map((t) => t.targetId));
+      return next;
+    });
+  };
+
+  const saveOmniboxEntry = (titleText: string, urlText: string, isSearch = false) => {
+    if (!urlText || urlText.startsWith("data:") || urlText.startsWith("about:")) return;
+    setLocalHistoryEntries((prev) => {
+      const filtered = prev.filter((item) => item.url !== urlText && item.title !== titleText);
+      const next = [{ title: titleText || urlText, url: urlText, isSearch }, ...filtered].slice(0, 40);
+      try {
+        localStorage.setItem(`skyer_browser_omnibox_hist_${agentId}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleToggleStreamEngine = (_nextMode?: "canvas" | "webrtc") => {
+    triggerHaptic(8);
+    setStreamEngineMode("canvas");
+    try {
+      sessionStorage.setItem(`skyer_browser_stream_engine_${agentId}`, "canvas");
+    } catch {}
+  };
+
+  // Pre-warm or connect signed Selkies WebRTC H.264/VP9 stream URL with automatic graceful fallback to CDP GPU Canvas
+  useEffect(() => {
     if (!agentId) return;
+    if (streamEngineMode !== "webrtc") {
+      setWebrtcStatus("idle");
+      setWebrtcErrorMsg("");
+      void prefetchAgentDesktopUrl(agentId, "control");
+      return;
+    }
+    let cancelled = false;
+    setWebrtcStatus("connecting");
+    setWebrtcErrorMsg("");
+    void focusAgentBrowser(agentId);
+    issueAgentDesktopUrl(agentId, "control")
+      .then((signedUrl) => {
+        if (cancelled) return;
+        const hashSuffix = signedUrl.includes("#") ? "" : "#collab";
+        setWebrtcSignedUrl(`${signedUrl}${hashSuffix}`);
+        setWebrtcStatus("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setWebrtcErrorMsg(err instanceof Error ? err.message : "WebRTC stream unavailable");
+        setWebrtcStatus("fallback");
+        setStreamEngineMode("canvas");
+        try {
+          sessionStorage.setItem(`skyer_browser_stream_engine_${agentId}`, "canvas");
+        } catch {}
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId, streamEngineMode, reloadKey, attempt]);
+
+  // Sync live tabs & active URL from the agent's Chromium profile across both Desktop and Mobile
+  const refreshBrowserTabs = async () => {
+    if (!agentId || draggingTabIdRef.current) return;
     try {
       const info = await fetchAgentBrowser(agentId);
+      if (draggingTabIdRef.current) return;
       if (info && Array.isArray(info.tabs)) {
         const realTabs = info.tabs.filter((t) => !t.anchor);
-        const list = realTabs.length > 0 ? realTabs : info.tabs;
-        setBrowserTabs(list);
+        const rawList = realTabs.length > 0 ? realTabs : info.tabs;
+        const list = reconcileTabsWithOrder(rawList);
+        if (Date.now() < tabMutationLockUntilRef.current) {
+          // Preserve any optimistic tabs during the mutation lock window
+          setBrowserTabs((prev) => {
+            const optimistic = prev.filter((t) => t.targetId.startsWith("optimistic-"));
+            const merged = [...list];
+            for (const opt of optimistic) {
+              if (!merged.some((m) => m.targetId === opt.targetId)) merged.push(opt);
+            }
+            return merged;
+          });
+        } else {
+          setBrowserTabs(list);
+        }
+        // Record discovered tabs into local omnibox history & pre-warm tabFrameCacheRef for 0ms first-time tab switch!
+        list.forEach((t) => {
+          if (t.url && !t.anchor && !t.url.startsWith("data:") && !t.url.startsWith("about:")) {
+            saveOmniboxEntry(t.title || t.url, t.url, false);
+          }
+          const tKey = `${agentId}:${t.targetId}`;
+          if (t.targetId && !t.anchor && !tabFrameCacheRef.current[tKey]) {
+            tabFrameCacheRef.current[tKey] = "__loading__";
+            void fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), t.targetId))
+              .then((blobUrl) => {
+                if (tabFrameCacheRef.current[tKey] === "__loading__") {
+                  tabFrameCacheRef.current[tKey] = blobUrl;
+                } else {
+                  try { URL.revokeObjectURL(blobUrl); } catch {}
+                }
+              })
+              .catch(() => {
+                if (tabFrameCacheRef.current[tKey] === "__loading__") {
+                  delete tabFrameCacheRef.current[tKey];
+                }
+              });
+          }
+        });
         const activeTab =
           (selectedTabId && list.find((t) => t.targetId === selectedTabId)) ||
           list[list.length - 1] ||
           list[0];
-        if (activeTab) {
-          if (!selectedTabId) setSelectedTabId(activeTab.targetId);
-          if (!isEditingAddress) setAddressInput(activeTab.url || "");
+        if (activeTab && Date.now() >= tabMutationLockUntilRef.current) {
+          if (!selectedTabId || (!selectedTabId.startsWith("optimistic-") && !list.some((t) => t.targetId === selectedTabId))) {
+            setSelectedTabId(activeTab.targetId);
+          }
+          if (!isEditingAddress && !selectedTabId.startsWith("optimistic-")) {
+            const cleanUrl = activeTab.anchor ? "" : (activeTab.url || "");
+            setAddressInput(cleanUrl);
+          }
         }
       }
     } catch {}
@@ -5368,20 +5611,42 @@ function SelkiesViewer({
 
   useEffect(() => {
     refreshBrowserTabs();
-    const timer = setInterval(refreshBrowserTabs, 3000);
+    const timer = setInterval(refreshBrowserTabs, 2500);
     return () => clearInterval(timer);
   }, [agentId, reloadKey, selectedTabId, isEditingAddress]);
 
+  // Fetch live Google autocomplete suggestions and tab navigation history when typing in Omnibox
   useEffect(() => {
+    if (!isEditingAddress) {
+      setSearchSuggestions([]);
+      return;
+    }
+    const q = addressInput.trim();
+    if (!q || q.startsWith("http://") || q.startsWith("https://")) {
+      setSearchSuggestions([]);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(async () => {
+      const res = await fetchAgentBrowserSuggestions(agentId, q);
+      if (alive) {
+        setSearchSuggestions(res);
+      }
+    }, 110);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [agentId, addressInput, isEditingAddress]);
+
+  useLayoutEffect(() => {
     const checkViewport = () => {
-      const ua = navigator.userAgent || "";
-      const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      const lacksImageDecoder = typeof (window as any).ImageDecoder === "undefined";
-      setIsMobileOrWebKitFallback(isMobileUA || lacksImageDecoder || window.innerWidth < 768);
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
-          setBoxSize({ w: Math.round(rect.width), h: Math.round(rect.height) });
+          const nw = Math.round(rect.width);
+          const nh = Math.round(rect.height);
+          setBoxSize((prev) => (Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev));
         }
       }
     };
@@ -5393,7 +5658,9 @@ function SelkiesViewer({
       ro = new ResizeObserver((entries) => {
         const cr = entries[0]?.contentRect;
         if (cr && cr.width > 0 && cr.height > 0) {
-          setBoxSize({ w: Math.round(cr.width), h: Math.round(cr.height) });
+          const nw = Math.round(cr.width);
+          const nh = Math.round(cr.height);
+          setBoxSize((prev) => (Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev));
         }
       });
       ro.observe(containerRef.current);
@@ -5403,36 +5670,6 @@ function SelkiesViewer({
       ro?.disconnect();
     };
   }, [agentId, reloadKey]);
-
-  // Issue signed desktop URL once per host `url`, `mode`, `attempt`, or `reloadKey`
-  useEffect(() => {
-    if (!url || !agentId) return;
-    let alive = true;
-    setError("");
-    setIframeLoaded(false);
-    focusAgentBrowser(agentId).catch(() => {});
-    issueAgentDesktopUrl(agentId, mode === "shared" ? "watch" : "control")
-      .then((signed) => {
-        if (!alive) return;
-        if (isSignedAgentDesktopUrl(signed)) {
-          setSrc(`${signed}#${mode}`);
-        } else {
-          setSrc("");
-          setError("unsigned viewer URL");
-        }
-      })
-      .catch((e) => {
-        if (!alive) return;
-        setSrc("");
-        setError(e instanceof DesktopAuthError ? "auth" : String(e?.message || e));
-      });
-    return () => { alive = false; };
-  }, [url, attempt, mode, reloadKey]);
-
-  useEffect(() => {
-    if (!agentId) return;
-    focusAgentBrowser(agentId).catch(() => {});
-  }, [agentId]);
 
   useEffect(() => {
     const onVis = () => {
@@ -5446,143 +5683,912 @@ function SelkiesViewer({
     return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("online", onOnline); };
   }, []);
 
-  const isPortraitViewport = boxSize.h > boxSize.w;
-  const isNativeStreamActive = Boolean(src && !error && preferNativeDesktop);
-  const useCdpChromeView = !isNativeStreamActive;
-  const activeTabObj = browserTabs.find((t) => t.targetId === selectedTabId) || browserTabs[browserTabs.length - 1] || browserTabs[0];
+  const activeTabObj =
+    browserTabs.find((t) => t.targetId === selectedTabId) ||
+    browserTabs[browserTabs.length - 1] ||
+    browserTabs[0];
+
+  const getTabFaviconUrl = (tabUrl?: string, isAnchor?: boolean) => {
+    if (!tabUrl || isAnchor || tabUrl.startsWith("data:") || tabUrl.startsWith("about:") || tabUrl.startsWith("chrome:")) {
+      return null;
+    }
+    try {
+      const parsed = new URL(tabUrl);
+      if (parsed.hostname && parsed.hostname.includes(".")) {
+        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=32`;
+      }
+    } catch {}
+    return null;
+  };
+
+  const handleNavigateUrl = async (rawTargetUrl: string) => {
+    const rawTarget = rawTargetUrl.trim();
+    if (!rawTarget) return;
+    setIsNavigating(true);
+    setIsEditingAddress(false);
+    setIsHistoryOpen(false);
+    addressInputRef.current?.blur();
+
+    const isDirectUrl = rawTarget.includes("://") || (rawTarget.includes(".") && !rawTarget.includes(" "));
+    const normalizedUrl = !rawTarget.includes("://") && !rawTarget.startsWith("about:")
+      ? (isDirectUrl ? `https://${rawTarget}` : `https://www.google.com/search?q=${encodeURIComponent(rawTarget)}`)
+      : rawTarget;
+
+    saveOmniboxEntry(rawTarget, normalizedUrl, !isDirectUrl);
+
+    setBrowserTabs((prev) =>
+      prev.map((t) =>
+        t.targetId === selectedTabId ? { ...t, url: normalizedUrl, title: rawTarget } : t
+      )
+    );
+    setAddressInput(normalizedUrl);
+
+    const res = await dispatchAgentBrowserInput(agentId, {
+      action: "navigate",
+      text: rawTarget,
+      pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+    });
+    if (res.tabs && Array.isArray(res.tabs)) {
+      const real = res.tabs.filter((t) => !t.anchor);
+      setBrowserTabs(reconcileTabsWithOrder(real.length > 0 ? real : res.tabs));
+    }
+    setAttempt((a) => a + 1);
+    setIsNavigating(false);
+    setTimeout(refreshBrowserTabs, 220);
+  };
 
   const handleNavigateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addressInput.trim()) return;
-    setIsNavigating(true);
-    setIsEditingAddress(false);
-    await dispatchAgentBrowserInput(agentId, {
-      action: "navigate",
-      text: addressInput.trim(),
-      pageId: selectedTabId || undefined,
-    });
-    setTimeout(() => {
-      setAttempt((a) => a + 1);
-      refreshBrowserTabs();
-      setIsNavigating(false);
-    }, 450);
+    const suggestionsList = buildOmniboxSuggestions();
+    if (omniboxActiveIdx >= 0 && omniboxActiveIdx < suggestionsList.length) {
+      await handleNavigateUrl(suggestionsList[omniboxActiveIdx].targetValue);
+    } else {
+      await handleNavigateUrl(addressInput);
+    }
   };
 
   const handleBrowserAction = async (act: "back" | "forward" | "reload") => {
-    triggerHaptic(10);
+    triggerHaptic(8);
     setIsNavigating(true);
     await dispatchAgentBrowserInput(agentId, {
       action: act,
-      pageId: selectedTabId || undefined,
+      pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
     });
-    setTimeout(() => {
-      setAttempt((a) => a + 1);
-      refreshBrowserTabs();
-      setIsNavigating(false);
-    }, 350);
+    setAttempt((a) => a + 1);
+    setIsNavigating(false);
+    refreshBrowserTabs();
   };
 
-  // Render full Browser Tab Strip + Navigation & URL Control Bar (visible in both Portrait & Landscape 90deg)
-  const renderBrowserChromeHeader = () => (
-    <div
-      data-testid="agent-browser-chrome-header"
-      className="w-full bg-[#16161f] border-b border-[#262636] flex flex-col shrink-0 select-none z-20"
-    >
-      {/* 1. Tab Strip Bar */}
-      {browserTabs.length > 0 && (
-        <div className="flex items-center gap-1 px-2 pt-1.5 overflow-x-auto no-scrollbar border-b border-[#222230]">
-          {browserTabs.map((tab, idx) => {
-            const isActive = (activeTabObj?.targetId || "") === tab.targetId;
-            return (
-              <button
-                key={tab.targetId || idx}
-                type="button"
-                onClick={() => {
-                  triggerHaptic(8);
-                  setSelectedTabId(tab.targetId);
-                  setAddressInput(tab.url || "");
-                  setAttempt((a) => a + 1);
-                }}
-                className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-t-lg text-[11px] font-sans max-w-[160px] sm:max-w-[200px] shrink-0 transition-colors cursor-pointer border-t border-x ${
-                  isActive
-                    ? "bg-[#222230] text-white border-[#34344a] font-medium"
-                    : "bg-[#12121a] text-neutral-400 border-transparent hover:bg-[#1a1a26] hover:text-neutral-200"
-                }`}
-                title={`${tab.title || "Tab"} — ${tab.url}`}
-              >
-                <Globe size={11} className={isActive ? "text-emerald-400 shrink-0" : "text-neutral-500 shrink-0"} />
-                <span className="truncate">{tab.title || tab.url || `Tab ${idx + 1}`}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+  const handleActivateTab = (tab: AgentBrowserTab) => {
+    if (!tab || tab.targetId === selectedTabId) return;
+    tabMutationLockUntilRef.current = Date.now() + 900;
+    setSelectedTabId(tab.targetId);
+    if (!isEditingAddress) {
+      setAddressInput(tab.anchor ? "" : (tab.url || ""));
+    }
+    if (!tab.targetId.startsWith("optimistic-")) {
+      void dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: tab.targetId });
+    }
+  };
 
-      {/* 2. Navigation & URL Omnibox Control Bar */}
-      <div className="h-9 px-2 flex items-center gap-1.5 bg-[#1e1e2a]">
-        <button
-          type="button"
-          onClick={() => handleBrowserAction("back")}
-          className="h-6 w-6 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-          title="Quay lại (Back)"
-          aria-label="Back"
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleBrowserAction("forward")}
-          className="h-6 w-6 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-          title="Tiến tới (Forward)"
-          aria-label="Forward"
-        >
-          <ChevronRight size={14} />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleBrowserAction("reload")}
-          className="h-6 w-6 rounded-md hover:bg-white/10 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-          title="Tải lại trang (Reload)"
-          aria-label="Reload"
-        >
-          <RefreshCw size={12} className={isNavigating ? "animate-spin text-emerald-400" : ""} />
-        </button>
-
-        {/* Interactive URL Bar */}
-        <form onSubmit={handleNavigateSubmit} className="flex-1 min-w-0 flex items-center">
-          <div className="w-full h-6 px-2.5 rounded-full bg-[#111118] border border-[#2e2e40] focus-within:border-[var(--agent-primary,#f8a87c)] flex items-center gap-1.5">
-            <Globe size={11} className="text-emerald-400 shrink-0" />
-            <input
-              type="text"
-              value={isEditingAddress ? addressInput : (addressInput || activeTabObj?.url || url || "")}
-              onFocus={() => {
-                setIsEditingAddress(true);
-                setAddressInput(activeTabObj?.url || addressInput || "");
-              }}
-              onBlur={() => setIsEditingAddress(false)}
-              onChange={(e) => setAddressInput(e.target.value)}
-              placeholder="Nhập URL hoặc từ khóa tìm kiếm..."
-              className="w-full bg-transparent text-[11px] font-mono text-neutral-200 placeholder:text-neutral-500 outline-none truncate"
-            />
-          </div>
-        </form>
-
-        {profile && (
-          <div
-            data-testid="agent-desktop-profile"
-            className="hidden xs:flex px-1.5 py-0.5 rounded bg-black/60 border border-white/10 text-[10px] font-mono text-neutral-300 shrink-0 pointer-events-none"
-          >
-            {profile}
-          </div>
-        )}
-      </div>
-    </div>
+// Instant 0ms Crisp Google New Tab Seed Frame (Eliminates stale-tab flash or blank screen while Chromium creates the tab)
+const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800">
+      <rect width="1280" height="800" fill="#ffffff"/>
+      <g transform="translate(640, 290)" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="88">
+        <text y="0">
+          <tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">o</tspan><tspan fill="#FBBC05">o</tspan><tspan fill="#4285F4">g</tspan><tspan fill="#34A853">l</tspan><tspan fill="#EA4335">e</tspan>
+        </text>
+      </g>
+      <rect x="350" y="340" width="580" height="48" rx="24" fill="#ffffff" stroke="#dfe1e5" stroke-width="1.5"/>
+      <circle cx="380" cy="364" r="7" fill="none" stroke="#9aa0a6" stroke-width="2"/>
+      <line x1="385" y1="369" x2="391" y2="375" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round"/>
+      <text x="406" y="369" font-family="Arial, sans-serif" font-size="15" fill="#9aa0a6">Tìm kiếm trên Google hoặc nhập một URL</text>
+      <rect x="495" y="416" width="136" height="36" rx="6" fill="#f8f9fa"/>
+      <text x="563" y="439" text-anchor="middle" font-family="Arial, sans-serif" font-size="13.5" fill="#3c4043">Tìm trên Google</text>
+      <rect x="645" y="416" width="146" height="36" rx="6" fill="#f8f9fa"/>
+      <text x="718" y="439" text-anchor="middle" font-family="Arial, sans-serif" font-size="13.5" fill="#3c4043">Xem trang đầu tiên</text>
+    </svg>`
   );
+
+  // Instant 0ms Optimistic New Tab creation with crisp Google homepage seed & seamless target ID swap
+  const handleCreateNewTab = async () => {
+    triggerHaptic(8);
+    setIsNavigating(true);
+    tabMutationLockUntilRef.current = Date.now() + 2600;
+
+    const existingGoogleTab = browserTabs.find((t) => (t.url || "").includes("google.com"));
+    const cachedGoogleFrame = existingGoogleTab ? tabFrameCacheRef.current[`${agentId}:${existingGoogleTab.targetId}`] : "";
+    const googleSeedFrame =
+      cachedGoogleFrame && cachedGoogleFrame !== "__loading__"
+        ? cachedGoogleFrame
+        : INSTANT_GOOGLE_NEW_TAB_DATA_URL;
+
+    const optId = `optimistic-${Date.now()}`;
+    tabFrameCacheRef.current[`${agentId}:${optId}`] = googleSeedFrame;
+
+    const optTab: AgentBrowserTab = {
+      targetId: optId,
+      title: "Google",
+      url: "https://www.google.com",
+      anchor: false,
+    };
+
+    setBrowserTabs((prev) => {
+      const next = [...prev, optTab];
+      persistTabOrder(next.map((t) => t.targetId));
+      return next;
+    });
+    setSelectedTabId(optId);
+    setAddressInput("https://www.google.com");
+
+    try {
+      const res = await dispatchAgentBrowserInput(agentId, {
+        action: "new_tab",
+        text: "https://www.google.com",
+        pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+      });
+
+      const realNewId = res.createdTargetId || res.targetId;
+      if (realNewId && (!tabFrameCacheRef.current[`${agentId}:${realNewId}`] || tabFrameCacheRef.current[`${agentId}:${realNewId}`] === "__loading__")) {
+        tabFrameCacheRef.current[`${agentId}:${realNewId}`] = googleSeedFrame;
+      }
+
+      if (realNewId) {
+        const replacedOrder = tabOrderRef.current.map((id) => (id === optId ? realNewId : id));
+        if (!replacedOrder.includes(realNewId)) replacedOrder.push(realNewId);
+        persistTabOrder(Array.from(new Set(replacedOrder)));
+      }
+
+      if (res.tabs && Array.isArray(res.tabs) && res.tabs.length > 0) {
+        const real = res.tabs.filter((t) => !t.anchor);
+        const list = reconcileTabsWithOrder(real.length > 0 ? real : res.tabs);
+        setBrowserTabs(list);
+        const chosen = (realNewId && list.find((t) => t.targetId === realNewId)) || list[list.length - 1];
+        if (chosen) {
+          setSelectedTabId(chosen.targetId);
+          setAddressInput(chosen.url || "https://www.google.com");
+        }
+      } else if (realNewId) {
+        const newTabEntry: AgentBrowserTab = {
+          targetId: realNewId,
+          title: "Google",
+          url: "https://www.google.com",
+          anchor: false,
+        };
+        setBrowserTabs((prev) => {
+          const next = prev.map((t) => (t.targetId === optId ? newTabEntry : t));
+          if (!next.some((t) => t.targetId === realNewId)) next.push(newTabEntry);
+          return next;
+        });
+        setSelectedTabId(realNewId);
+        setAddressInput("https://www.google.com");
+      } else {
+        await refreshBrowserTabs();
+      }
+    } finally {
+      delete tabFrameCacheRef.current[`${agentId}:${optId}`];
+      setIsNavigating(false);
+    }
+  };
+
+  const handleCloseTab = async (tabId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    triggerHaptic(8);
+    if (browserTabs.length <= 1) return;
+
+    closedTabsUntilRef.current.set(tabId, Date.now() + 8000);
+    tabMutationLockUntilRef.current = Date.now() + 1800;
+    delete tabFrameCacheRef.current[`${agentId}:${tabId}`];
+
+    const closeIdx = browserTabs.findIndex((t) => t.targetId === tabId);
+    const remaining = browserTabs.filter((t) => t.targetId !== tabId);
+    persistTabOrder(remaining.map((t) => t.targetId));
+    setBrowserTabs(remaining);
+
+    if (selectedTabId === tabId && remaining.length > 0) {
+      const nextIdx = Math.min(Math.max(0, closeIdx), remaining.length - 1);
+      const nextActive = remaining[nextIdx] || remaining[remaining.length - 1];
+      setSelectedTabId(nextActive.targetId);
+      setAddressInput(nextActive.anchor ? "" : (nextActive.url || ""));
+      if (!nextActive.targetId.startsWith("optimistic-")) {
+        void dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: nextActive.targetId });
+      }
+    }
+
+    if (tabId.startsWith("optimistic-")) return;
+
+    const res = await dispatchAgentBrowserInput(agentId, {
+      action: "close_tab",
+      pageId: tabId,
+    });
+    if (res.tabs && Array.isArray(res.tabs) && res.tabs.length > 0) {
+      const real = res.tabs.filter((t) => !t.anchor);
+      setBrowserTabs(reconcileTabsWithOrder(real.length > 0 ? real : res.tabs));
+    }
+  };
+
+  const handleToggleHistory = async () => {
+    const nextOpen = !isHistoryOpen;
+    setIsHistoryOpen(nextOpen);
+    if (nextOpen) {
+      setIsLoadingHistory(true);
+      const items = await fetchAgentBrowserHistory(
+        agentId,
+        selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined
+      );
+      setHistoryItems(items);
+      items.forEach((it) => {
+        if (it.url) saveOmniboxEntry(it.title || it.url, it.url, false);
+      });
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const handleFindInPage = async (queryText: string, direction: "next" | "prev" = "next") => {
+    await dispatchAgentBrowserInput(agentId, {
+      action: "find",
+      text: queryText,
+      key: direction,
+      pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+    });
+  };
+
+  const handleToggleFindBar = () => {
+    setIsFindOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        setTimeout(() => findInputRef.current?.focus(), 40);
+      } else {
+        void handleFindInPage("", "next");
+      }
+      return next;
+    });
+  };
+
+  const handleZoomStep = (deltaPct: number | "reset") => {
+    setBrowserZoomPercent((prev) => {
+      if (deltaPct === "reset") return 100;
+      return Math.max(50, Math.min(250, prev + deltaPct));
+    });
+  };
+
+  // Build unified Chrome Omnibox suggestions matching user reference screenshot
+  const buildOmniboxSuggestions = (): Array<{
+    kind: "primary" | "recent_search" | "search_suggest" | "history_url";
+    label: string;
+    subUrl?: string;
+    targetValue: string;
+  }> => {
+    const q = addressInput.trim();
+    const qLower = q.toLowerCase();
+    const results: Array<{
+      kind: "primary" | "recent_search" | "search_suggest" | "history_url";
+      label: string;
+      subUrl?: string;
+      targetValue: string;
+    }> = [];
+
+    if (q) {
+      const isUrlLike = q.includes("://") || (q.includes(".") && !q.includes(" "));
+      results.push({
+        kind: "primary",
+        label: q,
+        subUrl: isUrlLike ? q : "Google Search",
+        targetValue: q,
+      });
+    }
+
+    // 1. Matching recent searches (Clock icon)
+    const matchedSearches = localHistoryEntries
+      .filter((it) => it.isSearch && (!qLower || it.title.toLowerCase().includes(qLower)))
+      .slice(0, 2);
+    for (const s of matchedSearches) {
+      if (!results.some((r) => r.label.toLowerCase() === s.title.toLowerCase())) {
+        results.push({
+          kind: "recent_search",
+          label: s.title,
+          targetValue: s.title,
+        });
+      }
+    }
+
+    // 2. Live Google Search autocomplete suggestions (Search icon)
+    for (const sg of searchSuggestions.slice(0, 3)) {
+      if (!results.some((r) => r.label.toLowerCase() === sg.toLowerCase())) {
+        results.push({
+          kind: "search_suggest",
+          label: sg,
+          targetValue: sg,
+        });
+      }
+    }
+
+    // 3. Matching visited pages from open tabs + history (Globe icon + Title - blue URL)
+    const allPages: Array<{ title: string; url: string }> = [];
+    const seenUrls = new Set<string>();
+    for (const t of browserTabs) {
+      if (t.url && !t.anchor && !t.url.startsWith("data:") && !t.url.startsWith("about:") && !seenUrls.has(t.url)) {
+        seenUrls.add(t.url);
+        allPages.push({ title: t.title || t.url, url: t.url });
+      }
+    }
+    for (const h of historyItems) {
+      if (h.url && !seenUrls.has(h.url)) {
+        seenUrls.add(h.url);
+        allPages.push({ title: h.title || h.url, url: h.url });
+      }
+    }
+    for (const lh of localHistoryEntries) {
+      if (!lh.isSearch && lh.url && !seenUrls.has(lh.url)) {
+        seenUrls.add(lh.url);
+        allPages.push({ title: lh.title || lh.url, url: lh.url });
+      }
+    }
+
+    const matchedPages = allPages
+      .filter((p) => !qLower || p.title.toLowerCase().includes(qLower) || p.url.toLowerCase().includes(qLower))
+      .slice(0, 4);
+
+    for (const p of matchedPages) {
+      const cleanSubUrl = p.url.replace(/^https?:\/\/(www\.)?/, "");
+      results.push({
+        kind: "history_url",
+        label: p.title,
+        subUrl: cleanSubUrl,
+        targetValue: p.url,
+      });
+    }
+
+    return results.slice(0, 8);
+  };
+
+  const renderHighlightedMatch = (text: string, query: string) => {
+    const q = query.trim();
+    if (!q) return <span className="font-normal">{text}</span>;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return <span className="font-normal">{text}</span>;
+    return (
+      <>
+        <span className="font-normal">{text.slice(0, idx)}</span>
+        <span className="font-bold text-slate-950 dark:text-white">{text.slice(idx, idx + q.length)}</span>
+        <span className="font-normal">{text.slice(idx + q.length)}</span>
+      </>
+    );
+  };
+
+  // Authentic Modern Chromium Tab Strip & Omnibox matching the exact reference screenshots
+  const renderBrowserChromeHeader = () => {
+    const rawDisplayUrl = isEditingAddress
+      ? addressInput
+      : addressInput || (activeTabObj?.anchor ? "" : activeTabObj?.url) || "";
+    const omniboxItems = isEditingAddress ? buildOmniboxSuggestions() : [];
+
+    return (
+      <div
+        data-testid="agent-browser-chrome-header"
+        className="w-full bg-[#dee1e6] dark:bg-[#202124] flex flex-col shrink-0 select-none z-30 transition-colors"
+      >
+        {/* 1. Authentic Chrome Tab Strip (Equal-width tabs via flex-1 basis-0 min-w-[72px] max-w-[240px]) */}
+        <div className="flex items-end w-full px-2 pt-1.5 overflow-x-auto no-scrollbar">
+          {browserTabs.length > 0 ? (
+            browserTabs.map((tab, idx) => {
+              const isActive = (activeTabObj?.targetId || "") === tab.targetId;
+              const nextTab = browserTabs[idx + 1];
+              const isNextActive = nextTab && (activeTabObj?.targetId || "") === nextTab.targetId;
+              const favUrl = getTabFaviconUrl(tab.url, tab.anchor);
+              const tabTitle = tab.anchor
+                ? "New Tab"
+                : (tab.title || tab.url || `Tab ${idx + 1}`);
+
+              const isDraggingThis = draggingTabId === tab.targetId;
+              const isDragOverThis = dragOverTabId === tab.targetId && draggingTabId !== tab.targetId;
+
+              return (
+                <div
+                  key={tab.targetId || idx}
+                  data-tab-id={tab.targetId}
+                  draggable={browserTabs.length > 1}
+                  onDragStart={(e) => {
+                    if (browserTabs.length <= 1) return;
+                    draggingTabIdRef.current = tab.targetId;
+                    setDraggingTabId(tab.targetId);
+                    e.dataTransfer.effectAllowed = "move";
+                    try {
+                      e.dataTransfer.setData("text/plain", tab.targetId);
+                    } catch {}
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    const srcId = draggingTabIdRef.current;
+                    if (srcId && srcId !== tab.targetId) {
+                      setDragOverTabId(tab.targetId);
+                      reorderTabsInPlace(srcId, tab.targetId);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const srcId = draggingTabIdRef.current || e.dataTransfer.getData("text/plain");
+                    if (srcId && srcId !== tab.targetId) {
+                      reorderTabsInPlace(srcId, tab.targetId);
+                    }
+                    draggingTabIdRef.current = null;
+                    setDraggingTabId(null);
+                    setDragOverTabId(null);
+                  }}
+                  onDragEnd={() => {
+                    draggingTabIdRef.current = null;
+                    setDraggingTabId(null);
+                    setDragOverTabId(null);
+                  }}
+                  className={`flex items-center flex-1 basis-0 min-w-[72px] max-w-[240px] transition-transform duration-150 ${
+                    isDraggingThis ? "opacity-60 scale-[0.98] z-20" : ""
+                  } ${isDragOverThis ? "ring-1 ring-[#1a73e8]/60 rounded-t-[10px]" : ""}`}
+                >
+                  <div
+                    role="tab"
+                    data-testid={`agent-browser-tab-${idx}`}
+                    aria-selected={isActive}
+                    onClick={() => handleActivateTab(tab)}
+                    onAuxClick={(e) => {
+                      if (e.button === 1 && browserTabs.length > 1) {
+                        void handleCloseTab(tab.targetId, e);
+                      }
+                    }}
+                    className={`group relative flex items-center gap-2 pl-3 pr-2 h-[34px] w-full rounded-t-[10px] text-[12px] font-sans min-w-0 transition-colors duration-75 cursor-pointer ${
+                      isActive
+                        ? "bg-[#f1f3f4] dark:bg-[#323639] text-[#202124] dark:text-[#e8eaed] font-medium z-10"
+                        : "bg-transparent text-[#5f6368] dark:text-[#9aa0a6] hover:bg-black/[0.06] dark:hover:bg-white/[0.06] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                    }`}
+                    title={`${tabTitle}${tab.url && !tab.anchor ? ` — ${tab.url}` : ""} (Kéo thả để sắp xếp tab)`}
+                  >
+                    {/* Bottom-left & bottom-right outward curve connectors for active Chrome tab */}
+                    {isActive && (
+                      <>
+                        <span className="pointer-events-none absolute -left-2 bottom-0 w-2 h-2 bg-transparent rounded-br-[8px] shadow-[4px_0_0_0_#f1f3f4] dark:shadow-[4px_0_0_0_#323639]" />
+                        <span className="pointer-events-none absolute -right-2 bottom-0 w-2 h-2 bg-transparent rounded-bl-[8px] shadow-[-4px_0_0_0_#f1f3f4] dark:shadow-[-4px_0_0_0_#323639]" />
+                      </>
+                    )}
+
+                    {favUrl ? (
+                      <img
+                        src={favUrl}
+                        alt=""
+                        draggable={false}
+                        className="w-4 h-4 rounded-xs object-contain shrink-0 pointer-events-none"
+                        onError={(e) => { (e.currentTarget as HTMLElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <Globe
+                        size={14}
+                        className={isActive ? "text-[#5f6368] dark:text-[#9aa0a6] shrink-0" : "text-[#5f6368]/80 dark:text-[#9aa0a6]/80 shrink-0"}
+                      />
+                    )}
+
+                    <span className="truncate flex-1 leading-none">{tabTitle}</span>
+
+                    {browserTabs.length > 1 && (
+                      <button
+                        type="button"
+                        draggable={false}
+                        onDragStart={(e) => e.stopPropagation()}
+                        onClick={(e) => handleCloseTab(tab.targetId, e)}
+                        className="h-4 w-4 rounded-full hover:bg-black/10 dark:hover:bg-white/15 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-white flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity shrink-0"
+                        title="Đóng tab"
+                        aria-label="Close tab"
+                      >
+                        <X size={11} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Subtle vertical divider between inactive tabs or before the + button */}
+                  {(!isActive && !isNextActive) && (
+                    <span className="h-4 w-[1px] bg-black/15 dark:bg-white/15 mx-0.5 shrink-0" />
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex items-center gap-2 px-3 h-[34px] flex-1 basis-0 max-w-[240px] rounded-t-[10px] bg-[#f1f3f4] dark:bg-[#323639] text-[#202124] dark:text-[#e8eaed] text-[12px] font-medium">
+              <Globe size={14} className="text-[#9aa0a6] shrink-0" />
+              <span className="truncate">{title || "New Tab"}</span>
+            </div>
+          )}
+
+          {/* Vertical separator if last tab is active */}
+          {browserTabs.length > 0 && (activeTabObj?.targetId || "") === browserTabs[browserTabs.length - 1]?.targetId && (
+            <span className="h-4 w-[1px] bg-black/15 dark:bg-white/15 ml-2 mr-0.5 mb-[9px] shrink-0" />
+          )}
+
+          {/* New Tab (+) Button */}
+          <button
+            type="button"
+            data-testid="agent-browser-new-tab-btn"
+            onClick={handleCreateNewTab}
+            className="h-7 w-7 mb-[3px] ml-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed] flex items-center justify-center transition-colors cursor-pointer shrink-0 active:scale-95"
+            title="Mở tab mới (Google · Ctrl+T)"
+            aria-label="New tab"
+          >
+            <Plus size={15} />
+          </button>
+        </div>
+
+        {/* 2. Authentic Chrome Navigation, Omnibox with History/Search Suggestions Dropdown & Right History Icon */}
+        <div className="h-[42px] px-2.5 flex items-center gap-1.5 bg-[#f1f3f4] dark:bg-[#323639] border-b border-black/10 dark:border-black/40 relative">
+          <button
+            type="button"
+            onClick={() => handleBrowserAction("back")}
+            className="h-7 w-7 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Quay lại (Back)"
+            aria-label="Back"
+          >
+            <ArrowLeft size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleBrowserAction("forward")}
+            className="h-7 w-7 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Tiến tới (Forward)"
+            aria-label="Forward"
+          >
+            <ArrowRight size={15} />
+          </button>
+          <button
+            type="button"
+            data-testid="agent-browser-reload-btn"
+            onClick={() => handleBrowserAction("reload")}
+            className="h-7 w-7 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Tải lại trang (Reload · Ctrl+R)"
+            aria-label="Reload"
+          >
+            <RotateCw size={14} className={isNavigating ? "animate-spin text-[#1a73e8] dark:text-[#8ab4f8]" : ""} />
+          </button>
+
+          {/* Chrome Omnibox + Rich Autocomplete Dropdown Container */}
+          <div className="relative flex-1 min-w-0 flex items-center">
+            <form onSubmit={handleNavigateSubmit} className="w-full flex items-center">
+              <div
+                className={`w-full h-[30px] px-3 bg-white dark:bg-[#202124] border-[1.5px] flex items-center gap-2.5 transition-colors ${
+                  isEditingAddress && omniboxItems.length > 0
+                    ? "rounded-t-[16px] border-[#1a73e8] dark:border-[#a8c7fa] border-b-transparent"
+                    : "rounded-full border-black/15 dark:border-[#5f6368]/60 focus-within:border-[#1a73e8] dark:focus-within:border-[#a8c7fa]"
+                }`}
+              >
+                <span className="text-[13px] font-sans font-bold text-[#5f6368] dark:text-[#e8eaed] select-none shrink-0 leading-none">
+                  G
+                </span>
+
+                <input
+                  ref={addressInputRef}
+                  type="text"
+                  value={rawDisplayUrl}
+                  onFocus={(e) => {
+                    const targetEl = e.currentTarget;
+                    const currentUrl = activeTabObj?.anchor ? "" : (activeTabObj?.url || addressInput || "");
+                    setIsEditingAddress(true);
+                    setOmniboxActiveIdx(0);
+                    setAddressInput(currentUrl);
+                    // Also refresh tab history in background so suggestions include latest visited URLs
+                    void fetchAgentBrowserHistory(
+                      agentId,
+                      selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined
+                    ).then((items) => {
+                      setHistoryItems(items);
+                      items.forEach((it) => {
+                        if (it.url) saveOmniboxEntry(it.title || it.url, it.url, false);
+                      });
+                    });
+                    requestAnimationFrame(() => {
+                      try {
+                        targetEl.setSelectionRange(0, targetEl.value.length, "forward");
+                        targetEl.scrollLeft = targetEl.scrollWidth;
+                      } catch {}
+                    });
+                  }}
+                  onMouseUp={(e) => {
+                    if (
+                      document.activeElement === e.currentTarget &&
+                      e.currentTarget.selectionStart === 0 &&
+                      e.currentTarget.selectionEnd === e.currentTarget.value.length
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (!isEditingAddress || omniboxItems.length === 0) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setOmniboxActiveIdx((prev) => (prev + 1) % omniboxItems.length);
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setOmniboxActiveIdx((prev) => (prev - 1 + omniboxItems.length) % omniboxItems.length);
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setIsEditingAddress(false);
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setIsEditingAddress(false), 160);
+                  }}
+                  onChange={(e) => {
+                    setAddressInput(e.target.value);
+                    setOmniboxActiveIdx(0);
+                  }}
+                  placeholder="Tìm kiếm trên Google hoặc nhập một URL"
+                  className="w-full bg-transparent text-[13px] font-sans text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] outline-none truncate selection:bg-[#1a73e8]/30 dark:selection:bg-[#8ab4f8]/35"
+                />
+              </div>
+            </form>
+
+            {/* Chrome Omnibox Suggestions Dropdown matching the exact screenshot */}
+            {isEditingAddress && omniboxItems.length > 0 && (
+              <div
+                data-testid="agent-browser-omnibox-suggestions"
+                onMouseDown={(e) => e.preventDefault()}
+                className="absolute left-0 right-0 top-full bg-white dark:bg-[#292a2d] border-x-[1.5px] border-b-[1.5px] border-[#1a73e8] dark:border-[#a8c7fa] rounded-b-[18px] shadow-[0_12px_32px_rgba(0,0,0,0.45)] pb-2 pt-1 z-50 overflow-hidden"
+              >
+                {omniboxItems.map((item, sIdx) => {
+                  const isSelected = sIdx === omniboxActiveIdx;
+                  return (
+                    <div
+                      key={`${item.kind}-${item.targetValue}-${sIdx}`}
+                      onMouseEnter={() => setOmniboxActiveIdx(sIdx)}
+                      onClick={() => void handleNavigateUrl(item.targetValue)}
+                      className={`relative flex items-center gap-3 px-3.5 py-2 text-[13px] font-sans cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-[#e8f0fe] dark:bg-[#3c4043] rounded-r-full mr-2"
+                          : "hover:bg-black/5 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      {/* Left Blue Vertical Selection Pill Indicator matching Chrome */}
+                      {isSelected && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[#1a73e8] dark:bg-[#8ab4f8]" />
+                      )}
+
+                      {/* Leading Icon */}
+                      <span className="w-5 h-5 flex items-center justify-center text-[#5f6368] dark:text-[#9aa0a6] shrink-0">
+                        {item.kind === "recent_search" ? (
+                          <Clock size={14} />
+                        ) : item.kind === "history_url" ? (
+                          <Globe size={14} />
+                        ) : (
+                          <Search size={14} />
+                        )}
+                      </span>
+
+                      {/* Suggestion Content */}
+                      <div className="min-w-0 flex-1 truncate text-[#202124] dark:text-[#e8eaed]">
+                        {item.kind === "primary" ? (
+                          <span>
+                            <span className="font-medium">{item.label}</span>
+                            {item.subUrl && (
+                              <span className="text-[#5f6368] dark:text-[#9aa0a6]"> — {item.subUrl}</span>
+                            )}
+                          </span>
+                        ) : item.kind === "history_url" ? (
+                          <span>
+                            {renderHighlightedMatch(item.label, addressInput)}
+                            {item.subUrl && (
+                              <span className="text-[#1a73e8] dark:text-[#8ab4f8] ml-1.5">
+                                - {renderHighlightedMatch(item.subUrl, addressInput)}
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span>{renderHighlightedMatch(item.label, addressInput)}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Right Action Icons on Top Nav Bar: Stream Engine Toggle (CDP GPU vs WebRTC H.264/VP9), Find in Page, Zoom Controls, History, Touch/Mouse Mode, Rotate Landscape */}
+          <div className="flex items-center gap-0.5 shrink-0">
+            <Tooltip
+              content={
+                streamEngineMode === "webrtc"
+                  ? "Đang phát luồng WebRTC H.264/VP9 (Selkies 60fps Video Stream) · Bấm để chuyển về CDP GPU Canvas (120Hz Scroll)"
+                  : "Đang dùng CDP GPU Canvas (120Hz Predictive Scroll & Native Cursor) · Bấm để chuyển sang luồng WebRTC H.264/VP9 60fps khi xem video/animation tốc độ cao"
+              }
+              placement="bottom"
+            >
+              <button
+                type="button"
+                data-testid="agent-browser-stream-engine-btn"
+                data-stream-engine={streamEngineMode}
+                onClick={() => handleToggleStreamEngine()}
+                className={`hidden h-7 px-2 mr-0.5 rounded-full items-center gap-1 text-[10px] font-mono font-semibold transition-all cursor-pointer shrink-0 border ${
+                  streamEngineMode === "webrtc"
+                    ? "bg-emerald-500/15 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/35 shadow-2xs"
+                    : "bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed] border-black/10 dark:border-white/10"
+                }`}
+                aria-label={streamEngineMode === "webrtc" ? "Switch to CDP GPU Canvas" : "Switch to WebRTC H.264/VP9 Stream"}
+              >
+                <Radio size={11} className={streamEngineMode === "webrtc" ? "text-emerald-500 animate-pulse" : "text-[#1a73e8] dark:text-[#8ab4f8]"} />
+                <span className="hidden sm:inline">
+                  {streamEngineMode === "webrtc" ? "WebRTC H.264/VP9" : "CDP GPU"}
+                </span>
+                <span className="sm:hidden">
+                  {streamEngineMode === "webrtc" ? "H.264" : "GPU"}
+                </span>
+              </button>
+            </Tooltip>
+
+            <Tooltip content="Tìm trong trang (Ctrl+F)" placement="bottom">
+              <button
+                type="button"
+                data-testid="agent-browser-find-btn"
+                onClick={handleToggleFindBar}
+                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                  isFindOpen
+                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
+                    : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                }`}
+                aria-label="Find in page"
+              >
+                <Search size={14} />
+              </button>
+            </Tooltip>
+
+            {browserZoomPercent !== 100 && (
+              <button
+                type="button"
+                data-testid="agent-browser-zoom-reset-btn"
+                onClick={() => handleZoomStep("reset")}
+                className="h-6 px-1.5 rounded-full bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8] text-[10px] font-mono font-semibold hover:bg-[#1a73e8]/25 transition-colors cursor-pointer"
+                title="Đặt lại thu phóng 100% (Ctrl+0)"
+              >
+                {browserZoomPercent}%
+              </button>
+            )}
+            <div className="relative shrink-0">
+              <Tooltip content="Lịch sử duyệt web" placement="bottom">
+                <button
+                  type="button"
+                  data-testid="agent-browser-history-btn"
+                  onClick={handleToggleHistory}
+                  className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                    isHistoryOpen
+                      ? "bg-black/15 dark:bg-white/15 text-[#202124] dark:text-white"
+                      : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                  }`}
+                  aria-label="Browser History"
+                >
+                  <Clock size={14} />
+                </button>
+              </Tooltip>
+
+            {isHistoryOpen && (
+              <div
+                data-testid="agent-browser-history-popover"
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-full mt-1.5 w-72 sm:w-80 max-h-72 rounded-xl bg-white dark:bg-[#292a2d] border border-black/15 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col z-50 animate-in fade-in zoom-in-95 duration-100"
+              >
+                <div className="px-3 py-2 border-b border-black/10 dark:border-white/10 flex items-center justify-between text-[12px] font-semibold text-[#202124] dark:text-[#e8eaed]">
+                  <span className="flex items-center gap-1.5">
+                    <Clock size={13} className="text-[#1a73e8] dark:text-[#8ab4f8]" />
+                    <span>Lịch sử duyệt web</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsHistoryOpen(false)}
+                    className="h-5 w-5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-[#5f6368] dark:text-[#9aa0a6]"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 py-1">
+                  {isLoadingHistory ? (
+                    <div className="px-3 py-4 text-center text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
+                      Đang tải lịch sử...
+                    </div>
+                  ) : historyItems.length === 0 && localHistoryEntries.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
+                      Chưa có lịch sử trên tab này
+                    </div>
+                  ) : (
+                    (historyItems.length > 0 ? historyItems : localHistoryEntries.map((lh, i) => ({ id: i, title: lh.title, url: lh.url, isCurrent: false }))).map((hItem, hIdx) => {
+                      const hFav = getTabFaviconUrl(hItem.url, false);
+                      return (
+                        <button
+                          key={`${hItem.id}-${hIdx}`}
+                          type="button"
+                          onClick={() => void handleNavigateUrl(hItem.url)}
+                          className={`w-full px-3 py-2 text-left flex items-center gap-2.5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer ${
+                            hItem.isCurrent ? "bg-[#1a73e8]/10 dark:bg-[#8ab4f8]/10" : ""
+                          }`}
+                        >
+                          {hFav ? (
+                            <img src={hFav} alt="" className="w-3.5 h-3.5 rounded-xs shrink-0" />
+                          ) : (
+                            <Globe size={13} className="text-[#5f6368] dark:text-[#9aa0a6] shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[12px] font-medium text-[#202124] dark:text-[#e8eaed] truncate">
+                              {hItem.title}
+                            </div>
+                            <div className="text-[10px] font-mono text-[#1a73e8] dark:text-[#8ab4f8] truncate">
+                              {hItem.url}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+            </div>
+
+            {/* Mobile/Desktop Input Mode Toggle Icon (Mouse Pointer vs Direct Touch) */}
+            <Tooltip
+              content={
+                mobileInteractionMode === "mouse"
+                  ? "Chế độ Chuột ảo (Kéo 1 ngón di chuyển chuột, chạm để click, 2 ngón thu phóng) · Bấm để chuyển sang Chạm trực tiếp"
+                  : "Chế độ Chạm trực tiếp (Touch) · Bấm để chuyển sang Chuột ảo"
+              }
+              placement="bottom"
+            >
+              <button
+                type="button"
+                data-testid="computer-mobile-input-mode-btn"
+                onClick={() => setMobileInteractionMode((m) => (m === "mouse" ? "touch" : "mouse"))}
+                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                  mobileInteractionMode === "mouse"
+                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
+                    : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                }`}
+                aria-label={mobileInteractionMode === "mouse" ? "Mouse Mode" : "Touch Mode"}
+              >
+                {mobileInteractionMode === "mouse" ? <MousePointer2 size={14} /> : <Hand size={14} />}
+              </button>
+            </Tooltip>
+
+            {/* Rotate Landscape 90° Icon Button */}
+            <Tooltip
+              content={isLandscapeRotated ? "Chuyển về khung dọc (Portrait)" : "Xoay ngang màn hình 90° (Landscape)"}
+              placement="bottom"
+            >
+              <button
+                type="button"
+                data-testid="computer-rotate-landscape-btn"
+                onClick={() => setIsLandscapeRotated((r) => !r)}
+                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                  isLandscapeRotated
+                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
+                    : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                }`}
+                aria-label={isLandscapeRotated ? "Portrait Mode" : "Landscape Mode"}
+              >
+                <Smartphone size={14} className={isLandscapeRotated ? "rotate-90 transition-transform" : "transition-transform"} />
+              </button>
+            </Tooltip>
+
+
+          </div>
+
+          {isNavigating && (
+            <div className="absolute bottom-0 inset-x-0 h-[1.5px] bg-[#1a73e8] dark:bg-[#a8c7fa] animate-pulse" />
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-black overflow-hidden touch-manipulation select-none flex flex-col"
+      onClick={() => { if (isHistoryOpen) setIsHistoryOpen(false); }}
+      className="relative w-full h-full bg-[#F8F3ED] dark:bg-[#0c0c12] overflow-hidden touch-manipulation select-none flex flex-col"
     >
       <div
         style={
@@ -5598,259 +6604,328 @@ function SelkiesViewer({
               }
             : undefined
         }
-        className={`relative transition-transform duration-200 ease-out flex flex-col bg-black overflow-hidden ${
+        className={`relative transition-transform duration-200 ease-out flex flex-col bg-[#FFFDF9] dark:bg-[#0c0c12] overflow-hidden ${
           isLandscapeRotated ? "z-20 shadow-2xl" : "w-full h-full flex-1"
         }`}
       >
-        {/* Top Browser Tab & URL Control Bar so mobile/portrait always shows full browser controls */}
-        {useCdpChromeView && renderBrowserChromeHeader()}
+        {/* Unified Customized Browser Tab Strip & Omnibox Header on BOTH Web and Phone */}
+        {renderBrowserChromeHeader()}
 
-        {/* Main Viewport Area */}
-        <div
-          className={`relative flex-1 w-full min-h-0 bg-[#0c0c12] flex ${
-            isNativeStreamActive && isPortraitViewport && !isLandscapeRotated
-              ? "overflow-x-auto overflow-y-hidden items-stretch justify-start"
-              : "overflow-hidden items-center justify-center"
-          }`}
-        >
-          {error && (
-            <>
-              <AgentBrowserPreview
-                agentId={agentId}
-                pageId={selectedTabId || undefined}
-                enabled
-                isLandscapeRotated={isLandscapeRotated}
-                interactive={mode === "collab"}
+        {/* Main Webpage Viewport Area (Full Height & Interactive Touch/Mouse/Pinch-Zoom) */}
+        <div className="relative flex-1 w-full min-h-0 bg-[#F8F3ED] dark:bg-[#0a0a0f] overflow-hidden flex items-center justify-center">
+          {isFindOpen && (
+            <div
+              data-testid="agent-browser-find-bar"
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-2 right-5 z-40 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white dark:bg-[#292a2d] border border-black/15 dark:border-white/15 shadow-xl"
+            >
+              <Search size={13} className="text-[#5f6368] dark:text-[#9aa0a6] shrink-0 mr-0.5" />
+              <input
+                ref={findInputRef}
+                type="text"
+                value={findQuery}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFindQuery(val);
+                  void handleFindInPage(val, "next");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleFindInPage(findQuery, e.shiftKey ? "prev" : "next");
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setIsFindOpen(false);
+                    void handleFindInPage("", "next");
+                  }
+                }}
+                placeholder="Tìm trong trang..."
+                className="w-36 sm:w-44 bg-transparent text-[12px] font-sans text-[#202124] dark:text-[#e8eaed] placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6] outline-none"
               />
-              <div className="absolute top-2 left-2 right-2 sm:right-auto z-20 px-2 py-1.5 rounded bg-black/80 border border-white/10 text-[11px] font-mono text-white! keep-white flex flex-wrap items-center gap-1.5">
-                {error === "auth" ? (
-                  <>
-                    <span>Ảnh tĩnh (preview) · đăng nhập tài khoản admin hoặc nhập operator key để mở desktop trực tiếp</span>
-                    <form
-                      className="flex items-center gap-1"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const v = (new FormData(e.currentTarget).get("k") as string || "").trim();
-                        if (v) { operatorKey.set(v); setAttempt((a) => a + 1); }
-                      }}
-                    >
-                      <input name="k" type="password" autoComplete="off" placeholder="operator key" aria-label="Operator key"
-                        className="h-6 w-36 px-1.5 rounded bg-white/10 border border-white/20 text-[11px] text-white! keep-white placeholder:text-neutral-400 outline-none" />
-                      <button type="submit" className="h-6 px-2 rounded bg-[#f8a87c] text-black! text-[11px] font-semibold">Mở desktop</button>
-                    </form>
-                  </>
-                ) : `Desktop unavailable (${error}) · showing preview`}
+              <div className="h-3.5 w-[1px] bg-black/10 dark:bg-white/10 mx-0.5" />
+              <button
+                type="button"
+                onClick={() => void handleFindInPage(findQuery, "prev")}
+                className="h-6 w-6 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-white flex items-center justify-center cursor-pointer"
+                title="Kết quả trước (Shift+Enter)"
+                aria-label="Previous match"
+              >
+                <ChevronUp size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleFindInPage(findQuery, "next")}
+                className="h-6 w-6 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-white flex items-center justify-center cursor-pointer"
+                title="Kết quả tiếp theo (Enter)"
+                aria-label="Next match"
+              >
+                <ChevronDown size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFindOpen(false);
+                  void handleFindInPage("", "next");
+                }}
+                className="h-6 w-6 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-white flex items-center justify-center cursor-pointer"
+                title="Đóng tìm kiếm (Esc)"
+                aria-label="Close find bar"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
+          {streamEngineMode === "webrtc" && webrtcSignedUrl && webrtcStatus === "ready" && (
+            <div
+              data-testid="agent-browser-webrtc-container"
+              className="absolute inset-0 z-30 w-full h-full bg-[#0a0a0f] flex flex-col overflow-hidden"
+            >
+              <iframe
+                key={`webrtc-${agentId}-${attempt}-${reloadKey}`}
+                data-testid="agent-browser-webrtc-iframe"
+                src={webrtcSignedUrl}
+                title={`${title || "Agent Browser"} · WebRTC H.264/VP9 Stream`}
+                allow="autoplay; clipboard-read; clipboard-write; fullscreen; microphone; camera"
+                className="w-full h-full border-0 flex-1 bg-[#0a0a0f]"
+              />
+              <div className="pointer-events-none absolute bottom-2.5 right-3 z-40 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-emerald-500/35 text-[10px] font-mono text-emerald-300 shadow-lg">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>WebRTC H.264/VP9 · 60fps</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleStreamEngine("canvas")}
+                  className="pointer-events-auto ml-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                  title="Chuyển về CDP GPU Canvas"
+                >
+                  CDP GPU
+                </button>
               </div>
-            </>
+            </div>
           )}
-          {isNativeStreamActive && (
-            <iframe
-              ref={iframeRef}
-              key={`${src}#${attempt}#${reloadKey}`}
-              src={src}
-              title={title}
-              onLoad={() => {
-                setIframeLoaded(true);
-                focusAgentBrowser(agentId).catch(() => {});
-                setTimeout(() => {
-                  focusAgentBrowser(agentId).catch(() => {});
-                }, 900);
-              }}
-              className={`w-full h-full border-0 bg-black z-10 transition-opacity duration-200 ease-out ${
-                isResizing ? "pointer-events-none select-none" : ""
-              }`}
-              allow="clipboard-read; clipboard-write; fullscreen; keyboard-map; autoplay"
-              allowFullScreen
-              style={{
-                touchAction: "manipulation",
-                width:
-                  isNativeStreamActive && isPortraitViewport && !isLandscapeRotated
-                    ? `${Math.max(boxSize.w, Math.round(boxSize.h * 1.6))}px`
-                    : "100%",
-                minWidth:
-                  isNativeStreamActive && isPortraitViewport && !isLandscapeRotated
-                    ? `${Math.max(boxSize.w, Math.round(boxSize.h * 1.6))}px`
-                    : "100%",
-                height: "100%",
-              }}
-            />
+
+          {streamEngineMode === "webrtc" && webrtcStatus === "connecting" && (
+            <div
+              data-testid="agent-browser-webrtc-connecting"
+              className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-md border border-emerald-500/30 text-[11px] font-mono text-emerald-300 shadow-xl"
+            >
+              <Loader2 size={12} className="animate-spin text-emerald-400" />
+              <span>Đang kết nối luồng WebRTC H.264/VP9 60fps...</span>
+            </div>
           )}
-          {/* Live interactive CDP viewport with full height & touch-to-CDP click/scroll */}
+
           <AgentBrowserPreview
             agentId={agentId}
-            pageId={selectedTabId || undefined}
-            enabled={!error && (!isNativeStreamActive || !iframeLoaded)}
-            intervalMs={900}
-            liveWs={!isNativeStreamActive}
+            pageId={selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined}
+            enabled={boxSize.w > 0 && boxSize.h > 0}
+            intervalMs={800}
+            liveWs={true}
+            refreshSignal={attempt}
             isLandscapeRotated={isLandscapeRotated}
-            interactive={!isNativeStreamActive && mode === "collab"}
+            interactive={true}
+            mobileInputMode={mobileInteractionMode}
+            viewportWidth={Math.min(1920, isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w))}
+            viewportHeight={Math.min(1080, isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76))}
+            frameCacheRef={tabFrameCacheRef}
+            externalZoomPercent={browserZoomPercent}
+            onZoomStep={handleZoomStep}
+            onBrowserShortcut={(shortcut) => {
+              if (shortcut === "new_tab") void handleCreateNewTab();
+              else if (shortcut === "close_tab" && selectedTabId) void handleCloseTab(selectedTabId);
+              else if (shortcut === "focus_address") addressInputRef.current?.focus();
+              else if (shortcut === "reload") void handleBrowserAction("reload");
+              else if (shortcut === "back") void handleBrowserAction("back");
+              else if (shortcut === "forward") void handleBrowserAction("forward");
+              else if (shortcut === "find") handleToggleFindBar();
+            }}
           />
         </div>
-      </div>
-
-      <div className="fixed lg:absolute bottom-3 right-3 flex items-center gap-1.5 z-30">
-        {src && !error && (
-          <button
-            type="button"
-            data-testid="computer-native-mode-toggle"
-            onClick={() => {
-              triggerHaptic(10);
-              setPreferNativeDesktop((prev) => !prev);
-            }}
-            className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
-            title={preferNativeDesktop ? "Đang dùng luồng Native Selkies Desktop (bấm để chuyển sang CDP Tab View)" : "Đang dùng CDP Tab View (bấm để mở Native Selkies Desktop trực tiếp)"}
-          >
-            {preferNativeDesktop ? "Native Desktop" : "CDP View"}
-          </button>
-        )}
-        <button
-          type="button"
-          data-testid="computer-rotate-landscape-btn"
-          onClick={() => {
-            triggerHaptic(12);
-            setIsLandscapeRotated((r) => !r);
-          }}
-          className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer flex items-center gap-1"
-          title={isLandscapeRotated ? "Chuyển về khung dọc (Portrait)" : "Xoay ngang màn hình 90° (Full Landscape)"}
-        >
-          <RotateCw size={12} className={isLandscapeRotated ? "rotate-90 text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
-          <span>{isLandscapeRotated ? "Khung dọc" : "Xoay ngang"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode((m) => (m === "shared" ? "collab" : "shared"))}
-          className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
-          title={mode === "shared" ? "Take control (mouse/keyboard)" : "Switch to watch-only"}
-        >
-          {mode === "shared" ? "Control" : "Watch only"}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            focusAgentBrowser(agentId).catch(() => {});
-            setAttempt((a) => a + 1);
-            refreshBrowserTabs();
-          }}
-          className="px-2.5 py-1 rounded-lg bg-white/95 dark:bg-[#1c1c26]/95 hover:bg-white dark:hover:bg-[#252534] border border-slate-300 dark:border-[#2c2c3e] text-[11px] font-mono text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white shadow-md transition-colors cursor-pointer"
-          title="Reconnect stream & fit window"
-        >
-          Reconnect
-        </button>
       </div>
     </div>
   );
 }
 
-/** Live CDP screencast + screenshot preview with full-height & landscape 90deg support and direct touch interaction. */
+/** Live CDP screencast + Zero-Re-Render Direct DOM Pipeline + Kinetic Inertia Scrolling + 2-Mode Mobile Touch vs Trackpad Mouse. */
 function AgentBrowserPreview({
   agentId,
   pageId,
   enabled,
   intervalMs = 5000,
   liveWs = false,
+  refreshSignal = 0,
   isLandscapeRotated = false,
   interactive = false,
+  mobileInputMode = "touch",
+  viewportWidth = 0,
+  viewportHeight = 0,
+  frameCacheRef,
+  externalZoomPercent = 100,
+  onZoomStep,
+  onBrowserShortcut,
 }: {
   agentId: string;
   pageId?: string;
   enabled: boolean;
   intervalMs?: number;
   liveWs?: boolean;
+  refreshSignal?: number;
   isLandscapeRotated?: boolean;
   interactive?: boolean;
+  mobileInputMode?: "touch" | "mouse";
+  viewportWidth?: number;
+  viewportHeight?: number;
+  frameCacheRef?: React.MutableRefObject<Record<string, string>>;
+  externalZoomPercent?: number;
+  onZoomStep?: (deltaPct: number | "reset") => void;
+  onBrowserShortcut?: (shortcut: "new_tab" | "close_tab" | "focus_address" | "reload" | "back" | "forward" | "find") => void;
 }) {
-  const [src, setSrc] = useState<string>("");
+  const cacheKey = `${agentId}:${pageId || "default"}`;
+  const initCached = frameCacheRef?.current?.[cacheKey];
+  const validInitCached = initCached && initCached !== "__loading__" ? initCached : "";
+  const [hasFrame, setHasFrame] = useState<boolean>(() => Boolean(validInitCached));
   const [failures, setFailures] = useState(0);
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const [tapRipple, setTapRipple] = useState<{ x: number; y: number; id: number } | null>(null);
+
+  const cursorNormRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const zoomScaleRef = useRef<number>(1);
+  const zoomPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const predictiveScrollOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const predictiveResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const viewportBoxRef = useRef<HTMLDivElement>(null);
+  const zoomWrapperRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const touchDragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const cursorElRef = useRef<HTMLDivElement>(null);
+  const scrollbarTrackRef = useRef<HTMLDivElement>(null);
+  const scrollbarThumbRef = useRef<HTMLDivElement>(null);
+  const scrollMetricsRef = useRef<{ scrollTop: number; scrollHeight: number; clientHeight: number }>({
+    scrollTop: 0,
+    scrollHeight: 0,
+    clientHeight: 0,
+  });
+  const scrollbarDragRef = useRef<{
+    active: boolean;
+    pointerId: number;
+    startY: number;
+    startRatio: number;
+    lastSentAt: number;
+  }>({ active: false, pointerId: -1, startY: 0, startRatio: 0, lastSentAt: 0 });
+  const currentSrcRef = useRef<string>(validInitCached);
+  const naturalDimsRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+  const usingCanvasGpuRef = useRef<boolean>(false);
+  const lastCacheSnapshotAtRef = useRef<number>(0);
+  const remoteCursorStyleRef = useRef<string>("default");
 
-  useEffect(() => {
-    if (!enabled) return;
-    let alive = true;
-    let current = "";
-    let fails = 0;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let ws: WebSocket | null = null;
-    let wsConnected = false;
-    const ctrl = new AbortController();
-    setFailures(0);
-
-    if (liveWs && typeof WebSocket !== "undefined") {
-      try {
-        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1280, pageId));
-        ws.onmessage = (ev) => {
-          if (!alive || typeof ev.data !== "string") return;
-          try {
-            const msg = JSON.parse(ev.data);
-            const b64 = msg?.params?.data;
-            if (typeof b64 === "string" && b64.length > 0) {
-              wsConnected = true;
-              fails = 0;
-              setFailures(0);
-              if (current) {
-                URL.revokeObjectURL(current);
-                current = "";
-              }
-              setSrc(`data:image/jpeg;base64,${b64}`);
-            }
-          } catch {}
-        };
-        ws.onclose = () => { wsConnected = false; };
-        ws.onerror = () => { wsConnected = false; };
-      } catch {}
+  const applyScrollMetricsDom = (scrollTop: number, scrollHeight: number, clientHeight: number) => {
+    scrollMetricsRef.current = { scrollTop, scrollHeight, clientHeight };
+    const trackEl = scrollbarTrackRef.current;
+    const thumbEl = scrollbarThumbRef.current;
+    if (!trackEl || !thumbEl) return;
+    if (scrollHeight <= clientHeight + 4 || clientHeight <= 0) {
+      trackEl.style.opacity = "0";
+      trackEl.style.pointerEvents = "none";
+      return;
     }
+    trackEl.style.opacity = "1";
+    trackEl.style.pointerEvents = "auto";
+    const ratioVisible = Math.max(0.08, Math.min(1, clientHeight / scrollHeight));
+    const maxScroll = Math.max(1, scrollHeight - clientHeight);
+    const scrollProgress = Math.max(0, Math.min(1, scrollTop / maxScroll));
+    const thumbHeightPct = ratioVisible * 100;
+    const thumbTopPct = scrollProgress * (100 - thumbHeightPct);
+    thumbEl.style.height = `${thumbHeightPct.toFixed(2)}%`;
+    thumbEl.style.top = `${thumbTopPct.toFixed(2)}%`;
+  };
 
-    const tick = async () => {
-      if (!document.hidden && !wsConnected) {
-        try {
-          const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), pageId), ctrl.signal);
-          if (!alive) { URL.revokeObjectURL(next); return; }
-          if (current) URL.revokeObjectURL(current);
-          current = next;
-          fails = 0;
-          setSrc(next);
-          setFailures(0);
-        } catch {
-          if (!alive) return;
-          fails += 1;
-          setFailures(fails);
-        }
-      }
-      if (alive) timer = setTimeout(tick, fails > 2 ? 20000 : (wsConnected ? 5000 : intervalMs));
-    };
-    tick();
-    return () => {
-      alive = false;
-      ctrl.abort();
-      if (timer) clearTimeout(timer);
-      if (ws) {
-        try { ws.close(); } catch {}
-      }
-      if (current) URL.revokeObjectURL(current);
-    };
-  }, [enabled, agentId, pageId, intervalMs, liveWs, refreshNonce]);
+  const applyRemoteCursorStyleDom = (rawCursor: string) => {
+    const rawClean = (rawCursor || "default").trim().toLowerCase();
+    // Sanitize any custom url(...) CSS cursor down to its standard keyword fallback so local browser CSS cursor always renders natively
+    const keywordMatch = rawClean.match(/(pointer|text|vertical-text|grab|grabbing|move|not-allowed|no-drop|wait|progress|crosshair|help|zoom-in|zoom-out|col-resize|row-resize|ew-resize|ns-resize|nesw-resize|nwse-resize|n-resize|e-resize|s-resize|w-resize|ne-resize|nw-resize|se-resize|sw-resize|cell|copy|alias|context-menu|none|default)\s*$/i);
+    const clean = keywordMatch ? keywordMatch[1].toLowerCase() : (rawClean === "auto" || !rawClean ? "default" : rawClean);
+    remoteCursorStyleRef.current = clean;
+    if (viewportBoxRef.current) {
+      viewportBoxRef.current.style.cursor = clean;
+      viewportBoxRef.current.setAttribute("data-remote-cursor", clean);
+    }
+    if (zoomWrapperRef.current) {
+      zoomWrapperRef.current.style.cursor = clean;
+    }
+    const curEl = cursorElRef.current;
+    if (curEl) {
+      curEl.setAttribute("data-cursor-kind", clean);
+      const arrowSvg = curEl.querySelector('[data-cursor-shape="arrow"]') as HTMLElement | null;
+      const pointerSvg = curEl.querySelector('[data-cursor-shape="pointer"]') as HTMLElement | null;
+      const textSvg = curEl.querySelector('[data-cursor-shape="text"]') as HTMLElement | null;
+      const isPointer = clean === "pointer" || clean === "grab" || clean === "grabbing";
+      const isText = clean === "text" || clean === "vertical-text";
+      if (arrowSvg) arrowSvg.style.display = !isPointer && !isText ? "block" : "none";
+      if (pointerSvg) pointerSvg.style.display = isPointer ? "block" : "none";
+      if (textSvg) textSvg.style.display = isText ? "block" : "none";
+    }
+  };
 
-  const computeNormalizedCoords = (clientX: number, clientY: number): { xRatio: number; yRatio: number } | null => {
-    const img = imgRef.current;
-    if (!img) return null;
-    const rect = img.getBoundingClientRect();
+  const lastTouchHandledAtRef = useRef<number>(0);
+  const lastHoverMoveSentAtRef = useRef<number>(0);
+  const lastTouchScrollSentAtRef = useRef<number>(0);
+  const inertiaRafRef = useRef<number>(0);
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+
+  const gestureRef = useRef<{
+    type: "single" | "pinch";
+    nativeDrag?: boolean;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    lastTime: number;
+    vx: number;
+    vy: number;
+    startCursorX: number;
+    startCursorY: number;
+    startDist: number;
+    startScale: number;
+    startPanX: number;
+    startPanY: number;
+    startCenterX: number;
+    startCenterY: number;
+    moved: boolean;
+  } | null>(null);
+
+  const currentBlobUrlRef = useRef<string>("");
+  const wsConnectedRef = useRef<boolean>(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const latestViewportRef = useRef<{ w: number; h: number }>({ w: viewportWidth, h: viewportHeight });
+  latestViewportRef.current = { w: viewportWidth, h: viewportHeight };
+
+  // Direct DOM updater for zoom + sub-frame predictive scroll offset (0ms 60Hz/120Hz local GPU smoothness!)
+  const applyZoomTransformDom = () => {
+    const el = zoomWrapperRef.current;
+    if (!el) return;
+    const s = zoomScaleRef.current;
+    const p = zoomPanRef.current;
+    if (Math.abs(s - 1) > 0.005 || Math.abs(p.x) > 0.5 || Math.abs(p.y) > 0.5) {
+      el.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
+    } else {
+      el.style.transform = "none";
+    }
+  };
+
+  const applyPredictiveScrollOffset = (_dx: number, _dy: number) => {
+    // Keep canvas rock-steady at (0, 0) without synthetic CSS translation so scroll frames never rubber-band or show empty borders
+  };
+
+  const getRenderedImageBox = () => {
+    const activeSurface =
+      usingCanvasGpuRef.current && canvasRef.current
+        ? canvasRef.current
+        : imgRef.current;
+    if (!activeSurface) return null;
+    const rect = activeSurface.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
 
-    if (isLandscapeRotated) {
-      // When rotated +90deg CW:
-      // Image X axis (left->right) runs along Screen Y axis (top->bottom)
-      // Image Y axis (top->bottom) runs along Screen X axis (right->left)
-      return {
-        xRatio: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
-        yRatio: Math.max(0, Math.min(1, (rect.right - clientX) / rect.width)),
-      };
-    }
-
-    // Account for object-contain letterboxing when in portrait mode
-    const natW = img.naturalWidth || 1280;
-    const natH = img.naturalHeight || 800;
+    const natW = naturalDimsRef.current.w || imgRef.current?.naturalWidth || rect.width;
+    const natH = naturalDimsRef.current.h || imgRef.current?.naturalHeight || rect.height;
     const imgAspect = natW / natH;
     const boxAspect = rect.width / rect.height;
 
@@ -5859,14 +6934,465 @@ function AgentBrowserPreview({
     let offsetX = 0;
     let offsetY = 0;
 
-    if (imgAspect > boxAspect) {
-      renderW = rect.width;
-      renderH = rect.width / imgAspect;
-      offsetY = (rect.height - renderH) / 2;
+    if (!isLandscapeRotated && Math.abs(imgAspect - boxAspect) > 0.04) {
+      if (imgAspect > boxAspect) {
+        renderW = rect.width;
+        renderH = rect.width / imgAspect;
+        offsetY = (rect.height - renderH) / 2;
+      } else {
+        renderH = rect.height;
+        renderW = rect.height * imgAspect;
+        offsetX = (rect.width - renderW) / 2;
+      }
+    }
+
+    return { rect, renderW, renderH, offsetX, offsetY };
+  };
+
+  // Direct DOM updater for virtual mouse cursor (0 React re-renders during 120Hz touch/mouse move!)
+  const applyCursorDom = () => {
+    const curEl = cursorElRef.current;
+    if (!curEl) return;
+    const { x, y } = cursorNormRef.current;
+    const box = getRenderedImageBox();
+    if (box && box.rect.width > 0 && box.rect.height > 0) {
+      curEl.style.left = `${(box.offsetX + x * box.renderW).toFixed(1)}px`;
+      curEl.style.top = `${(box.offsetY + y * box.renderH).toFixed(1)}px`;
     } else {
-      renderH = rect.height;
-      renderW = rect.height * imgAspect;
-      offsetX = (rect.width - renderW) / 2;
+      curEl.style.left = `${(x * 100).toFixed(2)}%`;
+      curEl.style.top = `${(y * 100).toFixed(2)}%`;
+    }
+  };
+
+  const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+
+  // Hardware GPU ImageBitmap -> <canvas> painter (0 Blob URL churn, 0 DOM layout recalc, VSync-locked 60fps!)
+  const paintImageBitmapDom = (bitmap: ImageBitmap, backingBlob?: Blob) => {
+    try {
+      const cvs = canvasRef.current;
+      if (!cvs) {
+        bitmap.close();
+        return;
+      }
+      if (cvs.width !== bitmap.width || cvs.height !== bitmap.height) {
+        cvs.width = bitmap.width;
+        cvs.height = bitmap.height;
+        canvasCtxRef.current = null;
+      }
+      naturalDimsRef.current = { w: bitmap.width, h: bitmap.height };
+      if (!canvasCtxRef.current) {
+        canvasCtxRef.current = cvs.getContext("2d", { alpha: false, desynchronized: true });
+        if (canvasCtxRef.current) {
+          canvasCtxRef.current.imageSmoothingEnabled = true;
+          canvasCtxRef.current.imageSmoothingQuality = "medium";
+        }
+      }
+      const ctx = canvasCtxRef.current;
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0);
+      }
+
+      usingCanvasGpuRef.current = true;
+      cvs.style.display = "block";
+      if (imgRef.current) {
+        imgRef.current.style.display = "none";
+      }
+      if (!hasFrame) {
+        setHasFrame(true);
+      }
+      if (mobileInputMode === "mouse") {
+        applyCursorDom();
+      }
+      // Throttled snapshot cache for 0ms tab switch (creates a Blob URL at most once every 1200ms, zero GC pressure during active scrolling!)
+      const nowMs = performance.now();
+      if (backingBlob && frameCacheRef?.current && (!frameCacheRef.current[cacheKey] || frameCacheRef.current[cacheKey] === "__loading__" || nowMs - lastCacheSnapshotAtRef.current > 1200)) {
+        lastCacheSnapshotAtRef.current = nowMs;
+        const prevCached = frameCacheRef.current[cacheKey];
+        const nextUrl = URL.createObjectURL(backingBlob);
+        currentSrcRef.current = nextUrl;
+        frameCacheRef.current[cacheKey] = nextUrl;
+        if (prevCached && prevCached !== nextUrl && prevCached.startsWith("blob:")) {
+          setTimeout(() => {
+            const stillUsed = frameCacheRef?.current && Object.values(frameCacheRef.current).includes(prevCached);
+            if (!stillUsed) {
+              try { URL.revokeObjectURL(prevCached); } catch {}
+            }
+          }, 250);
+        }
+      }
+    } finally {
+      try { bitmap.close(); } catch {}
+    }
+  };
+
+  // Direct DOM updater for video stream frame fallback (0 React re-renders + safe Blob URL lifecycle!)
+  const commitStreamFrameDom = (nextUrl: string) => {
+    const prevUrl = currentSrcRef.current;
+    currentSrcRef.current = nextUrl;
+    if (frameCacheRef?.current) {
+      frameCacheRef.current[cacheKey] = nextUrl;
+    }
+    usingCanvasGpuRef.current = false;
+    if (canvasRef.current) {
+      canvasRef.current.style.display = "none";
+    }
+    if (imgRef.current) {
+      imgRef.current.style.display = "block";
+      imgRef.current.src = nextUrl;
+    }
+    if (!hasFrame) {
+      setHasFrame(true);
+    }
+    if (prevUrl && prevUrl !== nextUrl && prevUrl.startsWith("blob:")) {
+      setTimeout(() => {
+        // Only revoke if no tab in frameCacheRef is still referencing prevUrl
+        const stillCached = frameCacheRef?.current && Object.values(frameCacheRef.current).includes(prevUrl);
+        if (!stillCached && currentSrcRef.current !== prevUrl) {
+          try { URL.revokeObjectURL(prevUrl); } catch {}
+        }
+      }, 250);
+    }
+  };
+
+  useEffect(() => {
+    if (mobileInputMode === "touch") {
+      zoomScaleRef.current = externalZoomPercent / 100;
+      if (Math.abs(zoomScaleRef.current - 1) <= 0.01) {
+        zoomPanRef.current = { x: 0, y: 0 };
+      }
+      applyZoomTransformDom();
+    } else {
+      requestAnimationFrame(applyCursorDom);
+    }
+  }, [mobileInputMode, externalZoomPercent]);
+
+  const sendRealtimeInput = async (payload: BrowserInputPayload) => {
+    const sock = wsRef.current;
+    if (sock && sock.readyState === WebSocket.OPEN) {
+      try {
+        sock.send(JSON.stringify(payload));
+        return;
+      } catch {}
+    }
+    await dispatchAgentBrowserInput(agentId, payload);
+  };
+
+  // 0. Instant 0ms Frame Restore on Tab Switch from in-memory tab cache
+  useLayoutEffect(() => {
+    const cached = frameCacheRef?.current?.[cacheKey];
+    if (cached && cached !== "__loading__") {
+      currentSrcRef.current = cached;
+      usingCanvasGpuRef.current = false;
+      if (canvasRef.current) {
+        canvasRef.current.style.display = "none";
+      }
+      if (imgRef.current) {
+        imgRef.current.style.display = "block";
+        imgRef.current.src = cached;
+      }
+      setHasFrame(true);
+    }
+  }, [cacheKey]);
+
+  // 1. Persistent 30fps Full HD WebSocket Screencast with Zero-Re-Render DOM Swap & Adaptive Network Quality
+  useEffect(() => {
+    if (!enabled || !liveWs || typeof WebSocket === "undefined") return;
+    let alive = true;
+    let ws: WebSocket | null = null;
+    let rafId = 0;
+    let pendingDataUrl: string | null = null;
+    let pendingBlob: Blob | null = null;
+    let lastPaintedAt = 0;
+    let currentAbrQuality = detectAdaptiveNetworkQuality();
+    let lastQualitySentAt = 0;
+    let ewmaKbps = 2500;
+    let lastFrameAt = performance.now();
+    const supportsGpuBitmap = typeof window !== "undefined" && typeof window.createImageBitmap === "function";
+    wsConnectedRef.current = false;
+
+    let isDecodingFrame = false;
+    const flushPendingFrame = () => {
+      rafId = 0;
+      if (!alive || (!pendingBlob && !pendingDataUrl) || isDecodingFrame) return;
+      if (true) {
+        if (pendingBlob && supportsGpuBitmap) {
+          const blobToDecode = pendingBlob;
+          pendingBlob = null;
+          isDecodingFrame = true;
+          window.createImageBitmap(blobToDecode)
+            .then((bitmap) => {
+              isDecodingFrame = false;
+              if (!alive) {
+                try { bitmap.close(); } catch {}
+                return;
+              }
+              lastPaintedAt = performance.now();
+              paintImageBitmapDom(bitmap, blobToDecode);
+              if ((pendingBlob || pendingDataUrl) && !rafId) {
+                rafId = requestAnimationFrame(flushPendingFrame);
+              }
+            })
+            .catch(() => {
+              isDecodingFrame = false;
+              if (!alive) return;
+              const fallbackUrl = URL.createObjectURL(blobToDecode);
+              lastPaintedAt = performance.now();
+              commitStreamFrameDom(fallbackUrl);
+              if ((pendingBlob || pendingDataUrl) && !rafId) {
+                rafId = requestAnimationFrame(flushPendingFrame);
+              }
+            });
+          return;
+        }
+
+        const nextUrl = pendingDataUrl || (pendingBlob ? URL.createObjectURL(pendingBlob) : "");
+        pendingDataUrl = null;
+        pendingBlob = null;
+        if (!nextUrl) return;
+        isDecodingFrame = true;
+
+        const preImg = new Image();
+        preImg.decoding = "async";
+        preImg.src = nextUrl;
+        const finishDecode = () => {
+          isDecodingFrame = false;
+          if (!alive) return;
+          lastPaintedAt = performance.now();
+          commitStreamFrameDom(nextUrl);
+          if ((pendingBlob || pendingDataUrl) && !rafId) {
+            rafId = requestAnimationFrame(flushPendingFrame);
+          }
+        };
+        if (typeof preImg.decode === "function") {
+          preImg.decode().then(finishDecode).catch(finishDecode);
+        } else {
+          finishDecode();
+        }
+      } else {
+        rafId = requestAnimationFrame(flushPendingFrame);
+      }
+    };
+
+    const onNetChange = () => {
+      if (!alive || !ws || ws.readyState !== WebSocket.OPEN) return;
+      const targetQ = detectAdaptiveNetworkQuality();
+      if (Math.abs(targetQ - currentAbrQuality) >= 6) {
+        currentAbrQuality = targetQ;
+        try {
+          ws.send(JSON.stringify({ action: "quality", width: targetQ, pageId }));
+        } catch {}
+      }
+    };
+
+    const conn = typeof navigator !== "undefined" ? (navigator as any).connection : null;
+    try { conn?.addEventListener?.("change", onNetChange); } catch {}
+
+    try {
+      const { w: initW, h: initH } = latestViewportRef.current;
+      lastSentViewportRef.current = { pageId, w: Math.round(initW), h: Math.round(initH) };
+      ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH));
+      ws.binaryType = "blob";
+      wsRef.current = ws;
+      ws.onopen = () => {
+        if (!alive) return;
+        wsConnectedRef.current = true;
+        lastFrameAt = performance.now();
+      };
+      ws.onmessage = (ev) => {
+        if (!alive) return;
+        try {
+          let nextFrameUrl = "";
+          let nextFrameBlob: Blob | null = null;
+          let frameBytes = 0;
+
+          if (ev.data instanceof Blob) {
+            frameBytes = ev.data.size;
+            if (frameBytes <= 0) return;
+            if (supportsGpuBitmap) {
+              nextFrameBlob = ev.data;
+            } else {
+              nextFrameUrl = URL.createObjectURL(ev.data);
+            }
+          } else if (ev.data instanceof ArrayBuffer) {
+            frameBytes = ev.data.byteLength;
+            if (frameBytes <= 0) return;
+            const b = new Blob([ev.data], { type: "image/jpeg" });
+            if (supportsGpuBitmap) {
+              nextFrameBlob = b;
+            } else {
+              nextFrameUrl = URL.createObjectURL(b);
+            }
+          } else if (typeof ev.data === "string") {
+            const msg = JSON.parse(ev.data);
+            if (msg?.method === "Page.cursorChanged" && typeof msg?.params?.cursor === "string") {
+              applyRemoteCursorStyleDom(msg.params.cursor);
+              return;
+            }
+            if (msg?.method === "Page.scrollMetrics" && msg?.params) {
+              const st = Number(msg.params.scrollTop) || 0;
+              const sh = Number(msg.params.scrollHeight) || 0;
+              const ch = Number(msg.params.clientHeight) || 0;
+              if (!scrollbarDragRef.current.active) {
+                applyScrollMetricsDom(st, sh, ch);
+              }
+              return;
+            }
+            const b64 = msg?.params?.data;
+            if (typeof b64 === "string" && b64.length > 0) {
+              frameBytes = b64.length * 0.75;
+              nextFrameUrl = `data:image/jpeg;base64,${b64}`;
+            }
+          }
+
+          if (nextFrameBlob || nextFrameUrl) {
+            wsConnectedRef.current = true;
+            setFailures(0);
+
+            const now = performance.now();
+            const dtMs = Math.max(8, now - lastFrameAt);
+            lastFrameAt = now;
+            if (dtMs < 400 && frameBytes > 0) {
+              const instantKbps = (frameBytes * 8) / dtMs;
+              ewmaKbps = ewmaKbps * 0.75 + instantKbps * 0.25;
+              if (now - lastQualitySentAt > 420 && ws && ws.readyState === WebSocket.OPEN) {
+                // Smoothly map ewmaKbps (500..3000 kbps) into JPEG quality (55..75) for 60fps active frame pumping over 4G mobile links
+                const desiredQ = Math.max(55, Math.min(75, Math.round(55 + ((ewmaKbps - 500) / 2500) * 20)));
+                if (Math.abs(desiredQ - currentAbrQuality) >= 3) {
+                  currentAbrQuality = desiredQ;
+                  lastQualitySentAt = now;
+                  try {
+                    ws.send(JSON.stringify({ action: "quality", width: desiredQ, pageId }));
+                  } catch {}
+                }
+              }
+            }
+
+            if (nextFrameBlob) {
+              pendingBlob = nextFrameBlob;
+            } else {
+              if (pendingDataUrl && pendingDataUrl.startsWith("blob:")) {
+                try { URL.revokeObjectURL(pendingDataUrl); } catch {}
+              }
+              pendingDataUrl = nextFrameUrl;
+            }
+            if (!rafId) {
+              rafId = requestAnimationFrame(flushPendingFrame);
+            }
+          }
+        } catch {}
+      };
+      ws.onclose = () => { wsConnectedRef.current = false; if (wsRef.current === ws) wsRef.current = null; };
+      ws.onerror = () => { wsConnectedRef.current = false; };
+    } catch {}
+
+    return () => {
+      alive = false;
+      wsConnectedRef.current = false;
+      if (rafId) cancelAnimationFrame(rafId);
+      try { conn?.removeEventListener?.("change", onNetChange); } catch {}
+      if (wsRef.current === ws) wsRef.current = null;
+      if (ws) {
+        try { ws.close(); } catch {}
+      }
+    };
+  }, [enabled, agentId, pageId, liveWs]);
+
+  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number }>({ pageId: undefined, w: 0, h: 0 });
+
+  // 2. Smooth Debounced Viewport Synchronization
+  useEffect(() => {
+    if (!enabled || !liveWs || viewportWidth < 320 || viewportHeight < 240) return;
+    const w = Math.round(viewportWidth);
+    const h = Math.round(viewportHeight);
+    const prev = lastSentViewportRef.current;
+    if (prev.pageId === pageId && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      lastSentViewportRef.current = { pageId, w, h };
+      const sock = wsRef.current;
+      if (sock && sock.readyState === WebSocket.OPEN) {
+        try {
+          sock.send(JSON.stringify({ action: "resize", width: w, height: h, pageId }));
+          return;
+        } catch {}
+      }
+      void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [enabled, agentId, pageId, viewportWidth, viewportHeight]);
+
+  // 3. Fallback HTTP Frame Poll ONLY when liveWs is false or if WebSocket fails to connect within 1400ms
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    let fails = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ctrl = new AbortController();
+
+    const fetchFallbackFrame = async () => {
+      if (document.hidden || wsConnectedRef.current) return;
+      try {
+        const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), pageId), ctrl.signal);
+        if (!alive || wsConnectedRef.current) {
+          URL.revokeObjectURL(next);
+          return;
+        }
+        if (currentBlobUrlRef.current) {
+          URL.revokeObjectURL(currentBlobUrlRef.current);
+        }
+        currentBlobUrlRef.current = next;
+        fails = 0;
+        commitStreamFrameDom(next);
+        setFailures(0);
+      } catch {
+        if (!alive) return;
+        fails += 1;
+        setFailures(fails);
+      }
+    };
+
+    const loop = async () => {
+      await fetchFallbackFrame();
+      if (alive) {
+        timer = setTimeout(loop, fails > 2 ? 15000 : (wsConnectedRef.current ? 5000 : intervalMs));
+      }
+    };
+
+    if (!liveWs) {
+      void fetchFallbackFrame();
+      timer = setTimeout(loop, intervalMs);
+    } else {
+      timer = setTimeout(loop, 1400);
+    }
+
+    return () => {
+      alive = false;
+      ctrl.abort();
+      if (timer) clearTimeout(timer);
+    };
+  }, [enabled, agentId, pageId, intervalMs, liveWs, refreshNonce, refreshSignal]);
+
+  useEffect(() => {
+    return () => {
+      if (inertiaRafRef.current) cancelAnimationFrame(inertiaRafRef.current);
+      if (currentBlobUrlRef.current) {
+        URL.revokeObjectURL(currentBlobUrlRef.current);
+        currentBlobUrlRef.current = "";
+      }
+    };
+  }, []);
+
+  const computeNormalizedCoords = (clientX: number, clientY: number): { xRatio: number; yRatio: number } | null => {
+    const box = getRenderedImageBox();
+    if (!box) return null;
+    const { rect, renderW, renderH, offsetX, offsetY } = box;
+
+    if (isLandscapeRotated) {
+      return {
+        xRatio: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+        yRatio: Math.max(0, Math.min(1, (rect.right - clientX) / rect.width)),
+      };
     }
 
     const xInImg = clientX - rect.left - offsetX;
@@ -5878,97 +7404,899 @@ function AgentBrowserPreview({
     };
   };
 
-  const handleInteractiveTap = async (e: React.MouseEvent<HTMLImageElement>) => {
-    if (!interactive) return;
-    const coords = computeNormalizedCoords(e.clientX, e.clientY);
-    if (!coords) return;
-
-    setTapRipple({ x: e.clientX, y: e.clientY, id: Date.now() });
-    await dispatchAgentBrowserInput(agentId, {
-      action: "click",
-      xRatio: coords.xRatio,
-      yRatio: coords.yRatio,
-      pageId,
-    });
-    setTimeout(() => setRefreshNonce((n) => n + 1), 160);
-    setTimeout(() => setRefreshNonce((n) => n + 1), 550);
+  // Stop any ongoing kinetic inertia scroll when user touches screen
+  const stopInertiaScroll = () => {
+    if (inertiaRafRef.current) {
+      cancelAnimationFrame(inertiaRafRef.current);
+      inertiaRafRef.current = 0;
+    }
   };
 
-  const handleWheelScroll = async (e: React.WheelEvent<HTMLImageElement>) => {
-    if (!interactive) return;
-    const coords = computeNormalizedCoords(e.clientX, e.clientY) || { xRatio: 0.5, yRatio: 0.5 };
-    await dispatchAgentBrowserInput(agentId, {
+  // Start smooth iOS-like kinetic momentum scrolling after finger release in Touch Mode
+  const startInertiaScroll = (initialVx: number, initialVy: number, anchorXRatio: number, anchorYRatio: number) => {
+    stopInertiaScroll();
+    let vx = initialVx;
+    let vy = initialVy;
+    let lastTs = performance.now();
+
+    const stepInertia = () => {
+      const now = performance.now();
+      const dt = Math.min(32, Math.max(8, now - lastTs));
+      lastTs = now;
+
+      // Exponential friction decay (0.92 per 16ms frame)
+      const decay = Math.pow(0.92, dt / 16.67);
+      vx *= decay;
+      vy *= decay;
+
+      const stepDx = vx * dt;
+      const stepDy = vy * dt;
+
+      if (Math.hypot(stepDx, stepDy) < 0.8) {
+        inertiaRafRef.current = 0;
+        return;
+      }
+
+      const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.8 : -stepDx * 1.8;
+      const scrollDeltaY = isLandscapeRotated ? stepDx * 1.8 : -stepDy * 1.8;
+      void sendRealtimeInput({
+        action: "scroll",
+        xRatio: anchorXRatio,
+        yRatio: anchorYRatio,
+        deltaX: scrollDeltaX,
+        deltaY: scrollDeltaY,
+        pageId,
+      });
+
+      inertiaRafRef.current = requestAnimationFrame(stepInertia);
+    };
+
+    inertiaRafRef.current = requestAnimationFrame(stepInertia);
+  };
+
+  const beginSingleGesture = (clientX: number, clientY: number, pointerType = "touch") => {
+    stopInertiaScroll();
+    const startCoords = computeNormalizedCoords(clientX, clientY);
+    const isScrollbarZone = Boolean(startCoords && startCoords.xRatio >= 0.965);
+    const useNativeMouseDrag = isScrollbarZone || (pointerType === "mouse" && mobileInputMode === "touch");
+
+    gestureRef.current = {
+      type: "single",
+      nativeDrag: useNativeMouseDrag,
+      startX: clientX,
+      startY: clientY,
+      lastX: clientX,
+      lastY: clientY,
+      lastTime: performance.now(),
+      vx: 0,
+      vy: 0,
+      startCursorX: cursorNormRef.current.x,
+      startCursorY: cursorNormRef.current.y,
+      startDist: 0,
+      startScale: zoomScaleRef.current,
+      startPanX: zoomPanRef.current.x,
+      startPanY: zoomPanRef.current.y,
+      startCenterX: clientX,
+      startCenterY: clientY,
+      moved: false,
+    };
+
+    if (useNativeMouseDrag && startCoords) {
+      void sendRealtimeInput({
+        action: "mousedown",
+        xRatio: startCoords.xRatio,
+        yRatio: startCoords.yRatio,
+        pageId,
+      });
+    }
+  };
+
+  const beginPinchGesture = (x1: number, y1: number, x2: number, y2: number) => {
+    stopInertiaScroll();
+    const dist = Math.max(10, Math.hypot(x1 - x2, y1 - y2));
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    gestureRef.current = {
+      type: "pinch",
+      startX: cx,
+      startY: cy,
+      lastX: cx,
+      lastY: cy,
+      lastTime: performance.now(),
+      vx: 0,
+      vy: 0,
+      startCursorX: cursorNormRef.current.x,
+      startCursorY: cursorNormRef.current.y,
+      startDist: dist,
+      startScale: zoomScaleRef.current,
+      startPanX: zoomPanRef.current.x,
+      startPanY: zoomPanRef.current.y,
+      startCenterX: cx,
+      startCenterY: cy,
+      moved: true,
+    };
+  };
+
+  const movePinchGesture = (x1: number, y1: number, x2: number, y2: number) => {
+    const g = gestureRef.current;
+    if (!g || g.type !== "pinch") return;
+    const dist = Math.hypot(x1 - x2, y1 - y2);
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    const nextScale = Math.max(1, Math.min(3.5, g.startScale * (dist / g.startDist)));
+    zoomScaleRef.current = nextScale;
+    if (nextScale > 1.02) {
+      zoomPanRef.current = {
+        x: g.startPanX + (cx - g.startCenterX),
+        y: g.startPanY + (cy - g.startCenterY),
+      };
+    } else {
+      zoomPanRef.current = { x: 0, y: 0 };
+    }
+    applyZoomTransformDom();
+    g.moved = true;
+  };
+
+  const moveSingleGesture = (clientX: number, clientY: number) => {
+    const g = gestureRef.current;
+    if (!g || g.type !== "single") return;
+    const now = performance.now();
+    const dt = Math.max(4, now - g.lastTime);
+    const totalMove = Math.hypot(clientX - g.startX, clientY - g.startY);
+
+    if (g.nativeDrag) {
+      if (totalMove > 2) g.moved = true;
+      if (now - lastTouchScrollSentAtRef.current >= 14) {
+        lastTouchScrollSentAtRef.current = now;
+        const coords = computeNormalizedCoords(clientX, clientY);
+        if (coords) {
+          void sendRealtimeInput({
+            action: "mousemove_drag",
+            xRatio: coords.xRatio,
+            yRatio: coords.yRatio,
+            pageId,
+          });
+        }
+      }
+      return;
+    }
+
+    if (mobileInputMode === "mouse") {
+      // MODE 2: MOUSE (TRACKPAD) MODE — Direct DOM cursor update (0ms lag, 0 React re-renders!)
+      if (totalMove > 4) g.moved = true;
+      const rect = viewportBoxRef.current?.getBoundingClientRect();
+      const w = Math.max(180, rect?.width || 360);
+      const h = Math.max(180, rect?.height || 600);
+      const sensitivity = 1.25;
+      const dxNorm = ((clientX - g.startX) / w) * sensitivity;
+      const dyNorm = ((clientY - g.startY) / h) * sensitivity;
+
+      const nx = Math.max(0, Math.min(1, isLandscapeRotated ? g.startCursorX + dyNorm : g.startCursorX + dxNorm));
+      const ny = Math.max(0, Math.min(1, isLandscapeRotated ? g.startCursorY - dxNorm : g.startCursorY + dyNorm));
+      cursorNormRef.current = { x: nx, y: ny };
+      applyCursorDom();
+
+      if (now - lastHoverMoveSentAtRef.current > 24) {
+        lastHoverMoveSentAtRef.current = now;
+        void sendRealtimeInput({
+          action: "move",
+          xRatio: nx,
+          yRatio: ny,
+          pageId,
+        });
+      }
+    } else {
+      // MODE 1: TOUCH MODE — Real-time 60Hz drag scroll + velocity tracking for kinetic inertia!
+      if (totalMove > 4) {
+        g.moved = true;
+        const stepDx = clientX - g.lastX;
+        const stepDy = clientY - g.lastY;
+        if (Math.hypot(stepDx, stepDy) > 0.3) {
+          const instVx = stepDx / dt;
+          const instVy = stepDy / dt;
+          g.vx = g.vx * 0.55 + instVx * 0.45;
+          g.vy = g.vy * 0.55 + instVy * 0.45;
+        }
+        if (now - lastTouchScrollSentAtRef.current >= 12 && Math.hypot(stepDx, stepDy) > 0.5) {
+          lastTouchScrollSentAtRef.current = now;
+          g.lastX = clientX;
+          g.lastY = clientY;
+          g.lastTime = now;
+          const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
+          const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.65 : -stepDx * 1.65;
+          const scrollDeltaY = isLandscapeRotated ? stepDx * 1.65 : -stepDy * 1.65;
+          // Optimistically update scrollbar thumb & predictive GPU offset during touch scroll
+          const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
+          if (scrollHeight > clientHeight) {
+            const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + scrollDeltaY));
+            applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
+          }
+          applyPredictiveScrollOffset(scrollDeltaX, scrollDeltaY);
+          void sendRealtimeInput({
+            action: "scroll",
+            xRatio: coords.xRatio,
+            yRatio: coords.yRatio,
+            deltaX: scrollDeltaX,
+            deltaY: scrollDeltaY,
+            pageId,
+          });
+        }
+      }
+    }
+  };
+
+  const endGesture = async (endClientX?: number, endClientY?: number) => {
+    const g = gestureRef.current;
+    gestureRef.current = null;
+    if (!g || g.type === "pinch") return;
+
+    if (g.nativeDrag) {
+      const coords = computeNormalizedCoords(endClientX ?? g.lastX, endClientY ?? g.lastY) ||
+        computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
+      await sendRealtimeInput({
+        action: "mouseup",
+        xRatio: coords.xRatio,
+        yRatio: coords.yRatio,
+        pageId,
+      });
+      return;
+    }
+
+    if (mobileInputMode === "mouse") {
+      const cur = cursorNormRef.current;
+      if (!g.moved) {
+        await sendRealtimeInput({
+          action: "click",
+          xRatio: cur.x,
+          yRatio: cur.y,
+          pageId,
+        });
+      } else {
+        await sendRealtimeInput({
+          action: "move",
+          xRatio: cur.x,
+          yRatio: cur.y,
+          pageId,
+        });
+      }
+      return;
+    }
+
+    if (!g.moved) {
+      const coords = computeNormalizedCoords(g.startX, g.startY);
+      if (coords) {
+        await sendRealtimeInput({
+          action: "click",
+          xRatio: coords.xRatio,
+          yRatio: coords.yRatio,
+          pageId,
+        });
+      }
+    } else if (Math.hypot(g.vx, g.vy) > 0.18) {
+      // Launch smooth kinetic momentum scroll when user flicks finger!
+      const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
+      startInertiaScroll(g.vx, g.vy, coords.xRatio, coords.yRatio);
+    }
+  };
+
+  const handlersRef = useRef({ beginSingleGesture, beginPinchGesture, moveSingleGesture, movePinchGesture, endGesture, interactive });
+  handlersRef.current = { beginSingleGesture, beginPinchGesture, moveSingleGesture, movePinchGesture, endGesture, interactive };
+
+  useEffect(() => {
+    const el = viewportBoxRef.current;
+    if (!el) return;
+
+    const onNativeTouchStart = (ev: TouchEvent) => {
+      if (!handlersRef.current.interactive) return;
+      ev.stopPropagation();
+      lastTouchHandledAtRef.current = Date.now();
+      if (ev.touches.length >= 2) {
+        ev.preventDefault();
+        handlersRef.current.beginPinchGesture(
+          ev.touches[0].clientX,
+          ev.touches[0].clientY,
+          ev.touches[1].clientX,
+          ev.touches[1].clientY
+        );
+      } else if (ev.touches.length === 1) {
+        handlersRef.current.beginSingleGesture(ev.touches[0].clientX, ev.touches[0].clientY);
+      }
+    };
+
+    const onNativeTouchMove = (ev: TouchEvent) => {
+      if (!handlersRef.current.interactive) return;
+      ev.stopPropagation();
+      ev.preventDefault();
+      lastTouchHandledAtRef.current = Date.now();
+      if (ev.touches.length >= 2) {
+        if (gestureRef.current?.type !== "pinch") {
+          handlersRef.current.beginPinchGesture(
+            ev.touches[0].clientX,
+            ev.touches[0].clientY,
+            ev.touches[1].clientX,
+            ev.touches[1].clientY
+          );
+        } else {
+          handlersRef.current.movePinchGesture(
+            ev.touches[0].clientX,
+            ev.touches[0].clientY,
+            ev.touches[1].clientX,
+            ev.touches[1].clientY
+          );
+        }
+      } else if (ev.touches.length === 1) {
+        handlersRef.current.moveSingleGesture(ev.touches[0].clientX, ev.touches[0].clientY);
+      }
+    };
+
+    const onNativeTouchEnd = (ev: TouchEvent) => {
+      if (!handlersRef.current.interactive) return;
+      ev.stopPropagation();
+      lastTouchHandledAtRef.current = Date.now();
+      if (ev.touches.length === 0) {
+        void handlersRef.current.endGesture();
+      }
+    };
+
+    el.addEventListener("touchstart", onNativeTouchStart, { passive: false });
+    el.addEventListener("touchmove", onNativeTouchMove, { passive: false });
+    el.addEventListener("touchend", onNativeTouchEnd, { passive: false });
+    el.addEventListener("touchcancel", onNativeTouchEnd, { passive: false });
+
+    return () => {
+      el.removeEventListener("touchstart", onNativeTouchStart);
+      el.removeEventListener("touchmove", onNativeTouchMove);
+      el.removeEventListener("touchend", onNativeTouchEnd);
+      el.removeEventListener("touchcancel", onNativeTouchEnd);
+    };
+  }, [enabled]);
+
+  const wheelAccumRef = useRef<{ targetDx: number; targetDy: number; xRatio: number; yRatio: number; raf: number }>({
+    targetDx: 0,
+    targetDy: 0,
+    xRatio: 0.5,
+    yRatio: 0.5,
+    raf: 0,
+  });
+
+  const stepSmoothWheelScroll = () => {
+    const state = wheelAccumRef.current;
+    const remX = state.targetDx;
+    const remY = state.targetDy;
+
+    if (Math.hypot(remX, remY) < 0.8) {
+      if (Math.hypot(remX, remY) > 0.1) {
+        void sendRealtimeInput({
+          action: "scroll",
+          xRatio: state.xRatio,
+          yRatio: state.yRatio,
+          deltaX: remX,
+          deltaY: remY,
+          pageId,
+        });
+      }
+      state.targetDx = 0;
+      state.targetDy = 0;
+      state.raf = 0;
+      return;
+    }
+
+    // Immediate 1:1 pass-through for high-frequency trackpads (<= 48px) and 55% exponential glide for discrete mouse wheel notches
+    const isSmallTrackpadStep = Math.hypot(remX, remY) <= 48;
+    const stepX = isSmallTrackpadStep ? remX : remX * 0.55;
+    const stepY = isSmallTrackpadStep ? remY : remY * 0.55;
+    state.targetDx -= stepX;
+    state.targetDy -= stepY;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
+    if (scrollHeight > clientHeight) {
+      const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + stepY));
+      applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
+    }
+
+    applyPredictiveScrollOffset(stepX, stepY);
+    void sendRealtimeInput({
       action: "scroll",
-      xRatio: coords.xRatio,
-      yRatio: coords.yRatio,
-      deltaX: e.deltaX,
-      deltaY: e.deltaY,
+      xRatio: state.xRatio,
+      yRatio: state.yRatio,
+      deltaX: stepX,
+      deltaY: stepY,
       pageId,
     });
-    setTimeout(() => setRefreshNonce((n) => n + 1), 160);
+
+    if (Math.hypot(state.targetDx, state.targetDy) >= 0.8) {
+      state.raf = requestAnimationFrame(stepSmoothWheelScroll);
+    } else {
+      state.targetDx = 0;
+      state.targetDy = 0;
+      state.raf = 0;
+    }
+  };
+
+  const handleWheelScroll = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!interactive) return;
+    stopInertiaScroll();
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.12 : 0.89;
+      const nextScale = Math.max(1, Math.min(3.5, zoomScaleRef.current * factor));
+      zoomScaleRef.current = nextScale;
+      if (nextScale <= 1.02) {
+        zoomPanRef.current = { x: 0, y: 0 };
+      }
+      applyZoomTransformDom();
+      return;
+    }
+
+    const coords = computeNormalizedCoords(e.clientX, e.clientY) || { xRatio: 0.5, yRatio: 0.5 };
+    // Normalize deltaMode (1 = lines -> ~36px, 2 = pages -> ~720px, 0 = pixels)
+    const modeMultiplier = e.deltaMode === 1 ? 36 : e.deltaMode === 2 ? 720 : 1;
+    const rawDx = e.shiftKey && Math.abs(e.deltaX) < 1 ? e.deltaY : e.deltaX;
+    const rawDy = e.shiftKey && Math.abs(e.deltaX) < 1 ? 0 : e.deltaY;
+    wheelAccumRef.current.targetDx += rawDx * modeMultiplier;
+    wheelAccumRef.current.targetDy += rawDy * modeMultiplier;
+    wheelAccumRef.current.xRatio = coords.xRatio;
+    wheelAccumRef.current.yRatio = coords.yRatio;
+
+    if (!wheelAccumRef.current.raf) {
+      wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+    }
   };
 
   if (!enabled) return null;
   return (
-    <>
-      {src && (
-        <>
-          <img
-            ref={imgRef}
-            key={`${agentId}-${pageId || "default"}`}
-            src={src}
-            alt="Agent browser preview"
-            draggable={false}
-            onClick={handleInteractiveTap}
-            onWheel={handleWheelScroll}
-            onTouchStart={(e) => {
-              if (!interactive || e.touches.length !== 1) return;
-              touchDragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            }}
-            onTouchEnd={async (e) => {
-              if (!interactive || !touchDragStartRef.current || e.changedTouches.length !== 1) return;
-              const start = touchDragStartRef.current;
-              touchDragStartRef.current = null;
-              const end = e.changedTouches[0];
-              const dx = end.clientX - start.x;
-              const dy = end.clientY - start.y;
-              if (Math.hypot(dx, dy) > 24) {
-                const coords = computeNormalizedCoords(start.x, start.y) || { xRatio: 0.5, yRatio: 0.5 };
-                const scrollDeltaX = isLandscapeRotated ? -dy * 1.6 : -dx * 1.6;
-                const scrollDeltaY = isLandscapeRotated ? dx * 1.6 : -dy * 1.6;
-                await dispatchAgentBrowserInput(agentId, {
-                  action: "scroll",
+    <div
+      ref={viewportBoxRef}
+      data-no-swipe="true"
+      tabIndex={interactive ? 0 : -1}
+      onPointerDown={(e) => {
+        if (!interactive) return;
+        viewportBoxRef.current?.focus({ preventScroll: true });
+        if (e.pointerType === "touch" && Date.now() - lastTouchHandledAtRef.current < 400) return;
+
+        if (e.pointerType === "mouse" && mobileInputMode === "mouse") {
+          const coords = computeNormalizedCoords(e.clientX, e.clientY);
+          if (coords) {
+            cursorNormRef.current = { x: coords.xRatio, y: coords.yRatio };
+            applyCursorDom();
+          }
+        }
+
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const pts = Array.from(activePointersRef.current.values());
+        if (pts.length >= 2) {
+          beginPinchGesture(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
+        } else if (pts.length === 1) {
+          beginSingleGesture(e.clientX, e.clientY, e.pointerType || "mouse");
+        }
+      }}
+      onPointerMove={(e) => {
+        if (!interactive) return;
+        if (e.pointerType === "touch" && Date.now() - lastTouchHandledAtRef.current < 400) return;
+
+        if (!activePointersRef.current.has(e.pointerId)) {
+          if (e.pointerType === "mouse") {
+            const coords = computeNormalizedCoords(e.clientX, e.clientY);
+            if (coords) {
+              if (mobileInputMode === "mouse") {
+                cursorNormRef.current = { x: coords.xRatio, y: coords.yRatio };
+                applyCursorDom();
+              }
+              const now = Date.now();
+              if (now - lastHoverMoveSentAtRef.current >= 16) {
+                lastHoverMoveSentAtRef.current = now;
+                void sendRealtimeInput({
+                  action: "move",
                   xRatio: coords.xRatio,
                   yRatio: coords.yRatio,
-                  deltaX: scrollDeltaX,
-                  deltaY: scrollDeltaY,
                   pageId,
                 });
-                setTimeout(() => setRefreshNonce((n) => n + 1), 160);
-                setTimeout(() => setRefreshNonce((n) => n + 1), 550);
               }
+            }
+          }
+          return;
+        }
+
+        activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const pts = Array.from(activePointersRef.current.values());
+        if (pts.length >= 2) {
+          if (gestureRef.current?.type !== "pinch") {
+            beginPinchGesture(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
+          } else {
+            movePinchGesture(pts[0].x, pts[0].y, pts[1].x, pts[1].y);
+          }
+        } else if (pts.length === 1) {
+          moveSingleGesture(e.clientX, e.clientY);
+        }
+      }}
+      onPointerUp={(e) => {
+        if (!interactive) return;
+        try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+        activePointersRef.current.delete(e.pointerId);
+        if (e.pointerType === "touch" && Date.now() - lastTouchHandledAtRef.current < 400) return;
+        if (activePointersRef.current.size === 0) {
+          void endGesture(e.clientX, e.clientY);
+        }
+      }}
+      onPointerCancel={(e) => {
+        activePointersRef.current.delete(e.pointerId);
+        if (activePointersRef.current.size === 0) {
+          gestureRef.current = null;
+        }
+      }}
+      onWheel={handleWheelScroll}
+      onDoubleClick={(e) => {
+        if (!interactive) return;
+        const coords = computeNormalizedCoords(e.clientX, e.clientY);
+        if (coords) {
+          void sendRealtimeInput({
+            action: "dblclick",
+            xRatio: coords.xRatio,
+            yRatio: coords.yRatio,
+            pageId,
+          });
+        }
+      }}
+      onContextMenu={(e) => {
+        if (!interactive) return;
+        e.preventDefault();
+        const coords = computeNormalizedCoords(e.clientX, e.clientY);
+        if (coords) {
+          void sendRealtimeInput({
+            action: "rightclick",
+            xRatio: coords.xRatio,
+            yRatio: coords.yRatio,
+            pageId,
+          });
+        }
+      }}
+      onPaste={async (e) => {
+        if (!interactive) return;
+        const pasted = e.clipboardData?.getData("text");
+        if (pasted) {
+          e.preventDefault();
+          await sendRealtimeInput({ action: "type", text: pasted, pageId });
+        }
+      }}
+      onKeyDown={async (e) => {
+        if (!interactive) return;
+
+        // 1. Browser Wrapper Keyboard Shortcuts (Ctrl/Cmd + T/W/L/R/F/+/-/0, Alt + Left/Right, F5)
+        if (e.ctrlKey || e.metaKey) {
+          const kLower = e.key.toLowerCase();
+          if (kLower === "l") {
+            e.preventDefault();
+            onBrowserShortcut?.("focus_address");
+            return;
+          }
+          if (kLower === "r") {
+            e.preventDefault();
+            onBrowserShortcut?.("reload");
+            return;
+          }
+          if (kLower === "f") {
+            e.preventDefault();
+            onBrowserShortcut?.("find");
+            return;
+          }
+          if (kLower === "t") {
+            e.preventDefault();
+            onBrowserShortcut?.("new_tab");
+            return;
+          }
+          if (kLower === "w") {
+            e.preventDefault();
+            onBrowserShortcut?.("close_tab");
+            return;
+          }
+          if (e.key === "=" || e.key === "+") {
+            e.preventDefault();
+            onZoomStep?.(15);
+            return;
+          }
+          if (e.key === "-") {
+            e.preventDefault();
+            onZoomStep?.(-15);
+            return;
+          }
+          if (e.key === "0") {
+            e.preventDefault();
+            onZoomStep?.("reset");
+            return;
+          }
+        }
+        if (e.key === "F5") {
+          e.preventDefault();
+          onBrowserShortcut?.("reload");
+          return;
+        }
+        if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+          e.preventDefault();
+          onBrowserShortcut?.(e.key === "ArrowLeft" ? "back" : "forward");
+          return;
+        }
+
+        // 2. Space / Shift+Space Page Down / Page Up (when not typing inside a text input/editable element)
+        if ((e.key === " " || e.code === "Space") && remoteCursorStyleRef.current !== "text") {
+          e.preventDefault();
+          const pageDelta = e.shiftKey ? -520 : 520;
+          wheelAccumRef.current.targetDy += pageDelta;
+          wheelAccumRef.current.xRatio = 0.5;
+          wheelAccumRef.current.yRatio = 0.5;
+          if (!wheelAccumRef.current.raf) {
+            wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+          }
+          return;
+        }
+
+        // 3. Navigation & Editing Keys
+        if (["Enter", "Backspace", "Escape", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Delete", "Home", "End", "PageUp", "PageDown"].includes(e.key)) {
+          e.preventDefault();
+          if (e.key === "Home" && remoteCursorStyleRef.current !== "text") {
+            await sendRealtimeInput({ action: "scroll_to", yRatio: 0, pageId });
+          } else if (e.key === "End" && remoteCursorStyleRef.current !== "text") {
+            await sendRealtimeInput({ action: "scroll_to", yRatio: 1, pageId });
+          } else if (e.key === "ArrowDown" || e.key === "PageDown") {
+            wheelAccumRef.current.targetDy += e.key === "PageDown" ? 520 : 140;
+            wheelAccumRef.current.xRatio = 0.5;
+            wheelAccumRef.current.yRatio = 0.5;
+            if (!wheelAccumRef.current.raf) {
+              wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+            }
+          } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+            wheelAccumRef.current.targetDy += e.key === "PageUp" ? -520 : -140;
+            wheelAccumRef.current.xRatio = 0.5;
+            wheelAccumRef.current.yRatio = 0.5;
+            if (!wheelAccumRef.current.raf) {
+              wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+            }
+          } else if (e.key === "ArrowLeft" && remoteCursorStyleRef.current !== "text") {
+            wheelAccumRef.current.targetDx -= 140;
+            if (!wheelAccumRef.current.raf) {
+              wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+            }
+          } else if (e.key === "ArrowRight" && remoteCursorStyleRef.current !== "text") {
+            wheelAccumRef.current.targetDx += 140;
+            if (!wheelAccumRef.current.raf) {
+              wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+            }
+          } else {
+            await sendRealtimeInput({ action: "key", key: e.key, pageId });
+          }
+        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          await sendRealtimeInput({ action: "type", text: e.key, pageId });
+        }
+      }}
+      className="relative w-full h-full overflow-hidden flex items-center justify-center bg-[#FFFDF9] dark:bg-[#0a0a0f] outline-none select-none touch-none"
+    >
+      <div
+        ref={zoomWrapperRef}
+        style={{ transformOrigin: "center center", willChange: "transform" }}
+        className={`relative w-full h-full flex items-center justify-center pointer-events-none ${hasFrame ? "" : "hidden"}`}
+      >
+        <canvas
+          ref={canvasRef}
+          data-testid="agent-browser-gpu-canvas"
+          style={{
+            display: "none",
+            imageRendering: "-webkit-optimize-contrast",
+            willChange: "contents",
+          }}
+          className="select-none z-[12] block w-full h-full object-contain [backface-visibility:hidden] [transform:translateZ(0)] pointer-events-none"
+        />
+        <img
+          ref={imgRef}
+          src={currentSrcRef.current || undefined}
+          alt="Agent browser preview"
+          decoding="sync"
+          draggable={false}
+          onLoad={(e) => {
+            const el = e.currentTarget;
+            if (el.naturalWidth > 0 && el.naturalHeight > 0) {
+              naturalDimsRef.current = { w: el.naturalWidth, h: el.naturalHeight };
+            }
+            if (mobileInputMode === "mouse") applyCursorDom();
+          }}
+          style={{
+            imageRendering: "-webkit-optimize-contrast",
+            willChange: "contents",
+          }}
+          className="select-none z-[12] block w-full h-full object-contain [backface-visibility:hidden] [transform:translateZ(0)] pointer-events-none"
+        />
+
+        {/* Virtual Mouse Pointer Overlay when in Mouse Mode (Direct DOM position & shape update -> 0 React re-renders!) */}
+        {mobileInputMode === "mouse" && (
+          <div
+            ref={cursorElRef}
+            data-testid="virtual-mouse-cursor"
+            data-cursor-kind={remoteCursorStyleRef.current}
+            style={{
+              left: "50%",
+              top: "50%",
+              willChange: "left, top",
             }}
-            className={`select-none z-[12] w-full h-full ${
-              interactive ? "cursor-pointer pointer-events-auto" : "pointer-events-none"
-            } ${
-              isLandscapeRotated ? "object-fill" : "object-contain"
-            }`}
+            className="pointer-events-none absolute z-40 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
+          >
+            {/* Default Arrow Cursor */}
+            <svg data-cursor-shape="arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ display: "block" }}>
+              <path
+                d="M1 1L8.5 18L11.2 11.2L18 8.5L1 1Z"
+                fill="#ffffff"
+                stroke="#111827"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {/* Link / Button Pointer Hand Cursor */}
+            <svg data-cursor-shape="pointer" width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ display: "none" }}>
+              <path
+                d="M9 11V4.5C9 3.67 9.67 3 10.5 3C11.33 3 12 3.67 12 4.5V10H13.5C14.33 10 15 10.67 15 11.5V10.5C15 9.67 15.67 9 16.5 9C17.33 9 18 9.67 18 10.5V11.5C18 10.67 18.67 10 19.5 10C20.33 10 21 10.67 21 11.5V16C21 19.31 18.31 22 15 22H12.5C10.5 22 8.8 20.9 7.8 19.2L4.4 13.8C3.9 13 4.1 12 4.9 11.5C5.7 11 6.7 11.2 7.2 12L9 14.5V11Z"
+                fill="#ffffff"
+                stroke="#1a73e8"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+            </svg>
+            {/* Text Input I-Beam Cursor */}
+            <svg data-cursor-shape="text" width="20" height="22" viewBox="0 0 24 24" fill="none" style={{ display: "none" }}>
+              <path
+                d="M8 4H16M8 20H16M12 4V20"
+                stroke="#ffffff"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M8 4H16M8 20H16M12 4V20"
+                stroke="#111827"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Interactive Synchronized Browser Scrollbar Overlay (Click track or drag thumb for instant 60fps scrolling) */}
+      {interactive && (
+        <div
+          ref={scrollbarTrackRef}
+          data-testid="agent-browser-interactive-scrollbar"
+          style={{ opacity: 0, pointerEvents: "none" }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            stopInertiaScroll();
+            const trackEl = scrollbarTrackRef.current;
+            const thumbEl = scrollbarThumbRef.current;
+            if (!trackEl || !thumbEl) return;
+            try { trackEl.setPointerCapture(e.pointerId); } catch {}
+            const trackRect = trackEl.getBoundingClientRect();
+            const thumbRect = thumbEl.getBoundingClientRect();
+            if (trackRect.height <= 0) return;
+
+            const isClickOnThumb = e.clientY >= thumbRect.top - 4 && e.clientY <= thumbRect.bottom + 4;
+            const usableTrack = Math.max(1, trackRect.height - thumbRect.height);
+            let startRatio = (thumbRect.top - trackRect.top) / usableTrack;
+
+            const rawYRatio = Math.max(0, Math.min(1, (e.clientY - trackRect.top) / Math.max(1, trackRect.height)));
+            void sendRealtimeInput({
+              action: "mousedown",
+              xRatio: 0.995,
+              yRatio: rawYRatio,
+              pageId,
+            });
+
+            if (!isClickOnThumb) {
+              // Jump thumb center to clicked track position
+              const targetThumbTop = Math.max(0, Math.min(usableTrack, e.clientY - trackRect.top - thumbRect.height / 2));
+              startRatio = targetThumbTop / usableTrack;
+              const { scrollHeight, clientHeight } = scrollMetricsRef.current;
+              if (scrollHeight > clientHeight) {
+                applyScrollMetricsDom(startRatio * (scrollHeight - clientHeight), scrollHeight, clientHeight);
+              }
+              void sendRealtimeInput({
+                action: "scroll_to",
+                yRatio: Math.max(0, Math.min(1, startRatio)),
+                pageId,
+              });
+            }
+
+            scrollbarDragRef.current = {
+              active: true,
+              pointerId: e.pointerId,
+              startY: e.clientY,
+              startRatio: Math.max(0, Math.min(1, startRatio)),
+              lastSentAt: performance.now(),
+            };
+          }}
+          onPointerMove={(e) => {
+            const drag = scrollbarDragRef.current;
+            if (!drag.active || drag.pointerId !== e.pointerId) return;
+            e.stopPropagation();
+            e.preventDefault();
+            const trackEl = scrollbarTrackRef.current;
+            const thumbEl = scrollbarThumbRef.current;
+            if (!trackEl || !thumbEl) return;
+            const trackRect = trackEl.getBoundingClientRect();
+            const thumbRect = thumbEl.getBoundingClientRect();
+            const usableTrack = Math.max(1, trackRect.height - thumbRect.height);
+            const deltaRatio = (e.clientY - drag.startY) / usableTrack;
+            const nextRatio = Math.max(0, Math.min(1, drag.startRatio + deltaRatio));
+            const rawYRatio = Math.max(0, Math.min(1, (e.clientY - trackRect.top) / Math.max(1, trackRect.height)));
+
+            const { scrollHeight, clientHeight } = scrollMetricsRef.current;
+            if (scrollHeight > clientHeight) {
+              applyScrollMetricsDom(nextRatio * (scrollHeight - clientHeight), scrollHeight, clientHeight);
+            }
+
+            const now = performance.now();
+            if (now - drag.lastSentAt >= 12) {
+              drag.lastSentAt = now;
+              void sendRealtimeInput({
+                action: "mousemove_drag",
+                xRatio: 0.995,
+                yRatio: rawYRatio,
+                pageId,
+              });
+              void sendRealtimeInput({
+                action: "scroll_to",
+                yRatio: nextRatio,
+                pageId,
+              });
+            }
+          }}
+          onPointerUp={(e) => {
+            const drag = scrollbarDragRef.current;
+            if (!drag.active || drag.pointerId !== e.pointerId) return;
+            e.stopPropagation();
+            try { scrollbarTrackRef.current?.releasePointerCapture(e.pointerId); } catch {}
+            scrollbarDragRef.current.active = false;
+            const trackEl = scrollbarTrackRef.current;
+            const thumbEl = scrollbarThumbRef.current;
+            if (trackEl && thumbEl) {
+              const trackRect = trackEl.getBoundingClientRect();
+              const thumbRect = thumbEl.getBoundingClientRect();
+              const usableTrack = Math.max(1, trackRect.height - thumbRect.height);
+              const finalRatio = Math.max(0, Math.min(1, drag.startRatio + (e.clientY - drag.startY) / usableTrack));
+              const rawYRatio = Math.max(0, Math.min(1, (e.clientY - trackRect.top) / Math.max(1, trackRect.height)));
+              void sendRealtimeInput({
+                action: "mouseup",
+                xRatio: 0.995,
+                yRatio: rawYRatio,
+                pageId,
+              });
+              void sendRealtimeInput({
+                action: "scroll_to",
+                yRatio: finalRatio,
+                pageId,
+              });
+            }
+          }}
+          onPointerCancel={(e) => {
+            if (scrollbarDragRef.current.pointerId === e.pointerId) {
+              scrollbarDragRef.current.active = false;
+            }
+          }}
+          className="group/sbar absolute top-0 right-0 bottom-0 w-4 bg-transparent z-30 cursor-pointer select-none touch-none"
+          title="Kéo hoặc nhấp để cuộn trang (Scrollbar)"
+        >
+          <div
+            ref={scrollbarThumbRef}
+            data-testid="agent-browser-scrollbar-thumb"
+            style={{ top: "0%", height: "25%" }}
+            className="absolute left-0 right-0 min-h-[28px] bg-transparent pointer-events-none"
           />
-          {interactive && tapRipple && (
-            <span
-              key={tapRipple.id}
-              style={{ position: "fixed", left: `${tapRipple.x - 14}px`, top: `${tapRipple.y - 14}px` }}
-              className="pointer-events-none z-50 h-7 w-7 rounded-full border-2 border-[#f8a87c] bg-[#f8a87c]/25 animate-ping"
-            />
-          )}
-        </>
-      )}
-      {!src && (
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-slate-500 dark:text-neutral-500 bg-white dark:bg-black pointer-events-none select-none z-[12]">
-          {failures > 0 ? "Waiting for the agent's browser…" : "Loading preview…"}
         </div>
       )}
-    </>
+
+      {!hasFrame && (
+        <div className="absolute inset-0 flex items-center justify-center text-[12px] font-mono text-[#78716c] dark:text-neutral-500 bg-[#FFFDF9] dark:bg-[#0c0c12] pointer-events-none select-none z-[12]">
+          {failures > 0 ? "Đang kết nối trình duyệt của Agent…" : "Đang tải trang web…"}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -7756,7 +10084,7 @@ ${targetItem.text}`;
 
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFileResult[]>([]);
-  const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string } | null>(null);
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<{ url: string; name: string; variants?: AttachmentFormatVariant[]; activeExt?: string } | null>(null);
   const [previewModalFile, setPreviewModalFile] = useState<ParsedChatAttachmentItem | null>(null);
   const [previewModalText, setPreviewModalText] = useState<string | null>(null);
   const [previewModalStructured, setPreviewModalStructured] = useState<UniversalFilePreviewResponse | null>(null);
@@ -7894,7 +10222,7 @@ ${targetItem.text}`;
       setLightboxRotation(0);
       setLightboxMeta(null);
       setShowLightboxMeta(false);
-      setLightboxImageUrl({ url: resolvedAtt.previewUrl, name: resolvedAtt.fileName });
+      setLightboxImageUrl({ url: resolvedAtt.previewUrl, name: resolvedAtt.fileName, variants: resolvedAtt.variants, activeExt: resolvedAtt.ext });
       return;
     }
 
@@ -8305,29 +10633,54 @@ ${targetItem.text}`;
   const composerFormRef = useRef<HTMLFormElement>(null);
   const [composerWidth, setComposerWidth] = useState<number>(() => typeof window !== "undefined" ? window.innerWidth : 600);
 
+  const [domWrappedMultiline, setDomWrappedMultiline] = useState<boolean>(false);
+
   useEffect(() => {
-    const el = composerFormRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
+    if (typeof window === "undefined") return;
     const updateWidth = () => {
-      if (composerFormRef.current) {
-        const w = composerFormRef.current.clientWidth || composerFormRef.current.getBoundingClientRect().width;
+      const formEl = composerFormRef.current;
+      if (formEl) {
+        const w = formEl.clientWidth || formEl.getBoundingClientRect().width;
         if (w > 0) setComposerWidth(w);
       }
     };
     updateWidth();
-    const ro = new ResizeObserver(() => {
-      updateWidth();
-    });
-    ro.observe(el);
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(() => {
+        updateWidth();
+      });
+      if (composerFormRef.current) {
+        ro.observe(composerFormRef.current);
+      }
+    }
     window.addEventListener("resize", updateWidth);
     return () => {
-      ro.disconnect();
+      ro?.disconnect();
       window.removeEventListener("resize", updateWidth);
     };
-  }, []);
-    const prevIsMultilineRef = useRef<boolean>(false);
+  }, [isLoadingAgents, selectedAgentId, selectedChatId, isLeftSidebarCollapsed, isChatListCollapsed, isBotInfoCollapsed, isComputerSplitOpen]);
+
+  const prevIsMultilineRef = useRef<boolean>(false);
   useLayoutEffect(() => {
-    const isMultiline = computeIsMultilineComposer(inputText, composerWidth);
+    // Live-sync form width on every layout pass so sidebar resize or mobile viewport changes never use stale width
+    const formEl = composerFormRef.current;
+    const currentFormWidth = formEl ? (formEl.clientWidth || formEl.getBoundingClientRect().width || composerWidth) : composerWidth;
+    if (currentFormWidth > 0 && Math.abs(currentFormWidth - composerWidth) > 1) {
+      setComposerWidth(currentFormWidth);
+    }
+
+    const canvasMultiline = computeIsMultilineComposer(inputText, currentFormWidth);
+    let realDomWrap = false;
+    if (inputText && textareaRef.current) {
+      const el = textareaRef.current;
+      realDomWrap = el.scrollHeight > 30 || el.scrollWidth > el.clientWidth + 2;
+    }
+    if (realDomWrap !== domWrappedMultiline) {
+      setDomWrappedMultiline(realDomWrap);
+    }
+
+    const isMultiline = canvasMultiline || realDomWrap;
     const didChangeLayoutMode = isMultiline !== prevIsMultilineRef.current;
     prevIsMultilineRef.current = isMultiline;
 
@@ -8335,10 +10688,11 @@ ${targetItem.text}`;
       if (isMultiline) {
         textareaRef.current.style.height = "auto";
         if (inputText) {
-          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
+          const maxH = typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210;
+          textareaRef.current.style.height = Math.max(44, Math.min(textareaRef.current.scrollHeight, maxH)) + "px";
         }
       } else {
-        textareaRef.current.style.height = "24px";
+        textareaRef.current.style.height = "26px";
       }
       if (didChangeLayoutMode || (isTextareaFocusedRef.current && document.activeElement !== textareaRef.current)) {
         textareaRef.current.focus({ preventScroll: true });
@@ -8392,7 +10746,7 @@ ${targetItem.text}`;
         const nextDraft = selectedChatId ? localStorage.getItem(`agent360_draft_${selectedChatId}`) : "";
         setInputText(nextDraft || "");
         if (textareaRef.current) {
-          textareaRef.current.style.height = nextDraft && computeIsMultilineComposer(nextDraft, composerWidth) ? "auto" : "24px";
+          textareaRef.current.style.height = nextDraft && computeIsMultilineComposer(nextDraft, composerWidth) ? "auto" : "26px";
         }
       } catch {}
     }
@@ -12839,7 +15193,7 @@ const selectedAgentTheme = getAgentColorTheme(
       try { localStorage.removeItem(`agent360_draft_${selectedChatId}`); } catch {}
     }
     if (textareaRef.current) {
-      textareaRef.current.style.height = "24px";
+      textareaRef.current.style.height = "26px";
     }
     if (isRecording) {
       stopVoiceRecording();
@@ -13207,6 +15561,7 @@ const selectedAgentTheme = getAgentColorTheme(
             : "w-full sm:w-[380px] -translate-x-full max-lg:invisible max-lg:pointer-events-none lg:translate-x-0 lg:pointer-events-auto"
         }`}
         aria-hidden={!mobileAgentsOpen && isCompactMode ? true : undefined}
+        {...({ inert: !mobileAgentsOpen && typeof window !== "undefined" && window.innerWidth < 1024 ? true : undefined } as any)}
       >
         {isLeftSidebarCollapsed && !mobileAgentsOpen ? (
           /* ========================================================= */
@@ -13699,6 +16054,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 value={agentSearchQuery}
                 onChange={setAgentSearchQuery}
                 placeholder={t("sidebar.filterAgents")}
+                inputTabIndex={!mobileAgentsOpen && typeof window !== "undefined" && window.innerWidth < 1024 ? -1 : 0}
               />
             </div>
 
@@ -13753,7 +16109,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           }
                           handleSelectAgent(ag);
                         }}
-                        className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent animate-fade-in-stagger group relative ${
+                        className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent group relative ${
                           layoutDensity === "compact"
                             ? "px-2.5 py-1.5 gap-2.5"
                             : layoutDensity === "comfortable"
@@ -13763,8 +16119,8 @@ const selectedAgentTheme = getAgentColorTheme(
                           ag.enabled === false || ag.status === "disabled"
                             ? "bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
                             : isSelected
-                            ? "bg-neutral-200/80 dark:bg-[#1c1c26] text-neutral-900 dark:text-white cursor-pointer"
-                            : "hover:bg-neutral-200/50 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
+                            ? "bg-neutral-200/80 dark:bg-[#1c1c26] text-slate-900 dark:text-white cursor-pointer"
+                            : "hover:bg-neutral-200/50 dark:hover:bg-[#14141c] text-slate-800 dark:text-neutral-300 hover:text-slate-950 dark:hover:text-white cursor-pointer"
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
@@ -13773,18 +16129,17 @@ const selectedAgentTheme = getAgentColorTheme(
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
-                              
                             />
                           )}
                         </div>
 
                         {/* Agent Details: Lean typography with rich status tooltip */}
-                        <div className="min-w-0 flex-1 flex flex-col justify-center">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[15px] font-medium truncate block transition-all ${
+                        <div className="min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
+                          <div className="flex items-center justify-between gap-1.5 min-w-0 w-full">
+                            <span className={`text-[15px] font-medium truncate min-w-0 flex-1 block transition-colors ${
                               ag.enabled === false || ag.status === "disabled"
-                                ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
-                                : "text-neutral-900 dark:text-white"
+                                ? "text-slate-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
+                                : "text-slate-900 dark:text-white"
                             }`}>
                               {ag.name}
                             </span>
@@ -13928,10 +16283,10 @@ const selectedAgentTheme = getAgentColorTheme(
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[13px] leading-tight font-sans truncate min-w-0 w-full block mt-0.5 transition-colors ${
                             ag.enabled === false || ag.status === "disabled"
-                              ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
-                              : "text-neutral-500 dark:text-neutral-400"
+                              ? "text-slate-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
+                              : "text-slate-500 dark:text-neutral-400"
                           }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}>
                             {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}
                           </span>
@@ -14001,7 +16356,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           }
                           handleSelectAgent(ag);
                         }}
-                        className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent animate-fade-in-stagger group relative ${
+                        className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent group relative ${
                           layoutDensity === "compact"
                             ? "px-2.5 py-1.5 gap-2.5"
                             : layoutDensity === "comfortable"
@@ -14011,8 +16366,8 @@ const selectedAgentTheme = getAgentColorTheme(
                           ag.enabled === false || ag.status === "disabled"
                             ? "bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
                             : isSelected
-                            ? "bg-neutral-200/80 dark:bg-[#1c1c26] text-neutral-900 dark:text-white cursor-pointer"
-                            : "hover:bg-neutral-200/50 dark:hover:bg-[#14141c] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
+                            ? "bg-neutral-200/80 dark:bg-[#1c1c26] text-slate-900 dark:text-white cursor-pointer"
+                            : "hover:bg-neutral-200/50 dark:hover:bg-[#14141c] text-slate-800 dark:text-neutral-300 hover:text-slate-950 dark:hover:text-white cursor-pointer"
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
@@ -14021,18 +16376,17 @@ const selectedAgentTheme = getAgentColorTheme(
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
-                              
                             />
                           )}
                         </div>
 
                         {/* Agent Details: Lean typography with rich status tooltip */}
-                        <div className="min-w-0 flex-1 flex flex-col justify-center">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`text-[15px] font-medium truncate block transition-all ${
+                        <div className="min-w-0 flex-1 flex flex-col justify-center overflow-hidden">
+                          <div className="flex items-center justify-between gap-1.5 min-w-0 w-full">
+                            <span className={`text-[15px] font-medium truncate min-w-0 flex-1 block transition-colors ${
                               ag.enabled === false || ag.status === "disabled"
-                                ? "text-neutral-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
-                                : "text-neutral-900 dark:text-white"
+                                ? "text-slate-400 dark:text-neutral-500 opacity-50 grayscale blur-[0.4px]"
+                                : "text-slate-900 dark:text-white"
                             }`}>
                               {ag.name}
                             </span>
@@ -14176,10 +16530,10 @@ const selectedAgentTheme = getAgentColorTheme(
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[13px] leading-tight font-sans truncate block mt-0.5 transition-all ${
+                          <span className={`text-[13px] leading-tight font-sans truncate min-w-0 w-full block mt-0.5 transition-colors ${
                             ag.enabled === false || ag.status === "disabled"
-                              ? "text-neutral-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
-                              : "text-neutral-500 dark:text-neutral-400"
+                              ? "text-slate-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
+                              : "text-slate-500 dark:text-neutral-400"
                           }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}>
                             {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}
                           </span>
@@ -14310,13 +16664,36 @@ const selectedAgentTheme = getAgentColorTheme(
           </>
         )}
 
-        {/* Left Sidebar Draggable Resizer Splitter (only when expanded on desktop) */}
-        {!isLeftSidebarCollapsed && (
+        {/* Left Sidebar Edge Handle: Resizer when expanded; Hover col-resize indicator & click-to-open when collapsed */}
+        {!isLeftSidebarCollapsed ? (
           <div
             onMouseDown={() => setIsResizingLeft(true)}
-            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 transition-colors z-30 -mr-0.5"
-            title="Drag to resize agents sidebar"
-          />
+            className="hidden lg:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 active:bg-[var(--agent-primary,#38bdf8)] transition-colors z-30 -mr-0.5 group"
+            title="Kéo để chỉnh độ rộng danh sách Agent"
+          >
+            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
+          </div>
+        ) : (
+          <div
+            data-testid="left-sidebar-collapsed-edge"
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerHaptic(10);
+              handleToggleLeftSidebar(false);
+            }}
+            onMouseDown={(e) => {
+              // Clicking opens; dragging triggers resize & expands
+              if (e.button === 0) {
+                setIsResizingLeft(true);
+                handleToggleLeftSidebar(false);
+              }
+            }}
+            className="hidden lg:block absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 active:bg-[var(--agent-primary,#38bdf8)] transition-all z-30 -mr-1 group cursor-pointer"
+            title="Bấm hoặc kéo để mở rộng danh sách Agent (Ctrl+B)"
+            aria-label="Bấm để mở danh sách Agent"
+          >
+            <div className="w-0.5 h-8 bg-neutral-500/30 group-hover:bg-[var(--agent-primary,#38bdf8)] group-hover:h-12 rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-all duration-150" />
+          </div>
         )}
       </aside>
 
@@ -14976,10 +17353,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 <div className="text-xs font-semibold text-slate-800 dark:text-neutral-100 truncate max-w-[210px] sm:max-w-[280px] group-hover/attfile:text-[var(--agent-light)] dark:group-hover/attfile:text-[var(--agent-dark)] transition-colors">
                                   {att.fileName}
                                 </div>
-                                <div className="text-[10px] font-mono text-slate-400 dark:text-neutral-500 flex items-center gap-1.5 mt-0.5">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                  <span>Báo cáo hoàn tất · Nhấn để xem</span>
-                                </div>
+
                                 
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
@@ -15423,11 +17797,12 @@ const selectedAgentTheme = getAgentColorTheme(
                       <div
                         data-testid="user-message-bubble"
                         style={{
-                          backgroundColor: selectedAgentTheme.bgLight || "rgba(248, 168, 124, 0.16)",
-                          borderColor: selectedAgentTheme.borderLight || "rgba(248, 168, 124, 0.38)",
+                          backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c",
+                          borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c",
+                          color: "#ffffff",
                         }}
-                        className={`inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] text-slate-800 dark:text-neutral-100 font-normal border shadow-2xs font-sans ml-auto break-words ${
-                          isHighlighted ? "ring-2 ring-[var(--agent-primary)]/60 shadow-md" : ""
+                        className={`inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white text-white font-normal border shadow-2xs font-sans ml-auto break-words ${
+                          isHighlighted ? "ring-2 ring-white/60 shadow-md" : ""
                         }`}
                       >
                         {renderQuotedReplyBox()}
@@ -17565,7 +19940,7 @@ const selectedAgentTheme = getAgentColorTheme(
             )}
 
             {(() => {
-              const isMultiline = computeIsMultilineComposer(inputText, composerWidth);
+              const isMultiline = domWrappedMultiline || computeIsMultilineComposer(inputText, composerWidth);
               
               // Common Plus Button Trigger
               const renderPlusButton = () => {
@@ -17625,11 +20000,34 @@ const selectedAgentTheme = getAgentColorTheme(
               );
 
               // Common Textarea Element
+              const composerPlaceholderText = hasNoAgents
+                ? "Chưa có Agent được gán..."
+                : isRecording
+                ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
+                : isStreaming
+                ? "Agent is responding..."
+                : composerWidth < 380
+                ? "Nhập tin nhắn..."
+                : composerWidth < 520
+                ? "Nhập yêu cầu công việc..."
+                : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...");
+
               const renderTextarea = () => (
-                <textarea
+                <div className="relative flex-1 min-w-0 flex items-center self-center">
+                  {!inputText && (
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none select-none absolute inset-y-0 left-1 sm:left-0.5 right-1 flex items-center text-[13px] sm:text-[13.5px] text-slate-400 dark:text-neutral-500 truncate"
+                    >
+                      <span className="truncate leading-none translate-y-[0.5px]">{composerPlaceholderText}</span>
+                    </span>
+                  )}
+                  <textarea
                   key="composer-main-textarea"
                   ref={textareaRef}
                   rows={isMultiline ? 2 : 1}
+                  wrap="soft"
+                  enterKeyHint="send"
                   value={inputText}
                   onPaste={(e) => {
                     const items = e.clipboardData?.items;
@@ -17695,12 +20093,17 @@ const selectedAgentTheme = getAgentColorTheme(
                       end: cursorPos,
                     };
                     setInputText(newVal);
-                    const isMulti = e.target.scrollHeight > 30 || computeIsMultilineComposer(newVal, composerWidth);
+                    const liveFormW = composerFormRef.current?.clientWidth || composerWidth;
+                    const canvasMulti = computeIsMultilineComposer(newVal, liveFormW);
+                    e.target.style.height = "auto";
+                    const domMulti = Boolean(newVal && (e.target.scrollHeight > 30 || e.target.scrollWidth > e.target.clientWidth + 2));
+                    setDomWrappedMultiline(domMulti);
+                    const isMulti = domMulti || canvasMulti;
                     if (isMulti) {
-                      e.target.style.height = "auto";
-                      e.target.style.height = Math.min(e.target.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
+                      const maxH = typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210;
+                      e.target.style.height = Math.max(44, Math.min(e.target.scrollHeight, maxH)) + "px";
                     } else {
-                      e.target.style.height = "24px";
+                      e.target.style.height = "26px";
                     }
 
                     const textUpToCursor = newVal.slice(0, cursorPos);
@@ -17917,29 +20320,18 @@ const selectedAgentTheme = getAgentColorTheme(
                       e.preventDefault();
                       composerFormRef.current?.requestSubmit();
                       if (textareaRef.current) {
-                        textareaRef.current.style.height = "24px";
+                        textareaRef.current.style.height = "26px";
                       }
                     }
                   }}
                   disabled={hasNoAgents}
-                  placeholder={
-                    hasNoAgents
-                      ? "Chưa có Agent được gán..."
-                      : isRecording
-                      ? "🎙 Đang nghe... Hãy nói để chuyển thành văn bản..."
-                      : isStreaming
-                      ? "Agent is responding..."
-                      : composerWidth < 380
-                      ? "Nhập tin nhắn..."
-                      : composerWidth < 520
-                      ? "Nhập yêu cầu công việc..."
-                      : (t("composer.placeholder") || "Nhập yêu cầu công việc (Shift+Esc hoặc / để nhập)...")
-                  }
+                  placeholder=""
                   aria-label={`Message ${selectedAgent.name}`}
-                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white placeholder:text-[13px] sm:placeholder:text-[13.5px] placeholder:text-neutral-500 placeholder:truncate resize-none ${
-                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[42px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[22px] overflow-hidden flex-1 self-center h-[28px] min-h-[28px] max-h-[28px] pt-[5.5px] pb-0 px-1 sm:px-0.5 m-0 my-auto block"
+                  className={`w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 shadow-none text-[16px] sm:text-[14.5px] text-neutral-900 dark:text-white resize-none whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden ${
+                    isMultiline ? "leading-snug overflow-y-auto scrollbar-hover min-h-[44px] max-h-[140px] sm:max-h-[210px] py-1 px-1 sm:px-0.5" : "leading-[22px] overflow-y-hidden flex-1 self-center h-[26px] min-h-[26px] max-h-[26px] pt-[2.5px] pb-0 px-1 sm:px-0.5 m-0 my-auto block"
                   }`}
                 />
+                </div>
               );
 
               // Common Right Controls
@@ -18035,6 +20427,16 @@ const selectedAgentTheme = getAgentColorTheme(
               };
 
               return (
+                <>
+                  <input data-ux-target-min="16"
+                    ref={fileInputRef}
+                    type="file"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
                 <form
                   id="tour-prompt-composer"
                   ref={composerFormRef}
@@ -18091,13 +20493,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     </div>
                   )}
 
-                  <input data-ux-target-min="16"
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
+
 
                   {isMultiline ? (
                     <>
@@ -18121,6 +20517,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     </>
                   )}
                 </form>
+                </>
               );
             })()}          </div>
         </div>
@@ -18142,6 +20539,7 @@ const selectedAgentTheme = getAgentColorTheme(
               : undefined,
           ["--agent-primary" as any]: selectedAgentTheme.primary,
         }}
+        {...({ inert: (!mobileChatsOpen && typeof window !== "undefined" && window.innerWidth < 1024) || (isChatListCollapsed && typeof window !== "undefined" && window.innerWidth >= 1024) ? true : undefined } as any)}
         className={`fixed lg:static lg:relative inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok chat-sidebar-panel mobile-drawer-panel ${
           mobileChatsOpen
             ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl pointer-events-auto"
@@ -19145,9 +21543,9 @@ ${chat.id}`);
                     onClick={() => {
                       triggerHaptic();
                       setIsReloadingBrowser(true);
-                      focusAgentBrowser(agentBrowserFor).catch(() => {});
+                      void dispatchAgentBrowserInput(agentBrowserFor, { action: "reload" });
                       setBrowserIframeKey((k) => k + 1);
-                      setTimeout(() => setIsReloadingBrowser(false), 900);
+                      setTimeout(() => setIsReloadingBrowser(false), 600);
                     }}
                     className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
                     aria-label={t("computer.reloadProfileBtn")}
@@ -19210,6 +21608,7 @@ ${chat.id}`);
       {/* ========================================================= */}
       <aside
         data-type-scope="sidebar"
+        {...({ inert: isBotInfoCollapsed ? true : undefined } as any)}
         style={{ width: !isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280 ? `${botInfoWidth}px` : undefined }}
         className={`fixed xl:static xl:relative inset-y-0 right-0 z-[60] xl:z-40 h-full flex flex-col border-l border-neutral-200 dark:border-[#1e1e24] bg-[var(--bg-sidebar)] shrink-0 select-none transition-grok mobile-drawer-panel ${
           isBotInfoCollapsed
@@ -20479,9 +22878,44 @@ ${chat.id}`);
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#161622] gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border shrink-0 ${previewModalFile.badgeColor}`}>
-                  {previewModalFile.ext}
-                </span>
+                {previewModalFile.variants && previewModalFile.variants.length > 1 ? (
+                  <div data-testid="preview-format-variant-selector" className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-200/80 dark:bg-white/10 border border-slate-300/70 dark:border-white/10 shrink-0">
+                    {previewModalFile.variants.map((v) => {
+                      const isActive = previewModalFile.ext === v.ext;
+                      return (
+                        <button
+                          key={v.ext}
+                          type="button"
+                          onClick={() =>
+                            setPreviewModalFile((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    ext: v.ext,
+                                    fileName: v.fileName,
+                                    previewUrl: v.url,
+                                    storageUrl: v.storageUrl || prev.storageUrl,
+                                  }
+                                : null
+                            )
+                          }
+                          className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-[#f8a87c] text-slate-950 shadow-2xs"
+                              : "text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                          }`}
+                          title={`Chuyển sang định dạng .${v.ext} (${v.fileName})`}
+                        >
+                          {v.ext}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold border shrink-0 ${previewModalFile.badgeColor}`}>
+                    {previewModalFile.ext}
+                  </span>
+                )}
                 <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                   {previewModalFile.fileName}
                 </span>
@@ -20781,8 +23215,43 @@ ${chat.id}`);
             onClick={(e) => e.stopPropagation()}
             className="relative max-w-4xl max-h-[90vh] flex flex-col items-center justify-center p-2 rounded-xl bg-[#121218] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-150"
           >
-            <div className="w-full flex items-center justify-between px-3.5 py-2.5 border-b border-white/10 text-xs font-mono text-neutral-300">
-              <span className="truncate font-medium max-w-md">{lightboxImageUrl.name}</span>
+            <div className="w-full flex items-center justify-between px-3.5 py-2.5 border-b border-white/10 text-xs font-mono text-neutral-300 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                {lightboxImageUrl.variants && lightboxImageUrl.variants.length > 1 && (
+                  <div data-testid="lightbox-format-variant-selector" className="inline-flex items-center gap-0.5 p-0.5 rounded-lg bg-white/10 border border-white/10 shrink-0">
+                    {lightboxImageUrl.variants.map((v) => {
+                      const isActive = (lightboxImageUrl.activeExt || "") === v.ext || lightboxImageUrl.name === v.fileName;
+                      return (
+                        <button
+                          key={v.ext}
+                          type="button"
+                          onClick={() =>
+                            setLightboxImageUrl((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    url: v.storageUrl || v.url,
+                                    name: v.fileName,
+                                    activeExt: v.ext,
+                                  }
+                                : null
+                            )
+                          }
+                          className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-[#f8a87c] text-slate-950 shadow-2xs"
+                              : "text-neutral-400 hover:text-white"
+                          }`}
+                          title={`Chuyển sang phiên bản .${v.ext} (${v.fileName})`}
+                        >
+                          {v.ext}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <span className="truncate font-medium max-w-md">{lightboxImageUrl.name}</span>
+              </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {/* Copy Image (Blob or URL) with Shortcut Badge */}
                 <button

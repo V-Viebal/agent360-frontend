@@ -42,9 +42,7 @@ export function getAuthHeaders(agentId?: string): Record<string, string> {
   let opToken = "";
   try {
     token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
-    if (!token) {
-      opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || "";
-    }
+    opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || "";
   } catch {}
 
   const headers: Record<string, string> = {};

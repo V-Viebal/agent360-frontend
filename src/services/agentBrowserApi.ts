@@ -83,7 +83,7 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
 
 
 export interface BrowserInputPayload {
-  action: "click" | "scroll" | "type" | "key" | "navigate" | "reload" | "back" | "forward" | "new_tab" | "close_tab";
+  action: "click" | "dblclick" | "rightclick" | "move" | "mousedown" | "mousemove_drag" | "mouseup" | "scroll" | "scroll_to" | "find" | "type" | "key" | "navigate" | "reload" | "back" | "forward" | "new_tab" | "close_tab" | "activate_tab" | "resize" | "quality";
   xRatio?: number;
   yRatio?: number;
   deltaX?: number;
@@ -91,10 +91,21 @@ export interface BrowserInputPayload {
   text?: string;
   key?: string;
   pageId?: string;
+  width?: number;
+  height?: number;
 }
 
-/** Forward touch click, wheel scroll, or key input from Mobile Fast View directly into the agent's active CDP tab. */
-export async function dispatchAgentBrowserInput(agentId: string, payload: BrowserInputPayload): Promise<boolean> {
+export interface BrowserInputResult {
+  ok: boolean;
+  agentId?: string;
+  targetId?: string;
+  createdTargetId?: string | null;
+  action?: string;
+  tabs?: AgentBrowserTab[] | null;
+}
+
+/** Forward touch click, wheel scroll, or key input directly into the agent's active CDP tab. */
+export async function dispatchAgentBrowserInput(agentId: string, payload: BrowserInputPayload): Promise<BrowserInputResult> {
   try {
     const id = bare(agentId);
     const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/input`, {
@@ -102,20 +113,43 @@ export async function dispatchAgentBrowserInput(agentId: string, payload: Browse
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(payload),
     }, id);
-    return res.ok;
+    if (!res.ok) return { ok: false };
+    const data = await res.json().catch(() => ({}));
+    return { ok: true, ...data };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 
 
 /** Build an authenticated WebSocket URL for real-time CDP screencast push (/api/agents/{id}/browser/stream). */
-export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1280, pageId?: string): string {
+export function detectAdaptiveNetworkQuality(): number {
+  try {
+    const conn = typeof navigator !== "undefined" ? (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection : null;
+    if (conn) {
+      if (conn.saveData) return 58;
+      const eff = String(conn.effectiveType || "").toLowerCase();
+      if (eff === "slow-2g" || eff === "2g") return 56;
+      if (eff === "3g") return 68;
+      const dl = Number(conn.downlink || 10);
+      const rtt = Number(conn.rtt || 50);
+      if (dl < 2 || rtt > 250) return 64;
+      if (dl < 6 || rtt > 120) return 78;
+    }
+  } catch {}
+  return 90;
+}
+
+export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1920, pageId?: string, vw?: number, vh?: number): string {
+  const cappedMaxW = Math.min(1920, Math.max(800, maxWidth));
   const id = bare(agentId);
   const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = typeof window !== "undefined" ? window.location.host : "localhost:3000";
-  const qs = new URLSearchParams({ maxWidth: String(maxWidth) });
+  const q = detectAdaptiveNetworkQuality();
+  const qs = new URLSearchParams({ maxWidth: String(cappedMaxW), q: String(q), bin: "1" });
   if (pageId) qs.set("pageId", pageId);
+  if (vw && vw >= 320) qs.set("vw", String(Math.round(vw)));
+  if (vh && vh >= 240) qs.set("vh", String(Math.round(vh)));
   try {
     const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
     const opToken = operatorKey.get();
@@ -202,4 +236,43 @@ export function openAgentDesktopTab(agentId: string, hash = "#collab"): void {
       try { w?.close(); } catch {}
       window.alert(e instanceof DesktopAuthError ? "Cần quyền truy cập hoặc operator key để mở desktop của agent." : `Không mở được desktop: ${e.message}`);
     });
+}
+
+export interface AgentBrowserHistoryItem {
+  id: number;
+  title: string;
+  url: string;
+  isCurrent: boolean;
+}
+
+export async function fetchAgentBrowserHistory(agentId: string, pageId?: string): Promise<AgentBrowserHistoryItem[]> {
+  try {
+    const id = bare(agentId);
+    const qs = new URLSearchParams();
+    if (pageId) qs.set("pageId", pageId);
+    const url = `/api/agents/${encodeURIComponent(id)}/browser/history${qs.toString() ? "?" + qs.toString() : ""}`;
+    const res = await authorizedFetch(url, { headers: { Accept: "application/json" } }, id);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchAgentBrowserSuggestions(agentId: string, query: string): Promise<string[]> {
+  try {
+    const q = (query || "").trim();
+    if (!q) return [];
+    const id = bare(agentId);
+    const qs = new URLSearchParams({ q });
+    const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/suggest?${qs.toString()}`, {
+      headers: { Accept: "application/json" },
+    }, id);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }

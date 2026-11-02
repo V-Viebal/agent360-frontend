@@ -422,25 +422,8 @@ export function AgentSettingsModal({
                         </span>
                       </div>
                       
-                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-neutral-500 font-mono">
-                        <Tooltip
-                          content={
-                            <div className="text-left font-mono space-y-0.5 py-0.5">
-                              <div className="font-semibold text-slate-900 dark:text-white">Chi tiết Định danh & Node</div>
-                              <div>Node: {agent.node || "Node 3rd (Core)"}</div>
-                              <div>ID: {agent.id}</div>
-                              <div>Slug: {agent.slug}</div>
-                              <div>Runtime: {(agent.runtimeVersion || "Skyer v2.2.1").replace(/qwenpaw|agentcore/gi, "AgentCore")}</div>
-                            </div>
-                          }
-                          placement="top"
-                          minWidth={220}
-                        >
-                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-help transition-colors select-none">
-                            <Info size={11} className="text-slate-400 dark:text-neutral-500" />
-                            <span className="text-[10px] font-mono">{agent.node ? agent.node.split(" - ")[0] : "Node"} · {agent.slug || agent.id}</span>
-                          </div>
-                        </Tooltip>
+                      <div className="text-[11px] text-slate-400 dark:text-neutral-500 font-mono">
+                        <span>ID: {agent.slug || agent.id}</span>
                       </div>
                     </div>
                   </div>
@@ -470,82 +453,47 @@ export function AgentSettingsModal({
                   )}
                 </div>
 
-                {/* Active LLM Model Switcher Card (Simple QwenPaw Style) */}
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-3">
+                {/* Active LLM Model Switcher Card (Lean Single Dropdown) */}
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <Cpu size={14} style={{ color: agentTheme.primary }} />
-                      <span>Mô hình AI (LLM Model)</span>
+                      <span>Mô hình AI</span>
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-mono text-neutral-400">Đang chạy:</span>
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center gap-1">
+                      <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center gap-1">
                         {isChangingModel && <Loader2 size={11} className="animate-spin" />}
                         <span>{isChangingModel ? "Đang đổi..." : currentCleanModel}</span>
                       </span>
                     </div>
                   </div>
 
-                  {/* Quick-pick flagship model pills (QwenPaw Style) */}
-                  <div className="space-y-1.5">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 font-medium">
-                      Mô hình phổ biến (Quick Select)
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {[
-                        { id: "grok-4.7", label: "Grok 4.7" },
-                        { id: "gpt-5.6-luna", label: "GPT-5.6 Luna" },
-                        { id: "gpt-6-sol", label: "GPT-6 Sol" },
-                        { id: "claude-opus-4.6-thinking", label: "Claude Opus 4.6" },
-                        { id: "gemini-3.7-flash-tiered", label: "Gemini 3.7 Flash" },
-                        { id: "qwen3.7-max", label: "Qwen 3.7 Max" },
-                      ].map((preset) => {
-                        const isCurrent = currentCleanModel === preset.id;
-                        return (
-                          <button
-                            key={preset.id}
-                            type="button"
-                            disabled={isChangingModel}
-                            onClick={() => onSelectModel(preset.id)}
-                            className={"px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer border flex items-center gap-1.5 " + (
-                              isCurrent
-                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
-                                : "bg-white dark:bg-[#121218] hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-slate-200/80 dark:border-[#222230]"
-                            )}
-                          >
-                            <span>{preset.label}</span>
-                            {isCurrent && <Check size={11} style={{ color: agentTheme.primary }} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Clean Dropdown / Full Search Selector */}
-                  <div className="pt-1">
+                  {/* Clean Dropdown Selector */}
+                  <div className="relative">
                     <button
                       type="button"
+                      disabled={isChangingModel}
                       onClick={() => setIsModelDropdownOpen((prev) => !prev)}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-mono bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] text-slate-800 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-mono bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] text-slate-800 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors cursor-pointer shadow-2xs"
                     >
-                      <span className="flex items-center gap-2">
-                        <Sparkles size={13} style={{ color: agentTheme.primary }} />
-                        <span className="font-medium">
-                          {isModelDropdownOpen ? "Thu gọn danh sách tất cả mô hình" : "Chọn từ danh sách tất cả mô hình khả dụng..."}
+                      <span className="flex items-center gap-2 truncate">
+                        <Sparkles size={13} style={{ color: agentTheme.primary }} className="shrink-0" />
+                        <span className="font-medium truncate">
+                          {currentCleanModel || "Chọn mô hình AI..."}
                         </span>
                       </span>
-                      {isModelDropdownOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {isModelDropdownOpen ? <ChevronUp size={14} className="shrink-0 text-slate-400" /> : <ChevronDown size={14} className="shrink-0 text-slate-400" />}
                     </button>
 
                     {isModelDropdownOpen && (
-                      <div className="mt-2 p-2 rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] space-y-2 animate-in fade-in duration-100">
-                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#222230] rounded-lg px-2.5 py-1">
+                      <div className="mt-2 p-2 rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] space-y-2 animate-in fade-in duration-100 shadow-lg">
+                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#222230] rounded-lg px-2.5 py-1.5">
                           <Search size={12} className="text-neutral-400 shrink-0" />
                           <input
                             type="text"
                             value={modelSearch}
                             onChange={(e) => setModelSearch(e.target.value)}
-                            placeholder="Tìm kiếm model khả dụng..."
+                            placeholder="Tìm kiếm mô hình..."
                             className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white placeholder-neutral-500 focus:outline-none"
                             autoFocus
                           />
@@ -560,7 +508,7 @@ export function AgentSettingsModal({
                           )}
                         </div>
 
-                        <div className="max-h-48 overflow-y-auto pr-1 space-y-1">
+                        <div className="max-h-56 overflow-y-auto pr-1 space-y-1">
                           {filteredModels.length === 0 ? (
                             <div className="py-3 text-center text-xs text-neutral-400 font-mono">
                               Không tìm thấy mô hình phù hợp
@@ -577,20 +525,13 @@ export function AgentSettingsModal({
                                     onSelectModel(m.model, m.providerId);
                                     setIsModelDropdownOpen(false);
                                   }}
-                                  className={"w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer border text-left " + (
+                                  className={"w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition-all cursor-pointer border text-left " + (
                                     isCurrent
                                       ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
                                       : "bg-transparent hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-transparent"
                                   )}
                                 >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className="truncate">{m.model}</span>
-                                    {m.providerName && (
-                                      <span className="text-[10px] text-neutral-400 font-mono shrink-0">
-                                        ({m.providerName})
-                                      </span>
-                                    )}
-                                  </div>
+                                  <span className="truncate font-medium">{m.model}</span>
                                   {isCurrent && <Check size={12} style={{ color: agentTheme.primary }} className="shrink-0 ml-2" />}
                                 </button>
                               );

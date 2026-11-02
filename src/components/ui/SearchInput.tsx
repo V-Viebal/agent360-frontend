@@ -7,6 +7,7 @@ interface SearchInputProps {
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
+  inputTabIndex?: number;
 }
 
 export function SearchInput({
@@ -15,6 +16,7 @@ export function SearchInput({
   placeholder = "Search...",
   className = "",
   autoFocus = false,
+  inputTabIndex,
 }: SearchInputProps) {
   return (
     <div
@@ -25,6 +27,7 @@ export function SearchInput({
         aria-label={placeholder}
         data-ux-target-min="16"
         type="text"
+        tabIndex={inputTabIndex}
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -440,10 +440,168 @@ console.log("Testing Browser Chrome Header (Tab Strip & Omnibox) & Landscape Rot
 const grokBrowserSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
 assert.ok(
   grokBrowserSrc.includes("data-testid=\"agent-browser-chrome-header\"") &&
+  grokBrowserSrc.includes("data-testid=\"agent-browser-new-tab-btn\"") &&
+  grokBrowserSrc.includes("handleCreateNewTab") &&
+  grokBrowserSrc.includes("handleCloseTab") &&
   grokBrowserSrc.includes("handleNavigateSubmit") &&
   grokBrowserSrc.includes("handleBrowserAction(\"back\")") &&
   grokBrowserSrc.includes("handleBrowserAction(\"forward\")") &&
-  grokBrowserSrc.includes("handleBrowserAction(\"reload\")"),
-  "SelkiesViewer must render the full Browser Chrome Header with Tab Strip, Back/Forward/Reload controls, and interactive URL Omnibox"
+  grokBrowserSrc.includes("data-testid=\"computer-mobile-input-mode-btn\""),
+  "SelkiesViewer must render the unified authentic Browser Chrome Header with Tab Strip, New/Close Tab, Back/Forward/Reload controls, and interactive URL Omnibox across Web and Phone"
 );
 console.log("✓ Test 31: Browser Chrome Header (Tab Strip & Omnibox) & Landscape Rotation verified");
+
+console.log("Testing Cross-Format Attachment Deduplication (PNG vs JPG, WAV vs MP3, MP4 vs WEBM)...");
+const grokDedupeSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokDedupeSrc.includes("if (imgMatch && imgMatch[1]) return `img:${imgMatch[1]}`;") &&
+  grokDedupeSrc.includes("if (audioMatch && audioMatch[1]) return `aud:${audioMatch[1]}`;") &&
+  grokDedupeSrc.includes("if (videoMatch && videoMatch[1]) return `vid:${videoMatch[1]}`;") &&
+  grokDedupeSrc.includes("lightbox-format-variant-selector") &&
+  grokDedupeSrc.includes("preview-format-variant-selector"),
+  "normalizeAttachmentDedupeKey must unify same-basename media variants and expose format-variant selector in Lightbox & Preview modals"
+);
+console.log("✓ Test 32: Cross-Format Attachment Deduplication verified");
+
+console.log("Testing Mobile Agent Sidebar Text Visibility, iOS Form Accessory Suppression & Composer Multiline Wrapping...");
+const grokMobileSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+const cssMobileSrc = fs.readFileSync(new URL("../src/index.css", import.meta.url), "utf8");
+
+assert.ok(
+  grokMobileSrc.includes("wrap=\"soft\"") &&
+  grokMobileSrc.includes("whitespace-pre-wrap break-words [overflow-wrap:anywhere]") &&
+  grokMobileSrc.includes("el.scrollWidth > el.clientWidth + 2"),
+  "Composer textarea must enforce wrap=soft, whitespace-pre-wrap, and scrollWidth detection so long text always wraps to multiple lines"
+);
+assert.ok(
+  grokMobileSrc.includes("inert={!mobileAgentsOpen") &&
+  grokMobileSrc.includes("inputTabIndex={!mobileAgentsOpen"),
+  "Off-screen mobile sidebars must be marked inert and have fileInput outside form so iOS keyboard hides the Next/Prev accessory bar"
+);
+assert.ok(
+  cssMobileSrc.includes("[data-agent-item-id]") &&
+  cssMobileSrc.includes("opacity: 1 !important"),
+  "Agent list rows in mobile drawer must enforce full visibility and contrast without WebKit animation clipping"
+);
+console.log("✓ Test 33: Mobile Agent Sidebar Text Visibility, iOS Form Accessory Suppression & Composer Multiline Wrapping verified");
+
+console.log("Testing Lean Attachment Preview Cards (No Redundant Status Subtext)...");
+assert.ok(
+  !grokMobileSrc.includes("Báo cáo hoàn tất · Nhấn để xem"),
+  "Attachment preview cards must not contain redundant status subtext ('Báo cáo hoàn tất · Nhấn để xem')"
+);
+assert.ok(
+  grokMobileSrc.includes("group/attfile") &&
+  grokMobileSrc.includes("handleOpenAttachmentPreview(att)"),
+  "Attachment preview card must retain lean badge, filename, and direct preview/download actions"
+);
+console.log("✓ Test 34: Lean Attachment Preview Cards verified");
+
+console.log("Testing Lean Agent Settings Modal Model Selector Contract...");
+const settingsModalSrc = fs.readFileSync(new URL("../src/components/AgentSettingsModal.tsx", import.meta.url), "utf8");
+
+assert.ok(
+  !settingsModalSrc.includes("Mô hình phổ biến (Quick Select)") &&
+  !settingsModalSrc.includes("Chi tiết Định danh & Node"),
+  "Agent Settings Modal must remove redundant node pill and quick-select presets for a lean single dropdown"
+);
+assert.ok(
+  settingsModalSrc.includes("onSelectModel(m.model, m.providerId)") &&
+  (settingsModalSrc.includes("currentCleanModel") && settingsModalSrc.includes("Chọn mô hình AI...")),
+  "Model selector must present current active model and allow selecting any valid model with provider binding"
+);
+console.log("✓ Test 35: Lean Agent Settings Modal Model Selector Contract verified");
+
+console.log("Testing Browser Dynamic Hover Cursor & Drag-and-Drop Tab Management Contract...");
+assert.ok(
+  grokMobileSrc.includes('msg?.method === "Page.cursorChanged"') &&
+  grokMobileSrc.includes("applyRemoteCursorStyleDom(msg.params.cursor)") &&
+  grokMobileSrc.includes("viewportBoxRef.current.style.cursor = clean") &&
+  grokMobileSrc.includes('data-cursor-shape="pointer"') &&
+  grokMobileSrc.includes('data-cursor-shape="text"'),
+  "AgentBrowserPreview must handle Page.cursorChanged over WebSocket and dynamically update both viewport CSS cursor and virtual cursor shape"
+);
+assert.ok(
+  grokMobileSrc.includes("reorderTabsInPlace(") &&
+  grokMobileSrc.includes("reconcileTabsWithOrder(") &&
+  grokMobileSrc.includes("closedTabsUntilRef") &&
+  grokMobileSrc.includes("tabMutationLockUntilRef") &&
+  grokMobileSrc.includes("onDragStart=") &&
+  grokMobileSrc.includes("onDragOver="),
+  "SelkiesViewer must support drag-and-drop tab reordering, custom order persistence across polls, optimistic new-tab creation, and closed-tab tombstones"
+);
+console.log("✓ Test 36: Browser Dynamic Hover Cursor & Drag-and-Drop Tab Management Contract verified");
+
+console.log("Testing Hardware GPU createImageBitmap + <canvas> Screencast Pipeline Contract...");
+assert.ok(
+  grokMobileSrc.includes("window.createImageBitmap(blobToDecode)") &&
+  grokMobileSrc.includes("paintImageBitmapDom(bitmap, blobToDecode)") &&
+  grokMobileSrc.includes('data-testid="agent-browser-gpu-canvas"') &&
+  grokMobileSrc.includes('getContext("2d", { alpha: false, desynchronized: true })') &&
+  grokMobileSrc.includes("bitmap.close()"),
+  "AgentBrowserPreview must decode Binary JPEG frames via off-thread createImageBitmap and paint directly onto a desynchronized 2D GPU canvas with explicit bitmap.close() memory cleanup"
+);
+console.log("✓ Test 37: Hardware GPU createImageBitmap + <canvas> Screencast Pipeline Contract verified");
+
+console.log("Testing Left Sidebar Collapsed Edge Resizer & Click-To-Open Contract...");
+const grokWorkspaceEdgeSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokWorkspaceEdgeSrc.includes("data-testid=\"left-sidebar-collapsed-edge\"") &&
+  grokWorkspaceEdgeSrc.includes("handleToggleLeftSidebar(false)") &&
+  grokWorkspaceEdgeSrc.includes("cursor-col-resize"),
+  "Left sidebar edge handle must render in collapsed state with col-resize cursor and click/drag-to-open handler"
+);
+console.log("✓ Test 38: Left Sidebar Collapsed Edge Resizer & Click-To-Open Contract verified");
+
+console.log("Testing Smooth 60fps Browser Scroll & Interactive Synchronized Scrollbar Contract...");
+const grokScrollSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokScrollSrc.includes('data-testid="agent-browser-interactive-scrollbar"') &&
+  grokScrollSrc.includes('data-testid="agent-browser-scrollbar-thumb"') &&
+  grokScrollSrc.includes("applyScrollMetricsDom") &&
+  grokScrollSrc.includes("Page.scrollMetrics") &&
+  grokScrollSrc.includes("stepSmoothWheelScroll") &&
+  grokScrollSrc.includes('action: "scroll_to"') &&
+  grokScrollSrc.includes('action: "mousedown"') &&
+  grokScrollSrc.includes('action: "mousemove_drag"') &&
+  grokScrollSrc.includes('action: "mouseup"'),
+  "AgentBrowserPreview must render an interactive synchronized scrollbar thumb/track, handle Page.scrollMetrics, interpolate wheel deltas smoothly via stepSmoothWheelScroll, and forward native mousedown/mousemove_drag/mouseup"
+);
+console.log("✓ Test 39: Smooth 60fps Browser Scroll & Interactive Synchronized Scrollbar Contract verified");
+
+console.log("Testing Full Browser Wrapper Controls (Reload, Find in Page, Space/Shift+Space Page Scroll, Keyboard Shortcuts)...");
+const grokFullWrapperSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokFullWrapperSrc.includes('data-testid="agent-browser-reload-btn"') &&
+  grokFullWrapperSrc.includes('data-testid="agent-browser-find-btn"') &&
+  grokFullWrapperSrc.includes('data-testid="agent-browser-find-bar"') &&
+  grokFullWrapperSrc.includes('action: "find"') &&
+  grokFullWrapperSrc.includes('e.code === "Space"') &&
+  grokFullWrapperSrc.includes('onBrowserShortcut?.("focus_address")') &&
+  grokFullWrapperSrc.includes('onBrowserShortcut?.("new_tab")') &&
+  grokFullWrapperSrc.includes('onBrowserShortcut?.("close_tab")'),
+  "SelkiesViewer and AgentBrowserPreview must provide full browser wrapper controls including Reload button, Find-in-page bar, Space/Shift+Space page scrolling, and Ctrl+L/T/W/R/F shortcuts"
+);
+console.log("✓ Test 40: Full Browser Wrapper Controls verified");
+
+console.log("Testing WebRTC H.264/VP9 Stream Engine Toggle & Predictive 120Hz Scroll Contract...");
+const grokStreamEngineSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokStreamEngineSrc.includes('data-testid="agent-browser-stream-engine-btn"') &&
+  grokStreamEngineSrc.includes('data-testid="agent-browser-webrtc-container"') &&
+  grokStreamEngineSrc.includes('data-testid="agent-browser-webrtc-iframe"') &&
+  grokStreamEngineSrc.includes('issueAgentDesktopUrl(agentId, "control")') &&
+  grokStreamEngineSrc.includes("handleToggleStreamEngine") &&
+  grokStreamEngineSrc.includes("applyPredictiveScrollOffset"),
+  "SelkiesViewer must provide a 1-click toggle between CDP GPU Canvas (with 120Hz predictive scroll offset) and Selkies WebRTC H.264/VP9 60fps stream with automatic fallback"
+);
+console.log("✓ Test 41: WebRTC H.264/VP9 Stream Engine Toggle & Predictive 120Hz Scroll Contract verified");
+
+console.log("Testing Adaptive 55..75 JPEG Quality Controller for 60fps 4G Mobile Stream...");
+const grokAbrSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokAbrSrc.includes("Math.max(55, Math.min(75, Math.round(55 + ((ewmaKbps - 500) / 2500) * 20)))") &&
+  grokAbrSrc.includes('action: "quality", width: desiredQ, pageId'),
+  "AgentBrowserPreview must dynamically adjust JPEG quality between 55 and 75 based on ewmaKbps to maintain 60fps over 4G mobile networks"
+);
+console.log("✓ Test 42: Adaptive 55..75 JPEG Quality Controller for 60fps 4G Mobile Stream verified");

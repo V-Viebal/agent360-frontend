@@ -1610,9 +1610,22 @@ html.light [role="tooltip"] kbd,
 
 .mobile-drawer-panel {
   will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+}
+
+/* Ensure agent sidebar items on mobile and light mode never clip or hide text */
+[data-agent-item-id] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html.light [data-agent-item-id] span.font-medium,
+[data-theme="light"] [data-agent-item-id] span.font-medium {
+  color: #0f172a !important;
+}
+
+html.light [data-agent-item-id] span.text-\[13px\],
+[data-theme="light"] [data-agent-item-id] span.text-\[13px\] {
+  color: #64748b !important;
 }
 
 html.light .mobile-drawer-backdrop,
@@ -1796,13 +1809,14 @@ html.light,
   -webkit-tap-highlight-color: transparent !important;
 }
 
-/* Ensure single-line textarea placeholder and text baseline is strictly centered */
+/* Ensure single-line textarea placeholder sits comfortably centered with caret */
 #tour-prompt-composer textarea {
   vertical-align: middle;
 }
 #tour-prompt-composer textarea::placeholder {
-  line-height: inherit;
+  line-height: 26px !important;
   vertical-align: middle;
+  display: inline-block;
 }
 
 /* iOS Safari auto-zoom prevention: Input controls must be at least 16px on mobile viewports (< 640px) */
@@ -1836,17 +1850,21 @@ html.light .sidebar-bottom-fade,
 }
 
 
-/* Clean User Message Bubble — Soft Pastel Tint in Light Mode, Elevated Slate in Dark Mode, Crisp Text */
+/* Clean User Message Bubble — Solid Agent Accent with Crisp White Text */
+[data-testid="user-message-bubble"],
 html.light [data-testid="user-message-bubble"],
-[data-theme="light"] [data-testid="user-message-bubble"] {
-  color: #1e293b !important;
-  font-weight: 450 !important;
-}
+[data-theme="light"] [data-testid="user-message-bubble"],
 html.dark [data-testid="user-message-bubble"],
 [data-theme="dark"] [data-testid="user-message-bubble"],
 .dark [data-testid="user-message-bubble"] {
-  background-color: var(--agent-bg-dark, rgba(248, 168, 124, 0.18)) !important;
-  border-color: var(--agent-border-dark, rgba(248, 168, 124, 0.35)) !important;
-  color: #f8fafc !important;
+  color: #ffffff !important;
   font-weight: 450 !important;
+}
+
+[data-testid="user-message-bubble"] p,
+html.light [data-testid="user-message-bubble"] p,
+[data-theme="light"] [data-testid="user-message-bubble"] p,
+html.dark [data-testid="user-message-bubble"] p,
+[data-theme="dark"] [data-testid="user-message-bubble"] p {
+  color: #ffffff !important;
 }
