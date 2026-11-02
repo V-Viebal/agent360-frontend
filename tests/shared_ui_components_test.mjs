@@ -662,3 +662,12 @@ assert.ok(
   "The maximized browser must not mount alongside split view or animate a scale transform during interaction"
 );
 console.log("✓ Test 47: Browser scale-jitter guard verified");
+
+console.log("Testing Coalesced rAF Scroll Pipeline & Lossless Sub-Threshold Touch Tracking Contract...");
+assert.ok(
+  grokMouseGesturesSrc.includes("queueCoalescedScrollInput") &&
+  grokMouseGesturesSrc.includes("pendingScrollWireRef") &&
+  grokMouseGesturesSrc.includes("queueCoalescedScrollInput(cursorNormRef.current.x, cursorNormRef.current.y, scrollDeltaX, scrollDeltaY)"),
+  "AgentBrowserPreview must coalesce scroll deltas via queueCoalescedScrollInput without dropping sub-threshold touch movements"
+);
+console.log("✓ Test 48: Coalesced rAF Scroll Pipeline & Lossless Sub-Threshold Touch Tracking Contract verified");

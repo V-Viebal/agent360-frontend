@@ -7087,6 +7087,15 @@ function AgentBrowserPreview({
     }
   }, [mobileInputMode, externalZoomPercent]);
 
+  const pendingScrollWireRef = useRef<{ dx: number; dy: number; xRatio: number; yRatio: number; raf: number; lastFlushAt: number }>({
+    dx: 0,
+    dy: 0,
+    xRatio: 0.5,
+    yRatio: 0.5,
+    raf: 0,
+    lastFlushAt: 0,
+  });
+
   const sendRealtimeInput = async (payload: BrowserInputPayload) => {
     const sock = wsRef.current;
     if (sock && sock.readyState === WebSocket.OPEN) {
@@ -7096,6 +7105,37 @@ function AgentBrowserPreview({
       } catch {}
     }
     await dispatchAgentBrowserInput(agentId, payload);
+  };
+
+  const queueCoalescedScrollInput = (xRatio: number, yRatio: number, deltaX: number, deltaY: number) => {
+    const st = pendingScrollWireRef.current;
+    st.dx += deltaX;
+    st.dy += deltaY;
+    st.xRatio = xRatio;
+    st.yRatio = yRatio;
+    const flush = () => {
+      st.raf = 0;
+      const sendDx = st.dx;
+      const sendDy = st.dy;
+      st.dx = 0;
+      st.dy = 0;
+      st.lastFlushAt = performance.now();
+      if (Math.hypot(sendDx, sendDy) < 0.05) return;
+      void sendRealtimeInput({
+        action: "scroll",
+        xRatio: st.xRatio,
+        yRatio: st.yRatio,
+        deltaX: sendDx,
+        deltaY: sendDy,
+        pageId,
+      });
+    };
+    const now = performance.now();
+    if (now - st.lastFlushAt >= 14 && !st.raf) {
+      flush();
+    } else if (!st.raf) {
+      st.raf = requestAnimationFrame(flush);
+    }
   };
 
   // 0. Instant 0ms Frame Restore on Tab Switch from in-memory tab cache
@@ -7484,14 +7524,7 @@ function AgentBrowserPreview({
         applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
       }
       applyPredictiveScrollOffset(scrollDeltaX, scrollDeltaY);
-      void sendRealtimeInput({
-        action: "scroll",
-        xRatio: anchorXRatio,
-        yRatio: anchorYRatio,
-        deltaX: scrollDeltaX,
-        deltaY: scrollDeltaY,
-        pageId,
-      });
+      queueCoalescedScrollInput(anchorXRatio, anchorYRatio, scrollDeltaX, scrollDeltaY);
 
       inertiaRafRef.current = requestAnimationFrame(stepInertia);
     };
@@ -7605,11 +7638,12 @@ function AgentBrowserPreview({
           g.vy = g.vy * 0.55 + instVy * 0.45;
         }
 
-        if (now - lastTouchScrollSentAtRef.current >= 12 && Math.hypot(stepDx, stepDy) > 0.4) {
+        g.lastX = cx;
+        g.lastY = cy;
+        g.lastTime = now;
+
+        if (Math.hypot(stepDx, stepDy) > 0.25) {
           lastTouchScrollSentAtRef.current = now;
-          g.lastX = cx;
-          g.lastY = cy;
-          g.lastTime = now;
 
           // Enhancement 4: 2-Touch bidirectional smooth horizontal and vertical scrolling
           const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.65 : -stepDx * 1.65;
@@ -7621,15 +7655,7 @@ function AgentBrowserPreview({
             applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
           }
           applyPredictiveScrollOffset(scrollDeltaX, scrollDeltaY);
-
-          void sendRealtimeInput({
-            action: "scroll",
-            xRatio: cursorNormRef.current.x,
-            yRatio: cursorNormRef.current.y,
-            deltaX: scrollDeltaX,
-            deltaY: scrollDeltaY,
-            pageId,
-          });
+          queueCoalescedScrollInput(cursorNormRef.current.x, cursorNormRef.current.y, scrollDeltaX, scrollDeltaY);
         }
         return;
       }
@@ -7728,11 +7754,11 @@ function AgentBrowserPreview({
           g.vx = g.vx * 0.55 + instVx * 0.45;
           g.vy = g.vy * 0.55 + instVy * 0.45;
         }
-        if (now - lastTouchScrollSentAtRef.current >= 12 && Math.hypot(stepDx, stepDy) > 0.5) {
+        g.lastX = clientX;
+        g.lastY = clientY;
+        g.lastTime = now;
+        if (Math.hypot(stepDx, stepDy) > 0.25) {
           lastTouchScrollSentAtRef.current = now;
-          g.lastX = clientX;
-          g.lastY = clientY;
-          g.lastTime = now;
           const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
           const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.65 : -stepDx * 1.65;
           const scrollDeltaY = isLandscapeRotated ? stepDx * 1.65 : -stepDy * 1.65;
@@ -7743,14 +7769,7 @@ function AgentBrowserPreview({
             applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
           }
           applyPredictiveScrollOffset(scrollDeltaX, scrollDeltaY);
-          void sendRealtimeInput({
-            action: "scroll",
-            xRatio: coords.xRatio,
-            yRatio: coords.yRatio,
-            deltaX: scrollDeltaX,
-            deltaY: scrollDeltaY,
-            pageId,
-          });
+          queueCoalescedScrollInput(coords.xRatio, coords.yRatio, scrollDeltaX, scrollDeltaY);
         }
       }
     }
