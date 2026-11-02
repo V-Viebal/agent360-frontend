@@ -83,7 +83,8 @@ export async function focusAgentBrowser(agentId: string): Promise<boolean> {
 
 
 export interface BrowserInputPayload {
-  action: "click" | "dblclick" | "rightclick" | "move" | "mousedown" | "mousemove_drag" | "mouseup" | "scroll" | "scroll_to" | "find" | "type" | "key" | "navigate" | "reload" | "back" | "forward" | "new_tab" | "close_tab" | "activate_tab" | "resize" | "quality";
+  action: "click" | "dblclick" | "rightclick" | "move" | "mousedown" | "mousemove_drag" | "mouseup" | "scroll" | "scroll_to" | "find" | "type" | "key" | "navigate" | "reload" | "back" | "forward" | "new_tab" | "close_tab" | "activate_tab" | "resize" | "quality" | "clipboard_copy" | "clipboard_paste";
+  modifiers?: number;
   xRatio?: number;
   yRatio?: number;
   deltaX?: number;

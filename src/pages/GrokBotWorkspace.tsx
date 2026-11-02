@@ -5430,8 +5430,12 @@ function SelkiesViewer({
   const tabFrameCacheRef = useRef<Record<string, string>>({});
   const tabOrderRef = useRef<string[]>([]);
   const tabOrderLoadedForRef = useRef<string>("");
+  const closedTabsUntilRef = useRef<Map<string, number>>(new Map());
+  const tabMutationLockUntilRef = useRef<number>(0);
+  const lastNonAnchorTabsRef = useRef<{ tabs: AgentBrowserTab[]; at: number }>({ tabs: [], at: 0 });
   if (tabOrderLoadedForRef.current !== agentId) {
     tabOrderLoadedForRef.current = agentId;
+    lastNonAnchorTabsRef.current = { tabs: [], at: 0 };
     try {
       const saved = sessionStorage.getItem(`skyer_browser_tab_order_${agentId}`);
       const parsed = saved ? JSON.parse(saved) : null;
@@ -5440,8 +5444,6 @@ function SelkiesViewer({
       tabOrderRef.current = [];
     }
   }
-  const closedTabsUntilRef = useRef<Map<string, number>>(new Map());
-  const tabMutationLockUntilRef = useRef<number>(0);
   const draggingTabIdRef = useRef<string | null>(null);
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
   const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
@@ -5554,9 +5556,22 @@ function SelkiesViewer({
       if (draggingTabIdRef.current) return;
       if (info && Array.isArray(info.tabs)) {
         const realTabs = info.tabs.filter((t) => !t.anchor);
-        const rawList = realTabs.length > 0 ? realTabs : info.tabs;
+        const nowMs = Date.now();
+        if (realTabs.length > 0) {
+          lastNonAnchorTabsRef.current = { tabs: realTabs, at: nowMs };
+        }
+        const canHoldPreviousNonAnchorTabs =
+          realTabs.length === 0 &&
+          lastNonAnchorTabsRef.current.tabs.length > 0 &&
+          nowMs - lastNonAnchorTabsRef.current.at < 20000;
+        const rawList =
+          realTabs.length > 0
+            ? realTabs
+            : canHoldPreviousNonAnchorTabs
+              ? lastNonAnchorTabsRef.current.tabs
+              : info.tabs;
         const list = reconcileTabsWithOrder(rawList);
-        if (Date.now() < tabMutationLockUntilRef.current) {
+        if (nowMs < tabMutationLockUntilRef.current) {
           // Preserve any optimistic tabs during the mutation lock window
           setBrowserTabs((prev) => {
             const optimistic = prev.filter((t) => t.targetId.startsWith("optimistic-"));
@@ -5885,6 +5900,8 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
 
     const closeIdx = browserTabs.findIndex((t) => t.targetId === tabId);
     const remaining = browserTabs.filter((t) => t.targetId !== tabId);
+    const remainingNonAnchor = remaining.filter((t) => !t.anchor);
+    lastNonAnchorTabsRef.current = { tabs: remainingNonAnchor, at: Date.now() };
     persistTabOrder(remaining.map((t) => t.targetId));
     setBrowserTabs(remaining);
 
@@ -6533,7 +6550,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             <Tooltip
               content={
                 mobileInteractionMode === "mouse"
-                  ? "Chế độ Chuột ảo (Kéo 1 ngón di chuyển chuột, chạm để click, 2 ngón thu phóng) · Bấm để chuyển sang Chạm trực tiếp"
+                  ? "Chế độ Chuột ảo (1 ngón: Di chuột, chạm để click, chạm đúp mở/chọn từ, chạm 2 lần giữ để kéo · 2 ngón: Vuốt ngang/dọc cuộn trang, chạm để chuột phải)"
                   : "Chế độ Chạm trực tiếp (Touch) · Bấm để chuyển sang Chuột ảo"
               }
               placement="bottom"
@@ -6870,6 +6887,8 @@ function AgentBrowserPreview({
   const lastTouchScrollSentAtRef = useRef<number>(0);
   const inertiaRafRef = useRef<number>(0);
   const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const lastSingleTapRef = useRef<{ time: number; x: number; y: number }>({ time: 0, x: 0, y: 0 });
+  const isTapDraggingRef = useRef<boolean>(false);
 
   const gestureRef = useRef<{
     type: "single" | "pinch";
@@ -6890,6 +6909,8 @@ function AgentBrowserPreview({
     startCenterX: number;
     startCenterY: number;
     moved: boolean;
+    twoFingerMode?: "undecided" | "scroll" | "pinch";
+    isDragSelect?: boolean;
   } | null>(null);
 
   const currentBlobUrlRef = useRef<string>("");
@@ -7187,17 +7208,23 @@ function AgentBrowserPreview({
     const conn = typeof navigator !== "undefined" ? (navigator as any).connection : null;
     try { conn?.addEventListener?.("change", onNetChange); } catch {}
 
-    try {
-      const { w: initW, h: initH } = latestViewportRef.current;
-      lastSentViewportRef.current = { pageId, w: Math.round(initW), h: Math.round(initH) };
-      ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH));
-      ws.binaryType = "blob";
-      wsRef.current = ws;
-      ws.onopen = () => {
-        if (!alive) return;
-        wsConnectedRef.current = true;
-        lastFrameAt = performance.now();
-      };
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempt = 0;
+
+    const connectWs = () => {
+      if (!alive) return;
+      try {
+        const { w: initW, h: initH } = latestViewportRef.current;
+        lastSentViewportRef.current = { pageId, w: Math.round(initW), h: Math.round(initH) };
+        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH));
+        ws.binaryType = "blob";
+        wsRef.current = ws;
+        ws.onopen = () => {
+          if (!alive) return;
+          reconnectAttempt = 0;
+          wsConnectedRef.current = true;
+          lastFrameAt = performance.now();
+        };
       ws.onmessage = (ev) => {
         if (!alive) return;
         try {
@@ -7281,13 +7308,25 @@ function AgentBrowserPreview({
           }
         } catch {}
       };
-      ws.onclose = () => { wsConnectedRef.current = false; if (wsRef.current === ws) wsRef.current = null; };
-      ws.onerror = () => { wsConnectedRef.current = false; };
-    } catch {}
+        ws.onclose = () => {
+          wsConnectedRef.current = false;
+          if (wsRef.current === ws) wsRef.current = null;
+          if (alive) {
+            const delayMs = Math.min(3500, 450 + reconnectAttempt * 500);
+            reconnectAttempt += 1;
+            reconnectTimer = setTimeout(connectWs, delayMs);
+          }
+        };
+        ws.onerror = () => { wsConnectedRef.current = false; };
+      } catch {}
+    };
+
+    connectWs();
 
     return () => {
       alive = false;
       wsConnectedRef.current = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (rafId) cancelAnimationFrame(rafId);
       try { conn?.removeEventListener?.("change", onNetChange); } catch {}
       if (wsRef.current === ws) wsRef.current = null;
@@ -7439,6 +7478,12 @@ function AgentBrowserPreview({
 
       const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.8 : -stepDx * 1.8;
       const scrollDeltaY = isLandscapeRotated ? stepDx * 1.8 : -stepDy * 1.8;
+      const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
+      if (scrollHeight > clientHeight && Math.abs(scrollDeltaY) > 0.05) {
+        const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + scrollDeltaY));
+        applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
+      }
+      applyPredictiveScrollOffset(scrollDeltaX, scrollDeltaY);
       void sendRealtimeInput({
         action: "scroll",
         xRatio: anchorXRatio,
@@ -7460,14 +7505,20 @@ function AgentBrowserPreview({
     const isScrollbarZone = Boolean(startCoords && startCoords.xRatio >= 0.965);
     const useNativeMouseDrag = isScrollbarZone || (pointerType === "mouse" && mobileInputMode === "touch");
 
+    // Enhancement 3: Tap-and-drag preparation for text selection & dragging in Phone Mouse Mode
+    let isDragSelect = false;
+    const now = performance.now();
+    const isQuickSecondTap = mobileInputMode === "mouse" && pointerType === "touch" && (now - lastSingleTapRef.current.time < 320) && (Math.hypot(clientX - lastSingleTapRef.current.x, clientY - lastSingleTapRef.current.y) < 36);
+
     gestureRef.current = {
       type: "single",
       nativeDrag: useNativeMouseDrag,
+      isDragSelect,
       startX: clientX,
       startY: clientY,
       lastX: clientX,
       lastY: clientY,
-      lastTime: performance.now(),
+      lastTime: now,
       vx: 0,
       vy: 0,
       startCursorX: cursorNormRef.current.x,
@@ -7513,7 +7564,8 @@ function AgentBrowserPreview({
       startPanY: zoomPanRef.current.y,
       startCenterX: cx,
       startCenterY: cy,
-      moved: true,
+      moved: false,
+      twoFingerMode: mobileInputMode === "mouse" ? "undecided" : "pinch",
     };
   };
 
@@ -7523,6 +7575,71 @@ function AgentBrowserPreview({
     const dist = Math.hypot(x1 - x2, y1 - y2);
     const cx = (x1 + x2) / 2;
     const cy = (y1 + y2) / 2;
+    const now = performance.now();
+    const dt = Math.max(4, now - g.lastTime);
+
+    // In Phone Mouse Mode: 2-touch swipe scrolls the web page like a trackpad!
+    if (mobileInputMode === "mouse") {
+      const centerMove = Math.hypot(cx - g.startX, cy - g.startY);
+      const distChange = Math.abs(dist - g.startDist);
+      const distRatio = dist / Math.max(10, g.startDist);
+
+      if (g.twoFingerMode === "undecided") {
+        if (distChange > 24 && Math.abs(distRatio - 1) > 0.15 && distChange > centerMove * 1.4) {
+          g.twoFingerMode = "pinch";
+        } else if (centerMove > 5) {
+          g.twoFingerMode = "scroll";
+        }
+      }
+
+      if (g.twoFingerMode === "scroll" || (g.twoFingerMode === "undecided" && centerMove > 4)) {
+        g.twoFingerMode = "scroll";
+        g.moved = true;
+        const stepDx = cx - g.lastX;
+        const stepDy = cy - g.lastY;
+
+        if (Math.hypot(stepDx, stepDy) > 0.3) {
+          const instVx = stepDx / dt;
+          const instVy = stepDy / dt;
+          g.vx = g.vx * 0.55 + instVx * 0.45;
+          g.vy = g.vy * 0.55 + instVy * 0.45;
+        }
+
+        if (now - lastTouchScrollSentAtRef.current >= 12 && Math.hypot(stepDx, stepDy) > 0.4) {
+          lastTouchScrollSentAtRef.current = now;
+          g.lastX = cx;
+          g.lastY = cy;
+          g.lastTime = now;
+
+          // Enhancement 4: 2-Touch bidirectional smooth horizontal and vertical scrolling
+          const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.65 : -stepDx * 1.65;
+          const scrollDeltaY = isLandscapeRotated ? stepDx * 1.65 : -stepDy * 1.65;
+
+          const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
+          if (scrollHeight > clientHeight) {
+            const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + scrollDeltaY));
+            applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
+          }
+          applyPredictiveScrollOffset(scrollDeltaX, scrollDeltaY);
+
+          void sendRealtimeInput({
+            action: "scroll",
+            xRatio: cursorNormRef.current.x,
+            yRatio: cursorNormRef.current.y,
+            deltaX: scrollDeltaX,
+            deltaY: scrollDeltaY,
+            pageId,
+          });
+        }
+        return;
+      }
+    }
+
+    const totalDistChange = Math.abs(dist - g.startDist);
+    const totalCenterDelta = Math.hypot(cx - g.startX, cy - g.startY);
+    if (totalDistChange > 6 || totalCenterDelta > 6) {
+      g.moved = true;
+    }
     const nextScale = Math.max(1, Math.min(3.5, g.startScale * (dist / g.startDist)));
     zoomScaleRef.current = nextScale;
     if (nextScale > 1.02) {
@@ -7534,7 +7651,6 @@ function AgentBrowserPreview({
       zoomPanRef.current = { x: 0, y: 0 };
     }
     applyZoomTransformDom();
-    g.moved = true;
   };
 
   const moveSingleGesture = (clientX: number, clientY: number) => {
@@ -7563,7 +7679,21 @@ function AgentBrowserPreview({
 
     if (mobileInputMode === "mouse") {
       // MODE 2: MOUSE (TRACKPAD) MODE — Direct DOM cursor update (0ms lag, 0 React re-renders!)
-      if (totalMove > 4) g.moved = true;
+      if (totalMove > 4) {
+        g.moved = true;
+        // Engage tap-and-drag on first movement if second tap arrived within 320ms window!
+        if (!g.isDragSelect && (now - lastSingleTapRef.current.time < 320) && (Math.hypot(g.startX - lastSingleTapRef.current.x, g.startY - lastSingleTapRef.current.y) < 36)) {
+          g.isDragSelect = true;
+          isTapDraggingRef.current = true;
+          triggerHaptic(12);
+          void sendRealtimeInput({
+            action: "mousedown",
+            xRatio: cursorNormRef.current.x,
+            yRatio: cursorNormRef.current.y,
+            pageId,
+          });
+        }
+      }
       const rect = viewportBoxRef.current?.getBoundingClientRect();
       const w = Math.max(180, rect?.width || 360);
       const h = Math.max(180, rect?.height || 600);
@@ -7576,10 +7706,11 @@ function AgentBrowserPreview({
       cursorNormRef.current = { x: nx, y: ny };
       applyCursorDom();
 
-      if (now - lastHoverMoveSentAtRef.current > 24) {
+      const throttleMs = g.isDragSelect ? 16 : 24;
+      if (now - lastHoverMoveSentAtRef.current > throttleMs) {
         lastHoverMoveSentAtRef.current = now;
         void sendRealtimeInput({
-          action: "move",
+          action: g.isDragSelect ? "mousemove_drag" : "move",
           xRatio: nx,
           yRatio: ny,
           pageId,
@@ -7628,7 +7759,36 @@ function AgentBrowserPreview({
   const endGesture = async (endClientX?: number, endClientY?: number) => {
     const g = gestureRef.current;
     gestureRef.current = null;
-    if (!g || g.type === "pinch") return;
+    if (!g) return;
+
+    if (g.type === "pinch") {
+      if (mobileInputMode === "mouse") {
+        if (!g.moved) {
+          // 2-TOUCH TAP IN MOUSE MODE: Right click at virtual mouse pointer!
+          triggerHaptic(15);
+          const cur = cursorNormRef.current;
+          if (cursorElRef.current?.animate) {
+            cursorElRef.current.animate(
+              [{ transform: "scale(1)" }, { transform: "scale(0.82)" }, { transform: "scale(1)" }],
+              { duration: 160 }
+            );
+          }
+          await sendRealtimeInput({
+            action: "rightclick",
+            xRatio: cur.x,
+            yRatio: cur.y,
+            pageId,
+          });
+          return;
+        }
+        if (g.twoFingerMode === "scroll" && Math.hypot(g.vx, g.vy) > 0.18) {
+          // Launch smooth kinetic momentum scroll when user flicks 2 fingers!
+          startInertiaScroll(g.vx, g.vy, cursorNormRef.current.x, cursorNormRef.current.y);
+          return;
+        }
+      }
+      return;
+    }
 
     if (g.nativeDrag) {
       const coords = computeNormalizedCoords(endClientX ?? g.lastX, endClientY ?? g.lastY) ||
@@ -7644,13 +7804,60 @@ function AgentBrowserPreview({
 
     if (mobileInputMode === "mouse") {
       const cur = cursorNormRef.current;
-      if (!g.moved) {
+      const now = performance.now();
+
+      // If completing tap-and-drag, release mouse button (Enhancement 3)
+      if (g.isDragSelect || isTapDraggingRef.current) {
+        isTapDraggingRef.current = false;
         await sendRealtimeInput({
-          action: "click",
+          action: "mouseup",
           xRatio: cur.x,
           yRatio: cur.y,
           pageId,
         });
+        lastSingleTapRef.current = { time: 0, x: 0, y: 0 };
+        return;
+      }
+
+      if (!g.moved) {
+        // Enhancement 2: Double-tap detection -> dblclick action
+        const prevTap = lastSingleTapRef.current;
+        const timeSincePrev = now - prevTap.time;
+        const distFromPrev = Math.hypot((endClientX ?? g.lastX) - prevTap.x, (endClientY ?? g.lastY) - prevTap.y);
+
+        if (timeSincePrev < 280 && distFromPrev < 28) {
+          // Double click triggered!
+          triggerHaptic(18);
+          if (cursorElRef.current?.animate) {
+            cursorElRef.current.animate(
+              [{ transform: "scale(1)" }, { transform: "scale(0.78)" }, { transform: "scale(1)" }],
+              { duration: 150 }
+            );
+          }
+          await sendRealtimeInput({
+            action: "dblclick",
+            xRatio: cur.x,
+            yRatio: cur.y,
+            pageId,
+          });
+          lastSingleTapRef.current = { time: 0, x: 0, y: 0 };
+        } else {
+          // Single click triggered!
+          triggerHaptic(8);
+          if (cursorElRef.current?.animate) {
+            cursorElRef.current.animate(
+              [{ transform: "scale(1)" }, { transform: "scale(0.88)" }, { transform: "scale(1)" }],
+              { duration: 120 }
+            );
+          }
+          await sendRealtimeInput({
+            action: "click",
+            xRatio: cur.x,
+            yRatio: cur.y,
+            pageId,
+          });
+          lastSingleTapRef.current = { time: now, x: endClientX ?? g.lastX, y: endClientY ?? g.lastY };
+        }
       } else {
         await sendRealtimeInput({
           action: "move",
@@ -7951,6 +8158,12 @@ function AgentBrowserPreview({
           });
         }
       }}
+      onCopy={async (e) => {
+        if (!interactive) return;
+        // Native browser copy event inside viewport
+        e.preventDefault();
+        await sendRealtimeInput({ action: "key", key: "c", modifiers: 2, pageId });
+      }}
       onPaste={async (e) => {
         if (!interactive) return;
         const pasted = e.clipboardData?.getData("text");
@@ -8003,6 +8216,45 @@ function AgentBrowserPreview({
           if (e.key === "0") {
             e.preventDefault();
             onZoomStep?.("reset");
+            return;
+          }
+          if (kLower === "c") {
+            // Forward Ctrl+C (Copy) to active tab & sync to local client clipboard if text is selected
+            e.preventDefault();
+            triggerHaptic(8);
+            await sendRealtimeInput({ action: "key", key: "c", modifiers: 2, pageId });
+            return;
+          }
+          if (kLower === "v") {
+            // Forward Ctrl+V (Paste): read local clipboard and insert into active browser target
+            e.preventDefault();
+            triggerHaptic(8);
+            try {
+              if (navigator.clipboard?.readText) {
+                const clipText = await navigator.clipboard.readText();
+                if (clipText) {
+                  await sendRealtimeInput({ action: "type", text: clipText, pageId });
+                  return;
+                }
+              }
+            } catch {}
+            await sendRealtimeInput({ action: "key", key: "v", modifiers: 2, pageId });
+            return;
+          }
+          if (kLower === "x") {
+            e.preventDefault();
+            triggerHaptic(8);
+            await sendRealtimeInput({ action: "key", key: "x", modifiers: 2, pageId });
+            return;
+          }
+          if (kLower === "a") {
+            e.preventDefault();
+            await sendRealtimeInput({ action: "key", key: "a", modifiers: 2, pageId });
+            return;
+          }
+          if (kLower === "z") {
+            e.preventDefault();
+            await sendRealtimeInput({ action: "key", key: "z", modifiers: e.shiftKey ? 10 : 2, pageId });
             return;
           }
         }

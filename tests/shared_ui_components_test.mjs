@@ -474,7 +474,7 @@ assert.ok(
   "Composer textarea must enforce wrap=soft, whitespace-pre-wrap, and scrollWidth detection so long text always wraps to multiple lines"
 );
 assert.ok(
-  grokMobileSrc.includes("inert={!mobileAgentsOpen") &&
+  grokMobileSrc.includes("inert: !mobileAgentsOpen") &&
   grokMobileSrc.includes("inputTabIndex={!mobileAgentsOpen"),
   "Off-screen mobile sidebars must be marked inert and have fileInput outside form so iOS keyboard hides the Next/Prev accessory bar"
 );
@@ -605,3 +605,51 @@ assert.ok(
   "AgentBrowserPreview must dynamically adjust JPEG quality between 55 and 75 based on ewmaKbps to maintain 60fps over 4G mobile networks"
 );
 console.log("✓ Test 42: Adaptive 55..75 JPEG Quality Controller for 60fps 4G Mobile Stream verified");
+
+console.log("Testing Phone Browser Mouse Mode: 2-Touch Swipe to Scroll & 2-Touch Tap to Right Click Contract...");
+const grokMouseGesturesSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+assert.ok(
+  grokMouseGesturesSrc.includes('twoFingerMode?: "undecided" | "scroll" | "pinch"') &&
+  grokMouseGesturesSrc.includes('if (mobileInputMode === "mouse")') &&
+  grokMouseGesturesSrc.includes('g.twoFingerMode = "scroll"') &&
+  grokMouseGesturesSrc.includes('action: "rightclick"') &&
+  grokMouseGesturesSrc.includes('triggerHaptic(15)') &&
+  grokMouseGesturesSrc.includes('startInertiaScroll(g.vx, g.vy, cursorNormRef.current.x, cursorNormRef.current.y)'),
+  "AgentBrowserPreview must support 2-finger swipe to scroll with momentum inertia and 2-finger tap for right-click in phone mouse mode"
+);
+console.log("✓ Test 43: Phone Browser Mouse Mode 2-Touch Gestures (Scroll & Right Click) verified");
+
+console.log("Testing Phone Browser Mouse Mode: Double-Tap dblclick, Tap-and-Drag mousemove_drag, and Horizontal 2-Touch Scroll...");
+assert.ok(
+  grokMouseGesturesSrc.includes('action: "dblclick"') &&
+  grokMouseGesturesSrc.includes('isDragSelect') &&
+  grokMouseGesturesSrc.includes('isTapDraggingRef') &&
+  grokMouseGesturesSrc.includes('action: "mousemove_drag"') &&
+  grokMouseGesturesSrc.includes('action: "mouseup"') &&
+  grokMouseGesturesSrc.includes('scrollDeltaX') &&
+  grokMouseGesturesSrc.includes('scrollDeltaY'),
+  "AgentBrowserPreview must support double-tap dblclick, tap-and-drag mousemove_drag/mouseup, and bidirectional 2-finger scroll"
+);
+console.log("✓ Test 44: Phone Browser Mouse Mode Enhancements 2, 3, and 4 verified");
+
+console.log("Testing Browser Keyboard Shortcuts: Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A, Ctrl+Z and Clipboard Forwarding Contract...");
+assert.ok(
+  grokMouseGesturesSrc.includes('kLower === "c"') &&
+  grokMouseGesturesSrc.includes('kLower === "v"') &&
+  grokMouseGesturesSrc.includes('kLower === "x"') &&
+  grokMouseGesturesSrc.includes('kLower === "a"') &&
+  grokMouseGesturesSrc.includes('kLower === "z"') &&
+  grokMouseGesturesSrc.includes('onCopy={async (e) =>') &&
+  grokMouseGesturesSrc.includes('navigator.clipboard?.readText'),
+  "AgentBrowserPreview must forward Ctrl/Cmd+C, Ctrl/Cmd+V, Ctrl/Cmd+X, Ctrl/Cmd+A, and Ctrl/Cmd+Z to CDP target with clipboard integration"
+);
+console.log("✓ Test 45: Browser Clipboard Keyboard Shortcuts (Ctrl+C, Ctrl+V, etc.) verified");
+
+console.log("Testing Browser Anti-Flicker Anchor Tab Hold & WebSocket Auto-Reconnect Contract...");
+assert.ok(
+  grokMouseGesturesSrc.includes("lastNonAnchorTabsRef") &&
+  grokMouseGesturesSrc.includes("canHoldPreviousNonAnchorTabs") &&
+  grokMouseGesturesSrc.includes("reconnectTimer = setTimeout(connectWs, delayMs)"),
+  "SelkiesViewer must hold previous non-anchor tabs during transient poll gaps and AgentBrowserPreview must auto-reconnect live screencast WebSocket"
+);
+console.log("✓ Test 46: Browser Anti-Flicker Anchor Tab Hold & WebSocket Auto-Reconnect verified");
