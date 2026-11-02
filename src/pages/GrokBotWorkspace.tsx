@@ -21721,7 +21721,10 @@ ${chat.id}`);
       {/* ========================================================= */}
       {/* 2.5 LIVE COMPUTER EXPAND PANE (Desktop: 70% width, Mobile: Fullscreen) */}
       {/* ========================================================= */}
-      {isComputerSplitOpen && (() => {
+      {/* Keep only one interactive CDP viewer mounted at a time. The split pane and
+          maximized modal share one browser session; mounting both makes their
+          ResizeObservers race and changes the remote viewport while clicking. */}
+      {isComputerSplitOpen && !isBrowserModalOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
         return (
           <>
@@ -22956,7 +22959,7 @@ ${chat.id}`);
           >
             <div
               data-testid="computer-maximized-modal"
-              className="w-full h-full sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+              className="w-full h-full sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-150"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Top Navigation Bar with Controls & Close Button */}

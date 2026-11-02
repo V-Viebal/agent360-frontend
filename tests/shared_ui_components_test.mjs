@@ -653,3 +653,12 @@ assert.ok(
   "SelkiesViewer must hold previous non-anchor tabs during transient poll gaps and AgentBrowserPreview must auto-reconnect live screencast WebSocket"
 );
 console.log("✓ Test 46: Browser Anti-Flicker Anchor Tab Hold & WebSocket Auto-Reconnect verified");
+
+console.log("Testing Browser Scale-Jitter Guard for Modal / Split View and Stable CDP Frame Sizing...");
+assert.ok(
+  grokMouseGesturesSrc.includes("isComputerSplitOpen && !isBrowserModalOpen") &&
+  grokMouseGesturesSrc.includes('className="w-full h-full sm:w-[95vw] sm:h-[95vh]') &&
+  !grokMouseGesturesSrc.includes('max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150'),
+  "The maximized browser must not mount alongside split view or animate a scale transform during interaction"
+);
+console.log("✓ Test 47: Browser scale-jitter guard verified");
