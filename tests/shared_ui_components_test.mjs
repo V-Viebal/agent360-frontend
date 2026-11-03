@@ -709,3 +709,13 @@ assert.ok(
   "updateAgentActiveModel must resolve the agent provider_id and apply model updates to QwenPaw API via PUT /api/agents/{agentId} and PUT /api/agents/{agentId}/active-model"
 );
 console.log("✓ Test 51: Agent Active Model Update Sync to QwenPaw API Contract verified");
+
+console.log("Testing Precision Touchpad 1:1 Direct Pass-Through & Sub-Pixel Remainder Preservation Contract...");
+assert.ok(
+  grokMouseGesturesSrc.includes("isLikelyTouchpad") &&
+  grokMouseGesturesSrc.includes("st.dx -= sendDx;") &&
+  grokMouseGesturesSrc.includes("st.dy -= sendDy;") &&
+  grokMouseGesturesSrc.includes("queueCoalescedScrollInput(coords.xRatio, coords.yRatio, totalDx, totalDy)"),
+  "AgentBrowserPreview must pass precision touchpad wheel streams directly 1:1 to queueCoalescedScrollInput without double-smoothing and preserve sub-pixel remainders"
+);
+console.log("✓ Test 52: Precision Touchpad 1:1 Direct Pass-Through & Sub-Pixel Remainder Preservation Contract verified");

@@ -5367,6 +5367,17 @@ function SelkiesViewer({
   profile,
   reloadKey = 0,
   isResizing = false,
+  onCaptureScreenshot,
+  isScreenshotCaptured = false,
+  screenshotTooltip,
+  onReloadSession,
+  isReloadingSession = false,
+  reloadSessionTooltip,
+  onToggleMaximize,
+  isMaximized = false,
+  maximizeTooltip,
+  onCloseBrowser,
+  closeTooltip,
 }: {
   agentId: string;
   url: string;
@@ -5374,6 +5385,17 @@ function SelkiesViewer({
   profile: string;
   reloadKey?: number;
   isResizing?: boolean;
+  onCaptureScreenshot?: () => void;
+  isScreenshotCaptured?: boolean;
+  screenshotTooltip?: string;
+  onReloadSession?: () => void;
+  isReloadingSession?: boolean;
+  reloadSessionTooltip?: string;
+  onToggleMaximize?: () => void;
+  isMaximized?: boolean;
+  maximizeTooltip?: string;
+  onCloseBrowser?: () => void;
+  closeTooltip?: string;
 }) {
   const [mobileInteractionMode, setMobileInteractionMode] = useState<"touch" | "mouse">(() => {
     if (typeof window !== "undefined") {
@@ -6084,8 +6106,9 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
         data-testid="agent-browser-chrome-header"
         className="w-full bg-[#dee1e6] dark:bg-[#202124] flex flex-col shrink-0 select-none z-30 transition-colors"
       >
-        {/* 1. Authentic Chrome Tab Strip (Equal-width tabs via flex-1 basis-0 min-w-[72px] max-w-[240px]) */}
-        <div className="flex items-end w-full px-2 pt-1.5 overflow-x-auto no-scrollbar">
+        {/* 1. Authentic Chrome Tab Strip + Unified Borderless Window CTAs */}
+        <div className="flex items-end justify-between w-full pl-2 pr-0 pt-1">
+          <div className="flex items-end flex-1 min-w-0 overflow-x-auto no-scrollbar">
           {browserTabs.length > 0 ? (
             browserTabs.map((tab, idx) => {
               const isActive = (activeTabObj?.targetId || "") === tab.targetId;
@@ -6228,6 +6251,81 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
           >
             <Plus size={15} />
           </button>
+          </div>
+
+          {/* Unified Borderless Browser Header CTAs (matching Chrome Window Controls style) */}
+          {(onCaptureScreenshot || onReloadSession || onToggleMaximize || onCloseBrowser) && (
+            <div
+              data-testid="agent-browser-window-ctas"
+              className="flex items-stretch self-stretch shrink-0 ml-1 -mt-1"
+            >
+              {onCaptureScreenshot && (
+                <Tooltip content={screenshotTooltip || "Chụp màn hình"} placement="bottom">
+                  <button
+                    type="button"
+                    data-testid="agent-browser-header-screenshot-btn"
+                    onClick={onCaptureScreenshot}
+                    className={`h-[38px] w-11 border-0 rounded-none flex items-center justify-center transition-colors cursor-pointer ${
+                      isScreenshotCaptured
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "bg-transparent hover:bg-black/10 dark:hover:bg-[#35363a] text-[#5f6368] dark:text-[#e8eaed] hover:text-[#202124] dark:hover:text-white"
+                    }`}
+                    aria-label={screenshotTooltip || "Capture screenshot"}
+                  >
+                    {isScreenshotCaptured ? (
+                      <Check size={14} className="text-emerald-400 animate-in zoom-in-75 duration-150" />
+                    ) : (
+                      <Camera size={14} />
+                    )}
+                  </button>
+                </Tooltip>
+              )}
+
+              {onReloadSession && (
+                <Tooltip content={reloadSessionTooltip || "Tải lại phiên trình duyệt"} placement="bottom">
+                  <button
+                    type="button"
+                    data-testid="agent-browser-header-reload-session-btn"
+                    disabled={isReloadingSession}
+                    onClick={onReloadSession}
+                    className="h-[38px] w-11 border-0 rounded-none bg-transparent hover:bg-black/10 dark:hover:bg-[#35363a] text-[#5f6368] dark:text-[#e8eaed] hover:text-[#202124] dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                    aria-label={reloadSessionTooltip || "Reload browser session"}
+                  >
+                    <RefreshCw size={13} className={isReloadingSession ? "animate-spin text-[#1a73e8] dark:text-[#8ab4f8]" : ""} />
+                  </button>
+                </Tooltip>
+              )}
+
+              {onToggleMaximize && (
+                <Tooltip content={maximizeTooltip || (isMaximized ? "Thu nhỏ" : "Phóng to toàn màn hình")} placement="bottom">
+                  <button
+                    type="button"
+                    data-testid="agent-browser-header-maximize-btn"
+                    onClick={onToggleMaximize}
+                    className="h-[38px] w-11 border-0 rounded-none bg-transparent hover:bg-black/10 dark:hover:bg-[#35363a] text-[#5f6368] dark:text-[#e8eaed] hover:text-[#202124] dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                    aria-label={maximizeTooltip || (isMaximized ? "Restore split view" : "Maximize browser")}
+                  >
+                    {isMaximized ? <Copy size={13} className="-scale-x-100" /> : <Maximize2 size={13} />}
+                  </button>
+                </Tooltip>
+              )}
+
+              {onCloseBrowser && (
+                <Tooltip content={closeTooltip || "Đóng trình duyệt"} placement="bottom">
+                  <button
+                    type="button"
+                    data-testid="agent-browser-header-close-btn"
+                    data-ux-target-min="24"
+                    onClick={onCloseBrowser}
+                    className="h-[38px] w-11 border-0 rounded-none bg-transparent hover:bg-[#e81123] hover:text-white text-[#5f6368] dark:text-[#e8eaed] flex items-center justify-center transition-colors cursor-pointer"
+                    aria-label={closeTooltip || "Close (Esc)"}
+                  >
+                    <X size={15} />
+                  </button>
+                </Tooltip>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 2. Authentic Chrome Navigation, Omnibox with History/Search Suggestions Dropdown & Right History Icon */}
@@ -7111,10 +7209,11 @@ function AgentBrowserPreview({
     st.yRatio = yRatio;
     const flush = () => {
       st.raf = 0;
-      const sendDx = st.dx;
-      const sendDy = st.dy;
-      st.dx = 0;
-      st.dy = 0;
+      if (Math.hypot(st.dx, st.dy) < 0.05) return;
+      const sendDx = Number(st.dx.toFixed(2));
+      const sendDy = Number(st.dy.toFixed(2));
+      st.dx -= sendDx;
+      st.dy -= sendDy;
       st.lastFlushAt = performance.now();
       if (Math.hypot(sendDx, sendDy) < 0.05) return;
       void sendRealtimeInput({
@@ -7127,7 +7226,7 @@ function AgentBrowserPreview({
       });
     };
     const now = performance.now();
-    if (now - st.lastFlushAt >= 14 && !st.raf) {
+    if (now - st.lastFlushAt >= 8 && !st.raf) {
       flush();
     } else if (!st.raf) {
       st.raf = requestAnimationFrame(flush);
@@ -7976,12 +8075,14 @@ function AgentBrowserPreview({
     };
   }, [enabled]);
 
-  const wheelAccumRef = useRef<{ targetDx: number; targetDy: number; xRatio: number; yRatio: number; raf: number }>({
+  const wheelAccumRef = useRef<{ targetDx: number; targetDy: number; xRatio: number; yRatio: number; raf: number; lastWheelAt: number; isTouchpadStream: boolean }>({
     targetDx: 0,
     targetDy: 0,
     xRatio: 0.5,
     yRatio: 0.5,
     raf: 0,
+    lastWheelAt: 0,
+    isTouchpadStream: false,
   });
 
   const stepSmoothWheelScroll = () => {
@@ -7989,8 +8090,8 @@ function AgentBrowserPreview({
     const remX = state.targetDx;
     const remY = state.targetDy;
 
-    if (Math.hypot(remX, remY) < 0.8) {
-      if (Math.hypot(remX, remY) > 0.1) {
+    if (Math.hypot(remX, remY) < 0.5) {
+      if (Math.hypot(remX, remY) > 0.05) {
         queueCoalescedScrollInput(state.xRatio, state.yRatio, remX, remY);
       }
       state.targetDx = 0;
@@ -7999,10 +8100,9 @@ function AgentBrowserPreview({
       return;
     }
 
-    // Immediate 1:1 pass-through for high-frequency trackpads (<= 48px) and 55% exponential glide for discrete mouse wheel notches
-    const isSmallTrackpadStep = Math.hypot(remX, remY) <= 48;
-    const stepX = isSmallTrackpadStep ? remX : remX * 0.55;
-    const stepY = isSmallTrackpadStep ? remY : remY * 0.55;
+    // Smooth critically-damped glide for discrete notched mouse wheels
+    const stepX = remX * 0.42;
+    const stepY = remY * 0.42;
     state.targetDx -= stepX;
     state.targetDy -= stepY;
 
@@ -8015,9 +8115,12 @@ function AgentBrowserPreview({
     applyPredictiveScrollOffset(stepX, stepY);
     queueCoalescedScrollInput(state.xRatio, state.yRatio, stepX, stepY);
 
-    if (Math.hypot(state.targetDx, state.targetDy) >= 0.8) {
+    if (Math.hypot(state.targetDx, state.targetDy) >= 0.5) {
       state.raf = requestAnimationFrame(stepSmoothWheelScroll);
     } else {
+      if (Math.hypot(state.targetDx, state.targetDy) > 0.05) {
+        queueCoalescedScrollInput(state.xRatio, state.yRatio, state.targetDx, state.targetDy);
+      }
       state.targetDx = 0;
       state.targetDy = 0;
       state.raf = 0;
@@ -8042,15 +8145,52 @@ function AgentBrowserPreview({
     const coords = computeNormalizedCoords(e.clientX, e.clientY) || { xRatio: 0.5, yRatio: 0.5 };
     // Normalize deltaMode (1 = lines -> ~36px, 2 = pages -> ~720px, 0 = pixels)
     const modeMultiplier = e.deltaMode === 1 ? 36 : e.deltaMode === 2 ? 720 : 1;
-    const rawDx = e.shiftKey && Math.abs(e.deltaX) < 1 ? e.deltaY : e.deltaX;
-    const rawDy = e.shiftKey && Math.abs(e.deltaX) < 1 ? 0 : e.deltaY;
-    wheelAccumRef.current.targetDx += rawDx * modeMultiplier;
-    wheelAccumRef.current.targetDy += rawDy * modeMultiplier;
-    wheelAccumRef.current.xRatio = coords.xRatio;
-    wheelAccumRef.current.yRatio = coords.yRatio;
+    const rawDx = (e.shiftKey && Math.abs(e.deltaX) < 1 ? e.deltaY : e.deltaX) * modeMultiplier;
+    const rawDy = (e.shiftKey && Math.abs(e.deltaX) < 1 ? 0 : e.deltaY) * modeMultiplier;
 
-    if (!wheelAccumRef.current.raf) {
-      wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
+    const now = performance.now();
+    const state = wheelAccumRef.current;
+    const dt = now - state.lastWheelAt;
+    state.lastWheelAt = now;
+
+    // Detect precision touchpad stream: pixel mode (deltaMode === 0) with high frequency (< 34ms), fractional deltas, 2D pan, or small steps (< 64px)
+    const hasFractionalDelta = !Number.isInteger(e.deltaX) || !Number.isInteger(e.deltaY);
+    const has2DPan = Math.abs(e.deltaX) > 0 && Math.abs(e.deltaY) > 0;
+    const isLikelyTouchpad =
+      e.deltaMode === 0 &&
+      (hasFractionalDelta ||
+        has2DPan ||
+        Math.hypot(rawDx, rawDy) < 64 ||
+        (dt < 34 && state.isTouchpadStream));
+    state.isTouchpadStream = isLikelyTouchpad;
+
+    if (isLikelyTouchpad) {
+      // Zero-lag 1:1 pass-through for precision touchpad (no double-smoothing rAF interpolation on top of native OS trackpad inertia!)
+      if (state.raf) {
+        cancelAnimationFrame(state.raf);
+        state.raf = 0;
+      }
+      const totalDx = state.targetDx + rawDx;
+      const totalDy = state.targetDy + rawDy;
+      state.targetDx = 0;
+      state.targetDy = 0;
+      const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
+      if (scrollHeight > clientHeight && Math.abs(totalDy) > 0.05) {
+        const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + totalDy));
+        applyScrollMetricsDom(nextTop, scrollHeight, clientHeight);
+      }
+      applyPredictiveScrollOffset(totalDx, totalDy);
+      queueCoalescedScrollInput(coords.xRatio, coords.yRatio, totalDx, totalDy);
+      return;
+    }
+
+    state.targetDx += rawDx;
+    state.targetDy += rawDy;
+    state.xRatio = coords.xRatio;
+    state.yRatio = coords.yRatio;
+
+    if (!state.raf) {
+      state.raf = requestAnimationFrame(stepSmoothWheelScroll);
     }
   };
 
