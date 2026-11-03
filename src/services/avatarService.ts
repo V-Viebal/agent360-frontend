@@ -184,8 +184,10 @@ export function saveCustomAgentName(agentId: string, name: string): void {
     }
     localStorage.setItem(AGENT_NAMES_KEY, JSON.stringify(all));
     window.dispatchEvent(new CustomEvent("agent-name-updated", { detail: { agentId, name: trimmed, cleanId: clean } }));
-    pushAgentProfileToBackend(agentId, getAgentAvatarConfig(agentId), trimmed).catch?.(() => {});
-    updateQwenPawAgentName(clean, trimmed).catch?.(() => {});
+    (async () => {
+      await pushAgentProfileToBackend(agentId, getAgentAvatarConfig(agentId), trimmed).catch(() => {});
+      await updateQwenPawAgentName(clean, trimmed).catch(() => {});
+    })();
   } catch (err) {
     console.error("[AvatarService] Failed to save custom agent name:", err);
   }
