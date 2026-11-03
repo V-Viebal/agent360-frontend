@@ -55,10 +55,10 @@ export function AgentProfileHeader({ agent, loopMode = 'default', onRefresh, onM
     setShowModelDropdown(false);
     setSwitchingModel(true);
     try {
-      const res = await updateAgentActiveModel(agent.id, providerId, model);
+      const cleanModel = model.includes("/") ? model.split("/").pop()! : model;
+      const res = await updateAgentActiveModel(agent.id, providerId, cleanModel);
       if (res) {
-        const fullModelName = `${providerId}/${model}`;
-        onModelChanged?.(fullModelName);
+        onModelChanged?.(cleanModel);
         onRefresh?.();
       }
     } finally {

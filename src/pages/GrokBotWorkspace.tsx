@@ -9147,15 +9147,28 @@ export function GrokBotWorkspace() {
     triggerHaptic(15);
     setForkToast(`Đang chuyển mô hình ${newModelId} cho ${agentName}...`);
     try {
-      const ok = await updateAgentActiveModel(targetAgentId, providerId, newModelId);
+      const ok = await updateAgentActiveModel(targetAgentId, providerId, cleanModel);
       if (ok) {
-        setForkToast(`Đã đổi mô hình sang ${newModelId} cho ${agentName}`);
+        setForkToast(`Đã đổi mô hình sang ${cleanModel} cho ${agentName}`);
+        const cleanTargetSlug = targetAgentId.replace(/^bot:agent360:/i, "").trim();
         setAgents((prev) =>
-          prev.map((a) => (a.id === targetAgentId ? { ...a, model: newModelId } : a))
+          prev.map((a) =>
+            a.id === targetAgentId || a.slug === cleanTargetSlug
+              ? { ...a, model: cleanModel }
+              : a
+          )
         );
-                try {
+        try {
           const fresh = await fetchInfraAgents();
-          if (fresh && fresh.length > 0) setAgents(fresh);
+          if (fresh && fresh.length > 0) {
+            setAgents(
+              fresh.map((a) =>
+                a.id === targetAgentId || a.slug === cleanTargetSlug
+                  ? { ...a, model: cleanModel }
+                  : a
+              )
+            );
+          }
         } catch {}
       } else {
         setForkToast(`Không thể cập nhật mô hình cho ${agentName}`);
@@ -11463,32 +11476,23 @@ ${targetItem.text}`;
     }, 380);
   };
 
-  const swipeReplyTriggeredRef = useRef<boolean>(false);
-  const handleTouchMoveMsg = (e: React.TouchEvent, msgData?: any) => {
+  const handleTouchMoveMsg = (e: React.TouchEvent) => {
     if (!touchStartPosRef.current || e.touches.length === 0) return;
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
-    const dx = currentX - touchStartPosRef.current.x;
+    const dx = Math.abs(currentX - touchStartPosRef.current.x);
     const dy = Math.abs(currentY - touchStartPosRef.current.y);
 
-    if (Math.abs(dx) > 10 || dy > 10) {
+    if (dx > 10 || dy > 10) {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
     }
-
-    // Swipe right >= 60px with minimal vertical deviation triggers quick reply
-    if (dx > 60 && dy < 25 && !swipeReplyTriggeredRef.current && msgData) {
-      swipeReplyTriggeredRef.current = true;
-      triggerHaptic(12);
-      handleStartReply(msgData.rawMsg || { id: msgData.id, role: msgData.role, content: msgData.content });
-    }
   };
 
   const handleTouchEndMsg = () => {
     touchStartPosRef.current = null;
-    swipeReplyTriggeredRef.current = false;
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -17844,7 +17848,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     <div
                       onTouchStart={(e) => handleTouchStartMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg })}
                       onTouchEnd={handleTouchEndMsg}
-                      onTouchMove={(e) => handleTouchMoveMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg })}
+                      onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onClick={() => {
                         if (longPressPreventClickRef.current) {
@@ -17929,7 +17933,7 @@ const selectedAgentTheme = getAgentColorTheme(
                         rawMsg: msg,
                       })}
                       onTouchEnd={handleTouchEndMsg}
-                      onTouchMove={(e) => handleTouchMoveMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "assistant", rawMsg: msg })}
+                      onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
                       onClick={() => {
                         if (longPressPreventClickRef.current) {

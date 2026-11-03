@@ -485,17 +485,72 @@ export async function fetchActiveChats(): Promise<string[]> {
 
 export async function updateAgentActiveModel(agentId: string, providerId: string, model: string): Promise<boolean> {
   try {
-    const cleanId = agentId.replace(/^bot:agent360:/, "");
-    const putRes = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
+    const cleanId = agentId.replace(/^bot:agent360:/i, "").trim();
+    const rawModel = (model || "").trim();
+    const cleanModel = rawModel.includes("/") ? rawModel.split("/").pop()!.trim() : rawModel;
+    if (!cleanId || !cleanModel) return false;
+
+    let effectiveProviderId = (providerId || "").trim();
+    if (!effectiveProviderId && rawModel.includes("/")) {
+      effectiveProviderId = rawModel.split("/")[0].trim();
+    }
+
+    // Resolve the target agent's native QwenPaw provider_id when generic/default provider is passed
+    try {
+      const activeRes = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }, cleanId);
+      if (activeRes.ok) {
+        const activeDto = await activeRes.json().catch(() => null);
+        const currentProv = String(activeDto?.active_llm?.provider_id || activeDto?.active_model?.provider_id || "").trim();
+        if (currentProv && (!effectiveProviderId || effectiveProviderId === "llm360coding" || effectiveProviderId === "llm360")) {
+          effectiveProviderId = currentProv;
+        }
+      }
+    } catch {}
+
+    if (!effectiveProviderId) {
+      effectiveProviderId = "llm360coding";
+    }
+
+    // 1. Apply active_model directly to QwenPaw agent profile via PUT /api/agents/{agentId}
+    const profilePutRes = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ scope: "agent", agent_id: cleanId, provider_id: providerId, model }),
-    }, cleanId);
-    if (!putRes.ok) {
-      console.warn(`updateAgentActiveModel failed: HTTP ${putRes.status}`);
+      body: JSON.stringify({
+        active_model: {
+          provider_id: effectiveProviderId,
+          model: cleanModel,
+        },
+      }),
+    }, cleanId).catch(() => null);
+
+    // 2. Also invoke PUT /api/agents/{agentId}/active-model for hot-reload & fleet cache invalidation
+    const activePutRes = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        scope: "agent",
+        agent_id: cleanId,
+        provider_id: effectiveProviderId,
+        model: cleanModel,
+      }),
+    }, cleanId).catch(() => null);
+
+    const profileOk = Boolean(profilePutRes && profilePutRes.ok);
+    const activeOk = Boolean(activePutRes && activePutRes.ok);
+
+    if (!profileOk && !activeOk) {
+      console.warn(
+        `updateAgentActiveModel failed: profile HTTP ${profilePutRes?.status ?? "err"}, active-model HTTP ${activePutRes?.status ?? "err"}`
+      );
       return false;
     }
     return true;

@@ -695,3 +695,17 @@ assert.ok(
   "saveCustomAgentName must apply agent name updates to QwenPaw API via PUT /api/agents/{agentId} and persist profile-config via /api/agents/{agentId}/profile-config"
 );
 console.log("✓ Test 50: Agent Name Update Sync to QwenPaw API Contract verified");
+
+console.log("Testing Agent Active Model Update Sync to QwenPaw API Contract...");
+const agentApiModelSrc = fs.readFileSync(path.join(rootDir, "src/services/agentApi.ts"), "utf-8");
+assert.ok(
+  agentApiModelSrc.includes("export async function updateAgentActiveModel") &&
+  agentApiModelSrc.includes("${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/active-model") &&
+  agentApiModelSrc.includes("${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}") &&
+  agentApiModelSrc.includes("active_model:") &&
+  agentApiModelSrc.includes("provider_id: effectiveProviderId") &&
+  agentApiModelSrc.includes("model: cleanModel") &&
+  grokMouseGesturesSrc.includes("const ok = await updateAgentActiveModel(targetAgentId, providerId, cleanModel);"),
+  "updateAgentActiveModel must resolve the agent provider_id and apply model updates to QwenPaw API via PUT /api/agents/{agentId} and PUT /api/agents/{agentId}/active-model"
+);
+console.log("✓ Test 51: Agent Active Model Update Sync to QwenPaw API Contract verified");
