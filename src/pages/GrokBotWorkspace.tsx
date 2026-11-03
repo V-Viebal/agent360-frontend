@@ -191,13 +191,9 @@ import {
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, SessionRoomTurn, ReplyToMessageInfo } from "../types/agent";
 
-/** Short haptic tick on supporting devices; silently ignored elsewhere. */
-const triggerHaptic = (ms = 8) => {
-  try {
-    // Ultra-soft micro-vibration: scale down duration to subtle tactile tick (2ms - 6ms)
-    const gentleMs = Math.max(2, Math.min(Math.round(ms * 0.35), 6));
-    navigator.vibrate?.(gentleMs);
-  } catch { /* unsupported */ }
+/** Short haptic tick on supporting devices; disabled for lean noiseless UX. */
+const triggerHaptic = (_ms = 8) => {
+  // Vibration disabled as requested for clean operational experience
 };
 
 const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"];
@@ -7175,36 +7171,36 @@ function AgentBrowserPreview({
     const flushPendingFrame = () => {
       rafId = 0;
       if (!alive || (!pendingBlob && !pendingDataUrl) || isDecodingFrame) return;
+      if (pendingBlob && supportsGpuBitmap) {
+        const blobToDecode = pendingBlob;
+        pendingBlob = null;
+        isDecodingFrame = true;
+        window.createImageBitmap(blobToDecode)
+          .then((bitmap) => {
+            isDecodingFrame = false;
+            if (!alive) {
+              try { bitmap.close(); } catch {}
+              return;
+            }
+            lastPaintedAt = performance.now();
+            paintImageBitmapDom(bitmap, blobToDecode);
+            if (pendingBlob || pendingDataUrl) {
+              flushPendingFrame();
+            }
+          })
+          .catch(() => {
+            isDecodingFrame = false;
+            if (!alive) return;
+            const fallbackUrl = URL.createObjectURL(blobToDecode);
+            lastPaintedAt = performance.now();
+            commitStreamFrameDom(fallbackUrl);
+            if ((pendingBlob || pendingDataUrl) && !rafId) {
+              rafId = requestAnimationFrame(flushPendingFrame);
+            }
+          });
+        return;
+      }
       if (true) {
-        if (pendingBlob && supportsGpuBitmap) {
-          const blobToDecode = pendingBlob;
-          pendingBlob = null;
-          isDecodingFrame = true;
-          window.createImageBitmap(blobToDecode)
-            .then((bitmap) => {
-              isDecodingFrame = false;
-              if (!alive) {
-                try { bitmap.close(); } catch {}
-                return;
-              }
-              lastPaintedAt = performance.now();
-              paintImageBitmapDom(bitmap, blobToDecode);
-              if ((pendingBlob || pendingDataUrl) && !rafId) {
-                rafId = requestAnimationFrame(flushPendingFrame);
-              }
-            })
-            .catch(() => {
-              isDecodingFrame = false;
-              if (!alive) return;
-              const fallbackUrl = URL.createObjectURL(blobToDecode);
-              lastPaintedAt = performance.now();
-              commitStreamFrameDom(fallbackUrl);
-              if ((pendingBlob || pendingDataUrl) && !rafId) {
-                rafId = requestAnimationFrame(flushPendingFrame);
-              }
-            });
-          return;
-        }
 
         const nextUrl = pendingDataUrl || (pendingBlob ? URL.createObjectURL(pendingBlob) : "");
         pendingDataUrl = null;
@@ -7342,7 +7338,9 @@ function AgentBrowserPreview({
               }
               pendingDataUrl = nextFrameUrl;
             }
-            if (!rafId) {
+            if (!isDecodingFrame && nextFrameBlob && supportsGpuBitmap) {
+              flushPendingFrame();
+            } else if (!rafId) {
               rafId = requestAnimationFrame(flushPendingFrame);
             }
           }
@@ -7618,15 +7616,16 @@ function AgentBrowserPreview({
       const distRatio = dist / Math.max(10, g.startDist);
 
       if (g.twoFingerMode === "undecided") {
-        if (distChange > 24 && Math.abs(distRatio - 1) > 0.15 && distChange > centerMove * 1.4) {
+        if (distChange > 28 && Math.abs(distRatio - 1) > 0.16 && distChange > centerMove * 1.5) {
           g.twoFingerMode = "pinch";
-        } else if (centerMove > 5) {
+        } else if (centerMove > 2.5) {
           g.twoFingerMode = "scroll";
+        } else {
+          return;
         }
       }
 
-      if (g.twoFingerMode === "scroll" || (g.twoFingerMode === "undecided" && centerMove > 4)) {
-        g.twoFingerMode = "scroll";
+      if (g.twoFingerMode === "scroll") {
         g.moved = true;
         const stepDx = cx - g.lastX;
         const stepDy = cy - g.lastY;
@@ -7744,7 +7743,7 @@ function AgentBrowserPreview({
       }
     } else {
       // MODE 1: TOUCH MODE — Real-time 60Hz drag scroll + velocity tracking for kinetic inertia!
-      if (totalMove > 4) {
+      if (totalMove > 2.5) {
         g.moved = true;
         const stepDx = clientX - g.lastX;
         const stepDy = clientY - g.lastY;
@@ -7992,14 +7991,7 @@ function AgentBrowserPreview({
 
     if (Math.hypot(remX, remY) < 0.8) {
       if (Math.hypot(remX, remY) > 0.1) {
-        void sendRealtimeInput({
-          action: "scroll",
-          xRatio: state.xRatio,
-          yRatio: state.yRatio,
-          deltaX: remX,
-          deltaY: remY,
-          pageId,
-        });
+        queueCoalescedScrollInput(state.xRatio, state.yRatio, remX, remY);
       }
       state.targetDx = 0;
       state.targetDy = 0;
@@ -8021,14 +8013,7 @@ function AgentBrowserPreview({
     }
 
     applyPredictiveScrollOffset(stepX, stepY);
-    void sendRealtimeInput({
-      action: "scroll",
-      xRatio: state.xRatio,
-      yRatio: state.yRatio,
-      deltaX: stepX,
-      deltaY: stepY,
-      pageId,
-    });
+    queueCoalescedScrollInput(state.xRatio, state.yRatio, stepX, stepY);
 
     if (Math.hypot(state.targetDx, state.targetDy) >= 0.8) {
       state.raf = requestAnimationFrame(stepSmoothWheelScroll);
@@ -11065,7 +11050,7 @@ ${targetItem.text}`;
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isInitialLoadRef = useRef<boolean>(true);
   const needsScrollToLatestRef = useRef<boolean>(true);
-  const touchSwipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
 
   // Search in conversation list
   const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -11128,9 +11113,7 @@ ${targetItem.text}`;
   // Mobile Hold-Touch / Long-Press Action Sheet state
   const [mobileActionAgent, setMobileActionAgent] = useState<InfraAgent | null>(null);
   const [mobileActionChat, setMobileActionChat] = useState<AgentSession | null>(null);
-  // Enhancement 2: Swipe actions on chat sessions (swipe left to Pin/Archive, swipe right to Delete)
-  const [swipedChatState, setSwipedChatState] = useState<{ id: string; offset: number } | null>(null);
-  const chatSwipeTouchRef = useRef<{ id: string; startX: number; startY: number; moved: boolean } | null>(null);
+
   const [mobileActionMsg, setMobileActionMsg] = useState<{
     id: string;
     content: string;
@@ -11427,67 +11410,21 @@ ${targetItem.text}`;
     }
   };
 
-  const handleTouchStartChat = (e: React.TouchEvent, chat: AgentSession) => {
+  const handleTouchStartChat = (chat: AgentSession) => {
     if (!isCoarseTouchDevice()) return;
     longPressPreventClickRef.current = false;
-    if (e.touches.length === 1) {
-      chatSwipeTouchRef.current = {
-        id: chat.id,
-        startX: e.touches[0].clientX,
-        startY: e.touches[0].clientY,
-        moved: false,
-      };
-    }
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
       longPressPreventClickRef.current = true;
-      if (typeof window !== "undefined" && "vibrate" in navigator) {
-        triggerHaptic(12);
-      }
       setMobileActionChat(chat);
     }, 400);
   };
 
-  const handleTouchMoveChat = (e: React.TouchEvent, chat: AgentSession) => {
-    if (!chatSwipeTouchRef.current || chatSwipeTouchRef.current.id !== chat.id || e.touches.length !== 1) return;
-    const deltaX = e.touches[0].clientX - chatSwipeTouchRef.current.startX;
-    const deltaY = e.touches[0].clientY - chatSwipeTouchRef.current.startY;
-
-    // If movement is mostly horizontal, engage swipe and cancel long-press
-    if (Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      chatSwipeTouchRef.current.moved = true;
-      longPressPreventClickRef.current = true;
-      // Clamp offset between -140px (left swipe for 2 actions) and +80px (right swipe for delete)
-      const clamped = Math.max(-140, Math.min(80, deltaX));
-      setSwipedChatState({ id: chat.id, offset: clamped });
-    }
-  };
-
-  const handleTouchEndChat = (chat?: AgentSession) => {
+  const handleTouchEndChat = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-    if (swipedChatState && chat && swipedChatState.id === chat.id) {
-      const off = swipedChatState.offset;
-      if (off <= -55) {
-        // Snap open to reveal pin & archive actions with gentle haptic
-        triggerHaptic(8);
-        setSwipedChatState({ id: chat.id, offset: -112 });
-      } else if (off >= 55) {
-        // Snap open to reveal delete action with warning haptic
-        triggerHaptic(10);
-        setSwipedChatState({ id: chat.id, offset: 72 });
-      } else {
-        // Snap smoothly back to zero
-        setSwipedChatState(null);
-      }
-    }
-    chatSwipeTouchRef.current = null;
   };
 
   const handleTouchStartMsg = (
@@ -12051,54 +11988,7 @@ ${targetItem.text}`;
   // Mobile / Tablet Responsive Drawer States
   const [mobileAgentsOpen, setMobileAgentsOpen] = useState(false);
 
-  // Mobile Touch Edge Gesture for opening / closing Agent Sidebar
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        touchStartXRef.current = e.touches[0].clientX;
-        touchStartYRef.current = e.touches[0].clientY;
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (touchStartXRef.current === null || touchStartYRef.current === null) return;
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
-      const deltaX = touchEndX - touchStartXRef.current;
-      const deltaY = touchEndY - touchStartYRef.current;
-
-      // Ensure horizontal swipe is dominant over vertical scroll
-      if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-        // Swipe right from screen edge (startX <= 40px) opens agents drawer
-        if (touchStartXRef.current <= 40 && deltaX > 60) {
-          if (typeof window !== "undefined" && "vibrate" in navigator) {
-            triggerHaptic(8);
-          }
-          setMobileAgentsOpen(true);
-        }
-        // Swipe left when drawer is open closes it
-        else if (mobileAgentsOpen && deltaX < -60) {
-          if (typeof window !== "undefined" && "vibrate" in navigator) {
-            triggerHaptic(6);
-          }
-          setMobileAgentsOpen(false);
-        }
-      }
-
-      touchStartXRef.current = null;
-      touchStartYRef.current = null;
-    };
-
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [mobileAgentsOpen]);
   const [mobileChatsOpen, setMobileChatsOpen] = useState(false);
   const [mobileBotInfoOpen, setMobileBotInfoOpen] = useState(false);
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
@@ -16976,101 +16866,7 @@ const selectedAgentTheme = getAgentColorTheme(
           width: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${computerChatWidthPercent}%` : undefined,
           flex: isComputerSplitOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? `0 0 ${computerChatWidthPercent}%` : undefined,
         }}
-        onTouchStart={(e) => {
-          if (window.innerWidth >= 1024 || e.touches.length !== 1) return;
-          
-          // Guard: Do not trigger swipe if touching inside modals, overlays, popovers, media players, or horizontally scrollable containers
-          const target = e.target as HTMLElement | null;
-          if (target) {
-            const isInsideInteractiveOverlay = Boolean(
-              target.closest(
-                '[role="dialog"], [role="menu"], [data-testid="plus-add-popover"], [data-no-swipe="true"], ' +
-                '.overflow-x-auto, [data-testid="inline-live-computer-card"], [data-testid="lean-audio-player"], ' +
-                '[data-testid="lean-video-player"], pre, code, textarea, input, select, audio, video'
-              )
-            );
-            if (isInsideInteractiveOverlay) {
-              touchSwipeStartRef.current = null;
-              return;
-            }
-          }
 
-          touchSwipeStartRef.current = {
-            x: e.touches[0].clientX,
-            y: e.touches[0].clientY,
-            time: Date.now(),
-          };
-        }}
-        onTouchEnd={(e) => {
-          if (window.innerWidth < 1024 && touchSwipeStartRef.current && e.changedTouches.length === 1) {
-            // Guard: Do not trigger swipe gesture if any modal or bottom-sheet overlay is currently open
-            const anyActiveOverlay = Boolean(
-              isPlusMenuOpen ||
-              previewModalFile ||
-              lightboxImageUrl ||
-              isAgentSettingsModalOpen ||
-              isSettingsModalOpen ||
-              isScheduleModalOpen ||
-              isChannelModalOpen ||
-              isConnectAppsOpen ||
-              isPermissionsModalOpen ||
-              isCommandPaletteOpen ||
-              isBrowserModalOpen ||
-              isLiveThinkingModalOpen ||
-              isExportMenuOpen ||
-              activeChatMenuId ||
-              activeAgentMenuId
-            );
-            if (anyActiveOverlay) {
-              touchSwipeStartRef.current = null;
-              return;
-            }
-
-            const target = e.target as HTMLElement | null;
-            if (target) {
-              const isInsideInteractiveOverlay = Boolean(
-                target.closest(
-                  '[role="dialog"], [role="menu"], [data-testid="plus-add-popover"], [data-no-swipe="true"], ' +
-                  '.overflow-x-auto, [data-testid="inline-live-computer-card"], [data-testid="lean-audio-player"], ' +
-                  '[data-testid="lean-video-player"], pre, code, textarea, input, select, audio, video'
-                )
-              );
-              if (isInsideInteractiveOverlay) {
-                touchSwipeStartRef.current = null;
-                return;
-              }
-            }
-
-            const touch = e.changedTouches[0];
-            const deltaX = touch.clientX - touchSwipeStartRef.current.x;
-            const deltaY = touch.clientY - touchSwipeStartRef.current.y;
-            const deltaTime = Date.now() - touchSwipeStartRef.current.time;
-
-            // Only trigger if horizontal swipe is intentional (> 45px) and fast (< 450ms)
-            if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && deltaTime < 450) {
-              if (deltaX > 0) {
-                // Swiped from left to right -> Open Left Agents Drawer (or close right chats drawer if open)
-                if (mobileChatsOpen) {
-                  setMobileChatsOpen(false);
-                } else if (!mobileAgentsOpen) {
-                  triggerHaptic(20);
-                  setMobileAgentsOpen(true);
-                  setMobileBotInfoOpen(false);
-                }
-              } else {
-                // Swiped from right to left -> Open Right Chat Sessions Drawer (or close left agents drawer if open)
-                if (mobileAgentsOpen) {
-                  setMobileAgentsOpen(false);
-                } else if (!mobileChatsOpen) {
-                  triggerHaptic(20);
-                  setMobileChatsOpen(true);
-                  setMobileBotInfoOpen(false);
-                }
-              }
-            }
-          }
-          touchSwipeStartRef.current = null;
-        }}
         className="flex-1 flex flex-col h-full bg-[var(--bg-workspace)] relative overflow-hidden min-w-0"
       >
         {/* Top Centered Floating Capsule: Trigger Collapses Bot Info */}
@@ -21194,82 +20990,27 @@ const selectedAgentTheme = getAgentColorTheme(
                 );
                 const isUnreadCompleted = isChatUnreadCompleted(chat);
                 return (
-                  <div
+                  <Tooltip
                     key={chat.id}
-                    className="relative overflow-hidden rounded-lg select-none"
+                    content={
+                      <span className="line-clamp-3 text-left block font-sans text-[11px] leading-relaxed">
+                        {chat.title || "Cuộc hội thoại"}
+                      </span>
+                    }
+                    placement="auto-side"
+                    delay={250}
+                    maxWidth={280}
+                    disabled={editingChatId === chat.id || activeChatMenuId === chat.id}
                   >
-                    {/* Background Swipe Actions Reveal Layer (Mobile) */}
-                    {swipedChatState?.id === chat.id && (
-                      <div className="absolute inset-0 flex items-center justify-between px-2 text-xs font-mono pointer-events-auto z-0">
-                        {/* Right Swipe: Delete Action */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSwipedChatState(null);
-                            setChatToDelete(chat);
-                          }}
-                          className={`flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-500 cursor-pointer transition-opacity ${
-                            swipedChatState.offset > 20 ? "opacity-100" : "opacity-0"
-                          }`}
-                        >
-                          <Trash2 size={13} className="text-rose-500" />
-                          <span className="text-[10px] font-semibold">Xóa</span>
-                        </div>
-
-                        {/* Left Swipe: Pin & Archive Actions */}
-                        <div className={`flex items-center gap-1.5 transition-opacity ${
-                          swipedChatState.offset < -20 ? "opacity-100" : "opacity-0"
-                        }`}>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSwipedChatState(null);
-                              togglePinChat(chat.id, e);
-                            }}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-500 cursor-pointer"
-                          >
-                            <Pin size={12} className={pinnedChatIds.includes(chat.id) ? "fill-amber-400" : ""} />
-                            <span className="text-[10px] font-semibold">{pinnedChatIds.includes(chat.id) ? "Bỏ ghim" : "Ghim"}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSwipedChatState(null);
-                              toggleArchiveChat(chat.id, e);
-                            }}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 cursor-pointer"
-                          >
-                            <Archive size={12} />
-                            <span className="text-[10px] font-semibold">Lưu trữ</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <Tooltip
-                      content={
-                        <span className="line-clamp-3 text-left block font-sans text-[11px] leading-relaxed">
-                          {chat.title || "Cuộc hội thoại"}
-                        </span>
-                      }
-                      placement="auto-side"
-                      delay={250}
-                      maxWidth={280}
-                      disabled={editingChatId === chat.id || activeChatMenuId === chat.id}
-                    >
                     <div
                       data-chat-item-id={chat.id}
                       style={{
                         animationDelay: `${Math.min(cIdx * 12, 100)}ms`,
-                        transform: swipedChatState?.id === chat.id ? `translateX(${swipedChatState.offset}px)` : undefined,
-                        transition: chatSwipeTouchRef.current?.moved ? "none" : "transform 0.28s cubic-bezier(0.34, 1.45, 0.64, 1)",
                       }}
-                      onTouchStart={(e) => handleTouchStartChat(e, chat)}
-                      onTouchEnd={() => handleTouchEndChat(chat)}
-                      onTouchMove={(e) => handleTouchMoveChat(e, chat)}
-                      onTouchCancel={() => handleTouchEndChat(chat)}
+                      onTouchStart={() => handleTouchStartChat(chat)}
+                      onTouchEnd={handleTouchEndChat}
+                      onTouchMove={handleTouchEndChat}
+                      onTouchCancel={handleTouchEndChat}
                     onContextMenu={(e) => {
                       e.preventDefault();
                       if (isCoarseTouchDevice()) {
@@ -21682,7 +21423,6 @@ ${chat.id}`);
                     </div>
                   </div>
                   </Tooltip>
-                  </div>
                 );
               })}
 

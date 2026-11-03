@@ -671,3 +671,12 @@ assert.ok(
   "AgentBrowserPreview must coalesce scroll deltas via queueCoalescedScrollInput without dropping sub-threshold touch movements"
 );
 console.log("✓ Test 48: Coalesced rAF Scroll Pipeline & Lossless Sub-Threshold Touch Tracking Contract verified");
+
+console.log("Testing Immediate GPU Bitmap Decode & Unified Wheel/Touch Scroll Coalescing Contract...");
+assert.ok(
+  grokMouseGesturesSrc.includes("if (!isDecodingFrame && nextFrameBlob && supportsGpuBitmap)") &&
+  grokMouseGesturesSrc.includes("queueCoalescedScrollInput(state.xRatio, state.yRatio, stepX, stepY)") &&
+  grokMouseGesturesSrc.includes("else if (centerMove > 2.5)"),
+  "AgentBrowserPreview must decode incoming binary JPEG blobs immediately via createImageBitmap when idle and route wheel + 2.5px touch scrolls through queueCoalescedScrollInput"
+);
+console.log("✓ Test 49: Immediate GPU Bitmap Decode & Unified Wheel/Touch Scroll Coalescing Contract verified");
