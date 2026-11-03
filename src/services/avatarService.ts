@@ -191,13 +191,13 @@ export function saveCustomAgentName(agentId: string, name: string): void {
   }
 }
 
-// Sync with Skyer Backend API (/api/v1/agents/profiles-catalog and /api/v1/agents/{agentId}/profile-config)
+// Sync with Skyer Backend API (/api/agents/profiles-catalog and /api/agents/{agentId}/profile-config)
 let isCatalogSynced = false;
 
 export async function syncAgentProfilesCatalogFromBackend(): Promise<void> {
   if (isCatalogSynced) return;
   try {
-    const res = await fetch("/api/v1/agents/profiles-catalog", {
+    const res = await fetch("/api/agents/profiles-catalog", {
       headers: { Accept: "application/json" }
     });
     if (res.ok) {
@@ -255,7 +255,7 @@ export async function fetchRemoteAgentProfile(agentId: string): Promise<void> {
   if (!agentId) return;
   const clean = normalizeAgentIdKey(agentId);
   try {
-    const res = await fetch("/api/v1/agents/" + encodeURIComponent(clean) + "/profile-config", {
+    const res = await fetch("/api/agents/" + encodeURIComponent(clean) + "/profile-config", {
       headers: { Accept: "application/json" }
     });
     if (res.ok) {
@@ -292,7 +292,7 @@ export async function pushAgentProfileToBackend(agentId: string, avatarConfig: C
     if (avatarConfig !== undefined) payload.avatar = avatarConfig;
     if (name !== undefined) payload.name = name;
 
-    await fetch("/api/v1/agents/" + encodeURIComponent(clean) + "/profile-config", {
+    await fetch("/api/agents/" + encodeURIComponent(clean) + "/profile-config", {
       method: "POST",
       headers: buildAgentWriteHeaders(clean),
       body: JSON.stringify(payload)
@@ -378,7 +378,7 @@ export function resolveCanonicalAgentSlugFromAlias(param?: string | null): strin
 export async function uploadAgentAvatarImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch('/api/v1/media/upload', {
+  const res = await fetch('/api/media/upload', {
     method: 'POST',
     body: formData,
   });

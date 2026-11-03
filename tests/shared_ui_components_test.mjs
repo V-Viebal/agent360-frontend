@@ -687,10 +687,11 @@ const operatorFetchSrc = fs.readFileSync(path.join(rootDir, "src/services/operat
 assert.ok(
   avatarServiceSrc.includes("export async function updateQwenPawAgentName") &&
   avatarServiceSrc.includes('fetch("/api/agents/" + encodeURIComponent(clean)') &&
+  avatarServiceSrc.includes('fetch("/api/agents/" + encodeURIComponent(clean) + "/profile-config"') &&
   avatarServiceSrc.includes('method: "PUT"') &&
   avatarServiceSrc.includes("JSON.stringify({ name: effectiveName })") &&
   avatarServiceSrc.includes("updateQwenPawAgentName(clean, trimmed)") &&
   operatorFetchSrc.includes("agents/[^/]+(?:$|/(?:profile-config|"),
-  "saveCustomAgentName must apply agent name updates to QwenPaw API via PUT /api/agents/{agentId} with authenticated write headers"
+  "saveCustomAgentName must apply agent name updates to QwenPaw API via PUT /api/agents/{agentId} and persist profile-config via /api/agents/{agentId}/profile-config"
 );
 console.log("✓ Test 50: Agent Name Update Sync to QwenPaw API Contract verified");
