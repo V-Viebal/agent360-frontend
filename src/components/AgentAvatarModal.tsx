@@ -124,7 +124,6 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     const trimmed = editedName.trim();
     if (trimmed && trimmed !== agent.name) {
       saveCustomAgentName(targetKey, trimmed);
-      if (agent.id && agent.id !== targetKey) saveCustomAgentName(agent.id, trimmed);
     }
     if (customImageUrl) {
       const imgConfig: CustomAvatarConfig = {
@@ -156,7 +155,6 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     resetAgentAvatarConfig(targetKey);
     if (agent.id && agent.id !== targetKey) resetAgentAvatarConfig(agent.id);
     saveCustomAgentName(targetKey, "");
-    if (agent.id && agent.id !== targetKey) saveCustomAgentName(agent.id, "");
     setEditedName(agent.name || "");
     setIsCustomBlob(false);
     setSelectedBlobShape(defaultBlob.shape);

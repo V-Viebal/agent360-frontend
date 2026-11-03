@@ -1,4 +1,5 @@
-import { getCustomAgentName, hydrateAgentCustomProfileFromDto, resolveCanonicalAgentSlugFromAlias } from "./avatarService";
+import { getCustomAgentName, hydrateAgentCustomProfileFromDto, resolveCanonicalAgentSlugFromAlias, updateQwenPawAgentName } from "./avatarService";
+export { updateQwenPawAgentName as updateAgentName };
 export function cleanModelDisplayName(rawModel: string): string {
   if (!rawModel) return "";
   let m = rawModel.trim();

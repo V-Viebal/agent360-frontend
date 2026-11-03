@@ -3,7 +3,7 @@ import { operatorKey } from "./a2aApi";
 const PROTECTED = new RegExp(
   "^/api(?:/v\\d+)?/(?:" +
     [
-      "agents/[^/]+/(?:agent-status|config/|cron/|mcp|tools|skills|workspace/|memory|compact-context|active-model|media/send)",
+      "agents/[^/]+(?:$|/(?:profile-config|agent-status|config/|cron/|mcp|tools|skills|workspace/|memory|compact-context|active-model|media/send))",
       "agents/(?:approvals/|compact-context|iam/)",
       "approvals/",
       "libraries/skills/",

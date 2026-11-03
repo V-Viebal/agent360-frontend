@@ -680,3 +680,17 @@ assert.ok(
   "AgentBrowserPreview must decode incoming binary JPEG blobs immediately via createImageBitmap when idle and route wheel + 2.5px touch scrolls through queueCoalescedScrollInput"
 );
 console.log("✓ Test 49: Immediate GPU Bitmap Decode & Unified Wheel/Touch Scroll Coalescing Contract verified");
+
+console.log("Testing Agent Name Update Sync to QwenPaw API Contract...");
+const avatarServiceSrc = fs.readFileSync(path.join(rootDir, "src/services/avatarService.ts"), "utf-8");
+const operatorFetchSrc = fs.readFileSync(path.join(rootDir, "src/services/operatorFetch.ts"), "utf-8");
+assert.ok(
+  avatarServiceSrc.includes("export async function updateQwenPawAgentName") &&
+  avatarServiceSrc.includes('fetch("/api/agents/" + encodeURIComponent(clean)') &&
+  avatarServiceSrc.includes('method: "PUT"') &&
+  avatarServiceSrc.includes("JSON.stringify({ name: effectiveName })") &&
+  avatarServiceSrc.includes("updateQwenPawAgentName(clean, trimmed)") &&
+  operatorFetchSrc.includes("agents/[^/]+(?:$|/(?:profile-config|"),
+  "saveCustomAgentName must apply agent name updates to QwenPaw API via PUT /api/agents/{agentId} with authenticated write headers"
+);
+console.log("✓ Test 50: Agent Name Update Sync to QwenPaw API Contract verified");

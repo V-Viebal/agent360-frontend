@@ -124,6 +124,48 @@ export function getCustomAgentName(agentId?: string): string | null {
   return all[clean] || all[agentId] || all[`bot:agent360:${clean}`] || null;
 }
 
+function buildAgentWriteHeaders(agentId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  try {
+    if (typeof window !== "undefined") {
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      const opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || "";
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else if (opToken) {
+        headers["X-Agent360-Operator-Token"] = opToken;
+        headers["X-Operator-Token"] = opToken;
+      }
+      if (agentId) {
+        headers["X-Agent-Id"] = normalizeAgentIdKey(agentId);
+      }
+    }
+  } catch {}
+  return headers;
+}
+
+export async function updateQwenPawAgentName(agentId: string, name: string): Promise<boolean> {
+  if (!agentId) return false;
+  const clean = normalizeAgentIdKey(agentId);
+  if (!clean) return false;
+  const trimmed = name.trim();
+  const effectiveName = trimmed || clean;
+  try {
+    const res = await fetch("/api/agents/" + encodeURIComponent(clean), {
+      method: "PUT",
+      headers: buildAgentWriteHeaders(clean),
+      body: JSON.stringify({ name: effectiveName }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("[AvatarService] Failed to update agent name on QwenPaw API:", err);
+    return false;
+  }
+}
+
 export function saveCustomAgentName(agentId: string, name: string): void {
   if (!agentId) return;
   try {
@@ -143,6 +185,7 @@ export function saveCustomAgentName(agentId: string, name: string): void {
     localStorage.setItem(AGENT_NAMES_KEY, JSON.stringify(all));
     window.dispatchEvent(new CustomEvent("agent-name-updated", { detail: { agentId, name: trimmed, cleanId: clean } }));
     pushAgentProfileToBackend(agentId, getAgentAvatarConfig(agentId), trimmed).catch?.(() => {});
+    updateQwenPawAgentName(clean, trimmed).catch?.(() => {});
   } catch (err) {
     console.error("[AvatarService] Failed to save custom agent name:", err);
   }
@@ -251,10 +294,7 @@ export async function pushAgentProfileToBackend(agentId: string, avatarConfig: C
 
     await fetch("/api/v1/agents/" + encodeURIComponent(clean) + "/profile-config", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
+      headers: buildAgentWriteHeaders(clean),
       body: JSON.stringify(payload)
     });
   } catch (err) {
