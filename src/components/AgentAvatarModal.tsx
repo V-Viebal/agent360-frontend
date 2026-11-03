@@ -51,18 +51,14 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     setEditedName(agent.name || "");
     const current = getAgentAvatarConfig(agent.id) || getAgentAvatarConfig(agent.slug);
     if (current) {
-      if (current.type === "image" && current.imageUrl) {
-        setCustomImageUrl(current.imageUrl);
-      } else {
-        setCustomImageUrl("");
-      }
+      setCustomImageUrl(current.imageUrl || "");
 
-      if (current.type === "blob" && current.blob) {
+      if (current.blob || current.colorPreset) {
         setIsCustomBlob(true);
-        if (current.blob.shape) setSelectedBlobShape(current.blob.shape);
-        if (current.blob.expression) setSelectedBlobExpression(current.blob.expression);
-        if (current.blob.color) setSelectedBlobColor(current.blob.color);
-        if (current.blob.animation) setSelectedBlobAnimation(current.blob.animation);
+        setSelectedBlobShape(current.blob?.shape || defaultBlob.shape);
+        setSelectedBlobExpression(current.blob?.expression || defaultBlob.expression);
+        setSelectedBlobColor(current.blob?.color || current.colorPreset || defaultBlob.color);
+        setSelectedBlobAnimation(current.blob?.animation || defaultBlob.animation);
       } else {
         setIsCustomBlob(false);
         setSelectedBlobShape(defaultBlob.shape);
@@ -78,7 +74,7 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
       setSelectedBlobAnimation(defaultBlob.animation);
       setCustomImageUrl("");
     }
-  }, [isOpen, agent.id]);
+  }, [isOpen, agent.id, agent.slug]);
 
   if (!isOpen) return null;
 
@@ -92,30 +88,26 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
 
   // Build temporary preview config
   const previewConfig: CustomAvatarConfig | null = (() => {
+    const blobData = {
+      color: selectedBlobColor,
+      shape: selectedBlobShape,
+      expression: selectedBlobExpression,
+      animation: selectedBlobAnimation,
+      seed: defaultBlob.seed,
+    };
     if (customImageUrl) {
       return {
         type: "image",
         imageUrl: customImageUrl,
         colorPreset: selectedBlobColor,
-        blob: {
-          color: selectedBlobColor,
-          shape: selectedBlobShape,
-          expression: selectedBlobExpression,
-          animation: selectedBlobAnimation,
-          seed: defaultBlob.seed,
-        },
+        blob: blobData,
       };
     }
     if (!isCustomBlob) return null;
     return {
       type: "blob",
-      blob: {
-        shape: selectedBlobShape,
-        expression: selectedBlobExpression,
-        color: selectedBlobColor,
-        animation: selectedBlobAnimation,
-        seed: defaultBlob.seed,
-      },
+      colorPreset: selectedBlobColor,
+      blob: blobData,
     };
   })();
 
@@ -124,28 +116,14 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     const trimmed = editedName.trim();
     if (trimmed && trimmed !== agent.name) {
       saveCustomAgentName(targetKey, trimmed);
+      if (agent.id && agent.id !== targetKey) saveCustomAgentName(agent.id, trimmed);
     }
-    if (customImageUrl) {
-      const imgConfig: CustomAvatarConfig = {
-        type: "image",
-        imageUrl: customImageUrl,
-        colorPreset: selectedBlobColor,
-        blob: {
-          color: selectedBlobColor,
-          shape: selectedBlobShape,
-          expression: selectedBlobExpression,
-          animation: selectedBlobAnimation,
-          seed: defaultBlob.seed,
-        },
-      };
-      saveAgentAvatarConfig(targetKey, imgConfig);
-      if (agent.id && agent.id !== targetKey) saveAgentAvatarConfig(agent.id, imgConfig);
-    } else if (!isCustomBlob) {
-      resetAgentAvatarConfig(targetKey);
-      if (agent.id && agent.id !== targetKey) resetAgentAvatarConfig(agent.id);
-    } else if (previewConfig) {
+    if (previewConfig) {
       saveAgentAvatarConfig(targetKey, previewConfig);
       if (agent.id && agent.id !== targetKey) saveAgentAvatarConfig(agent.id, previewConfig);
+    } else {
+      resetAgentAvatarConfig(targetKey);
+      if (agent.id && agent.id !== targetKey) resetAgentAvatarConfig(agent.id);
     }
     onClose();
   };
@@ -176,11 +154,10 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
     // Instant local preview via Object URL
     const localPreview = URL.createObjectURL(file);
     setCustomImageUrl(localPreview);
-    setIsCustomBlob(false);
     setIsUploadingImage(true);
 
     try {
-      const serverUrl = await uploadAgentAvatarImage(file);
+      const serverUrl = await uploadAgentAvatarImage(file, agent.slug || agent.id);
       setCustomImageUrl(serverUrl);
     } catch (err) {
       console.warn("[AgentAvatarModal] Direct media upload failed, falling back to base64:", err);
@@ -291,7 +268,6 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
                     setSelectedBlobExpression(defaultBlob.expression);
                     setSelectedBlobColor(defaultBlob.color);
                     setSelectedBlobAnimation(defaultBlob.animation);
-                    setCustomImageUrl("");
                   }}
                   style={{ color: activeColorKey }}
                   className="text-[10px] font-mono hover:underline cursor-pointer"
@@ -302,13 +278,12 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             </div>
             <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
               {BLOB_COLORS.map((c) => {
-                const isSelected = !customImageUrl && (isCustomBlob ? selectedBlobColor : defaultBlob.color) === c;
+                const isSelected = (isCustomBlob ? selectedBlobColor : defaultBlob.color) === c;
                 return (
                   <button
                     key={c}
                     type="button"
                     onClick={() => {
-                      setCustomImageUrl("");
                       setIsCustomBlob(true);
                       setSelectedBlobColor(c);
                     }}
@@ -334,13 +309,12 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             </label>
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 max-h-32 overflow-y-auto pr-1 scrollbar-hover">
               {BLOB_SHAPES.map((sh) => {
-                const isSelected = !customImageUrl && (isCustomBlob ? selectedBlobShape : defaultBlob.shape) === sh;
+                const isSelected = (isCustomBlob ? selectedBlobShape : defaultBlob.shape) === sh;
                 return (
                   <button
                     key={sh}
                     type="button"
                     onClick={() => {
-                      setCustomImageUrl("");
                       setIsCustomBlob(true);
                       setSelectedBlobShape(sh);
                     }}
@@ -373,13 +347,12 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
               {BLOB_EXPRESSIONS.map((expr) => {
-                const isSelected = !customImageUrl && (isCustomBlob ? selectedBlobExpression : defaultBlob.expression) === expr;
+                const isSelected = (isCustomBlob ? selectedBlobExpression : defaultBlob.expression) === expr;
                 return (
                   <button
                     key={expr}
                     type="button"
                     onClick={() => {
-                      setCustomImageUrl("");
                       setIsCustomBlob(true);
                       setSelectedBlobExpression(expr);
                     }}
@@ -412,14 +385,13 @@ export function AgentAvatarModal({ isOpen, onClose, agent }: AgentAvatarModalPro
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               {BLOB_ANIMATIONS.map((anim, idx) => {
-                const isSelected = !customImageUrl && (isCustomBlob ? selectedBlobAnimation : defaultBlob.animation) === anim;
+                const isSelected = (isCustomBlob ? selectedBlobAnimation : defaultBlob.animation) === anim;
                 const cleanName = anim.replace(/idle\.2\.4,/g, "").split(".")[0];
                 return (
                   <button
                     key={anim}
                     type="button"
                     onClick={() => {
-                      setCustomImageUrl("");
                       setIsCustomBlob(true);
                       setSelectedBlobAnimation(anim);
                     }}

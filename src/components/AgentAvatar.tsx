@@ -123,24 +123,52 @@ export const BLOB_COLOR_THEMES: Record<
   "#4ade80": { primary: "#4ade80", bubbleBg: "#4ade80", textOnPastel: "#092212", light: "#16a34a", dark: "#4ade80", bgLight: "rgba(74,222,128,0.18)", bgDark: "rgba(74,222,128,0.22)", borderLight: "rgba(74,222,128,0.45)", borderDark: "rgba(74,222,128,0.35)" },
 };
 
+function parseHexRgb(hex: string): [number, number, number] | null {
+  const clean = (hex || "").trim().replace(/^#/, "");
+  if (/^[0-9a-fA-F]{6}$/.test(clean)) {
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16),
+    ];
+  }
+  if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+    return [
+      parseInt(clean[0] + clean[0], 16),
+      parseInt(clean[1] + clean[1], 16),
+      parseInt(clean[2] + clean[2], 16),
+    ];
+  }
+  return null;
+}
+
 export function getAgentColorTheme(agentId: string = "", name: string = "", roleTag: string = "") {
   const cleanId = normalizeAgentSeedKey(agentId);
   const cfg = getAgentAvatarConfig(agentId) || getAgentAvatarConfig(cleanId);
-  const colorKey = cfg?.blob?.color || getAgentBlobProfile(agentId, name, roleTag).color;
-  if (colorKey && BLOB_COLOR_THEMES[colorKey]) {
-    return BLOB_COLOR_THEMES[colorKey];
+  const rawColorKey = (cfg?.blob?.color || cfg?.colorPreset || getAgentBlobProfile(agentId, name, roleTag).color || "#f8a87c").trim();
+  const normalizedKey = rawColorKey.toLowerCase();
+  if (BLOB_COLOR_THEMES[rawColorKey]) {
+    return BLOB_COLOR_THEMES[rawColorKey];
   }
-  return {
-    primary: colorKey || "#f8a87c",
-    bubbleBg: colorKey || "#f8a87c",
-    textOnPastel: "#1e1e24",
-    light: "#c2540a",
-    dark: colorKey || "#f8a87c",
-    bgLight: "rgba(248,168,124,0.18)",
-    bgDark: "rgba(248,168,124,0.22)",
-    borderLight: "rgba(248,168,124,0.45)",
-    borderDark: "rgba(248,168,124,0.35)",
-  };
+  if (BLOB_COLOR_THEMES[normalizedKey]) {
+    return BLOB_COLOR_THEMES[normalizedKey];
+  }
+  const rgb = parseHexRgb(rawColorKey);
+  if (rgb) {
+    const [r, g, b] = rgb;
+    return {
+      primary: rawColorKey,
+      bubbleBg: rawColorKey,
+      textOnPastel: "#1e1e24",
+      light: rawColorKey,
+      dark: rawColorKey,
+      bgLight: `rgba(${r},${g},${b},0.18)`,
+      bgDark: `rgba(${r},${g},${b},0.22)`,
+      borderLight: `rgba(${r},${g},${b},0.45)`,
+      borderDark: `rgba(${r},${g},${b},0.35)`,
+    };
+  }
+  return BLOB_COLOR_THEMES["#f8a87c"];
 }
 
 
@@ -400,12 +428,14 @@ export function AgentAvatar({
 }: AgentAvatarProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   useEffect(() => {
-    if (!interactive) return;
     const el = containerRef.current;
     if (!el) return;
-    const parentTarget = el.closest("button, a, [role=\"button\"], [data-testid^=\"agent-mention-chip\"], .group") || el;
+    const parentTarget = interactive
+      ? (el.closest("button, a, [role=\"button\"], [data-testid^=\"agent-mention-chip\"], .group") || el)
+      : el;
     const onEnter = () => setIsHovered(true);
     const onLeave = () => setIsHovered(false);
     parentTarget.addEventListener("pointerenter", onEnter);
@@ -418,6 +448,10 @@ export function AgentAvatar({
   const [customConfig, setCustomConfig] = useState<CustomAvatarConfig | null>(
     overrideConfig !== undefined ? overrideConfig : (getAgentAvatarConfig(agent.id) || getAgentAvatarConfig(agent.slug))
   );
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [customConfig?.imageUrl]);
 
   useEffect(() => {
     if (overrideConfig !== undefined) {
@@ -503,11 +537,19 @@ export function AgentAvatar({
     "2xl": 136,
   }[size];
 
-  // 0. Custom Blob or Default Blob Avatar (from c0le0ni/blob-avatar)
-  const isDefaultBlob = !customConfig || customConfig.type === "blob" || customConfig.type === "role";
-  if (isDefaultBlob) {
+  const hasCustomImage = Boolean(customConfig?.imageUrl && !imageLoadFailed);
+  const isBlobOrHybridAvatar =
+    !customConfig ||
+    customConfig.type === "blob" ||
+    customConfig.type === "role" ||
+    customConfig.type === "image" ||
+    Boolean(customConfig.imageUrl);
+
+  // 0. Custom Blob, Default Blob, or Hybrid Optional Image + Hover Animated Blob Avatar
+  if (isBlobOrHybridAvatar) {
     const defaultBlob = getAgentBlobProfile(agent.id || agent.slug, agent.name, agent.roleTag);
     const blobProps = customConfig?.blob || defaultBlob;
+    const effectiveColor = blobProps.color || customConfig?.colorPreset || defaultBlob.color;
     const rawAnim = forcedAnimation || blobProps.animation || defaultBlob.animation;
     // Strict sanitizer: remove any clip that morphs avatar into 3 dots (thinking, sleep, rain, etc.)
     const safeAnim = typeof rawAnim === "string"
@@ -516,7 +558,11 @@ export function AgentAvatar({
           .replace(/,{2,}/g, ",")
           .replace(/^,|,$/g, "")
       : "nod.1.4,jump.1.4,wink.1.4";
-    const shouldAnimate = Boolean(forcedAnimation || alwaysAnimate || isHovered);
+    // When an optional custom image is configured, show the image by default and switch to animated blob on hover
+    const showStaticCustomImage = hasCustomImage && !isHovered;
+    const shouldAnimate = hasCustomImage
+      ? Boolean(isHovered)
+      : Boolean(forcedAnimation || alwaysAnimate || isHovered);
     const cleanClassName = size === "3xs"
       ? className
       : className
@@ -534,19 +580,32 @@ export function AgentAvatar({
           isHovered ? "scale-110" : ""
         } ${hoverEffects} ${cleanClassName}`}
       >
-        <BlobAvatar
-          key={`${blobProps.shape || defaultBlob.shape}-${blobProps.color || defaultBlob.color}-${blobProps.expression || defaultBlob.expression}-${blobProps.seed || defaultBlob.seed}-${customConfig?.updatedAt || 0}-${agent.id || agent.slug || ''}`}
-          shape={blobProps.shape as any || defaultBlob.shape}
-          expression={blobProps.expression as any || defaultBlob.expression}
-          color={blobProps.color || defaultBlob.color}
-          paused={!shouldAnimate}
-          animation={safeAnim}
-          seed={blobProps.seed || defaultBlob.seed}
-          size={blobPixelSize}
-          gaze={shouldAnimate || interactive}
-          reaction={interactive}
-          className="flex items-center justify-center"
-        />
+        {showStaticCustomImage ? (
+          <div
+            className={`relative flex items-center justify-center h-full w-full overflow-hidden border border-slate-200 dark:border-white/20 shadow-xs bg-slate-100 dark:bg-neutral-800 ${sizeBox}`}
+          >
+            <img
+              src={customConfig!.imageUrl}
+              alt={agent.name || "Agent Avatar"}
+              className="h-full w-full object-cover transition-transform duration-300"
+              onError={() => setImageLoadFailed(true)}
+            />
+          </div>
+        ) : (
+          <BlobAvatar
+            key={`${blobProps.shape || defaultBlob.shape}-${effectiveColor}-${blobProps.expression || defaultBlob.expression}-${blobProps.seed || defaultBlob.seed}-${customConfig?.updatedAt || 0}-${agent.id || agent.slug || ""}`}
+            shape={(blobProps.shape as any) || defaultBlob.shape}
+            expression={(blobProps.expression as any) || defaultBlob.expression}
+            color={effectiveColor}
+            paused={!shouldAnimate}
+            animation={safeAnim}
+            seed={blobProps.seed || defaultBlob.seed}
+            size={blobPixelSize}
+            gaze={shouldAnimate || interactive}
+            reaction={interactive}
+            className="flex items-center justify-center"
+          />
+        )}
       </div>
     );
   }
@@ -561,25 +620,6 @@ export function AgentAvatar({
         <span className={`${emojiSizeClass} leading-none transition-transform duration-300 group-hover/avatar:scale-110 group-hover/avatar:rotate-6`}>
           {customConfig.emoji}
         </span>
-      </div>
-    );
-  }
-
-  // 2. Custom Image Type
-  if (customConfig?.type === "image" && customConfig.imageUrl) {
-    return (
-      <div
-        className={`relative flex items-center justify-center shrink-0 border border-slate-200 dark:border-white/20 shadow-xs overflow-hidden select-none bg-slate-100 dark:bg-neutral-800 ${sizeBox} ${hoverEffects} ${className}`}
-      >
-        <img
-          src={customConfig.imageUrl}
-          alt={agent.name || "Agent Avatar"}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover/avatar:scale-110"
-          onError={(e) => {
-            // Fallback to role icon if image fails
-            (e.target as HTMLElement).style.display = "none";
-          }}
-        />
       </div>
     );
   }

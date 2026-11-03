@@ -19,10 +19,33 @@ export interface CustomAvatarConfig {
 }
 
 const STORAGE_KEY = "agent360_agent_avatars";
+const AVATAR_TOMBSTONES_KEY = "agent360_agent_avatar_tombstones";
 
 export function normalizeAgentIdKey(agentId?: string): string {
   if (!agentId) return "";
   return agentId.replace(/^bot:agent360:/i, "").trim().toLowerCase();
+}
+
+function getAvatarTombstones(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(AVATAR_TOMBSTONES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function markAvatarTombstone(cleanId: string, timestamp: number | null): void {
+  if (!cleanId) return;
+  try {
+    const map = getAvatarTombstones();
+    if (timestamp === null) {
+      delete map[cleanId];
+    } else {
+      map[cleanId] = timestamp;
+    }
+    localStorage.setItem(AVATAR_TOMBSTONES_KEY, JSON.stringify(map));
+  } catch {}
 }
 
 export function getAllAgentAvatarConfigs(): Record<string, CustomAvatarConfig> {
@@ -47,8 +70,16 @@ export function saveAgentAvatarConfig(agentId: string, config: CustomAvatarConfi
     const all = getAllAgentAvatarConfigs();
     const clean = normalizeAgentIdKey(agentId);
     const full = `bot:agent360:${clean}`;
-    const updated = {
+    markAvatarTombstone(clean, null);
+    const colorKey = config.blob?.color || config.colorPreset;
+    const updated: CustomAvatarConfig = {
       ...config,
+      colorPreset: config.colorPreset || colorKey,
+      blob: config.blob
+        ? { ...config.blob, color: config.blob.color || colorKey }
+        : colorKey
+        ? { color: colorKey }
+        : undefined,
       updatedAt: Date.now(),
     };
     all[clean] = updated;
@@ -76,30 +107,19 @@ export function resetAgentAvatarConfig(agentId: string): void {
     const all = getAllAgentAvatarConfigs();
     const clean = normalizeAgentIdKey(agentId);
     const full = `bot:agent360:${clean}`;
-    let changed = false;
-    if (all[clean]) {
-      delete all[clean];
-      changed = true;
+    markAvatarTombstone(clean, Date.now());
+    delete all[clean];
+    delete all[agentId];
+    delete all[full];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    const detail = { agentId, config: null, cleanId: clean, fullId: full };
+    window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
+    pushAgentProfileToBackend(agentId, null, getCustomAgentName(agentId) || undefined).catch?.(() => {});
+    if (clean !== agentId) {
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: clean } }));
     }
-    if (all[agentId]) {
-      delete all[agentId];
-      changed = true;
-    }
-    if (all[full]) {
-      delete all[full];
-      changed = true;
-    }
-    if (changed) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-      const detail = { agentId, config: null, cleanId: clean, fullId: full };
-      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail }));
-      pushAgentProfileToBackend(agentId, null, getCustomAgentName(agentId) || undefined).catch?.(() => {});
-      if (clean !== agentId) {
-        window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: clean } }));
-      }
-      if (full !== agentId) {
-        window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: full } }));
-      }
+    if (full !== agentId) {
+      window.dispatchEvent(new CustomEvent("agent-avatar-updated", { detail: { ...detail, agentId: full } }));
     }
   } catch (err) {
     console.error("[AvatarService] Failed to reset avatar config:", err);
@@ -312,7 +332,18 @@ export function hydrateAgentCustomProfileFromDto(agentId: string, slug: string |
 
   if (avatarConfig) {
     try {
+      const tombstones = getAvatarTombstones();
+      const tombstoneTs = tombstones[clean] || 0;
+      const incomingTs = Number(avatarConfig.updatedAt || 0);
+      if (tombstoneTs && (!incomingTs || incomingTs <= tombstoneTs)) {
+        return;
+      }
       const all = getAllAgentAvatarConfigs();
+      const existing = all[clean] || all[full] || (agentId ? all[agentId] : undefined);
+      const existingTs = Number(existing?.updatedAt || 0);
+      if (existingTs && (!incomingTs || incomingTs < existingTs)) {
+        return;
+      }
       all[clean] = avatarConfig;
       all[full] = avatarConfig;
       if (agentId) all[agentId] = avatarConfig;
@@ -377,18 +408,41 @@ export function resolveCanonicalAgentSlugFromAlias(param?: string | null): strin
 }
 
 
-export async function uploadAgentAvatarImage(file: File): Promise<string> {
+function buildMultipartUploadHeaders(agentId?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+  try {
+    if (typeof window !== "undefined") {
+      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      const opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || "";
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else if (opToken) {
+        headers["X-Agent360-Operator-Token"] = opToken;
+        headers["X-Operator-Token"] = opToken;
+      }
+      if (agentId) {
+        headers["X-Agent-Id"] = normalizeAgentIdKey(agentId);
+      }
+    }
+  } catch {}
+  return headers;
+}
+
+export async function uploadAgentAvatarImage(file: File, agentId?: string): Promise<string> {
   const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch('/api/media/upload', {
-    method: 'POST',
+  formData.append("file", file);
+  const res = await fetch("/api/media/upload", {
+    method: "POST",
+    headers: buildMultipartUploadHeaders(agentId),
     body: formData,
   });
   if (!res.ok) {
-    throw new Error('Upload failed with status ' + res.status);
+    throw new Error("Upload failed with status " + res.status);
   }
   const data = await res.json();
-  const rawUrl = data.publicUrl || data.public_url || data.url || '';
+  const rawUrl = data.publicUrl || data.public_url || data.url || "";
   if (rawUrl) {
     try {
       const parsed = new URL(rawUrl, window.location.origin);
@@ -397,5 +451,5 @@ export async function uploadAgentAvatarImage(file: File): Promise<string> {
       return rawUrl;
     }
   }
-  throw new Error('No public URL returned from upload');
+  throw new Error("No public URL returned from upload");
 }

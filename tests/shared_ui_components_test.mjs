@@ -719,3 +719,31 @@ assert.ok(
   "AgentBrowserPreview must pass precision touchpad wheel streams directly 1:1 to queueCoalescedScrollInput without double-smoothing and preserve sub-pixel remainders"
 );
 console.log("✓ Test 52: Precision Touchpad 1:1 Direct Pass-Through & Sub-Pixel Remainder Preservation Contract verified");
+
+console.log("Testing Unified Browser Header Borderless Window CTAs Contract...");
+const grokBrowserWindowCtaSrc = fs.readFileSync(path.join(rootDir, "src/pages/GrokBotWorkspace.tsx"), "utf-8");
+assert.ok(
+  grokBrowserWindowCtaSrc.includes('data-testid="agent-browser-window-ctas"') &&
+  grokBrowserWindowCtaSrc.includes('data-testid="agent-browser-header-screenshot-btn"') &&
+  grokBrowserWindowCtaSrc.includes('data-testid="agent-browser-header-reload-session-btn"') &&
+  grokBrowserWindowCtaSrc.includes('data-testid="agent-browser-header-maximize-btn"') &&
+  grokBrowserWindowCtaSrc.includes('data-testid="agent-browser-header-close-btn"') &&
+  grokBrowserWindowCtaSrc.includes("h-[38px] w-11 border-0 rounded-none") &&
+  !grokBrowserWindowCtaSrc.includes("{selectedAgent.name} · Computer Workspace"),
+  "SelkiesViewer must render the unified borderless window CTAs (Screenshot, Reload, Maximize/Restore, Close) directly inside the browser header row without a redundant separate top bar"
+);
+console.log("✓ Test 53: Unified Browser Header Borderless Window CTAs Contract verified");
+
+console.log("Testing Hybrid Optional Image + Hover Animated Blob Avatar & Color Theme Contract...");
+const agentAvatarSrc = fs.readFileSync(path.join(rootDir, "src/components/AgentAvatar.tsx"), "utf-8");
+const agentAvatarModalSrc = fs.readFileSync(path.join(rootDir, "src/components/AgentAvatarModal.tsx"), "utf-8");
+assert.ok(
+  agentAvatarSrc.includes("const hasCustomImage = Boolean(customConfig?.imageUrl && !imageLoadFailed);") &&
+  agentAvatarSrc.includes("const showStaticCustomImage = hasCustomImage && !isHovered;") &&
+  agentAvatarSrc.includes("cfg?.blob?.color || cfg?.colorPreset || getAgentBlobProfile(agentId, name, roleTag).color") &&
+  agentAvatarModalSrc.includes("if (current.blob || current.colorPreset)") &&
+  !agentAvatarModalSrc.includes('setCustomImageUrl("");\n                      setIsCustomBlob(true);') &&
+  avatarServiceSrc.includes("buildMultipartUploadHeaders(agentId)"),
+  "AgentAvatar must show custom image by default when present and switch to animated BlobAvatar on hover, while AgentAvatarModal preserves optional customImageUrl when changing color/shape/expression/animation"
+);
+console.log("✓ Test 54: Hybrid Optional Image + Hover Animated Blob Avatar & Color Theme Contract verified");
