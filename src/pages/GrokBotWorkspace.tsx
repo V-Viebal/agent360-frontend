@@ -1296,7 +1296,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, AgentBrowserTab, AgentBrowserHistoryItem, BrowserInputPayload, fetchAgentBrowserHistory, fetchAgentBrowserSuggestions, detectAdaptiveNetworkQuality, DesktopAuthError, agentBrowserImageUrl, hasNoBrowser, clearNoBrowserCache, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, AgentBrowserTab, AgentBrowserVpnStatus, AgentBrowserHistoryItem, BrowserInputPayload, fetchAgentBrowserHistory, fetchAgentBrowserSuggestions, detectAdaptiveNetworkQuality, DesktopAuthError, agentBrowserImageUrl, hasNoBrowser, clearNoBrowserCache, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl, fetchAgentBrowserVpn, setAgentBrowserVpn } from "../services/agentBrowserApi";
 
 
 
@@ -6534,6 +6534,8 @@ function SelkiesViewer({
   const [isFindOpen, setIsFindOpen] = useState<boolean>(false);
   const [findQuery, setFindQuery] = useState<string>("");
   const [browserZoomPercent, setBrowserZoomPercent] = useState<number>(100);
+  const [vpnStatus, setVpnStatus] = useState<AgentBrowserVpnStatus | null>(null);
+  const [isTogglingVpn, setIsTogglingVpn] = useState<boolean>(false);
   const findInputRef = useRef<HTMLInputElement>(null);
 
   // Stream Engine Mode: "canvas" (CDP GPU <canvas> + predictive 120Hz scroll) vs "webrtc" (Selkies WebRTC H.264/VP9 60fps stream)
@@ -6722,6 +6724,9 @@ function SelkiesViewer({
     try {
       const info = await fetchAgentBrowser(agentId);
       if (draggingTabIdRef.current) return;
+      if (info?.vpn) {
+        setVpnStatus(info.vpn);
+      }
       if (info && Array.isArray(info.tabs)) {
         const realTabs = info.tabs.filter((t) => !t.anchor);
         const nowMs = Date.now();
@@ -7189,6 +7194,30 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
       if (deltaPct === "reset") return 100;
       return Math.max(50, Math.min(250, prev + deltaPct));
     });
+  };
+
+  const handleToggleVpn = async () => {
+    if (isTogglingVpn || !agentId) return;
+    triggerHaptic(8);
+    setIsTogglingVpn(true);
+    try {
+      const nextEnabled = !(vpnStatus?.enabled);
+      const updated = await setAgentBrowserVpn(agentId, {
+        enabled: nextEnabled,
+        mode: "auto",
+        region: "VN",
+      });
+      if (updated) {
+        setVpnStatus(updated);
+      }
+      await dispatchAgentBrowserInput(agentId, {
+        action: "reload",
+        pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+      });
+      setTimeout(refreshBrowserTabs, 300);
+    } finally {
+      setIsTogglingVpn(false);
+    }
   };
 
   // Build unified Chrome Omnibox suggestions matching user reference screenshot
@@ -7731,6 +7760,38 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                 <span className="sm:hidden">
                   {streamEngineMode === "webrtc" ? "H.264" : "GPU"}
                 </span>
+              </button>
+            </Tooltip>
+
+            <Tooltip
+              content={
+                vpnStatus?.enabled
+                  ? `VPN Profile đang BẬT (${vpnStatus.region || "VN"} · ${vpnStatus.publicIp || vpnStatus.server || "proxy360 pool"}) · Bấm để tắt VPN`
+                  : "Bật VPN cho riêng Chromium Profile này (lấy IP từ proxy360 Pool)"
+              }
+              placement="bottom"
+            >
+              <button
+                type="button"
+                data-testid="agent-browser-vpn-toggle-btn"
+                data-vpn-enabled={vpnStatus?.enabled ? "true" : "false"}
+                disabled={isTogglingVpn}
+                onClick={() => void handleToggleVpn()}
+                className={`h-7 px-2 rounded-full flex items-center gap-1 text-[11px] font-mono font-semibold transition-colors cursor-pointer shrink-0 border ${
+                  vpnStatus?.enabled
+                    ? "bg-emerald-500/15 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/35"
+                    : "bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] border-black/10 dark:border-white/10"
+                }`}
+                aria-label="Toggle Profile VPN"
+              >
+                {isTogglingVpn ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : vpnStatus?.enabled ? (
+                  <ShieldCheck size={13} className="text-emerald-500" />
+                ) : (
+                  <Shield size={13} />
+                )}
+                <span>{vpnStatus?.enabled ? `VPN ${vpnStatus.region || "VN"}` : "VPN"}</span>
               </button>
             </Tooltip>
 

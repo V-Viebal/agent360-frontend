@@ -8,6 +8,15 @@ export interface AgentBrowserTab {
   anchor: boolean;
 }
 
+export interface AgentBrowserVpnStatus {
+  enabled: boolean;
+  mode: string;
+  proxyUrl: string;
+  server: string;
+  region: string;
+  publicIp: string;
+}
+
 export interface AgentBrowserInfo {
   agentId: string;
   instance: string;
@@ -18,6 +27,7 @@ export interface AgentBrowserInfo {
   cdpReachable: boolean;
   profileWindowOpen: boolean;
   tabs: AgentBrowserTab[];
+  vpn?: AgentBrowserVpnStatus | null;
 }
 
 function bare(agentId: string): string { return agentId.replace(/^bot:agent360:/i, ""); }
@@ -285,5 +295,37 @@ export async function fetchAgentBrowserSuggestions(agentId: string, query: strin
     return Array.isArray(data) ? data : [];
   } catch {
     return [];
+  }
+}
+
+
+export async function fetchAgentBrowserVpn(agentId: string): Promise<AgentBrowserVpnStatus | null> {
+  try {
+    const id = bare(agentId);
+    const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/vpn`, {
+      headers: { Accept: "application/json" },
+    }, id);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function setAgentBrowserVpn(
+  agentId: string,
+  payload: { enabled: boolean; mode?: string; region?: string; proxyId?: number; proxyUrl?: string }
+): Promise<AgentBrowserVpnStatus | null> {
+  try {
+    const id = bare(agentId);
+    const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/vpn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    }, id);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
   }
 }
