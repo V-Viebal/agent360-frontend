@@ -818,3 +818,30 @@ assert.ok(
   "Browser omnibox toolbar must consolidate secondary action buttons (Find, History, Input Mode, Site Mode, Landscape Rotate) into a clean More Menu popover with Screen Scale (+/-) controls"
 );
 console.log("✓ Test 58: Consolidated Browser More Menu & Screen Scale (+/-) Controls Contract verified");
+
+console.log("Testing Anti-Scale-Jitter FullHD Backing-Scale Guard & Inactive Tab Isolation Contract...");
+assert.ok(
+  screencastHubSrc.includes("var matchesBackingMeta = Math.Abs(dw - expectedBackingW) <= 20 && Math.Abs(dh - expectedBackingH) <= 20;") &&
+  screencastHubSrc.includes("if (!matchesLogicalMeta && !matchesBackingMeta)") &&
+  screencastHubSrc.includes("if (Math.Abs(_backingScale - 1.0) > 0.01) return;") &&
+  !screencastHubSrc.includes("return (matchesBacking || matchesLogical) && Math.Abs(frameAspect - targetAspect) <= 0.035;") &&
+  !cdpEndpointSrc.includes("hub.WarmTabsInBackground(cdp!, otherIds") &&
+  grokImeSrc.includes("if (document.hidden || wsConnectedRef.current || (liveWs && hasFrame)) return;"),
+  "ScreencastHub and AgentBrowserPreview must accept backing-scaled screencast metadata, suppress unscaled Page.captureScreenshot when _backingScale < 1, avoid pre-warming background tabs across the same Chromium window, and prevent HTTP fallback polls from overwriting live WebSocket frames"
+);
+console.log("✓ Test 59: Anti-Scale-Jitter FullHD Backing-Scale Guard & Inactive Tab Isolation Contract verified");
+
+console.log("Testing Interactive Chat Connect App Card & Quick OAuth/MCP Connect Contract...");
+const connectModalSrc = fs.readFileSync(path.join(rootDir, "src/components/ConnectAppsModal.tsx"), "utf-8");
+assert.ok(
+  grokImeSrc.includes('kind: "options" | "poll" | "force_reply" | "reply_keyboard" | "connect_app"') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-app-card-${w.interactionId}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-app-open-modal-${w.interactionId}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-app-item-${slug}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-app-action-${slug}`}') &&
+  grokImeSrc.includes("handleQuickConnectAppFromChat") &&
+  grokImeSrc.includes("resolveCatalogAppsFromText") &&
+  connectModalSrc.includes("initialSearchQuery"),
+  "Chat UI must support interactive connect_app cards (both explicit tool calls and natural prose detection), quick app connect/status badges, and pre-filtered ConnectAppsModal opening"
+);
+console.log("✓ Test 60: Interactive Chat Connect App Card & Quick OAuth/MCP Connect Contract verified");

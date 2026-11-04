@@ -5615,23 +5615,7 @@ function SelkiesViewer({
           if (t.url && !t.anchor && !t.url.startsWith("data:") && !t.url.startsWith("about:")) {
             saveOmniboxEntry(t.title || t.url, t.url, false);
           }
-          const tKey = `${agentId}:${t.targetId}`;
-          if (t.targetId && !t.anchor && !tabFrameCacheRef.current[tKey]) {
-            tabFrameCacheRef.current[tKey] = "__loading__";
-            void fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), t.targetId))
-              .then((blobUrl) => {
-                if (tabFrameCacheRef.current[tKey] === "__loading__") {
-                  tabFrameCacheRef.current[tKey] = blobUrl;
-                } else {
-                  try { URL.revokeObjectURL(blobUrl); } catch {}
-                }
-              })
-              .catch(() => {
-                if (tabFrameCacheRef.current[tKey] === "__loading__") {
-                  delete tabFrameCacheRef.current[tKey];
-                }
-              });
-          }
+          // Do not pre-fetch unscaled /browser/image.jpg snapshots into tabFrameCacheRef: tabFrameCacheRef is populated exclusively from scaled WebSocket stream frames so switching tabs never flashes an unscaled image
         });
         const activeTab =
           (selectedTabId && list.find((t) => t.targetId === selectedTabId)) ||
@@ -7860,7 +7844,7 @@ function AgentBrowserPreview({
     const ctrl = new AbortController();
 
     const fetchFallbackFrame = async () => {
-      if (document.hidden || wsConnectedRef.current) return;
+      if (document.hidden || wsConnectedRef.current || (liveWs && hasFrame)) return;
       try {
         const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), pageId), ctrl.signal);
         if (!alive || wsConnectedRef.current) {
