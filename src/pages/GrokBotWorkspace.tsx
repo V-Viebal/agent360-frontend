@@ -8395,6 +8395,12 @@ function AgentBrowserPreview({
     lastX: number;
     lastY: number;
     lastTime: number;
+    velDx: number;
+    velDy: number;
+    velStartTime: number;
+    peakVx: number;
+    peakVy: number;
+    peakAt: number;
     vx: number;
     vy: number;
     startCursorX: number;
@@ -9129,11 +9135,12 @@ function AgentBrowserPreview({
     }
   };
 
-  // Start smooth iOS-like kinetic momentum scrolling after finger release in Touch Mode
+  // Start smooth iOS/Android native-grade kinetic momentum scrolling after finger release in Touch Mode / 2-Finger Scroll
   const startInertiaScroll = (initialVx: number, initialVy: number, anchorXRatio: number, anchorYRatio: number) => {
     stopInertiaScroll();
-    let vx = initialVx;
-    let vy = initialVy;
+    // Boost initial flick velocity (~1.38x) and cap to prevent runaway jumps
+    let vx = Math.max(-4.8, Math.min(4.8, initialVx * 1.38));
+    let vy = Math.max(-4.8, Math.min(4.8, initialVy * 1.38));
     let lastTs = performance.now();
 
     const stepInertia = () => {
@@ -9141,15 +9148,15 @@ function AgentBrowserPreview({
       const dt = Math.min(32, Math.max(8, now - lastTs));
       lastTs = now;
 
-      // Smooth mobile Safari/Chrome friction decay (0.95 per 16ms frame)
-      const decay = Math.pow(0.95, dt / 16.67);
+      // Native mobile Safari/Chrome deceleration curve (0.968 per 16.67ms frame -> ~900-1200ms smooth glide)
+      const decay = Math.pow(0.968, dt / 16.67);
       vx *= decay;
       vy *= decay;
 
       const stepDx = vx * dt;
       const stepDy = vy * dt;
 
-      if (Math.hypot(stepDx, stepDy) < 0.45) {
+      if (Math.hypot(stepDx, stepDy) < 0.16) {
         inertiaRafRef.current = 0;
         return;
       }
@@ -9157,7 +9164,9 @@ function AgentBrowserPreview({
       const boxRect = viewportBoxRef.current?.getBoundingClientRect();
       const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
       const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
-      const touchScale = Math.max(1.85, Math.min(2.6, (logicalW / dispW) * 1.35));
+      const speedPxMs = Math.hypot(vx, vy);
+      const speedBoost = Math.min(1.32, 1 + Math.max(0, speedPxMs - 0.55) * 0.16);
+      const touchScale = Math.max(2.1, Math.min(3.1, (logicalW / dispW) * 1.48)) * speedBoost;
       const scrollDeltaX = isLandscapeRotated ? -stepDy * touchScale : -stepDx * touchScale;
       const scrollDeltaY = isLandscapeRotated ? stepDx * touchScale : -stepDy * touchScale;
       const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
@@ -9181,9 +9190,8 @@ function AgentBrowserPreview({
     const useNativeMouseDrag = isScrollbarZone || (pointerType === "mouse" && mobileInputMode === "touch");
 
     // Enhancement 3: Tap-and-drag preparation for text selection & dragging in Phone Mouse Mode
-    let isDragSelect = false;
+    const isDragSelect = false;
     const now = performance.now();
-    const isQuickSecondTap = mobileInputMode === "mouse" && pointerType === "touch" && (now - lastSingleTapRef.current.time < 320) && (Math.hypot(clientX - lastSingleTapRef.current.x, clientY - lastSingleTapRef.current.y) < 36);
 
     gestureRef.current = {
       type: "single",
@@ -9194,6 +9202,12 @@ function AgentBrowserPreview({
       lastX: clientX,
       lastY: clientY,
       lastTime: now,
+      velDx: 0,
+      velDy: 0,
+      velStartTime: now,
+      peakVx: 0,
+      peakVy: 0,
+      peakAt: now,
       vx: 0,
       vy: 0,
       startCursorX: cursorNormRef.current.x,
@@ -9222,13 +9236,20 @@ function AgentBrowserPreview({
     const dist = Math.max(10, Math.hypot(x1 - x2, y1 - y2));
     const cx = (x1 + x2) / 2;
     const cy = (y1 + y2) / 2;
+    const now = performance.now();
     gestureRef.current = {
       type: "pinch",
       startX: cx,
       startY: cy,
       lastX: cx,
       lastY: cy,
-      lastTime: performance.now(),
+      lastTime: now,
+      velDx: 0,
+      velDy: 0,
+      velStartTime: now,
+      peakVx: 0,
+      peakVy: 0,
+      peakAt: now,
       vx: 0,
       vy: 0,
       startCursorX: cursorNormRef.current.x,
@@ -9251,7 +9272,6 @@ function AgentBrowserPreview({
     const cx = (x1 + x2) / 2;
     const cy = (y1 + y2) / 2;
     const now = performance.now();
-    const dt = Math.max(4, now - g.lastTime);
 
     // In Phone Mouse Mode: 2-touch swipe scrolls the web page like a trackpad!
     if (mobileInputMode === "mouse") {
@@ -9273,26 +9293,40 @@ function AgentBrowserPreview({
         g.moved = true;
         const stepDx = cx - g.lastX;
         const stepDy = cy - g.lastY;
-
-        if (Math.hypot(stepDx, stepDy) > 0.3) {
-          const instVx = stepDx / dt;
-          const instVy = stepDy / dt;
-          g.vx = g.vx * 0.55 + instVx * 0.45;
-          g.vy = g.vy * 0.55 + instVy * 0.45;
-        }
-
         g.lastX = cx;
         g.lastY = cy;
         g.lastTime = now;
 
-        if (Math.hypot(stepDx, stepDy) > 0.25) {
+        g.velDx += stepDx;
+        g.velDy += stepDy;
+        const velDt = now - g.velStartTime;
+        if (velDt >= 10) {
+          const instVx = g.velDx / velDt;
+          const instVy = g.velDy / velDt;
+          if (Math.hypot(g.velDx, g.velDy) > 0.8 || velDt > 38) {
+            g.vx = g.vx * 0.35 + instVx * 0.65;
+            g.vy = g.vy * 0.35 + instVy * 0.65;
+            if (Math.hypot(g.vx, g.vy) >= Math.hypot(g.peakVx, g.peakVy) * 0.82 || now - g.peakAt > 65) {
+              g.peakVx = g.vx;
+              g.peakVy = g.vy;
+              g.peakAt = now;
+            }
+          }
+          g.velDx = 0;
+          g.velDy = 0;
+          g.velStartTime = now;
+        }
+
+        if (Math.hypot(stepDx, stepDy) > 0.2) {
           lastTouchScrollSentAtRef.current = now;
 
           // Enhancement 4: 2-Touch bidirectional smooth horizontal and vertical scrolling
           const boxRect = viewportBoxRef.current?.getBoundingClientRect();
           const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
           const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
-          const touchScale = Math.max(1.8, Math.min(2.5, (logicalW / dispW) * 1.3));
+          const speedPxMs = Math.hypot(g.vx, g.vy);
+          const speedBoost = Math.min(1.42, 1 + Math.max(0, speedPxMs - 0.5) * 0.22);
+          const touchScale = Math.max(2.05, Math.min(2.9, (logicalW / dispW) * 1.45)) * speedBoost;
           const scrollDeltaX = isLandscapeRotated ? -stepDy * touchScale : -stepDx * touchScale;
           const scrollDeltaY = isLandscapeRotated ? stepDx * touchScale : -stepDy * touchScale;
 
@@ -9330,7 +9364,6 @@ function AgentBrowserPreview({
     const g = gestureRef.current;
     if (!g || g.type !== "single") return;
     const now = performance.now();
-    const dt = Math.max(4, now - g.lastTime);
     const totalMove = Math.hypot(clientX - g.startX, clientY - g.startY);
 
     if (g.nativeDrag) {
@@ -9390,32 +9423,50 @@ function AgentBrowserPreview({
         });
       }
     } else {
-      // MODE 1: TOUCH MODE — Real-time 60Hz drag scroll + velocity tracking for kinetic inertia!
+      // MODE 1: TOUCH MODE — Real-time 60Hz drag scroll + windowed velocity tracking for kinetic inertia!
       if (totalMove > 1.5) {
         if (totalMove > 5) {
           g.moved = true;
         }
         const stepDx = clientX - g.lastX;
         const stepDy = clientY - g.lastY;
-        if (Math.hypot(stepDx, stepDy) > 0.2) {
-          const instVx = stepDx / dt;
-          const instVy = stepDy / dt;
-          g.vx = g.vx * 0.45 + instVx * 0.55;
-          g.vy = g.vy * 0.45 + instVy * 0.55;
-        }
         g.lastX = clientX;
         g.lastY = clientY;
         g.lastTime = now;
+
+        g.velDx += stepDx;
+        g.velDy += stepDy;
+        const velDt = now - g.velStartTime;
+        if (velDt >= 10) {
+          const instVx = g.velDx / velDt;
+          const instVy = g.velDy / velDt;
+          // Ignore tiny pre-lift micro-movement so finger lift never zeroes out flick momentum
+          if (Math.hypot(g.velDx, g.velDy) > 0.8 || velDt > 38) {
+            g.vx = g.vx * 0.35 + instVx * 0.65;
+            g.vy = g.vy * 0.35 + instVy * 0.65;
+            if (Math.hypot(g.vx, g.vy) >= Math.hypot(g.peakVx, g.peakVy) * 0.82 || now - g.peakAt > 65) {
+              g.peakVx = g.vx;
+              g.peakVy = g.vy;
+              g.peakAt = now;
+            }
+          }
+          g.velDx = 0;
+          g.velDy = 0;
+          g.velStartTime = now;
+        }
+
         if (Math.hypot(stepDx, stepDy) > 0.15) {
           lastTouchScrollSentAtRef.current = now;
           const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
           const boxRect = viewportBoxRef.current?.getBoundingClientRect();
           const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
           const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
-          const touchScale = Math.max(1.85, Math.min(2.6, (logicalW / dispW) * 1.35));
+          const speedPxMs = Math.hypot(g.vx, g.vy);
+          const speedBoost = Math.min(1.45, 1 + Math.max(0, speedPxMs - 0.5) * 0.24);
+          const touchScale = Math.max(2.1, Math.min(2.95, (logicalW / dispW) * 1.48)) * speedBoost;
           const scrollDeltaX = isLandscapeRotated ? -stepDy * touchScale : -stepDx * touchScale;
           const scrollDeltaY = isLandscapeRotated ? stepDx * touchScale : -stepDy * touchScale;
-          // Optimistically update scrollbar thumb & predictive GPU offset during touch scroll
+          // Optimistically update scrollbar thumb during touch scroll
           const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
           if (scrollHeight > clientHeight) {
             const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + scrollDeltaY));
@@ -9432,6 +9483,19 @@ function AgentBrowserPreview({
     const g = gestureRef.current;
     gestureRef.current = null;
     if (!g) return;
+    const now = performance.now();
+
+    // Flush any remaining sub-10ms velocity sample if significant
+    const remDt = Math.max(6, now - g.velStartTime);
+    if (Math.hypot(g.velDx, g.velDy) > 1.8 && remDt < 45) {
+      const instVx = g.velDx / remDt;
+      const instVy = g.velDy / remDt;
+      g.vx = g.vx * 0.35 + instVx * 0.65;
+      g.vy = g.vy * 0.35 + instVy * 0.65;
+    }
+    const usePeak = (now - g.peakAt <= 75) && (Math.hypot(g.peakVx, g.peakVy) > Math.hypot(g.vx, g.vy));
+    const launchVx = usePeak ? g.peakVx : g.vx;
+    const launchVy = usePeak ? g.peakVy : g.vy;
 
     if (g.type === "pinch") {
       if (mobileInputMode === "mouse") {
@@ -9453,9 +9517,9 @@ function AgentBrowserPreview({
           });
           return;
         }
-        if (g.twoFingerMode === "scroll" && Math.hypot(g.vx, g.vy) > 0.18) {
+        if (g.twoFingerMode === "scroll" && (now - g.lastTime < 130) && Math.hypot(launchVx, launchVy) > 0.1) {
           // Launch smooth kinetic momentum scroll when user flicks 2 fingers!
-          startInertiaScroll(g.vx, g.vy, cursorNormRef.current.x, cursorNormRef.current.y);
+          startInertiaScroll(launchVx, launchVy, cursorNormRef.current.x, cursorNormRef.current.y);
           return;
         }
       }
@@ -9476,7 +9540,6 @@ function AgentBrowserPreview({
 
     if (mobileInputMode === "mouse") {
       const cur = cursorNormRef.current;
-      const now = performance.now();
 
       // If completing tap-and-drag, release mouse button (Enhancement 3)
       if (g.isDragSelect || isTapDraggingRef.current) {
@@ -9553,10 +9616,10 @@ function AgentBrowserPreview({
           pageId,
         });
       }
-    } else if ((performance.now() - g.lastTime < 95) && Math.hypot(g.vx, g.vy) > 0.12) {
+    } else if ((now - g.lastTime < 130) && Math.hypot(launchVx, launchVy) > 0.08) {
       // Launch smooth kinetic momentum scroll when user flicks finger (skip if user held finger stationary before lifting)!
       const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
-      startInertiaScroll(g.vx, g.vy, coords.xRatio, coords.yRatio);
+      startInertiaScroll(launchVx, launchVy, coords.xRatio, coords.yRatio);
     }
   };
 
@@ -12652,6 +12715,7 @@ ${targetItem.text}`;
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [liveVoiceEnergy, setLiveVoiceEnergy] = useState<number>(0);
   const [isRealtimeVoiceOpen, setIsRealtimeVoiceOpen] = useState(false);
+  const [realtimeShowCaptions, setRealtimeShowCaptions] = useState(true);
   const [realtimeVoiceStatus, setRealtimeVoiceStatus] = useState<"idle" | "connecting" | "listening" | "thinking" | "speaking">("idle");
   const [realtimeTranscript, setRealtimeTranscript] = useState<string>("");
   const [realtimeBotReply, setRealtimeBotReply] = useState<string>("");
@@ -25992,96 +26056,366 @@ ${chat.id}`);
         }}
       />
 
-      {isRealtimeVoiceOpen && (
-        <div
-          data-testid="realtime-voice-modal"
-          style={{ backgroundColor: "rgba(10, 10, 15, 0.94)", backdropFilter: "blur(12px)", color: "#ffffff" }} className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 text-white animate-in fade-in duration-200 select-none"
-        >
-          <div className="w-full max-w-lg flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#1a73e8] animate-pulse" />
-              <span style={{ color: "#e2e8f0" }} className="text-xs font-mono uppercase tracking-wider">
-                Live Voice Chat • {selectedAgent?.name || "Agent"} (Node 5a54d0)
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={stopRealtimeVoiceChat}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-              aria-label="Close Live Voice Chat"
-            >
-              <X size={18} />
-            </button>
-          </div>
+      {isRealtimeVoiceOpen && (() => {
+        const voiceThemeAccent = selectedAgentTheme?.primary || "#3b82f6";
+        const voiceThemeLight = selectedAgentTheme?.light || voiceThemeAccent;
+        const isMicActive = realtimeMediaRecorderRef.current?.state === "recording";
+        const headlineText = realtimeShowCaptions && (realtimeBotReply || realtimeTranscript)
+          ? (realtimeBotReply || realtimeTranscript)
+          : realtimeVoiceStatus === "connecting"
+          ? "Đang kết nối đàm thoại trực tiếp..."
+          : realtimeVoiceStatus === "thinking"
+          ? "Đang suy nghĩ câu trả lời..."
+          : realtimeVoiceStatus === "speaking"
+          ? `${selectedAgent?.name || "Skyer"} đang phản hồi...`
+          : "Bạn có ý tưởng mới nào muốn khám phá không?";
 
-          <div className="flex flex-col items-center justify-center gap-6 my-auto max-w-md text-center">
+        return (
+          <div
+            data-testid="realtime-voice-modal"
+            style={{
+              backgroundColor: "#000000",
+              color: "#f4f6fa",
+              ["--voice-theme" as any]: voiceThemeAccent,
+              ["--voice-theme-light" as any]: voiceThemeLight,
+            }}
+            className="keep-white fixed inset-0 z-[100] flex flex-col items-center justify-between overflow-hidden select-none animate-in fade-in duration-300"
+          >
+            <style>{`
+              @keyframes skyerSmokeDriftA {
+                0% { transform: translate3d(-12%, 6%, 0) scale(1, 0.95) rotate(-4deg); opacity: 0.62; }
+                50% { transform: translate3d(10%, -8%, 0) scale(1.18, 1.08) rotate(5deg); opacity: 0.92; }
+                100% { transform: translate3d(-12%, 6%, 0) scale(1, 0.95) rotate(-4deg); opacity: 0.62; }
+              }
+              @keyframes skyerSmokeDriftB {
+                0% { transform: translate3d(14%, 2%, 0) scale(1.12, 0.92) rotate(6deg); opacity: 0.54; }
+                50% { transform: translate3d(-14%, -10%, 0) scale(0.96, 1.15) rotate(-6deg); opacity: 0.88; }
+                100% { transform: translate3d(14%, 2%, 0) scale(1.12, 0.92) rotate(6deg); opacity: 0.54; }
+              }
+              @keyframes skyerSmokePulse {
+                0%, 100% { transform: translate3d(0, 4%, 0) scale(1); opacity: 0.72; }
+                50% { transform: translate3d(0, -5%, 0) scale(1.12); opacity: 1; }
+              }
+              @keyframes skyerOrbMist {
+                0% { transform: translate3d(-14%, 8%, 0) scale(0.95) rotate(-6deg); opacity: 0.78; }
+                50% { transform: translate3d(14%, -4%, 0) scale(1.16) rotate(8deg); opacity: 1; }
+                100% { transform: translate3d(-14%, 8%, 0) scale(0.95) rotate(-6deg); opacity: 0.78; }
+              }
+              @keyframes skyerLogoFloat {
+                0%, 100% { transform: translateY(0px) scale(1); }
+                50% { transform: translateY(-4px) scale(1.04); }
+              }
+              [data-testid="realtime-voice-modal"],
+              [data-testid="realtime-voice-modal"] button {
+                color: #f4f6fa !important;
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .skyer-smoke-layer, .skyer-orb-mist, .skyer-voice-logo {
+                  animation: none !important;
+                }
+              }
+            `}</style>
+
+            {/* Bottom-half atmospheric misty / smoky aura following active agent theme */}
             <div
-              onClick={toggleRealtimeMicTurn}
-              className={`h-32 w-32 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ${
-                realtimeVoiceStatus === "speaking"
-                  ? "bg-[#1a73e8] shadow-[0_0_50px_rgba(26,115,232,0.8)] scale-105"
-                  : realtimeVoiceStatus === "thinking"
-                  ? "bg-amber-500/80 shadow-[0_0_40px_rgba(245,158,11,0.6)] animate-pulse"
-                  : "bg-[#1a73e8]/90 hover:bg-[#1a73e8] shadow-[0_0_36px_rgba(26,115,232,0.5)]"
-              }`}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] overflow-hidden"
             >
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <line x1="4" y1="10" x2="4" y2="14" />
-                <line x1="8" y1="6" x2="8" y2="18" />
-                <line x1="12" y1="8" x2="12" y2="16" />
-                <line x1="16" y1="6" x2="16" y2="18" />
-                <line x1="20" y1="10" x2="20" y2="14" />
-              </svg>
+              <div
+                className="absolute inset-0 transition-all duration-700"
+                style={{
+                  background: `radial-gradient(125% 95% at 50% 105%, color-mix(in srgb, var(--voice-theme) 62%, #050814) 0%, color-mix(in srgb, var(--voice-theme) 28%, transparent) 48%, transparent 82%)`,
+                  opacity: realtimeVoiceStatus === "speaking" ? 0.98 : realtimeVoiceStatus === "listening" ? 0.88 : 0.75,
+                }}
+              />
+              <div
+                className="skyer-smoke-layer absolute -bottom-24 left-[-10%] w-[78%] h-[78%] rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--voice-theme) 78%, #ffffff 12%) 0%, color-mix(in srgb, var(--voice-theme) 36%, transparent) 52%, transparent 76%)`,
+                  filter: "blur(56px)",
+                  animation: `skyerSmokeDriftA ${realtimeVoiceStatus === "speaking" ? "6.5s" : "11s"} ease-in-out infinite`,
+                }}
+              />
+              <div
+                className="skyer-smoke-layer absolute -bottom-28 right-[-12%] w-[82%] h-[80%] rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 48% 52%, color-mix(in srgb, var(--voice-theme-light) 74%, #0f172a 18%) 0%, color-mix(in srgb, var(--voice-theme) 34%, transparent) 54%, transparent 78%)`,
+                  filter: "blur(64px)",
+                  animation: `skyerSmokeDriftB ${realtimeVoiceStatus === "speaking" ? "7.5s" : "13s"} ease-in-out infinite`,
+                }}
+              />
+              <div
+                className="skyer-smoke-layer absolute -bottom-20 left-[15%] w-[70%] h-[62%] rounded-full"
+                style={{
+                  background: `radial-gradient(ellipse at 50% 65%, color-mix(in srgb, var(--voice-theme) 86%, #ffffff 24%) 0%, color-mix(in srgb, var(--voice-theme) 40%, transparent) 48%, transparent 76%)`,
+                  filter: "blur(48px)",
+                  animation: `skyerSmokePulse ${realtimeVoiceStatus === "speaking" ? "4.2s" : "8s"} ease-in-out infinite`,
+                }}
+              />
             </div>
 
-            <div className="space-y-2">
-              <div style={{ color: "#ffffff" }} className="text-base font-semibold tracking-tight">
-                {realtimeVoiceStatus === "connecting" && "Đang kết nối Voice Gateway..."}
-                {realtimeVoiceStatus === "listening" && "Đang lắng nghe... (Nhấn vào biểu tượng để nói / gửi)"}
-                {realtimeVoiceStatus === "thinking" && "Đang suy nghĩ..."}
-                {realtimeVoiceStatus === "speaking" && `${selectedAgent?.name || "Agent"} đang trả lời...`}
-                {realtimeVoiceStatus === "idle" && "Sẵn sàng đàm thoại"}
+            {/* Top Minimal Chrome Header (matching Image 1) */}
+            <div className="relative z-10 w-full max-w-2xl px-6 pt-5 pb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsVoiceRecordSettingsOpen(true)}
+                style={{ color: "#f4f6fa" }}
+                className="keep-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+                title="Tuỳ chọn thiết bị & mô hình giọng nói"
+                aria-label="Voice menu"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.9" strokeLinecap="round">
+                  <line x1="4" y1="9" x2="20" y2="9" />
+                  <line x1="4" y1="15" x2="20" y2="15" />
+                </svg>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-2 w-2 rounded-full transition-transform duration-300"
+                  style={{
+                    backgroundColor: voiceThemeAccent,
+                    boxShadow: `0 0 10px ${voiceThemeAccent}`,
+                  }}
+                />
+                <span style={{ color: "rgba(244,246,250,0.78)" }} className="keep-white text-xs font-medium tracking-wide">
+                  {selectedAgent?.name || "Skyer"}
+                </span>
               </div>
-              {realtimeTranscript && (
-                <p style={{ color: "#cbd5e1" }} className="text-xs italic">"{realtimeTranscript}"</p>
-              )}
-              {realtimeBotReply && (
-                <p style={{ color: "#f1f5f9", backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.16)" }} className="text-sm max-h-32 overflow-y-auto px-4 py-2.5 rounded-xl border">
-                  {realtimeBotReply}
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
+                  style={{ color: "#f4f6fa", opacity: realtimeShowCaptions ? 1 : 0.45 }}
+                  className="keep-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-opacity cursor-pointer"
+                  title={realtimeShowCaptions ? "Ẩn phụ đề trực tiếp" : "Hiện phụ đề trực tiếp"}
+                  aria-label="Toggle captions"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="4" />
+                    <line x1="8" y1="13" x2="16" y2="13" />
+                    <line x1="8" y1="16.5" x2="13" y2="16.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsVoiceRecordSettingsOpen(true)}
+                  style={{ color: "#f4f6fa" }}
+                  className="keep-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Cài đặt giọng nói nâng cao"
+                  aria-label="More voice options"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#f4f6fa">
+                    <circle cx="5" cy="12" r="1.6" />
+                    <circle cx="12" cy="12" r="1.6" />
+                    <circle cx="19" cy="12" r="1.6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Center Stage: Skyer Logo + Display Prompt / Live Transcript */}
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 max-w-xl w-full text-center -mt-4">
+              <div
+                onClick={toggleRealtimeMicTurn}
+                className="skyer-voice-logo mb-6 cursor-pointer relative flex items-center justify-center"
+                style={{
+                  animation: "skyerLogoFloat 5s ease-in-out infinite",
+                  filter: `drop-shadow(0 0 18px color-mix(in srgb, var(--voice-theme) 68%, transparent))`,
+                }}
+                title="Nhấn để nói hoặc ngắt lời"
+              >
+                <svg
+                  data-testid="skyer-voice-logo"
+                  width="46"
+                  height="46"
+                  viewBox="0 0 32 32"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="transition-transform duration-300 hover:scale-105"
+                >
+                  <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
+                  <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
+                  <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
+                  <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
+                </svg>
+              </div>
+
+              <h2
+                data-testid="realtime-voice-headline"
+                style={{ color: "#f4f6fa" }}
+                className="keep-white text-2xl sm:text-[28px] font-normal leading-[1.36] tracking-[-0.015em] max-h-48 overflow-y-auto px-2"
+              >
+                {headlineText}
+              </h2>
+
+              {realtimeShowCaptions && realtimeTranscript && realtimeBotReply && (
+                <p style={{ color: "rgba(244,246,250,0.68)" }} className="keep-white mt-3 text-sm italic max-w-md line-clamp-2">
+                  “{realtimeTranscript}”
                 </p>
               )}
+
+              {(isMicActive || realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") && (
+                <div style={{ color: "rgba(244,246,250,0.52)" }} className="keep-white mt-4 text-xs font-medium tracking-wide">
+                  {isMicActive
+                    ? "Đang thu âm... Nhấn viên thuốc sương khói để gửi"
+                    : realtimeVoiceStatus === "speaking"
+                    ? "Nhấn vào viên thuốc trung tâm để ngắt lời"
+                    : "Đang xử lý..."}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom 5-Item Control Dock (matching Image 1 layout & central smoky pill) */}
+            <div className="relative z-10 w-full max-w-md px-5 pb-7 pt-2 flex flex-col items-center gap-5">
+              <div className="w-full flex items-center justify-between sm:justify-center gap-2.5 sm:gap-5">
+                {/* 1. Left Button 1: Toggle Captions / Transcript View */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-captions-btn"
+                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
+                  style={{
+                    backgroundColor: "rgba(28, 30, 38, 0.88)",
+                    borderColor: "rgba(255, 255, 255, 0.08)",
+                    color: "#f4f6fa",
+                    opacity: realtimeShowCaptions ? 1 : 0.5,
+                  }}
+                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
+                  title={realtimeShowCaptions ? "Ẩn hội thoại chữ" : "Hiện hội thoại chữ"}
+                  aria-label="Toggle live captions"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="6" width="14" height="12" rx="3.5" />
+                    <line x1="20" y1="8.5" x2="20" y2="15.5" />
+                  </svg>
+                </button>
+
+                {/* 2. Left Button 2: Commit Turn / Interrupt Barge-in */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-commit-btn"
+                  onClick={() => {
+                    if (isMicActive) {
+                      toggleRealtimeMicTurn();
+                    } else if (realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") {
+                      stopSpeaking();
+                      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+                        realtimeWsRef.current.send(JSON.stringify({ type: "interrupt" }));
+                      }
+                      setRealtimeVoiceStatus("listening");
+                    } else {
+                      toggleRealtimeMicTurn();
+                    }
+                  }}
+                  style={{
+                    backgroundColor: "rgba(28, 30, 38, 0.88)",
+                    borderColor: "rgba(255, 255, 255, 0.08)",
+                    color: "#f4f6fa",
+                  }}
+                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
+                  title={isMicActive ? "Gửi lượt nói ngay" : "Ngắt lời / Gửi lượt mới"}
+                  aria-label="Send or interrupt voice turn"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3.5" y="5.5" width="17" height="13" rx="3.5" />
+                    <path d="M12 15V9" />
+                    <path d="M9.2 11.6L12 8.8l2.8 2.8" />
+                  </svg>
+                </button>
+
+                {/* 3. Center Glowing Smoky Pill Visualizer (follows Agent Theme) */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-smoky-pill"
+                  onClick={toggleRealtimeMicTurn}
+                  style={{
+                    backgroundColor: "#030408",
+                    borderColor: "rgba(255, 255, 255, 0.08)",
+                    boxShadow: `0 10px 36px -6px color-mix(in srgb, var(--voice-theme) 55%, transparent), inset 0 1px 1px rgba(255,255,255,0.12)`,
+                  }}
+                  className="keep-white relative h-[74px] w-[132px] sm:h-[84px] sm:w-[152px] rounded-full overflow-hidden border cursor-pointer transition-transform duration-300 active:scale-95 shrink-0"
+                  title={isMicActive ? "Nhấn để gửi lượt nói" : "Nhấn để bắt đầu nói"}
+                  aria-label="Voice smoky visualizer orb"
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(180deg, #000000 0%, rgba(2,4,10,0.92) 46%, transparent 100%)",
+                    }}
+                  />
+                  <div
+                    className="skyer-orb-mist absolute -bottom-5 left-[-12%] w-[124%] h-[78%] rounded-full"
+                    style={{
+                      background: `radial-gradient(ellipse at 50% 78%, #ffffff 0%, color-mix(in srgb, var(--voice-theme-light) 88%, #ffffff) 28%, color-mix(in srgb, var(--voice-theme) 72%, transparent) 62%, transparent 85%)`,
+                      filter: "blur(10px)",
+                      animation: `skyerOrbMist ${realtimeVoiceStatus === "speaking" || isMicActive ? "3.2s" : "6.5s"} ease-in-out infinite`,
+                    }}
+                  />
+                  <div
+                    className="skyer-orb-mist absolute -bottom-3 right-[-8%] w-[95%] h-[65%] rounded-full"
+                    style={{
+                      background: `radial-gradient(circle at 45% 70%, rgba(255,255,255,0.95) 0%, color-mix(in srgb, var(--voice-theme) 80%, #dbeafe) 42%, transparent 78%)`,
+                      filter: "blur(13px)",
+                      animation: `skyerSmokeDriftB ${realtimeVoiceStatus === "speaking" || isMicActive ? "2.8s" : "5.8s"} ease-in-out infinite`,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-x-3 bottom-0 h-[2px] rounded-full opacity-80"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, #ffffff, var(--voice-theme-light), transparent)`,
+                    }}
+                  />
+                </button>
+
+                {/* 4. Right Button 1: Microphone Toggle */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-mic-btn"
+                  onClick={toggleRealtimeMicTurn}
+                  style={{
+                    backgroundColor: isMicActive ? voiceThemeAccent : "rgba(28, 30, 38, 0.88)",
+                    borderColor: "rgba(255, 255, 255, 0.08)",
+                    color: "#f4f6fa",
+                    boxShadow: isMicActive ? `0 0 24px ${voiceThemeAccent}` : undefined,
+                  }}
+                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
+                  title={isMicActive ? "Đang bật Mic (Nhấn để gửi)" : "Bật Micro để nói"}
+                  aria-label="Toggle microphone"
+                >
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                </button>
+
+                {/* 5. Right Button 2: Close / End Voice Call (X) */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-close-btn"
+                  onClick={stopRealtimeVoiceChat}
+                  style={{
+                    backgroundColor: "rgba(28, 30, 38, 0.88)",
+                    borderColor: "rgba(255, 255, 255, 0.08)",
+                    color: "#f4f6fa",
+                  }}
+                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
+                  title="Kết thúc đàm thoại"
+                  aria-label="Close Live Voice Chat"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Subtle bottom home bar indicator matching Image 1 */}
+              <div className="w-32 h-1 rounded-full bg-white/80" />
             </div>
           </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={toggleRealtimeMicTurn}
-              className="px-5 py-2.5 rounded-full bg-[#1a73e8] hover:bg-[#1565c0] text-white text-xs font-semibold flex items-center gap-2 shadow-lg cursor-pointer transition-all"
-            >
-              <Mic size={15} />
-              <span>{realtimeMediaRecorderRef.current?.state === "recording" ? "Gửi lượt nói" : "Bắt đầu nói"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsVoiceRecordSettingsOpen(true);
-              }}
-              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 cursor-pointer transition-all"
-              title="Cài đặt Giọng nói & Micro"
-            >
-              <SlidersHorizontal size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={stopRealtimeVoiceChat}
-              className="px-5 py-2.5 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-semibold cursor-pointer transition-all"
-            >
-              Kết thúc
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       <VoiceRecordSettingsModal
         isOpen={isVoiceRecordSettingsOpen}
