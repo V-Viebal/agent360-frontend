@@ -95,6 +95,8 @@ export interface BrowserInputPayload {
   pageId?: string;
   width?: number;
   height?: number;
+  isMobile?: boolean;
+  deviceType?: "phone" | "tablet" | "desktop";
 }
 
 export interface BrowserInputResult {
@@ -142,7 +144,7 @@ export function detectAdaptiveNetworkQuality(): number {
   return 90;
 }
 
-export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1920, pageId?: string, vw?: number, vh?: number): string {
+export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1920, pageId?: string, vw?: number, vh?: number, isMobileDevice = false): string {
   const cappedMaxW = Math.min(1920, Math.max(800, maxWidth));
   const id = bare(agentId);
   const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -152,6 +154,8 @@ export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1920, pageId
   if (pageId) qs.set("pageId", pageId);
   if (vw && vw >= 320) qs.set("vw", String(Math.round(vw)));
   if (vh && vh >= 240) qs.set("vh", String(Math.round(vh)));
+  qs.set("mobile", isMobileDevice ? "1" : "0");
+  qs.set("device", isMobileDevice ? "phone" : "desktop");
   try {
     const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
     const opToken = operatorKey.get();

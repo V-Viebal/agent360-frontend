@@ -779,8 +779,26 @@ assert.ok(
   screencastHubSrc.includes("if (_nativeSurfaceMaxW < 1300)") &&
   screencastHubSrc.includes("Browser.getWindowForTarget") &&
   screencastHubSrc.includes("Browser.setWindowBounds") &&
-  screencastHubSrc.includes("NormalizeViewport(initialWidth, initialHeight, _nativeSurfaceMaxW, _nativeSurfaceMaxH)") &&
+  screencastHubSrc.includes("NormalizeViewport(initialWidth, initialHeight, _nativeSurfaceMaxW, _nativeSurfaceMaxH, isMobileDevice)") &&
   screencastHubSrc.includes("var scaleDown = Math.Min(1.0, Math.Min(boundW / w, boundH / h));"),
   "ScreencastHub must self-heal unmaximized Wayland/X11 window surfaces (<1300px wide) via Browser.setWindowBounds and clamp Emulation.setDeviceMetricsOverride proportionally inside _nativeSurfaceMaxW x _nativeSurfaceMaxH to eliminate edge tiling"
 );
 console.log("✓ Test 56: Unmaximized Chromium Window Self-Healing & Native Surface Viewport Clamping Contract verified");
+
+console.log("Testing Device-Aware Phone vs Desktop Responsive Viewport & Virtual Keyboard Lifecycle Contract...");
+const browserApiSrc = fs.readFileSync(path.join(rootDir, "src/services/agentBrowserApi.ts"), "utf-8");
+const cdpEndpointSrc = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserCdpEndpoint.cs"), "utf-8");
+assert.ok(
+  browserApiSrc.includes('qs.set("mobile", isMobileDevice ? "1" : "0")') &&
+  browserApiSrc.includes('qs.set("device", isMobileDevice ? "phone" : "desktop")') &&
+  cdpEndpointSrc.includes('context.Request.Query["mobile"] == "1"') &&
+  screencastHubSrc.includes("ProbeFocusedEditable(ws, (int)x, (int)y, ct)") &&
+  screencastHubSrc.includes('method = "Page.inputFocusChanged"') &&
+  screencastHubSrc.includes("editEl.scrollIntoView({ block: 'center', behavior: 'instant' })") &&
+  grokImeSrc.includes('data-testid="computer-device-site-mode-btn"') &&
+  grokImeSrc.includes('msg?.method === "Page.inputFocusChanged"') &&
+  grokImeSrc.includes("if (isVirtualKeyboardOpen) return;") &&
+  grokImeSrc.includes("recomputeVirtualKeyboardPanDom"),
+  "Browser must distinguish phone vs desktop viewers (mobile=1&device=phone), auto-scroll focused inputs into view on mobile, freeze CDP viewport resize while phone virtual keyboard is open, and handle Page.inputFocusChanged to manage virtual keyboard focus & pan"
+);
+console.log("✓ Test 57: Device-Aware Phone vs Desktop Responsive Viewport & Virtual Keyboard Lifecycle Contract verified");

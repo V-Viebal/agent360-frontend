@@ -5408,6 +5408,21 @@ function SelkiesViewer({
   });
   const [attempt, setAttempt] = useState(0);
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
+  const [isPhoneClient, setIsPhoneClient] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return (
+        window.innerWidth < 768 ||
+        (typeof window.matchMedia === "function" &&
+          window.matchMedia("(pointer: coarse)").matches &&
+          Math.min(window.screen.width, window.screen.height) < 560)
+      );
+    }
+    return false;
+  });
+  const [isDesktopSiteMode, setIsDesktopSiteMode] = useState<boolean>(false);
+  const [isVirtualKeyboardOpen, setIsVirtualKeyboardOpen] = useState<boolean>(false);
+  const [virtualKeyboardHeight, setVirtualKeyboardHeight] = useState<number>(0);
+  const isVirtualKeyboardOpenRef = useRef<boolean>(false);
   const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [browserTabs, setBrowserTabs] = useState<AgentBrowserTab[]>([]);
   const [selectedTabId, setSelectedTabId] = useState<string>("");
@@ -5672,6 +5687,39 @@ function SelkiesViewer({
     };
   }, [agentId, addressInput, isEditingAddress]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    let maxWindowInnerH = Math.max(window.innerHeight, vv?.height || 0);
+    const updateDeviceAndKeyboard = () => {
+      const coarse =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches &&
+        Math.min(window.screen.width, window.screen.height) < 560;
+      const phoneNow = window.innerWidth < 768 || coarse;
+      setIsPhoneClient(phoneNow);
+      const curInnerH = window.innerHeight;
+      if (curInnerH > maxWindowInnerH || Math.abs(window.innerWidth - (vv?.width || window.innerWidth)) > 80) {
+        maxWindowInnerH = Math.max(curInnerH, vv?.height || 0);
+      }
+      const vvHeight = vv ? vv.height : curInnerH;
+      const kbDiff = Math.max(curInnerH - vvHeight, maxWindowInnerH - vvHeight);
+      const kbOpen = phoneNow && kbDiff > 110;
+      isVirtualKeyboardOpenRef.current = kbOpen;
+      setIsVirtualKeyboardOpen(kbOpen);
+      setVirtualKeyboardHeight(kbOpen ? Math.round(kbDiff) : 0);
+    };
+    updateDeviceAndKeyboard();
+    window.addEventListener("resize", updateDeviceAndKeyboard);
+    vv?.addEventListener("resize", updateDeviceAndKeyboard);
+    vv?.addEventListener("scroll", updateDeviceAndKeyboard);
+    return () => {
+      window.removeEventListener("resize", updateDeviceAndKeyboard);
+      vv?.removeEventListener("resize", updateDeviceAndKeyboard);
+      vv?.removeEventListener("scroll", updateDeviceAndKeyboard);
+    };
+  }, []);
+
   useLayoutEffect(() => {
     const checkViewport = () => {
       if (containerRef.current) {
@@ -5679,7 +5727,12 @@ function SelkiesViewer({
         if (rect.width > 0 && rect.height > 0) {
           const nw = Math.round(rect.width);
           const nh = Math.round(rect.height);
-          setBoxSize((prev) => (Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev));
+          setBoxSize((prev) => {
+            if (isVirtualKeyboardOpenRef.current && prev.w > 0 && prev.h > 0 && Math.abs(prev.w - nw) <= 16 && nh < prev.h) {
+              return prev;
+            }
+            return Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev;
+          });
         }
       }
     };
@@ -5693,7 +5746,12 @@ function SelkiesViewer({
         if (cr && cr.width > 0 && cr.height > 0) {
           const nw = Math.round(cr.width);
           const nh = Math.round(cr.height);
-          setBoxSize((prev) => (Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev));
+          setBoxSize((prev) => {
+            if (isVirtualKeyboardOpenRef.current && prev.w > 0 && prev.h > 0 && Math.abs(prev.w - nw) <= 16 && nh < prev.h) {
+              return prev;
+            }
+            return Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev;
+          });
         }
       });
       ro.observe(containerRef.current);
@@ -6664,6 +6722,33 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
               </button>
             </Tooltip>
 
+            {/* Mobile Responsive vs Desktop Site Mode Toggle (Phone Client) */}
+            {isPhoneClient && !isLandscapeRotated && (
+              <Tooltip
+                content={
+                  isDesktopSiteMode
+                    ? "Đang xem giao diện Máy tính (Desktop Site) · Bấm để chuyển về giao diện Điện thoại (Mobile Responsive)"
+                    : "Đang xem giao diện Điện thoại (Mobile Responsive) · Bấm để xem bản Máy tính (Desktop Site)"
+                }
+                placement="bottom"
+              >
+                <button
+                  type="button"
+                  data-testid="computer-device-site-mode-btn"
+                  onClick={() => setIsDesktopSiteMode((d) => !d)}
+                  className={`h-7 px-2 rounded-full flex items-center gap-1 text-[10px] font-medium transition-colors cursor-pointer ${
+                    isDesktopSiteMode
+                      ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
+                      : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                  }`}
+                  aria-label={isDesktopSiteMode ? "Desktop Site Mode" : "Mobile Responsive Mode"}
+                >
+                  <Globe size={12} />
+                  <span>{isDesktopSiteMode ? "PC" : "Mobile"}</span>
+                </button>
+              </Tooltip>
+            )}
+
             {/* Rotate Landscape 90° Icon Button */}
             <Tooltip
               content={isLandscapeRotated ? "Chuyển về khung dọc (Portrait)" : "Xoay ngang màn hình 90° (Landscape)"}
@@ -6835,8 +6920,30 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             isLandscapeRotated={isLandscapeRotated}
             interactive={true}
             mobileInputMode={mobileInteractionMode}
-            viewportWidth={Math.min(1920, isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w))}
-            viewportHeight={Math.min(1080, isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76))}
+            isMobileDevice={isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode}
+            isVirtualKeyboardOpen={isVirtualKeyboardOpen}
+            virtualKeyboardHeight={virtualKeyboardHeight}
+            viewportWidth={(() => {
+              const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
+              const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
+              const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
+              if (!effectiveMob && isPhoneClient) {
+                const targetW = isLandscapeRotated ? Math.max(1024, Math.min(1366, Math.round(rawW * 1.65))) : 1024;
+                return Math.min(1920, targetW);
+              }
+              return Math.min(1920, rawW);
+            })()}
+            viewportHeight={(() => {
+              const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
+              const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
+              const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
+              if (!effectiveMob && isPhoneClient) {
+                const targetW = isLandscapeRotated ? Math.max(1024, Math.min(1366, Math.round(rawW * 1.65))) : 1024;
+                const aspect = rawH / Math.max(1, rawW);
+                return Math.min(1080, Math.max(480, Math.round(targetW * aspect)));
+              }
+              return Math.min(1080, rawH);
+            })()}
             frameCacheRef={tabFrameCacheRef}
             externalZoomPercent={browserZoomPercent}
             onZoomStep={handleZoomStep}
@@ -6867,6 +6974,9 @@ function AgentBrowserPreview({
   isLandscapeRotated = false,
   interactive = false,
   mobileInputMode = "touch",
+  isMobileDevice = false,
+  isVirtualKeyboardOpen = false,
+  virtualKeyboardHeight = 0,
   viewportWidth = 0,
   viewportHeight = 0,
   frameCacheRef,
@@ -6883,6 +6993,9 @@ function AgentBrowserPreview({
   isLandscapeRotated?: boolean;
   interactive?: boolean;
   mobileInputMode?: "touch" | "mouse";
+  isMobileDevice?: boolean;
+  isVirtualKeyboardOpen?: boolean;
+  virtualKeyboardHeight?: number;
   viewportWidth?: number;
   viewportHeight?: number;
   frameCacheRef?: React.MutableRefObject<Record<string, string>>;
@@ -6933,6 +7046,13 @@ function AgentBrowserPreview({
   const imeCommittedValRef = useRef<string>(IME_PROXY_PAD);
   const imeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRemoteTextFocusAtRef = useRef<number>(0);
+  const remoteEditableFocusRef = useRef<{ editable: boolean; inputType: string; yRatio: number; bottomRatio: number }>({
+    editable: false,
+    inputType: "text",
+    yRatio: 0.5,
+    bottomRatio: 0.5,
+  });
+  const keyboardPanOffsetYRef = useRef<number>(0);
   const inputQueueChainRef = useRef<Promise<void>>(Promise.resolve());
 
   const resetImeProxyBuffer = () => {
@@ -7049,21 +7169,42 @@ function AgentBrowserPreview({
   const currentBlobUrlRef = useRef<string>("");
   const wsConnectedRef = useRef<boolean>(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const latestViewportRef = useRef<{ w: number; h: number }>({ w: viewportWidth, h: viewportHeight });
-  latestViewportRef.current = { w: viewportWidth, h: viewportHeight };
+  const latestViewportRef = useRef<{ w: number; h: number; isMobile: boolean }>({ w: viewportWidth, h: viewportHeight, isMobile: isMobileDevice });
+  latestViewportRef.current = { w: viewportWidth, h: viewportHeight, isMobile: isMobileDevice };
 
-  // Direct DOM updater for zoom + sub-frame predictive scroll offset (0ms 60Hz/120Hz local GPU smoothness!)
+  // Direct DOM updater for zoom + virtual keyboard pan offset (0ms 60Hz/120Hz local GPU smoothness!)
   const applyZoomTransformDom = () => {
     const el = zoomWrapperRef.current;
     if (!el) return;
     const s = zoomScaleRef.current;
     const p = zoomPanRef.current;
-    if (Math.abs(s - 1) > 0.005 || Math.abs(p.x) > 0.5 || Math.abs(p.y) > 0.5) {
-      el.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
+    const kbY = keyboardPanOffsetYRef.current;
+    const totalY = p.y + kbY;
+    if (Math.abs(s - 1) > 0.005 || Math.abs(p.x) > 0.5 || Math.abs(totalY) > 0.5) {
+      el.style.transform = `translate3d(${p.x.toFixed(1)}px, ${totalY.toFixed(1)}px, 0) scale(${s.toFixed(3)})`;
     } else {
       el.style.transform = "none";
     }
   };
+
+  const recomputeVirtualKeyboardPanDom = () => {
+    const ed = remoteEditableFocusRef.current;
+    const boxRect = viewportBoxRef.current?.getBoundingClientRect();
+    const boxH = boxRect?.height || viewportHeight || 600;
+    if ((isVirtualKeyboardOpen || virtualKeyboardHeight > 80) && ed.editable && ed.bottomRatio > 0.44) {
+      const targetRatio = 0.36;
+      const neededLift = Math.max(0, (ed.bottomRatio - targetRatio) * boxH);
+      const maxLift = Math.max(60, Math.min(boxH * 0.46, virtualKeyboardHeight > 0 ? virtualKeyboardHeight * 0.85 : boxH * 0.42));
+      keyboardPanOffsetYRef.current = -Math.min(maxLift, neededLift);
+    } else {
+      keyboardPanOffsetYRef.current = 0;
+    }
+    applyZoomTransformDom();
+  };
+
+  useEffect(() => {
+    recomputeVirtualKeyboardPanDom();
+  }, [isVirtualKeyboardOpen, virtualKeyboardHeight]);
 
   const applyPredictiveScrollOffset = (_dx: number, _dy: number) => {
     // Keep canvas rock-steady at (0, 0) without synthetic CSS translation so scroll frames never rubber-band or show empty borders
@@ -7447,9 +7588,9 @@ function AgentBrowserPreview({
     const connectWs = () => {
       if (!alive) return;
       try {
-        const { w: initW, h: initH } = latestViewportRef.current;
-        lastSentViewportRef.current = { pageId, w: Math.round(initW), h: Math.round(initH) };
-        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH));
+        const { w: initW, h: initH, isMobile: initMob } = latestViewportRef.current;
+        lastSentViewportRef.current = { pageId, w: Math.round(initW), h: Math.round(initH), isMobile: initMob };
+        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH, initMob));
         ws.binaryType = "blob";
         wsRef.current = ws;
         ws.onopen = () => {
@@ -7494,6 +7635,45 @@ function AgentBrowserPreview({
                   void navigator.clipboard.writeText(msg.params.text);
                 }
               } catch {}
+              return;
+            }
+            if (msg?.method === "Page.inputFocusChanged" && msg?.params) {
+              const isEd = Boolean(msg.params.editable);
+              const inType = typeof msg.params.inputType === "string" ? msg.params.inputType : "text";
+              const yR = Number(msg.params.yRatio) || 0.5;
+              const bR = Number(msg.params.bottomRatio) || yR;
+              remoteEditableFocusRef.current = { editable: isEd, inputType: inType, yRatio: yR, bottomRatio: bR };
+              const isCoarseClient =
+                isMobileDevice ||
+                (typeof window !== "undefined" &&
+                  (window.innerWidth < 768 ||
+                    (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches)));
+              if (isEd) {
+                lastRemoteTextFocusAtRef.current = Date.now();
+                const proxyEl = imeProxyRef.current;
+                if (proxyEl) {
+                  const nextInputMode =
+                    inType === "email"
+                      ? "email"
+                      : inType === "tel"
+                      ? "tel"
+                      : inType === "url"
+                      ? "url"
+                      : inType === "number"
+                      ? "decimal"
+                      : inType === "search"
+                      ? "search"
+                      : "text";
+                  proxyEl.setAttribute("inputmode", nextInputMode);
+                }
+                focusImeProxy();
+              } else {
+                lastRemoteTextFocusAtRef.current = 0;
+                if (isCoarseClient && imeProxyRef.current && document.activeElement === imeProxyRef.current) {
+                  try { imeProxyRef.current.blur(); } catch {}
+                }
+              }
+              recomputeVirtualKeyboardPanDom();
               return;
             }
             if (msg?.method === "Page.scrollMetrics" && msg?.params) {
@@ -7579,30 +7759,32 @@ function AgentBrowserPreview({
     };
   }, [enabled, agentId, pageId, liveWs]);
 
-  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number }>({ pageId: undefined, w: 0, h: 0 });
+  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined });
 
-  // 2. Smooth Debounced Viewport Synchronization
+  // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open to prevent layout thrash & lost input focus)
   useEffect(() => {
     if (!enabled || !liveWs || viewportWidth < 320 || viewportHeight < 240) return;
+    if (isVirtualKeyboardOpen) return;
     const w = Math.round(viewportWidth);
     const h = Math.round(viewportHeight);
     const prev = lastSentViewportRef.current;
-    if (prev.pageId === pageId && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
+    if (prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
       return;
     }
     const timer = setTimeout(() => {
-      lastSentViewportRef.current = { pageId, w, h };
+      lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice };
+      const deviceType = isMobileDevice ? "phone" : "desktop";
       const sock = wsRef.current;
       if (sock && sock.readyState === WebSocket.OPEN) {
         try {
-          sock.send(JSON.stringify({ action: "resize", width: w, height: h, pageId }));
+          sock.send(JSON.stringify({ action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType }));
           return;
         } catch {}
       }
-      void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId });
+      void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType });
     }, 100);
     return () => clearTimeout(timer);
-  }, [enabled, agentId, pageId, viewportWidth, viewportHeight]);
+  }, [enabled, agentId, pageId, viewportWidth, viewportHeight, isMobileDevice, isVirtualKeyboardOpen]);
 
   // 3. Fallback HTTP Frame Poll ONLY when liveWs is false or if WebSocket fails to connect within 1400ms
   useEffect(() => {
@@ -8073,6 +8255,9 @@ function AgentBrowserPreview({
               { duration: 120 }
             );
           }
+          if (remoteCursorStyleRef.current === "text" || remoteCursorStyleRef.current === "vertical-text" || remoteEditableFocusRef.current.editable) {
+            focusImeProxy();
+          }
           await sendRealtimeInput({
             action: "click",
             xRatio: cur.x,
@@ -8095,6 +8280,7 @@ function AgentBrowserPreview({
     if (!g.moved) {
       const coords = computeNormalizedCoords(g.startX, g.startY);
       if (coords) {
+        focusImeProxy();
         await sendRealtimeInput({
           action: "click",
           xRatio: coords.xRatio,
@@ -8312,7 +8498,14 @@ function AgentBrowserPreview({
         if (remoteCursorStyleRef.current === "text") {
           lastRemoteTextFocusAtRef.current = Date.now();
         }
-        focusImeProxy();
+        const shouldFocusImmediately =
+          e.pointerType === "mouse" ||
+          remoteCursorStyleRef.current === "text" ||
+          remoteCursorStyleRef.current === "vertical-text" ||
+          remoteEditableFocusRef.current.editable;
+        if (shouldFocusImmediately) {
+          focusImeProxy();
+        }
         resetImeProxyBuffer();
         if (e.pointerType === "touch" && Date.now() - lastTouchHandledAtRef.current < 400) return;
 
