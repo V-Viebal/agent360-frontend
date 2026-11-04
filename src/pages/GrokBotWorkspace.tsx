@@ -6927,22 +6927,34 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
               const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
               const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
               const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
-              if (!effectiveMob && isPhoneClient) {
-                const targetW = isLandscapeRotated ? Math.max(1024, Math.min(1366, Math.round(rawW * 1.65))) : 1024;
-                return Math.min(1920, targetW);
+              if (effectiveMob) {
+                return Math.min(1920, rawW);
               }
-              return Math.min(1920, rawW);
+              // FullHD (1920x1080) Logical Scale for Desktop & Phone Landscape / Desktop Site Mode while preserving exact panel aspect ratio!
+              const aspect = rawH / Math.max(1, rawW);
+              let fhdW = 1920;
+              let fhdH = Math.round(fhdW * aspect);
+              if (fhdH > 1080) {
+                fhdH = 1080;
+                fhdW = Math.round(fhdH / Math.max(0.2, aspect));
+              }
+              return Math.max(640, Math.min(1920, fhdW));
             })()}
             viewportHeight={(() => {
               const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
               const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
               const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
-              if (!effectiveMob && isPhoneClient) {
-                const targetW = isLandscapeRotated ? Math.max(1024, Math.min(1366, Math.round(rawW * 1.65))) : 1024;
-                const aspect = rawH / Math.max(1, rawW);
-                return Math.min(1080, Math.max(480, Math.round(targetW * aspect)));
+              if (effectiveMob) {
+                return Math.min(1080, rawH);
               }
-              return Math.min(1080, rawH);
+              const aspect = rawH / Math.max(1, rawW);
+              let fhdW = 1920;
+              let fhdH = Math.round(fhdW * aspect);
+              if (fhdH > 1080) {
+                fhdH = 1080;
+                fhdW = Math.round(fhdH / Math.max(0.2, aspect));
+              }
+              return Math.max(360, Math.min(1080, fhdH));
             })()}
             frameCacheRef={tabFrameCacheRef}
             externalZoomPercent={browserZoomPercent}

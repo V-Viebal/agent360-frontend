@@ -774,16 +774,18 @@ assert.ok(
 );
 console.log("✓ Test 55: CDP GPU Keyboard Shortcuts, Editor Commands & Vietnamese IME Composition Proxy Contract verified");
 
-console.log("Testing Unmaximized Chromium Window Self-Healing & Native Surface Viewport Clamping Contract...");
+console.log("Testing Unmaximized Chromium Window Self-Healing & FullHD 1920x1080 Logical Scale Contract...");
 assert.ok(
   screencastHubSrc.includes("if (_nativeSurfaceMaxW < 1300)") &&
   screencastHubSrc.includes("Browser.getWindowForTarget") &&
   screencastHubSrc.includes("Browser.setWindowBounds") &&
   screencastHubSrc.includes("NormalizeViewport(initialWidth, initialHeight, _nativeSurfaceMaxW, _nativeSurfaceMaxH, isMobileDevice)") &&
-  screencastHubSrc.includes("var scaleDown = Math.Min(1.0, Math.Min(boundW / w, boundH / h));"),
-  "ScreencastHub must self-heal unmaximized Wayland/X11 window surfaces (<1300px wide) via Browser.setWindowBounds and clamp Emulation.setDeviceMetricsOverride proportionally inside _nativeSurfaceMaxW x _nativeSurfaceMaxH to eliminate edge tiling"
+  screencastHubSrc.includes("ComputeBackingScale") &&
+  screencastHubSrc.includes("scale = nextScale") &&
+  grokImeSrc.includes("let fhdW = 1920;"),
+  "ScreencastHub must self-heal unmaximized Wayland/X11 window surfaces (<1300px wide) via Browser.setWindowBounds and render Desktop viewports at FullHD (1920x1080) logical CSS scale fitted proportionally into _nativeSurfaceMaxW x _nativeSurfaceMaxH via ComputeBackingScale"
 );
-console.log("✓ Test 56: Unmaximized Chromium Window Self-Healing & Native Surface Viewport Clamping Contract verified");
+console.log("✓ Test 56: Unmaximized Chromium Window Self-Healing & FullHD 1920x1080 Logical Scale Contract verified");
 
 console.log("Testing Device-Aware Phone vs Desktop Responsive Viewport & Virtual Keyboard Lifecycle Contract...");
 const browserApiSrc = fs.readFileSync(path.join(rootDir, "src/services/agentBrowserApi.ts"), "utf-8");
