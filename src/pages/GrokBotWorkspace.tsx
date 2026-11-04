@@ -1243,7 +1243,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
-import { AgentBrowserInfo, AgentBrowserTab, AgentBrowserHistoryItem, BrowserInputPayload, fetchAgentBrowserHistory, fetchAgentBrowserSuggestions, detectAdaptiveNetworkQuality, DesktopAuthError, agentBrowserImageUrl, hasNoBrowser, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
+import { AgentBrowserInfo, AgentBrowserTab, AgentBrowserHistoryItem, BrowserInputPayload, fetchAgentBrowserHistory, fetchAgentBrowserSuggestions, detectAdaptiveNetworkQuality, DesktopAuthError, agentBrowserImageUrl, hasNoBrowser, clearNoBrowserCache, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl } from "../services/agentBrowserApi";
 
 
 
@@ -13956,12 +13956,65 @@ ${targetItem.text}`;
     await updateAgentLoopMode(selectedAgentId, mode);
   };
 
+  const openZaloWebBrowserForAgent = async (targetAgentRaw?: string) => {
+    const targetId = targetAgentRaw || selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+    if (!targetId) return;
+    clearNoBrowserCache(targetId);
+    setIsAgentSettingsModalOpen(false);
+    setIsChannelModalOpen(false);
+    handleSetBrowserModalOpen(true);
+
+    try {
+      const info = await fetchAgentBrowser(targetId);
+      if (info) {
+        setAgentBrowser(info);
+      }
+      const tabs = info?.tabs || [];
+      const zaloTab = tabs.find(
+        (t) => !t.anchor && ((t.url || "").includes("chat.zalo.me") || (t.url || "").includes("id.zalo.me"))
+      );
+      if (zaloTab) {
+        await dispatchAgentBrowserInput(targetId, { action: "activate_tab", pageId: zaloTab.targetId });
+      } else {
+        const blankOrGoogle = tabs.find(
+          (t) =>
+            !t.anchor &&
+            ((t.url || "").startsWith("chrome://newtab") ||
+              t.url === "about:blank" ||
+              (t.url || "").includes("google.com"))
+        );
+        if (blankOrGoogle) {
+          await dispatchAgentBrowserInput(targetId, {
+            action: "navigate",
+            text: "https://chat.zalo.me",
+            pageId: blankOrGoogle.targetId,
+          });
+        } else {
+          await dispatchAgentBrowserInput(targetId, {
+            action: "new_tab",
+            text: "https://chat.zalo.me",
+          });
+        }
+      }
+      const refreshed = await fetchAgentBrowser(targetId);
+      if (refreshed) {
+        setAgentBrowser(refreshed);
+      }
+      setBrowserIframeKey((k) => k + 1);
+    } catch (err) {
+      console.warn("openZaloWebBrowserForAgent error", err);
+    }
+  };
+
   const handleToggleChannel = async (channelType: string, currentEnabled: boolean) => {
     const nextState = !currentEnabled;
     setChannels((prev) =>
       prev.map((ch) => (ch.type === channelType ? { ...ch, enabled: nextState } : ch))
     );
-    await toggleAgentChannel(selectedAgentId, channelType, nextState);
+    const ok = await toggleAgentChannel(selectedAgentId, channelType, nextState);
+    if (ok && channelType === "zalo" && nextState) {
+      await openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+    }
   };
 
   const hasNoAgents = !isLoadingAgents && agents.length === 0;
@@ -23341,7 +23394,15 @@ ${chat.id}`);
         channel={selectedChannelForConfig}
         agentId={selectedAgent.id}
         agentName={selectedAgent.name}
-        onSaved={refreshDetailsData}
+        onSaved={(chType, en) => {
+          refreshDetailsData();
+          if (chType === "zalo" && en) {
+            void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+          }
+        }}
+        onOpenZaloWebBrowser={() => {
+          void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+        }}
       />
 
       {/* Schedule Job Configuration Modal */}

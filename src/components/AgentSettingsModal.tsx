@@ -716,7 +716,7 @@ export function AgentSettingsModal({
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {channels
-                        .filter((c) => ["console", "telegram", "discord", "slack", "matrix", "voice"].includes(c.type))
+                        .filter((c) => ["console", "telegram", "zalo", "discord", "slack", "matrix", "voice"].includes(c.type))
                         .map((ch) => (
                           <div
                             key={ch.type}

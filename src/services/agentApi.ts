@@ -1621,6 +1621,38 @@ export function normalizeTelegramChannelDefaults(raw: Record<string, any> | unde
   return d;
 }
 
+export function normalizeZaloChannelDefaults(raw: Record<string, any> | undefined): Record<string, any> {
+  const d = { ...(raw || {}) };
+  if (typeof d.mode !== "string" || !d.mode.trim()) {
+    d.mode = d.bot_token ? "webhook" : "web";
+  }
+  if (d.show_typing === undefined || d.show_typing === null) {
+    d.show_typing = true;
+  }
+  if (d.access_control_dm === undefined || d.access_control_dm === null) {
+    d.access_control_dm = d.dm_policy === "allowlist";
+  }
+  if (d.access_control_group === undefined || d.access_control_group === null) {
+    d.access_control_group = d.group_policy === "allowlist";
+  }
+  if (!d.dm_policy) {
+    d.dm_policy = d.access_control_dm ? "allowlist" : "open";
+  }
+  if (!d.group_policy) {
+    d.group_policy = d.access_control_group ? "allowlist" : "open";
+  }
+  if (d.require_mention === undefined || d.require_mention === null) {
+    d.require_mention = true;
+  }
+  if (d.no_text_debounce === undefined || d.no_text_debounce === null) {
+    d.no_text_debounce = true;
+  }
+  if (!d.group_monitor_mode) {
+    d.group_monitor_mode = d.require_mention === false ? "loud" : "silent";
+  }
+  return d;
+}
+
 export async function fetchAgentChannels(agentId: string): Promise<AgentChannelConfig[]> {
   try {
     const cleanId = resolveEffectiveAgentId(agentId);
@@ -1629,10 +1661,18 @@ export async function fetchAgentChannels(agentId: string): Promise<AgentChannelC
     }, cleanId);
     if (!res.ok) throw new Error("Failed to fetch agent channels");
     const channelsObj = await res.json();
-    
+    if (!channelsObj.zalo) {
+      channelsObj.zalo = normalizeZaloChannelDefaults({ enabled: false, mode: "web" });
+    }
+
     const list: AgentChannelConfig[] = [];
     for (const [key, val] of Object.entries<any>(channelsObj)) {
-      const details = key === "telegram" ? normalizeTelegramChannelDefaults(val) : val;
+      const details =
+        key === "telegram"
+          ? normalizeTelegramChannelDefaults(val)
+          : key === "zalo"
+          ? normalizeZaloChannelDefaults(val)
+          : val;
       list.push({
         name: key.toUpperCase(),
         enabled: Boolean(details?.enabled),
@@ -1651,10 +1691,17 @@ export async function toggleAgentChannel(agentId: string, channelType: string, e
   try {
     const cleanId = resolveEffectiveAgentId(agentId);
     const channelPath = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels/${encodeURIComponent(channelType)}`;
+    let current: Record<string, any> = {};
     const getRes = await authorizedFetch(channelPath, { headers: { Accept: "application/json" } }, cleanId);
-    if (!getRes.ok) throw new Error("Failed to fetch channel config");
-    const current = await getRes.json();
-    const basePayload = channelType === "telegram" ? normalizeTelegramChannelDefaults(current) : current;
+    if (getRes.ok) {
+      current = await getRes.json().catch(() => ({}));
+    }
+    const basePayload =
+      channelType === "telegram"
+        ? normalizeTelegramChannelDefaults(current)
+        : channelType === "zalo"
+        ? normalizeZaloChannelDefaults(current)
+        : current;
     const putRes = await authorizedFetch(channelPath, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -1701,10 +1748,17 @@ export async function updateAgentChannelConfig(agentId: string, channelType: str
   try {
     const cleanId = resolveEffectiveAgentId(agentId);
     const channelPath = `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/config/channels/${encodeURIComponent(channelType)}`;
+    let current: Record<string, any> = {};
     const getRes = await authorizedFetch(channelPath, { headers: { Accept: "application/json" } }, cleanId);
-    if (!getRes.ok) throw new Error("Failed to fetch channel config");
-    const current = await getRes.json();
-    const basePayload = channelType === "telegram" ? normalizeTelegramChannelDefaults(current) : current;
+    if (getRes.ok) {
+      current = await getRes.json().catch(() => ({}));
+    }
+    const basePayload =
+      channelType === "telegram"
+        ? normalizeTelegramChannelDefaults(current)
+        : channelType === "zalo"
+        ? normalizeZaloChannelDefaults(current)
+        : current;
     const mergedPayload: Record<string, any> = {
       ...basePayload,
       ...newConfig,

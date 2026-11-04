@@ -37,6 +37,11 @@ const isNoBrowser = (id: string) => {
 /** True while the API has recently said this agent has no browser profile. */
 export const hasNoBrowser = (agentId: string) => isNoBrowser(bare(agentId));
 
+/** Clear the negative browser cache for an agent (e.g. when Zalo Web channel is enabled). */
+export const clearNoBrowserCache = (agentId: string) => {
+  noBrowser.delete(bare(agentId));
+};
+
 /** Browser identity of one agent (its own Selkies desktop + Chromium profile). */
 export async function fetchAgentBrowser(agentId: string, signal?: AbortSignal): Promise<AgentBrowserInfo | null> {
   const id = bare(agentId);

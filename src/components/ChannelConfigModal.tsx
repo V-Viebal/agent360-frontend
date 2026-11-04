@@ -1,6 +1,6 @@
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
-import { Save, Radio, Check, Key, Users, Shield, Plus, X } from "lucide-react";
+import { Save, Radio, Check, Key, Users, Shield, Plus, X, Globe, ExternalLink } from "lucide-react";
 import {
   AgentChannelConfig,
   DEFAULT_TELEGRAM_API_BASE_URL,
@@ -15,7 +15,8 @@ interface ChannelConfigModalProps {
   channel: AgentChannelConfig | null;
   agentId: string;
   agentName: string;
-  onSaved: () => void;
+  onSaved: (channelType?: string, enabled?: boolean) => void;
+  onOpenZaloWebBrowser?: () => void;
 }
 
 export function ChannelConfigModal({
@@ -25,6 +26,7 @@ export function ChannelConfigModal({
   agentId,
   agentName,
   onSaved,
+  onOpenZaloWebBrowser,
 }: ChannelConfigModalProps) {
   const { t } = useTranslation();
   const [enabled, setEnabled] = useState(false);
@@ -75,7 +77,7 @@ export function ChannelConfigModal({
       setRequireMention(
         d.require_mention !== undefined && d.require_mention !== null
           ? Boolean(d.require_mention)
-          : isTelegram
+          : (isTelegram || channel.type === "zalo")
           ? true
           : false
       );
@@ -92,6 +94,7 @@ export function ChannelConfigModal({
   if (!channel) return null;
 
   const isTelegram = channel.type === "telegram";
+  const isZalo = channel.type === "zalo";
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +122,14 @@ export function ChannelConfigModal({
     }
 
     const trimmedToken = botToken.trim();
-    if (trimmedToken && trimmedToken !== "********") {
+    if (isZalo) {
+      updatedProps.show_typing = showTyping;
+      updatedProps.mode = trimmedToken && trimmedToken !== "********" ? "webhook" : (channel.details?.bot_token ? (channel.details?.mode || "web") : "web");
+      updatedProps.group_monitor_mode = requireMention ? "silent" : "loud";
+      if (trimmedToken && trimmedToken !== "********") {
+        updatedProps.bot_token = trimmedToken;
+      }
+    } else if (trimmedToken && trimmedToken !== "********") {
       if (channel.type === "telegram" || channel.type === "discord" || channel.type === "slack") {
         updatedProps.bot_token = trimmedToken;
       } else if (channel.type === "dingtalk") {
@@ -134,9 +144,9 @@ export function ChannelConfigModal({
     if (success) {
       setSaveSuccess(true);
       setTimeout(() => {
-        onSaved();
+        onSaved(channel.type, enabled);
         onClose();
-      }, 700);
+      }, 500);
     } else {
       setSaveError("Failed to save channel config to Skyer backend.");
     }
@@ -160,11 +170,40 @@ export function ChannelConfigModal({
           />
         </div>
 
+        {isZalo && (
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/25 space-y-2.5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="text-xs font-semibold text-blue-400 flex items-center gap-1.5">
+                  <Globe size={13} />
+                  <span>Zalo Web (Đăng nhập trực tiếp trên Trình duyệt Agent)</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-neutral-300 leading-relaxed">
+                  Chỉ cần bật kênh Zalo và đăng nhập tài khoản trên trình duyệt <code className="text-blue-400">chat.zalo.me</code> của Agent. Agent sẽ tự động lắng nghe ngữ cảnh nhóm và phản hồi trực tiếp qua tài khoản Zalo đã đăng nhập (không bắt buộc Bot Token).
+                </p>
+              </div>
+            </div>
+            {onOpenZaloWebBrowser && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenZaloWebBrowser();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+              >
+                <ExternalLink size={13} />
+                <span>Mở Trình duyệt Zalo Web để Đăng nhập (QR / Tài khoản)</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {channel.type !== "console" && (
           <div className="space-y-1.5">
             <label className="text-slate-700 dark:text-neutral-300 font-medium flex items-center gap-1.5">
               <Key size={13} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
-              <span>{t("channelConfig.token")}</span>
+              <span>{isZalo ? "Zalo Bot Token (Tùy chọn — Để trống nếu dùng Zalo Web)" : t("channelConfig.token")}</span>
             </label>
             <input
               type="password"
@@ -173,6 +212,8 @@ export function ChannelConfigModal({
               placeholder={
                 channel.details?.bot_token === "********"
                   ? "•••••••• (Configured — leave blank to keep current token)"
+                  : isZalo
+                  ? "Để trống để dùng Zalo Web qua Trình duyệt Agent"
                   : "Enter bot token (Telegram BotFather, Discord Bot Token, etc.)"
               }
               className="w-full bg-[#181824] border border-[#2a2a3c] rounded-xl px-3 py-2 text-white font-mono placeholder:text-neutral-600 focus:outline-none focus:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]/70"
@@ -193,7 +234,7 @@ export function ChannelConfigModal({
           />
         </div>
 
-        {isTelegram ? (
+        {(isTelegram || isZalo) ? (
           <div className="space-y-2 pt-1">
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-[#222230]">
               <ToggleSwitch
