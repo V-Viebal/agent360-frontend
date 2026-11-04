@@ -265,6 +265,52 @@ export function VoiceRecordSettingsModal({
             </div>
           </div>
 
+          {/* 1.5 LLM360 Cloud STT & TTS Engine (Skyer Node 5a54d0) */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Volume2 size={15} className="text-[#1a73e8]" />
+                <span className="text-xs font-semibold text-white">LLM360 Voice Models (Node 5a54d0)</span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1a73e8]/15 text-[#68a2ff] border border-[#1a73e8]/30">
+                Active
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div className="space-y-1">
+                <span className="text-[10px] text-neutral-400 block">STT Model:</span>
+                <select
+                  defaultValue={typeof window !== "undefined" ? localStorage.getItem("agent360_stt_model") || "scribe_v1" : "scribe_v1"}
+                  onChange={(e) => {
+                    try { localStorage.setItem("agent360_stt_model", e.target.value); } catch {}
+                  }}
+                  className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] rounded-lg px-2 py-1.5 text-[11px] text-white outline-none"
+                >
+                  <option value="scribe_v1">ElevenLabs Scribe v1</option>
+                  <option value="scribe_v2">ElevenLabs Scribe v2</option>
+                  <option value="gemini-3.8-flash">Gemini 3.8 Flash STT</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash STT</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-neutral-400 block">TTS Model:</span>
+                <select
+                  defaultValue={typeof window !== "undefined" ? localStorage.getItem("agent360_tts_model") || "eleven_flash_v2_5" : "eleven_flash_v2_5"}
+                  onChange={(e) => {
+                    try { localStorage.setItem("agent360_tts_model", e.target.value); } catch {}
+                  }}
+                  className="w-full bg-slate-100 dark:bg-[#1c1c28] border border-[#28283a] rounded-lg px-2 py-1.5 text-[11px] text-white outline-none"
+                >
+                  <option value="eleven_flash_v2_5">ElevenLabs Flash v2.5</option>
+                  <option value="eleven_turbo_v2_5">ElevenLabs Turbo v2.5</option>
+                  <option value="eleven_multilingual_v2">ElevenLabs Multilingual v2</option>
+                  <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS</option>
+                  <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro TTS</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* 2. Microphone Hardware Device */}
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-neutral-300">

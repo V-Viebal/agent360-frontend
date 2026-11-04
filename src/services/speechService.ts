@@ -169,6 +169,7 @@ export function cleanTextForSpeech(rawText: string): string {
 }
 
 export function stopSpeaking(): void {
+  stopCloudAudioPlayback();
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     window.speechSynthesis.cancel();
     setDuckingState(false);
@@ -248,4 +249,168 @@ export function speakText(
 
   speakNextSegment();
   return true;
+}
+
+
+// ============================================================================
+// Skyer LLM360 Cloud TTS & STT + Full-Duplex Realtime Voice Service
+// ============================================================================
+
+const API_BASE = ((import.meta as any).env?.VITE_API_URL || "/api/v1").replace(/\/+$/, "");
+
+let _activeCloudAudio: HTMLAudioElement | null = null;
+
+export function stopCloudAudioPlayback(): void {
+  if (_activeCloudAudio) {
+    try {
+      _activeCloudAudio.pause();
+      _activeCloudAudio.src = "";
+    } catch {}
+    _activeCloudAudio = null;
+  }
+  setDuckingState(false);
+}
+
+/**
+ * Mode A Step 1: Transcribe audio blob via Skyer LLM360 CLIProxy (/api/v1/agents/voice/transcribe)
+ */
+export async function transcribeAudioViaLlm360(
+  audioBlob: Blob,
+  options?: {
+    model?: string;
+    language?: string;
+    prompt?: string;
+  }
+): Promise<{ text: string; language_code?: string }> {
+  const formData = new FormData();
+  const ext = audioBlob.type.includes("wav") ? "wav" : audioBlob.type.includes("mp3") ? "mp3" : "webm";
+  formData.append("file", audioBlob, `recording.${ext}`);
+  formData.append("model", options?.model || localStorage.getItem("agent360_stt_model") || "scribe_v1");
+  if (options?.language) {
+    const langShort = options.language.split("-")[0];
+    formData.append("language", langShort);
+  }
+  if (options?.prompt) {
+    formData.append("prompt", options.prompt);
+  }
+
+  const resp = await fetch(`${API_BASE}/agents/voice/transcribe`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => "");
+    throw new Error(`Transcription failed (${resp.status}): ${errText}`);
+  }
+  return await resp.json();
+}
+
+/**
+ * Mode A Step 3 & 4: Synthesize and play speech via Skyer LLM360 CLIProxy (/api/v1/agents/voice/speech)
+ * Automatically falls back to browser speechSynthesis if offline.
+ */
+export async function speakTextViaLlm360(
+  text: string,
+  options?: {
+    model?: string;
+    voice?: string;
+    rate?: number;
+    onEnd?: () => void;
+    onError?: (err: any) => void;
+    onSegmentChange?: (segmentText: string, index: number, total: number) => void;
+  }
+): Promise<boolean> {
+  const clean = cleanTextForSpeech(text);
+  if (!clean) {
+    options?.onEnd?.();
+    return false;
+  }
+
+  stopCloudAudioPlayback();
+  stopSpeaking();
+
+  const useCloud = localStorage.getItem("agent360_use_cloud_tts") !== "false";
+  if (!useCloud) {
+    return speakText(text, { rate: options?.rate, onEnd: options?.onEnd, onError: options?.onError, onSegmentChange: options?.onSegmentChange });
+  }
+
+  try {
+    setDuckingState(true);
+    options?.onSegmentChange?.(clean.slice(0, 120), 0, 1);
+
+    const model = options?.model || localStorage.getItem("agent360_tts_model") || "eleven_flash_v2_5";
+    const voice = options?.voice || localStorage.getItem("agent360_tts_voice") || "alloy";
+
+    const resp = await fetch(`${API_BASE}/agents/voice/speech`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: clean,
+        model,
+        voice,
+        response_format: "mp3",
+      }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`TTS HTTP ${resp.status}`);
+    }
+
+    const audioBlob = await resp.blob();
+    if (!audioBlob || audioBlob.size < 100) {
+      throw new Error("Empty TTS audio payload");
+    }
+
+    const url = URL.createObjectURL(audioBlob);
+    const audio = new Audio(url);
+    audio.playbackRate = options?.rate ?? getStoredSpeechSettings().rate ?? 1.0;
+    _activeCloudAudio = audio;
+
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      if (_activeCloudAudio === audio) _activeCloudAudio = null;
+      setDuckingState(false);
+      options?.onEnd?.();
+    };
+
+    audio.onerror = (err) => {
+      URL.revokeObjectURL(url);
+      if (_activeCloudAudio === audio) _activeCloudAudio = null;
+      setDuckingState(false);
+      // Fallback to local speech synthesis
+      speakText(text, { rate: options?.rate, onEnd: options?.onEnd, onError: options?.onError, onSegmentChange: options?.onSegmentChange });
+    };
+
+    await audio.play();
+    return true;
+  } catch (err) {
+    console.warn("[Llm360 TTS] Falling back to browser speechSynthesis:", err);
+    setDuckingState(false);
+    return speakText(text, { rate: options?.rate, onEnd: options?.onEnd, onError: options?.onError, onSegmentChange: options?.onSegmentChange });
+  }
+}
+
+export function resolveVoiceRealtimeWsUrl(params: {
+  agentId: string;
+  sessionId?: string;
+  sttModel?: string;
+  ttsModel?: string;
+  voice?: string;
+  language?: string;
+}): string {
+  const qs = new URLSearchParams();
+  qs.set("agent_id", params.agentId || "mons");
+  if (params.sessionId) qs.set("session_id", params.sessionId);
+  qs.set("stt_model", params.sttModel || localStorage.getItem("agent360_stt_model") || "scribe_v1");
+  qs.set("tts_model", params.ttsModel || localStorage.getItem("agent360_tts_model") || "eleven_flash_v2_5");
+  qs.set("voice", params.voice || localStorage.getItem("agent360_tts_voice") || "alloy");
+  if (params.language) qs.set("language", params.language.split("-")[0]);
+
+  if (API_BASE.startsWith("http://") || API_BASE.startsWith("https://")) {
+    const wsBase = API_BASE.replace(/^http/, "ws");
+    return `${wsBase}/agents/ws/voice?${qs.toString()}`;
+  }
+  const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = typeof window !== "undefined" ? window.location.host : "localhost:5290";
+  return `${proto}//${host}${API_BASE}/agents/ws/voice?${qs.toString()}`;
 }

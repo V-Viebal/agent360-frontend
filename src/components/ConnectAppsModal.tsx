@@ -10,6 +10,7 @@ import {
   Check,
   Loader2,
   Sparkles,
+  ChevronRight,
 } from "lucide-react";
 
 export interface ConnectedAppItem {
@@ -603,6 +604,7 @@ export function ConnectAppsModal({
 
   const categories = [
     "All",
+    "Connected",
     "Password Managers",
     "Productivity",
     "Communication",
@@ -729,14 +731,21 @@ export function ConnectAppsModal({
     const matchesSearch =
       app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const isConnected = connectedAppIds.includes(app.id);
     const matchesCategory =
-      selectedCategory === "All" || app.category === selectedCategory;
+      selectedCategory === "All"
+        ? true
+        : selectedCategory === "Connected"
+        ? isConnected
+        : app.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const displayCategories =
     selectedCategory === "All"
       ? (["Recommended", "Password Managers", "Productivity", "Communication", "Code", "Data"] as const)
+      : selectedCategory === "Connected"
+      ? (["Connected", "Recommended", "Password Managers", "Productivity", "Communication", "Code", "Data"] as const)
       : [selectedCategory as any];
 
   return (
@@ -763,10 +772,52 @@ export function ConnectAppsModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 dark:text-neutral-400 font-mono bg-[#1c1c24] px-2.5 py-1 rounded-full border border-slate-200 dark:border-[#262632]">
-              <Shield size={12} className="text-emerald-400" />
-              <span>{connectedAppIds.length} active</span>
-            </div>
+            {/* Interactive Connected Apps entry button matching reference header */}
+            <button
+              type="button"
+              data-testid="header-connected-apps-btn"
+              onClick={() => {
+                setSelectedCategory("Connected");
+                setSearchQuery("");
+              }}
+              title="Xem danh sách ứng dụng đã kết nối"
+              className={`flex items-center gap-2 px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                selectedCategory === "Connected"
+                  ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 ring-1 ring-emerald-500/30 shadow-xs"
+                  : "bg-[#1c1c24] hover:bg-[#252532] border-slate-200 dark:border-[#262632] text-slate-700 dark:text-neutral-300 hover:text-white"
+              }`}
+            >
+              {/* Stacked micro app logos */}
+              {connectedAppIds.length > 0 ? (
+                <div className="flex items-center -space-x-1.5 shrink-0 overflow-hidden">
+                  {connectedAppIds.slice(0, 4).map((appId) => {
+                    const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === appId.toLowerCase() || a.id.toLowerCase() === appId.toLowerCase().replace(/^composio_/, ""));
+                    const logo = matched?.logoUrl || `https://logos.composio.dev/api/${appId.replace(/^composio_/, "")}`;
+                    return (
+                      <div
+                        key={appId}
+                        className="h-4.5 w-4.5 rounded-full bg-white dark:bg-[#1a1a24] border border-slate-300 dark:border-[#2c2c3e] flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs"
+                      >
+                        <img
+                          src={logo}
+                          alt={appId}
+                          className="h-full w-full object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Shield size={12} className="text-emerald-400 shrink-0" />
+              )}
+              <span className="text-xs font-mono font-medium whitespace-nowrap">
+                {connectedAppIds.length} connected
+              </span>
+              <ChevronRight size={13} className="text-neutral-400 shrink-0" />
+            </button>
 
             <button
               onClick={onClose}
@@ -845,9 +896,12 @@ export function ConnectAppsModal({
         {/* Content Body: Categorized App Grid */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3.5 bg-[#0f0f13]">
           {displayCategories.map((category) => {
-            const categoryApps = filteredApps.filter(
-              (app) => app.category === category
-            );
+            const categoryApps = filteredApps.filter((app) => {
+              if (category === "Connected") {
+                return connectedAppIds.includes(app.id);
+              }
+              return app.category === category;
+            });
             if (categoryApps.length === 0) return null;
 
             return (

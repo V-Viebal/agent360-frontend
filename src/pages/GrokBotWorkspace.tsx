@@ -1274,7 +1274,7 @@ import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPreviewUrl, classifyAttachmentFormat, AttachmentFormatKind } from "../services/uploadApi";
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
-import { speakText, stopSpeaking, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
+import { speakText, speakTextViaLlm360, stopSpeaking, transcribeAudioViaLlm360, resolveVoiceRealtimeWsUrl, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
 import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState } from "../components/ui";
 import { CommandPaletteModal } from "../components/CommandPaletteModal";
 import { SettingsModal } from "../components/SettingsModal";
@@ -6508,12 +6508,12 @@ function SelkiesViewer({
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
   const [isPhoneClient, setIsPhoneClient] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
-      return (
-        window.innerWidth < 768 ||
-        (typeof window.matchMedia === "function" &&
-          window.matchMedia("(pointer: coarse)").matches &&
-          Math.min(window.screen.width, window.screen.height) < 560)
-      );
+      const uaMob = typeof navigator !== "undefined" && /Android|iPhone|iPod|Windows Phone|Mobile/i.test(navigator.userAgent || "");
+      const coarse =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches &&
+        (window.innerWidth < 960 || window.innerHeight < 560 || Math.min(window.screen.width, window.screen.height) < 600);
+      return window.innerWidth < 768 || coarse || (uaMob && window.innerWidth < 960);
     }
     return false;
   });
@@ -6811,11 +6811,12 @@ function SelkiesViewer({
     const vv = window.visualViewport;
     let maxWindowInnerH = Math.max(window.innerHeight, vv?.height || 0);
     const updateDeviceAndKeyboard = () => {
+      const uaMob = typeof navigator !== "undefined" && /Android|iPhone|iPod|Windows Phone|Mobile/i.test(navigator.userAgent || "");
       const coarse =
         typeof window.matchMedia === "function" &&
         window.matchMedia("(pointer: coarse)").matches &&
-        Math.min(window.screen.width, window.screen.height) < 560;
-      const phoneNow = window.innerWidth < 768 || coarse;
+        (window.innerWidth < 960 || window.innerHeight < 560 || Math.min(window.screen.width, window.screen.height) < 600);
+      const phoneNow = window.innerWidth < 768 || coarse || (uaMob && window.innerWidth < 960);
       setIsPhoneClient(phoneNow);
       const curInnerH = window.innerHeight;
       if (curInnerH > maxWindowInnerH || Math.abs(window.innerWidth - (vv?.width || window.innerWidth)) > 80) {
@@ -7728,6 +7729,34 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                 <span className="sm:hidden">
                   {streamEngineMode === "webrtc" ? "H.264" : "GPU"}
                 </span>
+              </button>
+            </Tooltip>
+
+            <Tooltip
+              content={
+                mobileInteractionMode === "mouse"
+                  ? "Chế độ Chuột ảo (1 chạm: di chuyển/click · 2 chạm vuốt: cuộn trang · 2 chạm nhấn: chuột phải) · Bấm để chuyển sang Chạm"
+                  : "Chế độ Chạm trực tiếp (Mặc định trên điện thoại) · Bấm để chuyển sang Chuột ảo (Trackpad)"
+              }
+              placement="bottom"
+            >
+              <button
+                type="button"
+                data-testid="agent-browser-quick-input-mode-btn"
+                data-input-mode={mobileInteractionMode}
+                onClick={() => {
+                  triggerHaptic(8);
+                  setMobileInteractionMode((m) => (m === "mouse" ? "touch" : "mouse"));
+                }}
+                className={`h-7 px-2 rounded-full flex items-center gap-1 text-[11px] font-sans font-medium transition-colors cursor-pointer shrink-0 border ${
+                  mobileInteractionMode === "mouse"
+                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8] border-[#1a73e8]/30 dark:border-[#8ab4f8]/35"
+                    : "bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] border-black/10 dark:border-white/10"
+                }`}
+                aria-label={mobileInteractionMode === "mouse" ? "Switch to Touch Mode" : "Switch to Mouse Trackpad Mode"}
+              >
+                {mobileInteractionMode === "mouse" ? <MousePointer2 size={13} /> : <Hand size={13} />}
+                <span className="hidden xs:inline">{mobileInteractionMode === "mouse" ? "Chuột" : "Chạm"}</span>
               </button>
             </Tooltip>
 
@@ -9718,10 +9747,10 @@ function AgentBrowserPreview({
           lastRemoteTextFocusAtRef.current = Date.now();
         }
         const shouldFocusImmediately =
-          e.pointerType === "mouse" ||
-          remoteCursorStyleRef.current === "text" ||
-          remoteCursorStyleRef.current === "vertical-text" ||
-          remoteEditableFocusRef.current.editable;
+          e.pointerType === "mouse" &&
+          (remoteCursorStyleRef.current === "text" ||
+            remoteCursorStyleRef.current === "vertical-text" ||
+            remoteEditableFocusRef.current.editable);
         if (shouldFocusImmediately) {
           focusImeProxy();
         }
@@ -10575,7 +10604,16 @@ export function GrokBotWorkspace() {
 
   const { agentParam, chatParam } = useParams<{ agentParam?: string; chatParam?: string }>();
   const navigate = useNavigate();
-  const [agents, setAgents] = useState<InfraAgent[]>([]);
+  const [agents, setAgents] = useState<InfraAgent[]>(() => {
+    try {
+      const raw = sessionStorage.getItem("agent360_fleet_agents_swr") || localStorage.getItem("agent360_fleet_agents_swr");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [selectedAgentId, setSelectedAgentId] = useState<string>(() => {
     if (agentParam) return resolveCanonicalAgentSlugFromAlias(agentParam) || agentParam;
     try {
@@ -10611,7 +10649,7 @@ export function GrokBotWorkspace() {
         (Boolean(alias) && (slugifyAgentUrlAlias(a.name) === alias || slugifyAgentUrlAlias(getCustomAgentName(a.id) || getCustomAgentName(a.slug)) === alias))
     );
   };
-  const [isLoadingAgents, setIsLoadingAgents] = useState(true);
+  const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(() => agents.length === 0);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isOnlineState, setIsOnlineState] = useState<boolean>(() => {
     return typeof navigator !== "undefined" ? navigator.onLine : true;
@@ -12592,10 +12630,18 @@ ${targetItem.text}`;
     inputTextRef.current = inputText;
   }, [inputText]);
 
-  // Voice recording / Speech-to-text state
+  // Voice recording / Speech-to-text state (Mode A: Push-to-Talk & Mode B: Full-Duplex Realtime)
   const [isRecording, setIsRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [liveVoiceEnergy, setLiveVoiceEnergy] = useState<number>(0);
+  const [isRealtimeVoiceOpen, setIsRealtimeVoiceOpen] = useState(false);
+  const [realtimeVoiceStatus, setRealtimeVoiceStatus] = useState<"idle" | "connecting" | "listening" | "thinking" | "speaking">("idle");
+  const [realtimeTranscript, setRealtimeTranscript] = useState<string>("");
+  const [realtimeBotReply, setRealtimeBotReply] = useState<string>("");
+  const realtimeWsRef = useRef<WebSocket | null>(null);
+  const realtimeMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const pttMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const pttChunksRef = useRef<Blob[]>([]);
   const [sttLang, setSttLang] = useState<"vi-VN" | "en-US">(() => {
     try {
       return (localStorage.getItem("agent360_stt_lang") as any) || "vi-VN";
@@ -12678,10 +12724,41 @@ ${targetItem.text}`;
     }
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const useCloudStt = typeof window !== "undefined" && localStorage.getItem("agent360_use_cloud_stt") !== "false";
 
-    if (!SpeechRecognition) {
-      setVoiceError("Trình duyệt không hỗ trợ Web Speech API. Vui lòng dùng Chrome hoặc Edge.");
-      setTimeout(() => setVoiceError(null), 4000);
+    if (!SpeechRecognition || useCloudStt) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        pttChunksRef.current = [];
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) pttChunksRef.current.push(e.data);
+        };
+        recorder.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop());
+          pttMediaRecorderRef.current = null;
+          setIsRecording(false);
+          if (pttChunksRef.current.length === 0) return;
+          const blob = new Blob(pttChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+          try {
+            const res = await transcribeAudioViaLlm360(blob, { language: sttLang });
+            if (res?.text) {
+              const base = (inputTextRef.current || "").trim();
+              setInputText(base ? `${base} ${res.text.trim()}` : res.text.trim());
+            }
+          } catch (e: any) {
+            setVoiceError(e?.message || "Không thể nhận diện giọng nói");
+            setTimeout(() => setVoiceError(null), 4000);
+          }
+        };
+        pttMediaRecorderRef.current = recorder;
+        recorder.start();
+        setIsRecording(true);
+        setVoiceError(null);
+      } catch (e: any) {
+        setVoiceError("Không thể mở Microphone: " + (e?.message || ""));
+        setTimeout(() => setVoiceError(null), 4000);
+      }
       return;
     }
 
@@ -12822,7 +12899,155 @@ ${targetItem.text}`;
       } catch {}
       recognitionRef.current = null;
     }
+    if (pttMediaRecorderRef.current && pttMediaRecorderRef.current.state !== "inactive") {
+      try {
+        pttMediaRecorderRef.current.stop();
+      } catch {}
+    }
     setIsRecording(false);
+  };
+
+  const startRealtimeVoiceChat = async () => {
+    stopSpeaking();
+    stopVoiceRecording(true);
+    setIsRealtimeVoiceOpen(true);
+    setRealtimeVoiceStatus("connecting");
+    setRealtimeTranscript("");
+    setRealtimeBotReply("");
+
+    try {
+      const wsUrl = resolveVoiceRealtimeWsUrl({
+        agentId: selectedAgent?.id || "mons",
+        sessionId: selectedChatId || undefined,
+        language: sttLang,
+      });
+      const ws = new WebSocket(wsUrl);
+      realtimeWsRef.current = ws;
+
+      ws.onopen = () => {
+        setRealtimeVoiceStatus("listening");
+      };
+
+      ws.onmessage = async (ev) => {
+        try {
+          const raw = String(ev.data || "");
+          if (!raw.startsWith("{")) return;
+          const msg = JSON.parse(raw);
+          if (msg.type === "ready" || msg.type === "configured") {
+            setRealtimeVoiceStatus("listening");
+          } else if (msg.type === "transcript") {
+            if (msg.text) {
+              setRealtimeTranscript(msg.text);
+              setRealtimeVoiceStatus("thinking");
+            }
+          } else if (msg.type === "text_delta") {
+            if (msg.delta) {
+              setRealtimeBotReply((prev) => (prev ? `${prev} ${msg.delta}` : msg.delta));
+            }
+          } else if (msg.type === "audio_chunk" && msg.data) {
+            setRealtimeVoiceStatus("speaking");
+            if (msg.text) setRealtimeBotReply(msg.text);
+            const byteChars = atob(msg.data);
+            const byteArr = new Uint8Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+            const blob = new Blob([byteArr], { type: msg.mime_type || "audio/mpeg" });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => {
+              URL.revokeObjectURL(url);
+              setRealtimeVoiceStatus("listening");
+            };
+            audio.onerror = () => {
+              URL.revokeObjectURL(url);
+              setRealtimeVoiceStatus("listening");
+            };
+            await audio.play().catch(() => setRealtimeVoiceStatus("listening"));
+          } else if (msg.type === "turn_complete") {
+            if (msg.text && !realtimeBotReply) {
+              setRealtimeBotReply(msg.text);
+            }
+            setRealtimeVoiceStatus((prev) => (prev === "speaking" ? prev : "listening"));
+          } else if (msg.type === "error") {
+            setVoiceError(msg.message || "Lỗi kết nối đàm thoại trực tiếp");
+            setRealtimeVoiceStatus("listening");
+          }
+        } catch {}
+      };
+
+      ws.onerror = () => {
+        setVoiceError("Không thể kết nối Voice Gateway. Đang chuyển sang chế độ dự phòng.");
+        setRealtimeVoiceStatus("idle");
+      };
+
+      ws.onclose = () => {
+        realtimeWsRef.current = null;
+      };
+    } catch (err: any) {
+      setVoiceError(err?.message || "Không thể khởi động Voice Chat");
+      setRealtimeVoiceStatus("idle");
+    }
+  };
+
+  const stopRealtimeVoiceChat = () => {
+    if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state !== "inactive") {
+      try {
+        realtimeMediaRecorderRef.current.stop();
+      } catch {}
+      realtimeMediaRecorderRef.current = null;
+    }
+    if (realtimeWsRef.current) {
+      try {
+        realtimeWsRef.current.send(JSON.stringify({ type: "stop" }));
+        realtimeWsRef.current.close();
+      } catch {}
+      realtimeWsRef.current = null;
+    }
+    stopSpeaking();
+    setIsRealtimeVoiceOpen(false);
+    setRealtimeVoiceStatus("idle");
+  };
+
+  const toggleRealtimeMicTurn = async () => {
+    if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state === "recording") {
+      realtimeMediaRecorderRef.current.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        realtimeMediaRecorderRef.current = null;
+        if (chunks.length === 0) return;
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = String(reader.result || "").split(",")[1] || "";
+          if (base64data && realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+            setRealtimeVoiceStatus("thinking");
+            realtimeWsRef.current.send(
+              JSON.stringify({
+                type: "audio",
+                data: base64data,
+                format: blob.type.includes("wav") ? "wav" : "webm",
+                commit: true,
+                language: sttLang.split("-")[0],
+              })
+            );
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+      realtimeMediaRecorderRef.current = recorder;
+      recorder.start();
+      setRealtimeVoiceStatus("listening");
+    } catch (err: any) {
+      setVoiceError(err?.message || "Không thể truy cập Microphone");
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -14393,15 +14618,16 @@ ${targetItem.text}`;
   // Initial load from real backend
   useEffect(() => {
     async function initData() {
-      setIsLoadingAgents(true);
+      if (agents.length === 0) setIsLoadingAgents(true);
       syncAgentProfilesCatalogFromBackend().catch(() => {});
+      fetchSkills(undefined)
+        .then((sk) => {
+          if (Array.isArray(sk) && sk.length > 0) setSkills(sk);
+        })
+        .catch(() => {});
       let loadedAgents: any[] = [];
-      let loadedSkills: any[] = [];
       try {
-        [loadedAgents, loadedSkills] = await Promise.all([
-          fetchInfraAgents(),
-          fetchSkills(undefined),
-        ]);
+        loadedAgents = await fetchInfraAgents();
         // When 0 agents are returned, user either has no assigned agents or is a new member.
         // Don't show technical 'cluster standby / reconnect' error banner in this legitimate case.
         setBackendError(null);
@@ -14412,6 +14638,15 @@ ${targetItem.text}`;
       }
 
       setAgents(loadedAgents);
+      try {
+        if (Array.isArray(loadedAgents) && loadedAgents.length > 0) {
+          sessionStorage.setItem("agent360_fleet_agents_swr", JSON.stringify(loadedAgents));
+          localStorage.setItem("agent360_fleet_agents_swr", JSON.stringify(loadedAgents));
+        } else {
+          sessionStorage.removeItem("agent360_fleet_agents_swr");
+          localStorage.removeItem("agent360_fleet_agents_swr");
+        }
+      } catch {}
       if (Array.isArray(loadedAgents) && loadedAgents.length > 0) {
         let localUnpinned: string[] = [];
         try {
@@ -14441,7 +14676,6 @@ ${targetItem.text}`;
           });
         }
       }
-      setSkills(loadedSkills);
       setIsLoadingAgents(false);
 
       // Pre-populate recent sessions map for each agent from initial data
@@ -15398,9 +15632,9 @@ ${targetItem.text}`;
 
   const hasNoAgents = !isLoadingAgents && agents.length === 0;
 
-  // Always focus textarea when chat finishes loading or user switches sessions
+  // Always focus textarea when chat finishes loading or user switches sessions on desktop (when Virtual Computer is closed)
   useEffect(() => {
-    if (!isLoadingMessages && selectedChatId && !hasNoAgents) {
+    if (!isLoadingMessages && selectedChatId && !hasNoAgents && !isComputerSplitOpen && !isBrowserModalOpen && !isCoarseTouchDevice()) {
       const timer = setTimeout(() => {
         if (textareaRef.current && document.activeElement !== textareaRef.current) {
           textareaRef.current.focus({ preventScroll: true });
@@ -15408,7 +15642,7 @@ ${targetItem.text}`;
       }, 60);
       return () => clearTimeout(timer);
     }
-  }, [isLoadingMessages, selectedChatId, hasNoAgents]);
+  }, [isLoadingMessages, selectedChatId, hasNoAgents, isComputerSplitOpen, isBrowserModalOpen]);
   const selectedAgent = agents.find((a) =>
     a.id === selectedAgentId ||
     a.slug === selectedAgentId ||
@@ -17266,7 +17500,7 @@ const selectedAgentTheme = getAgentColorTheme(
       }
 
       if (isAutoSpeakEnabled && accumulated) {
-        speakText(accumulated, {
+        speakTextViaLlm360(accumulated, {
           onSegmentChange: (seg) => setSpeakingSentence(seg),
           onEnd: () => {
             setSpeakingMsgId(null);
@@ -22624,62 +22858,80 @@ const selectedAgentTheme = getAgentColorTheme(
                       }}
                     />
 
-                    {/* Single Action Slot: Voice button when empty, Send button when text/files entered */}
-                    {(!hasInputContent || isRecording) ? (
-                      <button aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"} data-ux-target-min="24"
+                    {/* Dual-Mode Voice & Action Controls: [Mic (Voice-to-Text)] + [Start Voice Chat / Send] */}
+                    <button
+                      aria-label={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
+                      data-ux-target-min="24"
+                      type="button"
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setSettingsModalTab("voice_record");
+                        setIsSettingsModalOpen(true);
+                      }}
+                      onClick={() => {
+                        if (vadModeRef.current !== "push_to_talk") {
+                          if (isRecording) stopVoiceRecording(true);
+                          else startVoiceRecording();
+                        }
+                      }}
+                      onPointerDown={() => {
+                        if (vadModeRef.current === "push_to_talk" && !isRecording) {
+                          startVoiceRecording();
+                        }
+                      }}
+                      onPointerUp={() => {
+                        if (vadModeRef.current === "push_to_talk" && isRecording) {
+                          stopVoiceRecording();
+                          setTimeout(() => {
+                            composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                          }, 200);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: isRecording
+                          ? (liveVoiceEnergy > 45 ? undefined : (selectedAgentTheme.primary || selectedAgentTheme.dark))
+                          : undefined,
+                        borderColor: isRecording ? "transparent" : undefined,
+                        color: isRecording ? "#ffffff" : undefined,
+                        boxShadow: isRecording
+                          ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
+                            (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : (selectedAgentTheme.primary || selectedAgentTheme.dark))
+                          : undefined,
+                      }}
+                      className={`h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border ${
+                        isRecording
+                          ? liveVoiceEnergy > 45
+                            ? "bg-gradient-to-r from-[#ff3366] to-[var(--agent-color)] text-white border-transparent"
+                            : "text-white shadow-xs border-transparent"
+                          : "bg-slate-200/80 dark:bg-[#2a2a32] border-slate-300/70 dark:border-white/10 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:brightness-110 active:scale-95"
+                      }`}
+                      title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
+                    >
+                      {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={14} className="stroke-[2.2]" />}
+                    </button>
+
+                    {!hasInputContent ? (
+                      <button
                         type="button"
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setSettingsModalTab("voice_record");
-                          setIsSettingsModalOpen(true);
-                        }}
+                        data-testid="start-voice-chat-btn"
+                        aria-label="Start Voice Chat"
+                        title="Start Voice Chat (Đàm thoại trực tiếp)"
                         onClick={() => {
-                          if (vadModeRef.current !== "push_to_talk") {
-                            if (isRecording) stopVoiceRecording(true);
-                            else startVoiceRecording();
-                          }
+                          if (isRealtimeVoiceOpen) stopRealtimeVoiceChat();
+                          else startRealtimeVoiceChat();
                         }}
-                        onPointerDown={() => {
-                          if (vadModeRef.current === "push_to_talk" && !isRecording) {
-                            startVoiceRecording();
-                          }
-                        }}
-                        onPointerUp={() => {
-                          if (vadModeRef.current === "push_to_talk" && isRecording) {
-                            stopVoiceRecording();
-                            setTimeout(() => {
-                              composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                            }, 200);
-                          }
-                        }}
-                        style={{
-                          backgroundColor: isRecording
-                            ? (liveVoiceEnergy > 45 ? undefined : (selectedAgentTheme.primary || selectedAgentTheme.dark))
-                            : (selectedAgentTheme.bgLight || "rgba(248,168,124,0.18)"),
-                          borderColor: isRecording
-                            ? "transparent"
-                            : (selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)"),
-                          color: isRecording
-                            ? "#ffffff"
-                            : (selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c"),
-                          boxShadow: isRecording
-                            ? "0 0 " + Math.max(8, Math.min(28, Math.round(liveVoiceEnergy * 0.45))) + "px " +
-                              (liveVoiceEnergy > 45 ? "rgba(255, 51, 102, 0.75)" : (selectedAgentTheme.primary || selectedAgentTheme.dark))
-                            : undefined,
-                        }}
-                        className={`h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border ${
-                          isRecording
-                            ? liveVoiceEnergy > 45
-                              ? "bg-gradient-to-r from-[#ff3366] to-[var(--agent-color)] text-white border-transparent"
-                              : "text-white shadow-xs border-transparent"
-                            : "hover:brightness-105 active:scale-95 shadow-2xs"
-                        }`}
-                        title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
+                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 bg-[#1a73e8] hover:bg-[#1565c0] text-white border border-[#1a73e8] shadow-xs active:scale-95"
                       >
-                        {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={14} className="stroke-[2.2]" />}
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                          <line x1="4" y1="10" x2="4" y2="14" />
+                          <line x1="8" y1="6" x2="8" y2="18" />
+                          <line x1="12" y1="9" x2="12" y2="15" />
+                          <line x1="16" y1="6" x2="16" y2="18" />
+                          <line x1="20" y1="10" x2="20" y2="14" />
+                        </svg>
                       </button>
                     ) : (
-                      /* Send button: replaces Voice button when user inputs text or attachments */
+                      /* Send button: replaces Start Voice Chat button when user inputs text or attachments */
                       <button
                         type="submit"
                         style={{
@@ -25722,6 +25974,97 @@ ${chat.id}`);
           setIsKeyboardShortcutsOpen(true);
         }}
       />
+
+      {isRealtimeVoiceOpen && (
+        <div
+          data-testid="realtime-voice-modal"
+          className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex flex-col items-center justify-between p-6 text-white animate-in fade-in duration-200 select-none"
+        >
+          <div className="w-full max-w-lg flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#1a73e8] animate-pulse" />
+              <span className="text-xs font-mono uppercase tracking-wider text-neutral-300">
+                Live Voice Chat • {selectedAgent?.name || "Agent"} (Node 5a54d0)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={stopRealtimeVoiceChat}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Close Live Voice Chat"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center justify-center gap-6 my-auto max-w-md text-center">
+            <div
+              onClick={toggleRealtimeMicTurn}
+              className={`h-32 w-32 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ${
+                realtimeVoiceStatus === "speaking"
+                  ? "bg-[#1a73e8] shadow-[0_0_50px_rgba(26,115,232,0.8)] scale-105"
+                  : realtimeVoiceStatus === "thinking"
+                  ? "bg-amber-500/80 shadow-[0_0_40px_rgba(245,158,11,0.6)] animate-pulse"
+                  : "bg-[#1a73e8]/90 hover:bg-[#1a73e8] shadow-[0_0_36px_rgba(26,115,232,0.5)]"
+              }`}
+            >
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <line x1="4" y1="10" x2="4" y2="14" />
+                <line x1="8" y1="6" x2="8" y2="18" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="16" y1="6" x2="16" y2="18" />
+                <line x1="20" y1="10" x2="20" y2="14" />
+              </svg>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-base font-semibold tracking-tight">
+                {realtimeVoiceStatus === "connecting" && "Đang kết nối Voice Gateway..."}
+                {realtimeVoiceStatus === "listening" && "Đang lắng nghe... (Nhấn vào biểu tượng để nói / gửi)"}
+                {realtimeVoiceStatus === "thinking" && "Đang suy nghĩ..."}
+                {realtimeVoiceStatus === "speaking" && `${selectedAgent?.name || "Agent"} đang trả lời...`}
+                {realtimeVoiceStatus === "idle" && "Sẵn sàng đàm thoại"}
+              </div>
+              {realtimeTranscript && (
+                <p className="text-xs text-neutral-400 italic">"{realtimeTranscript}"</p>
+              )}
+              {realtimeBotReply && (
+                <p className="text-sm text-neutral-200 max-h-32 overflow-y-auto px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                  {realtimeBotReply}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={toggleRealtimeMicTurn}
+              className="px-5 py-2.5 rounded-full bg-[#1a73e8] hover:bg-[#1565c0] text-white text-xs font-semibold flex items-center gap-2 shadow-lg cursor-pointer transition-all"
+            >
+              <Mic size={15} />
+              <span>{realtimeMediaRecorderRef.current?.state === "recording" ? "Gửi lượt nói" : "Bắt đầu nói"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsVoiceRecordSettingsOpen(true);
+              }}
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-neutral-200 cursor-pointer transition-all"
+              title="Cài đặt Giọng nói & Micro"
+            >
+              <SlidersHorizontal size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={stopRealtimeVoiceChat}
+              className="px-5 py-2.5 rounded-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-xs font-semibold cursor-pointer transition-all"
+            >
+              Kết thúc
+            </button>
+          </div>
+        </div>
+      )}
 
       <VoiceRecordSettingsModal
         isOpen={isVoiceRecordSettingsOpen}

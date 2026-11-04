@@ -940,3 +940,22 @@ assert.ok(
   "Browser tab management must route over persistent Browser-level CDP socket, pre-warm newly created tabs with cached native surface dimensions, serialize rapid client tab mutations, and flush normal text input with 4ms adaptive IME debounce + immediate key frame pump"
 );
 console.log("✓ Test 63: Fast Tab Control Serialization, Browser-Level CDP Tab Management, & Zero-Lag Text Input Contract verified");
+
+
+console.log("Testing Phone Browser Fast Load, Optimistic Target Resolution, Touch Default & Mouse 2-Touch Control Contract...");
+const cacheWarmerSrc64 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Services/AgentCacheWarmer.cs"), "utf-8");
+const runtimeProxySrc64 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Endpoints/AgentRuntimeProxyEndpoint.cs"), "utf-8");
+assert.ok(
+  grokImeSrc.includes("inferAgentViewerUrlFallback(agent)") &&
+  grokImeSrc.includes("fetchSkills(undefined)") &&
+  grokImeSrc.includes("}, [enabled, agentId, pageId, liveWs]);") &&
+  grokImeSrc.includes("agent-browser-quick-input-mode-btn") &&
+  grokImeSrc.includes("useState<\"touch\" | \"mouse\">(\"touch\")") &&
+  grokImeSrc.includes("twoFingerMode: mobileInputMode === \"mouse\" ? \"undecided\" : \"pinch\"") &&
+  grokImeSrc.includes("2-TOUCH TAP IN MOUSE MODE: Right click at virtual mouse pointer!") &&
+  grokImeSrc.includes("queueCoalescedScrollInput(cursorNormRef.current.x, cursorNormRef.current.y, scrollDeltaX, scrollDeltaY)") &&
+  cacheWarmerSrc64.includes("browserDir.GetAsync(item.Slug, gtoken)") &&
+  runtimeProxySrc64.includes("agent360:skills:{normId}"),
+  "Phone browser must resolve optimistically without waiting for skills or browser discovery, avoid ResizeObserver WebSocket reconnect churn, default to Touch mode with a quick toolbar toggle, and support 2-touch scroll & 2-touch right-click in Mouse mode"
+);
+console.log("✓ Test 64: Phone Browser Fast Load, Optimistic Target Resolution, Touch Default & Mouse 2-Touch Control Contract verified");
