@@ -6580,9 +6580,11 @@ function SelkiesViewer({
     const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
     const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
     if (effectiveMob) {
+      const mobW = Math.max(360, rawW);
+      const mobH = Math.round(rawH * (mobW / Math.max(1, rawW)));
       return {
-        w: Math.min(1920, Math.round(rawW * scaleFactor)),
-        h: Math.min(1080, Math.round(rawH * scaleFactor)),
+        w: Math.min(1920, Math.round(mobW * scaleFactor)),
+        h: Math.min(1080, Math.round(mobH * scaleFactor)),
         isMobile: true,
       };
     }
@@ -8150,44 +8152,8 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             isMobileDevice={isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode}
             isVirtualKeyboardOpen={isVirtualKeyboardOpen}
             virtualKeyboardHeight={virtualKeyboardHeight}
-            viewportWidth={(() => {
-              const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
-              const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
-              const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
-              const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
-              if (effectiveMob) {
-                const mobW = Math.max(560, rawW);
-                return Math.min(1920, Math.round(mobW * scaleFactor));
-              }
-              // FullHD (1920x1080) Logical Scale for Desktop & Phone Landscape / Desktop Site Mode while preserving exact panel aspect ratio!
-              const aspect = rawH / Math.max(1, rawW);
-              let fhdW = 1920;
-              let fhdH = Math.round(fhdW * aspect);
-              if (fhdH > 1080) {
-                fhdH = 1080;
-                fhdW = Math.round(fhdH / Math.max(0.2, aspect));
-              }
-              return Math.max(640, Math.min(1920, Math.round(fhdW * scaleFactor)));
-            })()}
-            viewportHeight={(() => {
-              const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
-              const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
-              const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
-              const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
-              if (effectiveMob) {
-                const mobW = Math.max(560, rawW);
-                const mobH = Math.round(rawH * (mobW / Math.max(1, rawW)));
-                return Math.min(1080, Math.round(mobH * scaleFactor));
-              }
-              const aspect = rawH / Math.max(1, rawW);
-              let fhdW = 1920;
-              let fhdH = Math.round(fhdW * aspect);
-              if (fhdH > 1080) {
-                fhdH = 1080;
-                fhdW = Math.round(fhdH / Math.max(0.2, aspect));
-              }
-              return Math.max(360, Math.min(1080, Math.round(fhdH * scaleFactor)));
-            })()}
+            viewportWidth={computeActiveBrowserViewport().w}
+            viewportHeight={computeActiveBrowserViewport().h}
             frameCacheRef={tabFrameCacheRef}
             externalZoomPercent={browserZoomPercent}
             onZoomStep={handleZoomStep}
@@ -9163,7 +9129,7 @@ function AgentBrowserPreview({
 
       const boxRect = viewportBoxRef.current?.getBoundingClientRect();
       const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
-      const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
+      const logicalW = Math.max(dispW, latestViewportRef.current.w || 390);
       const speedPxMs = Math.hypot(vx, vy);
       const speedBoost = Math.min(1.32, 1 + Math.max(0, speedPxMs - 0.55) * 0.16);
       const touchScale = Math.max(2.1, Math.min(3.1, (logicalW / dispW) * 1.48)) * speedBoost;
@@ -9323,7 +9289,7 @@ function AgentBrowserPreview({
           // Enhancement 4: 2-Touch bidirectional smooth horizontal and vertical scrolling
           const boxRect = viewportBoxRef.current?.getBoundingClientRect();
           const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
-          const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
+          const logicalW = Math.max(dispW, latestViewportRef.current.w || 390);
           const speedPxMs = Math.hypot(g.vx, g.vy);
           const speedBoost = Math.min(1.42, 1 + Math.max(0, speedPxMs - 0.5) * 0.22);
           const touchScale = Math.max(2.05, Math.min(2.9, (logicalW / dispW) * 1.45)) * speedBoost;
@@ -9460,7 +9426,7 @@ function AgentBrowserPreview({
           const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
           const boxRect = viewportBoxRef.current?.getBoundingClientRect();
           const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
-          const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
+          const logicalW = Math.max(dispW, latestViewportRef.current.w || 390);
           const speedPxMs = Math.hypot(g.vx, g.vy);
           const speedBoost = Math.min(1.45, 1 + Math.max(0, speedPxMs - 0.5) * 0.24);
           const touchScale = Math.max(2.1, Math.min(2.95, (logicalW / dispW) * 1.48)) * speedBoost;

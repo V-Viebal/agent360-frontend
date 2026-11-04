@@ -614,7 +614,7 @@ assert.ok(
   grokMouseGesturesSrc.includes('g.twoFingerMode = "scroll"') &&
   grokMouseGesturesSrc.includes('action: "rightclick"') &&
   grokMouseGesturesSrc.includes('triggerHaptic(15)') &&
-  grokMouseGesturesSrc.includes('startInertiaScroll(g.vx, g.vy, cursorNormRef.current.x, cursorNormRef.current.y)'),
+  grokMouseGesturesSrc.includes('startInertiaScroll(launchVx, launchVy, cursorNormRef.current.x, cursorNormRef.current.y)'),
   "AgentBrowserPreview must support 2-finger swipe to scroll with momentum inertia and 2-finger tap for right-click in phone mouse mode"
 );
 console.log("✓ Test 43: Phone Browser Mouse Mode 2-Touch Gestures (Scroll & Right Click) verified");
@@ -960,14 +960,17 @@ assert.ok(
 );
 console.log("✓ Test 64: Phone Browser Fast Load, Optimistic Target Resolution, Touch Default & Mouse 2-Touch Control Contract verified");
 
-console.log("Testing Phone Browser Fit-Width (>= 560px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract...");
+console.log("Testing Phone Browser Genuine Mobile Aspect-Preserving Scale (>= 360px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract...");
 assert.ok(
-  screencastHubSrc.includes("if (w < 560)") &&
-  screencastHubSrc.includes("if (w < 560 && boundW >= 560)") &&
+  screencastHubSrc.includes("if (w < 360)") &&
+  !screencastHubSrc.includes("if (w < 560 && boundW >= 560)") &&
+  screencastHubSrc.includes("Emulation.resetPageScaleFactor") &&
   screencastHubSrc.includes("node.scrollHeight > node.clientHeight + 8 || node.scrollWidth > node.clientWidth + 8") &&
-  grokImeSrc.includes("const mobW = Math.max(560, rawW);") &&
-  grokImeSrc.includes("const touchScale = Math.max(1.85, Math.min(2.6, (logicalW / dispW) * 1.35));") &&
-  grokImeSrc.includes("else if ((performance.now() - g.lastTime < 95) && Math.hypot(g.vx, g.vy) > 0.12)"),
-  "Phone browser must guarantee >= 560px logical width so hybrid login cards fit centered without horizontal clipping, scale touch-drag deltas proportionally to logical viewport width, and suppress kinetic inertia when the user holds their finger stationary before lifting"
+  grokImeSrc.includes("const mobW = Math.max(360, rawW);") &&
+  grokImeSrc.includes("const mobH = Math.round(rawH * (mobW / Math.max(1, rawW)));") &&
+  grokImeSrc.includes("viewportWidth={computeActiveBrowserViewport().w}") &&
+  grokImeSrc.includes("viewportHeight={computeActiveBrowserViewport().h}") &&
+  grokImeSrc.includes("else if ((now - g.lastTime < 130) && Math.hypot(launchVx, launchVy) > 0.08)"),
+  "Phone browser must preserve genuine mobile CSS width (<640px) and exact panel aspect ratio so responsive breakpoints work and content is never vertically stretched, while maintaining windowed velocity tracking for natural touch-slide scrolling"
 );
-console.log("✓ Test 65: Phone Browser Fit-Width (>= 560px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract verified");
+console.log("✓ Test 65: Phone Browser Genuine Mobile Aspect-Preserving Scale (>= 360px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract verified");
