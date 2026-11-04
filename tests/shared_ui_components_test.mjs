@@ -962,7 +962,7 @@ console.log("✓ Test 64: Phone Browser Fast Load, Optimistic Target Resolution,
 
 console.log("Testing Phone Browser Genuine Mobile Aspect-Preserving Scale (>= 360px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract...");
 assert.ok(
-  screencastHubSrc.includes("if (w < 360)") &&
+  screencastHubSrc.includes("if (w < 375)") &&
   !screencastHubSrc.includes("if (w < 560 && boundW >= 560)") &&
   screencastHubSrc.includes("Emulation.resetPageScaleFactor") &&
   screencastHubSrc.includes("node.scrollHeight > node.clientHeight + 8 || node.scrollWidth > node.clientWidth + 8") &&
