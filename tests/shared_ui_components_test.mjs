@@ -747,3 +747,40 @@ assert.ok(
   "AgentAvatar must show custom image by default when present and switch to animated BlobAvatar on hover, while AgentAvatarModal preserves optional customImageUrl when changing color/shape/expression/animation"
 );
 console.log("✓ Test 54: Hybrid Optional Image + Hover Animated Blob Avatar & Color Theme Contract verified");
+
+console.log("Testing CDP GPU Keyboard Shortcuts, Editor Commands & Vietnamese IME Composition Proxy Contract...");
+const grokImeSrc = fs.readFileSync(path.join(rootDir, "src/pages/GrokBotWorkspace.tsx"), "utf-8");
+const screencastHubSrc = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Browser/ScreencastHub.cs"), "utf-8");
+assert.ok(
+  grokImeSrc.includes('data-testid="agent-browser-ime-proxy"') &&
+  grokImeSrc.includes('const IME_PROXY_PAD = "                                ";') &&
+  grokImeSrc.includes('action: "ime_commit"') &&
+  grokImeSrc.includes('.normalize("NFC")') &&
+  grokImeSrc.includes("imeCommittedValRef") &&
+  grokImeSrc.includes("onCompositionStart") &&
+  grokImeSrc.includes("onCompositionEnd") &&
+  grokImeSrc.includes('msg?.method === "Page.clipboardContent"') &&
+  screencastHubSrc.includes('action == "ime_commit"') &&
+  screencastHubSrc.includes("NormalizationForm.FormC") &&
+  grokImeSrc.includes("navigator.clipboard.writeText(msg.params.text)") &&
+  screencastHubSrc.includes("bool isPrintable = k.Length == 1 && !char.IsControl(k[0]) && !hasCtrlOrMeta;") &&
+  screencastHubSrc.includes('"SelectAll"') &&
+  screencastHubSrc.includes('"Copy"') &&
+  screencastHubSrc.includes('"Cut"') &&
+  screencastHubSrc.includes('"Undo"') &&
+  screencastHubSrc.includes('"Redo"') &&
+  screencastHubSrc.includes("JsonIgnoreCondition.WhenWritingNull"),
+  "CDP GPU Browser must route Vietnamese IME & Backspace-replacement via the hidden IME proxy textarea, sync Page.clipboardContent to local clipboard, and suppress char insertion on Ctrl/Meta shortcuts while dispatching native Chromium editing commands"
+);
+console.log("✓ Test 55: CDP GPU Keyboard Shortcuts, Editor Commands & Vietnamese IME Composition Proxy Contract verified");
+
+console.log("Testing Unmaximized Chromium Window Self-Healing & Native Surface Viewport Clamping Contract...");
+assert.ok(
+  screencastHubSrc.includes("if (_nativeSurfaceMaxW < 1300)") &&
+  screencastHubSrc.includes("Browser.getWindowForTarget") &&
+  screencastHubSrc.includes("Browser.setWindowBounds") &&
+  screencastHubSrc.includes("NormalizeViewport(initialWidth, initialHeight, _nativeSurfaceMaxW, _nativeSurfaceMaxH)") &&
+  screencastHubSrc.includes("var scaleDown = Math.Min(1.0, Math.Min(boundW / w, boundH / h));"),
+  "ScreencastHub must self-heal unmaximized Wayland/X11 window surfaces (<1300px wide) via Browser.setWindowBounds and clamp Emulation.setDeviceMetricsOverride proportionally inside _nativeSurfaceMaxW x _nativeSurfaceMaxH to eliminate edge tiling"
+);
+console.log("✓ Test 56: Unmaximized Chromium Window Self-Healing & Native Surface Viewport Clamping Contract verified");

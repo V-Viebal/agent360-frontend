@@ -6927,6 +6927,42 @@ function AgentBrowserPreview({
   const usingCanvasGpuRef = useRef<boolean>(false);
   const lastCacheSnapshotAtRef = useRef<number>(0);
   const remoteCursorStyleRef = useRef<string>("default");
+  const IME_PROXY_PAD = "                                ";
+  const imeProxyRef = useRef<HTMLTextAreaElement>(null);
+  const imeComposingRef = useRef<boolean>(false);
+  const imeCommittedValRef = useRef<string>(IME_PROXY_PAD);
+  const imeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRemoteTextFocusAtRef = useRef<number>(0);
+  const inputQueueChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  const resetImeProxyBuffer = () => {
+    const el = imeProxyRef.current;
+    if (!el || imeComposingRef.current) return;
+    if (imeDebounceTimerRef.current) {
+      clearTimeout(imeDebounceTimerRef.current);
+      imeDebounceTimerRef.current = null;
+    }
+    imeCommittedValRef.current = IME_PROXY_PAD;
+    el.value = IME_PROXY_PAD;
+    try { el.setSelectionRange(IME_PROXY_PAD.length, IME_PROXY_PAD.length); } catch {}
+  };
+
+  const focusImeProxy = () => {
+    if (!interactive) return;
+    const el = imeProxyRef.current;
+    if (el) {
+      if (document.activeElement !== el) {
+        el.focus({ preventScroll: true });
+      }
+      if (!imeComposingRef.current && (el.value.length < 8 || el.value.length > 160)) {
+        resetImeProxyBuffer();
+      } else if (!imeComposingRef.current) {
+        try { el.setSelectionRange(el.value.length, el.value.length); } catch {}
+      }
+    } else {
+      viewportBoxRef.current?.focus({ preventScroll: true });
+    }
+  };
 
   const applyScrollMetricsDom = (scrollTop: number, scrollHeight: number, clientHeight: number) => {
     scrollMetricsRef.current = { scrollTop, scrollHeight, clientHeight };
@@ -6955,6 +6991,9 @@ function AgentBrowserPreview({
     const keywordMatch = rawClean.match(/(pointer|text|vertical-text|grab|grabbing|move|not-allowed|no-drop|wait|progress|crosshair|help|zoom-in|zoom-out|col-resize|row-resize|ew-resize|ns-resize|nesw-resize|nwse-resize|n-resize|e-resize|s-resize|w-resize|ne-resize|nw-resize|se-resize|sw-resize|cell|copy|alias|context-menu|none|default)\s*$/i);
     const clean = keywordMatch ? keywordMatch[1].toLowerCase() : (rawClean === "auto" || !rawClean ? "default" : rawClean);
     remoteCursorStyleRef.current = clean;
+    if (clean === "text") {
+      lastRemoteTextFocusAtRef.current = Date.now();
+    }
     if (viewportBoxRef.current) {
       viewportBoxRef.current.style.cursor = clean;
       viewportBoxRef.current.setAttribute("data-remote-cursor", clean);
@@ -7049,7 +7088,8 @@ function AgentBrowserPreview({
     let offsetX = 0;
     let offsetY = 0;
 
-    if (!isLandscapeRotated && Math.abs(imgAspect - boxAspect) > 0.04) {
+    // When interactive (or aspect ratios match closely), canvas/img uses object-fill so the stream fills 100% of container width & height with zero letterboxing/pillarboxing
+    if (!interactive && !isLandscapeRotated && Math.abs(imgAspect - boxAspect) > 0.04) {
       if (imgAspect > boxAspect) {
         renderW = rect.width;
         renderH = rect.width / imgAspect;
@@ -7199,6 +7239,64 @@ function AgentBrowserPreview({
       } catch {}
     }
     await dispatchAgentBrowserInput(agentId, payload);
+  };
+
+  const enqueueOrderedInput = (task: () => Promise<void>) => {
+    inputQueueChainRef.current = inputQueueChainRef.current
+      .then(task)
+      .catch(() => {});
+  };
+
+  const flushImeProxyDiffImmediate = (el?: HTMLTextAreaElement | null) => {
+    if (imeDebounceTimerRef.current) {
+      clearTimeout(imeDebounceTimerRef.current);
+      imeDebounceTimerRef.current = null;
+    }
+    const targetEl = el || imeProxyRef.current;
+    if (!targetEl) return;
+    const prevNFC = imeCommittedValRef.current.normalize("NFC");
+    const nextNFC = targetEl.value.normalize("NFC");
+    if (prevNFC === nextNFC) {
+      imeCommittedValRef.current = targetEl.value;
+      return;
+    }
+    const prevChars = Array.from(prevNFC);
+    const nextChars = Array.from(nextNFC);
+    let prefix = 0;
+    while (prefix < prevChars.length && prefix < nextChars.length && prevChars[prefix] === nextChars[prefix]) {
+      prefix++;
+    }
+    const backspaces = prevChars.length - prefix;
+    const inserted = nextChars.slice(prefix).join("").replace(/\u200B/g, "");
+    imeCommittedValRef.current = targetEl.value;
+    enqueueOrderedInput(async () => {
+      if (backspaces > 0 || inserted.length > 0) {
+        await sendRealtimeInput({
+          action: "ime_commit",
+          backspaces,
+          text: inserted,
+          pageId,
+        });
+      }
+      if (!imeComposingRef.current && (targetEl.value.length < 8 || targetEl.value.length > 160 || targetEl.value.endsWith(" ") || targetEl.value.endsWith("\n"))) {
+        resetImeProxyBuffer();
+      }
+    });
+  };
+
+  const flushImeProxyDiff = (el: HTMLTextAreaElement, immediate = false) => {
+    if (immediate) {
+      flushImeProxyDiffImmediate(el);
+      return;
+    }
+    if (imeDebounceTimerRef.current) {
+      clearTimeout(imeDebounceTimerRef.current);
+    }
+    // 18ms coalescing window so Windows Vietnamese Keyboard / Unikey / EVKey Backspace + replacement char sequences merge into one atomic diff!
+    imeDebounceTimerRef.current = setTimeout(() => {
+      imeDebounceTimerRef.current = null;
+      flushImeProxyDiffImmediate(el);
+    }, 18);
   };
 
   const queueCoalescedScrollInput = (xRatio: number, yRatio: number, deltaX: number, deltaY: number) => {
@@ -7388,6 +7486,14 @@ function AgentBrowserPreview({
             const msg = JSON.parse(ev.data);
             if (msg?.method === "Page.cursorChanged" && typeof msg?.params?.cursor === "string") {
               applyRemoteCursorStyleDom(msg.params.cursor);
+              return;
+            }
+            if (msg?.method === "Page.clipboardContent" && typeof msg?.params?.text === "string" && msg.params.text) {
+              try {
+                if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                  void navigator.clipboard.writeText(msg.params.text);
+                }
+              } catch {}
               return;
             }
             if (msg?.method === "Page.scrollMetrics" && msg?.params) {
@@ -8202,7 +8308,12 @@ function AgentBrowserPreview({
       tabIndex={interactive ? 0 : -1}
       onPointerDown={(e) => {
         if (!interactive) return;
-        viewportBoxRef.current?.focus({ preventScroll: true });
+        flushImeProxyDiffImmediate();
+        if (remoteCursorStyleRef.current === "text") {
+          lastRemoteTextFocusAtRef.current = Date.now();
+        }
+        focusImeProxy();
+        resetImeProxyBuffer();
         if (e.pointerType === "touch" && Date.now() - lastTouchHandledAtRef.current < 400) return;
 
         if (e.pointerType === "mouse" && mobileInputMode === "mouse") {
@@ -8308,19 +8419,43 @@ function AgentBrowserPreview({
         e.preventDefault();
         await sendRealtimeInput({ action: "key", key: "c", modifiers: 2, pageId });
       }}
+      onCut={async (e) => {
+        if (!interactive) return;
+        e.preventDefault();
+        await sendRealtimeInput({ action: "key", key: "x", modifiers: 2, pageId });
+      }}
       onPaste={async (e) => {
         if (!interactive) return;
         const pasted = e.clipboardData?.getData("text");
         if (pasted) {
           e.preventDefault();
+          lastRemoteTextFocusAtRef.current = Date.now();
           await sendRealtimeInput({ action: "type", text: pasted, pageId });
+          resetImeProxyBuffer();
         }
       }}
       onKeyDown={async (e) => {
         if (!interactive) return;
+        const nativeEv = e.nativeEvent as KeyboardEvent;
+        // Let the hidden IME proxy textarea handle active IME composition or OS-synthesized 229/Process events without interfering
+        if (imeComposingRef.current || nativeEv.isComposing || e.key === "Process" || nativeEv.keyCode === 229) {
+          return;
+        }
+
+        const isEditingTextContext =
+          remoteCursorStyleRef.current === "text" ||
+          remoteCursorStyleRef.current === "vertical-text" ||
+          Date.now() - lastRemoteTextFocusAtRef.current < 15000;
+
+        const cdpMods =
+          (e.altKey ? 1 : 0) |
+          (e.ctrlKey ? 2 : 0) |
+          (e.metaKey ? 4 : 0) |
+          (e.shiftKey ? 8 : 0);
 
         // 1. Browser Wrapper Keyboard Shortcuts (Ctrl/Cmd + T/W/L/R/F/+/-/0, Alt + Left/Right, F5)
         if (e.ctrlKey || e.metaKey) {
+          flushImeProxyDiffImmediate();
           const kLower = e.key.toLowerCase();
           if (kLower === "l") {
             e.preventDefault();
@@ -8367,38 +8502,61 @@ function AgentBrowserPreview({
             e.preventDefault();
             triggerHaptic(8);
             await sendRealtimeInput({ action: "key", key: "c", modifiers: 2, pageId });
+            resetImeProxyBuffer();
             return;
           }
           if (kLower === "v") {
             // Forward Ctrl+V (Paste): read local clipboard and insert into active browser target
             e.preventDefault();
             triggerHaptic(8);
+            lastRemoteTextFocusAtRef.current = Date.now();
             try {
               if (navigator.clipboard?.readText) {
                 const clipText = await navigator.clipboard.readText();
                 if (clipText) {
                   await sendRealtimeInput({ action: "type", text: clipText, pageId });
+                  resetImeProxyBuffer();
                   return;
                 }
               }
             } catch {}
             await sendRealtimeInput({ action: "key", key: "v", modifiers: 2, pageId });
+            resetImeProxyBuffer();
             return;
           }
           if (kLower === "x") {
             e.preventDefault();
             triggerHaptic(8);
+            lastRemoteTextFocusAtRef.current = Date.now();
             await sendRealtimeInput({ action: "key", key: "x", modifiers: 2, pageId });
+            resetImeProxyBuffer();
             return;
           }
           if (kLower === "a") {
             e.preventDefault();
             await sendRealtimeInput({ action: "key", key: "a", modifiers: 2, pageId });
+            resetImeProxyBuffer();
             return;
           }
           if (kLower === "z") {
             e.preventDefault();
+            lastRemoteTextFocusAtRef.current = Date.now();
             await sendRealtimeInput({ action: "key", key: "z", modifiers: e.shiftKey ? 10 : 2, pageId });
+            resetImeProxyBuffer();
+            return;
+          }
+          if (kLower === "y") {
+            e.preventDefault();
+            lastRemoteTextFocusAtRef.current = Date.now();
+            await sendRealtimeInput({ action: "key", key: "y", modifiers: 2, pageId });
+            resetImeProxyBuffer();
+            return;
+          }
+          if (e.key === "Backspace" || e.key === "Delete" || e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End") {
+            e.preventDefault();
+            lastRemoteTextFocusAtRef.current = Date.now();
+            await sendRealtimeInput({ action: "key", key: e.key, modifiers: cdpMods, pageId });
+            resetImeProxyBuffer();
             return;
           }
         }
@@ -8413,8 +8571,8 @@ function AgentBrowserPreview({
           return;
         }
 
-        // 2. Space / Shift+Space Page Down / Page Up (when not typing inside a text input/editable element)
-        if ((e.key === " " || e.code === "Space") && remoteCursorStyleRef.current !== "text") {
+        // 2. Space / Shift+Space Page Down / Page Up ONLY when NOT in an editing text context
+        if ((e.key === " " || e.code === "Space") && !isEditingTextContext) {
           e.preventDefault();
           const pageDelta = e.shiftKey ? -520 : 520;
           wheelAccumRef.current.targetDy += pageDelta;
@@ -8428,45 +8586,138 @@ function AgentBrowserPreview({
 
         // 3. Navigation & Editing Keys
         if (["Enter", "Backspace", "Escape", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Delete", "Home", "End", "PageUp", "PageDown"].includes(e.key)) {
+          // If Backspace is pressed while focus is on our hidden IME proxy textarea AND the textarea still has characters to delete, let the textarea native input handler diff and process it so Vietnamese IME (Windows VIE / Unikey / EVKey) Backspace+replacement sequences stay 100% atomic!
+          if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            const proxyEl = imeProxyRef.current;
+            if (proxyEl && document.activeElement === proxyEl && proxyEl.value.length > 0 && (proxyEl.selectionStart ?? proxyEl.value.length) > 0) {
+              return;
+            }
+            e.preventDefault();
+            lastRemoteTextFocusAtRef.current = Date.now();
+            flushImeProxyDiffImmediate();
+            enqueueOrderedInput(async () => {
+              await sendRealtimeInput({ action: "key", key: "Backspace", pageId });
+              resetImeProxyBuffer();
+            });
+            return;
+          }
+          flushImeProxyDiffImmediate();
           e.preventDefault();
-          if (e.key === "Home" && remoteCursorStyleRef.current !== "text") {
+          if (e.key === "Escape") {
+            lastRemoteTextFocusAtRef.current = 0;
+            await sendRealtimeInput({ action: "key", key: "Escape", modifiers: cdpMods, pageId });
+          } else if (e.key === "Home" && !isEditingTextContext && !e.shiftKey) {
             await sendRealtimeInput({ action: "scroll_to", yRatio: 0, pageId });
-          } else if (e.key === "End" && remoteCursorStyleRef.current !== "text") {
+          } else if (e.key === "End" && !isEditingTextContext && !e.shiftKey) {
             await sendRealtimeInput({ action: "scroll_to", yRatio: 1, pageId });
-          } else if (e.key === "ArrowDown" || e.key === "PageDown") {
+          } else if (e.key === "PageDown" || (e.key === "ArrowDown" && !isEditingTextContext && !e.shiftKey)) {
             wheelAccumRef.current.targetDy += e.key === "PageDown" ? 520 : 140;
             wheelAccumRef.current.xRatio = 0.5;
             wheelAccumRef.current.yRatio = 0.5;
             if (!wheelAccumRef.current.raf) {
               wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
             }
-          } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+          } else if (e.key === "PageUp" || (e.key === "ArrowUp" && !isEditingTextContext && !e.shiftKey)) {
             wheelAccumRef.current.targetDy += e.key === "PageUp" ? -520 : -140;
             wheelAccumRef.current.xRatio = 0.5;
             wheelAccumRef.current.yRatio = 0.5;
             if (!wheelAccumRef.current.raf) {
               wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
             }
-          } else if (e.key === "ArrowLeft" && remoteCursorStyleRef.current !== "text") {
+          } else if (e.key === "ArrowLeft" && !isEditingTextContext && !e.shiftKey) {
             wheelAccumRef.current.targetDx -= 140;
             if (!wheelAccumRef.current.raf) {
               wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
             }
-          } else if (e.key === "ArrowRight" && remoteCursorStyleRef.current !== "text") {
+          } else if (e.key === "ArrowRight" && !isEditingTextContext && !e.shiftKey) {
             wheelAccumRef.current.targetDx += 140;
             if (!wheelAccumRef.current.raf) {
               wheelAccumRef.current.raf = requestAnimationFrame(stepSmoothWheelScroll);
             }
           } else {
-            await sendRealtimeInput({ action: "key", key: e.key, pageId });
+            enqueueOrderedInput(async () => {
+              await sendRealtimeInput({ action: "key", key: e.key, modifiers: cdpMods, pageId });
+              resetImeProxyBuffer();
+            });
           }
-        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          return;
+        }
+
+        // 4. Printable character typing: if the hidden IME proxy textarea is focused, let the native browser input/composition pipeline handle character & Vietnamese diacritic insertion without duplicate keyDown typing!
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          lastRemoteTextFocusAtRef.current = Date.now();
+          if (document.activeElement === imeProxyRef.current) {
+            return;
+          }
+          focusImeProxy();
+          const proxyEl = imeProxyRef.current;
+          if (proxyEl) {
+            e.preventDefault();
+            const cur = proxyEl.value || IME_PROXY_PAD;
+            proxyEl.value = cur + e.key;
+            try { proxyEl.setSelectionRange(proxyEl.value.length, proxyEl.value.length); } catch {}
+            flushImeProxyDiff(proxyEl, false);
+            return;
+          }
           e.preventDefault();
-          await sendRealtimeInput({ action: "type", text: e.key, pageId });
+          enqueueOrderedInput(async () => {
+            await sendRealtimeInput({ action: "type", text: e.key, pageId });
+          });
         }
       }}
       className="relative w-full h-full overflow-hidden flex items-center justify-center bg-[#FFFDF9] dark:bg-[#0a0a0f] outline-none select-none touch-none"
     >
+      {interactive && (
+        <textarea
+          ref={imeProxyRef}
+          data-testid="agent-browser-ime-proxy"
+          aria-label="Browser keyboard and Vietnamese IME input proxy"
+          defaultValue={IME_PROXY_PAD}
+          autoCapitalize="off"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          rows={1}
+          onCompositionStart={() => {
+            imeComposingRef.current = true;
+            lastRemoteTextFocusAtRef.current = Date.now();
+          }}
+          lang="vi"
+          inputMode="text"
+          onCompositionEnd={(e) => {
+            imeComposingRef.current = false;
+            lastRemoteTextFocusAtRef.current = Date.now();
+            flushImeProxyDiff(e.currentTarget, true);
+          }}
+          onInput={(e) => {
+            if (imeComposingRef.current || (e.nativeEvent as InputEvent).isComposing) {
+              return;
+            }
+            lastRemoteTextFocusAtRef.current = Date.now();
+            flushImeProxyDiff(e.currentTarget, false);
+          }}
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: "24px",
+            height: "24px",
+            opacity: 0.001,
+            fontSize: "16px",
+            lineHeight: "20px",
+            color: "transparent",
+            background: "transparent",
+            caretColor: "transparent",
+            padding: 0,
+            border: 0,
+            outline: "none",
+            resize: "none",
+            overflow: "hidden",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
+      )}
       <div
         ref={zoomWrapperRef}
         style={{ transformOrigin: "center center", willChange: "transform" }}
@@ -8480,7 +8731,7 @@ function AgentBrowserPreview({
             imageRendering: "-webkit-optimize-contrast",
             willChange: "contents",
           }}
-          className="select-none z-[12] block w-full h-full object-contain [backface-visibility:hidden] [transform:translateZ(0)] pointer-events-none"
+          className={`select-none z-[12] block w-full h-full ${interactive ? "object-fill" : "object-contain"} [backface-visibility:hidden] [transform:translateZ(0)] pointer-events-none`}
         />
         <img
           ref={imgRef}
@@ -8499,7 +8750,7 @@ function AgentBrowserPreview({
             imageRendering: "-webkit-optimize-contrast",
             willChange: "contents",
           }}
-          className="select-none z-[12] block w-full h-full object-contain [backface-visibility:hidden] [transform:translateZ(0)] pointer-events-none"
+          className={`select-none z-[12] block w-full h-full ${interactive ? "object-fill" : "object-contain"} [backface-visibility:hidden] [transform:translateZ(0)] pointer-events-none`}
         />
 
         {/* Virtual Mouse Pointer Overlay when in Mouse Mode (Direct DOM position & shape update -> 0 React re-renders!) */}
@@ -21645,98 +21896,7 @@ ${chat.id}`);
             aria-label="Virtual Computer Interactive Workspace"
             className="fixed inset-0 z-50 lg:static lg:z-10 flex-1 h-full flex flex-col bg-[#0d0d12] border-l border-neutral-200 dark:border-[#1e1e24] shadow-2xl lg:shadow-none animate-in fade-in duration-150 overflow-hidden min-w-0"
           >
-            {/* Top Control Bar */}
-            <div className="h-12 border-b border-neutral-200 dark:border-[#1c1c22] bg-[var(--bg-sidebar)] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
-              </div>
 
-              {/* Action Buttons: Minimized Icon Buttons with Precision Tooltips */}
-              <div className="flex items-center gap-1 shrink-0">
-                {/* 1. Quick Screenshot Button with instant feedback */}
-                <Tooltip content={isScreenshotCaptured ? "Đã chụp và đính kèm vào chat!" : t("computer.screenshotBtn")} placement="bottom">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      triggerHaptic();
-                      playNotificationChime("retro");
-                      setIsScreenshotCaptured(true);
-                      setTimeout(() => setIsScreenshotCaptured(false), 1500);
-                      const timestamp = new Date().toLocaleTimeString();
-                      const frameUrl = agentBrowserImageUrl(agentBrowserFor, Date.now());
-                      
-                      // Add real screenshot item to attachedFiles state
-                      const newAttachment: UploadedFileResult = {
-                        file_name: `${selectedAgent.slug}-screen-${Date.now().toString().slice(-4)}.jpg`,
-                        url: frameUrl,
-                        size: 145000,
-                        mime_type: "image/jpeg",
-                      };
-                      setAttachedFiles((prev) => [...prev, newAttachment]);
-
-                      const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${timestamp} Attached]`;
-                      setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
-                      textareaRef.current?.focus();
-                    }}
-                    className={`h-8 w-8 rounded-lg border flex items-center justify-center text-xs font-mono transition-all cursor-pointer ${
-                      isScreenshotCaptured
-                        ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 scale-105"
-                        : "bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-cyan-600 dark:hover:text-cyan-400"
-                    }`}
-                    aria-label={t("computer.screenshotBtn")}
-                  >
-                    {isScreenshotCaptured ? (
-                      <Check size={14} className="text-emerald-400 animate-in zoom-in-75 duration-150" />
-                    ) : (
-                      <Camera size={14} className="text-cyan-400" />
-                    )}
-                  </button>
-                </Tooltip>
-
-                {/* 2. Reload Session Button */}
-                <Tooltip content={t("computer.reloadProfileBtn")} placement="bottom">
-                  <button
-                    type="button"
-                    disabled={isReloadingBrowser}
-                    onClick={() => {
-                      triggerHaptic();
-                      setIsReloadingBrowser(true);
-                      void dispatchAgentBrowserInput(agentBrowserFor, { action: "reload" });
-                      setBrowserIframeKey((k) => k + 1);
-                      setTimeout(() => setIsReloadingBrowser(false), 600);
-                    }}
-                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
-                    aria-label={t("computer.reloadProfileBtn")}
-                  >
-                    <RefreshCw size={13} className={isReloadingBrowser ? "animate-spin text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : ""} />
-                  </button>
-                </Tooltip>
-
-                {/* 3. Zen Mode (Fullscreen) Button */}
-                <Tooltip content={t("computer.zenMode")} placement="bottom">
-                  <button
-                    type="button"
-                    onClick={() => handleSetBrowserModalOpen(true)}
-                    className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-mono transition-colors cursor-pointer"
-                    aria-label={t("computer.zenMode")}
-                  >
-                    <Maximize2 size={13} />
-                  </button>
-                </Tooltip>
-
-                                {/* 5. Close Split Button */}
-                <Tooltip content={t("computer.closeComputer")} placement="bottom">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleComputerSplit(false)}
-                    className="h-8 w-8 rounded-lg bg-slate-200/80 hover:bg-red-500/10 hover:text-red-500 dark:bg-[#22222e] dark:hover:bg-red-500/20 dark:hover:text-red-400 border border-slate-300 dark:border-[#303042] hover:border-red-500/30 text-slate-700 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer ml-1"
-                    aria-label={t("computer.closeComputer")}
-                  >
-                    <X size={15} />
-                  </button>
-                </Tooltip>
-              </div>
-            </div>
 
             {/* Iframe Workspace with automatic viewport scaling */}
             <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
@@ -21749,6 +21909,40 @@ ${chat.id}`);
                   profile={browserTarget.profile}
                   reloadKey={browserIframeKey}
                   isResizing={isResizingComputerSplit}
+                  onCaptureScreenshot={async () => {
+                    triggerHaptic();
+                    playNotificationChime("retro");
+                    setIsScreenshotCaptured(true);
+                    setTimeout(() => setIsScreenshotCaptured(false), 1500);
+                    const timestamp = new Date().toLocaleTimeString();
+                    const frameUrl = agentBrowserImageUrl(agentBrowserFor, Date.now());
+                    const newAttachment: UploadedFileResult = {
+                      file_name: `${selectedAgent.slug}-screen-${Date.now().toString().slice(-4)}.jpg`,
+                      url: frameUrl,
+                      size: 145000,
+                      mime_type: "image/jpeg",
+                    };
+                    setAttachedFiles((prev) => [...prev, newAttachment]);
+                    const screenshotTag = `[Screenshot of ${selectedAgent.name} Computer @ ${timestamp} Attached]`;
+                    setInputText((prev) => (prev ? `${prev} ${screenshotTag}` : `Please inspect this screen state: ${screenshotTag}`));
+                    textareaRef.current?.focus();
+                  }}
+                  isScreenshotCaptured={isScreenshotCaptured}
+                  screenshotTooltip={isScreenshotCaptured ? "Đã chụp và đính kèm vào chat!" : (t("computer.screenshotBtn") || "Chụp màn hình")}
+                  onReloadSession={() => {
+                    triggerHaptic();
+                    setIsReloadingBrowser(true);
+                    void dispatchAgentBrowserInput(agentBrowserFor, { action: "reload" });
+                    setBrowserIframeKey((k) => k + 1);
+                    setTimeout(() => setIsReloadingBrowser(false), 600);
+                  }}
+                  isReloadingSession={isReloadingBrowser}
+                  reloadSessionTooltip={t("computer.reloadProfileBtn") || "Tải lại phiên trình duyệt"}
+                  onToggleMaximize={() => handleSetBrowserModalOpen(true)}
+                  isMaximized={false}
+                  maximizeTooltip={t("computer.zenMode") || "Phóng to toàn màn hình"}
+                  onCloseBrowser={() => handleToggleComputerSplit(false)}
+                  closeTooltip={t("computer.closeComputer") || "Đóng (Esc)"}
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-neutral-400">
@@ -22865,35 +23059,7 @@ ${chat.id}`);
               className="w-full h-full sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-150"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Top Navigation Bar with Controls & Close Button */}
-              <header className="h-11 sm:h-12 border-b border-slate-200 dark:border-[#22222e] bg-slate-50 dark:bg-[#14141c] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" title="Live Computer" />
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-neutral-200 truncate">
-                    {selectedAgent.name} · Computer Workspace
-                  </span>
-                  {browserTarget.profile && (
-                    <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-white/10 text-[11px] font-mono text-slate-600 dark:text-neutral-300">
-                      {browserTarget.profile}
-                    </span>
-                  )}
-                </div>
 
-                {/* Action buttons */}
-                <div className="flex items-center gap-1.5">
-                  <Tooltip content={t("computer.closeComputer") || "Đóng (Esc)"} placement="bottom">
-                    <button
-                      aria-label="Close (Esc)"
-                      data-ux-target-min="24"
-                      type="button"
-                      onClick={() => handleSetBrowserModalOpen(false)}
-                      className="h-8 w-8 rounded-lg bg-slate-200/80 hover:bg-red-500/10 hover:text-red-500 dark:bg-[#22222e] dark:hover:bg-red-500/20 dark:hover:text-red-400 border border-slate-300 dark:border-[#303042] hover:border-red-500/30 text-slate-700 dark:text-neutral-300 flex items-center justify-center transition-colors cursor-pointer"
-                    >
-                      <X size={16} />
-                    </button>
-                  </Tooltip>
-                </div>
-              </header>
 
               {/* Interactive Browser Viewport */}
               <main className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative transition-colors overflow-hidden">
@@ -22905,6 +23071,14 @@ ${chat.id}`);
                     title={`${selectedAgent.name} Interactive Workspace`}
                     profile={browserTarget.profile}
                     reloadKey={browserIframeKey}
+                    onToggleMaximize={() => {
+                      handleSetBrowserModalOpen(false);
+                      handleToggleComputerSplit(true);
+                    }}
+                    isMaximized={true}
+                    maximizeTooltip={t("computer.exitZenMode") || "Thu nhỏ về khung chia đôi"}
+                    onCloseBrowser={() => handleSetBrowserModalOpen(false)}
+                    closeTooltip={t("computer.closeComputer") || "Đóng (Esc)"}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-600 dark:text-neutral-400 bg-slate-50 dark:bg-black transition-colors">
