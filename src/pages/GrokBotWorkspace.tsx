@@ -5459,6 +5459,40 @@ function SelkiesViewer({
   const closedTabsUntilRef = useRef<Map<string, number>>(new Map());
   const tabMutationLockUntilRef = useRef<number>(0);
   const lastNonAnchorTabsRef = useRef<{ tabs: AgentBrowserTab[]; at: number }>({ tabs: [], at: 0 });
+  const selectedTabIdRef = useRef<string>("");
+  selectedTabIdRef.current = selectedTabId;
+  const isEditingAddressRef = useRef<boolean>(false);
+  isEditingAddressRef.current = isEditingAddress;
+  const tabOpQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const enqueueTabMutation = (op: () => Promise<void>) => {
+    tabOpQueueRef.current = tabOpQueueRef.current.then(op).catch(() => {});
+    return tabOpQueueRef.current;
+  };
+  const computeActiveBrowserViewport = () => {
+    const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
+    const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
+    const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
+    const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
+    if (effectiveMob) {
+      return {
+        w: Math.min(1920, Math.round(rawW * scaleFactor)),
+        h: Math.min(1080, Math.round(rawH * scaleFactor)),
+        isMobile: true,
+      };
+    }
+    const aspect = rawH / Math.max(1, rawW);
+    let fhdW = 1920;
+    let fhdH = Math.round(fhdW * aspect);
+    if (fhdH > 1080) {
+      fhdH = 1080;
+      fhdW = Math.round(fhdH / Math.max(0.2, aspect));
+    }
+    return {
+      w: Math.max(640, Math.min(1920, Math.round(fhdW * scaleFactor))),
+      h: Math.max(360, Math.min(1080, Math.round(fhdH * scaleFactor))),
+      isMobile: false,
+    };
+  };
   if (tabOrderLoadedForRef.current !== agentId) {
     tabOrderLoadedForRef.current = agentId;
     lastNonAnchorTabsRef.current = { tabs: [], at: 0 };
@@ -5617,15 +5651,17 @@ function SelkiesViewer({
           }
           // Do not pre-fetch unscaled /browser/image.jpg snapshots into tabFrameCacheRef: tabFrameCacheRef is populated exclusively from scaled WebSocket stream frames so switching tabs never flashes an unscaled image
         });
+        const curTabId = selectedTabIdRef.current;
         const activeTab =
-          (selectedTabId && list.find((t) => t.targetId === selectedTabId)) ||
+          (curTabId && list.find((t) => t.targetId === curTabId)) ||
           list[list.length - 1] ||
           list[0];
         if (activeTab && Date.now() >= tabMutationLockUntilRef.current) {
-          if (!selectedTabId || (!selectedTabId.startsWith("optimistic-") && !list.some((t) => t.targetId === selectedTabId))) {
+          if (!curTabId || (!curTabId.startsWith("optimistic-") && !list.some((t) => t.targetId === curTabId))) {
+            selectedTabIdRef.current = activeTab.targetId;
             setSelectedTabId(activeTab.targetId);
           }
-          if (!isEditingAddress && !selectedTabId.startsWith("optimistic-")) {
+          if (!isEditingAddressRef.current && !curTabId.startsWith("optimistic-")) {
             const cleanUrl = activeTab.anchor ? "" : (activeTab.url || "");
             setAddressInput(cleanUrl);
           }
@@ -5636,9 +5672,9 @@ function SelkiesViewer({
 
   useEffect(() => {
     refreshBrowserTabs();
-    const timer = setInterval(refreshBrowserTabs, 2500);
+    const timer = setInterval(refreshBrowserTabs, 3000);
     return () => clearInterval(timer);
-  }, [agentId, reloadKey, selectedTabId, isEditingAddress]);
+  }, [agentId, reloadKey]);
 
   // Fetch live Google autocomplete suggestions and tab navigation history when typing in Omnibox
   useEffect(() => {
@@ -5828,14 +5864,17 @@ function SelkiesViewer({
   };
 
   const handleActivateTab = (tab: AgentBrowserTab) => {
-    if (!tab || tab.targetId === selectedTabId) return;
-    tabMutationLockUntilRef.current = Date.now() + 900;
+    if (!tab || tab.targetId === selectedTabIdRef.current) return;
+    tabMutationLockUntilRef.current = Date.now() + 1200;
+    selectedTabIdRef.current = tab.targetId;
     setSelectedTabId(tab.targetId);
-    if (!isEditingAddress) {
+    if (!isEditingAddressRef.current) {
       setAddressInput(tab.anchor ? "" : (tab.url || ""));
     }
     if (!tab.targetId.startsWith("optimistic-")) {
-      void dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: tab.targetId });
+      void enqueueTabMutation(async () => {
+        await dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: tab.targetId });
+      });
     }
   };
 
@@ -5865,7 +5904,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
   const handleCreateNewTab = async () => {
     triggerHaptic(8);
     setIsNavigating(true);
-    tabMutationLockUntilRef.current = Date.now() + 2600;
+    tabMutationLockUntilRef.current = Date.now() + 3200;
 
     const existingGoogleTab = browserTabs.find((t) => (t.url || "").includes("google.com"));
     const cachedGoogleFrame = existingGoogleTab ? tabFrameCacheRef.current[`${agentId}:${existingGoogleTab.targetId}`] : "";
@@ -5874,8 +5913,9 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
         ? cachedGoogleFrame
         : INSTANT_GOOGLE_NEW_TAB_DATA_URL;
 
-    const optId = `optimistic-${Date.now()}`;
+    const optId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     tabFrameCacheRef.current[`${agentId}:${optId}`] = googleSeedFrame;
+    const prevSelectedId = selectedTabIdRef.current;
 
     const optTab: AgentBrowserTab = {
       targetId: optId,
@@ -5889,57 +5929,69 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
       persistTabOrder(next.map((t) => t.targetId));
       return next;
     });
+    selectedTabIdRef.current = optId;
     setSelectedTabId(optId);
     setAddressInput("https://www.google.com");
 
-    try {
-      const res = await dispatchAgentBrowserInput(agentId, {
-        action: "new_tab",
-        text: "https://www.google.com",
-        pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
-      });
-
-      const realNewId = res.createdTargetId || res.targetId;
-      if (realNewId && (!tabFrameCacheRef.current[`${agentId}:${realNewId}`] || tabFrameCacheRef.current[`${agentId}:${realNewId}`] === "__loading__")) {
-        tabFrameCacheRef.current[`${agentId}:${realNewId}`] = googleSeedFrame;
-      }
-
-      if (realNewId) {
-        const replacedOrder = tabOrderRef.current.map((id) => (id === optId ? realNewId : id));
-        if (!replacedOrder.includes(realNewId)) replacedOrder.push(realNewId);
-        persistTabOrder(Array.from(new Set(replacedOrder)));
-      }
-
-      if (res.tabs && Array.isArray(res.tabs) && res.tabs.length > 0) {
-        const real = res.tabs.filter((t) => !t.anchor);
-        const list = reconcileTabsWithOrder(real.length > 0 ? real : res.tabs);
-        setBrowserTabs(list);
-        const chosen = (realNewId && list.find((t) => t.targetId === realNewId)) || list[list.length - 1];
-        if (chosen) {
-          setSelectedTabId(chosen.targetId);
-          setAddressInput(chosen.url || "https://www.google.com");
-        }
-      } else if (realNewId) {
-        const newTabEntry: AgentBrowserTab = {
-          targetId: realNewId,
-          title: "Google",
-          url: "https://www.google.com",
-          anchor: false,
-        };
-        setBrowserTabs((prev) => {
-          const next = prev.map((t) => (t.targetId === optId ? newTabEntry : t));
-          if (!next.some((t) => t.targetId === realNewId)) next.push(newTabEntry);
-          return next;
+    const vp = computeActiveBrowserViewport();
+    await enqueueTabMutation(async () => {
+      try {
+        const res = await dispatchAgentBrowserInput(agentId, {
+          action: "new_tab",
+          text: "https://www.google.com",
+          pageId: prevSelectedId && !prevSelectedId.startsWith("optimistic-") ? prevSelectedId : undefined,
+          width: vp.w,
+          height: vp.h,
+          isMobile: vp.isMobile,
+          deviceType: vp.isMobile ? "phone" : "desktop",
         });
-        setSelectedTabId(realNewId);
-        setAddressInput("https://www.google.com");
-      } else {
-        await refreshBrowserTabs();
+
+        const realNewId = res.createdTargetId || res.targetId;
+        if (realNewId && (!tabFrameCacheRef.current[`${agentId}:${realNewId}`] || tabFrameCacheRef.current[`${agentId}:${realNewId}`] === "__loading__")) {
+          tabFrameCacheRef.current[`${agentId}:${realNewId}`] = googleSeedFrame;
+        }
+
+        if (realNewId) {
+          const replacedOrder = tabOrderRef.current.map((id) => (id === optId ? realNewId : id));
+          if (!replacedOrder.includes(realNewId)) replacedOrder.push(realNewId);
+          persistTabOrder(Array.from(new Set(replacedOrder)));
+        }
+
+        if (res.tabs && Array.isArray(res.tabs) && res.tabs.length > 0) {
+          const real = res.tabs.filter((t) => !t.anchor);
+          const list = reconcileTabsWithOrder(real.length > 0 ? real : res.tabs);
+          setBrowserTabs(list);
+          const chosen = (realNewId && list.find((t) => t.targetId === realNewId)) || list[list.length - 1];
+          if (chosen && (selectedTabIdRef.current === optId || selectedTabIdRef.current === chosen.targetId)) {
+            selectedTabIdRef.current = chosen.targetId;
+            setSelectedTabId(chosen.targetId);
+            setAddressInput(chosen.url || "https://www.google.com");
+          }
+        } else if (realNewId) {
+          const newTabEntry: AgentBrowserTab = {
+            targetId: realNewId,
+            title: "Google",
+            url: "https://www.google.com",
+            anchor: false,
+          };
+          setBrowserTabs((prev) => {
+            const next = prev.map((t) => (t.targetId === optId ? newTabEntry : t));
+            if (!next.some((t) => t.targetId === realNewId)) next.push(newTabEntry);
+            return next;
+          });
+          if (selectedTabIdRef.current === optId) {
+            selectedTabIdRef.current = realNewId;
+            setSelectedTabId(realNewId);
+            setAddressInput("https://www.google.com");
+          }
+        } else {
+          await refreshBrowserTabs();
+        }
+      } finally {
+        delete tabFrameCacheRef.current[`${agentId}:${optId}`];
+        setIsNavigating(false);
       }
-    } finally {
-      delete tabFrameCacheRef.current[`${agentId}:${optId}`];
-      setIsNavigating(false);
-    }
+    });
   };
 
   const handleCloseTab = async (tabId: string, e?: React.MouseEvent) => {
@@ -5948,7 +6000,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
     if (browserTabs.length <= 1) return;
 
     closedTabsUntilRef.current.set(tabId, Date.now() + 8000);
-    tabMutationLockUntilRef.current = Date.now() + 1800;
+    tabMutationLockUntilRef.current = Date.now() + 2200;
     delete tabFrameCacheRef.current[`${agentId}:${tabId}`];
 
     const closeIdx = browserTabs.findIndex((t) => t.targetId === tabId);
@@ -5958,26 +6010,31 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
     persistTabOrder(remaining.map((t) => t.targetId));
     setBrowserTabs(remaining);
 
-    if (selectedTabId === tabId && remaining.length > 0) {
+    let nextActiveTargetId = "";
+    if (selectedTabIdRef.current === tabId && remaining.length > 0) {
       const nextIdx = Math.min(Math.max(0, closeIdx), remaining.length - 1);
       const nextActive = remaining[nextIdx] || remaining[remaining.length - 1];
+      nextActiveTargetId = nextActive.targetId;
+      selectedTabIdRef.current = nextActive.targetId;
       setSelectedTabId(nextActive.targetId);
       setAddressInput(nextActive.anchor ? "" : (nextActive.url || ""));
-      if (!nextActive.targetId.startsWith("optimistic-")) {
-        void dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: nextActive.targetId });
-      }
     }
 
     if (tabId.startsWith("optimistic-")) return;
 
-    const res = await dispatchAgentBrowserInput(agentId, {
-      action: "close_tab",
-      pageId: tabId,
+    await enqueueTabMutation(async () => {
+      if (nextActiveTargetId && !nextActiveTargetId.startsWith("optimistic-")) {
+        void dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: nextActiveTargetId });
+      }
+      const res = await dispatchAgentBrowserInput(agentId, {
+        action: "close_tab",
+        pageId: tabId,
+      });
+      if (res.tabs && Array.isArray(res.tabs) && res.tabs.length > 0) {
+        const real = res.tabs.filter((t) => !t.anchor);
+        setBrowserTabs(reconcileTabsWithOrder(real.length > 0 ? real : res.tabs));
+      }
     });
-    if (res.tabs && Array.isArray(res.tabs) && res.tabs.length > 0) {
-      const real = res.tabs.filter((t) => !t.anchor);
-      setBrowserTabs(reconcileTabsWithOrder(real.length > 0 ? real : res.tabs));
-    }
   };
 
   const handleToggleHistory = async () => {
@@ -7459,19 +7516,27 @@ function AgentBrowserPreview({
     const backspaces = prevChars.length - prefix;
     const inserted = nextChars.slice(prefix).join("").replace(/\u200B/g, "");
     imeCommittedValRef.current = targetEl.value;
-    enqueueOrderedInput(async () => {
-      if (backspaces > 0 || inserted.length > 0) {
-        await sendRealtimeInput({
-          action: "ime_commit",
-          backspaces,
-          text: inserted,
-          pageId,
-        });
+    if (!imeComposingRef.current && (targetEl.value.length < 8 || targetEl.value.length > 160 || targetEl.value.endsWith(" ") || targetEl.value.endsWith("\n"))) {
+      resetImeProxyBuffer();
+    }
+    if (backspaces > 0 || inserted.length > 0) {
+      const payload: BrowserInputPayload = {
+        action: "ime_commit",
+        backspaces,
+        text: inserted,
+        pageId,
+      };
+      const sock = wsRef.current;
+      if (sock && sock.readyState === WebSocket.OPEN) {
+        try {
+          sock.send(JSON.stringify(payload));
+          return;
+        } catch {}
       }
-      if (!imeComposingRef.current && (targetEl.value.length < 8 || targetEl.value.length > 160 || targetEl.value.endsWith(" ") || targetEl.value.endsWith("\n"))) {
-        resetImeProxyBuffer();
-      }
-    });
+      enqueueOrderedInput(async () => {
+        await sendRealtimeInput(payload);
+      });
+    }
   };
 
   const flushImeProxyDiff = (el: HTMLTextAreaElement, immediate = false) => {
@@ -7482,11 +7547,12 @@ function AgentBrowserPreview({
     if (imeDebounceTimerRef.current) {
       clearTimeout(imeDebounceTimerRef.current);
     }
-    // 18ms coalescing window so Windows Vietnamese Keyboard / Unikey / EVKey Backspace + replacement char sequences merge into one atomic diff!
+    //Adaptive coalescing: if this input deleted characters (Unikey / EVKey Backspace before diacritic replacement), wait 12ms to merge the replacement; otherwise flush in 4ms for instant 0-lag typing!
+    const isDeletionStep = el.value.length < imeCommittedValRef.current.length;
     imeDebounceTimerRef.current = setTimeout(() => {
       imeDebounceTimerRef.current = null;
       flushImeProxyDiffImmediate(el);
-    }, 18);
+    }, isDeletionStep ? 12 : 4);
   };
 
   const queueCoalescedScrollInput = (xRatio: number, yRatio: number, deltaX: number, deltaY: number) => {
@@ -8304,9 +8370,7 @@ function AgentBrowserPreview({
               { duration: 120 }
             );
           }
-          if (remoteCursorStyleRef.current === "text" || remoteCursorStyleRef.current === "vertical-text" || remoteEditableFocusRef.current.editable) {
-            focusImeProxy();
-          }
+          focusImeProxy();
           await sendRealtimeInput({
             action: "click",
             xRatio: cur.x,

@@ -845,3 +845,20 @@ assert.ok(
   "Chat UI must support interactive connect_app cards (both explicit tool calls and natural prose detection), quick app connect/status badges, and pre-filtered ConnectAppsModal opening"
 );
 console.log("✓ Test 60: Interactive Chat Connect App Card & Quick OAuth/MCP Connect Contract verified");
+
+console.log("Testing Fast Tab Control Serialization, Browser-Level CDP Tab Management, & Zero-Lag Text Input Contract...");
+const browserDirSrc63 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserDirectory.cs"), "utf-8");
+assert.ok(
+  browserDirSrc63.includes("ManageTabOverBrowserSocketAsync") &&
+  cdpEndpointSrc.includes("directory.ManageTabOverBrowserSocketAsync") &&
+  cdpEndpointSrc.includes("hub.PrewarmSession") &&
+  screencastHubSrc.includes("public void PrewarmSession") &&
+  screencastHubSrc.includes("_knownNativeSurfaces") &&
+  screencastHubSrc.includes("PumpImmediateKeyFrameIfReady") &&
+  grokImeSrc.includes("enqueueTabMutation") &&
+  grokImeSrc.includes("computeActiveBrowserViewport") &&
+  grokImeSrc.includes("const isDeletionStep = el.value.length < imeCommittedValRef.current.length;") &&
+  grokImeSrc.includes("isDeletionStep ? 12 : 4"),
+  "Browser tab management must route over persistent Browser-level CDP socket, pre-warm newly created tabs with cached native surface dimensions, serialize rapid client tab mutations, and flush normal text input with 4ms adaptive IME debounce + immediate key frame pump"
+);
+console.log("✓ Test 63: Fast Tab Control Serialization, Browser-Level CDP Tab Management, & Zero-Lag Text Input Contract verified");
