@@ -5397,15 +5397,7 @@ function SelkiesViewer({
   onCloseBrowser?: () => void;
   closeTooltip?: string;
 }) {
-  const [mobileInteractionMode, setMobileInteractionMode] = useState<"touch" | "mouse">(() => {
-    if (typeof window !== "undefined") {
-      const isCoarseMobile =
-        window.innerWidth < 768 ||
-        (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches);
-      return isCoarseMobile ? "mouse" : "touch";
-    }
-    return "touch";
-  });
+  const [mobileInteractionMode, setMobileInteractionMode] = useState<"touch" | "mouse">("touch");
   const [attempt, setAttempt] = useState(0);
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
   const [isPhoneClient, setIsPhoneClient] = useState<boolean>(() => {
@@ -5430,6 +5422,7 @@ function SelkiesViewer({
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isBrowserMoreMenuOpen, setIsBrowserMoreMenuOpen] = useState<boolean>(false);
   const [historyItems, setHistoryItems] = useState<AgentBrowserHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
   const [isFindOpen, setIsFindOpen] = useState<boolean>(false);
@@ -6591,185 +6584,240 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
               </button>
             </Tooltip>
 
-            <Tooltip content="Tìm trong trang (Ctrl+F)" placement="bottom">
-              <button
-                type="button"
-                data-testid="agent-browser-find-btn"
-                onClick={handleToggleFindBar}
-                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                  isFindOpen
-                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
-                    : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
-                }`}
-                aria-label="Find in page"
-              >
-                <Search size={14} />
-              </button>
-            </Tooltip>
-
             {browserZoomPercent !== 100 && (
               <button
                 type="button"
                 data-testid="agent-browser-zoom-reset-btn"
                 onClick={() => handleZoomStep("reset")}
                 className="h-6 px-1.5 rounded-full bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8] text-[10px] font-mono font-semibold hover:bg-[#1a73e8]/25 transition-colors cursor-pointer"
-                title="Đặt lại thu phóng 100% (Ctrl+0)"
+                title="Đặt lại tỉ lệ màn hình 100% (Ctrl+0)"
               >
                 {browserZoomPercent}%
               </button>
             )}
-            <div className="relative shrink-0">
-              <Tooltip content="Lịch sử duyệt web" placement="bottom">
+
+            <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+              <Tooltip content="Menu công cụ & tỉ lệ màn hình" placement="bottom">
                 <button
                   type="button"
-                  data-testid="agent-browser-history-btn"
-                  onClick={handleToggleHistory}
-                  className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                    isHistoryOpen
-                      ? "bg-black/15 dark:bg-white/15 text-[#202124] dark:text-white"
-                      : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
-                  }`}
-                  aria-label="Browser History"
-                >
-                  <Clock size={14} />
-                </button>
-              </Tooltip>
-
-            {isHistoryOpen && (
-              <div
-                data-testid="agent-browser-history-popover"
-                onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 top-full mt-1.5 w-72 sm:w-80 max-h-72 rounded-xl bg-white dark:bg-[#292a2d] border border-black/15 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col z-50 animate-in fade-in zoom-in-95 duration-100"
-              >
-                <div className="px-3 py-2 border-b border-black/10 dark:border-white/10 flex items-center justify-between text-[12px] font-semibold text-[#202124] dark:text-[#e8eaed]">
-                  <span className="flex items-center gap-1.5">
-                    <Clock size={13} className="text-[#1a73e8] dark:text-[#8ab4f8]" />
-                    <span>Lịch sử duyệt web</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsHistoryOpen(false)}
-                    className="h-5 w-5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-[#5f6368] dark:text-[#9aa0a6]"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 py-1">
-                  {isLoadingHistory ? (
-                    <div className="px-3 py-4 text-center text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
-                      Đang tải lịch sử...
-                    </div>
-                  ) : historyItems.length === 0 && localHistoryEntries.length === 0 ? (
-                    <div className="px-3 py-4 text-center text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
-                      Chưa có lịch sử trên tab này
-                    </div>
-                  ) : (
-                    (historyItems.length > 0 ? historyItems : localHistoryEntries.map((lh, i) => ({ id: i, title: lh.title, url: lh.url, isCurrent: false }))).map((hItem, hIdx) => {
-                      const hFav = getTabFaviconUrl(hItem.url, false);
-                      return (
-                        <button
-                          key={`${hItem.id}-${hIdx}`}
-                          type="button"
-                          onClick={() => void handleNavigateUrl(hItem.url)}
-                          className={`w-full px-3 py-2 text-left flex items-center gap-2.5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer ${
-                            hItem.isCurrent ? "bg-[#1a73e8]/10 dark:bg-[#8ab4f8]/10" : ""
-                          }`}
-                        >
-                          {hFav ? (
-                            <img src={hFav} alt="" className="w-3.5 h-3.5 rounded-xs shrink-0" />
-                          ) : (
-                            <Globe size={13} className="text-[#5f6368] dark:text-[#9aa0a6] shrink-0" />
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-[12px] font-medium text-[#202124] dark:text-[#e8eaed] truncate">
-                              {hItem.title}
-                            </div>
-                            <div className="text-[10px] font-mono text-[#1a73e8] dark:text-[#8ab4f8] truncate">
-                              {hItem.url}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-            </div>
-
-            {/* Mobile/Desktop Input Mode Toggle Icon (Mouse Pointer vs Direct Touch) */}
-            <Tooltip
-              content={
-                mobileInteractionMode === "mouse"
-                  ? "Chế độ Chuột ảo (1 ngón: Di chuột, chạm để click, chạm đúp mở/chọn từ, chạm 2 lần giữ để kéo · 2 ngón: Vuốt ngang/dọc cuộn trang, chạm để chuột phải)"
-                  : "Chế độ Chạm trực tiếp (Touch) · Bấm để chuyển sang Chuột ảo"
-              }
-              placement="bottom"
-            >
-              <button
-                type="button"
-                data-testid="computer-mobile-input-mode-btn"
-                onClick={() => setMobileInteractionMode((m) => (m === "mouse" ? "touch" : "mouse"))}
-                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                  mobileInteractionMode === "mouse"
-                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
-                    : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
-                }`}
-                aria-label={mobileInteractionMode === "mouse" ? "Mouse Mode" : "Touch Mode"}
-              >
-                {mobileInteractionMode === "mouse" ? <MousePointer2 size={14} /> : <Hand size={14} />}
-              </button>
-            </Tooltip>
-
-            {/* Mobile Responsive vs Desktop Site Mode Toggle (Phone Client) */}
-            {isPhoneClient && !isLandscapeRotated && (
-              <Tooltip
-                content={
-                  isDesktopSiteMode
-                    ? "Đang xem giao diện Máy tính (Desktop Site) · Bấm để chuyển về giao diện Điện thoại (Mobile Responsive)"
-                    : "Đang xem giao diện Điện thoại (Mobile Responsive) · Bấm để xem bản Máy tính (Desktop Site)"
-                }
-                placement="bottom"
-              >
-                <button
-                  type="button"
-                  data-testid="computer-device-site-mode-btn"
-                  onClick={() => setIsDesktopSiteMode((d) => !d)}
-                  className={`h-7 px-2 rounded-full flex items-center gap-1 text-[10px] font-medium transition-colors cursor-pointer ${
-                    isDesktopSiteMode
+                  data-testid="agent-browser-more-menu-btn"
+                  onClick={() => {
+                    setIsBrowserMoreMenuOpen((prev) => !prev);
+                    if (isHistoryOpen) setIsHistoryOpen(false);
+                  }}
+                  className={`relative h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                    isBrowserMoreMenuOpen || isHistoryOpen || isFindOpen || isLandscapeRotated || isDesktopSiteMode || browserZoomPercent !== 100
                       ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
                       : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
                   }`}
-                  aria-label={isDesktopSiteMode ? "Desktop Site Mode" : "Mobile Responsive Mode"}
+                  aria-label="More browser options"
                 >
-                  <Globe size={12} />
-                  <span>{isDesktopSiteMode ? "PC" : "Mobile"}</span>
+                  <MoreVertical size={15} />
                 </button>
               </Tooltip>
-            )}
 
-            {/* Rotate Landscape 90° Icon Button */}
-            <Tooltip
-              content={isLandscapeRotated ? "Chuyển về khung dọc (Portrait)" : "Xoay ngang màn hình 90° (Landscape)"}
-              placement="bottom"
-            >
-              <button
-                type="button"
-                data-testid="computer-rotate-landscape-btn"
-                onClick={() => setIsLandscapeRotated((r) => !r)}
-                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                  isLandscapeRotated
-                    ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
-                    : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
-                }`}
-                aria-label={isLandscapeRotated ? "Portrait Mode" : "Landscape Mode"}
-              >
-                <Smartphone size={14} className={isLandscapeRotated ? "rotate-90 transition-transform" : "transition-transform"} />
-              </button>
-            </Tooltip>
+              {isBrowserMoreMenuOpen && (
+                <div
+                  data-testid="agent-browser-more-menu-popover"
+                  className="absolute right-0 top-full mt-1.5 w-60 rounded-xl bg-white dark:bg-[#292a2d] border border-black/15 dark:border-white/15 shadow-2xl py-1.5 z-50 flex flex-col text-[12px] text-[#202124] dark:text-[#e8eaed] animate-in fade-in zoom-in-95 duration-100"
+                >
+                  {/* Row 1: Screen Scale / Zoom In & Out Controls */}
+                  <div className="px-3 py-1.5 flex items-center justify-between border-b border-black/8 dark:border-white/10">
+                    <span className="flex items-center gap-2 text-[#5f6368] dark:text-[#9aa0a6] font-medium">
+                      <ZoomIn size={13} />
+                      <span>Tỉ lệ màn hình</span>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        data-testid="agent-browser-scale-down-btn"
+                        onClick={() => handleZoomStep(-15)}
+                        className="h-6 w-6 rounded-md hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-[#202124] dark:text-[#e8eaed] font-mono text-[13px] cursor-pointer"
+                        title="Giảm tỉ lệ màn hình (-15%)"
+                        aria-label="Decrease screen scale"
+                      >
+                        <ZoomOut size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="agent-browser-scale-reset-btn"
+                        onClick={() => handleZoomStep("reset")}
+                        className="min-w-[44px] h-6 px-1.5 rounded-md bg-black/[0.05] dark:bg-white/[0.08] hover:bg-black/10 dark:hover:bg-white/15 font-mono text-[11px] font-semibold text-center cursor-pointer"
+                        title="Đặt lại 100%"
+                      >
+                        {browserZoomPercent}%
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="agent-browser-scale-up-btn"
+                        onClick={() => handleZoomStep(15)}
+                        className="h-6 w-6 rounded-md hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-[#202124] dark:text-[#e8eaed] font-mono text-[13px] cursor-pointer"
+                        title="Tăng tỉ lệ màn hình (+15%)"
+                        aria-label="Increase screen scale"
+                      >
+                        <ZoomIn size={13} />
+                      </button>
+                    </div>
+                  </div>
 
+                  {/* Row 2: Find in Page */}
+                  <button
+                    type="button"
+                    data-testid="agent-browser-find-btn"
+                    onClick={() => {
+                      setIsBrowserMoreMenuOpen(false);
+                      handleToggleFindBar();
+                    }}
+                    className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Search size={14} className="text-[#5f6368] dark:text-[#9aa0a6]" />
+                      <span>Tìm trong trang</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-[#5f6368] dark:text-[#9aa0a6]">Ctrl+F</span>
+                  </button>
 
+                  {/* Row 3: Browser History */}
+                  <button
+                    type="button"
+                    data-testid="agent-browser-history-btn"
+                    onClick={() => {
+                      setIsBrowserMoreMenuOpen(false);
+                      void handleToggleHistory();
+                    }}
+                    className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Clock size={14} className="text-[#5f6368] dark:text-[#9aa0a6]" />
+                      <span>Lịch sử duyệt web</span>
+                    </span>
+                  </button>
+
+                  {/* Row 4: Mouse Mode vs Touch Mode */}
+                  <button
+                    type="button"
+                    data-testid="computer-mobile-input-mode-btn"
+                    onClick={() => {
+                      setMobileInteractionMode((m) => (m === "mouse" ? "touch" : "mouse"));
+                      setIsBrowserMoreMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      {mobileInteractionMode === "mouse" ? (
+                        <MousePointer2 size={14} className="text-[#1a73e8] dark:text-[#8ab4f8]" />
+                      ) : (
+                        <Hand size={14} className="text-[#5f6368] dark:text-[#9aa0a6]" />
+                      )}
+                      <span>Chế độ điều khiển</span>
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/[0.06] dark:bg-white/[0.1] text-[10px] font-medium text-[#1a73e8] dark:text-[#8ab4f8]">
+                      {mobileInteractionMode === "mouse" ? "Chuột ảo" : "Chạm"}
+                    </span>
+                  </button>
+
+                  {/* Row 5: Mobile vs Desktop Site Mode */}
+                  <button
+                    type="button"
+                    data-testid="computer-device-site-mode-btn"
+                    onClick={() => {
+                      setIsDesktopSiteMode((d) => !d);
+                      setIsBrowserMoreMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Globe size={14} className={isDesktopSiteMode ? "text-[#1a73e8] dark:text-[#8ab4f8]" : "text-[#5f6368] dark:text-[#9aa0a6]"} />
+                      <span>Giao diện hiển thị</span>
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded bg-black/[0.06] dark:bg-white/[0.1] text-[10px] font-medium">
+                      {isDesktopSiteMode || !isPhoneClient ? "Máy tính" : "Điện thoại"}
+                    </span>
+                  </button>
+
+                  {/* Row 6: Rotate 90° Landscape */}
+                  <button
+                    type="button"
+                    data-testid="computer-rotate-landscape-btn"
+                    onClick={() => {
+                      setIsLandscapeRotated((r) => !r);
+                      setIsBrowserMoreMenuOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Smartphone size={14} className={isLandscapeRotated ? "rotate-90 text-[#1a73e8] dark:text-[#8ab4f8] transition-transform" : "text-[#5f6368] dark:text-[#9aa0a6] transition-transform"} />
+                      <span>Xoay ngang màn hình</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-[#5f6368] dark:text-[#9aa0a6]">
+                      {isLandscapeRotated ? "Ngang 90°" : "Dọc"}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {isHistoryOpen && (
+                <div
+                  data-testid="agent-browser-history-popover"
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1.5 w-72 sm:w-80 max-h-72 rounded-xl bg-white dark:bg-[#292a2d] border border-black/15 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col z-50 animate-in fade-in zoom-in-95 duration-100"
+                >
+                  <div className="px-3 py-2 border-b border-black/10 dark:border-white/10 flex items-center justify-between text-[12px] font-semibold text-[#202124] dark:text-[#e8eaed]">
+                    <span className="flex items-center gap-1.5">
+                      <Clock size={13} className="text-[#1a73e8] dark:text-[#8ab4f8]" />
+                      <span>Lịch sử duyệt web</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsHistoryOpen(false)}
+                      className="h-5 w-5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-[#5f6368] dark:text-[#9aa0a6]"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 py-1">
+                    {isLoadingHistory ? (
+                      <div className="px-3 py-4 text-center text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
+                        Đang tải lịch sử...
+                      </div>
+                    ) : historyItems.length === 0 && localHistoryEntries.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
+                        Chưa có lịch sử trên tab này
+                      </div>
+                    ) : (
+                      (historyItems.length > 0 ? historyItems : localHistoryEntries.map((lh, i) => ({ id: i, title: lh.title, url: lh.url, isCurrent: false }))).map((hItem, hIdx) => {
+                        const hFav = getTabFaviconUrl(hItem.url, false);
+                        return (
+                          <button
+                            key={`${hItem.id}-${hIdx}`}
+                            type="button"
+                            onClick={() => void handleNavigateUrl(hItem.url)}
+                            className={`w-full px-3 py-2 text-left flex items-center gap-2.5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer ${
+                              hItem.isCurrent ? "bg-[#1a73e8]/10 dark:bg-[#8ab4f8]/10" : ""
+                            }`}
+                          >
+                            {hFav ? (
+                              <img src={hFav} alt="" className="w-3.5 h-3.5 rounded-xs shrink-0" />
+                            ) : (
+                              <Globe size={13} className="text-[#5f6368] dark:text-[#9aa0a6] shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[12px] font-medium text-[#202124] dark:text-[#e8eaed] truncate">
+                                {hItem.title}
+                              </div>
+                              <div className="text-[10px] font-mono text-[#1a73e8] dark:text-[#8ab4f8] truncate">
+                                {hItem.url}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {isNavigating && (
@@ -6783,7 +6831,10 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
   return (
     <div
       ref={containerRef}
-      onClick={() => { if (isHistoryOpen) setIsHistoryOpen(false); }}
+      onClick={() => {
+        if (isHistoryOpen) setIsHistoryOpen(false);
+        if (isBrowserMoreMenuOpen) setIsBrowserMoreMenuOpen(false);
+      }}
       className="relative w-full h-full bg-[#F8F3ED] dark:bg-[#0c0c12] overflow-hidden touch-manipulation select-none flex flex-col"
     >
       <div
@@ -6926,9 +6977,10 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             viewportWidth={(() => {
               const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
               const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
+              const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
               const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
               if (effectiveMob) {
-                return Math.min(1920, rawW);
+                return Math.min(1920, Math.round(rawW * scaleFactor));
               }
               // FullHD (1920x1080) Logical Scale for Desktop & Phone Landscape / Desktop Site Mode while preserving exact panel aspect ratio!
               const aspect = rawH / Math.max(1, rawW);
@@ -6938,14 +6990,15 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                 fhdH = 1080;
                 fhdW = Math.round(fhdH / Math.max(0.2, aspect));
               }
-              return Math.max(640, Math.min(1920, fhdW));
+              return Math.max(640, Math.min(1920, Math.round(fhdW * scaleFactor)));
             })()}
             viewportHeight={(() => {
               const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
               const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
+              const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
               const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
               if (effectiveMob) {
-                return Math.min(1080, rawH);
+                return Math.min(1080, Math.round(rawH * scaleFactor));
               }
               const aspect = rawH / Math.max(1, rawW);
               let fhdW = 1920;
@@ -6954,7 +7007,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                 fhdH = 1080;
                 fhdW = Math.round(fhdH / Math.max(0.2, aspect));
               }
-              return Math.max(360, Math.min(1080, fhdH));
+              return Math.max(360, Math.min(1080, Math.round(fhdH * scaleFactor)));
             })()}
             frameCacheRef={tabFrameCacheRef}
             externalZoomPercent={browserZoomPercent}
@@ -7363,13 +7416,13 @@ function AgentBrowserPreview({
   };
 
   useEffect(() => {
-    if (mobileInputMode === "touch") {
-      zoomScaleRef.current = externalZoomPercent / 100;
-      if (Math.abs(zoomScaleRef.current - 1) <= 0.01) {
-        zoomPanRef.current = { x: 0, y: 0 };
-      }
-      applyZoomTransformDom();
-    } else {
+    const nextZoom = Math.max(1, externalZoomPercent / 100);
+    zoomScaleRef.current = nextZoom;
+    if (Math.abs(zoomScaleRef.current - 1) <= 0.01) {
+      zoomPanRef.current = { x: 0, y: 0 };
+    }
+    applyZoomTransformDom();
+    if (mobileInputMode === "mouse") {
       requestAnimationFrame(applyCursorDom);
     }
   }, [mobileInputMode, externalZoomPercent]);

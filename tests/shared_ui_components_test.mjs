@@ -797,6 +797,7 @@ assert.ok(
   screencastHubSrc.includes("ProbeFocusedEditable(ws, (int)x, (int)y, ct)") &&
   screencastHubSrc.includes('method = "Page.inputFocusChanged"') &&
   screencastHubSrc.includes("editEl.scrollIntoView({ block: 'center', behavior: 'instant' })") &&
+  grokImeSrc.includes('const [mobileInteractionMode, setMobileInteractionMode] = useState<"touch" | "mouse">("touch");') &&
   grokImeSrc.includes('data-testid="computer-device-site-mode-btn"') &&
   grokImeSrc.includes('msg?.method === "Page.inputFocusChanged"') &&
   grokImeSrc.includes("if (isVirtualKeyboardOpen) return;") &&
@@ -804,3 +805,16 @@ assert.ok(
   "Browser must distinguish phone vs desktop viewers (mobile=1&device=phone), auto-scroll focused inputs into view on mobile, freeze CDP viewport resize while phone virtual keyboard is open, and handle Page.inputFocusChanged to manage virtual keyboard focus & pan"
 );
 console.log("✓ Test 57: Device-Aware Phone vs Desktop Responsive Viewport & Virtual Keyboard Lifecycle Contract verified");
+
+console.log("Testing Consolidated Browser More Menu & Screen Scale (+/-) Controls Contract...");
+assert.ok(
+  grokImeSrc.includes('data-testid="agent-browser-more-menu-btn"') &&
+  grokImeSrc.includes('data-testid="agent-browser-more-menu-popover"') &&
+  grokImeSrc.includes('data-testid="agent-browser-scale-down-btn"') &&
+  grokImeSrc.includes('data-testid="agent-browser-scale-reset-btn"') &&
+  grokImeSrc.includes('data-testid="agent-browser-scale-up-btn"') &&
+  grokImeSrc.includes("handleZoomStep(-15)") &&
+  grokImeSrc.includes("handleZoomStep(15)"),
+  "Browser omnibox toolbar must consolidate secondary action buttons (Find, History, Input Mode, Site Mode, Landscape Rotate) into a clean More Menu popover with Screen Scale (+/-) controls"
+);
+console.log("✓ Test 58: Consolidated Browser More Menu & Screen Scale (+/-) Controls Contract verified");
