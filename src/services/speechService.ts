@@ -256,7 +256,7 @@ export function speakText(
 // Skyer LLM360 Cloud TTS & STT + Full-Duplex Realtime Voice Service
 // ============================================================================
 
-const API_BASE = ((import.meta as any).env?.VITE_API_URL || "/api/v1").replace(/\/+$/, "");
+const API_BASE = ((import.meta as any).env?.VITE_API_URL || "/api").replace(/\/+$/, "");
 
 let _activeCloudAudio: HTMLAudioElement | null = null;
 

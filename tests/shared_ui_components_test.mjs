@@ -959,3 +959,15 @@ assert.ok(
   "Phone browser must resolve optimistically without waiting for skills or browser discovery, avoid ResizeObserver WebSocket reconnect churn, default to Touch mode with a quick toolbar toggle, and support 2-touch scroll & 2-touch right-click in Mouse mode"
 );
 console.log("✓ Test 64: Phone Browser Fast Load, Optimistic Target Resolution, Touch Default & Mouse 2-Touch Control Contract verified");
+
+console.log("Testing Phone Browser Fit-Width (>= 560px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract...");
+assert.ok(
+  screencastHubSrc.includes("if (w < 560)") &&
+  screencastHubSrc.includes("if (w < 560 && boundW >= 560)") &&
+  screencastHubSrc.includes("node.scrollHeight > node.clientHeight + 8 || node.scrollWidth > node.clientWidth + 8") &&
+  grokImeSrc.includes("const mobW = Math.max(560, rawW);") &&
+  grokImeSrc.includes("const touchScale = Math.max(1.85, Math.min(2.6, (logicalW / dispW) * 1.35));") &&
+  grokImeSrc.includes("else if ((performance.now() - g.lastTime < 95) && Math.hypot(g.vx, g.vy) > 0.12)"),
+  "Phone browser must guarantee >= 560px logical width so hybrid login cards fit centered without horizontal clipping, scale touch-drag deltas proportionally to logical viewport width, and suppress kinetic inertia when the user holds their finger stationary before lifting"
+);
+console.log("✓ Test 65: Phone Browser Fit-Width (>= 560px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract verified");

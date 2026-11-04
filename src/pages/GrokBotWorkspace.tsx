@@ -8156,7 +8156,8 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
               const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
               const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
               if (effectiveMob) {
-                return Math.min(1920, Math.round(rawW * scaleFactor));
+                const mobW = Math.max(560, rawW);
+                return Math.min(1920, Math.round(mobW * scaleFactor));
               }
               // FullHD (1920x1080) Logical Scale for Desktop & Phone Landscape / Desktop Site Mode while preserving exact panel aspect ratio!
               const aspect = rawH / Math.max(1, rawW);
@@ -8174,7 +8175,9 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
               const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
               const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
               if (effectiveMob) {
-                return Math.min(1080, Math.round(rawH * scaleFactor));
+                const mobW = Math.max(560, rawW);
+                const mobH = Math.round(rawH * (mobW / Math.max(1, rawW)));
+                return Math.min(1080, Math.round(mobH * scaleFactor));
               }
               const aspect = rawH / Math.max(1, rawW);
               let fhdW = 1920;
@@ -9138,21 +9141,25 @@ function AgentBrowserPreview({
       const dt = Math.min(32, Math.max(8, now - lastTs));
       lastTs = now;
 
-      // Exponential friction decay (0.92 per 16ms frame)
-      const decay = Math.pow(0.92, dt / 16.67);
+      // Smooth mobile Safari/Chrome friction decay (0.95 per 16ms frame)
+      const decay = Math.pow(0.95, dt / 16.67);
       vx *= decay;
       vy *= decay;
 
       const stepDx = vx * dt;
       const stepDy = vy * dt;
 
-      if (Math.hypot(stepDx, stepDy) < 0.8) {
+      if (Math.hypot(stepDx, stepDy) < 0.45) {
         inertiaRafRef.current = 0;
         return;
       }
 
-      const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.8 : -stepDx * 1.8;
-      const scrollDeltaY = isLandscapeRotated ? stepDx * 1.8 : -stepDy * 1.8;
+      const boxRect = viewportBoxRef.current?.getBoundingClientRect();
+      const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
+      const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
+      const touchScale = Math.max(1.85, Math.min(2.6, (logicalW / dispW) * 1.35));
+      const scrollDeltaX = isLandscapeRotated ? -stepDy * touchScale : -stepDx * touchScale;
+      const scrollDeltaY = isLandscapeRotated ? stepDx * touchScale : -stepDy * touchScale;
       const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
       if (scrollHeight > clientHeight && Math.abs(scrollDeltaY) > 0.05) {
         const nextTop = Math.max(0, Math.min(scrollHeight - clientHeight, scrollTop + scrollDeltaY));
@@ -9282,8 +9289,12 @@ function AgentBrowserPreview({
           lastTouchScrollSentAtRef.current = now;
 
           // Enhancement 4: 2-Touch bidirectional smooth horizontal and vertical scrolling
-          const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.65 : -stepDx * 1.65;
-          const scrollDeltaY = isLandscapeRotated ? stepDx * 1.65 : -stepDy * 1.65;
+          const boxRect = viewportBoxRef.current?.getBoundingClientRect();
+          const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
+          const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
+          const touchScale = Math.max(1.8, Math.min(2.5, (logicalW / dispW) * 1.3));
+          const scrollDeltaX = isLandscapeRotated ? -stepDy * touchScale : -stepDx * touchScale;
+          const scrollDeltaY = isLandscapeRotated ? stepDx * touchScale : -stepDy * touchScale;
 
           const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
           if (scrollHeight > clientHeight) {
@@ -9380,24 +9391,30 @@ function AgentBrowserPreview({
       }
     } else {
       // MODE 1: TOUCH MODE — Real-time 60Hz drag scroll + velocity tracking for kinetic inertia!
-      if (totalMove > 2.5) {
-        g.moved = true;
+      if (totalMove > 1.5) {
+        if (totalMove > 5) {
+          g.moved = true;
+        }
         const stepDx = clientX - g.lastX;
         const stepDy = clientY - g.lastY;
-        if (Math.hypot(stepDx, stepDy) > 0.3) {
+        if (Math.hypot(stepDx, stepDy) > 0.2) {
           const instVx = stepDx / dt;
           const instVy = stepDy / dt;
-          g.vx = g.vx * 0.55 + instVx * 0.45;
-          g.vy = g.vy * 0.55 + instVy * 0.45;
+          g.vx = g.vx * 0.45 + instVx * 0.55;
+          g.vy = g.vy * 0.45 + instVy * 0.55;
         }
         g.lastX = clientX;
         g.lastY = clientY;
         g.lastTime = now;
-        if (Math.hypot(stepDx, stepDy) > 0.25) {
+        if (Math.hypot(stepDx, stepDy) > 0.15) {
           lastTouchScrollSentAtRef.current = now;
           const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
-          const scrollDeltaX = isLandscapeRotated ? -stepDy * 1.65 : -stepDx * 1.65;
-          const scrollDeltaY = isLandscapeRotated ? stepDx * 1.65 : -stepDy * 1.65;
+          const boxRect = viewportBoxRef.current?.getBoundingClientRect();
+          const dispW = Math.max(320, isLandscapeRotated ? (boxRect?.height || 640) : (boxRect?.width || 390));
+          const logicalW = Math.max(dispW, latestViewportRef.current.w || 560);
+          const touchScale = Math.max(1.85, Math.min(2.6, (logicalW / dispW) * 1.35));
+          const scrollDeltaX = isLandscapeRotated ? -stepDy * touchScale : -stepDx * touchScale;
+          const scrollDeltaY = isLandscapeRotated ? stepDx * touchScale : -stepDy * touchScale;
           // Optimistically update scrollbar thumb & predictive GPU offset during touch scroll
           const { scrollTop, scrollHeight, clientHeight } = scrollMetricsRef.current;
           if (scrollHeight > clientHeight) {
@@ -9536,8 +9553,8 @@ function AgentBrowserPreview({
           pageId,
         });
       }
-    } else if (Math.hypot(g.vx, g.vy) > 0.18) {
-      // Launch smooth kinetic momentum scroll when user flicks finger!
+    } else if ((performance.now() - g.lastTime < 95) && Math.hypot(g.vx, g.vy) > 0.12) {
+      // Launch smooth kinetic momentum scroll when user flicks finger (skip if user held finger stationary before lifting)!
       const coords = computeNormalizedCoords(g.startX, g.startY) || { xRatio: 0.5, yRatio: 0.5 };
       startInertiaScroll(g.vx, g.vy, coords.xRatio, coords.yRatio);
     }
@@ -25560,7 +25577,7 @@ ${chat.id}`);
                           ))}
                         </ul>
                       ) : (
-                        <p className="text-xs text-neutral-400 italic">(Slide không có văn bản phụ)</p>
+                        <p style={{ color: "#cbd5e1" }} className="text-xs italic">(Slide không có văn bản phụ)</p>
                       )}
                     </div>
                   ))}
@@ -25978,12 +25995,12 @@ ${chat.id}`);
       {isRealtimeVoiceOpen && (
         <div
           data-testid="realtime-voice-modal"
-          className="fixed inset-0 z-[120] bg-black/85 backdrop-blur-md flex flex-col items-center justify-between p-6 text-white animate-in fade-in duration-200 select-none"
+          style={{ backgroundColor: "rgba(10, 10, 15, 0.94)", backdropFilter: "blur(12px)", color: "#ffffff" }} className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 text-white animate-in fade-in duration-200 select-none"
         >
           <div className="w-full max-w-lg flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className="h-2.5 w-2.5 rounded-full bg-[#1a73e8] animate-pulse" />
-              <span className="text-xs font-mono uppercase tracking-wider text-neutral-300">
+              <span style={{ color: "#e2e8f0" }} className="text-xs font-mono uppercase tracking-wider">
                 Live Voice Chat • {selectedAgent?.name || "Agent"} (Node 5a54d0)
               </span>
             </div>
@@ -26018,7 +26035,7 @@ ${chat.id}`);
             </div>
 
             <div className="space-y-2">
-              <div className="text-base font-semibold tracking-tight">
+              <div style={{ color: "#ffffff" }} className="text-base font-semibold tracking-tight">
                 {realtimeVoiceStatus === "connecting" && "Đang kết nối Voice Gateway..."}
                 {realtimeVoiceStatus === "listening" && "Đang lắng nghe... (Nhấn vào biểu tượng để nói / gửi)"}
                 {realtimeVoiceStatus === "thinking" && "Đang suy nghĩ..."}
@@ -26026,10 +26043,10 @@ ${chat.id}`);
                 {realtimeVoiceStatus === "idle" && "Sẵn sàng đàm thoại"}
               </div>
               {realtimeTranscript && (
-                <p className="text-xs text-neutral-400 italic">"{realtimeTranscript}"</p>
+                <p style={{ color: "#cbd5e1" }} className="text-xs italic">"{realtimeTranscript}"</p>
               )}
               {realtimeBotReply && (
-                <p className="text-sm text-neutral-200 max-h-32 overflow-y-auto px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                <p style={{ color: "#f1f5f9", backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.16)" }} className="text-sm max-h-32 overflow-y-auto px-4 py-2.5 rounded-xl border">
                   {realtimeBotReply}
                 </p>
               )}
