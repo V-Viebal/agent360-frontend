@@ -323,7 +323,7 @@ export function A2ATopologyGraphModal({
         className="w-full max-w-6xl max-h-[92vh] bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Header (aligned with SettingsModal & Skyer Design Pattern) */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
+        <div className="px-4 py-2.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0">
               <Share2 size={17} />
@@ -503,7 +503,7 @@ export function A2ATopologyGraphModal({
         </div>
 
         {/* Toolbar: Search & Node Filters */}
-        <div className="px-6 py-2.5 bg-white dark:bg-[#14141c] border-b border-[#20202c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs select-none">
+        <div className="px-4 py-1.5 bg-white dark:bg-[#14141c] border-b border-[#20202c] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs select-none">
           <div className="flex items-center gap-2 flex-1 max-w-md bg-[#1a1a24] border border-[#2a2a3c] focus-within:border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] rounded-xl px-3 py-1.5 transition-colors">
             <Search size={13} className="text-slate-500 dark:text-neutral-400 shrink-0" />
             <input
@@ -850,7 +850,7 @@ export function A2ATopologyGraphModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-4 py-2 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <span>{t("topology.footerBrand")}</span>
           <button
             type="button"

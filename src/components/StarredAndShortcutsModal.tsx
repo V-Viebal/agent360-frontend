@@ -68,7 +68,7 @@ export function StarredAndShortcutsModal({
       maxWidth="xl"
     >
       {/* Content Body */}
-      <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
+      <div className="p-3 max-h-[60vh] overflow-y-auto space-y-2">
         {activeTab === "starred" ? (
           starredMessages.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
@@ -172,7 +172,7 @@ export function StarredAndShortcutsModal({
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-3 border-t border-slate-200 dark:border-[#22222e] bg-slate-50 dark:bg-[#161620] flex items-center justify-between text-[11px] text-neutral-500">
+      <div className="px-4 py-2 border-t border-slate-200 dark:border-[#22222e] bg-slate-50 dark:bg-[#161620] flex items-center justify-between text-[11px] text-neutral-500">
         <span className="font-mono">
           {activeTab === "starred" ? `${starredMessages.length} mục đã lưu` : "Tối ưu cho luồng làm việc tốc độ cao"}
         </span>

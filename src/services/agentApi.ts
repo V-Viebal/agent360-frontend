@@ -1072,6 +1072,8 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
       }
       let roomCtxIdx = userContent.indexOf("[SHARED SESSION ROOM CONTEXT]");
       if (roomCtxIdx < 0) roomCtxIdx = userContent.indexOf("[AGENTTEAMS COLLABORATION ROOM");
+      const skyerAwareIdx = userContent.indexOf("[SKYER PLATFORM CHANNEL & APP CONNECTION AWARENESS]");
+      if (skyerAwareIdx >= 0 && (roomCtxIdx < 0 || skyerAwareIdx < roomCtxIdx)) roomCtxIdx = skyerAwareIdx;
       if (roomCtxIdx >= 0) {
         const tail = userContent.slice(roomCtxIdx);
         let head = userContent.slice(0, roomCtxIdx).trimEnd();

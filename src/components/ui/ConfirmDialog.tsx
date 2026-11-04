@@ -63,7 +63,7 @@ export function ConfirmDialog({
       icon={icon}
       maxWidth="sm"
     >
-      <div className="p-5 space-y-4">
+      <div className="p-3.5 space-y-3">
         <div className="text-xs text-slate-600 dark:text-neutral-300 leading-relaxed font-sans">
           {description}
         </div>

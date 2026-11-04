@@ -45,7 +45,7 @@ export function SlideOverDrawer({
         className={`relative w-full ${width} bg-white dark:bg-[#14141c] border-l border-slate-200 dark:border-[#242432] shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-right duration-200 text-slate-900 dark:text-white`}
       >
         {/* Drawer Header */}
-        <div className="h-14 px-5 border-b border-slate-200 dark:border-[#22222e] bg-white dark:bg-[#161622] flex items-center justify-between shrink-0">
+        <div className="h-12 px-4 border-b border-slate-200 dark:border-[#22222e] bg-white dark:bg-[#161622] flex items-center justify-between shrink-0">
           <div className="min-w-0 pr-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{title}</h3>
             {subtitle && <p className="text-[11px] text-slate-500 dark:text-neutral-400 font-mono truncate">{subtitle}</p>}
@@ -60,7 +60,7 @@ export function SlideOverDrawer({
         </div>
 
         {/* Drawer Body (Scrollable) */}
-        <div className="flex-1 overflow-y-auto scrollbar-hover p-5 space-y-5 text-xs font-sans">
+        <div className="flex-1 overflow-y-auto scrollbar-hover p-3.5 space-y-3.5 text-xs font-sans">
           {children}
         </div>
 

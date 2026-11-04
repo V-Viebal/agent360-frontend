@@ -283,7 +283,7 @@ export function CommandPaletteModal({
         className="w-full max-w-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Search Input Bar */}
-        <div className="h-14 px-4 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-3 bg-slate-50 dark:bg-[#161620]">
+        <div className="h-11 px-3.5 border-b border-slate-200 dark:border-[#22222e] flex items-center gap-3 bg-slate-50 dark:bg-[#161620]">
           <Search size={18} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0" />
           <input
             ref={inputRef}
@@ -324,7 +324,7 @@ export function CommandPaletteModal({
                 key={item.id}
                 onClick={item.action}
                 onMouseEnter={() => setSelectedIndex(idx)}
-                className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
+                className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
                   isSelected
                     ? "bg-amber-500/10 text-slate-900 dark:text-white border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] shadow-xs"
                     : "hover:bg-slate-50 dark:bg-[#181822] text-slate-700 dark:text-neutral-300 border border-transparent"
@@ -358,7 +358,7 @@ export function CommandPaletteModal({
         </div>
 
         {/* Footer shortcuts */}
-        <div className="px-4 py-2.5 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500 select-none">
+        <div className="px-3.5 py-1.5 bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500 select-none">
           <div className="flex items-center gap-3">
             <span>{t("cmdPalette.navigate")}</span>
             <span>{t("cmdPalette.select")}</span>

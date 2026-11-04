@@ -64,11 +64,11 @@ export function Modal({
       >
         {/* Header */}
         {(title || icon) && (
-          <div className="px-4 py-3 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between shrink-0 select-none">
+          <div className="px-3.5 py-2.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between shrink-0 select-none">
             <div className="flex items-center gap-2 min-w-0">
               {icon && <span className="shrink-0 text-[var(--agent-light)] dark:text-[var(--agent-dark)]">{icon}</span>}
               {typeof title === "string" ? (
-                <span className="text-[14px] font-semibold text-slate-800 dark:text-white tracking-wide uppercase font-mono truncate">
+                <span className="text-[14px] font-semibold text-slate-900 dark:text-white tracking-tight font-sans truncate">
                   {title}
                 </span>
               ) : (

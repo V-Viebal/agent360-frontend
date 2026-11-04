@@ -71,10 +71,10 @@ export function ContactModal({
   };
 
   return (
-    <div className="grok-modal-scope fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="grok-modal-scope font-sans fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-xl bg-[var(--bg-page)] border border-neutral-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[var(--text-primary)]">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02]">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-200 dark:border-white/10 bg-neutral-50/50 dark:bg-white/[0.02]">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[#f8a87c]/15 text-[#f8a87c] border border-[#f8a87c]/30">
               {category === "request_agent" ? <Bot size={20} /> : <Mail size={20} />}
@@ -97,7 +97,7 @@ export function ContactModal({
         </div>
 
         {/* Form or Success State */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        <div className="p-4 overflow-y-auto space-y-3.5">
           {status === "success" ? (
             <div className="py-8 text-center space-y-4">
               <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">

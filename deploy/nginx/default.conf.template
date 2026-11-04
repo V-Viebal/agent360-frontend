@@ -40,8 +40,8 @@ server {
 
     location /api/ {
         proxy_pass http://${AGENT360_BACKEND_UPSTREAM}/api/v1/;
-        proxy_read_timeout 330s;
-        proxy_send_timeout 330s;
+        proxy_read_timeout 900s;
+        proxy_send_timeout 900s;
         proxy_buffering off;
         proxy_cache off;
         proxy_connect_timeout 5s;

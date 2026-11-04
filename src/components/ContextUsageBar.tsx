@@ -126,9 +126,7 @@ export function ContextUsageBar({
             }
             if (touchTimerRef.current) clearTimeout(touchTimerRef.current);
             touchTimerRef.current = setTimeout(() => {
-              if (typeof window !== "undefined" && "vibrate" in navigator) {
-                try { navigator.vibrate(20); } catch {}
-              }
+// vibration disabled
               setShowMobileTooltip(true);
             }, 350);
           }}

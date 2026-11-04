@@ -107,7 +107,7 @@ export function ToolSchemaInspectorModal({
       icon={<Wrench size={16} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="2xl"
     >
-      <div className="p-5 space-y-4">
+      <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs text-slate-500 dark:text-neutral-400">
             Discovered schemas from Composio remote MCP protocol populated in SKILL.md

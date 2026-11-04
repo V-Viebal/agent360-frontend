@@ -58,9 +58,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const playThemeToggleSound = () => {
     try {
       // Micro haptic vibration
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate(15);
-      }
+// vibration disabled
       // Subtle pleasant Web Audio API pop sound (frequency glide from 440Hz to 660Hz in 50ms)
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtx) {

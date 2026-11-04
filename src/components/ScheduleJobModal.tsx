@@ -225,7 +225,7 @@ export function ScheduleJobModal({
     <div className="grok-modal-scope fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150 select-none">
       <div style={{ "--agent-color": agentTheme.dark, "--agent-light": agentTheme.light } as React.CSSProperties} className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] shadow-2xl overflow-hidden font-sans text-xs text-slate-800 dark:text-neutral-200">
         {/* Header */}
-        <div className="px-5 py-3.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-[#181822] border-b border-slate-200 dark:border-[#242432] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div
               style={{
@@ -253,7 +253,7 @@ export function ScheduleJobModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSave} className="p-5 space-y-4">
+        <form onSubmit={handleSave} className="p-3.5 space-y-3">
           {/* 1. Name */}
           <div className="space-y-1.5">
             <label className="text-slate-700 dark:text-neutral-300 font-medium text-xs">

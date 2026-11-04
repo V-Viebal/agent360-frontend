@@ -200,7 +200,7 @@ export function VoiceRecordSettingsModal({
         className="w-full max-w-md bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#262634] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
+        <div className="px-4 py-2.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620]">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] flex items-center justify-center text-[var(--agent-light)] dark:text-[var(--agent-dark)]">
               <Mic size={18} />
@@ -516,7 +516,7 @@ export function VoiceRecordSettingsModal({
         </div>
 
         {/* Footer info */}
-        <div className="px-5 py-3 bg-slate-50 dark:bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
+        <div className="px-4 py-2 bg-slate-50 dark:bg-[#0f0f15] border-t border-slate-200 dark:border-[#1e1e28] flex items-center justify-between text-[11px] font-mono text-neutral-500">
           <div className="flex items-center gap-2">
             {onOpenPermissions && (
               <button

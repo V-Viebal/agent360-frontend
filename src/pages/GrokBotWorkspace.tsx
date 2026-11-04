@@ -19,26 +19,17 @@ function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { chan
     );
   }
 
-  // 2. Official Zalo Logo SVG (Iconic Speech Bubble with White Lettermark)
+  // 2. Official Zalo Logo SVG (Official Crisp Wordmark on Blue Squircle)
   if (ch === "zalo") {
     return (
-      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" className="shrink-0 select-none" aria-label="Zalo">
-        <rect width="48" height="48" rx="12" fill="#0068FF" />
-        <path
-          d="M34.5 13H13.5C10.5 13 8 15.5 8 18.5V29.5C8 32.5 10.5 35 13.5 35H18L21 38.5C21.4 39 22.2 39 22.6 38.5L25.6 35H34.5C37.5 35 40 32.5 40 29.5V18.5C40 15.5 37.5 13 34.5 13Z"
-          fill="#0052CC"
-          opacity="0.35"
-        />
-        {/* Zalo official typography mark */}
-        <path
-          d="M14 20H23L16 28H23.5V30.5H13.5L20.5 22.5H14V20Z"
-          fill="white"
-        />
-        <circle cx="28" cy="25" r="3.2" fill="white" />
-        <path
-          d="M33 19H35.5V30.5H33V19Z"
-          fill="white"
-        />
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Zalo">
+        <rect width="24" height="24" rx="5.5" fill="#0068FF"/>
+        <g transform="translate(3.25, 3.27) scale(0.729)">
+          <path
+            d="M12.49 10.2722v-.4496h1.3467v6.3218h-.7704a.576.576 0 01-.5763-.5729l-.0006.0005a3.273 3.273 0 01-1.9372.6321c-1.8138 0-3.2844-1.4697-3.2844-3.2823 0-1.8125 1.4706-3.2822 3.2844-3.2822a3.273 3.273 0 011.9372.6321l.0006.0005zM6.9188 7.7896v.205c0 .3823-.051.6944-.2995 1.0605l-.03.0343c-.0542.0615-.1815.206-.2421.2843L2.024 14.8h4.8948v.7682a.5764.5764 0 01-.5767.5761H0v-.3622c0-.4436.1102-.6414.2495-.8476L4.8582 9.23H.1922V7.7896h6.7266zm8.5513 8.3548a.4805.4805 0 01-.4803-.4798v-7.875h1.4416v8.3548H15.47zM20.6934 9.6C22.52 9.6 24 11.0807 24 12.9044c0 1.8252-1.4801 3.306-3.3066 3.306-1.8264 0-3.3066-1.4808-3.3066-3.306 0-1.8237 1.4802-3.3044 3.3066-3.3044zm-10.1412 5.253c1.0675 0 1.9324-.8645 1.9324-1.9312 0-1.065-.865-1.9295-1.9324-1.9295s-1.9324.8644-1.9324 1.9295c0 1.0667.865 1.9312 1.9324 1.9312zm10.1412-.0033c1.0737 0 1.945-.8707 1.945-1.9453 0-1.073-.8713-1.9436-1.945-1.9436-1.0753 0-1.945.8706-1.945 1.9453 0 1.0746.8697 1.9453 1.945 1.9453z"
+            fill="white"
+          />
+        </g>
       </svg>
     );
   }
@@ -64,6 +55,61 @@ function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { chan
         <path d="M9.93 5.04a2.02 2.02 0 1 1-2.02-2.02v2.02h2.02zm0 1.01a2.02 2.02 0 0 1 0 4.04H4.88a2.02 2.02 0 1 1 0-4.04h5.05z" fill="#36C5F0"/>
         <path d="M18.96 9.93a2.02 2.02 0 1 1 2.02 2.02h-2.02V9.93zm-1.01 0a2.02 2.02 0 0 1-4.04 0V4.88a2.02 2.02 0 1 1 4.04 0v5.05z" fill="#2EB67D"/>
         <path d="M14.07 18.96a2.02 2.02 0 1 1 2.02 2.02v-2.02h-2.02zm0-1.01a2.02 2.02 0 0 1 0-4.04h5.05a2.02 2.02 0 1 1 0 4.04h-5.05z" fill="#ECB22E"/>
+      </svg>
+    );
+  }
+
+  // 4b. Official Microsoft Teams Logo SVG
+  if (ch === "teams" || ch === "msteams" || ch === "microsoft teams") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Microsoft Teams">
+        <rect width="24" height="24" rx="6" fill="#464EB8"/>
+        {/* Teams double user / T mark */}
+        <path d="M14.5 9.5C15.6 9.5 16.5 8.6 16.5 7.5C16.5 6.4 15.6 5.5 14.5 5.5C13.4 5.5 12.5 6.4 12.5 7.5C12.5 8.6 13.4 9.5 14.5 9.5ZM17.5 10.5H15.5C14.7 10.5 14 11 13.7 11.7C14.7 12.3 15.5 13.3 15.5 14.5V17.5H19.5C20.1 17.5 20.5 17.1 20.5 16.5V13.5C20.5 11.8 19.2 10.5 17.5 10.5ZM10 10C11.4 10 12.5 8.9 12.5 7.5C12.5 6.1 11.4 5 10 5C8.6 5 7.5 6.1 7.5 7.5C7.5 8.9 8.6 10 10 10ZM13.5 11.5H6.5C5.1 11.5 4 12.6 4 14V17C4 17.6 4.4 18 5 18H15C15.6 18 16 17.6 16 17V14C16 12.6 14.9 11.5 13.5 11.5Z" fill="white"/>
+      </svg>
+    );
+  }
+
+  // 5. Official WhatsApp Logo SVG
+  if (ch === "whatsapp") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="WhatsApp">
+        <rect width="24" height="24" rx="6" fill="#25D366"/>
+        <path
+          d="M12.04 5C8.16 5 5.01 8.14 5.01 12.01C5.01 13.25 5.33 14.45 5.95 15.51L5 19L8.58 18.06C9.61 18.62 10.81 18.92 12.04 18.92C15.92 18.92 19.07 15.78 19.07 11.91C19.07 8.04 15.92 5 12.04 5ZM15.58 14.9C15.43 15.32 14.71 15.7 14.36 15.75C14.04 15.8 13.64 15.82 13.2 15.68C12.93 15.59 12.59 15.48 12.16 15.29C10.33 14.5 9.14 12.66 9.05 12.54C8.96 12.42 8.31 11.56 8.31 10.67C8.31 9.78 8.78 9.35 8.95 9.17C9.12 8.99 9.32 8.94 9.44 8.94C9.56 8.94 9.68 8.94 9.79 8.95C9.9 8.96 10.05 8.91 10.2 9.26C10.35 9.62 10.71 10.51 10.75 10.6C10.8 10.69 10.83 10.8 10.77 10.92C10.71 11.04 10.68 11.11 10.59 11.22C10.5 11.33 10.4 11.46 10.32 11.54C10.23 11.63 10.14 11.73 10.24 11.91C10.34 12.09 10.71 12.69 11.25 13.17C11.95 13.79 12.53 13.99 12.71 14.08C12.89 14.17 13 14.15 13.1 14.03C13.21 13.91 13.55 13.51 13.67 13.33C13.79 13.15 13.91 13.18 14.08 13.24C14.25 13.3 15.14 13.74 15.32 13.83C15.5 13.92 15.62 13.96 15.67 14.04C15.71 14.13 15.71 14.48 15.58 14.9Z"
+          fill="white"
+        />
+      </svg>
+    );
+  }
+
+  // 6. Official Feishu / Lark Logo SVG
+  if (ch === "feishu" || ch === "lark") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Feishu">
+        <rect width="24" height="24" rx="6" fill="#3370FF"/>
+        <path d="M6.5 8.5L13.5 5.5L11.8 12.2L6.5 8.5Z" fill="#00D6B9"/>
+        <path d="M6.5 8.5L17.5 11.5L11.5 18.5L6.5 8.5Z" fill="white"/>
+      </svg>
+    );
+  }
+
+  // 7. Official DingTalk Logo SVG
+  if (ch === "dingtalk") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="DingTalk">
+        <rect width="24" height="24" rx="6" fill="#0089FF"/>
+        <path d="M7.5 6.5L16.8 9.8C17.4 10 17.5 10.8 16.9 11.2L12.8 13.8L14.5 17.5L9.8 14.2L7.2 15.5L8.6 11.5L6.5 10.2L7.5 6.5Z" fill="white"/>
+      </svg>
+    );
+  }
+
+  // 8. Official Matrix Logo SVG
+  if (ch === "matrix") {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Matrix">
+        <rect width="24" height="24" rx="6" fill="#0DBD8B"/>
+        <path d="M6 6H8.5V7.5H7.5V16.5H8.5V18H6V6ZM18 6H15.5V7.5H16.5V16.5H15.5V18H18V6ZM9.5 9.5H11L12 11.5L13 9.5H14.5V14.5H13.2V11.3L12 13.5L10.8 11.3V14.5H9.5V9.5Z" fill="white"/>
       </svg>
     );
   }
@@ -162,6 +208,7 @@ import {
   Bot,
   Filter,
   SlidersHorizontal,
+  QrCode,
   ExternalLink,
   AlertCircle,
   Sparkles,
@@ -237,6 +284,8 @@ function stripSharedRoomContext(text: string): string {
   }
   let idx = cleaned.indexOf("[SHARED SESSION ROOM CONTEXT]");
   if (idx < 0) idx = cleaned.indexOf("[AGENTTEAMS COLLABORATION ROOM");
+  const skyerAwareIdx = cleaned.indexOf("[SKYER PLATFORM CHANNEL & APP CONNECTION AWARENESS]");
+  if (skyerAwareIdx >= 0 && (idx < 0 || skyerAwareIdx < idx)) idx = skyerAwareIdx;
   if (idx < 0) return cleaned;
   let head = cleaned.slice(0, idx).trimEnd();
   const tail = cleaned.slice(idx);
@@ -1176,6 +1225,9 @@ import {
   fetchSkills,
   fetchAgentChannels,
   toggleAgentChannel,
+  updateAgentChannelConfig,
+  normalizeTelegramChannelDefaults,
+  normalizeZaloChannelDefaults,
   fetchAgentSchedules,
   AgentChannelConfig,
   AgentScheduleJob,
@@ -1213,10 +1265,11 @@ import {
   fetchAgentPinnedMessages,
   deleteChatApi,
   toggleArchiveChatApi,
+  authorizedFetch,
   submitChatInteraction,
   ClaimedInteractionRecord,
 } from "../services/agentApi";
-import { sendConsoleChatMessageStream } from "../services/chatStream";
+import { sendConsoleChatMessageStream, SessionBusyConflictError } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
 import { subAgentApi, SubAgentBinding } from "../services/subAgentApi";
 import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPreviewUrl, classifyAttachmentFormat, AttachmentFormatKind } from "../services/uploadApi";
@@ -4030,17 +4083,188 @@ export interface SkyerInteractiveOption {
   prompt?: string;
   url?: string;
   copy_text?: string;
+  appSlug?: string;
+  logoUrl?: string;
+  description?: string;
+  channelType?: string;
+  channelMode?: "web" | "webhook" | "bot";
+  requiresToken?: boolean;
 }
 
 export interface SkyerInteractiveWidget {
   interactionId: string;
-  kind: "options" | "poll" | "force_reply" | "reply_keyboard";
+  kind: "options" | "poll" | "force_reply" | "reply_keyboard" | "connect_app" | "connect_channel";
   promptText: string;
   actionType?: string;
   columns?: number;
   allowsMultiple?: boolean;
   placeholder?: string;
   options: SkyerInteractiveOption[];
+}
+
+export interface ChannelConnectionCatalogItem {
+  id: string;
+  name: string;
+  description: string;
+  requiresToken: boolean;
+  defaultMode: "web" | "webhook" | "bot";
+  aliases: string[];
+}
+
+export const CHANNEL_CONNECTION_CATALOG: ChannelConnectionCatalogItem[] = [
+  {
+    id: "zalo",
+    name: "Zalo",
+    description: "Mặc định: Zalo Web (Quét QR tài khoản Zalo cá nhân/nhóm trên trình duyệt Agent) • Hoặc Bot Token",
+    requiresToken: false,
+    defaultMode: "web",
+    aliases: ["zalo", "chat.zalo.me", "zalo web", "zalo oa", "zalo zns", "zalo bot", "kênh zalo", "tài khoản zalo"],
+  },
+  {
+    id: "telegram",
+    name: "Telegram",
+    description: "Kết nối Bot Telegram qua @BotFather Token, hỗ trợ nhóm & tin nhắn riêng",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["telegram", "@botfather", "botfather", "tg bot", "kênh telegram", "bot telegram"],
+  },
+  {
+    id: "discord",
+    name: "Discord",
+    description: "Kết nối Discord Bot vào Server & kênh thảo luận nhóm",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["discord", "kênh discord", "discord bot"],
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    description: "Tích hợp Slack Bot vào Workspace để nhận lệnh và báo cáo",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["slack", "kênh slack", "slack bot"],
+  },
+  {
+    id: "teams",
+    name: "Microsoft Teams",
+    description: "Kết nối Microsoft Teams Bot vào Workspace và nhóm kênh",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["teams", "msteams", "microsoft teams", "ms teams", "kênh teams"],
+  },
+  {
+    id: "whatsapp",
+    name: "WhatsApp",
+    description: "Kết nối WhatsApp Business / QR để nhận và phản hồi tin nhắn",
+    requiresToken: false,
+    defaultMode: "web",
+    aliases: ["whatsapp", "kênh whatsapp", "whatsapp bot", "wa"],
+  },
+  {
+    id: "feishu",
+    name: "Feishu / Lark",
+    description: "Kết nối Feishu / Lark Bot vào không gian làm việc doanh nghiệp",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["feishu", "lark", "kênh feishu", "kênh lark", "feishu bot"],
+  },
+  {
+    id: "dingtalk",
+    name: "DingTalk",
+    description: "Tích hợp DingTalk Stream / Webhook Bot cho nhóm nội bộ",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["dingtalk", "kênh dingtalk", "dingtalk bot"],
+  },
+  {
+    id: "matrix",
+    name: "Matrix",
+    description: "Kết nối Matrix Homeserver (Element / HiClaw) qua Access Token",
+    requiresToken: true,
+    defaultMode: "bot",
+    aliases: ["matrix", "element", "kênh matrix", "matrix bot"],
+  },
+];
+
+function resolveChannelsFromText(text: string): SkyerInteractiveOption[] {
+  if (!text) return [];
+  const low = text.toLowerCase();
+  const matched: SkyerInteractiveOption[] = [];
+  const seen = new Set<string>();
+  for (const ch of CHANNEL_CONNECTION_CATALOG) {
+    const hit = ch.aliases.some((al) => low.includes(al));
+    if (hit && !seen.has(ch.id)) {
+      seen.add(ch.id);
+      matched.push({
+        id: ch.id,
+        channelType: ch.id,
+        channelMode: ch.defaultMode,
+        requiresToken: ch.requiresToken,
+        label: ch.name,
+        description: ch.description,
+        prompt: `Tôi đã thiết lập và bật kênh ${ch.name} (/${ch.id}), hãy kiểm tra kết nối và tiếp tục.`,
+      });
+    }
+  }
+  return matched;
+}
+
+function resolveCatalogAppsFromText(text: string): SkyerInteractiveOption[] {
+  if (!text) return [];
+  const low = text.toLowerCase();
+  const matched: SkyerInteractiveOption[] = [];
+  const seen = new Set<string>();
+  const EXTRA_ALIASES: Record<string, string[]> = {
+    gmail: ["gmail", "google mail", "email", "hộp thư"],
+    googlecalendar: ["google calendar", "lịch google", "calendar"],
+    googledrive: ["google drive", "drive"],
+    googledocs: ["google docs", "docs"],
+    googlesheets: ["google sheets", "sheets", "bảng tính"],
+    github: ["github", "git repo", "pull request"],
+    gitlab: ["gitlab"],
+    notion: ["notion"],
+    slack: ["slack"],
+    discord: ["discord"],
+    telegram: ["telegram"],
+    jira: ["jira"],
+    linear: ["linear"],
+    trello: ["trello"],
+    asana: ["asana"],
+    clickup: ["clickup"],
+    figma: ["figma"],
+    canva: ["canva"],
+    stripe: ["stripe"],
+    shopify: ["shopify"],
+    hubspot: ["hubspot"],
+    salesforce: ["salesforce"],
+    supabase: ["supabase"],
+    cloudflare: ["cloudflare"],
+    vercel: ["vercel"],
+    postgres: ["postgres", "postgresql"],
+  };
+  for (const app of APPS_CATALOG) {
+    const slug = app.id.toLowerCase();
+    const aliases = EXTRA_ALIASES[slug] || [slug, app.name.toLowerCase()];
+    const hit = aliases.some((al) => {
+      if (al.length <= 3) {
+        return new RegExp(`\\b${al}\\b`, "i").test(low);
+      }
+      return low.includes(al);
+    });
+    if (hit && !seen.has(slug)) {
+      seen.add(slug);
+      matched.push({
+        id: slug,
+        appSlug: slug,
+        label: app.name,
+        description: app.description,
+        logoUrl: app.logoUrl,
+        prompt: `Tôi đã kết nối ứng dụng ${app.name} (/${slug}), hãy tiếp tục thực hiện yêu cầu.`,
+      });
+    }
+    if (matched.length >= 4) break;
+  }
+  return matched;
 }
 
 export interface BrowserExecutionSummary {
@@ -4170,7 +4394,19 @@ function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: strin
 
   for (const tc of mergedMap.values()) {
     const tLow = (tc.tool || "").toLowerCase();
+    const isConnectChannelTool =
+      tLow.includes("present_connect_channel") ||
+      tLow.includes("request_channel_connection") ||
+      tLow.includes("connect_channel") ||
+      tLow.includes("setup_channel");
+    const isConnectAppTool =
+      !isConnectChannelTool &&
+      (tLow.includes("present_connect_app") ||
+        tLow.includes("request_app_connection") ||
+        tLow.includes("connect_app"));
     const isPresentationTool =
+      isConnectChannelTool ||
+      isConnectAppTool ||
       tLow.includes("present_interactive_options") ||
       tLow.includes("present_telegram_poll") ||
       tLow.includes("present_telegram_input") ||
@@ -4227,14 +4463,32 @@ function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: strin
         (tLow.includes("poll") ? "poll" : tLow.includes("input") ? argsObj?.mode || "force_reply" : "options")
     ).toLowerCase();
 
-    const kind: SkyerInteractiveWidget["kind"] =
-      kindRaw === "poll"
-        ? "poll"
-        : kindRaw === "force_reply"
-        ? "force_reply"
-        : kindRaw === "reply_keyboard"
-        ? "reply_keyboard"
-        : "options";
+    const isConnectChannelKind =
+      isConnectChannelTool ||
+      kindRaw === "connect_channel" ||
+      kindRaw === "connect_channels" ||
+      kindRaw === "setup_channel" ||
+      String(effective.action_type || "").toLowerCase() === "connect_channel" ||
+      String(effective.action_type || "").toLowerCase() === "setup_channel";
+
+    const isConnectKind =
+      !isConnectChannelKind &&
+      (isConnectAppTool ||
+        kindRaw === "connect_app" ||
+        kindRaw === "connect_apps" ||
+        String(effective.action_type || "").toLowerCase() === "connect_app");
+
+    const kind: SkyerInteractiveWidget["kind"] = isConnectChannelKind
+      ? "connect_channel"
+      : isConnectKind
+      ? "connect_app"
+      : kindRaw === "poll"
+      ? "poll"
+      : kindRaw === "force_reply"
+      ? "force_reply"
+      : kindRaw === "reply_keyboard"
+      ? "reply_keyboard"
+      : "options";
 
     const promptText = String(
       effective.prompt_text ||
@@ -4266,7 +4520,75 @@ function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: strin
       });
     }
 
-    if (kind !== "force_reply" && normOptions.length === 0) continue;
+    if (kind === "connect_app") {
+      const explicitApps = Array.isArray(effective.apps || argsObj?.apps)
+        ? (effective.apps || argsObj?.apps)
+        : effective.app_slug || effective.appSlug || argsObj?.app_slug || argsObj?.appSlug
+        ? [effective.app_slug || effective.appSlug || argsObj?.app_slug || argsObj?.appSlug]
+        : [];
+      for (const item of explicitApps) {
+        const rawSlug = typeof item === "string" ? item : item?.id || item?.slug || item?.app_slug || "";
+        const cleanSlug = String(rawSlug).toLowerCase().replace(/^composio_/, "").trim();
+        if (!cleanSlug) continue;
+        const catalogApp = APPS_CATALOG.find((a) => a.id.toLowerCase() === cleanSlug);
+        normOptions.push({
+          id: cleanSlug,
+          appSlug: cleanSlug,
+          label: catalogApp?.name || (typeof item === "object" && item?.name) || cleanSlug,
+          description: catalogApp?.description || (typeof item === "object" && item?.description) || `Tích hợp công cụ ${cleanSlug} qua Composio MCP`,
+          logoUrl: catalogApp?.logoUrl || `https://logos.composio.dev/api/${cleanSlug}`,
+          prompt: `Tôi đã kết nối ứng dụng ${catalogApp?.name || cleanSlug} (/${cleanSlug}), hãy tiếp tục.`,
+        });
+      }
+      if (normOptions.length === 0) {
+        const inferred = resolveCatalogAppsFromText(`${promptText} ${cleanContent}`);
+        normOptions.push(...inferred);
+      }
+    }
+    if (kind === "connect_channel") {
+      const explicitChannels = Array.isArray(effective.channels || argsObj?.channels)
+        ? (effective.channels || argsObj?.channels)
+        : effective.channel_type || effective.channelType || effective.channel || argsObj?.channel_type || argsObj?.channelType || argsObj?.channel
+        ? [effective.channel_type || effective.channelType || effective.channel || argsObj?.channel_type || argsObj?.channelType || argsObj?.channel]
+        : [];
+      for (const item of explicitChannels) {
+        const rawType = typeof item === "string" ? item : item?.type || item?.channel_type || item?.id || "";
+        const cleanType = String(rawType).toLowerCase().trim();
+        if (!cleanType) continue;
+        const catCh = CHANNEL_CONNECTION_CATALOG.find((c) => c.id === cleanType);
+        if (normOptions.some((o) => (o.channelType || o.id).toLowerCase() === cleanType)) continue;
+        normOptions.push({
+          id: cleanType,
+          channelType: cleanType,
+          channelMode: (typeof item === "object" && item?.mode) || catCh?.defaultMode || (cleanType === "zalo" ? "web" : "bot"),
+          requiresToken: catCh ? catCh.requiresToken : cleanType !== "zalo",
+          label: catCh?.name || (typeof item === "object" && item?.name) || cleanType.toUpperCase(),
+          description:
+            catCh?.description ||
+            (typeof item === "object" && item?.description) ||
+            `Thiết lập và bật kênh giao tiếp ${cleanType.toUpperCase()} cho Agent`,
+          prompt: `Tôi đã thiết lập và bật kênh ${catCh?.name || cleanType.toUpperCase()} (/${cleanType}), hãy tiếp tục.`,
+        });
+      }
+      if (normOptions.length === 0) {
+        const inferred = resolveChannelsFromText(`${promptText} ${cleanContent}`);
+        normOptions.push(...inferred);
+      }
+      if (normOptions.length === 0) {
+        for (const ch of CHANNEL_CONNECTION_CATALOG) {
+          normOptions.push({
+            id: ch.id,
+            channelType: ch.id,
+            channelMode: ch.defaultMode,
+            requiresToken: ch.requiresToken,
+            label: ch.name,
+            description: ch.description,
+            prompt: `Tôi đã thiết lập và bật kênh ${ch.name} (/${ch.id}), hãy tiếp tục.`,
+          });
+        }
+      }
+    }
+    if (kind !== "force_reply" && kind !== "connect_app" && kind !== "connect_channel" && normOptions.length === 0) continue;
 
     const interactionId = String(
       effective.interaction_id || effective.menu_token || `ix_${msg.id}_${widgets.length}`
@@ -4284,6 +4606,111 @@ function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: strin
       placeholder: String(effective.placeholder || argsObj?.placeholder || "Nhập thông tin phản hồi..."),
       options: normOptions,
     });
+  }
+
+  // Parse inline ```skyer-interaction/v1 or JSON fenced blocks from assistant prose
+  if (cleanContent && (cleanContent.includes("skyer-interaction/v1") || cleanContent.includes('"connect_channel"') || cleanContent.includes('"connect_app"'))) {
+    const fencedRegex = /```(?:skyer-interaction\/v1|json)?\s*\n([\s\S]*?)```/gi;
+    let fm: RegExpExecArray | null;
+    while ((fm = fencedRegex.exec(cleanContent)) !== null) {
+      const rawBlock = (fm[1] || "").trim();
+      if (!rawBlock.startsWith("{")) continue;
+      try {
+        const parsed = JSON.parse(rawBlock);
+        const eff = parsed.intent && typeof parsed.intent === "object" ? parsed.intent : parsed;
+        const kRaw = String(eff.kind || eff.type || eff.action_type || "").toLowerCase();
+        const isMisleadingChannelMethodChoice =
+          (kRaw === "choice" || kRaw === "options" || !kRaw) &&
+          Array.isArray(eff.options) &&
+          eff.options.some((o: any) =>
+            /(?:zalo\s*oa|official\s*account|zns|webhook|nền\s*tảng\s*trung\s*gian|botfather|zalo\s*web)/i.test(
+              typeof o === "string" ? o : `${o?.label || ""} ${o?.text || ""} ${o?.description || ""}`
+            )
+          );
+
+        if (kRaw === "connect_channel" || kRaw === "connect_channels" || kRaw === "setup_channel" || isMisleadingChannelMethodChoice) {
+          const explicitChannels = Array.isArray(eff.channels)
+            ? eff.channels
+            : eff.channel_type || eff.channel
+            ? [eff.channel_type || eff.channel]
+            : [];
+          const normChOpts: SkyerInteractiveOption[] = [];
+          for (const item of explicitChannels) {
+            const rawType = typeof item === "string" ? item : item?.type || item?.channel_type || item?.id || "";
+            const cleanType = String(rawType).toLowerCase().trim();
+            if (!cleanType) continue;
+            const catCh = CHANNEL_CONNECTION_CATALOG.find((c) => c.id === cleanType);
+            if (normChOpts.some((o) => (o.channelType || o.id).toLowerCase() === cleanType)) continue;
+            normChOpts.push({
+              id: cleanType,
+              channelType: cleanType,
+              channelMode: cleanType === "zalo" ? ((typeof item === "object" && item?.mode === "webhook") ? "webhook" : "web") : (catCh?.defaultMode || "bot"),
+              requiresToken: catCh ? catCh.requiresToken : cleanType !== "zalo",
+              label: catCh?.name || cleanType.toUpperCase(),
+              description: catCh?.description || `Thiết lập và bật kênh ${cleanType.toUpperCase()} cho Agent`,
+              prompt: `Tôi đã thiết lập và bật kênh ${catCh?.name || cleanType.toUpperCase()} (/${cleanType}), hãy kiểm tra kết nối và tiếp tục.`,
+            });
+          }
+          if (normChOpts.length === 0) {
+            normChOpts.push(...resolveChannelsFromText(`${eff.title || ""} ${eff.prompt_text || ""} ${cleanContent}`));
+          }
+          if (normChOpts.length === 0) {
+            for (const ch of CHANNEL_CONNECTION_CATALOG) {
+              normChOpts.push({
+                id: ch.id,
+                channelType: ch.id,
+                channelMode: ch.defaultMode,
+                requiresToken: ch.requiresToken,
+                label: ch.name,
+                description: ch.description,
+                prompt: `Tôi đã thiết lập và bật kênh ${ch.name} (/${ch.id}), hãy kiểm tra kết nối và tiếp tục.`,
+              });
+            }
+          }
+          const ixId = String(eff.id || eff.interaction_id || `ix_fenced_channel_${msg.id}`);
+          if (!seenIds.has(ixId)) {
+            seenIds.add(ixId);
+            widgets.push({
+              interactionId: ixId,
+              kind: "connect_channel",
+              promptText: String(eff.title || eff.prompt_text || `Thiết lập kênh giao tiếp (${normChOpts.map((c) => c.label).join(", ")})`),
+              actionType: "connect_channel",
+              options: normChOpts,
+            });
+          }
+        } else if (kRaw === "connect_app" || kRaw === "connect_apps") {
+          const detectedApps = resolveCatalogAppsFromText(`${JSON.stringify(eff.apps || [])} ${cleanContent}`);
+          const ixId = String(eff.id || eff.interaction_id || `ix_fenced_app_${msg.id}`);
+          if (!seenIds.has(ixId)) {
+            seenIds.add(ixId);
+            widgets.push({
+              interactionId: ixId,
+              kind: "connect_app",
+              promptText: String(eff.title || eff.prompt_text || "Kết nối ứng dụng & công cụ MCP"),
+              actionType: "connect_app",
+              options: detectedApps,
+            });
+          }
+        } else if ((kRaw === "choice" || kRaw === "options") && Array.isArray(eff.options) && eff.options.length > 0) {
+          const ixId = String(eff.id || eff.interaction_id || `ix_fenced_opt_${msg.id}_${widgets.length}`);
+          if (!seenIds.has(ixId)) {
+            seenIds.add(ixId);
+            widgets.push({
+              interactionId: ixId,
+              kind: "options",
+              promptText: String(eff.title || eff.prompt_text || eff.question || "Chọn hướng thực hiện"),
+              actionType: "fenced_choice",
+              columns: Number(eff.columns) || 2,
+              options: eff.options.map((o: any, idx: number) => ({
+                id: String(o?.id || `opt_${idx}`),
+                label: String(o?.label || o?.text || o?.title || o || `Lựa chọn ${idx + 1}`).trim(),
+                prompt: String(o?.value || o?.prompt || o?.label || o?.text || o || "").trim(),
+              })),
+            });
+          }
+        }
+      } catch {}
+    }
   }
 
   // Automatic Smart Fallback: detect structured follow-up choices at the end of assistant prose
@@ -4325,6 +4752,68 @@ function extractInteractiveWidgetsFromTurn(msg: ChatMessage, cleanContent: strin
         });
       }
     }
+  }
+
+  // Automatic Channel Connection Card detection when assistant invites or guides setting up Telegram / Zalo / messaging channels
+  const hasConnectChannelWidget = widgets.some((w) => w.kind === "connect_channel");
+  if (!hasConnectChannelWidget && cleanContent && cleanContent.length > 12) {
+    const channelCueRegex =
+      /(?:kết nối kênh|thiết lập kênh|cấu hình kênh|bật kênh|bật kết nối tới kênh|connect channel|setup channel|configure channel|kết nối(?:\s+tài\s+khoản)?\s+telegram|thiết lập telegram|cấu hình telegram|bot telegram|@botfather|bot_token|bot token|kết nối(?:\s+tài\s+khoản)?\s+zalo|tích hợp(?:\s+tài\s+khoản)?\s+zalo|thiết lập zalo|cấu hình zalo|zalo web|chat\.zalo\.me|zalo oa|zalo zns|zalo cá nhân|kênh zalo|kênh liên lạc|kênh chat|kết nối discord|kết nối slack|kết nối whatsapp|kết nối feishu|kết nối lark|kết nối dingtalk|kết nối matrix)/i;
+    if (channelCueRegex.test(cleanContent)) {
+      const detectedChannels = resolveChannelsFromText(cleanContent);
+      const effectiveChannels =
+        detectedChannels.length > 0
+          ? detectedChannels
+          : CHANNEL_CONNECTION_CATALOG.map((ch) => ({
+              id: ch.id,
+              channelType: ch.id,
+              channelMode: ch.defaultMode,
+              requiresToken: ch.requiresToken,
+              label: ch.name,
+              description: ch.description,
+              prompt: `Tôi đã thiết lập và bật kênh ${ch.name} (/${ch.id}), hãy kiểm tra kết nối và tiếp tục.`,
+            }));
+      widgets.push({
+        interactionId: `ix_connect_channel_${msg.id}`,
+        kind: "connect_channel",
+        promptText:
+          detectedChannels.length === 1
+            ? `Thiết lập kênh ${detectedChannels[0].label}`
+            : "Bạn muốn kết nối mình với kênh chat nào?",
+        actionType: "connect_channel",
+        options: effectiveChannels,
+      });
+    }
+  }
+
+  // Automatic Connect App Card detection when assistant invites or needs app/tool connection
+  const hasConnectAppWidget = widgets.some((w) => w.kind === "connect_app");
+  if (!hasConnectAppWidget && !widgets.some((w) => w.kind === "connect_channel") && cleanContent && cleanContent.length > 12) {
+    const connectCueRegex =
+      /(?:kết nối ứng dụng|kết nối app|connect app|connect applications?|chưa kết nối|cần kết nối|hãy kết nối|bấm connect apps|mở connect apps|cấp quyền oauth|liên kết tài khoản|chưa được kết nối|integrat(?:e|ion) with|connect your .* account)/i;
+    if (connectCueRegex.test(cleanContent)) {
+      const detectedApps = resolveCatalogAppsFromText(cleanContent);
+      widgets.push({
+        interactionId: `ix_connect_app_${msg.id}`,
+        kind: "connect_app",
+        promptText:
+          detectedApps.length > 0
+            ? `Kết nối ứng dụng (${detectedApps.map((a) => a.label).join(", ")})`
+            : "Kết nối ứng dụng & công cụ MCP",
+        actionType: "connect_app",
+        options: detectedApps,
+      });
+    }
+  }
+
+  if (widgets.some((w) => w.kind === "connect_channel")) {
+    const filtered = widgets.filter((w) => {
+      if (w.kind !== "options") return true;
+      const combinedOpts = (w.options || []).map((o) => `${o.label} ${o.prompt || ""}`).join(" ");
+      return !/(?:zalo\s*oa|official\s*account|zns|webhook|nền\s*tảng\s*trung\s*gian|botfather|zalo\s*web)/i.test(combinedOpts);
+    });
+    filtered.sort((a, b) => (a.kind === "connect_channel" ? -1 : b.kind === "connect_channel" ? 1 : 0));
+    return filtered;
   }
 
   return widgets;
@@ -4476,22 +4965,50 @@ function InteractiveTurnWidgetsSection({
   messageId,
   claimedMap,
   isTurnBusy,
+  connectedAppIds = [],
+  onOpenConnectApps,
+  onQuickConnectApp,
+  channels = [],
+  onOpenChannelsSettings,
+  onOpenChannelConfig,
+  onQuickSetupChannel,
+  onOpenZaloWebBrowser,
   onSelectOption,
   onSubmitPoll,
   onSubmitInput,
   themePrimary,
+  agentName,
+  agentBrowser,
 }: {
   widgets: SkyerInteractiveWidget[];
   messageId: string;
   claimedMap: Record<string, ClaimedInteractionRecord>;
   isTurnBusy?: boolean;
+  connectedAppIds?: string[];
+  onOpenConnectApps?: (searchQuery?: string) => void;
+  onQuickConnectApp?: (widget: SkyerInteractiveWidget, appOpt: SkyerInteractiveOption) => Promise<void> | void;
+  channels?: AgentChannelConfig[];
+  onOpenChannelsSettings?: () => void;
+  onOpenChannelConfig?: (channelType: string) => void;
+  onQuickSetupChannel?: (
+    widget: SkyerInteractiveWidget,
+    chOpt: SkyerInteractiveOption,
+    inlineConfig?: { botToken?: string; mode?: "web" | "webhook" | "bot" }
+  ) => Promise<void> | void;
+  onOpenZaloWebBrowser?: () => void;
   onSelectOption: (widget: SkyerInteractiveWidget, opt: SkyerInteractiveOption) => void;
   onSubmitPoll: (widget: SkyerInteractiveWidget, selectedOpts: SkyerInteractiveOption[]) => void;
   onSubmitInput: (widget: SkyerInteractiveWidget, value: string) => void;
   themePrimary?: string;
+  agentName?: string;
+  agentBrowser?: AgentBrowserInfo | null;
 }) {
   const [pollSelections, setPollSelections] = useState<Record<string, string[]>>({});
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [channelTokens, setChannelTokens] = useState<Record<string, string>>({});
+  const [channelModes, setChannelModes] = useState<Record<string, "web" | "webhook" | "bot">>({});
+  const [selectedChannelIds, setSelectedChannelIds] = useState<Record<string, string>>({});
+  const [expandedTokenInputs, setExpandedTokenInputs] = useState<Record<string, boolean>>({});
   const [focusedInputId, setFocusedInputId] = useState<string | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -4514,6 +5031,589 @@ function InteractiveTurnWidgetsSection({
             setSubmittingId((prev) => (prev === w.interactionId ? null : prev));
           }, 1800);
         };
+
+        if (w.kind === "connect_channel") {
+          const displayChannels: SkyerInteractiveOption[] =
+            w.options && w.options.length > 0
+              ? w.options
+              : CHANNEL_CONNECTION_CATALOG.map((ch) => ({
+                  id: ch.id,
+                  channelType: ch.id,
+                  channelMode: ch.defaultMode,
+                  requiresToken: ch.requiresToken,
+                  label: ch.name,
+                  description: ch.description,
+                  prompt: `Tôi đã thiết lập và bật kênh ${ch.name} (/${ch.id}), hãy tiếp tục.`,
+                }));
+
+          const rawAgentName = (agentName || "Agent").trim();
+          const displayAgentName = rawAgentName.replace(/\s*\([^)]*\)/g, "").trim() || rawAgentName;
+          const claimedId = (claimed?.selected_ids || [])[0] || "";
+          const chosenChannelId =
+            displayChannels.length === 1
+              ? (displayChannels[0].channelType || displayChannels[0].id).toLowerCase().trim()
+              : (selectedChannelIds[w.interactionId] || claimedId || "").toLowerCase().trim();
+
+          const chosenChannelOpt = chosenChannelId
+            ? displayChannels.find(
+                (c) => (c.channelType || c.id).toLowerCase().trim() === chosenChannelId
+              ) || displayChannels[0]
+            : null;
+          const chosenIdx = chosenChannelOpt
+            ? Math.max(0, displayChannels.indexOf(chosenChannelOpt))
+            : 0;
+          const chosenLetter = String.fromCharCode(65 + (chosenIdx % 26));
+
+          const renderSingleLeanChannelCard = (chOpt: SkyerInteractiveOption) => {
+            const chType = (chOpt.channelType || chOpt.id).toLowerCase().trim();
+            const liveCh = channels.find((c) => c.type.toLowerCase() === chType);
+            const isZalo = chType === "zalo";
+            const isTelegram = chType === "telegram";
+            const tokenKey = `${w.interactionId}_${chType}`;
+            const inlineToken = channelTokens[tokenKey] || "";
+            const currentMode: "web" | "webhook" | "bot" =
+              channelModes[tokenKey] ||
+              (isZalo
+                ? liveCh?.details?.mode === "webhook"
+                  ? "webhook"
+                  : "web"
+                : "bot");
+            const requiresTokenNow =
+              (chOpt.requiresToken ?? (chType !== "zalo" && chType !== "whatsapp")) ||
+              (isZalo && currentMode === "webhook");
+
+            const isConfigEnabled =
+              Boolean(liveCh?.enabled) ||
+              (claimed?.selected_ids || []).includes(chType) ||
+              (claimed?.selected_ids || []).includes(chOpt.id);
+
+            const hasConfiguredToken = Boolean(
+              liveCh?.details?.bot_token ||
+                liveCh?.details?.client_secret ||
+                liveCh?.details?.access_token ||
+                inlineToken.trim()
+            );
+
+            // Real Channel Authentication & Connectivity Determination across all channels:
+            // 1. Zalo in Web mode (QR login):
+            // Check agent browser tabs: if tab is at id.zalo.me or contains QR login text, user hasn't finished login!
+            const zaloBrowserTabs = agentBrowser?.tabs || [];
+            const hasZaloLoginTab = zaloBrowserTabs.some(
+              (t: AgentBrowserTab) => !t.anchor && (t.url || "").includes("id.zalo.me")
+            );
+            const hasZaloChatTab = zaloBrowserTabs.some(
+              (t: AgentBrowserTab) => !t.anchor && (t.url || "").includes("chat.zalo.me") && !(t.url || "").includes("id.zalo.me")
+            );
+
+            let isConnected = false;
+            let channelStatusLabel = "Connect";
+
+            if (isZalo && currentMode === "web") {
+              if (hasZaloChatTab && !hasZaloLoginTab) {
+                isConnected = true;
+                channelStatusLabel = "Connected";
+              } else if (isConfigEnabled || hasZaloLoginTab) {
+                isConnected = false;
+                channelStatusLabel = "Quét QR";
+              } else {
+                isConnected = false;
+                channelStatusLabel = "Bật Zalo Web";
+              }
+            } else if (requiresTokenNow) {
+              if (isConfigEnabled && hasConfiguredToken) {
+                isConnected = true;
+                channelStatusLabel = "Connected";
+              } else if (isConfigEnabled && !hasConfiguredToken) {
+                isConnected = false;
+                channelStatusLabel = "Nhập Token";
+              } else {
+                isConnected = false;
+                channelStatusLabel = "Connect";
+              }
+            } else {
+              isConnected = isConfigEnabled;
+              channelStatusLabel = isConnected ? "Connected" : "Connect";
+            }
+
+            const isEnabled = isConnected;
+            const isTokenDrawerOpen = Boolean(expandedTokenInputs[tokenKey]);
+            const isThisChannelSubmitting =
+              submittingId === `${w.interactionId}_${chType}` || isSubmittingThis;
+
+            const triggerChannelSubmitting = () => {
+              const key = `${w.interactionId}_${chType}`;
+              setSubmittingId(key);
+              setTimeout(() => {
+                setSubmittingId((prev) => (prev === key ? null : prev));
+              }, 1600);
+            };
+
+            return (
+              <div
+                key={chType}
+                data-testid={`interactive-connect-channel-item-${chType}`}
+                className="w-full max-w-md space-y-1.5"
+              >
+                <div className="flex flex-col gap-2.5 rounded-2xl px-4 py-3.5 bg-white dark:bg-[#16161d] border border-neutral-200/90 dark:border-[#262632] shadow-2xs transition-all">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Left: Rounded Squircle Logo + Channel Title with Verified Badge + Let <Agent> use <Channel> */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-11 w-11 rounded-xl bg-neutral-50 dark:bg-white border border-neutral-200/80 dark:border-white/15 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs">
+                        <ChannelChatIcon channel={chType} isSelected={true} size={26} activeColor={themePrimary} />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[14.5px] font-semibold text-slate-900 dark:text-white truncate">
+                            {chOpt.label}
+                          </span>
+                          {/* Official Verified Badge (Matching Image 3 & 4) */}
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="shrink-0"
+                            aria-label="Verified Skyer Channel"
+                          >
+                            <circle cx="12" cy="12" r="10" fill="#3B82F6" />
+                            <path
+                              d="M8.5 12.3L10.8 14.6L15.6 9.8"
+                              stroke="white"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </div>
+                        <span className="text-[12.5px] text-neutral-500 dark:text-neutral-400 truncate">
+                          {`Let ${displayAgentName} use ${chOpt.label}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Pill Connect Button / Loading Spinner Pill (Image 3 & 4) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        data-ux-target-min="24"
+                        data-testid={`interactive-connect-channel-open-settings-${w.interactionId}`}
+                        onClick={() => onOpenChannelsSettings?.()}
+                        className="hidden"
+                        aria-hidden="true"
+                        tabIndex={-1}
+                      />
+                      <button
+                        type="button"
+                        data-ux-target-min="24"
+                        data-testid={`interactive-connect-channel-config-${chType}`}
+                        onClick={() => onOpenChannelConfig?.(chType)}
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-slate-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                        title={`Cấu hình chi tiết kênh ${chOpt.label}`}
+                        aria-label={`Cấu hình chi tiết kênh ${chOpt.label}`}
+                      >
+                        <SlidersHorizontal size={13} />
+                      </button>
+
+                      <button
+                        type="button"
+                        data-ux-target-min="24"
+                        data-testid={`interactive-connect-channel-setup-${chType}`}
+                        onClick={() => {
+                          if (isZalo && currentMode === "web" && (isConfigEnabled || hasZaloLoginTab) && !isConnected) {
+                            onOpenZaloWebBrowser?.();
+                            return;
+                          }
+                          if (requiresTokenNow && !hasConfiguredToken && !inlineToken.trim() && !isTokenDrawerOpen) {
+                            setExpandedTokenInputs((prev) => ({ ...prev, [tokenKey]: true }));
+                            return;
+                          }
+                          triggerChannelSubmitting();
+                          if (onQuickSetupChannel) {
+                            void onQuickSetupChannel(w, chOpt, {
+                              botToken: inlineToken.trim() || undefined,
+                              mode: currentMode,
+                            });
+                          } else {
+                            onOpenChannelConfig?.(chType);
+                          }
+                        }}
+                        className={`min-w-[96px] h-9 px-4 rounded-full text-[13px] font-semibold transition-all cursor-pointer shrink-0 flex items-center justify-center gap-1.5 active:scale-95 ${
+                          isThisChannelSubmitting
+                            ? "bg-neutral-200/80 dark:bg-[#2a2a35] text-neutral-500 dark:text-neutral-300 border border-neutral-300/60 dark:border-white/10"
+                            : isEnabled
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
+                            : "bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:opacity-90 shadow-2xs"
+                        }`}
+                      >
+                        {isThisChannelSubmitting ? (
+                          <Loader2 size={15} className="animate-spin text-neutral-500 dark:text-neutral-300" />
+                        ) : isConnected ? (
+                          <>
+                            <Check size={13} />
+                            <span>{inlineToken.trim() ? "Update" : "Connected"}</span>
+                          </>
+                        ) : isZalo && currentMode === "web" && (isConfigEnabled || hasZaloLoginTab) ? (
+                          <>
+                            <QrCode size={13} />
+                            <span>Quét QR</span>
+                          </>
+                        ) : requiresTokenNow && isConfigEnabled && !hasConfiguredToken ? (
+                          <span>Nhập Token</span>
+                        ) : (
+                          <span>{channelStatusLabel}</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Compact Inline Token Input Drawer (only when a token-based channel needs a token or user toggled mode) */}
+                  {(isTokenDrawerOpen || (requiresTokenNow && inlineToken.trim().length > 0)) && (
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-white/10">
+                      <input
+                        type="password"
+                        data-testid={`interactive-connect-channel-token-${chType}`}
+                        value={inlineToken}
+                        onChange={(e) =>
+                          setChannelTokens((prev) => ({ ...prev, [tokenKey]: e.target.value }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && inlineToken.trim()) {
+                            e.preventDefault();
+                            triggerChannelSubmitting();
+                            void onQuickSetupChannel?.(w, chOpt, {
+                              botToken: inlineToken.trim(),
+                              mode: currentMode,
+                            });
+                          }
+                        }}
+                        placeholder={
+                          hasConfiguredToken
+                            ? `•••••••• (Đã cấu hình ${chOpt.label} Token — nhập mới để cập nhật)`
+                            : isTelegram
+                            ? "Nhập Telegram Bot Token từ @BotFather (VD: 123456:ABC-DEF...)"
+                            : isZalo
+                            ? "Nhập Zalo Bot / OA Token..."
+                            : `Nhập ${chOpt.label} Bot / Access Token...`
+                        }
+                        className="flex-1 bg-neutral-50 dark:bg-[#111117] border border-neutral-200 dark:border-[#2a2a38] rounded-xl px-3 py-1.5 text-[12px] text-slate-900 dark:text-white font-mono placeholder:text-neutral-400 focus:outline-none focus:border-blue-500"
+                        autoFocus
+                      />
+                      {isZalo && (
+                        <button
+                          type="button"
+                          data-testid={`interactive-connect-channel-zalo-mode-web-${w.interactionId}`}
+                          onClick={() => {
+                            setChannelModes((prev) => ({ ...prev, [tokenKey]: "web" }));
+                            setExpandedTokenInputs((prev) => ({ ...prev, [tokenKey]: false }));
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl text-[11px] font-mono bg-blue-500/15 text-blue-500 hover:bg-blue-500/25 cursor-pointer shrink-0"
+                        >
+                          Zalo Web (QR • Mặc định)
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Subtle Secondary Actions for Zalo (Open QR Browser or switch to Bot Token/OA) */}
+                  {isZalo && !isTokenDrawerOpen && (
+                    <div className="flex items-center justify-between gap-2 pt-1 text-[11px] text-neutral-400">
+                      <span className="truncate font-mono">
+                        Mặc định: Zalo Web (Quét QR trên trình duyệt Agent)
+                      </span>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {onOpenZaloWebBrowser && (
+                          <button
+                            type="button"
+                            data-testid={`interactive-connect-channel-zalo-browser-${w.interactionId}`}
+                            onClick={() => onOpenZaloWebBrowser()}
+                            className="text-blue-500 hover:text-blue-400 hover:underline font-mono cursor-pointer flex items-center gap-1"
+                          >
+                            <Globe size={11} />
+                            <span>Mở Zalo Web</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          data-testid={`interactive-connect-channel-zalo-mode-webhook-${w.interactionId}`}
+                          onClick={() => {
+                            setChannelModes((prev) => ({ ...prev, [tokenKey]: "webhook" }));
+                            setExpandedTokenInputs((prev) => ({ ...prev, [tokenKey]: true }));
+                          }}
+                          className="hover:text-slate-700 dark:hover:text-neutral-200 hover:underline font-mono cursor-pointer"
+                        >
+                          Dùng Bot Token
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+
+              </div>
+            );
+          };
+
+          return (
+            <div
+              key={w.interactionId}
+              data-testid={`interactive-connect-channel-card-${w.interactionId}`}
+              className="w-full max-w-md space-y-2.5 font-sans"
+            >
+              {/* Multi-channel Selector Card (Style Image 2 & Collapsed State in Image 3/4) */}
+              {displayChannels.length > 1 && (
+                <div
+                  data-testid={`interactive-connect-channel-selector-${w.interactionId}`}
+                  className="w-full rounded-2xl p-4 bg-white dark:bg-[#16161d] border border-neutral-200/90 dark:border-[#262632] shadow-2xs space-y-3"
+                >
+                  <div className="text-[14px] font-semibold text-slate-900 dark:text-neutral-100 leading-snug">
+                    {w.promptText && !w.promptText.startsWith("Thiết lập kênh")
+                      ? w.promptText
+                      : "Bạn muốn kết nối mình với kênh chat nào?"}
+                  </div>
+
+                  {chosenChannelOpt ? (
+                    /* Collapsed Selected Pill Row (Style Image 3 & 4 top card) */
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedChannelIds((prev) => {
+                            const next = { ...prev };
+                            delete next[w.interactionId];
+                            return next;
+                          })
+                        }
+                        className="inline-flex items-center gap-2.5 text-left group/selch cursor-pointer"
+                        title="Bấm để đổi kênh kết nối khác"
+                      >
+                        <span className="h-6 w-6 rounded-lg bg-blue-600 text-white text-[12px] font-semibold flex items-center justify-center shrink-0 shadow-2xs">
+                          {chosenLetter}
+                        </span>
+                        <span className="text-[14px] font-medium text-slate-900 dark:text-white group-hover/selch:underline">
+                          {chosenChannelOpt.label}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedChannelIds((prev) => {
+                            const next = { ...prev };
+                            delete next[w.interactionId];
+                            return next;
+                          })
+                        }
+                        className="text-[11px] font-mono text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200 cursor-pointer"
+                      >
+                        Đổi kênh
+                      </button>
+                    </div>
+                  ) : (
+                    /* Full A / B / C / D Channel Option List (Style Image 2) */
+                    <div className="space-y-1.5">
+                      {displayChannels.map((chOpt, idx) => {
+                        const letter = String.fromCharCode(65 + (idx % 26));
+                        const cType = (chOpt.channelType || chOpt.id).toLowerCase().trim();
+                        const isLiveEnabled = channels.some(
+                          (c) => c.type.toLowerCase() === cType && c.enabled
+                        );
+                        return (
+                          <button
+                            key={`${cType}-${idx}`}
+                            type="button"
+                            data-testid={`interactive-connect-channel-option-${cType}`}
+                            onClick={() =>
+                              setSelectedChannelIds((prev) => ({
+                                ...prev,
+                                [w.interactionId]: cType,
+                              }))
+                            }
+                            className="w-full flex items-center justify-between gap-3 px-2.5 py-2 rounded-xl hover:bg-neutral-100/80 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group/chopt"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="h-6 w-6 rounded-lg bg-neutral-100 dark:bg-[#22222c] border border-neutral-200/80 dark:border-white/10 group-hover/chopt:bg-blue-600 group-hover/chopt:border-blue-600 group-hover/chopt:text-white text-neutral-600 dark:text-neutral-300 text-[12px] font-medium flex items-center justify-center shrink-0 transition-colors">
+                                {letter}
+                              </span>
+                              <ChannelChatIcon channel={cType} isSelected={true} size={16} />
+                              <span className="text-[13.5px] font-medium text-slate-900 dark:text-neutral-100 truncate">
+                                {chOpt.label}
+                              </span>
+                            </div>
+                            {isLiveEnabled && (
+                              <span className="text-[10.5px] font-mono text-emerald-500 shrink-0">
+                                Connected
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => onOpenChannelsSettings?.()}
+                        className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-neutral-100/80 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group/chopt"
+                      >
+                        <span className="h-6 w-6 rounded-lg bg-neutral-100 dark:bg-[#22222c] border border-neutral-200/80 dark:border-white/10 text-neutral-500 dark:text-neutral-400 text-[12px] font-medium flex items-center justify-center shrink-0">
+                          {String.fromCharCode(65 + (displayChannels.length % 26))}
+                        </span>
+                        <span className="text-[13.5px] text-neutral-400 dark:text-neutral-500">
+                          Something else
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Lean Single-Row Connect Card (Style Image 3 & 4) */}
+              {chosenChannelOpt && renderSingleLeanChannelCard(chosenChannelOpt)}
+            </div>
+          );
+        }
+
+        if (w.kind === "connect_app") {
+          const displayApps: SkyerInteractiveOption[] =
+            w.options && w.options.length > 0
+              ? w.options
+              : APPS_CATALOG.slice(0, 4).map((a) => ({
+                  id: a.id,
+                  appSlug: a.id,
+                  label: a.name,
+                  description: a.description,
+                  logoUrl: a.logoUrl,
+                  prompt: `Tôi đã kết nối ứng dụng ${a.name} (/${a.id}), hãy tiếp tục.`,
+                }));
+          const allTargetConnected =
+            displayApps.length > 0 &&
+            displayApps.every((a) => connectedAppIds.includes((a.appSlug || a.id).toLowerCase()));
+
+          return (
+            <div
+              key={w.interactionId}
+              data-testid={`interactive-connect-app-card-${w.interactionId}`}
+              className="group/ixcard w-full max-w-md rounded-2xl p-3 sm:p-3.5 bg-white dark:bg-[#121218] border border-neutral-200/90 dark:border-[#22222e] hover:border-[var(--agent-primary)]/45 shadow-2xs space-y-2.5 font-sans transition-all duration-200"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    style={{ color: themePrimary }}
+                    className="h-6 w-6 rounded-lg bg-[var(--agent-primary)]/15 border border-[var(--agent-primary)]/30 flex items-center justify-center shrink-0"
+                  >
+                    <Layers size={12} />
+                  </div>
+                  <span className="text-[13.5px] font-semibold text-slate-900 dark:text-white leading-snug truncate">
+                    {w.promptText || "Kết nối ứng dụng & công cụ MCP"}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  data-ux-target-min="24"
+                  data-testid={`interactive-connect-app-open-modal-${w.interactionId}`}
+                  onClick={() => onOpenConnectApps?.(w.options.length === 1 ? w.options[0].label : "")}
+                  style={{ color: themePrimary }}
+                  className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-lg bg-[var(--agent-primary)]/10 hover:bg-[var(--agent-primary)]/20 border border-[var(--agent-primary)]/25 transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                  title="Mở kho ứng dụng Connect Apps"
+                >
+                  <Plus size={10} />
+                  <span>Connect Apps</span>
+                </button>
+              </div>
+
+              {/* App Items List */}
+              <div className="space-y-1.5">
+                {displayApps.map((appOpt, aIdx) => {
+                  const slug = (appOpt.appSlug || appOpt.id).toLowerCase().replace(/^composio_/, "");
+                  const isConnected =
+                    connectedAppIds.includes(slug) ||
+                    (claimed?.selected_ids || []).includes(slug) ||
+                    (claimed?.selected_ids || []).includes(appOpt.id);
+                  const logoUrl = appOpt.logoUrl || `https://logos.composio.dev/api/${slug}`;
+
+                  return (
+                    <div
+                      key={`${slug}-${aIdx}`}
+                      data-testid={`interactive-connect-app-item-${slug}`}
+                      className="flex items-center justify-between gap-2.5 p-2 rounded-xl bg-neutral-50/90 dark:bg-[#171721] border border-neutral-200/80 dark:border-[#242432] hover:border-[var(--agent-primary)]/35 transition-all"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="h-8 w-8 rounded-lg bg-white dark:bg-[#20202e] border border-neutral-200/80 dark:border-[#2c2c3e] flex items-center justify-center p-1.5 shrink-0 overflow-hidden shadow-2xs">
+                          <img
+                            src={logoUrl}
+                            alt={appOpt.label}
+                            className="h-full w-full object-contain"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = "none";
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">
+                            {appOpt.label}
+                          </span>
+                          <span className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+                            {appOpt.description || `Tích hợp ${appOpt.label} qua Composio MCP`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        data-ux-target-min="24"
+                        data-testid={`interactive-connect-app-action-${slug}`}
+                        onClick={() => {
+                          triggerSubmitState();
+                          if (onQuickConnectApp) {
+                            void onQuickConnectApp(w, appOpt);
+                          } else {
+                            onOpenConnectApps?.(appOpt.label);
+                          }
+                        }}
+                        style={!isConnected ? { backgroundColor: themePrimary } : undefined}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer shrink-0 flex items-center gap-1 active:scale-95 ${
+                          isConnected
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
+                            : "text-white shadow-2xs hover:brightness-105"
+                        }`}
+                      >
+                        {isSubmittingThis ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : isConnected ? (
+                          <>
+                            <Check size={11} />
+                            <span>Đã kết nối</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={11} />
+                            <span>Kết nối</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer Status / Browse All Apps */}
+              <div className="flex items-center justify-between pt-0.5 px-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+                <span className="truncate">
+                  {allTargetConnected
+                    ? "✓ Tất cả ứng dụng yêu cầu đã sẵn sàng"
+                    : `Đang kết nối ${connectedAppIds.length} ứng dụng trên Agent`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenConnectApps?.("")}
+                  className="hover:text-slate-900 dark:hover:text-white hover:underline font-mono text-[10.5px] cursor-pointer shrink-0"
+                >
+                  Xem tất cả 60+ apps →
+                </button>
+              </div>
+            </div>
+          );
+        }
 
         if (w.kind === "poll") {
           const currentSelected = pollSelections[w.interactionId] || claimed?.selected_ids || [];
@@ -5000,9 +6100,15 @@ function FormattedMessageContent({
 
   if (!content) return null;
 
+  const cleanedDisplayContent = content
+    .replace(/```skyer-interaction\/v1\s*\n[\s\S]*?```/gi, "")
+    .replace(/```(?:json)?\s*\n\s*\{[\s\S]*?"(?:skyer-interaction\/v1|connect_channel|connect_app)"[\s\S]*?\}\s*```/gi, "")
+    .trim();
+  if (!cleanedDisplayContent) return null;
+
   // Split code blocks: ```lang ... ```
   const codeBlockRegex = /(```[\s\S]*?```)/g;
-  const parts = content.split(codeBlockRegex);
+  const parts = cleanedDisplayContent.split(codeBlockRegex);
 
   return (
     <div className="space-y-1.5 text-[14.5px] sm:text-[15px] leading-snug select-text min-w-0 max-w-full break-words">
@@ -10007,7 +11113,6 @@ export function GrokBotWorkspace() {
 
   // Rightmost bot info tab: 'Computer' | 'Details' | 'Library'
   const [rightTab, setRightTab] = useState<"Details" | "Computer" | "Library">("Details");
-  const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
   const [isAgentSettingsModalOpen, setIsAgentSettingsModalOpen] = useState(false);
   const [agentSettingsModalTab, setAgentSettingsModalTab] = useState<AgentSettingsTab>("general");
@@ -10121,7 +11226,7 @@ export function GrokBotWorkspace() {
         setSelectedChatId(sendChatId);
       }
       chatAgentMapRef.current[sendChatId] = selectedAgentId;
-      if (isStreaming || processingChatsRef.current.has(sendChatId)) {
+      if (isStreaming || isCurrentSessionRunning || Boolean(liveTurn) || processingChatsRef.current.has(sendChatId)) {
         const newItem: QueuedRequestItem = {
           id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           text: cleanPrompt,
@@ -10135,6 +11240,215 @@ export function GrokBotWorkspace() {
         requestAnimationFrame(() => smoothScrollToBottom());
       }
     }
+  };
+
+  const handleQuickConnectAppFromChat = async (
+    messageId: string,
+    widget: SkyerInteractiveWidget,
+    appOpt: SkyerInteractiveOption
+  ) => {
+    const cleanSlug = (appOpt.appSlug || appOpt.id || "").toLowerCase().replace(/^composio_/, "").trim();
+    if (!cleanSlug) {
+      setConnectAppsInitialSearch(appOpt.label || "");
+      setIsConnectAppsOpen(true);
+      return;
+    }
+    const isAlreadyConnected = connectedAppIds.includes(cleanSlug);
+    if (isAlreadyConnected) {
+      handleRecordAndDispatchInteraction(
+        messageId,
+        widget,
+        [cleanSlug],
+        [appOpt.label],
+        appOpt.prompt || `Tôi đã kết nối ứng dụng ${appOpt.label} (/${cleanSlug}), hãy tiếp tục.`
+      );
+      return;
+    }
+
+    try {
+      const targetId = selectedAgent?.id || selectedAgentId || "default";
+      const connRes = await authorizedFetch(
+        "/api/integrations/composio/connect",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appSlug: cleanSlug,
+            action: "add",
+            agentId: targetId,
+          }),
+        },
+        targetId
+      );
+      if (connRes.ok) {
+        const connData = await connRes.json().catch(() => ({}));
+        setConnectedAppIds((prev) => Array.from(new Set([...prev, cleanSlug])));
+        const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === cleanSlug);
+        setCurrentAgentMcpClients((prev) => {
+          const clientKey = `composio_${cleanSlug}`;
+          if (prev.some((c) => c.key.toLowerCase() === clientKey || c.key.toLowerCase() === cleanSlug)) {
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              key: clientKey,
+              name: matched?.name || appOpt.label || cleanSlug,
+              description: matched?.description || appOpt.description || `Composio ${cleanSlug} integration`,
+              enabled: true,
+              transport: "sse",
+              url: `https://connect.composio.dev/mcp/${cleanSlug}`,
+            },
+          ];
+        });
+        setMcpRefreshTrigger((t) => t + 1);
+        if (connData?.redirect_url && connData?.status !== "active") {
+          window.open(connData.redirect_url, "_blank", "noopener,noreferrer");
+        }
+        handleRecordAndDispatchInteraction(
+          messageId,
+          widget,
+          [cleanSlug],
+          [appOpt.label],
+          appOpt.prompt || `Tôi đã kết nối ứng dụng ${appOpt.label} (/${cleanSlug}), hãy tiếp tục.`
+        );
+        return;
+      }
+    } catch {
+      // Fallback to opening ConnectAppsModal pre-filtered to this app
+    }
+    setConnectAppsInitialSearch(appOpt.label || cleanSlug);
+    setIsConnectAppsOpen(true);
+  };
+
+  const handleOpenChannelConfigFromChat = (channelType: string) => {
+    const cleanType = (channelType || "telegram").toLowerCase().trim();
+    const existing = channels.find((c) => c.type.toLowerCase() === cleanType);
+    if (existing) {
+      setSelectedChannelForConfig(existing);
+    } else {
+      const details =
+        cleanType === "telegram"
+          ? normalizeTelegramChannelDefaults({ enabled: false })
+          : cleanType === "zalo"
+          ? normalizeZaloChannelDefaults({ enabled: false, mode: "web" })
+          : { enabled: false };
+      setSelectedChannelForConfig({
+        name: cleanType.toUpperCase(),
+        enabled: false,
+        type: cleanType,
+        details,
+      });
+    }
+    setIsChannelModalOpen(true);
+  };
+
+  const handleQuickSetupChannelFromChat = async (
+    messageId: string,
+    widget: SkyerInteractiveWidget,
+    chOpt: SkyerInteractiveOption,
+    inlineConfig?: { botToken?: string; mode?: "web" | "webhook" | "bot" }
+  ) => {
+    const chType = (chOpt.channelType || chOpt.id || "").toLowerCase().trim();
+    if (!chType) {
+      setAgentSettingsModalTab("channels_cron");
+      setIsAgentSettingsModalOpen(true);
+      return;
+    }
+
+    const existing = channels.find((c) => c.type.toLowerCase() === chType);
+    const hasSavedToken = Boolean(
+      existing?.details?.bot_token ||
+        existing?.details?.client_secret ||
+        existing?.details?.access_token
+    );
+    const trimmedToken = (inlineConfig?.botToken || "").trim();
+    const effectiveMode = inlineConfig?.mode || chOpt.channelMode || (chType === "zalo" ? "web" : "bot");
+
+    // If token is required (e.g. Telegram or Zalo Webhook mode) and neither inline token nor saved token exists, open ChannelConfigModal
+    const needsToken =
+      chType === "telegram" ||
+      chType === "discord" ||
+      chType === "slack" ||
+      (chType === "zalo" && effectiveMode === "webhook");
+
+    if (needsToken && !trimmedToken && !hasSavedToken) {
+      handleOpenChannelConfigFromChat(chType);
+      return;
+    }
+
+    const targetAgentId = selectedAgent?.id || selectedAgentId || "default";
+    const payload: Record<string, any> = {
+      enabled: true,
+    };
+
+    if (chType === "zalo") {
+      payload.mode = trimmedToken ? "webhook" : effectiveMode === "webhook" ? "webhook" : "web";
+      payload.show_typing = true;
+      payload.require_mention = existing?.details?.require_mention ?? true;
+      payload.no_text_debounce = existing?.details?.no_text_debounce ?? true;
+      if (trimmedToken && trimmedToken !== "********") {
+        payload.bot_token = trimmedToken;
+      }
+    } else if (chType === "telegram") {
+      payload.show_typing = true;
+      payload.require_mention = existing?.details?.require_mention ?? true;
+      payload.no_text_debounce = existing?.details?.no_text_debounce ?? true;
+      if (trimmedToken && trimmedToken !== "********") {
+        payload.bot_token = trimmedToken;
+      }
+    } else if (trimmedToken && trimmedToken !== "********") {
+      payload.bot_token = trimmedToken;
+    }
+
+    const ok = await updateAgentChannelConfig(targetAgentId, chType, payload);
+    if (ok) {
+      setChannels((prev) => {
+        const found = prev.some((c) => c.type.toLowerCase() === chType);
+        if (found) {
+          return prev.map((c) =>
+            c.type.toLowerCase() === chType
+              ? {
+                  ...c,
+                  enabled: true,
+                  details: {
+                    ...(c.details || {}),
+                    ...payload,
+                    ...(trimmedToken ? { bot_token: "********" } : {}),
+                  },
+                }
+              : c
+          );
+        }
+        return [
+          ...prev,
+          {
+            name: chType.toUpperCase(),
+            enabled: true,
+            type: chType,
+            details: {
+              ...payload,
+              ...(trimmedToken ? { bot_token: "********" } : {}),
+            },
+          },
+        ];
+      });
+      refreshDetailsData();
+      if (chType === "zalo" && payload.mode === "web") {
+        void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+      }
+      handleRecordAndDispatchInteraction(
+        messageId,
+        widget,
+        [chType],
+        [chOpt.label],
+        chOpt.prompt || `Tôi đã thiết lập và bật kênh ${chOpt.label} (/${chType}), hãy tiếp tục.`,
+        trimmedToken ? "[bot_token_configured]" : payload.mode || "enabled"
+      );
+      return;
+    }
+
+    handleOpenChannelConfigFromChat(chType);
   };
   const [activeLoopMode, setActiveLoopMode] = useState<"default" | "goal" | "mission">(() => {
     try {
@@ -12807,6 +14121,7 @@ ${targetItem.text}`;
     }
   };
   const [isConnectAppsOpen, setIsConnectAppsOpen] = useState(false);
+  const [connectAppsInitialSearch, setConnectAppsInitialSearch] = useState<string>("");
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -14357,6 +15672,7 @@ const selectedAgentTheme = getAgentColorTheme(
             )
           );
           markChatAsRead(chatId, agentId);
+          processNextInQueue(chatId);
         } else if (!isCurrentSessionRunning) {
           setLiveTurn(null);
         }
@@ -15678,6 +16994,10 @@ const selectedAgentTheme = getAgentColorTheme(
         {
           signal: abortController.signal,
           channel: activeTargetChannel,
+          onReconnectReset: () => {
+            turnAcc.reset();
+            accumulated = "";
+          },
           onEvent: (ev) => {
             if (ev?.object === "room_event") {
               if (selectedChatIdRef.current === originChatId) {
@@ -15966,13 +17286,100 @@ const selectedAgentTheme = getAgentColorTheme(
         console.log("[Stream] User cancelled generation.");
       } else {
         console.warn("[Stream] Turn stream error:", err);
-        updateTurnMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempBotMsgId && !m.content
-              ? { ...m, content: "Không thể kết nối tới Agent ngay lúc này. Vui lòng thử gửi lại.", evidenceStatus: "unknown" }
-              : m
-          )
-        );
+        const isConflictOrMidTurnDrop =
+          err instanceof SessionBusyConflictError ||
+          err?.status === 409 ||
+          String(err?.message || "").includes("409") ||
+          String(err?.message || "").includes("already running");
+
+        let recoveredViaLive = false;
+        const targetSessionIdForAttach = originChatId || startSessionId;
+        if (targetSessionIdForAttach && !abortController.signal.aborted) {
+          if (isConflictOrMidTurnDrop) {
+            // Re-queue the follow-up user prompt so it runs automatically right after the active turn finishes
+            const existingQueue = requestQueuesRef.current[originChatId] || [];
+            if (!existingQueue.some((item) => item.text === userText)) {
+              const queuedFollowUp: QueuedRequestItem = {
+                id: `q-conflict-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                text: userText,
+                previewText: (userText.split("\n")[0] || userText).slice(0, 100),
+                createdAt: Date.now(),
+              };
+              setChatQueue(originChatId, [queuedFollowUp, ...existingQueue], originAgentId);
+            }
+            // Remove the premature duplicate user bubble & empty placeholder before attaching to the active turn
+            updateTurnMessages((prev) => {
+              const filtered = prev.filter((m) => m.id !== tempBotMsgId);
+              if (filtered.length > 0 && filtered[filtered.length - 1].role === "user" && filtered[filtered.length - 1].content === userText) {
+                return filtered.slice(0, -1);
+              }
+              return filtered;
+            });
+          }
+
+          for (let liveAttempt = 0; liveAttempt < 3 && !abortController.signal.aborted; liveAttempt++) {
+            if (liveAttempt > 0) {
+              await new Promise((r) => setTimeout(r, 800 * liveAttempt));
+              if (abortController.signal.aborted) break;
+            }
+            const attached = await attachLiveTurn(
+              targetAgent?.slug || originAgentId,
+              targetSessionIdForAttach,
+              (liveMsg) => {
+                if (abortController.signal.aborted) return;
+                updateTurnMessages((prev) => {
+                  const hasTemp = prev.some((m) => m.id === tempBotMsgId);
+                  if (hasTemp) {
+                    return prev.map((m) =>
+                      m.id === tempBotMsgId
+                        ? {
+                            ...m,
+                            content: liveMsg.content || m.content,
+                            textSegments: liveMsg.textSegments || m.textSegments,
+                            reasoning: liveMsg.reasoning || m.reasoning,
+                            steps: liveMsg.steps && liveMsg.steps.length > 0 ? liveMsg.steps : m.steps,
+                            toolCalls: liveMsg.toolCalls && liveMsg.toolCalls.length > 0 ? liveMsg.toolCalls : m.toolCalls,
+                          }
+                        : m
+                    );
+                  }
+                  const hasLive = prev.some((m) => m.id === liveMsg.id);
+                  if (hasLive) {
+                    return prev.map((m) => (m.id === liveMsg.id ? liveMsg : m));
+                  }
+                  return [...prev, liveMsg];
+                });
+              },
+              abortController.signal
+            ).catch(() => false);
+
+            if (attached) {
+              recoveredViaLive = true;
+              const reloaded = await fetchChatMessages(originChatId, originAgentId).catch(() => null);
+              if (reloaded && reloaded.length > 0 && !abortController.signal.aborted) {
+                updateTurnMessages(() => reloaded);
+              }
+              break;
+            }
+          }
+        }
+
+        if (!recoveredViaLive && !abortController.signal.aborted) {
+          // Final fallback: check if the turn already completed in the background and saved to chat history
+          const freshHistory = await fetchChatMessages(originChatId, originAgentId).catch(() => null);
+          const lastFresh = freshHistory && freshHistory.length > 0 ? freshHistory[freshHistory.length - 1] : null;
+          if (freshHistory && lastFresh && lastFresh.role === "assistant" && lastFresh.content.trim().length > 0) {
+            updateTurnMessages(() => freshHistory);
+          } else {
+            updateTurnMessages((prev) =>
+              prev.map((m) =>
+                m.id === tempBotMsgId && !m.content
+                  ? { ...m, content: "Không thể kết nối tới Agent ngay lúc này. Vui lòng thử gửi lại.", evidenceStatus: "unknown" }
+                  : m
+              )
+            );
+          }
+        }
       }
     } finally {
       if (streamAbortControllersRef.current[originChatId] === abortController) {
@@ -16149,7 +17556,7 @@ const selectedAgentTheme = getAgentColorTheme(
       setSelectedChatId(sendChatId);
     }
     chatAgentMapRef.current[sendChatId] = selectedAgentId;
-    if (isStreaming || processingChatsRef.current.has(sendChatId)) {
+    if (isStreaming || isCurrentSessionRunning || Boolean(liveTurn) || processingChatsRef.current.has(sendChatId)) {
       // Agent is busy: enqueue prompt into Request Queue only (do not show in chat stream until it executes)
       const newItem: QueuedRequestItem = {
         id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -16575,7 +17982,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           }`}
                         >
                         <div className="relative shrink-0 flex items-center justify-center transition-all">
-                          <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
+                          <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={isSelected || checkIsAgentBusy(ag)} forcedAnimation={isSelected || checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {isAgentPinned(ag) && (
                             <span className="absolute -top-0.5 -left-0.5 p-0.5 rounded-full z-10 flex items-center justify-center pointer-events-none" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }}>
                               <Pin size={7.5} style={{ fill: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }} />
@@ -16975,7 +18382,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
             {/* Agents List Container with Bottom Fade */}
             <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
-              <div ref={agentsListScrollRef} onScroll={updateAgentsScroll} className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1.5 scrollbar-hover pb-4">
+              <div ref={agentsListScrollRef} onScroll={updateAgentsScroll} className="flex-1 overflow-y-auto px-1.5 py-1 space-y-1 scrollbar-hover pb-3">
               {isLoadingAgents ? (
                 <div className="space-y-2 p-1">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -17026,10 +18433,10 @@ const selectedAgentTheme = getAgentColorTheme(
                         }}
                         className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent group relative ${
                           layoutDensity === "compact"
-                            ? "px-2.5 py-1.5 gap-2.5"
+                            ? "px-2 py-1 gap-2"
                             : layoutDensity === "comfortable"
-                            ? "px-3 py-2.5 gap-3"
-                            : "px-2.5 py-2 gap-2.5"
+                            ? "px-2.5 py-2 gap-2.5"
+                            : "px-2 py-1.5 gap-2"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
                             ? "bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
@@ -17040,7 +18447,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       >
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0 flex items-center justify-center self-center">
-                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
+                          <AgentAvatar agent={ag} size="md" alwaysAnimate={isSelected || checkIsAgentBusy(ag)} forcedAnimation={isSelected || checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
@@ -17273,10 +18680,10 @@ const selectedAgentTheme = getAgentColorTheme(
                         }}
                         className={`w-full rounded-2xl text-left flex items-center transition-colors border border-transparent group relative ${
                           layoutDensity === "compact"
-                            ? "px-2.5 py-1.5 gap-2.5"
+                            ? "px-2 py-1 gap-2"
                             : layoutDensity === "comfortable"
-                            ? "px-3 py-2.5 gap-3"
-                            : "px-2.5 py-2 gap-2.5"
+                            ? "px-2.5 py-2 gap-2.5"
+                            : "px-2 py-1.5 gap-2"
                         } ${
                           ag.enabled === false || ag.status === "disabled"
                             ? "bg-neutral-100/30 dark:bg-white/[0.01] cursor-not-allowed select-none"
@@ -17287,7 +18694,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       >
                         {/* Dedicated Agent Identity Avatar */}
                         <div className="relative shrink-0 flex items-center justify-center self-center">
-                          <AgentAvatar agent={ag} size="md" alwaysAnimate={checkIsAgentBusy(ag)} forcedAnimation={checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
+                          <AgentAvatar agent={ag} size="md" alwaysAnimate={isSelected || checkIsAgentBusy(ag)} forcedAnimation={isSelected || checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
                               className="absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-white dark:border-[#0c0c0e] bg-red-500"
@@ -18622,7 +20029,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c",
                           color: "#ffffff",
                         }}
-                        className={`inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white text-white font-normal border shadow-2xs font-sans ml-auto break-words ${
+                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white text-white font-normal border shadow-2xs font-sans ml-auto break-words ${
                           isHighlighted ? "ring-2 ring-white/60 shadow-md" : ""
                         }`}
                       >
@@ -18962,7 +20369,29 @@ const selectedAgentTheme = getAgentColorTheme(
                               messageId={msg.id}
                               claimedMap={claimedInteractionsMap}
                               isTurnBusy={isStreaming || isCurrentSessionRunning}
+                              connectedAppIds={connectedAppIds}
+                              onOpenConnectApps={(q) => {
+                                setConnectAppsInitialSearch(q || "");
+                                setIsConnectAppsOpen(true);
+                              }}
+                              onQuickConnectApp={(w, appOpt) =>
+                                handleQuickConnectAppFromChat(msg.id, w, appOpt)
+                              }
+                              channels={channels}
+                              onOpenChannelsSettings={() => {
+                                setAgentSettingsModalTab("channels_cron");
+                                setIsAgentSettingsModalOpen(true);
+                              }}
+                              onOpenChannelConfig={(chType) => handleOpenChannelConfigFromChat(chType)}
+                              onQuickSetupChannel={(w, chOpt, inlineCfg) =>
+                                handleQuickSetupChannelFromChat(msg.id, w, chOpt, inlineCfg)
+                              }
+                              onOpenZaloWebBrowser={() => {
+                                void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+                              }}
                               themePrimary={selectedAgentTheme.primary}
+                              agentName={selectedAgent?.name}
+                              agentBrowser={agentBrowser}
                               onSelectOption={(w, opt) =>
                                 handleRecordAndDispatchInteraction(
                                   msg.id,
@@ -19008,7 +20437,29 @@ const selectedAgentTheme = getAgentColorTheme(
                           messageId={msg.id}
                           claimedMap={claimedInteractionsMap}
                           isTurnBusy={isStreaming || isCurrentSessionRunning}
+                          connectedAppIds={connectedAppIds}
+                          onOpenConnectApps={(q) => {
+                            setConnectAppsInitialSearch(q || "");
+                            setIsConnectAppsOpen(true);
+                          }}
+                          onQuickConnectApp={(w, appOpt) =>
+                            handleQuickConnectAppFromChat(msg.id, w, appOpt)
+                          }
+                          channels={channels}
+                          onOpenChannelsSettings={() => {
+                            setAgentSettingsModalTab("channels_cron");
+                            setIsAgentSettingsModalOpen(true);
+                          }}
+                          onOpenChannelConfig={(chType) => handleOpenChannelConfigFromChat(chType)}
+                          onQuickSetupChannel={(w, chOpt, inlineCfg) =>
+                            handleQuickSetupChannelFromChat(msg.id, w, chOpt, inlineCfg)
+                          }
+                          onOpenZaloWebBrowser={() => {
+                            void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+                          }}
                           themePrimary={selectedAgentTheme.primary}
+                          agentName={selectedAgent?.name}
+                              agentBrowser={agentBrowser}
                           onSelectOption={(w, opt) =>
                             handleRecordAndDispatchInteraction(
                               msg.id,
@@ -19873,7 +21324,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   transform: plusMenuDragY > 0 ? "translateY(" + plusMenuDragY + "px)" : undefined,
                   transition: isPlusMenuDragging ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
-                data-no-swipe="true" data-testid="plus-add-popover" className="fixed md:absolute inset-x-0 md:inset-x-0 bottom-0 md:bottom-full mb-0 md:mb-2 max-h-[92dvh] md:max-h-[520px] flex flex-col rounded-t-3xl rounded-b-none md:rounded-2xl bg-white dark:bg-[#14141c] border-t md:border border-slate-200 dark:border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.3)] md:shadow-2xl p-3.5 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 z-[70] md:z-50 animate-in fade-in slide-in-from-bottom-8 md:zoom-in-95 duration-200 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
+                data-no-swipe="true" data-testid="plus-add-popover" className="fixed md:absolute inset-x-0 md:inset-x-0 bottom-0 md:bottom-full mb-0 md:mb-2 max-h-[92dvh] md:max-h-[520px] flex flex-col rounded-t-3xl rounded-b-none md:rounded-2xl bg-white dark:bg-[#14141c] border-t md:border border-slate-200 dark:border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.3)] md:shadow-2xl p-2.5 sm:p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-3 z-[70] md:z-50 animate-in fade-in slide-in-from-bottom-8 md:zoom-in-95 duration-200 select-none text-left overflow-hidden ring-0 [container-type:inline-size]"
               >
                 {/* Mobile iOS-style Swipe-down Handle (Kéo để đóng) */}
                 <div
@@ -20307,8 +21758,8 @@ const selectedAgentTheme = getAgentColorTheme(
                   return (
                     <div className={`flex-1 overflow-y-auto max-h-[76dvh] md:max-h-[460px] pr-1 sm:pr-1.5 overscroll-contain ${
                       isNarrowMenu
-                        ? "flex flex-col space-y-4 pt-2"
-                        : "grid grid-cols-3 gap-3.5 pt-2.5 items-stretch"
+                        ? "flex flex-col space-y-2.5 pt-1"
+                        : "grid grid-cols-3 gap-2.5 pt-1.5 items-stretch"
                     }`}>
                   {/* Column 1: Add Files & Work Mode (Add files at the top, followed by clear work modes) */}
                   <div className={`flex flex-col justify-between space-y-2 ${isNarrowMenu ? "w-full" : "h-full"}`}>
@@ -20329,7 +21780,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           fileInputRef.current?.click();
                         }}
                         style={{ backgroundColor: selectedAgentTheme.bgLight, borderColor: selectedAgentTheme.borderLight }}
-                        className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border text-slate-900 dark:text-white group shadow-xs"
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left transition-all cursor-pointer border text-slate-900 dark:text-white group shadow-xs"
                       >
                         <div style={{ backgroundColor: selectedAgentTheme.primary }} className="h-7 w-7 rounded-lg flex items-center justify-center text-white shrink-0 shadow-xs transition-transform group-hover:scale-105">
                           <Paperclip size={14} className="stroke-[2.5]" />
@@ -20349,7 +21800,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     </div>
 
                     {/* 2. Work Mode Section (Chế độ làm việc rõ ràng, thân thiện) */}
-                    <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-[#222230]">
+                    <div className="space-y-1 pt-1.5 border-t border-slate-200 dark:border-[#222230]">
                       <div className="flex items-center justify-between px-1">
                         <div>
                           <div className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">Chế độ làm việc</div>
@@ -20366,7 +21817,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           backgroundColor: selectedAgentTheme.bgLight,
                           borderColor: selectedAgentTheme.primary,
                         } : undefined}
-                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
+                        className={`w-full flex items-start gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "default"
                             ? "text-slate-900 dark:text-white shadow-xs"
                             : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
@@ -20395,7 +21846,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       <button
                         type="button"
                         onClick={() => handleSelectLoopMode("goal")}
-                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
+                        className={`w-full flex items-start gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "goal"
                             ? "bg-emerald-500/10 dark:bg-[#1f1f2e] border-emerald-500 text-slate-900 dark:text-white shadow-xs"
                             : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
@@ -20424,7 +21875,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       <button
                         type="button"
                         onClick={() => handleSelectLoopMode("mission")}
-                        className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-xs text-left transition-all cursor-pointer border ${
+                        className={`w-full flex items-start gap-2 px-2.5 py-1.5 rounded-xl text-xs text-left transition-all cursor-pointer border ${
                           activeLoopMode === "mission"
                             ? "bg-cyan-500/10 dark:bg-[#1f1f2e] border-cyan-500 text-slate-900 dark:text-white shadow-xs"
                             : "bg-slate-100/80 dark:bg-[#181822]/80 hover:bg-slate-200/80 dark:hover:bg-[#20202e] border-slate-200 dark:border-transparent hover:border-slate-300 dark:hover:border-[#2f2f42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
@@ -20454,7 +21905,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   {/* Column 2: Connected Apps (Loaded from Selected Agent's Apps tab - Full Height List) */}
                   <div className={`flex flex-col space-y-1.5 ${
                     isNarrowMenu
-                      ? "w-full pt-3 border-t border-slate-200 dark:border-[#222230]"
+                      ? "w-full pt-2 border-t border-slate-200 dark:border-[#222230]"
                       : "h-full pt-0 border-t-0"
                   }`}>
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
@@ -20550,7 +22001,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               });
                               textareaRef.current?.focus();
                             }}
-                            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
+                            className={`w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
                                 ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border-[var(--agent-primary)] text-slate-900 dark:text-white shadow-xs"
                                 : isAlreadyAdded
@@ -20587,7 +22038,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   {/* Column 3: Subagents & Team Agents (Loaded from Selected Agent's Agents tab - Full Height List) */}
                   <div className={`flex flex-col space-y-1.5 ${
                     isNarrowMenu
-                      ? "w-full pt-3 border-t border-slate-200 dark:border-[#222230]"
+                      ? "w-full pt-2 border-t border-slate-200 dark:border-[#222230]"
                       : "h-full pt-0 border-t-0"
                   }`}>
                     <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase tracking-wider text-neutral-500 font-semibold">
@@ -20688,7 +22139,7 @@ const selectedAgentTheme = getAgentColorTheme(
 // Room creation deferred until prompt with @mention is actually submitted
                               textareaRef.current?.focus();
                             }}
-                            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
+                            className={`w-full flex items-center justify-between px-2 py-1 rounded-lg text-xs text-left transition-colors cursor-pointer group border ${
                               isHighlighted
                                 ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] border-[var(--agent-primary)] text-slate-900 dark:text-white shadow-xs"
                                 : isAlreadyMentioned
@@ -22408,7 +23859,7 @@ ${chat.id}`);
             </div>
 
             {/* 3 Streamlined Pill Tabs: Details | Library | Computer (Evenly spaced & centered) */}
-            <div className="flex items-center justify-center px-4 pb-3 pt-1 border-b border-neutral-200/70 dark:border-[#1c1c22] text-[13px] font-medium shrink-0">
+            <div className="flex items-center justify-center px-3 pb-2 pt-1 border-b border-neutral-200/70 dark:border-[#1c1c22] text-[13px] font-medium shrink-0">
               <div className="grid grid-cols-3 gap-1.5 w-full max-w-[320px]">
                 {(["Details", "Library", "Computer"] as const).map((tab) => (
                   <button
@@ -22419,7 +23870,7 @@ ${chat.id}`);
                         loadWorkspaceTree();
                       }
                     }}
-                    className={`py-1.5 px-2 rounded-full transition-all cursor-pointer font-sans text-center flex items-center justify-center ${
+                    className={`py-1 px-2 rounded-full transition-all cursor-pointer font-sans text-center flex items-center justify-center ${
                       rightTab === tab
                         ? "bg-neutral-200/80 dark:bg-[#22222e] text-neutral-900 dark:text-white font-semibold shadow-xs"
                         : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5"
@@ -22432,7 +23883,7 @@ ${chat.id}`);
             </div>
 
             {/* Tab Content: Computer | Details | Library */}
-            <div className="flex-1 p-3.5 overflow-y-auto scrollbar-hover">
+            <div className="flex-1 p-2.5 overflow-y-auto scrollbar-hover">
               {rightTab === "Computer" && (() => {
                 const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
                 return (
@@ -22508,42 +23959,103 @@ ${chat.id}`);
               })()}
 
               {rightTab === "Details" && (
-                <div className="space-y-4 text-sm text-slate-700 dark:text-neutral-300 font-sans pb-4">
-                  {/* 1. Concise Description: 2-3 lines by default, collapsed */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-sans text-neutral-400">
-                      <span className="font-semibold text-slate-900 dark:text-white uppercase tracking-wider text-xs">
-                        Giới thiệu & Vai trò
-                      </span>
-                      <span style={{ color: selectedAgentTheme.light }} className="text-xs uppercase font-semibold">
-                        {selectedAgent.roleTag || "Agent"}
-                      </span>
-                    </div>
-
-                    <div className="relative p-3.5 rounded-2xl bg-slate-50 dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] transition-all">
-                      <p
-                        className={`text-sm text-slate-700 dark:text-neutral-200 leading-relaxed select-text transition-all ${
-                          isDescExpanded ? "" : "line-clamp-3"
-                        }`}
+                <div className="space-y-3 text-sm text-slate-700 dark:text-neutral-300 font-sans pb-3">
+                  {/* 1. Connect Apps Action Card in Detail Tab */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white font-sans">
+                          Connected Apps
+                        </span>
+                        <span className="text-[11px] font-mono bg-slate-100 dark:bg-[#1e1e28] text-slate-600 dark:text-neutral-400 px-2 py-0.5 rounded-full border border-slate-200 dark:border-[#2b2b3a]">
+                          {currentAgentMcpClients.length}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsConnectAppsOpen(true)}
+                        style={{ color: selectedAgentTheme.light || selectedAgentTheme.primary }}
+                        className="text-xs font-sans font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Mở kho ứng dụng tích hợp (Connect Apps)"
                       >
-                        {selectedAgent.description || "Chưa có mô tả chi tiết cho Agent này."}
-                      </p>
-
-                      {/* Expand / Collapse toggle if description is lengthy */}
-                      {selectedAgent.description && selectedAgent.description.length > 120 && (
-                        <button
-                          type="button"
-                          onClick={() => setIsDescExpanded(!isDescExpanded)}
-                          className="mt-1.5 text-[11px] font-mono text-[var(--agent-light)] dark:text-[var(--agent-dark)] hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>{isDescExpanded ? "Thu gọn bớt" : "Xem thêm"}</span>
-                          <ChevronDown
-                            size={12}
-                            className={`transition-transform duration-200 ${isDescExpanded ? "rotate-180" : ""}`}
-                          />
-                        </button>
-                      )}
+                        <Plus size={11} />
+                        <span>Connect Apps</span>
+                      </button>
                     </div>
+
+                    <button
+                      type="button"
+                      data-testid="detail-connect-apps-btn"
+                      onClick={() => setIsConnectAppsOpen(true)}
+                      className="w-full p-2.5 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-[var(--agent-primary)]/50 shadow-xs flex items-center justify-between gap-2.5 cursor-pointer group transition-all text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          style={{
+                            backgroundColor: selectedAgentTheme.bgLight,
+                            color: selectedAgentTheme.light || selectedAgentTheme.primary,
+                          }}
+                          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+                        >
+                          <Layers size={16} />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white truncate group-hover:text-[var(--agent-light)] dark:group-hover:text-[var(--agent-dark)] transition-colors">
+                            Connect Apps
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-neutral-400 font-sans truncate mt-0.5">
+                            {currentAgentMcpClients.length > 0
+                              ? `${currentAgentMcpClients.length} ứng dụng đang kết nối`
+                              : "Kết nối Gmail, Notion, GitHub, ERP..."}
+                          </span>
+                        </div>
+                      </div>
+
+                      {currentAgentMcpClients.length > 0 ? (
+                        <div className="flex items-center -space-x-1.5 shrink-0">
+                          {currentAgentMcpClients.slice(0, 4).map((c) => {
+                            const rawKey = c.key.toLowerCase().replace(/^composio_/, "");
+                            const matched = APPS_CATALOG.find(
+                              (a) =>
+                                a.id.toLowerCase() === rawKey ||
+                                (a.id.length > 2 && c.name.toLowerCase().includes(a.id.toLowerCase()))
+                            );
+                            const logoUrl = matched?.logoUrl || `https://logos.composio.dev/api/${rawKey}`;
+                            return (
+                              <div
+                                key={c.key}
+                                title={matched?.name || c.name || c.key}
+                                className="h-6 w-6 rounded-full bg-white dark:bg-[#1e1e2a] border border-slate-200 dark:border-[#2e2e3e] flex items-center justify-center p-1 shadow-2xs overflow-hidden"
+                              >
+                                <img
+                                  src={logoUrl}
+                                  alt={matched?.name || c.name || c.key}
+                                  className="h-full w-full object-contain"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLElement).style.display = "none";
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                          {currentAgentMcpClients.length > 4 && (
+                            <div className="h-6 px-1.5 rounded-full bg-slate-100 dark:bg-[#222230] border border-slate-200 dark:border-[#2e2e3e] flex items-center justify-center text-[10px] font-mono font-semibold text-slate-600 dark:text-neutral-300 shadow-2xs">
+                              +{currentAgentMcpClients.length - 4}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            backgroundColor: selectedAgentTheme.bgLight,
+                            color: selectedAgentTheme.light || selectedAgentTheme.primary,
+                          }}
+                          className="h-7 w-7 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+                        >
+                          <Plus size={14} />
+                        </div>
+                      )}
+                    </button>
                   </div>
 
                   {/* 2. Routines (Automated Schedules) Section with clean card toggle matching user reference */}
@@ -22577,7 +24089,7 @@ ${chat.id}`);
                           setSelectedJobForConfig(null);
                           setIsScheduleModalOpen(true);
                         }}
-                        className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[var(--agent-primary)]/50 flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                        className="p-2.5 rounded-xl bg-white dark:bg-[#14141c] border border-dashed border-slate-300 dark:border-[#2a2a38] hover:border-[var(--agent-primary)]/50 flex items-center justify-between gap-2.5 cursor-pointer group transition-all"
                       >
                         <div className="flex flex-col min-w-0 pr-2">
                           <span className="text-sm font-semibold text-slate-800 dark:text-white truncate">
@@ -22612,7 +24124,7 @@ ${chat.id}`);
                                 setSelectedJobForConfig(job);
                                 setIsScheduleModalOpen(true);
                               }}
-                              className="p-3.5 rounded-2xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-slate-300 dark:hover:border-[#323242] shadow-xs flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                              className="p-2.5 rounded-xl bg-white dark:bg-[#14141c] border border-slate-200/90 dark:border-[#22222e] hover:border-slate-300 dark:hover:border-[#323242] shadow-xs flex items-center justify-between gap-2.5 cursor-pointer group transition-all"
                             >
                               <div className="flex flex-col min-w-0 pr-2">
                                 <span className="text-sm font-semibold text-slate-900 dark:text-white truncate group-hover:text-[var(--agent-light)] dark:group-hover:text-[var(--agent-dark)] transition-colors">
@@ -23538,6 +25050,7 @@ ${chat.id}`);
         onSttLangChange={setSttLang}
         agentId={selectedAgent?.id}
         agentName={selectedAgent?.name}
+                              agentBrowser={agentBrowser}
         onStartTour={() => startOnboardingTour({ force: true })}
         onResetChecklist={() => {
           try {
@@ -24442,9 +25955,13 @@ ${chat.id}`);
 
       <ConnectAppsModal
         isOpen={isConnectAppsOpen}
-        onClose={() => setIsConnectAppsOpen(false)}
+        onClose={() => {
+          setIsConnectAppsOpen(false);
+          setConnectAppsInitialSearch("");
+        }}
         targetAgentId={selectedAgent.id}
         targetAgentName={selectedAgent.name}
+        initialSearchQuery={connectAppsInitialSearch}
         connectedAppIds={connectedAppIds}
         onAppConnected={(appId) => {
           const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");

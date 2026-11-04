@@ -229,9 +229,7 @@ export function DropdownMenu({
               if (touchStartYRef.current !== null && e.changedTouches.length === 1) {
                 const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
                 if (deltaY > 60) {
-                  if (typeof window !== "undefined" && "vibrate" in navigator) {
-                    try { navigator.vibrate(6); } catch {}
-                  }
+// vibration disabled
                   onClose();
                 }
               }

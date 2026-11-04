@@ -12,10 +12,22 @@ export interface StreamRetryOptions {
   maxRetries?: number;
   initialDelayMs?: number;
   onRetryAttempt?: (attempt: number, error: Error) => void;
+  /** Called right before attaching to /live so TurnAccumulator can reset before replay. */
+  onReconnectReset?: (attempt: number, reason: string) => void;
   signal?: AbortSignal;
   channel?: string;
   /** Receives every parsed upstream event so callers can fold the turn with TurnAccumulator. */
   onEvent?: (event: any) => void;
+}
+
+export class SessionBusyConflictError extends Error {
+  readonly status = 409;
+  readonly sessionId: string;
+  constructor(sessionId: string, message = "A task is already running for this chat (409 Conflict)") {
+    super(message);
+    this.name = "SessionBusyConflictError";
+    this.sessionId = sessionId;
+  }
 }
 
 export async function sendConsoleChatMessageStream(
@@ -75,6 +87,8 @@ export async function sendConsoleChatMessageStream(
   let currentStreamMsgType = "message";
   const activeToolCalls: Record<string, { tool: string; args: string; result?: string; state: "calling" | "success" | "error" }> = {};
   let lastActiveToolCallId: string | null = null;
+  let sawAnyTurnEvent = false;
+  let sawTerminalResponse = false;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -119,6 +133,7 @@ export async function sendConsoleChatMessageStream(
       } catch {}
 
       let response: Response | null = null;
+      let isLiveReconnectStream = false;
       if (attempt > 0 && payload.session_id) {
         // Reconnect to the in-flight AgentCore turn first instead of re-sending a duplicate user prompt
         response = await fetch(`/api/agents/${encodeURIComponent(targetAgent)}/chats/${encodeURIComponent(payload.session_id)}/live`, {
@@ -126,9 +141,19 @@ export async function sendConsoleChatMessageStream(
           headers: authHeaders,
           signal: options.signal
         }).catch(() => null);
+        if (response?.ok) {
+          isLiveReconnectStream = true;
+          accumulatedText = "";
+          accumulatedReasoning = "";
+          reasoningMsgIds.clear();
+          options.onReconnectReset?.(attempt, "live_reconnect");
+        }
       }
 
       if (!response || !response.ok) {
+        if (attempt > 0 && sawAnyTurnEvent) {
+          throw new Error("Live turn stream closed before terminal event and /live was unavailable");
+        }
         response = await fetch("/api/agents/console/chat", {
           method: "POST",
           headers: authHeaders,
@@ -137,14 +162,22 @@ export async function sendConsoleChatMessageStream(
         }).catch(() => null);
       }
 
+      if (response?.status === 409) {
+        throw new SessionBusyConflictError(payload.session_id);
+      }
+
       if (!response || !response.ok) {
-        // Fallback to /api/console/chat
+        // Fallback to /api/console/chat only when primary route failed before starting turn
         response = await fetch("/api/console/chat", {
           method: "POST",
           headers: authHeaders,
           body: JSON.stringify(payload),
           signal: options.signal
         });
+      }
+
+      if (response.status === 409) {
+        throw new SessionBusyConflictError(payload.session_id);
       }
 
       if (!response.ok) {
@@ -179,6 +212,16 @@ export async function sendConsoleChatMessageStream(
 
             try {
               const parsed = JSON.parse(rawData);
+              sawAnyTurnEvent = true;
+              if (
+                parsed?.object === "response" &&
+                (parsed.status === "completed" ||
+                  parsed.status === "failed" ||
+                  parsed.status === "canceled" ||
+                  parsed.status === "cancelled")
+              ) {
+                sawTerminalResponse = true;
+              }
               options.onEvent?.(parsed);
 
               if (parsed.object === "message" && parsed.type) {
@@ -315,19 +358,20 @@ export async function sendConsoleChatMessageStream(
         }
       }
 
-      if (accumulatedText.length > 0) {
+      // If stream closed mid-turn without a terminal response event, retry via /live if attempts remain
+      if (sawAnyTurnEvent && !sawTerminalResponse && attempt < maxRetries && !isLiveReconnectStream) {
+        throw new Error("SSE stream closed before terminal response.completed event");
+      }
+
+      if (sawTerminalResponse || accumulatedText.length > 0 || sawAnyTurnEvent) {
         return { text: stripInternalExecutionArtifacts(accumulatedText), reasoning: accumulatedReasoning || undefined };
       }
     } catch (err: any) {
-      if (options.signal?.aborted || err?.name === "AbortError") {
+      if (options.signal?.aborted || err?.name === "AbortError" || err instanceof SessionBusyConflictError || err?.status === 409) {
         throw err;
       }
       lastError = err instanceof Error ? err : new Error(String(err));
       console.warn(`[chatStream] Attempt ${attempt + 1}/${maxRetries + 1} failed:`, lastError.message);
-
-      if (accumulatedText.length > 20) {
-        break;
-      }
     }
   }
 

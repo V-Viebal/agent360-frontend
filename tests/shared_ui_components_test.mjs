@@ -834,7 +834,9 @@ console.log("✓ Test 59: Anti-Scale-Jitter FullHD Backing-Scale Guard & Inactiv
 console.log("Testing Interactive Chat Connect App Card & Quick OAuth/MCP Connect Contract...");
 const connectModalSrc = fs.readFileSync(path.join(rootDir, "src/components/ConnectAppsModal.tsx"), "utf-8");
 assert.ok(
-  grokImeSrc.includes('kind: "options" | "poll" | "force_reply" | "reply_keyboard" | "connect_app"') &&
+  grokImeSrc.includes('"connect_app"') &&
+  grokImeSrc.includes('data-testid="detail-connect-apps-btn"') &&
+  !grokImeSrc.includes("Giới thiệu & Vai trò") &&
   grokImeSrc.includes('data-testid={`interactive-connect-app-card-${w.interactionId}`}') &&
   grokImeSrc.includes('data-testid={`interactive-connect-app-open-modal-${w.interactionId}`}') &&
   grokImeSrc.includes('data-testid={`interactive-connect-app-item-${slug}`}') &&
@@ -842,9 +844,85 @@ assert.ok(
   grokImeSrc.includes("handleQuickConnectAppFromChat") &&
   grokImeSrc.includes("resolveCatalogAppsFromText") &&
   connectModalSrc.includes("initialSearchQuery"),
-  "Chat UI must support interactive connect_app cards (both explicit tool calls and natural prose detection), quick app connect/status badges, and pre-filtered ConnectAppsModal opening"
+  "Chat UI must support interactive connect_app cards (both explicit tool calls and natural prose detection), quick app connect/status badges, pre-filtered ConnectAppsModal opening, and Detail tab Connect Apps CTA without legacy intro card"
 );
-console.log("✓ Test 60: Interactive Chat Connect App Card & Quick OAuth/MCP Connect Contract verified");
+console.log("✓ Test 60: Interactive Chat Connect App Card & Detail Tab Connect Apps Contract verified");
+
+console.log("Testing Interactive Chat Channel Connection Card (Telegram & Zalo) & Inline Setup Contract...");
+const channelModalSrc61 = fs.readFileSync(path.join(rootDir, "src/components/ChannelConfigModal.tsx"), "utf-8");
+const agentApiSrc61 = fs.readFileSync(path.join(rootDir, "src/services/agentApi.ts"), "utf-8");
+assert.ok(
+  grokImeSrc.includes('kind: "options" | "poll" | "force_reply" | "reply_keyboard" | "connect_app" | "connect_channel"') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-card-${w.interactionId}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-open-settings-${w.interactionId}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-item-${chType}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-setup-${chType}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-config-${chType}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-token-${chType}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-zalo-mode-web-${w.interactionId}`}') &&
+  grokImeSrc.includes('data-testid={`interactive-connect-channel-zalo-mode-webhook-${w.interactionId}`}') &&
+  grokImeSrc.includes("handleQuickSetupChannelFromChat") &&
+  grokImeSrc.includes("resolveChannelsFromText") &&
+  grokImeSrc.includes("CHANNEL_CONNECTION_CATALOG") &&
+  channelModalSrc61.includes("isZalo") &&
+  agentApiSrc61.includes("normalizeZaloChannelDefaults"),
+  "Chat UI must support interactive connect_channel cards for Telegram, Zalo, Discord, and Slack with inline Bot Token input, Zalo Web vs Webhook mode selector, one-click setup & enable, and ChannelConfigModal integration"
+);
+
+const proxyEndpointSrc61 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Endpoints/AgentRuntimeProxyEndpoint.cs"), "utf-8");
+const qwenPawClientSrc61 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Services/QwenPawClient.cs"), "utf-8");
+const sessionRoomSrc61 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/SubAgents/SessionRoomService.cs"), "utf-8");
+const siteCustomizeSrc61 = fs.readFileSync(path.join(rootDir, "../../its/runtime-tools/sitecustomize.py"), "utf-8");
+const zaloPassiveBridgeSrc61 = fs.readFileSync(path.join(rootDir, "../../its/runtime-tools/zalo_passive_bridge.py"), "utf-8");
+const multiChannelPluginSrc61 = fs.readFileSync(path.join(rootDir, "../../its/runtime-tools/multi_channel_hotfix_plugin.py"), "utf-8");
+assert.ok(
+  !proxyEndpointSrc61.includes("_zaloChannelOverrides") &&
+  zaloPassiveBridgeSrc61.includes("Skyer Zalo Web Chat <-> QwenPaw ZaloChannel Bidirectional Bridge") &&
+  zaloPassiveBridgeSrc61.includes("_build_bot_mention_regex") &&
+  multiChannelPluginSrc61.includes("import zalo_passive_bridge as zpb") &&
+  proxyEndpointSrc61.includes('zaloObj["isBuiltin"] = true;') &&
+  siteCustomizeSrc61.includes("_DEFAULT_ZALO_BUILTIN_CHANNEL") &&
+  siteCustomizeSrc61.includes('channels["zalo"] = dict(_DEFAULT_ZALO_BUILTIN_CHANNEL)') &&
+  siteCustomizeSrc61.includes("_install_skyer_channel_connection_awareness") &&
+  siteCustomizeSrc61.includes("SKYER PLATFORM CHANNEL & APP CONNECTION ARCHITECTURE") &&
+  qwenPawClientSrc61.includes("EnrichWithSkyerChannelAwarenessIfRelevant") &&
+  qwenPawClientSrc61.includes("[SKYER PLATFORM CHANNEL & APP CONNECTION AWARENESS]") &&
+  sessionRoomSrc61.includes("[SKYER PLATFORM CHANNEL & APP CONNECTION AWARENESS]") &&
+  grokImeSrc.includes("isMisleadingChannelMethodChoice") &&
+  grokImeSrc.includes("Zalo Web (QR • Mặc định)"),
+  "Zalo channel schema must be seeded as a first-class builtin channel in QwenPaw/AgentCore sitecustomize.py, fleet-wide Skyer Channel & App Connection Awareness must instruct all agents that Zalo defaults to Zalo Web (mode=web, QR scan on Agent Browser) without Zalo OA/ZNS hallucination, and frontend must convert/suppress misleading Zalo OA/ZNS choice cards into connect_channel cards"
+);
+
+console.log("✓ Test 61: Interactive Chat Channel Connection Card, Builtin Zalo Schema, & Fleet-Wide Skyer Channel Awareness Contract verified");
+
+console.log("Testing Stream Interrupt Resilience, 409 Auto-Reconnect, & Polling Reduction Contract...");
+const chatStreamSrc62 = fs.readFileSync(path.join(rootDir, "src/services/chatStream.ts"), "utf-8");
+const turnStreamSrc62 = fs.readFileSync(path.join(rootDir, "src/services/turnStream.ts"), "utf-8");
+const nginxConfSrc62 = fs.readFileSync(path.join(rootDir, "deploy/nginx/default.conf.template"), "utf-8");
+const syncStreamEndpointSrc62 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Endpoints/AgentChatSyncStreamEndpoint.cs"), "utf-8");
+const qwenPawClientSrc62 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Services/QwenPawClient.cs"), "utf-8");
+const featuresEndpointsSrc62 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Endpoints/AgentFeaturesEndpoints.cs"), "utf-8");
+
+assert.ok(
+  nginxConfSrc62.includes("proxy_read_timeout 900s;") &&
+  nginxConfSrc62.includes("proxy_send_timeout 900s;") &&
+  chatStreamSrc62.includes("export class SessionBusyConflictError extends Error") &&
+  chatStreamSrc62.includes("sawTerminalResponse") &&
+  chatStreamSrc62.includes("onReconnectReset") &&
+  !chatStreamSrc62.includes("if (accumulatedText.length > 20)") &&
+  turnStreamSrc62.includes("reset(): void") &&
+  grokImeSrc.includes("SessionBusyConflictError") &&
+  grokImeSrc.includes("isConflictOrMidTurnDrop") &&
+  grokImeSrc.includes("if (isStreaming || isCurrentSessionRunning || Boolean(liveTurn) || processingChatsRef.current.has(sendChatId))") &&
+  syncStreamEndpointSrc62.includes("if (isActiveInQueue && lastKnownCount != -1)") &&
+  syncStreamEndpointSrc62.includes("var pollDelay = isTurnRunning ? TimeSpan.FromSeconds(4) : TimeSpan.FromSeconds(5);") &&
+  qwenPawClientSrc62.includes("ApprovalsCacheTtl = TimeSpan.FromSeconds(15)") &&
+  qwenPawClientSrc62.includes("ChatHistoryGates") &&
+  featuresEndpointsSrc62.includes("SESSION_TURN_ALREADY_RUNNING") &&
+  featuresEndpointsSrc62.includes("response.StatusCode == System.Net.HttpStatusCode.Conflict"),
+  "Agent360 must enforce 900s SSE proxy timeout, auto-reconnect /live on mid-turn drop or 409 Conflict without duplicate prompts, reset TurnAccumulator on replay, and throttle/coalesce chat history & approval polling"
+);
+console.log("✓ Test 62: Stream Interrupt Resilience, 409 Auto-Reconnect, & Polling Reduction Contract verified");
 
 console.log("Testing Fast Tab Control Serialization, Browser-Level CDP Tab Management, & Zero-Lag Text Input Contract...");
 const browserDirSrc63 = fs.readFileSync(path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserDirectory.cs"), "utf-8");

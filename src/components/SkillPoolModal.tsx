@@ -94,7 +94,7 @@ export function SkillPoolModal({ onClose, agentName }: SkillPoolModalProps) {
       </div>
 
       {/* Skills list */}
-      <div className="p-6 overflow-y-auto space-y-3 max-h-[60vh]">
+      <div className="p-3.5 overflow-y-auto space-y-2 max-h-[60vh]">
         {loading ? (
           <div className="text-center py-12 text-neutral-500 text-xs font-mono">
             Loading skills from Skyer runtime adapter...

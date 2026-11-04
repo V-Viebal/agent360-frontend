@@ -288,7 +288,7 @@ export function AgentSettingsModal({
         className="w-full sm:w-[95vw] md:w-[1100px] lg:w-[1240px] xl:w-[1360px] max-w-[96vw] h-[94dvh] sm:h-[92vh] max-h-[100dvh] sm:max-h-[820px] bg-white dark:bg-[#121218] border-t sm:border border-slate-200 dark:border-[#262634] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-800 dark:text-neutral-200 font-sans animate-in zoom-in-95 duration-150"
       >
         {/* Modal Header */}
-        <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
+        <div className="px-3.5 sm:px-4 py-2.5 sm:py-2.5 border-b border-slate-200 dark:border-[#22222e] flex items-center justify-between bg-slate-50 dark:bg-[#161620] shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div
               style={{
@@ -381,7 +381,7 @@ export function AgentSettingsModal({
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5 bg-white dark:bg-[#121218]">
+          <div className="flex-1 p-3 sm:p-3.5 overflow-y-auto space-y-3 sm:space-y-3.5 bg-white dark:bg-[#121218]">
             {/* TAB 1: GENERAL (Identity, LLM Model, Governance, Status) */}
             {activeTab === "general" && (
               <div className="space-y-4 max-w-4xl">

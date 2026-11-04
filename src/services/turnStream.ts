@@ -21,6 +21,20 @@ export class TurnAccumulator {
 
   constructor(private readonly messageId: string) {}
 
+  reset(): void {
+    this.messageTypes.clear();
+    this.reasoningById.clear();
+    this.textById.clear();
+    this.textOrder.length = 0;
+    this.tools.length = 0;
+    this.stepOrder.length = 0;
+    this.toolMsgToCall.clear();
+    this.lastActiveMsgId = null;
+    this.done = false;
+    this.userText = null;
+    this.hasSeenStructuredEvents = false;
+  }
+
   ingest(event: any): boolean {
     if (!event || typeof event !== "object") return false;
     if (event.object === "response") {

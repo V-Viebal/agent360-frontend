@@ -63,7 +63,7 @@ export function ApprovalCardModal({
       icon={<ShieldAlert size={18} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="lg"
     >
-      <div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+      <div className="p-3.5 space-y-3 max-h-[65vh] overflow-y-auto">
         {approvals.map((app) => (
           <div
             key={app.request_id}
@@ -121,7 +121,7 @@ export function ApprovalCardModal({
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 bg-slate-50 dark:bg-[#17120e] border-t border-slate-200 dark:border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
+      <div className="px-4 py-2 bg-slate-50 dark:bg-[#17120e] border-t border-slate-200 dark:border-[#2b241e] flex justify-between items-center text-[11px] text-neutral-500 font-mono">
         <span>{t("approval.auditNotice")}</span>
         <button
           onClick={onClose}

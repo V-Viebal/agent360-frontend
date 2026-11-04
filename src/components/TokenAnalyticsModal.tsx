@@ -46,7 +46,7 @@ export function TokenAnalyticsModal({ onClose }: TokenAnalyticsModalProps) {
       icon={<BarChart3 size={18} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
       maxWidth="2xl"
     >
-      <div className="p-6 space-y-6 font-sans text-xs">
+      <div className="p-3.5 space-y-3.5 font-sans text-xs">
         {loading ? (
           <div className="text-center py-12 text-neutral-500 font-mono">
             Loading runtime token usage statistics...

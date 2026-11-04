@@ -537,6 +537,7 @@ interface ConnectAppsModalProps {
   onClose: () => void;
   targetAgentId?: string;
   targetAgentName?: string;
+  initialSearchQuery?: string;
   connectedAppIds?: string[];
   onAppConnected?: (appId: string) => void;
   onAppDisconnected?: (appId: string) => void;
@@ -547,6 +548,7 @@ export function ConnectAppsModal({
   onClose,
   targetAgentId = "default",
   targetAgentName = "Agent",
+  initialSearchQuery = "",
   connectedAppIds = [],
   onAppConnected,
   onAppDisconnected,
@@ -558,6 +560,15 @@ export function ConnectAppsModal({
   const [loadingAppId, setLoadingAppId] = useState<string | null>(null);
   const [pendingAuthAppIds, setPendingAuthAppIds] = useState<string[]>([]);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery(initialSearchQuery || "");
+      if (initialSearchQuery) {
+        setSelectedCategory("All");
+      }
+    }
+  }, [isOpen, initialSearchQuery]);
 
   // Realtime WebSocket event listener for instant OAuth activation (MUST run before early return)
   useEffect(() => {
@@ -735,7 +746,7 @@ export function ConnectAppsModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#1f1f2a] flex items-center justify-between shrink-0 bg-[#16161c]">
+        <div className="px-4 py-2.5 border-b border-[#1f1f2a] flex items-center justify-between shrink-0 bg-[#16161c]">
           <div className="flex items-center gap-3">
             <div style={{ backgroundColor: agentTheme.bgLight, borderColor: agentTheme.borderLight, color: agentTheme.light }} className="h-8 w-8 rounded-xl border flex items-center justify-center dark:!text-[var(--agent-color)]">
               <Sparkles size={16} />
@@ -787,7 +798,7 @@ export function ConnectAppsModal({
         )}
 
         {/* Search Bar & Categories */}
-        <div className="p-4 border-b border-[#1c1c26] space-y-3 shrink-0 bg-[#14141a]">
+        <div className="p-3 border-b border-[#1c1c26] space-y-2 shrink-0 bg-[#14141a]">
           <div className="relative">
             <Search
               size={14}
@@ -832,7 +843,7 @@ export function ConnectAppsModal({
         </div>
 
         {/* Content Body: Categorized App Grid */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-[#0f0f13]">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3.5 bg-[#0f0f13]">
           {displayCategories.map((category) => {
             const categoryApps = filteredApps.filter(
               (app) => app.category === category
