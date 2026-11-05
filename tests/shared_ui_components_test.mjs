@@ -974,3 +974,21 @@ assert.ok(
   "Phone browser must preserve genuine mobile CSS width (<640px) and exact panel aspect ratio so responsive breakpoints work and content is never vertically stretched, while maintaining windowed velocity tracking for natural touch-slide scrolling"
 );
 console.log("✓ Test 65: Phone Browser Genuine Mobile Aspect-Preserving Scale (>= 360px) & Natural Touch Hold-to-Slide / Kinetic Scroll Contract verified");
+
+console.log("Testing Browser Device Emulation (Mobile UA + Client Hints + Touch) & View as Phone / View as Desktop Option Contract...");
+assert.ok(
+  screencastHubSrc.includes("Emulation.setUserAgentOverride") &&
+  screencastHubSrc.includes("Emulation.setTouchEmulationEnabled") &&
+  screencastHubSrc.includes("BuildUserAgentOverrideParams(isMobile)") &&
+  screencastHubSrc.includes("mobile = isMobile") &&
+  cdpEndpointSrc.includes("Emulation.setUserAgentOverride") &&
+  cdpEndpointSrc.includes("Emulation.setTouchEmulationEnabled") &&
+  cdpEndpointSrc.includes("mobile = isMobileResize") &&
+  grokImeSrc.includes('data-testid="agent-browser-view-as-phone-btn"') &&
+  grokImeSrc.includes('data-testid="agent-browser-view-as-desktop-btn"') &&
+  grokImeSrc.includes("View as Phone") &&
+  grokImeSrc.includes("View as Desktop") &&
+  grokImeSrc.includes("reloadOnModeChange"),
+  "Browser must emulate full Phone identity (Mobile User-Agent, Client Hints userAgentMetadata.mobile=true, TouchEmulation maxTouchPoints=5, DeviceMetrics mobile=true) when in Phone mode and provide View as Phone / View as Desktop options in the expanded More Menu"
+);
+console.log("✓ Test 66: Browser Device Emulation & View as Phone / View as Desktop Option Contract verified");

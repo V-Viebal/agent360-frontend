@@ -201,6 +201,7 @@ import {
   MousePointer2,
   Hand,
   Smartphone,
+  Monitor,
   ArrowUpRight,
   Share2,
   Volume2,
@@ -6517,7 +6518,14 @@ function SelkiesViewer({
     }
     return false;
   });
-  const [isDesktopSiteMode, setIsDesktopSiteMode] = useState<boolean>(false);
+  const [browserViewModeOverride, setBrowserViewModeOverride] = useState<"phone" | "desktop" | null>(null);
+  const effectiveViewMode: "phone" | "desktop" = browserViewModeOverride ?? (isPhoneClient && !isLandscapeRotated ? "phone" : "desktop");
+  const isDesktopSiteMode = effectiveViewMode === "desktop";
+  const setIsDesktopSiteMode = (next: boolean | ((prev: boolean) => boolean)) => {
+    const curDesktop = effectiveViewMode === "desktop";
+    const resolved = typeof next === "function" ? next(curDesktop) : next;
+    setBrowserViewModeOverride(resolved ? "desktop" : "phone");
+  };
   const [isVirtualKeyboardOpen, setIsVirtualKeyboardOpen] = useState<boolean>(false);
   const [virtualKeyboardHeight, setVirtualKeyboardHeight] = useState<number>(0);
   const isVirtualKeyboardOpenRef = useRef<boolean>(false);
@@ -6576,16 +6584,24 @@ function SelkiesViewer({
     tabOpQueueRef.current = tabOpQueueRef.current.then(op).catch(() => {});
     return tabOpQueueRef.current;
   };
-  const computeActiveBrowserViewport = () => {
+  const computeActiveBrowserViewport = (modeOverride?: "phone" | "desktop") => {
     const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
     const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
     const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
-    const effectiveMob = isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode;
+    const targetMode = modeOverride ?? effectiveViewMode;
+    const effectiveMob = targetMode === "phone" && !isLandscapeRotated;
     if (effectiveMob) {
+      if (!isPhoneClient) {
+        return {
+          w: Math.min(430, Math.max(375, Math.round(390 * scaleFactor))),
+          h: Math.min(932, Math.max(640, Math.round(844 * scaleFactor))),
+          isMobile: true,
+        };
+      }
       const mobW = Math.max(360, rawW);
       const mobH = Math.round(rawH * (mobW / Math.max(1, rawW)));
       return {
-        w: Math.min(1920, Math.round(mobW * scaleFactor)),
+        w: Math.min(480, Math.round(mobW * scaleFactor)),
         h: Math.min(1080, Math.round(mobH * scaleFactor)),
         isMobile: true,
       };
@@ -6602,6 +6618,28 @@ function SelkiesViewer({
       h: Math.max(360, Math.min(1080, Math.round(fhdH * scaleFactor))),
       isMobile: false,
     };
+  };
+
+  const handleSetBrowserViewMode = async (nextMode: "phone" | "desktop") => {
+    triggerHaptic(8);
+    setBrowserViewModeOverride(nextMode);
+    setIsBrowserMoreMenuOpen(false);
+    const nextVp = computeActiveBrowserViewport(nextMode);
+    setIsNavigating(true);
+    try {
+      await dispatchAgentBrowserInput(agentId, {
+        action: "resize",
+        width: nextVp.w,
+        height: nextVp.h,
+        pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+        isMobile: nextVp.isMobile,
+        deviceType: nextVp.isMobile ? "phone" : "desktop",
+        reloadOnModeChange: true,
+      });
+    } finally {
+      setIsNavigating(false);
+      setTimeout(refreshBrowserTabs, 260);
+    }
   };
   if (tabOrderLoadedForRef.current !== agentId) {
     tabOrderLoadedForRef.current = agentId;
@@ -7196,16 +7234,17 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
     });
   };
 
-  const handleToggleVpn = async () => {
+  const handleToggleVpn = async (forceRotate = false) => {
     if (isTogglingVpn || !agentId) return;
     triggerHaptic(8);
     setIsTogglingVpn(true);
     try {
-      const nextEnabled = !(vpnStatus?.enabled);
+      const nextEnabled = forceRotate ? true : !(vpnStatus?.enabled);
       const updated = await setAgentBrowserVpn(agentId, {
         enabled: nextEnabled,
-        mode: "auto",
+        mode: forceRotate ? "rotate" : "auto",
         region: "VN",
+        rotate: forceRotate,
       });
       if (updated) {
         setVpnStatus(updated);
@@ -7765,38 +7804,6 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
 
             <Tooltip
               content={
-                vpnStatus?.enabled
-                  ? `VPN Profile đang BẬT (${vpnStatus.region || "VN"} · ${vpnStatus.publicIp || vpnStatus.server || "proxy360 pool"}) · Bấm để tắt VPN`
-                  : "Bật VPN cho riêng Chromium Profile này (lấy IP từ proxy360 Pool)"
-              }
-              placement="bottom"
-            >
-              <button
-                type="button"
-                data-testid="agent-browser-vpn-toggle-btn"
-                data-vpn-enabled={vpnStatus?.enabled ? "true" : "false"}
-                disabled={isTogglingVpn}
-                onClick={() => void handleToggleVpn()}
-                className={`h-7 px-2 rounded-full flex items-center gap-1 text-[11px] font-mono font-semibold transition-colors cursor-pointer shrink-0 border ${
-                  vpnStatus?.enabled
-                    ? "bg-emerald-500/15 dark:bg-emerald-400/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/35"
-                    : "bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] border-black/10 dark:border-white/10"
-                }`}
-                aria-label="Toggle Profile VPN"
-              >
-                {isTogglingVpn ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : vpnStatus?.enabled ? (
-                  <ShieldCheck size={13} className="text-emerald-500" />
-                ) : (
-                  <Shield size={13} />
-                )}
-                <span>{vpnStatus?.enabled ? `VPN ${vpnStatus.region || "VN"}` : "VPN"}</span>
-              </button>
-            </Tooltip>
-
-            <Tooltip
-              content={
                 mobileInteractionMode === "mouse"
                   ? "Chế độ Chuột ảo (1 chạm: di chuyển/click · 2 chạm vuốt: cuộn trang · 2 chạm nhấn: chuột phải) · Bấm để chuyển sang Chạm"
                   : "Chế độ Chạm trực tiếp (Mặc định trên điện thoại) · Bấm để chuyển sang Chuột ảo (Trackpad)"
@@ -7845,13 +7852,20 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                     if (isHistoryOpen) setIsHistoryOpen(false);
                   }}
                   className={`relative h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                    isBrowserMoreMenuOpen || isHistoryOpen || isFindOpen || isLandscapeRotated || isDesktopSiteMode || browserZoomPercent !== 100
+                    isBrowserMoreMenuOpen || isHistoryOpen || isFindOpen || isLandscapeRotated || isDesktopSiteMode || browserZoomPercent !== 100 || vpnStatus?.enabled
                       ? "bg-[#1a73e8]/15 dark:bg-[#8ab4f8]/20 text-[#1a73e8] dark:text-[#8ab4f8]"
                       : "hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
                   }`}
                   aria-label="More browser options"
                 >
                   <MoreVertical size={15} />
+                  {vpnStatus?.enabled && (
+                    <span
+                      data-testid="agent-browser-more-vpn-dot"
+                      className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#202124]"
+                      title={`VPN ${vpnStatus.region || "VN"} đang bật (${vpnStatus.publicIp || vpnStatus.server || "proxy360 pool"})`}
+                    />
+                  )}
                 </button>
               </Tooltip>
 
@@ -7955,24 +7969,58 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                     </span>
                   </button>
 
-                  {/* Row 5: Mobile vs Desktop Site Mode */}
-                  <button
-                    type="button"
-                    data-testid="computer-device-site-mode-btn"
-                    onClick={() => {
-                      setIsDesktopSiteMode((d) => !d);
-                      setIsBrowserMoreMenuOpen(false);
-                    }}
-                    className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <Globe size={14} className={isDesktopSiteMode ? "text-[#1a73e8] dark:text-[#8ab4f8]" : "text-[#5f6368] dark:text-[#9aa0a6]"} />
-                      <span>Giao diện hiển thị</span>
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-black/[0.06] dark:bg-white/[0.1] text-[10px] font-medium">
-                      {isDesktopSiteMode || !isPhoneClient ? "Máy tính" : "Điện thoại"}
-                    </span>
-                  </button>
+                  {/* Row 5: View as Phone vs View as Desktop Mode */}
+                  <div className="px-3 py-2 flex flex-col gap-1.5 border-t border-black/8 dark:border-white/10">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-[#5f6368] dark:text-[#9aa0a6] font-medium">
+                        {effectiveViewMode === "phone" ? (
+                          <Smartphone size={13} className="text-[#1a73e8] dark:text-[#8ab4f8]" />
+                        ) : (
+                          <Monitor size={13} className="text-[#1a73e8] dark:text-[#8ab4f8]" />
+                        )}
+                        <span>Chế độ hiển thị (View as)</span>
+                      </span>
+                      <button
+                        type="button"
+                        data-testid="computer-device-site-mode-btn"
+                        data-view-as={effectiveViewMode}
+                        onClick={() => void handleSetBrowserViewMode(effectiveViewMode === "phone" ? "desktop" : "phone")}
+                        className="px-1.5 py-0.5 rounded bg-black/[0.06] dark:bg-white/[0.1] text-[10px] font-medium text-[#1a73e8] dark:text-[#8ab4f8] cursor-pointer"
+                      >
+                        {effectiveViewMode === "phone" ? "Phone" : "Desktop"}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 bg-black/[0.04] dark:bg-white/[0.06] p-0.5 rounded-lg">
+                      <button
+                        type="button"
+                        data-testid="agent-browser-view-as-phone-btn"
+                        aria-pressed={effectiveViewMode === "phone"}
+                        onClick={() => void handleSetBrowserViewMode("phone")}
+                        className={`px-2 py-1 rounded-md flex items-center justify-center gap-1.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                          effectiveViewMode === "phone"
+                            ? "bg-white dark:bg-[#3c4043] text-[#1a73e8] dark:text-[#8ab4f8] shadow-2xs font-semibold"
+                            : "text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                        }`}
+                      >
+                        <Smartphone size={12} />
+                        <span>View as Phone</span>
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="agent-browser-view-as-desktop-btn"
+                        aria-pressed={effectiveViewMode === "desktop"}
+                        onClick={() => void handleSetBrowserViewMode("desktop")}
+                        className={`px-2 py-1 rounded-md flex items-center justify-center gap-1.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                          effectiveViewMode === "desktop"
+                            ? "bg-white dark:bg-[#3c4043] text-[#1a73e8] dark:text-[#8ab4f8] shadow-2xs font-semibold"
+                            : "text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed]"
+                        }`}
+                      >
+                        <Monitor size={12} />
+                        <span>View as Desktop</span>
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Row 6: Rotate 90° Landscape */}
                   <button
@@ -7992,6 +8040,61 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                       {isLandscapeRotated ? "Ngang 90°" : "Dọc"}
                     </span>
                   </button>
+
+                  {/* Row 7: Per-Profile VPN (proxy360 Round-Robin IP Pool) */}
+                  <div className="border-t border-black/8 dark:border-white/10 mt-1 pt-1 flex flex-col">
+                    <button
+                      type="button"
+                      data-testid="agent-browser-vpn-toggle-btn"
+                      data-vpn-enabled={vpnStatus?.enabled ? "true" : "false"}
+                      disabled={isTogglingVpn}
+                      onClick={() => void handleToggleVpn(false)}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        {isTogglingVpn ? (
+                          <Loader2 size={14} className="animate-spin text-[#1a73e8] dark:text-[#8ab4f8]" />
+                        ) : vpnStatus?.enabled ? (
+                          <ShieldCheck size={14} className="text-emerald-500" />
+                        ) : (
+                          <Shield size={14} className="text-[#5f6368] dark:text-[#9aa0a6]" />
+                        )}
+                        <span className="flex flex-col">
+                          <span className="font-medium">VPN Profile ({vpnStatus?.region || "VN"})</span>
+                          <span className="text-[10px] font-mono text-[#5f6368] dark:text-[#9aa0a6]">
+                            {vpnStatus?.enabled
+                              ? (vpnStatus.publicIp || vpnStatus.server || "proxy360 pool")
+                              : "Tắt · Dùng mạng gốc VPS"}
+                          </span>
+                        </span>
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                          vpnStatus?.enabled
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30"
+                            : "bg-black/[0.06] dark:bg-white/[0.1] text-[#5f6368] dark:text-[#9aa0a6]"
+                        }`}
+                      >
+                        {vpnStatus?.enabled ? "ĐANG BẬT" : "BẬT VPN"}
+                      </span>
+                    </button>
+
+                    {vpnStatus?.enabled && (
+                      <button
+                        type="button"
+                        data-testid="agent-browser-vpn-rotate-btn"
+                        disabled={isTogglingVpn}
+                        onClick={() => void handleToggleVpn(true)}
+                        className="w-full px-3 py-1.5 text-left flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-[11px] text-[#1a73e8] dark:text-[#8ab4f8]"
+                      >
+                        <span className="flex items-center gap-2.5 pl-0.5">
+                          <RefreshCw size={12} className={isTogglingVpn ? "animate-spin" : ""} />
+                          <span>Xoay tour IP kế tiếp (Pool)</span>
+                        </span>
+                        <span className="text-[10px] font-mono opacity-80">Round-Robin</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -8200,6 +8303,13 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             </div>
           )}
 
+          <div
+            className={
+              effectiveViewMode === "phone" && !isPhoneClient && !isLandscapeRotated
+                ? "relative h-full max-w-full aspect-[390/844] rounded-2xl overflow-hidden shadow-2xl border border-black/15 dark:border-white/15 bg-[#FFFDF9] dark:bg-[#0a0a0f]"
+                : "relative w-full h-full"
+            }
+          >
           <AgentBrowserPreview
             agentId={agentId}
             pageId={selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined}
@@ -8210,7 +8320,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             isLandscapeRotated={isLandscapeRotated}
             interactive={true}
             mobileInputMode={mobileInteractionMode}
-            isMobileDevice={isPhoneClient && !isLandscapeRotated && !isDesktopSiteMode}
+            isMobileDevice={effectiveViewMode === "phone" && !isLandscapeRotated}
             isVirtualKeyboardOpen={isVirtualKeyboardOpen}
             virtualKeyboardHeight={virtualKeyboardHeight}
             viewportWidth={computeActiveBrowserViewport().w}
@@ -8228,6 +8338,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
               else if (shortcut === "find") handleToggleFindBar();
             }}
           />
+          </div>
         </div>
       </div>
     </div>
@@ -9058,16 +9169,17 @@ function AgentBrowserPreview({
       return;
     }
     const timer = setTimeout(() => {
+      const modeFlipped = prev.pageId === pageId && prev.isMobile !== undefined && prev.isMobile !== isMobileDevice;
       lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice };
       const deviceType = isMobileDevice ? "phone" : "desktop";
       const sock = wsRef.current;
       if (sock && sock.readyState === WebSocket.OPEN) {
         try {
-          sock.send(JSON.stringify({ action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType }));
+          sock.send(JSON.stringify({ action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType, reloadOnModeChange: modeFlipped }));
           return;
         } catch {}
       }
-      void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType });
+      void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType, reloadOnModeChange: modeFlipped });
     }, 100);
     return () => clearTimeout(timer);
   }, [enabled, agentId, pageId, viewportWidth, viewportHeight, isMobileDevice, isVirtualKeyboardOpen]);

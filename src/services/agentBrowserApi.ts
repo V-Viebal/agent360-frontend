@@ -112,6 +112,7 @@ export interface BrowserInputPayload {
   height?: number;
   isMobile?: boolean;
   deviceType?: "phone" | "tablet" | "desktop";
+  reloadOnModeChange?: boolean;
 }
 
 export interface BrowserInputResult {
@@ -314,7 +315,7 @@ export async function fetchAgentBrowserVpn(agentId: string): Promise<AgentBrowse
 
 export async function setAgentBrowserVpn(
   agentId: string,
-  payload: { enabled: boolean; mode?: string; region?: string; proxyId?: number; proxyUrl?: string }
+  payload: { enabled: boolean; mode?: string; region?: string; proxyId?: number; proxyUrl?: string; rotate?: boolean }
 ): Promise<AgentBrowserVpnStatus | null> {
   try {
     const id = bare(agentId);
