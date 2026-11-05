@@ -992,3 +992,17 @@ assert.ok(
   "Browser must emulate full Phone identity (Mobile User-Agent, Client Hints userAgentMetadata.mobile=true, TouchEmulation maxTouchPoints=5, DeviceMetrics mobile=true) when in Phone mode and provide View as Phone / View as Desktop options in the expanded More Menu"
 );
 console.log("✓ Test 66: Browser Device Emulation & View as Phone / View as Desktop Option Contract verified");
+
+console.log("Testing Browser Refresh / Reload Viewport Fit & Device Mode Persistence Contract...");
+assert.ok(
+  screencastHubSrc.includes("EnsureActiveViewportAndDeviceEmulationAsync(ws, req, ct, forceReapplyEmulation: true)") &&
+  screencastHubSrc.includes("EnsureActiveViewportAndDeviceEmulationAsync(ws, req, ct)") &&
+  cdpEndpointSrc.includes('var isMobileNav = req.IsMobile == true || string.Equals(req.DeviceType, "phone", StringComparison.OrdinalIgnoreCase);') &&
+  cdpEndpointSrc.includes('var isMobileRel = req.IsMobile == true || string.Equals(req.DeviceType, "phone", StringComparison.OrdinalIgnoreCase);') &&
+  grokImeSrc.includes("skyer_browser_view_mode_") &&
+  grokImeSrc.includes("refreshSignal={attempt + reloadKey}") &&
+  grokImeSrc.includes('key={`split-${browserTarget.url}`}') &&
+  !grokImeSrc.includes('key={`split-${browserTarget.url}-${browserIframeKey}`}'),
+  "Browser refresh/reload/navigation must preserve fitted viewport dimensions and selected device mode without unmounting SelkiesViewer or resetting CDP device emulation"
+);
+console.log("✓ Test 67: Browser Refresh / Reload Viewport Fit & Device Mode Persistence Contract verified");

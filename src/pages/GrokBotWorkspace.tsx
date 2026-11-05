@@ -6518,13 +6518,29 @@ function SelkiesViewer({
     }
     return false;
   });
-  const [browserViewModeOverride, setBrowserViewModeOverride] = useState<"phone" | "desktop" | null>(null);
+  const [browserViewModeOverride, setBrowserViewModeOverride] = useState<"phone" | "desktop" | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(`skyer_browser_view_mode_${agentId}`);
+      if (saved === "phone" || saved === "desktop") return saved;
+    } catch {}
+    return null;
+  });
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(`skyer_browser_view_mode_${agentId}`);
+      setBrowserViewModeOverride(saved === "phone" || saved === "desktop" ? saved : null);
+    } catch {}
+  }, [agentId]);
   const effectiveViewMode: "phone" | "desktop" = browserViewModeOverride ?? (isPhoneClient && !isLandscapeRotated ? "phone" : "desktop");
   const isDesktopSiteMode = effectiveViewMode === "desktop";
   const setIsDesktopSiteMode = (next: boolean | ((prev: boolean) => boolean)) => {
     const curDesktop = effectiveViewMode === "desktop";
     const resolved = typeof next === "function" ? next(curDesktop) : next;
-    setBrowserViewModeOverride(resolved ? "desktop" : "phone");
+    const nextMode = resolved ? "desktop" : "phone";
+    setBrowserViewModeOverride(nextMode);
+    try {
+      sessionStorage.setItem(`skyer_browser_view_mode_${agentId}`, nextMode);
+    } catch {}
   };
   const [isVirtualKeyboardOpen, setIsVirtualKeyboardOpen] = useState<boolean>(false);
   const [virtualKeyboardHeight, setVirtualKeyboardHeight] = useState<number>(0);
@@ -6623,6 +6639,9 @@ function SelkiesViewer({
   const handleSetBrowserViewMode = async (nextMode: "phone" | "desktop") => {
     triggerHaptic(8);
     setBrowserViewModeOverride(nextMode);
+    try {
+      sessionStorage.setItem(`skyer_browser_view_mode_${agentId}`, nextMode);
+    } catch {}
     setIsBrowserMoreMenuOpen(false);
     const nextVp = computeActiveBrowserViewport(nextMode);
     setIsNavigating(true);
@@ -6979,10 +6998,15 @@ function SelkiesViewer({
     );
     setAddressInput(normalizedUrl);
 
+    const navVp = computeActiveBrowserViewport();
     const res = await dispatchAgentBrowserInput(agentId, {
       action: "navigate",
       text: rawTarget,
       pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+      width: navVp.w,
+      height: navVp.h,
+      isMobile: navVp.isMobile,
+      deviceType: navVp.isMobile ? "phone" : "desktop",
     });
     if (res.tabs && Array.isArray(res.tabs)) {
       const real = res.tabs.filter((t) => !t.anchor);
@@ -7006,9 +7030,15 @@ function SelkiesViewer({
   const handleBrowserAction = async (act: "back" | "forward" | "reload") => {
     triggerHaptic(8);
     setIsNavigating(true);
+    const actVp = computeActiveBrowserViewport();
     await dispatchAgentBrowserInput(agentId, {
       action: act,
       pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+      width: actVp.w,
+      height: actVp.h,
+      isMobile: actVp.isMobile,
+      deviceType: actVp.isMobile ? "phone" : "desktop",
+      reloadOnModeChange: act === "reload",
     });
     setAttempt((a) => a + 1);
     setIsNavigating(false);
@@ -7024,8 +7054,16 @@ function SelkiesViewer({
       setAddressInput(tab.anchor ? "" : (tab.url || ""));
     }
     if (!tab.targetId.startsWith("optimistic-")) {
+      const tabVp = computeActiveBrowserViewport();
       void enqueueTabMutation(async () => {
-        await dispatchAgentBrowserInput(agentId, { action: "activate_tab", pageId: tab.targetId });
+        await dispatchAgentBrowserInput(agentId, {
+          action: "activate_tab",
+          pageId: tab.targetId,
+          width: tabVp.w,
+          height: tabVp.h,
+          isMobile: tabVp.isMobile,
+          deviceType: tabVp.isMobile ? "phone" : "desktop",
+        });
       });
     }
   };
@@ -7249,9 +7287,15 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
       if (updated) {
         setVpnStatus(updated);
       }
+      const vpnVp = computeActiveBrowserViewport();
       await dispatchAgentBrowserInput(agentId, {
         action: "reload",
         pageId: selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined,
+        width: vpnVp.w,
+        height: vpnVp.h,
+        isMobile: vpnVp.isMobile,
+        deviceType: vpnVp.isMobile ? "phone" : "desktop",
+        reloadOnModeChange: true,
       });
       setTimeout(refreshBrowserTabs, 300);
     } finally {
@@ -7556,7 +7600,10 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                     type="button"
                     data-testid="agent-browser-header-reload-session-btn"
                     disabled={isReloadingSession}
-                    onClick={onReloadSession}
+                    onClick={() => {
+                      void handleBrowserAction("reload");
+                      onReloadSession();
+                    }}
                     className="h-[38px] w-11 border-0 rounded-none bg-transparent hover:bg-black/10 dark:hover:bg-[#35363a] text-[#5f6368] dark:text-[#e8eaed] hover:text-[#202124] dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
                     aria-label={reloadSessionTooltip || "Reload browser session"}
                   >
@@ -8316,7 +8363,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             enabled={boxSize.w > 0 && boxSize.h > 0}
             intervalMs={800}
             liveWs={true}
-            refreshSignal={attempt}
+            refreshSignal={attempt + reloadKey}
             isLandscapeRotated={isLandscapeRotated}
             interactive={true}
             mobileInputMode={mobileInteractionMode}
@@ -9156,7 +9203,7 @@ function AgentBrowserPreview({
     };
   }, [enabled, agentId, pageId, liveWs]);
 
-  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined });
+  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0 });
 
   // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open to prevent layout thrash & lost input focus)
   useEffect(() => {
@@ -9165,12 +9212,13 @@ function AgentBrowserPreview({
     const w = Math.round(viewportWidth);
     const h = Math.round(viewportHeight);
     const prev = lastSentViewportRef.current;
-    if (prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
+    const forceResync = prev.refreshSignal !== refreshSignal;
+    if (!forceResync && prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
       return;
     }
     const timer = setTimeout(() => {
       const modeFlipped = prev.pageId === pageId && prev.isMobile !== undefined && prev.isMobile !== isMobileDevice;
-      lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice };
+      lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice, refreshSignal };
       const deviceType = isMobileDevice ? "phone" : "desktop";
       const sock = wsRef.current;
       if (sock && sock.readyState === WebSocket.OPEN) {
@@ -9180,9 +9228,9 @@ function AgentBrowserPreview({
         } catch {}
       }
       void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType, reloadOnModeChange: modeFlipped });
-    }, 100);
+    }, forceResync ? 20 : 100);
     return () => clearTimeout(timer);
-  }, [enabled, agentId, pageId, viewportWidth, viewportHeight, isMobileDevice, isVirtualKeyboardOpen]);
+  }, [enabled, agentId, pageId, viewportWidth, viewportHeight, isMobileDevice, isVirtualKeyboardOpen, refreshSignal]);
 
   // 3. Fallback HTTP Frame Poll ONLY when liveWs is false or if WebSocket fails to connect within 1400ms
   useEffect(() => {
@@ -12861,6 +12909,19 @@ ${targetItem.text}`;
   const realtimeWsRef = useRef<WebSocket | null>(null);
   const realtimeMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const pttMediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  // Mode B Multimodal RTC Video & Continuous Loop State
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [isScreenShareActive, setIsScreenShareActive] = useState<boolean>(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<"user" | "environment">("user");
+  const [liveRtcNodeId, setLiveRtcNodeId] = useState<string>("");
+  const [liveVisionSummary, setLiveVisionSummary] = useState<string>("");
+  const [liveVisionSource, setLiveVisionSource] = useState<"camera" | "screen" | "">("");
+  const realtimeVideoRef = useRef<HTMLVideoElement | null>(null);
+  const realtimeVideoStreamRef = useRef<MediaStream | null>(null);
+  const realtimeFrameIntervalRef = useRef<any>(null);
+  const realtimeAudioStreamRef = useRef<MediaStream | null>(null);
+  const realtimeContinuousActiveRef = useRef<boolean>(false);
   const pttChunksRef = useRef<Blob[]>([]);
   const [sttLang, setSttLang] = useState<"vi-VN" | "en-US">(() => {
     try {
@@ -13127,6 +13188,156 @@ ${targetItem.text}`;
     setIsRecording(false);
   };
 
+  // Helper to capture a frame from the live Camera or Screen-share video stream
+  const captureRealtimeVideoFrame = (): { data: string; mimeType: string } | null => {
+    const video = realtimeVideoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight || video.readyState < 2) return null;
+    try {
+      const canvas = document.createElement("canvas");
+      // Scale down to max 960x540 for ultra-low latency multimodal inference
+      const scale = Math.min(1, 960 / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+      const parts = dataUrl.split(",");
+      return { data: parts[1] || "", mimeType: "image/jpeg" };
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Continuous Mic Loop Handler: automatically arms microphone when assistant is done speaking,
+  // continuously detects speech, commits audio turn when user finishes speaking naturally,
+  // and hands control right back to the loop.
+  const startContinuousListeningLoop = async () => {
+    if (!realtimeContinuousActiveRef.current) return;
+    if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state === "recording") return;
+
+    try {
+      let stream = realtimeAudioStreamRef.current;
+      if (!stream || !stream.active) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        realtimeAudioStreamRef.current = stream;
+      }
+
+      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : undefined });
+      const chunks: Blob[] = [];
+
+      // Audio Energy Analysis for natural Voice Activity Detection (VAD)
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const sourceNode = audioCtx.createMediaStreamSource(stream);
+      const analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 256;
+      sourceNode.connect(analyserNode);
+      const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+
+      let speechDetected = false;
+      let silenceTimer: any = null;
+      let vadInterval: any = null;
+
+      const stopAndCommit = () => {
+        if (vadInterval) clearInterval(vadInterval);
+        if (silenceTimer) clearTimeout(silenceTimer);
+        try { sourceNode.disconnect(); analyserNode.disconnect(); audioCtx.close(); } catch {}
+        if (recorder.state === "recording") {
+          recorder.stop();
+        }
+      };
+
+      vadInterval = setInterval(() => {
+        if (!realtimeContinuousActiveRef.current) {
+          stopAndCommit();
+          return;
+        }
+        analyserNode.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        const avgEnergy = sum / dataArray.length;
+        setLiveVoiceEnergy(Math.min(100, Math.round((avgEnergy / 128) * 100)));
+
+        if (avgEnergy > 18) {
+          speechDetected = true;
+          if (silenceTimer) {
+            clearTimeout(silenceTimer);
+            silenceTimer = null;
+          }
+        } else if (speechDetected && !silenceTimer) {
+          // 1.4s natural silence detected after active user vocalization -> commit turn
+          silenceTimer = setTimeout(() => {
+            stopAndCommit();
+          }, 1400);
+        }
+      }, 100);
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = async () => {
+        realtimeMediaRecorderRef.current = null;
+        if (!realtimeContinuousActiveRef.current) return;
+        if (chunks.length === 0 || !speechDetected) {
+          // If no speech occurred, seamlessly restart continuous listening
+          setTimeout(() => {
+            if (realtimeContinuousActiveRef.current && realtimeVoiceStatus !== "speaking" && realtimeVoiceStatus !== "thinking") {
+              startContinuousListeningLoop();
+            }
+          }, 200);
+          return;
+        }
+
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = String(reader.result || "").split(",")[1] || "";
+          if (base64data && realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+            setRealtimeVoiceStatus("thinking");
+
+            // Attach latest camera or screen share frame on audio commit if active
+            const frame = captureRealtimeVideoFrame();
+            if (frame && (isCameraActive || isScreenShareActive)) {
+              realtimeWsRef.current.send(
+                JSON.stringify({
+                  type: "video_frame",
+                  data: frame.data,
+                  mime_type: frame.mimeType,
+                  source: isScreenShareActive ? "screen" : "camera",
+                })
+              );
+            }
+
+            realtimeWsRef.current.send(
+              JSON.stringify({
+                type: "audio",
+                data: base64data,
+                format: blob.type.includes("wav") ? "wav" : "webm",
+                commit: true,
+                language: sttLang.split("-")[0],
+              })
+            );
+          }
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      realtimeMediaRecorderRef.current = recorder;
+      recorder.start(250);
+      setRealtimeVoiceStatus("listening");
+    } catch (err: any) {
+      console.warn("Continuous mic loop init error:", err);
+      setRealtimeVoiceStatus("idle");
+    }
+  };
+
   const startRealtimeVoiceChat = async () => {
     stopSpeaking();
     stopVoiceRecording(true);
@@ -13134,6 +13345,18 @@ ${targetItem.text}`;
     setRealtimeVoiceStatus("connecting");
     setRealtimeTranscript("");
     setRealtimeBotReply("");
+    realtimeContinuousActiveRef.current = true;
+
+    // Fetch Target RTC Node for Active Agent
+    try {
+      const rtcResp = await fetch(`/api/v1/agents/${selectedAgent?.id || "mons"}/voice/rtc`).catch(() => null);
+      if (rtcResp && rtcResp.ok) {
+        const rtcData = await rtcResp.json();
+        if (rtcData?.rtc_node_id) {
+          setLiveRtcNodeId(rtcData.rtc_node_id);
+        }
+      }
+    } catch {}
 
     try {
       const wsUrl = resolveVoiceRealtimeWsUrl({
@@ -13153,8 +13376,19 @@ ${targetItem.text}`;
           const raw = String(ev.data || "");
           if (!raw.startsWith("{")) return;
           const msg = JSON.parse(raw);
+
           if (msg.type === "ready" || msg.type === "configured") {
+            if (msg.rtc_node) setLiveRtcNodeId(msg.rtc_node);
             setRealtimeVoiceStatus("listening");
+          } else if (msg.type === "agent_greeting") {
+            if (msg.text) {
+              setRealtimeBotReply(msg.text);
+            }
+          } else if (msg.type === "vision_context") {
+            if (msg.summary) {
+              setLiveVisionSummary(msg.summary);
+              setLiveVisionSource(msg.source || "camera");
+            }
           } else if (msg.type === "transcript") {
             if (msg.text) {
               setRealtimeTranscript(msg.text);
@@ -13167,26 +13401,48 @@ ${targetItem.text}`;
           } else if (msg.type === "audio_chunk" && msg.data) {
             setRealtimeVoiceStatus("speaking");
             if (msg.text) setRealtimeBotReply(msg.text);
+
+            // Pause mic recorder during speech output to prevent acoustic feedback echo
+            if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state === "recording") {
+              try { realtimeMediaRecorderRef.current.stop(); } catch {}
+            }
+
             const byteChars = atob(msg.data);
             const byteArr = new Uint8Array(byteChars.length);
             for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
             const blob = new Blob([byteArr], { type: msg.mime_type || "audio/mpeg" });
             const url = URL.createObjectURL(blob);
             const audio = new Audio(url);
-            audio.onended = () => {
+
+            const resumeListeningAfterSpeech = () => {
               URL.revokeObjectURL(url);
               setRealtimeVoiceStatus("listening");
+              // CONTINUOUS INTERACTION: Automatically re-engage listening loop immediately
+              if (realtimeContinuousActiveRef.current) {
+                setTimeout(() => {
+                  startContinuousListeningLoop();
+                }, 300);
+              }
             };
-            audio.onerror = () => {
-              URL.revokeObjectURL(url);
-              setRealtimeVoiceStatus("listening");
-            };
-            await audio.play().catch(() => setRealtimeVoiceStatus("listening"));
+
+            audio.onended = resumeListeningAfterSpeech;
+            audio.onerror = resumeListeningAfterSpeech;
+            await audio.play().catch(resumeListeningAfterSpeech);
           } else if (msg.type === "turn_complete") {
             if (msg.text && !realtimeBotReply) {
               setRealtimeBotReply(msg.text);
             }
-            setRealtimeVoiceStatus((prev) => (prev === "speaking" ? prev : "listening"));
+            if (realtimeContinuousActiveRef.current && realtimeVoiceStatus !== "speaking") {
+              setRealtimeVoiceStatus("listening");
+              setTimeout(() => {
+                startContinuousListeningLoop();
+              }, 300);
+            }
+          } else if (msg.type === "interrupted") {
+            setRealtimeVoiceStatus("listening");
+            if (realtimeContinuousActiveRef.current) {
+              startContinuousListeningLoop();
+            }
           } else if (msg.type === "error") {
             setVoiceError(msg.message || "Lỗi kết nối đàm thoại trực tiếp");
             setRealtimeVoiceStatus("listening");
@@ -13209,6 +13465,19 @@ ${targetItem.text}`;
   };
 
   const stopRealtimeVoiceChat = () => {
+    realtimeContinuousActiveRef.current = false;
+    if (realtimeFrameIntervalRef.current) {
+      clearInterval(realtimeFrameIntervalRef.current);
+      realtimeFrameIntervalRef.current = null;
+    }
+    if (realtimeVideoStreamRef.current) {
+      realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+      realtimeVideoStreamRef.current = null;
+    }
+    if (realtimeAudioStreamRef.current) {
+      realtimeAudioStreamRef.current.getTracks().forEach((t) => t.stop());
+      realtimeAudioStreamRef.current = null;
+    }
     if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state !== "inactive") {
       try {
         realtimeMediaRecorderRef.current.stop();
@@ -13223,51 +13492,176 @@ ${targetItem.text}`;
       realtimeWsRef.current = null;
     }
     stopSpeaking();
+    setIsCameraActive(false);
+    setIsScreenShareActive(false);
+    setLiveVisionSummary("");
+    setLiveVisionSource("");
     setIsRealtimeVoiceOpen(false);
     setRealtimeVoiceStatus("idle");
   };
 
+  // Toggle Camera (Web & Phone with Front/Rear switch)
+  const toggleRealtimeCamera = async (forceFacing?: "user" | "environment") => {
+    if (isCameraActive && !forceFacing) {
+      if (realtimeVideoStreamRef.current) {
+        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        realtimeVideoStreamRef.current = null;
+      }
+      if (realtimeFrameIntervalRef.current) {
+        clearInterval(realtimeFrameIntervalRef.current);
+        realtimeFrameIntervalRef.current = null;
+      }
+      setIsCameraActive(false);
+      setLiveVisionSummary("");
+      setLiveVisionSource("");
+      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+        realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: false, screen_enabled: isScreenShareActive }));
+      }
+      return;
+    }
+
+    try {
+      if (isScreenShareActive && realtimeVideoStreamRef.current) {
+        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        setIsScreenShareActive(false);
+      }
+
+      const nextFacing = forceFacing || (cameraFacingMode === "user" ? "environment" : "user");
+      setCameraFacingMode(nextFacing);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+
+      realtimeVideoStreamRef.current = stream;
+      if (realtimeVideoRef.current) {
+        realtimeVideoRef.current.srcObject = stream;
+        realtimeVideoRef.current.play().catch(() => {});
+      }
+      setIsCameraActive(true);
+
+      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+        realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: true, screen_enabled: false }));
+      }
+
+      // Start periodic vision frame transmission (every 2.5s for real-time visual grounding)
+      if (realtimeFrameIntervalRef.current) clearInterval(realtimeFrameIntervalRef.current);
+      realtimeFrameIntervalRef.current = setInterval(() => {
+        if (!realtimeContinuousActiveRef.current) return;
+        const frame = captureRealtimeVideoFrame();
+        if (frame && realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+          realtimeWsRef.current.send(
+            JSON.stringify({
+              type: "video_frame",
+              data: frame.data,
+              mime_type: frame.mimeType,
+              source: "camera",
+            })
+          );
+        }
+      }, 2600);
+    } catch (err: any) {
+      console.warn("Failed to open camera:", err);
+      setVoiceError("Không thể bật Camera: " + (err?.message || ""));
+      setIsCameraActive(false);
+    }
+  };
+
+  // Toggle Screen Sharing (Web on Desktop & Supported Mobile Browsers)
+  const toggleRealtimeScreenShare = async () => {
+    if (isScreenShareActive) {
+      if (realtimeVideoStreamRef.current) {
+        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        realtimeVideoStreamRef.current = null;
+      }
+      if (realtimeFrameIntervalRef.current) {
+        clearInterval(realtimeFrameIntervalRef.current);
+        realtimeFrameIntervalRef.current = null;
+      }
+      setIsScreenShareActive(false);
+      setLiveVisionSummary("");
+      setLiveVisionSource("");
+      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+        realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: isCameraActive, screen_enabled: false }));
+      }
+      return;
+    }
+
+    if (!navigator.mediaDevices || !(navigator.mediaDevices as any).getDisplayMedia) {
+      setVoiceError("Trình duyệt không hỗ trợ chia sẻ màn hình trực tiếp. Hãy dùng tính năng Camera.");
+      return;
+    }
+
+    try {
+      if (isCameraActive && realtimeVideoStreamRef.current) {
+        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        setIsCameraActive(false);
+      }
+
+      const stream = await (navigator.mediaDevices as any).getDisplayMedia({
+        video: { cursor: "always" },
+        audio: false,
+      });
+
+      stream.getVideoTracks()[0].onended = () => {
+        setIsScreenShareActive(false);
+        if (realtimeFrameIntervalRef.current) {
+          clearInterval(realtimeFrameIntervalRef.current);
+          realtimeFrameIntervalRef.current = null;
+        }
+      };
+
+      realtimeVideoStreamRef.current = stream;
+      if (realtimeVideoRef.current) {
+        realtimeVideoRef.current.srcObject = stream;
+        realtimeVideoRef.current.play().catch(() => {});
+      }
+      setIsScreenShareActive(true);
+
+      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+        realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: false, screen_enabled: true }));
+      }
+
+      // Start periodic screen frame transmission
+      if (realtimeFrameIntervalRef.current) clearInterval(realtimeFrameIntervalRef.current);
+      realtimeFrameIntervalRef.current = setInterval(() => {
+        if (!realtimeContinuousActiveRef.current) return;
+        const frame = captureRealtimeVideoFrame();
+        if (frame && realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+          realtimeWsRef.current.send(
+            JSON.stringify({
+              type: "screen_frame",
+              data: frame.data,
+              mime_type: frame.mimeType,
+              source: "screen",
+            })
+          );
+        }
+      }, 2600);
+    } catch (err: any) {
+      console.warn("Failed to start screen share:", err);
+      setIsScreenShareActive(false);
+    }
+  };
+
   const toggleRealtimeMicTurn = async () => {
+    if (realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") {
+      stopSpeaking();
+      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+        realtimeWsRef.current.send(JSON.stringify({ type: "interrupt" }));
+      }
+      setRealtimeVoiceStatus("listening");
+      startContinuousListeningLoop();
+      return;
+    }
+
     if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state === "recording") {
       realtimeMediaRecorderRef.current.stop();
       return;
     }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunks.push(e.data);
-      };
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        realtimeMediaRecorderRef.current = null;
-        if (chunks.length === 0) return;
-        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64data = String(reader.result || "").split(",")[1] || "";
-          if (base64data && realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
-            setRealtimeVoiceStatus("thinking");
-            realtimeWsRef.current.send(
-              JSON.stringify({
-                type: "audio",
-                data: base64data,
-                format: blob.type.includes("wav") ? "wav" : "webm",
-                commit: true,
-                language: sttLang.split("-")[0],
-              })
-            );
-          }
-        };
-        reader.readAsDataURL(blob);
-      };
-      realtimeMediaRecorderRef.current = recorder;
-      recorder.start();
-      setRealtimeVoiceStatus("listening");
-    } catch (err: any) {
-      setVoiceError(err?.message || "Không thể truy cập Microphone");
-    }
+
+    startContinuousListeningLoop();
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24214,7 +24608,6 @@ ${chat.id}`);
                   onReloadSession={() => {
                     triggerHaptic();
                     setIsReloadingBrowser(true);
-                    void dispatchAgentBrowserInput(agentBrowserFor, { action: "reload" });
                     setBrowserIframeKey((k) => k + 1);
                     setTimeout(() => setIsReloadingBrowser(false), 600);
                   }}
@@ -25414,6 +25807,14 @@ ${chat.id}`);
                     title={`${selectedAgent.name} Interactive Workspace`}
                     profile={browserTarget.profile}
                     reloadKey={browserIframeKey}
+                    onReloadSession={() => {
+                      triggerHaptic();
+                      setIsReloadingBrowser(true);
+                      setBrowserIframeKey((k) => k + 1);
+                      setTimeout(() => setIsReloadingBrowser(false), 600);
+                    }}
+                    isReloadingSession={isReloadingBrowser}
+                    reloadSessionTooltip={t("computer.reloadProfileBtn") || "Tải lại phiên trình duyệt"}
                     onToggleMaximize={() => {
                       handleSetBrowserModalOpen(false);
                       handleToggleComputerSplit(true);
@@ -26309,17 +26710,27 @@ ${chat.id}`);
                 </svg>
               </button>
 
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2 w-2 rounded-full transition-transform duration-300"
-                  style={{
-                    backgroundColor: voiceThemeAccent,
-                    boxShadow: `0 0 10px ${voiceThemeAccent}`,
-                  }}
-                />
-                <span style={{ color: "rgba(244,246,250,0.78)" }} className="keep-white text-xs font-medium tracking-wide">
-                  {selectedAgent?.name || "Skyer"}
-                </span>
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2 w-2 rounded-full transition-transform duration-300"
+                    style={{
+                      backgroundColor: voiceThemeAccent,
+                      boxShadow: `0 0 10px ${voiceThemeAccent}`,
+                    }}
+                  />
+                  <span style={{ color: "rgba(244,246,250,0.92)" }} className="keep-white text-xs font-semibold tracking-wide">
+                    {selectedAgent?.name || "Skyer"}
+                  </span>
+                </div>
+                {liveRtcNodeId && (
+                  <span
+                    data-testid="rtc-node-badge"
+                    className="text-[10px] tracking-wider text-white/50 font-mono"
+                  >
+                    {liveRtcNodeId} • LLM360 5a54d0
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -26354,31 +26765,58 @@ ${chat.id}`);
               </div>
             </div>
 
-            {/* Center Stage: Skyer Logo + Display Prompt / Live Transcript */}
+            {/* Center Stage: Skyer Logo + Video Stream PIP + Display Prompt / Live Transcript */}
             <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 max-w-xl w-full text-center -mt-4">
-              <div
-                onClick={toggleRealtimeMicTurn}
-                className="skyer-voice-logo mb-6 cursor-pointer relative flex items-center justify-center"
-                style={{
-                  animation: "skyerLogoFloat 5s ease-in-out infinite",
-                  filter: `drop-shadow(0 0 18px color-mix(in srgb, var(--voice-theme) 68%, transparent))`,
-                }}
-                title="Nhấn để nói hoặc ngắt lời"
-              >
-                <svg
-                  data-testid="skyer-voice-logo"
-                  width="46"
-                  height="46"
-                  viewBox="0 0 32 32"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="transition-transform duration-300 hover:scale-105"
+              {/* Live Video Preview (Camera or Screen Share) */}
+              {(isCameraActive || isScreenShareActive) ? (
+                <div
+                  data-testid="rtc-video-preview"
+                  className="relative mb-5 w-full max-w-sm aspect-video rounded-2xl overflow-hidden border border-white/20 bg-neutral-950 shadow-2xl transition-all duration-300"
                 >
-                  <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
-                  <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
-                  <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
-                  <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
-                </svg>
-              </div>
+                  <video
+                    ref={realtimeVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2.5 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-medium tracking-wide text-white border border-white/10">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{isScreenShareActive ? "Màn hình trực tiếp" : `Camera (${cameraFacingMode === "user" ? "Trước" : "Sau"})`}</span>
+                  </div>
+                  {liveVisionSummary && (
+                    <div className="absolute inset-x-2 bottom-2 p-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 text-left">
+                      <p className="text-[11px] text-white/90 line-clamp-2 leading-tight">
+                        👁️ {liveVisionSummary}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  onClick={toggleRealtimeMicTurn}
+                  className="skyer-voice-logo mb-6 cursor-pointer relative flex items-center justify-center"
+                  style={{
+                    animation: "skyerLogoFloat 5s ease-in-out infinite",
+                    filter: `drop-shadow(0 0 18px color-mix(in srgb, var(--voice-theme) 68%, transparent))`,
+                  }}
+                  title="Nhấn để nói hoặc ngắt lời"
+                >
+                  <svg
+                    data-testid="skyer-voice-logo"
+                    width="46"
+                    height="46"
+                    viewBox="0 0 32 32"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="transition-transform duration-300 hover:scale-105"
+                  >
+                    <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
+                    <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
+                    <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
+                    <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
+                  </svg>
+                </div>
+              )}
 
               <h2
                 data-testid="realtime-voice-headline"
@@ -26408,57 +26846,65 @@ ${chat.id}`);
             {/* Bottom 5-Item Control Dock (matching Image 1 layout & central smoky pill) */}
             <div className="relative z-10 w-full max-w-md px-5 pb-7 pt-2 flex flex-col items-center gap-5">
               <div className="w-full flex items-center justify-between sm:justify-center gap-2.5 sm:gap-5">
-                {/* 1. Left Button 1: Toggle Captions / Transcript View */}
-                <button
-                  type="button"
-                  data-testid="voice-dock-captions-btn"
-                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
-                  style={{
-                    backgroundColor: "rgba(28, 30, 38, 0.88)",
-                    borderColor: "rgba(255, 255, 255, 0.08)",
-                    color: "#f4f6fa",
-                    opacity: realtimeShowCaptions ? 1 : 0.5,
-                  }}
-                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
-                  title={realtimeShowCaptions ? "Ẩn hội thoại chữ" : "Hiện hội thoại chữ"}
-                  aria-label="Toggle live captions"
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="6" width="14" height="12" rx="3.5" />
-                    <line x1="20" y1="8.5" x2="20" y2="15.5" />
-                  </svg>
-                </button>
+                {/* 1. Left Button 1: Camera Video Stream (Web & Mobile with Front/Rear flip) */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    data-testid="voice-dock-camera-btn"
+                    onClick={() => toggleRealtimeCamera()}
+                    style={{
+                      backgroundColor: isCameraActive ? voiceThemeAccent : "rgba(28, 30, 38, 0.88)",
+                      borderColor: "rgba(255, 255, 255, 0.08)",
+                      color: "#f4f6fa",
+                      boxShadow: isCameraActive ? `0 0 20px ${voiceThemeAccent}` : undefined,
+                    }}
+                    className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
+                    title={isCameraActive ? "Tắt Camera" : "Bật Camera (Video Call)"}
+                    aria-label="Toggle camera"
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                      <circle cx="12" cy="13" r="3" />
+                    </svg>
+                  </button>
+                  {isCameraActive && (
+                    <button
+                      type="button"
+                      data-testid="voice-dock-camera-flip-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRealtimeCamera(cameraFacingMode === "user" ? "environment" : "user");
+                      }}
+                      className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-neutral-900 border border-white/20 text-white flex items-center justify-center shadow-md hover:bg-neutral-800 cursor-pointer"
+                      title="Đổi camera trước / sau"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
 
-                {/* 2. Left Button 2: Commit Turn / Interrupt Barge-in */}
+                {/* 2. Left Button 2: Screen Share Stream (Web on Desktop & Supported Mobile) */}
                 <button
                   type="button"
-                  data-testid="voice-dock-commit-btn"
-                  onClick={() => {
-                    if (isMicActive) {
-                      toggleRealtimeMicTurn();
-                    } else if (realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") {
-                      stopSpeaking();
-                      if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
-                        realtimeWsRef.current.send(JSON.stringify({ type: "interrupt" }));
-                      }
-                      setRealtimeVoiceStatus("listening");
-                    } else {
-                      toggleRealtimeMicTurn();
-                    }
-                  }}
+                  data-testid="voice-dock-screen-btn"
+                  onClick={toggleRealtimeScreenShare}
                   style={{
-                    backgroundColor: "rgba(28, 30, 38, 0.88)",
+                    backgroundColor: isScreenShareActive ? voiceThemeAccent : "rgba(28, 30, 38, 0.88)",
                     borderColor: "rgba(255, 255, 255, 0.08)",
                     color: "#f4f6fa",
+                    boxShadow: isScreenShareActive ? `0 0 20px ${voiceThemeAccent}` : undefined,
                   }}
                   className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
-                  title={isMicActive ? "Gửi lượt nói ngay" : "Ngắt lời / Gửi lượt mới"}
-                  aria-label="Send or interrupt voice turn"
+                  title={isScreenShareActive ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình trực tiếp"}
+                  aria-label="Toggle screen share"
                 >
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3.5" y="5.5" width="17" height="13" rx="3.5" />
-                    <path d="M12 15V9" />
-                    <path d="M9.2 11.6L12 8.8l2.8 2.8" />
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                    <polyline points="9 8 12 11 15 8" />
                   </svg>
                 </button>
 
