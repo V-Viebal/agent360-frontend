@@ -1,3 +1,4 @@
+import { ChannelChatIcon } from "./ChannelChatIcon";
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { Save, Radio, Check, Key, Users, Shield, Plus, X, Globe, ExternalLink } from "lucide-react";
@@ -157,7 +158,7 @@ export function ChannelConfigModal({
       isOpen={isOpen}
       onClose={onClose}
       title={`Configure ${channel.name} Channel`}
-      icon={<Radio size={15} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
+      icon={<ChannelChatIcon channel={channel.type} isSelected={true} size={18} activeColor="var(--agent-color)" />}
       maxWidth="md"
     >
       <form onSubmit={handleSave} className="p-4 space-y-3.5 max-h-[80vh] overflow-y-auto">

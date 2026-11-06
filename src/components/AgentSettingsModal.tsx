@@ -1,3 +1,4 @@
+import { ChannelChatIcon } from "./ChannelChatIcon";
 import React, { useState, useEffect } from "react";
 import {
   Smile,
@@ -732,6 +733,9 @@ export function AgentSettingsModal({
                                   ch.enabled ? "bg-emerald-400 animate-pulse" : "bg-neutral-500"
                                 }`}
                               />
+                              <div className="h-6 w-6 rounded-lg bg-neutral-100 dark:bg-[#20202e] flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                                <ChannelChatIcon channel={ch.type} isSelected={ch.enabled} size={15} />
+                              </div>
                               <span className="font-mono text-xs font-medium uppercase tracking-wider truncate">
                                 {ch.name}
                               </span>

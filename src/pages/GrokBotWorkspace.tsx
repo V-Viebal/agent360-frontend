@@ -4,127 +4,7 @@ import { LeanVideoPlayer } from "../components/LeanVideoPlayer";
 import React from "react";
 import { createPortal } from "react-dom";
 import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent, AgentPinUpdatedWsEvent, AgentEnabledUpdatedWsEvent, ChatMessagePinUpdatedWsEvent } from "../services/sessionMultiplexer";
-function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { channel?: string; isSelected?: boolean; size?: number; activeColor?: string }) {
-  const ch = (channel || "console").toLowerCase();
-  
-  // 1. Official Telegram Logo SVG
-  if (ch === "telegram") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Telegram">
-        <circle cx="12" cy="12" r="12" fill="#24A1DE"/>
-        <path
-          d="M5.4 11.9L16.8 7.3C17.3 7.1 17.8 7.4 17.6 8L15.7 17.1C15.5 17.7 14.8 17.9 14.3 17.5L11.2 15L9.6 16.5C9.4 16.7 9.1 16.6 9.1 16.3L9.3 13.7L14.7 8.8C14.9 8.6 14.7 8.3 14.4 8.5L7.8 12.7L5.4 11.9Z"
-          fill="white"
-        />
-      </svg>
-    );
-  }
-
-  // 2. Official Zalo Logo SVG (Official Crisp Wordmark on Blue Squircle)
-  if (ch === "zalo") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Zalo">
-        <rect width="24" height="24" rx="5.5" fill="#0068FF"/>
-        <g transform="translate(3.25, 3.27) scale(0.729)">
-          <path
-            d="M12.49 10.2722v-.4496h1.3467v6.3218h-.7704a.576.576 0 01-.5763-.5729l-.0006.0005a3.273 3.273 0 01-1.9372.6321c-1.8138 0-3.2844-1.4697-3.2844-3.2823 0-1.8125 1.4706-3.2822 3.2844-3.2822a3.273 3.273 0 011.9372.6321l.0006.0005zM6.9188 7.7896v.205c0 .3823-.051.6944-.2995 1.0605l-.03.0343c-.0542.0615-.1815.206-.2421.2843L2.024 14.8h4.8948v.7682a.5764.5764 0 01-.5767.5761H0v-.3622c0-.4436.1102-.6414.2495-.8476L4.8582 9.23H.1922V7.7896h6.7266zm8.5513 8.3548a.4805.4805 0 01-.4803-.4798v-7.875h1.4416v8.3548H15.47zM20.6934 9.6C22.52 9.6 24 11.0807 24 12.9044c0 1.8252-1.4801 3.306-3.3066 3.306-1.8264 0-3.3066-1.4808-3.3066-3.306 0-1.8237 1.4802-3.3044 3.3066-3.3044zm-10.1412 5.253c1.0675 0 1.9324-.8645 1.9324-1.9312 0-1.065-.865-1.9295-1.9324-1.9295s-1.9324.8644-1.9324 1.9295c0 1.0667.865 1.9312 1.9324 1.9312zm10.1412-.0033c1.0737 0 1.945-.8707 1.945-1.9453 0-1.073-.8713-1.9436-1.945-1.9436-1.0753 0-1.945.8706-1.945 1.9453 0 1.0746.8697 1.9453 1.945 1.9453z"
-            fill="white"
-          />
-        </g>
-      </svg>
-    );
-  }
-
-  // 3. Official Discord Logo SVG
-  if (ch === "discord") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Discord">
-        <rect width="24" height="24" rx="6" fill="#5865F2"/>
-        <path
-          d="M17.5 7.2C16.3 6.6 15 6.2 13.7 6C13.5 6.3 13.3 6.7 13.2 7C11.8 6.8 10.4 6.8 9 7C8.9 6.7 8.7 6.3 8.5 6C7.2 6.2 5.9 6.6 4.7 7.2C2.4 10.6 1.8 13.9 2.1 17.1C3.6 18.2 5.1 19 6.5 19.4C6.9 18.9 7.2 18.3 7.5 17.7C7 17.5 6.5 17.3 6 17C6.1 16.9 6.2 16.8 6.3 16.7C9.3 18.1 12.7 18.1 15.7 16.7C15.8 16.8 15.9 16.9 16 17C15.5 17.3 15 17.5 14.5 17.7C14.8 18.3 15.1 18.9 15.5 19.4C16.9 19 18.4 18.2 19.9 17.1C20.3 13.3 19.3 10.1 17.5 7.2ZM8.4 15.2C7.5 15.2 6.8 14.4 6.8 13.4C6.8 12.4 7.5 11.6 8.4 11.6C9.3 11.6 10 12.4 10 13.4C10 14.4 9.3 15.2 8.4 15.2ZM15.6 15.2C14.7 15.2 14 14.4 14 13.4C14 12.4 14.7 11.6 15.6 11.6C16.5 11.6 17.2 12.4 17.2 13.4C17.2 14.4 16.5 15.2 15.6 15.2Z"
-          fill="white"
-        />
-      </svg>
-    );
-  }
-
-  // 4. Official Slack Logo SVG
-  if (ch === "slack") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Slack">
-        <path d="M5.04 14.07a2.02 2.02 0 1 1-2.02-2.02h2.02v2.02zm1.01 0a2.02 2.02 0 0 1 4.04 0v5.05a2.02 2.02 0 1 1-4.04 0v-5.05z" fill="#E01E5A"/>
-        <path d="M9.93 5.04a2.02 2.02 0 1 1-2.02-2.02v2.02h2.02zm0 1.01a2.02 2.02 0 0 1 0 4.04H4.88a2.02 2.02 0 1 1 0-4.04h5.05z" fill="#36C5F0"/>
-        <path d="M18.96 9.93a2.02 2.02 0 1 1 2.02 2.02h-2.02V9.93zm-1.01 0a2.02 2.02 0 0 1-4.04 0V4.88a2.02 2.02 0 1 1 4.04 0v5.05z" fill="#2EB67D"/>
-        <path d="M14.07 18.96a2.02 2.02 0 1 1 2.02 2.02v-2.02h-2.02zm0-1.01a2.02 2.02 0 0 1 0-4.04h5.05a2.02 2.02 0 1 1 0 4.04h-5.05z" fill="#ECB22E"/>
-      </svg>
-    );
-  }
-
-  // 4b. Official Microsoft Teams Logo SVG
-  if (ch === "teams" || ch === "msteams" || ch === "microsoft teams") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Microsoft Teams">
-        <rect width="24" height="24" rx="6" fill="#464EB8"/>
-        {/* Teams double user / T mark */}
-        <path d="M14.5 9.5C15.6 9.5 16.5 8.6 16.5 7.5C16.5 6.4 15.6 5.5 14.5 5.5C13.4 5.5 12.5 6.4 12.5 7.5C12.5 8.6 13.4 9.5 14.5 9.5ZM17.5 10.5H15.5C14.7 10.5 14 11 13.7 11.7C14.7 12.3 15.5 13.3 15.5 14.5V17.5H19.5C20.1 17.5 20.5 17.1 20.5 16.5V13.5C20.5 11.8 19.2 10.5 17.5 10.5ZM10 10C11.4 10 12.5 8.9 12.5 7.5C12.5 6.1 11.4 5 10 5C8.6 5 7.5 6.1 7.5 7.5C7.5 8.9 8.6 10 10 10ZM13.5 11.5H6.5C5.1 11.5 4 12.6 4 14V17C4 17.6 4.4 18 5 18H15C15.6 18 16 17.6 16 17V14C16 12.6 14.9 11.5 13.5 11.5Z" fill="white"/>
-      </svg>
-    );
-  }
-
-  // 5. Official WhatsApp Logo SVG
-  if (ch === "whatsapp") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="WhatsApp">
-        <rect width="24" height="24" rx="6" fill="#25D366"/>
-        <path
-          d="M12.04 5C8.16 5 5.01 8.14 5.01 12.01C5.01 13.25 5.33 14.45 5.95 15.51L5 19L8.58 18.06C9.61 18.62 10.81 18.92 12.04 18.92C15.92 18.92 19.07 15.78 19.07 11.91C19.07 8.04 15.92 5 12.04 5ZM15.58 14.9C15.43 15.32 14.71 15.7 14.36 15.75C14.04 15.8 13.64 15.82 13.2 15.68C12.93 15.59 12.59 15.48 12.16 15.29C10.33 14.5 9.14 12.66 9.05 12.54C8.96 12.42 8.31 11.56 8.31 10.67C8.31 9.78 8.78 9.35 8.95 9.17C9.12 8.99 9.32 8.94 9.44 8.94C9.56 8.94 9.68 8.94 9.79 8.95C9.9 8.96 10.05 8.91 10.2 9.26C10.35 9.62 10.71 10.51 10.75 10.6C10.8 10.69 10.83 10.8 10.77 10.92C10.71 11.04 10.68 11.11 10.59 11.22C10.5 11.33 10.4 11.46 10.32 11.54C10.23 11.63 10.14 11.73 10.24 11.91C10.34 12.09 10.71 12.69 11.25 13.17C11.95 13.79 12.53 13.99 12.71 14.08C12.89 14.17 13 14.15 13.1 14.03C13.21 13.91 13.55 13.51 13.67 13.33C13.79 13.15 13.91 13.18 14.08 13.24C14.25 13.3 15.14 13.74 15.32 13.83C15.5 13.92 15.62 13.96 15.67 14.04C15.71 14.13 15.71 14.48 15.58 14.9Z"
-          fill="white"
-        />
-      </svg>
-    );
-  }
-
-  // 6. Official Feishu / Lark Logo SVG
-  if (ch === "feishu" || ch === "lark") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Feishu">
-        <rect width="24" height="24" rx="6" fill="#3370FF"/>
-        <path d="M6.5 8.5L13.5 5.5L11.8 12.2L6.5 8.5Z" fill="#00D6B9"/>
-        <path d="M6.5 8.5L17.5 11.5L11.5 18.5L6.5 8.5Z" fill="white"/>
-      </svg>
-    );
-  }
-
-  // 7. Official DingTalk Logo SVG
-  if (ch === "dingtalk") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="DingTalk">
-        <rect width="24" height="24" rx="6" fill="#0089FF"/>
-        <path d="M7.5 6.5L16.8 9.8C17.4 10 17.5 10.8 16.9 11.2L12.8 13.8L14.5 17.5L9.8 14.2L7.2 15.5L8.6 11.5L6.5 10.2L7.5 6.5Z" fill="white"/>
-      </svg>
-    );
-  }
-
-  // 8. Official Matrix Logo SVG
-  if (ch === "matrix") {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="shrink-0 select-none" aria-label="Matrix">
-        <rect width="24" height="24" rx="6" fill="#0DBD8B"/>
-        <path d="M6 6H8.5V7.5H7.5V16.5H8.5V18H6V6ZM18 6H15.5V7.5H16.5V16.5H15.5V18H18V6ZM9.5 9.5H11L12 11.5L13 9.5H14.5V14.5H13.2V11.3L12 13.5L10.8 11.3V14.5H9.5V9.5Z" fill="white"/>
-      </svg>
-    );
-  }
-
-  // 5. Default Console Web Workspace
-  return (
-    <MessageSquare
-      size={size}
-      style={isSelected && activeColor ? { color: activeColor } : undefined}
-      className={isSelected ? (!activeColor ? "text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "") : "text-neutral-400"}
-    />
-  );
-}
-
+import { ChannelChatIcon } from "../components/ChannelChatIcon";
 import { getCurrentUserProfile, UserProfile, parseJwt, isPlaceholderDisplayName, isPlaceholderEmail } from "../services/userService";
 import { initiateSkyerSignOut } from "../services/pkceAuth";
 import { authConfig } from "../config/authConfig";
@@ -23964,7 +23844,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           if (isRealtimeVoiceOpen) stopRealtimeVoiceChat();
                           else startRealtimeVoiceChat();
                         }}
-                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 bg-[#1a73e8] hover:bg-[#1565c0] text-white border border-[#1a73e8] shadow-xs active:scale-95"
+                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 bg-[#1a73e8]/15 hover:bg-[#1a73e8]/25 text-[#1a73e8] border border-[#1a73e8]/30 dark:bg-[#1a73e8] dark:hover:bg-[#1565c0] dark:text-white dark:border-[#1a73e8] shadow-xs active:scale-95"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <line x1="4" y1="10" x2="4" y2="14" />
