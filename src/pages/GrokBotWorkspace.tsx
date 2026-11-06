@@ -9977,6 +9977,24 @@ function AgentBrowserPreview({
       lastTouchHandledAtRef.current = Date.now();
       if (ev.touches.length >= 2) {
         ev.preventDefault();
+        const cur = gestureRef.current;
+        if (cur?.type === "pinch") {
+          // A finger re-landed mid-gesture: rebase the center/distance without resetting
+          // moved/twoFingerMode, so a 2-finger swipe never ends as a stray right click.
+          const x1 = ev.touches[0].clientX, y1 = ev.touches[0].clientY;
+          const x2 = ev.touches[1].clientX, y2 = ev.touches[1].clientY;
+          const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+          const shiftX = cx - cur.lastX, shiftY = cy - cur.lastY;
+          cur.startX += shiftX;
+          cur.startY += shiftY;
+          cur.lastX = cx;
+          cur.lastY = cy;
+          cur.startDist = Math.max(10, Math.hypot(x1 - x2, y1 - y2));
+          cur.velDx = 0;
+          cur.velDy = 0;
+          cur.velStartTime = performance.now();
+          return;
+        }
         handlersRef.current.beginPinchGesture(
           ev.touches[0].clientX,
           ev.touches[0].clientY,
