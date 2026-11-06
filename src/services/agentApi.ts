@@ -49,7 +49,8 @@ export function getAuthHeaders(agentId?: string): Record<string, string> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-  } else if (opToken) {
+  }
+  if (opToken) {
     headers["X-Agent360-Operator-Token"] = opToken;
     headers["X-Operator-Token"] = opToken;
   }
@@ -101,8 +102,8 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
     const data = await res.json();
     const rawList = Array.isArray(data) ? data : (data.agents || []);
     // Filter to load only enabled agents (handling both backend DTO and direct Skyer schema)
-    // Exclude root default template, keep all infra agents (enabled and disabled)
-    const validAgents = rawList.filter((a: any) => a.id !== 'default');
+    // Exclude root default template or empty ghost entries, keep all infra agents (enabled and disabled)
+    const validAgents = rawList.filter((a: any) => a.id && a.id !== 'default' && a.id !== 'bot:agent360:' && (a.slug === undefined || String(a.slug).trim() !== ''));
     return validAgents.map((a: any) => {
       const idStr = (a.id || "").toLowerCase();
       const slugStr = (a.slug || "").toLowerCase();
@@ -2057,9 +2058,33 @@ export async function updateAgentLoopMode(agentId: string, mode: "default" | "go
   return config;
 }
 
+export function getLocalDisabledAgentOverrides(): Record<string, boolean> {
+  try {
+    if (typeof window === "undefined") return {};
+    const raw = localStorage.getItem("agent360_enabled_overrides");
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setLocalDisabledAgentOverride(agentIdOrSlug: string, enabled: boolean): void {
+  try {
+    if (typeof window === "undefined") return;
+    const canonical = resolveCanonicalAgentSlugFromAlias(agentIdOrSlug) || agentIdOrSlug.replace(/^bot:agent360:/i, "");
+    const norm = canonical.toLowerCase();
+    const map = getLocalDisabledAgentOverrides();
+    map[norm] = enabled;
+    localStorage.setItem("agent360_enabled_overrides", JSON.stringify(map));
+  } catch {}
+}
+
 export async function toggleAgentEnabled(agentId: string, enabled: boolean): Promise<boolean> {
   try {
-    const cleanId = agentId.replace(/^bot:agent360:/, "");
+    const rawClean = agentId.replace(/^bot:agent360:/i, "");
+    const cleanId = resolveCanonicalAgentSlugFromAlias(rawClean) || rawClean;
+    setLocalDisabledAgentOverride(cleanId, enabled);
+
     const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/toggle`, {
       method: "PATCH",
       headers: {

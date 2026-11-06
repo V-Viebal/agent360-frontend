@@ -84,6 +84,13 @@ export interface AgentPinUpdatedWsEvent {
   timestamp?: string;
 }
 
+export interface AgentEnabledUpdatedWsEvent {
+  type: "agent_enabled_updated";
+  agent_id: string;
+  enabled: boolean;
+  timestamp?: string;
+}
+
 export interface ChatMessagePinUpdatedWsEvent {
   type: "chat_message_pin_updated";
   agent_id: string;
@@ -104,6 +111,7 @@ export type MultiplexerEvent =
   | AgentWebhookDlqAlertWsEvent
   | ChatSessionUpsertWsEvent
   | AgentPinUpdatedWsEvent
+  | AgentEnabledUpdatedWsEvent
   | ChatMessagePinUpdatedWsEvent;
 
 export interface MultiplexerHandlers {
@@ -113,6 +121,7 @@ export interface MultiplexerHandlers {
   onComposioConnection?: (ev: ComposioConnectionEvent) => void;
   onChatSessionUpsert?: (ev: ChatSessionUpsertWsEvent) => void;
   onAgentPinUpdated?: (ev: AgentPinUpdatedWsEvent) => void;
+  onAgentEnabledUpdated?: (ev: AgentEnabledUpdatedWsEvent) => void;
   onChatMessagePinUpdated?: (ev: ChatMessagePinUpdatedWsEvent) => void;
 }
 
@@ -197,6 +206,11 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("agent:pin_updated", { detail: data }));
             }
+          } else if (data.type === "agent_enabled_updated") {
+            if (handlers.onAgentEnabledUpdated) handlers.onAgentEnabledUpdated(data);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:enabled_updated", { detail: data }));
+            }
           } else if (data.type === "chat_message_pin_updated") {
             if (handlers.onChatMessagePinUpdated) handlers.onChatMessagePinUpdated(data);
             if (typeof window !== "undefined") {
@@ -271,6 +285,11 @@ export function connectSessionMultiplexer(handlers: MultiplexerHandlers): () => 
             if (handlers.onAgentPinUpdated) handlers.onAgentPinUpdated(update);
             if (typeof window !== "undefined") {
               window.dispatchEvent(new CustomEvent("agent:pin_updated", { detail: update }));
+            }
+          } else if (update.type === "agent_enabled_updated") {
+            if (handlers.onAgentEnabledUpdated) handlers.onAgentEnabledUpdated(update);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agent:enabled_updated", { detail: update }));
             }
           } else if (update.type === "chat_message_pin_updated") {
             if (handlers.onChatMessagePinUpdated) handlers.onChatMessagePinUpdated(update);

@@ -1006,3 +1006,37 @@ assert.ok(
   "Browser refresh/reload/navigation must preserve fitted viewport dimensions and selected device mode without unmounting SelkiesViewer or resetting CDP device emulation"
 );
 console.log("✓ Test 67: Browser Refresh / Reload Viewport Fit & Device Mode Persistence Contract verified");
+
+console.log("Testing Agent Disable / Enable Toggle, Persistent Override Ledger & Multi-Surface Re-Enable Contract...");
+const qwenPawClientSrc68 = fs.readFileSync(
+  path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Services/QwenPawClient.cs"),
+  "utf8"
+);
+const agentFeaturesEpSrc68 = fs.readFileSync(
+  path.join(rootDir, "../backend/src/Agent360.API/Features/Agents/Endpoints/AgentFeaturesEndpoints.cs"),
+  "utf8"
+);
+const sessionMuxSrc68 = fs.readFileSync(
+  path.join(rootDir, "src/services/sessionMultiplexer.ts"),
+  "utf8"
+);
+const agentApiSrc68 = fs.readFileSync(
+  path.join(rootDir, "src/services/agentApi.ts"),
+  "utf8"
+);
+assert.ok(
+  qwenPawClientSrc68.includes("AgentEnabledOverrides") &&
+  qwenPawClientSrc68.includes("SaveAgentEnabledOverrideAsync(normalizedSlug, enabled, cancellationToken)") &&
+  qwenPawClientSrc68.includes("ResolveEffectiveEnabled(") &&
+  agentFeaturesEpSrc68.includes('group.MapMethods("{agentId}/toggle", ["PATCH", "POST", "PUT"]') &&
+  agentFeaturesEpSrc68.includes("profileStore.ResolveCanonicalSlugByAlias(agentId)") &&
+  agentFeaturesEpSrc68.includes('type = "agent_enabled_updated"') &&
+  agentApiSrc68.includes("resolveCanonicalAgentSlugFromAlias(rawClean)") &&
+  agentApiSrc68.includes("setLocalDisabledAgentOverride(cleanId, enabled)") &&
+  sessionMuxSrc68.includes("agent_enabled_updated") &&
+  grokImeSrc.includes("onAgentEnabledUpdated: (ev: AgentEnabledUpdatedWsEvent)") &&
+  grokImeSrc.includes("const ok = await toggleAgentEnabled(cleanSlug, nextEnabled);") &&
+  grokImeSrc.includes("handleToggleAgentEnabled(targetAg, e);"),
+  "Agent disable/enable must resolve custom aliases to canonical slugs, persist overrides in AgentEnabledOverrides + QwenPaw runtime, broadcast agent_enabled_updated over WebSocket, and allow re-enabling from collapsed rail, expanded sidebar, mobile action sheet, and AgentSettingsModal"
+);
+console.log("✓ Test 68: Agent Disable / Enable Toggle, Persistent Override Ledger & Multi-Surface Re-Enable Contract verified");

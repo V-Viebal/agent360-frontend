@@ -2,7 +2,7 @@ import { LeanAudioPlayer } from "../components/LeanAudioPlayer";
 import { LeanVideoPlayer } from "../components/LeanVideoPlayer";
 import React from "react";
 import { createPortal } from "react-dom";
-import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent, AgentPinUpdatedWsEvent, ChatMessagePinUpdatedWsEvent } from "../services/sessionMultiplexer";
+import { connectSessionMultiplexer, notifyMultiplexerSubscribedAgent, ActiveSessionsSnapshot, SessionTurnUpdate, SessionUnreadUpdate, ChatSessionUpsertWsEvent, AgentPinUpdatedWsEvent, AgentEnabledUpdatedWsEvent, ChatMessagePinUpdatedWsEvent } from "../services/sessionMultiplexer";
 function ChannelChatIcon({ channel, isSelected, size = 15, activeColor }: { channel?: string; isSelected?: boolean; size?: number; activeColor?: string }) {
   const ch = (channel || "console").toLowerCase();
   
@@ -146,7 +146,7 @@ import {
   Info,
 } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
-import { ConnectAppsModal, APPS_CATALOG } from "../components/ConnectAppsModal";
+import { ConnectAppsModal, APPS_CATALOG, resolveAppLogo } from "../components/ConnectAppsModal";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
 import { AgentSubAgentsTab } from "../components/AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
@@ -5222,6 +5222,7 @@ function InteractiveTurnWidgetsSection({
                         onClick={() => {
                           if (isZalo && currentMode === "web" && (isConfigEnabled || hasZaloLoginTab) && !isConnected) {
                             onOpenZaloWebBrowser?.();
+                            window.dispatchEvent(new CustomEvent("agent360_channel_browser_refresh"));
                             return;
                           }
                           if (requiresTokenNow && !hasConfiguredToken && !inlineToken.trim() && !isTokenDrawerOpen) {
@@ -12482,6 +12483,22 @@ export function GrokBotWorkspace() {
           )
         );
       },
+      onAgentEnabledUpdated: (ev: AgentEnabledUpdatedWsEvent) => {
+        if (!ev?.agent_id) return;
+        const cleanSlug = ev.agent_id.replace(/^bot:agent360:/i, "").toLowerCase();
+        const fullId = `bot:agent360:${cleanSlug}`;
+        setAgents((prev) =>
+          prev.map((a) =>
+            a.id.toLowerCase() === fullId || (a.slug || "").toLowerCase() === cleanSlug
+              ? {
+                  ...a,
+                  enabled: ev.enabled,
+                  status: ev.enabled ? (a.status === "disabled" ? "active" : a.status) : "disabled",
+                }
+              : a
+          )
+        );
+      },
       onChatMessagePinUpdated: (ev: ChatMessagePinUpdatedWsEvent) => {
         if (!ev?.message_id) return;
         setStarredMsgIds((prev) => {
@@ -12936,6 +12953,16 @@ ${targetItem.text}`;
   const realtimeFrameIntervalRef = useRef<any>(null);
   const realtimeAudioStreamRef = useRef<MediaStream | null>(null);
   const realtimeContinuousActiveRef = useRef<boolean>(false);
+  const realtimeActiveAudioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const realtimeBargeInDetectorRef = useRef<any>(null);
+
+  // Ensure live video element attaches stream immediately upon mounting into DOM
+  useEffect(() => {
+    if ((isCameraActive || isScreenShareActive) && realtimeVideoRef.current && realtimeVideoStreamRef.current) {
+      realtimeVideoRef.current.srcObject = realtimeVideoStreamRef.current;
+      realtimeVideoRef.current.play().catch(() => {});
+    }
+  }, [isCameraActive, isScreenShareActive]);
   const pttChunksRef = useRef<Blob[]>([]);
   const [sttLang, setSttLang] = useState<"vi-VN" | "en-US">(() => {
     try {
@@ -13223,6 +13250,99 @@ ${targetItem.text}`;
     }
   };
 
+  // Automated Acoustic Barge-in Detection:
+  // When assistant is speaking, microphone stream continues running through an acoustic filter.
+  // When user vocal power exceeds threshold for >180ms, it automatically cancels the assistant's
+  // active audio, sends { type: "interrupt" } to the WebSocket, and switches to active listening.
+  const disarmAutoBargeInDetection = () => {
+    if (realtimeBargeInDetectorRef.current) {
+      try {
+        if (realtimeBargeInDetectorRef.current.interval) clearInterval(realtimeBargeInDetectorRef.current.interval);
+        if (realtimeBargeInDetectorRef.current.sourceNode) realtimeBargeInDetectorRef.current.sourceNode.disconnect();
+        if (realtimeBargeInDetectorRef.current.analyserNode) realtimeBargeInDetectorRef.current.analyserNode.disconnect();
+        if (realtimeBargeInDetectorRef.current.audioCtx) realtimeBargeInDetectorRef.current.audioCtx.close();
+      } catch {}
+      realtimeBargeInDetectorRef.current = null;
+    }
+  };
+
+  const armAutoBargeInDetection = async () => {
+    disarmAutoBargeInDetection();
+    if (!realtimeContinuousActiveRef.current) return;
+
+    try {
+      let stream = realtimeAudioStreamRef.current;
+      if (!stream || !stream.active) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        realtimeAudioStreamRef.current = stream;
+      }
+
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const sourceNode = audioCtx.createMediaStreamSource(stream);
+      const analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 256;
+      sourceNode.connect(analyserNode);
+      const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+
+      let sustainedVocalSlices = 0;
+
+      const interval = setInterval(() => {
+        if (!realtimeActiveAudioPlayerRef.current || realtimeActiveAudioPlayerRef.current.paused) {
+          disarmAutoBargeInDetection();
+          return;
+        }
+
+        analyserNode.getByteFrequencyData(dataArray);
+        let sum = 0;
+        // Focus on human vocal fundamental formants (approx 250Hz - 2800Hz)
+        const startBin = 3;
+        const endBin = Math.min(dataArray.length, 36);
+        for (let i = startBin; i < endBin; i++) sum += dataArray[i];
+        const vocalEnergy = sum / (endBin - startBin);
+
+        // Vocal energy threshold with hardware echoCancellation
+        if (vocalEnergy > 26) {
+          sustainedVocalSlices++;
+          // When vocal energy sustained for >160ms (2 slices) -> AUTO BARGE-IN DETECTED!
+          if (sustainedVocalSlices >= 2) {
+            console.log("[Auto-Barge-In] User speech detected during bot output! Cutting bot audio and listening...");
+            disarmAutoBargeInDetection();
+
+            // 1. Immediately cut assistant audio playback
+            if (realtimeActiveAudioPlayerRef.current) {
+              try {
+                realtimeActiveAudioPlayerRef.current.pause();
+                realtimeActiveAudioPlayerRef.current.src = "";
+              } catch {}
+              realtimeActiveAudioPlayerRef.current = null;
+            }
+
+            // 2. Notify WebSocket gateway to interrupt turn
+            if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+              realtimeWsRef.current.send(JSON.stringify({ type: "interrupt" }));
+            }
+
+            // 3. Immediately switch status to listening and start recording user's turn
+            setRealtimeVoiceStatus("listening");
+            startContinuousListeningLoop();
+          }
+        } else {
+          sustainedVocalSlices = Math.max(0, sustainedVocalSlices - 1);
+        }
+      }, 80);
+
+      realtimeBargeInDetectorRef.current = { audioCtx, sourceNode, analyserNode, interval };
+    } catch (err) {
+      console.warn("Auto barge-in detection initialization skipped:", err);
+    }
+  };
+
   // Continuous Mic Loop Handler: automatically arms microphone when assistant is done speaking,
   // continuously detects speech, commits audio turn when user finishes speaking naturally,
   // and hands control right back to the loop.
@@ -13285,10 +13405,10 @@ ${targetItem.text}`;
             silenceTimer = null;
           }
         } else if (speechDetected && !silenceTimer) {
-          // 1.4s natural silence detected after active user vocalization -> commit turn
+          // Snappy 650ms conversational silence detection for fast, natural duplex turn-taking
           silenceTimer = setTimeout(() => {
             stopAndCommit();
-          }, 1400);
+          }, 650);
         }
       }, 100);
 
@@ -13361,16 +13481,13 @@ ${targetItem.text}`;
     setRealtimeBotReply("");
     realtimeContinuousActiveRef.current = true;
 
-    // Fetch Target RTC Node for Active Agent
-    try {
-      const rtcResp = await fetch(`/api/v1/agents/${selectedAgent?.id || "mons"}/voice/rtc`).catch(() => null);
-      if (rtcResp && rtcResp.ok) {
-        const rtcData = await rtcResp.json();
-        if (rtcData?.rtc_node_id) {
-          setLiveRtcNodeId(rtcData.rtc_node_id);
-        }
-      }
-    } catch {}
+    // Non-blocking parallel preflight of RTC Node identity
+    fetch(`/api/v1/agents/${selectedAgent?.id || "mons"}/voice/rtc`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.rtc_node_id) setLiveRtcNodeId(d.rtc_node_id);
+      })
+      .catch(() => {});
 
     try {
       const wsUrl = resolveVoiceRealtimeWsUrl({
@@ -13413,13 +13530,17 @@ ${targetItem.text}`;
               setRealtimeBotReply((prev) => (prev ? `${prev} ${msg.delta}` : msg.delta));
             }
           } else if (msg.type === "audio_chunk" && msg.data) {
+            // Stop any currently playing speech chunk before playing new one
+            if (realtimeActiveAudioPlayerRef.current) {
+              try {
+                realtimeActiveAudioPlayerRef.current.pause();
+                realtimeActiveAudioPlayerRef.current.src = "";
+              } catch {}
+              realtimeActiveAudioPlayerRef.current = null;
+            }
+
             setRealtimeVoiceStatus("speaking");
             if (msg.text) setRealtimeBotReply(msg.text);
-
-            // Pause mic recorder during speech output to prevent acoustic feedback echo
-            if (realtimeMediaRecorderRef.current && realtimeMediaRecorderRef.current.state === "recording") {
-              try { realtimeMediaRecorderRef.current.stop(); } catch {}
-            }
 
             const byteChars = atob(msg.data);
             const byteArr = new Uint8Array(byteChars.length);
@@ -13427,15 +13548,24 @@ ${targetItem.text}`;
             const blob = new Blob([byteArr], { type: msg.mime_type || "audio/mpeg" });
             const url = URL.createObjectURL(blob);
             const audio = new Audio(url);
+            realtimeActiveAudioPlayerRef.current = audio;
+
+            // DUAL-CHANNEL AUTO BARGE-IN: Keep listening to user voice during assistant playback.
+            // If user begins speaking, IMMEDIATELY cut assistant speech, notify server, and commit user's new turn!
+            armAutoBargeInDetection();
 
             const resumeListeningAfterSpeech = () => {
+              disarmAutoBargeInDetection();
               URL.revokeObjectURL(url);
+              if (realtimeActiveAudioPlayerRef.current === audio) {
+                realtimeActiveAudioPlayerRef.current = null;
+              }
               setRealtimeVoiceStatus("listening");
-              // CONTINUOUS INTERACTION: Automatically re-engage listening loop immediately
+              // CONTINUOUS INTERACTION: Automatically engage listening loop
               if (realtimeContinuousActiveRef.current) {
                 setTimeout(() => {
                   startContinuousListeningLoop();
-                }, 300);
+                }, 200);
               }
             };
 
@@ -13505,6 +13635,14 @@ ${targetItem.text}`;
       } catch {}
       realtimeWsRef.current = null;
     }
+    disarmAutoBargeInDetection();
+    if (realtimeActiveAudioPlayerRef.current) {
+      try {
+        realtimeActiveAudioPlayerRef.current.pause();
+        realtimeActiveAudioPlayerRef.current.src = "";
+      } catch {}
+      realtimeActiveAudioPlayerRef.current = null;
+    }
     stopSpeaking();
     setIsCameraActive(false);
     setIsScreenShareActive(false);
@@ -13514,11 +13652,13 @@ ${targetItem.text}`;
     setRealtimeVoiceStatus("idle");
   };
 
-  // Toggle Camera (Web & Phone with Front/Rear switch)
+  // Toggle Camera (Web & Phone with Front/Rear switch and resilient permission handling)
   const toggleRealtimeCamera = async (forceFacing?: "user" | "environment") => {
     if (isCameraActive && !forceFacing) {
       if (realtimeVideoStreamRef.current) {
-        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        try {
+          realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
         realtimeVideoStreamRef.current = null;
       }
       if (realtimeFrameIntervalRef.current) {
@@ -13534,26 +13674,51 @@ ${targetItem.text}`;
       return;
     }
 
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setVoiceError("Trình duyệt không hỗ trợ truy cập Camera trực tiếp.");
+      return;
+    }
+
     try {
-      if (isScreenShareActive && realtimeVideoStreamRef.current) {
-        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+      if (realtimeVideoStreamRef.current) {
+        try {
+          realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
+        realtimeVideoStreamRef.current = null;
+      }
+      if (isScreenShareActive) {
         setIsScreenShareActive(false);
       }
 
       const nextFacing = forceFacing || (cameraFacingMode === "user" ? "environment" : "user");
       setCameraFacingMode(nextFacing);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: nextFacing, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: nextFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch (exactErr) {
+        console.warn("Exact facingMode camera failed, trying fallback video: true:", exactErr);
+        // Fallback to basic video constraint if mobile browser rejects exact facingMode
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      if (!stream) {
+        throw new Error("Không thể khởi tạo luồng video camera.");
+      }
 
       realtimeVideoStreamRef.current = stream;
-      if (realtimeVideoRef.current) {
-        realtimeVideoRef.current.srcObject = stream;
-        realtimeVideoRef.current.play().catch(() => {});
-      }
       setIsCameraActive(true);
+
+      // Ensure stream is bound to video element and played cleanly
+      setTimeout(() => {
+        if (realtimeVideoRef.current && stream) {
+          realtimeVideoRef.current.srcObject = stream;
+          realtimeVideoRef.current.play().catch((playErr) => console.warn("Video play error:", playErr));
+        }
+      }, 50);
 
       if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
         realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: true, screen_enabled: false }));
@@ -13577,7 +13742,10 @@ ${targetItem.text}`;
       }, 2600);
     } catch (err: any) {
       console.warn("Failed to open camera:", err);
-      setVoiceError("Không thể bật Camera: " + (err?.message || ""));
+      const isDenied = err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError";
+      setVoiceError(isDenied
+        ? "Quyền Camera đã bị từ chối trong trình duyệt. Vui lòng bấm biểu tượng 🔒 hoặc ổ khóa trên thanh địa chỉ để cho phép Camera."
+        : "Không thể mở Camera: " + (err?.message || ""));
       setIsCameraActive(false);
     }
   };
@@ -13586,7 +13754,9 @@ ${targetItem.text}`;
   const toggleRealtimeScreenShare = async () => {
     if (isScreenShareActive) {
       if (realtimeVideoStreamRef.current) {
-        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        try {
+          realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
         realtimeVideoStreamRef.current = null;
       }
       if (realtimeFrameIntervalRef.current) {
@@ -13602,36 +13772,57 @@ ${targetItem.text}`;
       return;
     }
 
-    if (!navigator.mediaDevices || !(navigator.mediaDevices as any).getDisplayMedia) {
-      setVoiceError("Trình duyệt không hỗ trợ chia sẻ màn hình trực tiếp. Hãy dùng tính năng Camera.");
+    const getDisplayMediaFn = navigator.mediaDevices?.getDisplayMedia?.bind(navigator.mediaDevices)
+      || (navigator as any).getDisplayMedia?.bind(navigator);
+
+    if (!getDisplayMediaFn) {
+      setVoiceError("Trình duyệt hoặc hệ điều hành hiện tại không hỗ trợ getDisplayMedia (chia sẻ màn hình). Hãy sử dụng tính năng Camera trực tiếp.");
       return;
     }
 
     try {
-      if (isCameraActive && realtimeVideoStreamRef.current) {
-        realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+      if (realtimeVideoStreamRef.current) {
+        try {
+          realtimeVideoStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
+        realtimeVideoStreamRef.current = null;
+      }
+      if (isCameraActive) {
         setIsCameraActive(false);
       }
 
-      const stream = await (navigator.mediaDevices as any).getDisplayMedia({
-        video: { cursor: "always" },
+      const stream = await getDisplayMediaFn({
+        video: { cursor: "always" } as any,
         audio: false,
       });
 
-      stream.getVideoTracks()[0].onended = () => {
-        setIsScreenShareActive(false);
-        if (realtimeFrameIntervalRef.current) {
-          clearInterval(realtimeFrameIntervalRef.current);
-          realtimeFrameIntervalRef.current = null;
-        }
-      };
+      if (!stream) {
+        throw new Error("Không có luồng chia sẻ màn hình nào được chọn.");
+      }
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          setIsScreenShareActive(false);
+          if (realtimeFrameIntervalRef.current) {
+            clearInterval(realtimeFrameIntervalRef.current);
+            realtimeFrameIntervalRef.current = null;
+          }
+          if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
+            realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: false, screen_enabled: false }));
+          }
+        };
+      }
 
       realtimeVideoStreamRef.current = stream;
-      if (realtimeVideoRef.current) {
-        realtimeVideoRef.current.srcObject = stream;
-        realtimeVideoRef.current.play().catch(() => {});
-      }
       setIsScreenShareActive(true);
+
+      setTimeout(() => {
+        if (realtimeVideoRef.current && stream) {
+          realtimeVideoRef.current.srcObject = stream;
+          realtimeVideoRef.current.play().catch((playErr) => console.warn("Video play error:", playErr));
+        }
+      }, 50);
 
       if (realtimeWsRef.current && realtimeWsRef.current.readyState === WebSocket.OPEN) {
         realtimeWsRef.current.send(JSON.stringify({ type: "media_state", camera_enabled: false, screen_enabled: true }));
@@ -13655,6 +13846,13 @@ ${targetItem.text}`;
       }, 2600);
     } catch (err: any) {
       console.warn("Failed to start screen share:", err);
+      const isDenied = err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError";
+      if (isDenied) {
+        // User cancelled picker or denied screen sharing permission
+        setVoiceError("Bạn đã hủy hoặc từ chối quyền chia sẻ màn hình.");
+      } else {
+        setVoiceError("Không thể chia sẻ màn hình: " + (err?.message || ""));
+      }
       setIsScreenShareActive(false);
     }
   };
@@ -14716,19 +14914,16 @@ ${targetItem.text}`;
     }
     triggerHaptic(20);
     const targetId = agent.id;
-    const rawSlug = agent.slug || agent.id.replace(/^bot:agent360:/, "");
-    const isRootDefault = agent.isRootAgent ?? (agent.canToggle === false) ?? (
-      ["default-core", "gm-boc", "climax-default", "its-default", "gl-default", "planthy-pm"].includes(rawSlug) ||
-      rawSlug.endsWith("-default") || rawSlug === "default"
-    );
+    const rawSlug = agent.slug || agent.id.replace(/^bot:agent360:/i, "");
+    const cleanSlug = (resolveCanonicalAgentSlugFromAlias(rawSlug) || rawSlug).toLowerCase();
+    const fullId = `bot:agent360:${cleanSlug}`;
 
     const isCurrentlyEnabled = agent.enabled !== false && agent.status !== "disabled";
     const nextEnabled = !isCurrentlyEnabled;
 
-    // Prevent disabling core node root agents which cannot be disabled on AgentCore runtime
-    if (!nextEnabled && (isRootDefault || agent.canToggle === false)) {
+    if (!nextEnabled && agent.canToggle === false) {
       setActiveAgentMenuId(null);
-      setForkToast(`Agent ${agent.name} là Core Root Agent của cụm hạ tầng, không thể vô hiệu hóa.`);
+      setForkToast(`Agent ${agent.name} không thể vô hiệu hóa.`);
       setTimeout(() => setForkToast(null), 3500);
       return;
     }
@@ -14736,38 +14931,67 @@ ${targetItem.text}`;
     setTogglingAgentId(targetId);
     setActiveAgentMenuId(null);
 
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === targetId
+    const matchesAgent = (a: InfraAgent) =>
+      a.id === targetId ||
+      a.id.toLowerCase() === fullId ||
+      (a.slug || "").toLowerCase() === cleanSlug ||
+      (a.slug || "").toLowerCase() === rawSlug.toLowerCase();
+
+    setAgents((prev) => {
+      const updated = prev.map((a) =>
+        matchesAgent(a)
           ? {
               ...a,
               enabled: nextEnabled,
-              status: nextEnabled ? "idle" : "disabled",
+              status: (nextEnabled ? "active" : "disabled") as InfraAgent["status"],
             }
           : a
-      )
-    );
+      );
+      // If we just disabled the currently active agent, smoothly switch selection to the first enabled agent in the current view
+      if (!nextEnabled) {
+        const curSel = normalizeAgentKey(selectedAgentIdRef.current);
+        if (curSel === cleanSlug || curSel === rawSlug.toLowerCase()) {
+          const fallbackAg = updated.find(
+            (a) => a.enabled !== false && a.status !== "disabled" && !matchesAgent(a)
+          );
+          if (fallbackAg) {
+            setTimeout(() => handleSelectAgent(fallbackAg), 40);
+          }
+        }
+      }
+      return updated;
+    });
 
     setForkToast(nextEnabled ? `Đang kích hoạt Agent ${agent.name}...` : `Đang vô hiệu hóa Agent ${agent.name}...`);
 
     try {
-      console.log(`[Agent360] Initiating toggleAgentEnabled for ${targetId} -> enabled: ${nextEnabled}`);
-      const ok = await toggleAgentEnabled(targetId, nextEnabled);
-      console.log(`[Agent360] toggleAgentEnabled result for ${targetId}:`, ok);
+      const ok = await toggleAgentEnabled(cleanSlug, nextEnabled);
       if (ok) {
         setForkToast(nextEnabled ? `Đã kích hoạt Agent ${agent.name}` : `Đã vô hiệu hóa Agent ${agent.name}`);
         try {
           const fresh = await fetchInfraAgents();
-          if (fresh && fresh.length > 0) setAgents(fresh);
+          if (fresh && fresh.length > 0) {
+            setAgents(
+              fresh.map((a) =>
+                matchesAgent(a)
+                  ? {
+                      ...a,
+                      enabled: nextEnabled,
+                      status: (nextEnabled ? (a.status === "disabled" ? "active" : a.status) : "disabled") as InfraAgent["status"],
+                    }
+                  : a
+              )
+            );
+          }
         } catch {}
       } else {
         setAgents((prev) =>
           prev.map((a) =>
-            a.id === targetId
+            matchesAgent(a)
               ? {
                   ...a,
                   enabled: isCurrentlyEnabled,
-                  status: isCurrentlyEnabled ? "active" : "disabled",
+                  status: (isCurrentlyEnabled ? "active" : "disabled") as InfraAgent["status"],
                 }
               : a
           )
@@ -14777,11 +15001,11 @@ ${targetItem.text}`;
     } catch {
       setAgents((prev) =>
         prev.map((a) =>
-          a.id === targetId
+          matchesAgent(a)
             ? {
                 ...a,
                 enabled: isCurrentlyEnabled,
-                status: isCurrentlyEnabled ? "active" : "disabled",
+                status: (isCurrentlyEnabled ? "active" : "disabled") as InfraAgent["status"],
               }
             : a
         )
@@ -16242,6 +16466,7 @@ ${targetItem.text}`;
         setAgentBrowser(refreshed);
       }
       setBrowserIframeKey((k) => k + 1);
+      window.dispatchEvent(new CustomEvent("agent360_channel_browser_refresh"));
     } catch (err) {
       console.warn("openZaloWebBrowserForAgent error", err);
     }
@@ -16791,8 +17016,22 @@ const selectedAgentTheme = getAgentColorTheme(
         .catch(() => {});
     };
     load();
-    const i = setInterval(load, 20000);
-    return () => { alive = false; ctrl.abort(); clearInterval(i); };
+    // Fast adaptive polling (2.5s) when a channel needs login verification (e.g. Zalo Web awaiting QR login) so the card flips to Connected in real-time
+    const i = setInterval(() => {
+      load();
+    }, 3000);
+
+    const onForceRefresh = () => {
+      load();
+    };
+    window.addEventListener("agent360_channel_browser_refresh", onForceRefresh);
+
+    return () => {
+      alive = false;
+      ctrl.abort();
+      clearInterval(i);
+      window.removeEventListener("agent360_channel_browser_refresh", onForceRefresh);
+    };
   }, [agentBrowserFor]);
 
   // Switch agent
@@ -18351,6 +18590,11 @@ const selectedAgentTheme = getAgentColorTheme(
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (hasNoAgents) return;
+    if (selectedAgent && (selectedAgent.enabled === false || selectedAgent.status === "disabled")) {
+      setForkToast(`Agent ${selectedAgent.name} đang bị vô hiệu hóa. Hãy kích hoạt lại để gửi tin nhắn.`);
+      setTimeout(() => setForkToast(null), 3200);
+      return;
+    }
     if (!inputText.trim() && attachedFiles.length === 0) return;
 
     // Request notification permission on first user interaction if supported
@@ -18930,6 +19174,17 @@ const selectedAgentTheme = getAgentColorTheme(
                                 onTouchEnd={handleTouchEndAgent}
                                 onTouchMove={handleTouchEndAgent}
                                 onTouchCancel={handleTouchEndAgent}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (isCoarseTouchDevice()) {
+                                    setMobileActionAgent(ag);
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setActiveAgentMenuId(ag.id);
+                                    setActiveAgentMenuPos({ x: rect.right + 6, y: rect.top });
+                                  }
+                                }}
                                 onContextMenu={(e) => {
                                   e.preventDefault();
                                   if (isCoarseTouchDevice()) {
@@ -18939,7 +19194,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                     setActiveAgentMenuPos({ x: e.clientX, y: e.clientY });
                                   }
                                 }}
-                                className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 grayscale blur-[0.6px] cursor-not-allowed select-none shrink-0"
+                                className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all border border-transparent opacity-40 hover:opacity-75 grayscale blur-[0.6px] hover:blur-none cursor-pointer select-none shrink-0"
                               >
                                 <div className="relative shrink-0">
                                   <AgentAvatar agent={ag} size="md" />
@@ -19283,12 +19538,18 @@ const selectedAgentTheme = getAgentColorTheme(
                             setActiveAgentMenuPos({ x: e.clientX, y: e.clientY });
                           }
                         }}
-                        onClick={() => {
+                        onClick={(e) => {
                           if (longPressPreventClickRef.current) {
                             longPressPreventClickRef.current = false;
                             return;
                           }
                           if (ag.enabled === false || ag.status === "disabled") {
+                            if (isCoarseTouchDevice()) {
+                              setMobileActionAgent(ag);
+                            } else {
+                              setActiveAgentMenuPos(null);
+                              setActiveAgentMenuId(activeAgentMenuId === ag.id ? null : ag.id);
+                            }
                             return;
                           }
                           handleSelectAgent(ag);
@@ -22473,7 +22734,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           return {
                             id: matched?.id || rawKey,
                             name: matched?.name || c.name || c.key,
-                            logoUrl: matched?.logoUrl || `https://logos.composio.dev/api/${rawKey}`,
+                            logoUrl: resolveAppLogo(rawKey),
                             description: matched?.description || "MCP tool integration",
                           };
                         })
@@ -22824,7 +23085,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               return {
                                 id: matched?.id || rawKey,
                                 name: matched?.name || c.name || c.key,
-                                logoUrl: matched?.logoUrl || `https://logos.composio.dev/api/${rawKey}`,
+                                logoUrl: resolveAppLogo(rawKey),
                                 isConnected: true,
                               };
                             })
@@ -27375,6 +27636,29 @@ ${chat.id}`);
               >
                 <Bot size={15} className="text-cyan-400" />
                 <span>Xem thông số kỹ thuật (Agent Specs)</span>
+              </button>
+
+              {/* 5. Enable / Disable Agent */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  const targetAg = mobileActionAgent;
+                  setMobileActionAgent(null);
+                  handleToggleAgentEnabled(targetAg, e);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-[#1f1f2c] text-xs text-slate-700 dark:text-neutral-200 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                {mobileActionAgent.enabled === false || mobileActionAgent.status === "disabled" ? (
+                  <>
+                    <Power size={15} className="text-emerald-400" />
+                    <span>Kích hoạt Agent (Bật)</span>
+                  </>
+                ) : (
+                  <>
+                    <PowerOff size={15} className="text-rose-400" />
+                    <span>Vô hiệu hóa Agent (Tắt)</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
