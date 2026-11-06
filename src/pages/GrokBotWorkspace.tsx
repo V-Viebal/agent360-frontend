@@ -1,3 +1,4 @@
+import { useTheme } from "../context/ThemeContext";
 import { LeanAudioPlayer } from "../components/LeanAudioPlayer";
 import { LeanVideoPlayer } from "../components/LeanVideoPlayer";
 import React from "react";
@@ -6127,31 +6128,24 @@ function FormattedMessageContent({
           return (
             <div
               key={idx}
-              className={`my-2 rounded-xl overflow-hidden border border-[#262634] bg-[#0a0a0f] font-mono text-xs shadow-md transition-all ${
-                expandedBlock === idx ? "fixed inset-4 z-50 flex flex-col bg-[#0a0a0f]/95 border-[#f8a87c]/40 shadow-2xl p-2" : ""
+              className={`my-2 rounded-xl overflow-hidden border border-slate-200 dark:border-[#222230] bg-slate-900 dark:bg-[#0c0c12] font-mono text-xs shadow-md transition-all max-w-full ${
+                expandedBlock === idx ? "fixed inset-2 sm:inset-4 z-50 flex flex-col bg-[#0a0a0f]/95 border-[#f8a87c]/40 shadow-2xl p-2" : ""
               }`}
             >
-              <div className="px-3 py-1.5 bg-[#14141c] border-b border-[#262634] flex items-center justify-between text-[11px] text-neutral-400 select-none">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span style={{ color: themeColor || "#f8a87c" }} className="flex items-center gap-1.5 font-mono">
-                    <Terminal size={12} />
-                    {lang}
-                  </span>
-                  <span className="text-[10px] text-neutral-500 font-mono hidden sm:inline">
+              {/* Clean Minimal Header */}
+              <div className="px-3 py-1.5 bg-slate-800/80 dark:bg-[#14141c] border-b border-slate-700/60 dark:border-[#1e1e28] flex items-center justify-between gap-1.5 text-[11px] text-neutral-400 select-none min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0 truncate">
+                  <Terminal size={12} className="text-[#f8a87c] shrink-0" />
+                  <span className="font-semibold text-slate-200 truncate capitalize">{lang}</span>
+                  <span className="text-[10px] text-neutral-500 font-mono hidden md:inline">
                     ({code.trim().split("\n").length} lines)
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button aria-label={expandedBlock === idx ? "Collapse code block" : "Expand code block"} data-ux-target-min="24"
-                    type="button"
-                    onClick={() => setExpandedBlock(expandedBlock === idx ? null : idx)}
-                    className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
-                    title={expandedBlock === idx ? "Collapse code block" : "Expand code block"}
-                  >
-                    {expandedBlock === idx ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                  </button>
+                <div className="flex items-center gap-1 shrink-0">
                   {onRunCode && (lang === "bash" || lang === "sh" || lang === "shell" || lang === "python" || lang === "sql") && (
-                    <button aria-label="Execute code directly on Agent workspace node" data-ux-target-min="24"
+                    <button
+                      aria-label="Execute code on node"
+                      data-ux-target-min="24"
                       type="button"
                       onClick={() => {
                         setRunningBlock(idx);
@@ -6167,13 +6161,23 @@ function FormattedMessageContent({
                           setRunningBlock(null);
                         }, 700);
                       }}
-                      style={{ color: themeColor || "#f8a87c", backgroundColor: themeColor ? `${themeColor}26` : undefined, borderColor: themeColor ? `${themeColor}4d` : undefined }} className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono hover:brightness-110 transition-colors cursor-pointer border"
-                      title="Execute code directly on Agent workspace node"
+                      className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-colors cursor-pointer"
+                      title="Run code snippet"
                     >
                       <Play size={10} fill="currentColor" />
-                      <span>{runningBlock === idx ? "Running..." : "Run on Node"}</span>
+                      <span>{runningBlock === idx ? "Running..." : "Run"}</span>
                     </button>
                   )}
+                  <button
+                    aria-label={expandedBlock === idx ? "Collapse code block" : "Expand code block"}
+                    data-ux-target-min="24"
+                    type="button"
+                    onClick={() => setExpandedBlock(expandedBlock === idx ? null : idx)}
+                    className="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    title={expandedBlock === idx ? "Collapse code block" : "Expand code block"}
+                  >
+                    {expandedBlock === idx ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -6192,7 +6196,7 @@ function FormattedMessageContent({
                       a.click();
                       URL.revokeObjectURL(a.href);
                     }}
-                    className="flex items-center gap-1 text-neutral-400 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-white/10"
+                    className="hidden sm:flex items-center text-neutral-400 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-white/10"
                     title="Tải mã nguồn về máy"
                   >
                     <Download size={11} />
@@ -6201,10 +6205,10 @@ function FormattedMessageContent({
                   <button
                     type="button"
                     onClick={() => handleCopyCode(code, idx)}
-                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-[10px] font-mono ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md transition-all cursor-pointer text-[10px] font-mono ${
                       copiedBlock === idx
-                        ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 scale-105 shadow-xs"
-                        : "text-neutral-400 hover:text-white hover:bg-white/10 border border-transparent active:scale-95"
+                        ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 shadow-xs scale-105"
+                        : "text-neutral-300 hover:text-white hover:bg-white/10 border border-transparent active:scale-95"
                     }`}
                     title="Sao chép toàn bộ khối mã"
                   >
@@ -6215,14 +6219,16 @@ function FormattedMessageContent({
                       </>
                     ) : (
                       <>
-                        <Copy size={11} className="transition-transform duration-150" />
+                        <Copy size={11} />
                         <span>Copy</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
-              <pre className="p-3.5 overflow-x-auto text-neutral-200 whitespace-pre max-h-80 overflow-y-auto">
+
+              {/* Code Body with Smooth Responsive Horizontal Scroll */}
+              <pre className="p-3 sm:p-3.5 overflow-x-auto text-neutral-200 font-mono text-[11px] sm:text-xs leading-relaxed whitespace-pre max-h-80 overflow-y-auto overscroll-contain">
                 <code>{code}</code>
               </pre>
               {runOutputs[idx] && (
@@ -6552,6 +6558,30 @@ function SelkiesViewer({
   const [addressInput, setAddressInput] = useState<string>("");
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  // Real page loading state per tab, pushed by the backend screencast (Page.loadingState from CDP lifecycle events)
+  const [tabLoadingById, setTabLoadingById] = useState<Record<string, boolean>>({});
+  const tabLoadingByIdRef = useRef<Record<string, boolean>>({});
+  tabLoadingByIdRef.current = tabLoadingById;
+  const loadingSafetyTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // Latest URL/title pushed by the live stream per tab; overrides possibly stale polled tab metadata for a short window.
+  const liveTabMetaRef = useRef<Record<string, { url: string; title: string; at: number }>>({});
+  // Optimistically show loading the instant a navigation is requested; Page.loadingState events then own the state.
+  const markTabLoading = (tabId: string, loading: boolean) => {
+    if (!tabId) return;
+    const prevTimer = loadingSafetyTimersRef.current[tabId];
+    if (prevTimer) clearTimeout(prevTimer);
+    delete loadingSafetyTimersRef.current[tabId];
+    if (loading) {
+      loadingSafetyTimersRef.current[tabId] = setTimeout(() => {
+        delete loadingSafetyTimersRef.current[tabId];
+        setTabLoadingById((prev) => (prev[tabId] ? { ...prev, [tabId]: false } : prev));
+      }, 20000);
+    }
+    setTabLoadingById((prev) => (Boolean(prev[tabId]) === loading ? prev : { ...prev, [tabId]: loading }));
+  };
+  useEffect(() => () => {
+    Object.values(loadingSafetyTimersRef.current).forEach((t) => clearTimeout(t));
+  }, []);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [isBrowserMoreMenuOpen, setIsBrowserMoreMenuOpen] = useState<boolean>(false);
   const [historyItems, setHistoryItems] = useState<AgentBrowserHistoryItem[]>([]);
@@ -6688,7 +6718,13 @@ function SelkiesViewer({
     for (const [cid, exp] of closedTabsUntilRef.current.entries()) {
       if (now > exp) closedTabsUntilRef.current.delete(cid);
     }
-    const filtered = incoming.filter((t) => !closedTabsUntilRef.current.has(t.targetId));
+    const filtered = incoming
+      .filter((t) => !closedTabsUntilRef.current.has(t.targetId))
+      .map((t) => {
+        const live = liveTabMetaRef.current[t.targetId];
+        if (!live || now - live.at > 15000) return t;
+        return { ...t, url: live.url || t.url, title: live.title || t.title };
+      });
     const currentOrder = tabOrderRef.current;
     const byId = new Map<string, AgentBrowserTab>();
     filtered.forEach((t) => byId.set(t.targetId, t));
@@ -6841,10 +6877,32 @@ function SelkiesViewer({
     } catch {}
   };
 
+  // Adaptive tab sync: 1s while any tab is loading (titles/URLs/new agent tabs land fast), 3s when idle, paused while hidden
   useEffect(() => {
-    refreshBrowserTabs();
-    const timer = setInterval(refreshBrowserTabs, 3000);
-    return () => clearInterval(timer);
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const loop = async () => {
+      if (!alive) return;
+      if (typeof document === "undefined" || !document.hidden) {
+        await refreshBrowserTabs();
+      }
+      if (!alive) return;
+      const anyLoading = Object.values(tabLoadingByIdRef.current).some(Boolean);
+      timer = setTimeout(loop, anyLoading ? 1000 : 3000);
+    };
+    void loop();
+    const onVisible = () => {
+      if (!document.hidden && alive) {
+        if (timer) clearTimeout(timer);
+        void loop();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [agentId, reloadKey]);
 
   // Fetch live Google autocomplete suggestions and tab navigation history when typing in Omnibox
@@ -6973,6 +7031,7 @@ function SelkiesViewer({
     browserTabs.find((t) => t.targetId === selectedTabId) ||
     browserTabs[browserTabs.length - 1] ||
     browserTabs[0];
+  const isActivePageLoading = isNavigating || Boolean(activeTabObj && tabLoadingById[activeTabObj.targetId]);
 
   const getTabFaviconUrl = (tabUrl?: string, isAnchor?: boolean) => {
     if (!tabUrl || isAnchor || tabUrl.startsWith("data:") || tabUrl.startsWith("about:") || tabUrl.startsWith("chrome:")) {
@@ -7001,6 +7060,7 @@ function SelkiesViewer({
       : rawTarget;
 
     saveOmniboxEntry(rawTarget, normalizedUrl, !isDirectUrl);
+    if (selectedTabIdRef.current) markTabLoading(selectedTabIdRef.current, true);
 
     setBrowserTabs((prev) =>
       prev.map((t) =>
@@ -7041,6 +7101,7 @@ function SelkiesViewer({
   const handleBrowserAction = async (act: "back" | "forward" | "reload") => {
     triggerHaptic(8);
     setIsNavigating(true);
+    if (selectedTabIdRef.current) markTabLoading(selectedTabIdRef.current, true);
     const actVp = computeActiveBrowserViewport();
     await dispatchAgentBrowserInput(agentId, {
       action: act,
@@ -7054,6 +7115,53 @@ function SelkiesViewer({
     setAttempt((a) => a + 1);
     setIsNavigating(false);
     refreshBrowserTabs();
+  };
+
+  const handlePageLoadingState = (state: { loading: boolean; url: string; title: string }) => {
+    const tabId = selectedTabIdRef.current;
+    if (!tabId || tabId.startsWith("optimistic-")) return;
+    markTabLoading(tabId, state.loading);
+    const cleanUrl = state.url && !state.url.startsWith("data:") ? state.url : "";
+    if (cleanUrl || state.title) {
+      const prevLive = liveTabMetaRef.current[tabId];
+      const urlChanged = Boolean(cleanUrl && prevLive && prevLive.url !== cleanUrl);
+      liveTabMetaRef.current[tabId] = {
+        url: cleanUrl || prevLive?.url || "",
+        title: state.title && !(urlChanged && state.loading && state.title === prevLive?.title) ? state.title : (urlChanged ? "" : prevLive?.title || ""),
+        at: Date.now(),
+      };
+      setBrowserTabs((prev) => {
+        let changed = false;
+        const next = prev.map((t) => {
+          if (t.targetId !== tabId) return t;
+          const live = liveTabMetaRef.current[tabId];
+          const url = live.url || t.url;
+          const title = live.title || (url !== t.url ? url : t.title);
+          if (url === t.url && title === t.title) return t;
+          changed = true;
+          return { ...t, url, title };
+        });
+        return changed ? next : prev;
+      });
+    }
+    if (cleanUrl && !isEditingAddressRef.current) {
+      setAddressInput(cleanUrl.startsWith("about:") ? "" : cleanUrl);
+    }
+    if (!state.loading) {
+      setIsNavigating(false);
+      if (cleanUrl && !cleanUrl.startsWith("about:")) saveOmniboxEntry(state.title || cleanUrl, cleanUrl, false);
+    }
+  };
+
+  const handleStopLoading = async () => {
+    triggerHaptic(8);
+    const tabId = selectedTabIdRef.current;
+    setIsNavigating(false);
+    if (tabId) markTabLoading(tabId, false);
+    await dispatchAgentBrowserInput(agentId, {
+      action: "stop",
+      pageId: tabId && !tabId.startsWith("optimistic-") ? tabId : undefined,
+    });
   };
 
   const handleActivateTab = (tab: AgentBrowserTab) => {
@@ -7513,7 +7621,13 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
                       </>
                     )}
 
-                    {favUrl ? (
+                    {tabLoadingById[tab.targetId] || (isActive && isNavigating) ? (
+                      <Loader2
+                        size={14}
+                        data-testid={`agent-browser-tab-loading-${idx}`}
+                        className="animate-spin text-[#1a73e8] dark:text-[#8ab4f8] shrink-0"
+                      />
+                    ) : favUrl ? (
                       <img
                         src={favUrl}
                         alt=""
@@ -7678,12 +7792,13 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
           <button
             type="button"
             data-testid="agent-browser-reload-btn"
-            onClick={() => handleBrowserAction("reload")}
+            data-loading={isActivePageLoading ? "true" : "false"}
+            onClick={() => (isActivePageLoading ? void handleStopLoading() : void handleBrowserAction("reload"))}
             className="h-7 w-7 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-[#5f6368] dark:text-[#9aa0a6] hover:text-[#202124] dark:hover:text-[#e8eaed] flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Tải lại trang (Reload · Ctrl+R)"
-            aria-label="Reload"
+            title={isActivePageLoading ? "Dừng tải trang (Stop)" : "Tải lại trang (Reload · Ctrl+R)"}
+            aria-label={isActivePageLoading ? "Stop loading" : "Reload"}
           >
-            <RotateCw size={14} className={isNavigating ? "animate-spin text-[#1a73e8] dark:text-[#8ab4f8]" : ""} />
+            {isActivePageLoading ? <X size={15} /> : <RotateCw size={14} />}
           </button>
 
           {/* Chrome Omnibox + Rich Autocomplete Dropdown Container */}
@@ -8220,8 +8335,15 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             </div>
           </div>
 
-          {isNavigating && (
-            <div className="absolute bottom-0 inset-x-0 h-[1.5px] bg-[#1a73e8] dark:bg-[#a8c7fa] animate-pulse" />
+          {isActivePageLoading && (
+            <div
+              data-testid="agent-browser-loading-bar"
+              role="progressbar"
+              aria-label="Đang tải trang"
+              className="pointer-events-none absolute bottom-0 inset-x-0 h-[2px] overflow-hidden"
+            >
+              <div className="agent-browser-loading-sweep h-full w-1/3 bg-[#1a73e8] dark:bg-[#a8c7fa]" />
+            </div>
           )}
         </div>
       </div>
@@ -8385,6 +8507,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             viewportWidth={computeActiveBrowserViewport().w}
             viewportHeight={computeActiveBrowserViewport().h}
             frameCacheRef={tabFrameCacheRef}
+            onPageLoadingState={handlePageLoadingState}
             externalZoomPercent={browserZoomPercent}
             onZoomStep={handleZoomStep}
             onBrowserShortcut={(shortcut) => {
@@ -8425,6 +8548,7 @@ function AgentBrowserPreview({
   externalZoomPercent = 100,
   onZoomStep,
   onBrowserShortcut,
+  onPageLoadingState,
 }: {
   agentId: string;
   pageId?: string;
@@ -8445,7 +8569,10 @@ function AgentBrowserPreview({
   externalZoomPercent?: number;
   onZoomStep?: (deltaPct: number | "reset") => void;
   onBrowserShortcut?: (shortcut: "new_tab" | "close_tab" | "focus_address" | "reload" | "back" | "forward" | "find") => void;
+  onPageLoadingState?: (state: { loading: boolean; url: string; title: string }) => void;
 }) {
+  const onPageLoadingStateRef = useRef(onPageLoadingState);
+  onPageLoadingStateRef.current = onPageLoadingState;
   const cacheKey = `${agentId}:${pageId || "default"}`;
   const initCached = frameCacheRef?.current?.[cacheKey];
   const validInitCached = initCached && initCached !== "__loading__" ? initCached : "";
@@ -9083,6 +9210,14 @@ function AgentBrowserPreview({
             }
           } else if (typeof ev.data === "string") {
             const msg = JSON.parse(ev.data);
+            if (msg?.method === "Page.loadingState" && msg?.params) {
+              onPageLoadingStateRef.current?.({
+                loading: Boolean(msg.params.loading),
+                url: typeof msg.params.url === "string" ? msg.params.url : "",
+                title: typeof msg.params.title === "string" ? msg.params.title : "",
+              });
+              return;
+            }
             if (msg?.method === "Page.cursorChanged" && typeof msg?.params?.cursor === "string") {
               applyRemoteCursorStyleDom(msg.params.cursor);
               return;
@@ -10880,6 +11015,8 @@ function useScrollBottomIndicator() {
 
 export function GrokBotWorkspace() {
   const { t, language } = useTranslation();
+  const { resolvedTheme } = useTheme();
+  const isLightMode = resolvedTheme === 'light';
   const { scrollRef: agentsListScrollRef, canScrollDown: agentsListCanScrollDown, updateScrollState: updateAgentsScroll } = useScrollBottomIndicator();
   const { scrollRef: chatsListScrollRef, canScrollDown: chatsListCanScrollDown, updateScrollState: updateChatsScroll } = useScrollBottomIndicator();
   const { scrollRef: railAgentsScrollRef, canScrollDown: railAgentsCanScrollDown, updateScrollState: updateRailScroll } = useScrollBottomIndicator();
@@ -11998,19 +12135,15 @@ export function GrokBotWorkspace() {
         let computedWidth = 280;
         if (chatSessionsAsideRef.current) {
           const rect = chatSessionsAsideRef.current.getBoundingClientRect();
-          if (isComputerSplitOpen) {
-            // When virtual computer is open to the right of chat sessions, splitter is on the right edge
-            computedWidth = e.clientX - rect.left;
-          } else {
-            // When virtual computer is closed, chat sessions is on the right of screen, splitter is on left edge
-            computedWidth = rect.right - e.clientX;
-          }
+          // The splitter is always on the left edge of chat sessions sidebar (between chat dialogue and chat list)
+          // Dragging left increases width, dragging right decreases width
+          computedWidth = rect.right - e.clientX;
         } else {
           const offsetFromRight = window.innerWidth - e.clientX;
           const currentBotInfoOffset = (!isBotInfoCollapsed && typeof window !== "undefined" && window.innerWidth >= 1280) ? botInfoWidth : 0;
           computedWidth = offsetFromRight - currentBotInfoOffset;
         }
-        const boundedW = Math.min(460, Math.max(220, computedWidth));
+        const boundedW = Math.min(520, Math.max(200, computedWidth));
         setChatSessionsWidth(boundedW);
         try { localStorage.setItem("agent360_chat_sessions_w", boundedW.toString()); } catch {}
       }
@@ -23934,6 +24067,442 @@ const selectedAgentTheme = getAgentColorTheme(
               );
             })()}          </div>
         </div>
+      
+        {/* Real-time Voice/Video Call Overlay (Scoped strictly within Center Chat UI) */}
+      {isRealtimeVoiceOpen && (() => {
+        const isLight = isLightMode;
+        const voiceThemeAccent = selectedAgentTheme?.primary || "#3b82f6";
+        const voiceThemeLight = selectedAgentTheme?.light || voiceThemeAccent;
+        const isMicActive = realtimeMediaRecorderRef.current?.state === "recording";
+        const textColorPrimary = isLight ? "#0f172a" : "#f4f6fa";
+        const textColorSecondary = isLight ? "rgba(15, 23, 42, 0.72)" : "rgba(244, 246, 250, 0.68)";
+        const textColorTertiary = isLight ? "rgba(15, 23, 42, 0.52)" : "rgba(244, 246, 250, 0.52)";
+        const dockBtnBg = isLight ? "rgba(255, 255, 255, 0.92)" : "rgba(28, 30, 38, 0.88)";
+        const dockBtnBorder = isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)";
+        const dockBtnText = isLight ? "#1e293b" : "#f4f6fa";
+        const dockBtnShadow = isLight ? "0 4px 14px rgba(0, 0, 0, 0.06)" : undefined;
+        const headlineText = realtimeShowCaptions && (realtimeBotReply || realtimeTranscript)
+          ? (realtimeBotReply || realtimeTranscript)
+          : realtimeVoiceStatus === "connecting"
+          ? "Đang kết nối đàm thoại trực tiếp..."
+          : realtimeVoiceStatus === "thinking"
+          ? "Đang suy nghĩ câu trả lời..."
+          : realtimeVoiceStatus === "speaking"
+          ? `${selectedAgent?.name || "Skyer"} đang phản hồi...`
+          : "Bạn có ý tưởng mới nào muốn khám phá không?";
+
+        return (
+          <div
+            data-testid="realtime-voice-modal"
+            style={{
+              backgroundColor: isLight ? "#f8fafc" : "#000000",
+              color: textColorPrimary,
+              ["--voice-theme" as any]: voiceThemeAccent,
+              ["--voice-theme-light" as any]: voiceThemeLight,
+            }}
+            className={`absolute inset-0 z-30 flex flex-col items-center justify-between overflow-hidden select-none animate-in fade-in duration-300 transition-colors ${isLight ? "voice-light-mode" : "keep-white"}`}
+          >
+            <style>{`
+              @keyframes skyerSmokeDriftA {
+                0% { transform: translate3d(-12%, 6%, 0) scale(1, 0.95) rotate(-4deg); opacity: 0.62; }
+                50% { transform: translate3d(10%, -8%, 0) scale(1.18, 1.08) rotate(5deg); opacity: 0.92; }
+                100% { transform: translate3d(-12%, 6%, 0) scale(1, 0.95) rotate(-4deg); opacity: 0.62; }
+              }
+              @keyframes skyerSmokeDriftB {
+                0% { transform: translate3d(14%, 2%, 0) scale(1.12, 0.92) rotate(6deg); opacity: 0.54; }
+                50% { transform: translate3d(-14%, -10%, 0) scale(0.96, 1.15) rotate(-6deg); opacity: 0.88; }
+                100% { transform: translate3d(14%, 2%, 0) scale(1.12, 0.92) rotate(6deg); opacity: 0.54; }
+              }
+              @keyframes skyerSmokePulse {
+                0%, 100% { transform: translate3d(0, 4%, 0) scale(1); opacity: 0.72; }
+                50% { transform: translate3d(0, -5%, 0) scale(1.12); opacity: 1; }
+              }
+              @keyframes skyerOrbMist {
+                0% { transform: translate3d(-14%, 8%, 0) scale(0.95) rotate(-6deg); opacity: 0.78; }
+                50% { transform: translate3d(14%, -4%, 0) scale(1.16) rotate(8deg); opacity: 1; }
+                100% { transform: translate3d(-14%, 8%, 0) scale(0.95) rotate(-6deg); opacity: 0.78; }
+              }
+              @keyframes skyerLogoFloat {
+                0%, 100% { transform: translateY(0px) scale(1); }
+                50% { transform: translateY(-4px) scale(1.04); }
+              }
+              [data-testid="realtime-voice-modal"].voice-light-mode,
+              [data-testid="realtime-voice-modal"].voice-light-mode button {
+                color: #0f172a;
+              }
+              [data-testid="realtime-voice-modal"]:not(.voice-light-mode),
+              [data-testid="realtime-voice-modal"]:not(.voice-light-mode) button {
+                color: #f4f6fa;
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .skyer-smoke-layer, .skyer-orb-mist, .skyer-voice-logo {
+                  animation: none !important;
+                }
+              }
+            `}</style>
+
+            {/* Bottom-half atmospheric misty / smoky aura following active agent theme (Adaptive Dark/Light) */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] overflow-hidden"
+            >
+              <div
+                className="absolute inset-0 transition-all duration-700"
+                style={{
+                  background: isLight
+                    ? `radial-gradient(125% 95% at 50% 105%, color-mix(in srgb, var(--voice-theme) 35%, #ffffff) 0%, color-mix(in srgb, var(--voice-theme) 15%, #f1f5f9) 45%, transparent 80%)`
+                    : `radial-gradient(125% 95% at 50% 105%, color-mix(in srgb, var(--voice-theme) 62%, #050814) 0%, color-mix(in srgb, var(--voice-theme) 28%, transparent) 48%, transparent 82%)`,
+                  opacity: realtimeVoiceStatus === "speaking" ? 0.98 : realtimeVoiceStatus === "listening" ? 0.88 : 0.75,
+                }}
+              />
+              <div
+                className="skyer-smoke-layer absolute -bottom-24 left-[-10%] w-[78%] h-[78%] rounded-full"
+                style={{
+                  background: isLight
+                    ? `radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--voice-theme) 65%, #ffffff 40%) 0%, color-mix(in srgb, var(--voice-theme) 22%, transparent) 55%, transparent 76%)`
+                    : `radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--voice-theme) 78%, #ffffff 12%) 0%, color-mix(in srgb, var(--voice-theme) 36%, transparent) 52%, transparent 76%)`,
+                  filter: "blur(56px)",
+                  animation: `skyerSmokeDriftA ${realtimeVoiceStatus === "speaking" ? "6.5s" : "11s"} ease-in-out infinite`,
+                }}
+              />
+              <div
+                className="skyer-smoke-layer absolute -bottom-28 right-[-12%] w-[82%] h-[80%] rounded-full"
+                style={{
+                  background: isLight
+                    ? `radial-gradient(circle at 48% 52%, color-mix(in srgb, var(--voice-theme-light) 60%, #ffffff 35%) 0%, color-mix(in srgb, var(--voice-theme) 20%, transparent) 55%, transparent 78%)`
+                    : `radial-gradient(circle at 48% 52%, color-mix(in srgb, var(--voice-theme-light) 74%, #0f172a 18%) 0%, color-mix(in srgb, var(--voice-theme) 34%, transparent) 54%, transparent 78%)`,
+                  filter: "blur(64px)",
+                  animation: `skyerSmokeDriftB ${realtimeVoiceStatus === "speaking" ? "7.5s" : "13s"} ease-in-out infinite`,
+                }}
+              />
+              <div
+                className="skyer-smoke-layer absolute -bottom-20 left-[15%] w-[70%] h-[62%] rounded-full"
+                style={{
+                  background: isLight
+                    ? `radial-gradient(ellipse at 50% 65%, color-mix(in srgb, var(--voice-theme) 70%, #ffffff 45%) 0%, color-mix(in srgb, var(--voice-theme) 26%, transparent) 50%, transparent 76%)`
+                    : `radial-gradient(ellipse at 50% 65%, color-mix(in srgb, var(--voice-theme) 86%, #ffffff 24%) 0%, color-mix(in srgb, var(--voice-theme) 40%, transparent) 48%, transparent 76%)`,
+                  filter: "blur(48px)",
+                  animation: `skyerSmokePulse ${realtimeVoiceStatus === "speaking" ? "4.2s" : "8s"} ease-in-out infinite`,
+                }}
+              />
+            </div>
+
+            {/* Top Minimal Chrome Header (matching Image 1) */}
+            <div className="relative z-10 w-full max-w-2xl px-6 pt-5 pb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setIsVoiceRecordSettingsOpen(true)}
+                style={{ color: textColorPrimary }}
+                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Tuỳ chọn thiết bị & mô hình giọng nói"
+                aria-label="Voice menu"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+                  <line x1="4" y1="9" x2="20" y2="9" />
+                  <line x1="4" y1="15" x2="20" y2="15" />
+                </svg>
+              </button>
+
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-2 w-2 rounded-full transition-transform duration-300"
+                    style={{
+                      backgroundColor: voiceThemeAccent,
+                      boxShadow: `0 0 10px ${voiceThemeAccent}`,
+                    }}
+                  />
+                  <span style={{ color: textColorPrimary }} className="text-xs font-semibold tracking-wide">
+                    {selectedAgent?.name || "Skyer"}
+                  </span>
+                </div>
+                {liveRtcNodeId && (
+                  <span
+                    data-testid="rtc-node-badge"
+                    style={{ color: textColorTertiary }}
+                    className="text-[10px] tracking-wider font-mono"
+                  >
+                    {liveRtcNodeId} • LLM360 5a54d0
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
+                  style={{ color: textColorPrimary, opacity: realtimeShowCaptions ? 1 : 0.45 }}
+                  className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-opacity cursor-pointer"
+                  title={realtimeShowCaptions ? "Ẩn phụ đề trực tiếp" : "Hiện phụ đề trực tiếp"}
+                  aria-label="Toggle captions"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="4" />
+                    <line x1="8" y1="13" x2="16" y2="13" />
+                    <line x1="8" y1="16.5" x2="13" y2="16.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsVoiceRecordSettingsOpen(true)}
+                  style={{ color: textColorPrimary }}
+                  className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Cài đặt giọng nói nâng cao"
+                  aria-label="More voice options"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="1.6" />
+                    <circle cx="12" cy="12" r="1.6" />
+                    <circle cx="19" cy="12" r="1.6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Center Stage: Skyer Logo + Video Stream PIP + Display Prompt / Live Transcript */}
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 max-w-xl w-full text-center -mt-4">
+              {/* Live Video Preview (Camera or Screen Share) */}
+              {(isCameraActive || isScreenShareActive) ? (
+                <div
+                  data-testid="rtc-video-preview"
+                  className="relative mb-5 w-full max-w-sm aspect-video rounded-2xl overflow-hidden border border-white/20 bg-neutral-950 shadow-2xl transition-all duration-300"
+                >
+                  <video
+                    ref={realtimeVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2.5 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-medium tracking-wide text-white border border-white/10">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{isScreenShareActive ? "Màn hình trực tiếp" : `Camera (${cameraFacingMode === "user" ? "Trước" : "Sau"})`}</span>
+                  </div>
+                  {liveVisionSummary && (
+                    <div className="absolute inset-x-2 bottom-2 p-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 text-left">
+                      <p className="text-[11px] text-white/90 line-clamp-2 leading-tight">
+                        👁️ {liveVisionSummary}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  onClick={toggleRealtimeMicTurn}
+                  className="skyer-voice-logo mb-6 cursor-pointer relative flex items-center justify-center"
+                  style={{
+                    animation: "skyerLogoFloat 5s ease-in-out infinite",
+                    filter: `drop-shadow(0 0 18px color-mix(in srgb, var(--voice-theme) 68%, transparent))`,
+                  }}
+                  title="Nhấn để nói hoặc ngắt lời"
+                >
+                  <svg
+                    data-testid="skyer-voice-logo"
+                    width="46"
+                    height="46"
+                    viewBox="0 0 32 32"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="transition-transform duration-300 hover:scale-105"
+                  >
+                    <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
+                    <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
+                    <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
+                    <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
+                  </svg>
+                </div>
+              )}
+
+              <h2
+                data-testid="realtime-voice-headline"
+                style={{ color: textColorPrimary }}
+                className="text-2xl sm:text-[28px] font-normal leading-[1.36] tracking-[-0.015em] max-h-48 overflow-y-auto px-2"
+              >
+                {headlineText}
+              </h2>
+
+              {realtimeShowCaptions && realtimeTranscript && realtimeBotReply && (
+                <p style={{ color: textColorSecondary }} className="mt-3 text-sm italic max-w-md line-clamp-2">
+                  “{realtimeTranscript}”
+                </p>
+              )}
+
+              {(isMicActive || realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") && (
+                <div style={{ color: textColorTertiary }} className="mt-4 text-xs font-medium tracking-wide">
+                  {isMicActive
+                    ? "Đang thu âm... Nhấn viên thuốc sương khói để gửi"
+                    : realtimeVoiceStatus === "speaking"
+                    ? "Nhấn vào viên thuốc trung tâm để ngắt lời"
+                    : "Đang xử lý..."}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom 5-Item Control Dock (matching Image 1 layout & central smoky pill) */}
+            <div className="relative z-10 w-full max-w-md px-5 pb-7 pt-2 flex flex-col items-center gap-5">
+              <div className="w-full flex items-center justify-between sm:justify-center gap-2.5 sm:gap-5">
+                {/* 1. Left Button 1: Camera Video Stream (Web & Mobile with Front/Rear flip) */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    data-testid="voice-dock-camera-btn"
+                    onClick={() => toggleRealtimeCamera()}
+                    style={{
+                      backgroundColor: isCameraActive ? voiceThemeAccent : dockBtnBg,
+                      borderColor: dockBtnBorder,
+                      color: isCameraActive ? "#ffffff" : dockBtnText,
+                      boxShadow: isCameraActive ? `0 0 20px ${voiceThemeAccent}` : dockBtnShadow,
+                    }}
+                    className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95 backdrop-blur-md"
+                    title={isCameraActive ? "Tắt Camera" : "Bật Camera (Video Call)"}
+                    aria-label="Toggle camera"
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                      <circle cx="12" cy="13" r="3" />
+                    </svg>
+                  </button>
+                  {isCameraActive && (
+                    <button
+                      type="button"
+                      data-testid="voice-dock-camera-flip-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRealtimeCamera(cameraFacingMode === "user" ? "environment" : "user");
+                      }}
+                      className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-neutral-900 border border-white/20 text-white flex items-center justify-center shadow-md hover:bg-neutral-800 cursor-pointer"
+                      title="Đổi camera trước / sau"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* 2. Left Button 2: Screen Share Stream (Web on Desktop & Supported Mobile) */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-screen-btn"
+                  onClick={toggleRealtimeScreenShare}
+                  style={{
+                    backgroundColor: isScreenShareActive ? voiceThemeAccent : dockBtnBg,
+                    borderColor: dockBtnBorder,
+                    color: isScreenShareActive ? "#ffffff" : dockBtnText,
+                    boxShadow: isScreenShareActive ? `0 0 20px ${voiceThemeAccent}` : dockBtnShadow,
+                  }}
+                  className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95 backdrop-blur-md"
+                  title={isScreenShareActive ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình trực tiếp"}
+                  aria-label="Toggle screen share"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                    <polyline points="9 8 12 11 15 8" />
+                  </svg>
+                </button>
+
+                {/* 3. Center Glowing Smoky Pill Visualizer (follows Agent Theme) */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-smoky-pill"
+                  onClick={toggleRealtimeMicTurn}
+                  style={{
+                    backgroundColor: isLight ? "#ffffff" : "#030408",
+                    borderColor: isLight ? "rgba(0, 0, 0, 0.1)" : "rgba(255, 255, 255, 0.08)",
+                    boxShadow: isLight
+                      ? `0 10px 30px -4px color-mix(in srgb, var(--voice-theme) 40%, transparent), 0 4px 12px rgba(0,0,0,0.06)`
+                      : `0 10px 36px -6px color-mix(in srgb, var(--voice-theme) 55%, transparent), inset 0 1px 1px rgba(255,255,255,0.12)`,
+                  }}
+                  className="relative h-[74px] w-[132px] sm:h-[84px] sm:w-[152px] rounded-full overflow-hidden border cursor-pointer transition-transform duration-300 active:scale-95 shrink-0"
+                  title={isMicActive ? "Nhấn để gửi lượt nói" : "Nhấn để bắt đầu nói"}
+                  aria-label="Voice smoky visualizer orb"
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: isLight
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.85) 46%, transparent 100%)"
+                        : "linear-gradient(180deg, #000000 0%, rgba(2,4,10,0.92) 46%, transparent 100%)",
+                    }}
+                  />
+                  <div
+                    className="skyer-orb-mist absolute -bottom-5 left-[-12%] w-[124%] h-[78%] rounded-full"
+                    style={{
+                      background: `radial-gradient(ellipse at 50% 78%, #ffffff 0%, color-mix(in srgb, var(--voice-theme-light) 88%, #ffffff) 28%, color-mix(in srgb, var(--voice-theme) 72%, transparent) 62%, transparent 85%)`,
+                      filter: "blur(10px)",
+                      animation: `skyerOrbMist ${realtimeVoiceStatus === "speaking" || isMicActive ? "3.2s" : "6.5s"} ease-in-out infinite`,
+                    }}
+                  />
+                  <div
+                    className="skyer-orb-mist absolute -bottom-3 right-[-8%] w-[95%] h-[65%] rounded-full"
+                    style={{
+                      background: `radial-gradient(circle at 45% 70%, rgba(255,255,255,0.95) 0%, color-mix(in srgb, var(--voice-theme) 80%, #dbeafe) 42%, transparent 78%)`,
+                      filter: "blur(13px)",
+                      animation: `skyerSmokeDriftB ${realtimeVoiceStatus === "speaking" || isMicActive ? "2.8s" : "5.8s"} ease-in-out infinite`,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-x-3 bottom-0 h-[2px] rounded-full opacity-80"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, #ffffff, var(--voice-theme-light), transparent)`,
+                    }}
+                  />
+                </button>
+
+                {/* 4. Right Button 1: Microphone Toggle */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-mic-btn"
+                  onClick={toggleRealtimeMicTurn}
+                  style={{
+                    backgroundColor: isMicActive ? voiceThemeAccent : dockBtnBg,
+                    borderColor: dockBtnBorder,
+                    color: isMicActive ? "#ffffff" : dockBtnText,
+                    boxShadow: isMicActive ? `0 0 24px ${voiceThemeAccent}` : dockBtnShadow,
+                  }}
+                  className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95 backdrop-blur-md"
+                  title={isMicActive ? "Đang bật Mic (Nhấn để gửi)" : "Bật Micro để nói"}
+                  aria-label="Toggle microphone"
+                >
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                </button>
+
+                {/* 5. Right Button 2: Close / End Voice Call (X) */}
+                <button
+                  type="button"
+                  data-testid="voice-dock-close-btn"
+                  onClick={stopRealtimeVoiceChat}
+                  style={{
+                    backgroundColor: dockBtnBg,
+                    borderColor: dockBtnBorder,
+                    color: dockBtnText,
+                    boxShadow: dockBtnShadow,
+                  }}
+                  className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95 backdrop-blur-md"
+                  title="Kết thúc đàm thoại"
+                  aria-label="Close Live Voice Chat"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Subtle bottom home bar indicator matching Image 1 */}
+              <div
+                style={{ backgroundColor: isLight ? "rgba(0, 0, 0, 0.25)" : "rgba(255, 255, 255, 0.8)" }}
+                className="w-32 h-1 rounded-full transition-colors"
+              />
+            </div>
+          </div>
+        );
+      })()}
       </main>
 
       {/* ========================================================= */}
@@ -23953,7 +24522,7 @@ const selectedAgentTheme = getAgentColorTheme(
           ["--agent-primary" as any]: selectedAgentTheme.primary,
         }}
         {...({ inert: (!mobileChatsOpen && typeof window !== "undefined" && window.innerWidth < 1024) || (isChatListCollapsed && typeof window !== "undefined" && window.innerWidth >= 1024) ? true : undefined } as any)}
-        className={`fixed lg:static lg:relative inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 transition-grok chat-sidebar-panel mobile-drawer-panel ${
+        className={`fixed lg:static lg:relative inset-y-0 right-0 z-[60] lg:z-30 h-full flex flex-col bg-[var(--bg-sidebar)] shrink-0 ${isResizingChatSessions ? "!transition-none select-none" : "transition-grok"} chat-sidebar-panel mobile-drawer-panel ${
           mobileChatsOpen
             ? "flex w-full sm:w-[360px] border-l border-neutral-200 dark:border-[#1e1e24] translate-x-0 shadow-2xl pointer-events-auto"
             : isChatListCollapsed
@@ -23964,10 +24533,11 @@ const selectedAgentTheme = getAgentColorTheme(
         {/* Subtle, Slim Resizer Splitter between Chat / Virtual Computer and Session Chats */}
         {!isChatListCollapsed && (
           <div
-            onMouseDown={() => setIsResizingChatSessions(true)}
-            className={`hidden lg:block absolute top-0 ${
-              isComputerSplitOpen ? "right-0 -mr-1" : "left-0 -ml-1"
-            } w-1.5 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/40 active:bg-[var(--agent-primary)] transition-colors z-30 group`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsResizingChatSessions(true);
+            }}
+            className="hidden lg:block absolute top-0 left-0 -ml-1 w-2 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/50 active:bg-[var(--agent-primary)] transition-colors z-30 group"
             title="Kéo để chỉnh độ rộng danh sách chat"
           >
             <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
@@ -24850,7 +25420,7 @@ ${chat.id}`);
 
 
             {/* Iframe Workspace with automatic viewport scaling */}
-            <div className="flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors">
+            <div className={`flex-1 w-full h-full bg-slate-100 dark:bg-black relative overflow-hidden flex items-center justify-center transition-colors ${(isResizingChatSessions || isResizingComputerSplit) ? "pointer-events-none select-none" : ""}`}>
               {browserTarget.url ? (
                 <SelkiesViewer
                   key={`split-${browserTarget.url}`}
@@ -24859,7 +25429,7 @@ ${chat.id}`);
                   title={`${selectedAgent.name} Computer Live Split`}
                   profile={browserTarget.profile}
                   reloadKey={browserIframeKey}
-                  isResizing={isResizingComputerSplit}
+                  isResizing={isResizingComputerSplit || isResizingChatSessions}
                   onCaptureScreenshot={async () => {
                     triggerHaptic();
                     playNotificationChime("retro");
@@ -26871,411 +27441,6 @@ ${chat.id}`);
         }}
       />
 
-      {isRealtimeVoiceOpen && (() => {
-        const voiceThemeAccent = selectedAgentTheme?.primary || "#3b82f6";
-        const voiceThemeLight = selectedAgentTheme?.light || voiceThemeAccent;
-        const isMicActive = realtimeMediaRecorderRef.current?.state === "recording";
-        const headlineText = realtimeShowCaptions && (realtimeBotReply || realtimeTranscript)
-          ? (realtimeBotReply || realtimeTranscript)
-          : realtimeVoiceStatus === "connecting"
-          ? "Đang kết nối đàm thoại trực tiếp..."
-          : realtimeVoiceStatus === "thinking"
-          ? "Đang suy nghĩ câu trả lời..."
-          : realtimeVoiceStatus === "speaking"
-          ? `${selectedAgent?.name || "Skyer"} đang phản hồi...`
-          : "Bạn có ý tưởng mới nào muốn khám phá không?";
-
-        return (
-          <div
-            data-testid="realtime-voice-modal"
-            style={{
-              backgroundColor: "#000000",
-              color: "#f4f6fa",
-              ["--voice-theme" as any]: voiceThemeAccent,
-              ["--voice-theme-light" as any]: voiceThemeLight,
-            }}
-            className="keep-white fixed inset-0 z-[100] flex flex-col items-center justify-between overflow-hidden select-none animate-in fade-in duration-300"
-          >
-            <style>{`
-              @keyframes skyerSmokeDriftA {
-                0% { transform: translate3d(-12%, 6%, 0) scale(1, 0.95) rotate(-4deg); opacity: 0.62; }
-                50% { transform: translate3d(10%, -8%, 0) scale(1.18, 1.08) rotate(5deg); opacity: 0.92; }
-                100% { transform: translate3d(-12%, 6%, 0) scale(1, 0.95) rotate(-4deg); opacity: 0.62; }
-              }
-              @keyframes skyerSmokeDriftB {
-                0% { transform: translate3d(14%, 2%, 0) scale(1.12, 0.92) rotate(6deg); opacity: 0.54; }
-                50% { transform: translate3d(-14%, -10%, 0) scale(0.96, 1.15) rotate(-6deg); opacity: 0.88; }
-                100% { transform: translate3d(14%, 2%, 0) scale(1.12, 0.92) rotate(6deg); opacity: 0.54; }
-              }
-              @keyframes skyerSmokePulse {
-                0%, 100% { transform: translate3d(0, 4%, 0) scale(1); opacity: 0.72; }
-                50% { transform: translate3d(0, -5%, 0) scale(1.12); opacity: 1; }
-              }
-              @keyframes skyerOrbMist {
-                0% { transform: translate3d(-14%, 8%, 0) scale(0.95) rotate(-6deg); opacity: 0.78; }
-                50% { transform: translate3d(14%, -4%, 0) scale(1.16) rotate(8deg); opacity: 1; }
-                100% { transform: translate3d(-14%, 8%, 0) scale(0.95) rotate(-6deg); opacity: 0.78; }
-              }
-              @keyframes skyerLogoFloat {
-                0%, 100% { transform: translateY(0px) scale(1); }
-                50% { transform: translateY(-4px) scale(1.04); }
-              }
-              [data-testid="realtime-voice-modal"],
-              [data-testid="realtime-voice-modal"] button {
-                color: #f4f6fa !important;
-              }
-              @media (prefers-reduced-motion: reduce) {
-                .skyer-smoke-layer, .skyer-orb-mist, .skyer-voice-logo {
-                  animation: none !important;
-                }
-              }
-            `}</style>
-
-            {/* Bottom-half atmospheric misty / smoky aura following active agent theme */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] overflow-hidden"
-            >
-              <div
-                className="absolute inset-0 transition-all duration-700"
-                style={{
-                  background: `radial-gradient(125% 95% at 50% 105%, color-mix(in srgb, var(--voice-theme) 62%, #050814) 0%, color-mix(in srgb, var(--voice-theme) 28%, transparent) 48%, transparent 82%)`,
-                  opacity: realtimeVoiceStatus === "speaking" ? 0.98 : realtimeVoiceStatus === "listening" ? 0.88 : 0.75,
-                }}
-              />
-              <div
-                className="skyer-smoke-layer absolute -bottom-24 left-[-10%] w-[78%] h-[78%] rounded-full"
-                style={{
-                  background: `radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--voice-theme) 78%, #ffffff 12%) 0%, color-mix(in srgb, var(--voice-theme) 36%, transparent) 52%, transparent 76%)`,
-                  filter: "blur(56px)",
-                  animation: `skyerSmokeDriftA ${realtimeVoiceStatus === "speaking" ? "6.5s" : "11s"} ease-in-out infinite`,
-                }}
-              />
-              <div
-                className="skyer-smoke-layer absolute -bottom-28 right-[-12%] w-[82%] h-[80%] rounded-full"
-                style={{
-                  background: `radial-gradient(circle at 48% 52%, color-mix(in srgb, var(--voice-theme-light) 74%, #0f172a 18%) 0%, color-mix(in srgb, var(--voice-theme) 34%, transparent) 54%, transparent 78%)`,
-                  filter: "blur(64px)",
-                  animation: `skyerSmokeDriftB ${realtimeVoiceStatus === "speaking" ? "7.5s" : "13s"} ease-in-out infinite`,
-                }}
-              />
-              <div
-                className="skyer-smoke-layer absolute -bottom-20 left-[15%] w-[70%] h-[62%] rounded-full"
-                style={{
-                  background: `radial-gradient(ellipse at 50% 65%, color-mix(in srgb, var(--voice-theme) 86%, #ffffff 24%) 0%, color-mix(in srgb, var(--voice-theme) 40%, transparent) 48%, transparent 76%)`,
-                  filter: "blur(48px)",
-                  animation: `skyerSmokePulse ${realtimeVoiceStatus === "speaking" ? "4.2s" : "8s"} ease-in-out infinite`,
-                }}
-              />
-            </div>
-
-            {/* Top Minimal Chrome Header (matching Image 1) */}
-            <div className="relative z-10 w-full max-w-2xl px-6 pt-5 pb-2 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsVoiceRecordSettingsOpen(true)}
-                style={{ color: "#f4f6fa" }}
-                className="keep-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
-                title="Tuỳ chọn thiết bị & mô hình giọng nói"
-                aria-label="Voice menu"
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.9" strokeLinecap="round">
-                  <line x1="4" y1="9" x2="20" y2="9" />
-                  <line x1="4" y1="15" x2="20" y2="15" />
-                </svg>
-              </button>
-
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 rounded-full transition-transform duration-300"
-                    style={{
-                      backgroundColor: voiceThemeAccent,
-                      boxShadow: `0 0 10px ${voiceThemeAccent}`,
-                    }}
-                  />
-                  <span style={{ color: "rgba(244,246,250,0.92)" }} className="keep-white text-xs font-semibold tracking-wide">
-                    {selectedAgent?.name || "Skyer"}
-                  </span>
-                </div>
-                {liveRtcNodeId && (
-                  <span
-                    data-testid="rtc-node-badge"
-                    className="text-[10px] tracking-wider text-white/50 font-mono"
-                  >
-                    {liveRtcNodeId} • LLM360 5a54d0
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
-                  style={{ color: "#f4f6fa", opacity: realtimeShowCaptions ? 1 : 0.45 }}
-                  className="keep-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-opacity cursor-pointer"
-                  title={realtimeShowCaptions ? "Ẩn phụ đề trực tiếp" : "Hiện phụ đề trực tiếp"}
-                  aria-label="Toggle captions"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="4" y="4" width="16" height="16" rx="4" />
-                    <line x1="8" y1="13" x2="16" y2="13" />
-                    <line x1="8" y1="16.5" x2="13" y2="16.5" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsVoiceRecordSettingsOpen(true)}
-                  style={{ color: "#f4f6fa" }}
-                  className="keep-white h-10 w-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Cài đặt giọng nói nâng cao"
-                  aria-label="More voice options"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#f4f6fa">
-                    <circle cx="5" cy="12" r="1.6" />
-                    <circle cx="12" cy="12" r="1.6" />
-                    <circle cx="19" cy="12" r="1.6" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Center Stage: Skyer Logo + Video Stream PIP + Display Prompt / Live Transcript */}
-            <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 max-w-xl w-full text-center -mt-4">
-              {/* Live Video Preview (Camera or Screen Share) */}
-              {(isCameraActive || isScreenShareActive) ? (
-                <div
-                  data-testid="rtc-video-preview"
-                  className="relative mb-5 w-full max-w-sm aspect-video rounded-2xl overflow-hidden border border-white/20 bg-neutral-950 shadow-2xl transition-all duration-300"
-                >
-                  <video
-                    ref={realtimeVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2.5 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-medium tracking-wide text-white border border-white/10">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{isScreenShareActive ? "Màn hình trực tiếp" : `Camera (${cameraFacingMode === "user" ? "Trước" : "Sau"})`}</span>
-                  </div>
-                  {liveVisionSummary && (
-                    <div className="absolute inset-x-2 bottom-2 p-2 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 text-left">
-                      <p className="text-[11px] text-white/90 line-clamp-2 leading-tight">
-                        👁️ {liveVisionSummary}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div
-                  onClick={toggleRealtimeMicTurn}
-                  className="skyer-voice-logo mb-6 cursor-pointer relative flex items-center justify-center"
-                  style={{
-                    animation: "skyerLogoFloat 5s ease-in-out infinite",
-                    filter: `drop-shadow(0 0 18px color-mix(in srgb, var(--voice-theme) 68%, transparent))`,
-                  }}
-                  title="Nhấn để nói hoặc ngắt lời"
-                >
-                  <svg
-                    data-testid="skyer-voice-logo"
-                    width="46"
-                    height="46"
-                    viewBox="0 0 32 32"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="transition-transform duration-300 hover:scale-105"
-                  >
-                    <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
-                    <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
-                    <path fill="#FFFDF9" d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
-                    <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
-                  </svg>
-                </div>
-              )}
-
-              <h2
-                data-testid="realtime-voice-headline"
-                style={{ color: "#f4f6fa" }}
-                className="keep-white text-2xl sm:text-[28px] font-normal leading-[1.36] tracking-[-0.015em] max-h-48 overflow-y-auto px-2"
-              >
-                {headlineText}
-              </h2>
-
-              {realtimeShowCaptions && realtimeTranscript && realtimeBotReply && (
-                <p style={{ color: "rgba(244,246,250,0.68)" }} className="keep-white mt-3 text-sm italic max-w-md line-clamp-2">
-                  “{realtimeTranscript}”
-                </p>
-              )}
-
-              {(isMicActive || realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") && (
-                <div style={{ color: "rgba(244,246,250,0.52)" }} className="keep-white mt-4 text-xs font-medium tracking-wide">
-                  {isMicActive
-                    ? "Đang thu âm... Nhấn viên thuốc sương khói để gửi"
-                    : realtimeVoiceStatus === "speaking"
-                    ? "Nhấn vào viên thuốc trung tâm để ngắt lời"
-                    : "Đang xử lý..."}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom 5-Item Control Dock (matching Image 1 layout & central smoky pill) */}
-            <div className="relative z-10 w-full max-w-md px-5 pb-7 pt-2 flex flex-col items-center gap-5">
-              <div className="w-full flex items-center justify-between sm:justify-center gap-2.5 sm:gap-5">
-                {/* 1. Left Button 1: Camera Video Stream (Web & Mobile with Front/Rear flip) */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    data-testid="voice-dock-camera-btn"
-                    onClick={() => toggleRealtimeCamera()}
-                    style={{
-                      backgroundColor: isCameraActive ? voiceThemeAccent : "rgba(28, 30, 38, 0.88)",
-                      borderColor: "rgba(255, 255, 255, 0.08)",
-                      color: "#f4f6fa",
-                      boxShadow: isCameraActive ? `0 0 20px ${voiceThemeAccent}` : undefined,
-                    }}
-                    className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
-                    title={isCameraActive ? "Tắt Camera" : "Bật Camera (Video Call)"}
-                    aria-label="Toggle camera"
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                      <circle cx="12" cy="13" r="3" />
-                    </svg>
-                  </button>
-                  {isCameraActive && (
-                    <button
-                      type="button"
-                      data-testid="voice-dock-camera-flip-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleRealtimeCamera(cameraFacingMode === "user" ? "environment" : "user");
-                      }}
-                      className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-neutral-900 border border-white/20 text-white flex items-center justify-center shadow-md hover:bg-neutral-800 cursor-pointer"
-                      title="Đổi camera trước / sau"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
-                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* 2. Left Button 2: Screen Share Stream (Web on Desktop & Supported Mobile) */}
-                <button
-                  type="button"
-                  data-testid="voice-dock-screen-btn"
-                  onClick={toggleRealtimeScreenShare}
-                  style={{
-                    backgroundColor: isScreenShareActive ? voiceThemeAccent : "rgba(28, 30, 38, 0.88)",
-                    borderColor: "rgba(255, 255, 255, 0.08)",
-                    color: "#f4f6fa",
-                    boxShadow: isScreenShareActive ? `0 0 20px ${voiceThemeAccent}` : undefined,
-                  }}
-                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
-                  title={isScreenShareActive ? "Dừng chia sẻ màn hình" : "Chia sẻ màn hình trực tiếp"}
-                  aria-label="Toggle screen share"
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" />
-                    <line x1="8" y1="21" x2="16" y2="21" />
-                    <line x1="12" y1="17" x2="12" y2="21" />
-                    <polyline points="9 8 12 11 15 8" />
-                  </svg>
-                </button>
-
-                {/* 3. Center Glowing Smoky Pill Visualizer (follows Agent Theme) */}
-                <button
-                  type="button"
-                  data-testid="voice-dock-smoky-pill"
-                  onClick={toggleRealtimeMicTurn}
-                  style={{
-                    backgroundColor: "#030408",
-                    borderColor: "rgba(255, 255, 255, 0.08)",
-                    boxShadow: `0 10px 36px -6px color-mix(in srgb, var(--voice-theme) 55%, transparent), inset 0 1px 1px rgba(255,255,255,0.12)`,
-                  }}
-                  className="keep-white relative h-[74px] w-[132px] sm:h-[84px] sm:w-[152px] rounded-full overflow-hidden border cursor-pointer transition-transform duration-300 active:scale-95 shrink-0"
-                  title={isMicActive ? "Nhấn để gửi lượt nói" : "Nhấn để bắt đầu nói"}
-                  aria-label="Voice smoky visualizer orb"
-                >
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background: "linear-gradient(180deg, #000000 0%, rgba(2,4,10,0.92) 46%, transparent 100%)",
-                    }}
-                  />
-                  <div
-                    className="skyer-orb-mist absolute -bottom-5 left-[-12%] w-[124%] h-[78%] rounded-full"
-                    style={{
-                      background: `radial-gradient(ellipse at 50% 78%, #ffffff 0%, color-mix(in srgb, var(--voice-theme-light) 88%, #ffffff) 28%, color-mix(in srgb, var(--voice-theme) 72%, transparent) 62%, transparent 85%)`,
-                      filter: "blur(10px)",
-                      animation: `skyerOrbMist ${realtimeVoiceStatus === "speaking" || isMicActive ? "3.2s" : "6.5s"} ease-in-out infinite`,
-                    }}
-                  />
-                  <div
-                    className="skyer-orb-mist absolute -bottom-3 right-[-8%] w-[95%] h-[65%] rounded-full"
-                    style={{
-                      background: `radial-gradient(circle at 45% 70%, rgba(255,255,255,0.95) 0%, color-mix(in srgb, var(--voice-theme) 80%, #dbeafe) 42%, transparent 78%)`,
-                      filter: "blur(13px)",
-                      animation: `skyerSmokeDriftB ${realtimeVoiceStatus === "speaking" || isMicActive ? "2.8s" : "5.8s"} ease-in-out infinite`,
-                    }}
-                  />
-                  <div
-                    className="absolute inset-x-3 bottom-0 h-[2px] rounded-full opacity-80"
-                    style={{
-                      background: `linear-gradient(90deg, transparent, #ffffff, var(--voice-theme-light), transparent)`,
-                    }}
-                  />
-                </button>
-
-                {/* 4. Right Button 1: Microphone Toggle */}
-                <button
-                  type="button"
-                  data-testid="voice-dock-mic-btn"
-                  onClick={toggleRealtimeMicTurn}
-                  style={{
-                    backgroundColor: isMicActive ? voiceThemeAccent : "rgba(28, 30, 38, 0.88)",
-                    borderColor: "rgba(255, 255, 255, 0.08)",
-                    color: "#f4f6fa",
-                    boxShadow: isMicActive ? `0 0 24px ${voiceThemeAccent}` : undefined,
-                  }}
-                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
-                  title={isMicActive ? "Đang bật Mic (Nhấn để gửi)" : "Bật Micro để nói"}
-                  aria-label="Toggle microphone"
-                >
-                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="22" />
-                  </svg>
-                </button>
-
-                {/* 5. Right Button 2: Close / End Voice Call (X) */}
-                <button
-                  type="button"
-                  data-testid="voice-dock-close-btn"
-                  onClick={stopRealtimeVoiceChat}
-                  style={{
-                    backgroundColor: "rgba(28, 30, 38, 0.88)",
-                    borderColor: "rgba(255, 255, 255, 0.08)",
-                    color: "#f4f6fa",
-                  }}
-                  className="keep-white h-12 w-12 sm:h-14 sm:w-14 shrink-0 aspect-square rounded-full flex items-center justify-center border transition-all cursor-pointer active:scale-95"
-                  title="Kết thúc đàm thoại"
-                  aria-label="Close Live Voice Chat"
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4f6fa" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Subtle bottom home bar indicator matching Image 1 */}
-              <div className="w-32 h-1 rounded-full bg-white/80" />
-            </div>
-          </div>
-        );
-      })()}
 
       <VoiceRecordSettingsModal
         isOpen={isVoiceRecordSettingsOpen}

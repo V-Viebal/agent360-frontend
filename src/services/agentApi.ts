@@ -1468,6 +1468,9 @@ export async function fetchChatMessages(chatId: string, agentId?: string): Promi
           res = attempt;
           break;
         }
+        // The agent-scoped history route is authoritative: a 404 there means the chat does not exist,
+        // so do not walk the legacy fallbacks one by one.
+        if (attempt.status === 404 && cleanAgentId) break;
       } catch {}
     }
     if (!res || !res.ok) {

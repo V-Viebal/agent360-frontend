@@ -1868,3 +1868,14 @@ html.dark [data-testid="user-message-bubble"] p,
 [data-theme="dark"] [data-testid="user-message-bubble"] p {
   color: #ffffff !important;
 }
+
+@keyframes agentBrowserLoadSweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.agent-browser-loading-sweep {
+  animation: agentBrowserLoadSweep 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-browser-loading-sweep { animation: none; width: 100%; opacity: 0.6; }
+}

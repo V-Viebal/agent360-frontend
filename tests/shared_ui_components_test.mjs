@@ -776,14 +776,14 @@ console.log("✓ Test 55: CDP GPU Keyboard Shortcuts, Editor Commands & Vietname
 
 console.log("Testing Unmaximized Chromium Window Self-Healing & FullHD 1920x1080 Logical Scale Contract...");
 assert.ok(
-  screencastHubSrc.includes("if (_nativeSurfaceMaxW < 1300)") &&
-  screencastHubSrc.includes("Browser.getWindowForTarget") &&
-  screencastHubSrc.includes("Browser.setWindowBounds") &&
+  // Window maximize self-heal was retired: any native surface >= 640x480 is accepted and FullHD is fitted by proportional zoom.
+  !screencastHubSrc.includes("Browser.setWindowBounds") &&
+  screencastHubSrc.includes("cachedSurf.W >= 640 && cachedSurf.H >= 480") &&
   screencastHubSrc.includes("NormalizeViewport(initialWidth, initialHeight, _nativeSurfaceMaxW, _nativeSurfaceMaxH, isMobileDevice)") &&
   screencastHubSrc.includes("ComputeBackingScale") &&
   screencastHubSrc.includes("scale = nextScale") &&
   grokImeSrc.includes("let fhdW = 1920;"),
-  "ScreencastHub must self-heal unmaximized Wayland/X11 window surfaces (<1300px wide) via Browser.setWindowBounds and render Desktop viewports at FullHD (1920x1080) logical CSS scale fitted proportionally into _nativeSurfaceMaxW x _nativeSurfaceMaxH via ComputeBackingScale"
+  "ScreencastHub must accept native surfaces >= 640x480 without window-bounds toggling and render Desktop viewports at FullHD (1920x1080) logical CSS scale fitted proportionally into _nativeSurfaceMaxW x _nativeSurfaceMaxH via ComputeBackingScale"
 );
 console.log("✓ Test 56: Unmaximized Chromium Window Self-Healing & FullHD 1920x1080 Logical Scale Contract verified");
 
@@ -1029,7 +1029,7 @@ assert.ok(
   qwenPawClientSrc68.includes("SaveAgentEnabledOverrideAsync(normalizedSlug, enabled, cancellationToken)") &&
   qwenPawClientSrc68.includes("ResolveEffectiveEnabled(") &&
   agentFeaturesEpSrc68.includes('group.MapMethods("{agentId}/toggle", ["PATCH", "POST", "PUT"]') &&
-  agentFeaturesEpSrc68.includes("profileStore.ResolveCanonicalSlugByAlias(agentId)") &&
+  agentFeaturesEpSrc68.includes("ResolveCanonicalSlugByAlias(agentId)") &&
   agentFeaturesEpSrc68.includes('type = "agent_enabled_updated"') &&
   agentApiSrc68.includes("resolveCanonicalAgentSlugFromAlias(rawClean)") &&
   agentApiSrc68.includes("setLocalDisabledAgentOverride(cleanId, enabled)") &&
@@ -1040,3 +1040,27 @@ assert.ok(
   "Agent disable/enable must resolve custom aliases to canonical slugs, persist overrides in AgentEnabledOverrides + QwenPaw runtime, broadcast agent_enabled_updated over WebSocket, and allow re-enabling from collapsed rail, expanded sidebar, mobile action sheet, and AgentSettingsModal"
 );
 console.log("✓ Test 68: Agent Disable / Enable Toggle, Persistent Override Ledger & Multi-Surface Re-Enable Contract verified");
+
+console.log("Testing CDP Browser Real Page Loading State, Stop Action & Live Tab Metadata Contract...");
+{
+  const hub69 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/ScreencastHub.cs", import.meta.url), "utf8");
+  const cdpEp69 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserCdpEndpoint.cs", import.meta.url), "utf8");
+  const grok69 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  const api69 = fs.readFileSync(new URL("../src/services/agentBrowserApi.ts", import.meta.url), "utf8");
+  assert.ok(
+    hub69.includes('method = "Page.enable"') &&
+    hub69.includes('method = "Page.loadingState"') &&
+    hub69.includes('case "Page.frameStartedLoading":') &&
+    hub69.includes('case "Page.frameStoppedLoading":') &&
+    hub69.includes('method = "Page.stopLoading"') &&
+    cdpEp69.includes('else if (action == "stop")') &&
+    api69.includes('| "stop"') &&
+    grok69.includes('msg?.method === "Page.loadingState"') &&
+    grok69.includes('data-testid="agent-browser-loading-bar"') &&
+    grok69.includes('aria-label={isActivePageLoading ? "Stop loading" : "Reload"}') &&
+    grok69.includes("liveTabMetaRef.current[t.targetId]") &&
+    grok69.includes("timer = setTimeout(loop, anyLoading ? 1000 : 3000);"),
+    "CDP browser must forward main-frame lifecycle as Page.loadingState, support stop, and drive the loading bar, tab spinner, Reload/Stop toggle and live tab title from the stream"
+  );
+}
+console.log("✓ Test 69: CDP Browser Real Page Loading State, Stop Action & Live Tab Metadata Contract verified");
