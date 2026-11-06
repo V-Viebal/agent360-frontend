@@ -14,7 +14,7 @@ import {
   Activity,
 } from "lucide-react";
 import { AgentMcpClient, fetchAgentMcpClients, authorizedFetch } from "../services/agentApi";
-import { APPS_CATALOG } from "./ConnectAppsModal";
+import { APPS_CATALOG, resolveAppLogo } from "./ConnectAppsModal";
 import { getAgentColorTheme } from "./AgentAvatar";
 
 interface AgentConnectedAppsTabProps {
@@ -185,7 +185,7 @@ export function AgentConnectedAppsTab({
     return {
       name: matched?.name || client.name || client.key,
       description: matched?.description || client.description || "Active agent integration tool",
-      logoUrl: matched?.logoUrl || `https://logos.composio.dev/api/${rawKey}`,
+      logoUrl: resolveAppLogo(rawKey),
       isComposio: client.key.startsWith("composio_") || Boolean(matched),
       matchedId: matched?.id || rawKey,
     };

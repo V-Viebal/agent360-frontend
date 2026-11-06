@@ -22,6 +22,66 @@ export interface ConnectedAppItem {
   status: "connected" | "available";
 }
 
+// High-resolution verified vector brand logos for known fleet MCP servers & drivers
+export const KNOWN_MCP_LOGOS: Record<string, string> = {
+  nextcloud: "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-gm": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-core": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-core-mons": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-core-mkai": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-core-harness": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-core-harness-write": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  "nextcloud-management": "https://cdn.simpleicons.org/nextcloud/0082C9",
+  minio: "https://cdn.simpleicons.org/minio/C72C48",
+  postgres: "https://cdn.simpleicons.org/postgresql/4169E1",
+  postgresql: "https://cdn.simpleicons.org/postgresql/4169E1",
+  gcloud: "https://cdn.simpleicons.org/googlecloud/4285F4",
+  "gcloud-cli": "https://cdn.simpleicons.org/googlecloud/4285F4",
+  kb: "https://cdn.simpleicons.org/outline/white",
+  outline: "https://cdn.simpleicons.org/outline/white",
+  "browser-cdp": "https://cdn.simpleicons.org/googlechrome/4285F4",
+  "browser-cdp-mcp-server": "https://cdn.simpleicons.org/googlechrome/4285F4",
+  "chrome-devtools": "https://cdn.simpleicons.org/googlechrome/4285F4",
+  erpnext: "https://cdn.simpleicons.org/frappe/0089FF",
+  "erpnext-management": "https://cdn.simpleicons.org/frappe/0089FF",
+  excalidraw: "https://cdn.simpleicons.org/excalidraw/6965DB",
+  github: "https://logos.composio.dev/api/github",
+  "github-org": "https://logos.composio.dev/api/github",
+  docker: "https://cdn.simpleicons.org/docker/2496ED",
+  mail: "https://cdn.simpleicons.org/maildotru/005FF9",
+  audio360: "https://cdn.simpleicons.org/soundcharts/0055FF",
+  translate: "https://cdn.simpleicons.org/googletranslate/4285F4",
+  toonflow: "https://cdn.simpleicons.org/crunchyroll/F47521",
+  postiz: "https://cdn.simpleicons.org/buffer/231F20",
+  infra: "https://cdn.simpleicons.org/linux/FCC624",
+  app360: "https://cdn.simpleicons.org/kubernetes/326CE5",
+  agent360: "https://cdn.simpleicons.org/robotframework/000000",
+  qwenpaw: "https://logos.composio.dev/api/openai",
+  hiclaw: "https://cdn.simpleicons.org/anthropic/D97757",
+  vault: "https://cdn.simpleicons.org/vault/white",
+  gatus: "https://cdn.simpleicons.org/statuspage/1B86F2",
+  llm: "https://logos.composio.dev/api/openai",
+  logto: "https://cdn.simpleicons.org/auth0/EB5424",
+  "skyer-community": "https://cdn.simpleicons.org/discourse/231F20",
+  router360: "https://cdn.simpleicons.org/fastapi/009688",
+};
+
+export function resolveAppLogo(appId: string): string {
+  const clean = (appId || "").toLowerCase().replace(/^composio_/, "").trim();
+  if (KNOWN_MCP_LOGOS[clean]) return KNOWN_MCP_LOGOS[clean];
+  const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === clean);
+  if (matched?.logoUrl) return matched.logoUrl;
+  if (clean.startsWith("nextcloud")) return KNOWN_MCP_LOGOS["nextcloud"];
+  if (clean.startsWith("minio")) return KNOWN_MCP_LOGOS["minio"];
+  if (clean.startsWith("postgres")) return KNOWN_MCP_LOGOS["postgres"];
+  if (clean.startsWith("kb") || clean.startsWith("outline")) return KNOWN_MCP_LOGOS["kb"];
+  if (clean.startsWith("chrome") || clean.startsWith("browser")) return KNOWN_MCP_LOGOS["browser-cdp"];
+  if (clean.startsWith("erpnext")) return KNOWN_MCP_LOGOS["erpnext"];
+  if (clean.startsWith("github")) return KNOWN_MCP_LOGOS["github"];
+  if (clean.startsWith("gcloud")) return KNOWN_MCP_LOGOS["gcloud"];
+  return `https://logos.composio.dev/api/${clean}`;
+}
+
 // 100% verified SVG logos supported directly by Composio API (https://logos.composio.dev/api/:slug)
 export const APPS_CATALOG: ConnectedAppItem[] = [
   // Recommended
@@ -755,23 +815,22 @@ export function ConnectAppsModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-2.5 border-b border-[#1f1f2a] flex items-center justify-between shrink-0 bg-[#16161c]">
-          <div className="flex items-center gap-3">
-            <div style={{ backgroundColor: agentTheme.bgLight, borderColor: agentTheme.borderLight, color: agentTheme.light }} className="h-8 w-8 rounded-xl border flex items-center justify-center dark:!text-[var(--agent-color)]">
-              <Sparkles size={16} />
+        <div className="px-3.5 sm:px-4 py-2 sm:py-2.5 border-b border-[#1f1f2a] flex items-center justify-between gap-2 shrink-0 bg-[#16161c] min-w-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <div style={{ backgroundColor: agentTheme.bgLight, borderColor: agentTheme.borderLight, color: agentTheme.light }} className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl border flex items-center justify-center shrink-0 dark:!text-[var(--agent-color)]">
+              <Sparkles size={14} className="sm:w-4 sm:h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white tracking-tight">{t("connectApps.title")}</h2>
-                <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="text-[10px] font-mono px-2 py-0.5 rounded-full border dark:!text-[var(--agent-color)]">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap min-w-0">
+                <h2 className="text-xs sm:text-sm font-semibold text-white tracking-tight whitespace-normal sm:whitespace-nowrap leading-snug line-clamp-1">{t("connectApps.title")}</h2>
+                <span style={{ backgroundColor: agentTheme.bgLight, color: agentTheme.light, borderColor: agentTheme.borderLight }} className="text-[9px] sm:text-[10px] font-mono px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full border shrink-0 dark:!text-[var(--agent-color)]">
                   {targetAgentName}
                 </span>
               </div>
-
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Interactive Connected Apps entry button matching reference header */}
             <button
               type="button"
@@ -781,29 +840,36 @@ export function ConnectAppsModal({
                 setSearchQuery("");
               }}
               title="Xem danh sách ứng dụng đã kết nối"
-              className={`flex items-center gap-2 px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
                 selectedCategory === "Connected"
                   ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 ring-1 ring-emerald-500/30 shadow-xs"
                   : "bg-[#1c1c24] hover:bg-[#252532] border-slate-200 dark:border-[#262632] text-slate-700 dark:text-neutral-300 hover:text-white"
               }`}
             >
-              {/* Stacked micro app logos */}
+              {/* Stacked micro app logos: high-contrast dark square badge with subtle border & shadow */}
               {connectedAppIds.length > 0 ? (
-                <div className="flex items-center -space-x-1.5 shrink-0 overflow-hidden">
+                <div className="flex items-center -space-x-1 sm:-space-x-1.5 shrink-0 overflow-hidden py-0.5">
                   {connectedAppIds.slice(0, 4).map((appId) => {
-                    const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === appId.toLowerCase() || a.id.toLowerCase() === appId.toLowerCase().replace(/^composio_/, ""));
-                    const logo = matched?.logoUrl || `https://logos.composio.dev/api/${appId.replace(/^composio_/, "")}`;
+                    const logo = resolveAppLogo(appId);
+                    const cleanName = appId.replace(/^composio_/, "");
                     return (
                       <div
                         key={appId}
-                        className="h-4.5 w-4.5 rounded-full bg-white dark:bg-[#1a1a24] border border-slate-300 dark:border-[#2c2c3e] flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-2xs"
+                        className="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded-md bg-[#181820] border border-white/15 flex items-center justify-center p-0.5 shrink-0 overflow-hidden shadow-xs ring-1 ring-black/40"
+                        title={cleanName}
                       >
                         <img
                           src={logo}
-                          alt={appId}
-                          className="h-full w-full object-contain"
+                          alt={cleanName}
+                          className="h-full w-full object-contain filter drop-shadow-xs"
+                          loading="lazy"
                           onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = "none";
+                            const target = e.currentTarget;
+                            target.style.display = "none";
+                            if (target.parentElement) {
+                              target.parentElement.className = "h-4 w-4 sm:h-4.5 sm:w-4.5 rounded-md bg-[#252532] text-neutral-300 flex items-center justify-center text-[9px] font-bold font-mono border border-white/10 shrink-0";
+                              target.parentElement.textContent = cleanName.charAt(0).toUpperCase();
+                            }
                           }}
                         />
                       </div>
@@ -813,18 +879,18 @@ export function ConnectAppsModal({
               ) : (
                 <Shield size={12} className="text-emerald-400 shrink-0" />
               )}
-              <span className="text-xs font-mono font-medium whitespace-nowrap">
+              <span className="text-[11px] sm:text-xs font-mono font-medium whitespace-nowrap">
                 {connectedAppIds.length} connected
               </span>
-              <ChevronRight size={13} className="text-neutral-400 shrink-0" />
+              <ChevronRight size={12} className="text-neutral-400 shrink-0 hidden sm:inline-block" />
             </button>
 
             <button
               onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-slate-500 dark:text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430]"
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-[#1a1a22] hover:bg-[#252530] text-slate-500 dark:text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-[#242430] shrink-0"
               title="Close"
             >
-              <X size={15} />
+              <X size={14} className="sm:w-3.5 sm:h-3.5" />
             </button>
           </div>
         </div>

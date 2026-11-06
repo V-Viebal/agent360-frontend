@@ -1,6 +1,6 @@
 // Comprehensive Browser Permission & Hardware Capability Service for Skyer
 
-export type PermissionType = "microphone" | "notifications" | "clipboard" | "speaker";
+export type PermissionType = "microphone" | "camera" | "screen" | "notifications" | "clipboard" | "speaker";
 
 export interface PermissionStatusDetail {
   type: PermissionType;
@@ -57,6 +57,50 @@ export async function queryPermissionStatus(type: PermissionType): Promise<Permi
       description: "Allows real-time voice speech-to-text recording for agent interaction.",
       state: "prompt",
       canRequest: true,
+    };
+  }
+
+  // 1b. Camera
+  if (type === "camera") {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return {
+        type,
+        name: "Camera Access",
+        description: "Cho phép truyền hình ảnh trực tiếp từ camera để Agent quan sát trong cuộc gọi video.",
+        state: "unsupported",
+        canRequest: false,
+      };
+    }
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const status = await navigator.permissions.query({ name: "camera" as any });
+        return {
+          type,
+          name: "Camera Access",
+          description: "Cho phép truyền hình ảnh trực tiếp từ camera để Agent quan sát trong cuộc gọi video.",
+          state: status.state,
+          canRequest: status.state !== "denied",
+        };
+      }
+    } catch {}
+    return {
+      type,
+      name: "Camera Access",
+      description: "Cho phép truyền hình ảnh trực tiếp từ camera để Agent quan sát trong cuộc gọi video.",
+      state: "prompt",
+      canRequest: true,
+    };
+  }
+
+  // 1c. Screen Share
+  if (type === "screen") {
+    const hasDisplay = !!(navigator.mediaDevices?.getDisplayMedia || (navigator as any).getDisplayMedia);
+    return {
+      type,
+      name: "Screen Share Access",
+      description: "Cho phép chia sẻ màn hình máy tính hoặc ứng dụng cho Agent hỗ trợ trực quan.",
+      state: hasDisplay ? "prompt" : "unsupported",
+      canRequest: hasDisplay,
     };
   }
 
@@ -167,6 +211,32 @@ export async function requestPermission(type: PermissionType): Promise<boolean> 
     }
   }
 
+  if (type === "camera") {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (err: any) {
+      console.warn("Camera permission request rejected:", err);
+      return false;
+    }
+  }
+
+  if (type === "screen") {
+    try {
+      const getDisplayMediaFn = navigator.mediaDevices?.getDisplayMedia?.bind(navigator.mediaDevices)
+        || (navigator as any).getDisplayMedia?.bind(navigator);
+      if (!getDisplayMediaFn) return false;
+      const stream = await getDisplayMediaFn({ video: true, audio: false });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (err: any) {
+      console.warn("Screen share permission request rejected:", err);
+      return false;
+    }
+  }
+
   if (type === "notifications") {
     try {
       if (!("Notification" in window)) return false;
@@ -195,7 +265,7 @@ export async function requestPermission(type: PermissionType): Promise<boolean> 
  * Query all known permissions supported by the app
  */
 export async function queryAllPermissions(): Promise<PermissionStatusDetail[]> {
-  const permissions: PermissionType[] = ["microphone", "notifications", "clipboard", "speaker"];
+  const permissions: PermissionType[] = ["microphone", "camera", "screen", "notifications", "clipboard", "speaker"];
   return Promise.all(permissions.map((p) => queryPermissionStatus(p)));
 }
 

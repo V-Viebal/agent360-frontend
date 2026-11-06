@@ -12,7 +12,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+    add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
 
     root /usr/share/nginx/html;
     index index.html;
@@ -59,7 +59,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     location / {
@@ -70,7 +70,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     # Service worker, manifest and HTML shell must always revalidate, otherwise browsers/Cloudflare keep an
@@ -84,7 +84,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
     location = /manifest.json {
         add_header Cache-Control "no-cache" always;
@@ -94,7 +94,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
     location = /index.html {
         add_header Cache-Control "no-cache" always;
@@ -103,7 +103,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     # Vite content-hashed bundles are safe to cache forever.
@@ -116,7 +116,7 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 
     # Static files only: API paths ending in an image extension (e.g. /api/agents/{id}/browser/image.jpg)
@@ -129,6 +129,6 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)" always;
+        add_header Permissions-Policy "camera=(self), display-capture=(self), geolocation=(), payment=(), usb=(), microphone=(self)" always;
     }
 }

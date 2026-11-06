@@ -9,6 +9,8 @@ import {
   Bell,
   Copy,
   Volume2,
+  Video,
+  Monitor,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
@@ -263,6 +265,10 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
     switch (type) {
       case "microphone":
         return <Mic size={16} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />;
+      case "camera":
+        return <Video size={16} className="text-amber-400" />;
+      case "screen":
+        return <Monitor size={16} className="text-blue-400" />;
       case "notifications":
         return <Bell size={16} className="text-cyan-400" />;
       case "clipboard":
