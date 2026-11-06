@@ -6924,24 +6924,34 @@ function SelkiesViewer({
     window.addEventListener("resize", checkViewport);
 
     let ro: ResizeObserver | null = null;
+    let roRaf = 0;
+    let pendingRoRect: { w: number; h: number } | null = null;
     if (typeof ResizeObserver !== "undefined" && containerRef.current) {
       ro = new ResizeObserver((entries) => {
         const cr = entries[0]?.contentRect;
         if (cr && cr.width > 0 && cr.height > 0) {
-          const nw = Math.round(cr.width);
-          const nh = Math.round(cr.height);
-          setBoxSize((prev) => {
-            if (isVirtualKeyboardOpenRef.current && prev.w > 0 && prev.h > 0 && Math.abs(prev.w - nw) <= 16 && nh < prev.h) {
-              return prev;
-            }
-            return Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev;
-          });
+          pendingRoRect = { w: Math.round(cr.width), h: Math.round(cr.height) };
+          if (!roRaf) {
+            roRaf = requestAnimationFrame(() => {
+              roRaf = 0;
+              if (!pendingRoRect) return;
+              const { w: nw, h: nh } = pendingRoRect;
+              pendingRoRect = null;
+              setBoxSize((prev) => {
+                if (isVirtualKeyboardOpenRef.current && prev.w > 0 && prev.h > 0 && Math.abs(prev.w - nw) <= 16 && nh < prev.h) {
+                  return prev;
+                }
+                return Math.abs(prev.w - nw) > 1 || Math.abs(prev.h - nh) > 1 ? { w: nw, h: nh } : prev;
+              });
+            });
+          }
         }
       });
       ro.observe(containerRef.current);
     }
     return () => {
       window.removeEventListener("resize", checkViewport);
+      if (roRaf) cancelAnimationFrame(roRaf);
       ro?.disconnect();
     };
   }, [agentId, reloadKey]);
@@ -8366,6 +8376,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             refreshSignal={attempt + reloadKey}
             isLandscapeRotated={isLandscapeRotated}
             interactive={true}
+            isResizing={isResizing}
             mobileInputMode={mobileInteractionMode}
             isMobileDevice={effectiveViewMode === "phone" && !isLandscapeRotated}
             isVirtualKeyboardOpen={isVirtualKeyboardOpen}
@@ -8402,6 +8413,7 @@ function AgentBrowserPreview({
   refreshSignal = 0,
   isLandscapeRotated = false,
   interactive = false,
+  isResizing = false,
   mobileInputMode = "touch",
   isMobileDevice = false,
   isVirtualKeyboardOpen = false,
@@ -8421,6 +8433,7 @@ function AgentBrowserPreview({
   refreshSignal?: number;
   isLandscapeRotated?: boolean;
   interactive?: boolean;
+  isResizing?: boolean;
   mobileInputMode?: "touch" | "mouse";
   isMobileDevice?: boolean;
   isVirtualKeyboardOpen?: boolean;
@@ -9205,10 +9218,11 @@ function AgentBrowserPreview({
 
   const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0 });
 
-  // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open to prevent layout thrash & lost input focus)
+  // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open or during active splitter drag to prevent CDP resize thrash; flushes smoothly once settled)
   useEffect(() => {
     if (!enabled || !liveWs || viewportWidth < 320 || viewportHeight < 240) return;
     if (isVirtualKeyboardOpen) return;
+    if (isResizing) return;
     const w = Math.round(viewportWidth);
     const h = Math.round(viewportHeight);
     const prev = lastSentViewportRef.current;
@@ -9228,9 +9242,9 @@ function AgentBrowserPreview({
         } catch {}
       }
       void dispatchAgentBrowserInput(agentId, { action: "resize", width: w, height: h, pageId, isMobile: isMobileDevice, deviceType, reloadOnModeChange: modeFlipped });
-    }, forceResync ? 20 : 100);
+    }, forceResync ? 16 : 64);
     return () => clearTimeout(timer);
-  }, [enabled, agentId, pageId, viewportWidth, viewportHeight, isMobileDevice, isVirtualKeyboardOpen, refreshSignal]);
+  }, [enabled, agentId, pageId, viewportWidth, viewportHeight, isMobileDevice, isVirtualKeyboardOpen, isResizing, refreshSignal]);
 
   // 3. Fallback HTTP Frame Poll ONLY when liveWs is false or if WebSocket fails to connect within 1400ms
   useEffect(() => {
