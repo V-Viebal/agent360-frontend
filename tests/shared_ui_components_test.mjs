@@ -676,8 +676,9 @@ console.log("Testing Immediate GPU Bitmap Decode & Unified Wheel/Touch Scroll Co
 assert.ok(
   grokMouseGesturesSrc.includes("if (!isDecodingFrame && nextFrameBlob && supportsGpuBitmap)") &&
   grokMouseGesturesSrc.includes("queueCoalescedScrollInput(state.xRatio, state.yRatio, stepX, stepY)") &&
-  grokMouseGesturesSrc.includes("else if (centerMove > 2.5)"),
-  "AgentBrowserPreview must decode incoming binary JPEG blobs immediately via createImageBitmap when idle and route wheel + 2.5px touch scrolls through queueCoalescedScrollInput"
+  grokMouseGesturesSrc.includes("else if (centerMove > 9)") &&
+  grokMouseGesturesSrc.includes('if (!g.moved && g.twoFingerMode !== "pinch" && tapDuration < 450)'),
+  "AgentBrowserPreview must decode incoming binary JPEG blobs immediately via createImageBitmap when idle, route 2-finger swipes (>9px jitter tolerance) through queueCoalescedScrollInput, and resolve short 2-finger taps to right click"
 );
 console.log("✓ Test 49: Immediate GPU Bitmap Decode & Unified Wheel/Touch Scroll Coalescing Contract verified");
 

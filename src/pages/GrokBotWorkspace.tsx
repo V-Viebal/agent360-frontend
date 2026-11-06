@@ -8739,6 +8739,7 @@ function AgentBrowserPreview({
     startCenterY: number;
     moved: boolean;
     twoFingerMode?: "undecided" | "scroll" | "pinch";
+    startedAt?: number;
     isDragSelect?: boolean;
   } | null>(null);
 
@@ -9599,6 +9600,7 @@ function AgentBrowserPreview({
       startCenterY: cy,
       moved: false,
       twoFingerMode: mobileInputMode === "mouse" ? "undecided" : "pinch",
+      startedAt: now,
     };
   };
 
@@ -9619,7 +9621,8 @@ function AgentBrowserPreview({
       if (g.twoFingerMode === "undecided") {
         if (distChange > 28 && Math.abs(distRatio - 1) > 0.16 && distChange > centerMove * 1.5) {
           g.twoFingerMode = "pinch";
-        } else if (centerMove > 2.5) {
+        } else if (centerMove > 9) {
+          // Tolerate finger jitter so a 2-finger tap still resolves to right click
           g.twoFingerMode = "scroll";
         } else {
           return;
@@ -9836,7 +9839,8 @@ function AgentBrowserPreview({
 
     if (g.type === "pinch") {
       if (mobileInputMode === "mouse") {
-        if (!g.moved) {
+        const tapDuration = now - (g.startedAt ?? now);
+        if (!g.moved && g.twoFingerMode !== "pinch" && tapDuration < 450) {
           // 2-TOUCH TAP IN MOUSE MODE: Right click at virtual mouse pointer!
           triggerHaptic(15);
           const cur = cursorNormRef.current;
