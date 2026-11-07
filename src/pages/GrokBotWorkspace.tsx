@@ -23844,7 +23844,18 @@ const selectedAgentTheme = getAgentColorTheme(
                           if (isRealtimeVoiceOpen) stopRealtimeVoiceChat();
                           else startRealtimeVoiceChat();
                         }}
-                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 bg-[#1a73e8]/15 hover:bg-[#1a73e8]/25 text-[#1a73e8] border border-[#1a73e8]/30 dark:bg-[#1a73e8] dark:hover:bg-[#1565c0] dark:text-white dark:border-[#1a73e8] shadow-xs active:scale-95"
+                        style={{
+                          backgroundColor: isLightMode
+                            ? (selectedAgentTheme.bgLight || "rgba(26,115,232,0.15)")
+                            : (selectedAgentTheme.primary || "#1a73e8"),
+                          borderColor: isLightMode
+                            ? (selectedAgentTheme.borderLight || "rgba(26,115,232,0.3)")
+                            : (selectedAgentTheme.primary || "#1a73e8"),
+                          color: isLightMode
+                            ? (selectedAgentTheme.light || selectedAgentTheme.primary || "#1a73e8")
+                            : "#ffffff",
+                        }}
+                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border shadow-xs hover:brightness-105 active:scale-95"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <line x1="4" y1="10" x2="4" y2="14" />
