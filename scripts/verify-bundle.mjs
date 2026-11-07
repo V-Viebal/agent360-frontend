@@ -64,4 +64,21 @@ if (vendorCoreFile) {
   console.log(`  ✓ Circular chunk check passed: ${vendorReactFile} does not depend on ${vendorCoreFile}`);
 }
 
+// 5. Security guard: ensure no hardcoded operator token secret ships in the frontend bundle
+const FORBIDDEN_SECRETS = [
+  '4c72b68abbe9a28628df95234d79e665d76e65ff5154deff54ac40f9b1b6b10b',
+  'fd90fead6f7381094c0f891bf3268a5a041d22ea1ca4a0be',
+  'DEFAULT_OPERATOR_TOKEN'
+];
+for (const asset of allAssets.filter(f => f.endsWith('.js'))) {
+  const content = fs.readFileSync(path.join(distDir, 'assets', asset), 'utf-8');
+  for (const secret of FORBIDDEN_SECRETS) {
+    if (content.includes(secret)) {
+      console.error(`[Bundle Check] FAILED: Forbidden hardcoded operator token/secret found in ${asset}!`);
+      process.exit(1);
+    }
+  }
+}
+console.log('  ✓ Security check passed: no hardcoded operator token shipped in frontend bundle');
+
 console.log('[Bundle Check] SUCCESS: All bundle integrity checks passed!\n');

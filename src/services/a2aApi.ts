@@ -42,14 +42,14 @@ export interface A2AMetrics {
 const B = "/api";
 const KEY = "agent360.a2a.operatorKey";
 function enc(s: string): string { return encodeURIComponent(s); }
-export const DEFAULT_OPERATOR_TOKEN = "4c72b68abbe9a28628df95234d79e665d76e65ff5154deff54ac40f9b1b6b10b";
 export const operatorKey = {
   get: () => {
     try {
-      if (typeof localStorage === "undefined") return DEFAULT_OPERATOR_TOKEN;
-      return localStorage.getItem(KEY) || localStorage.getItem("operator_token") || DEFAULT_OPERATOR_TOKEN;
+      // Operator keys are only ever entered explicitly by an operator; the bundle ships no default.
+      if (typeof localStorage === "undefined") return "";
+      return localStorage.getItem(KEY) || localStorage.getItem("operator_token") || "";
     } catch {
-      return DEFAULT_OPERATOR_TOKEN;
+      return "";
     }
   },
   set: (v: string) => (v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY)),

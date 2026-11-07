@@ -212,7 +212,8 @@ export async function issueAgentDesktopUrl(agentId: string, mode: "control" | "w
     return cached.url;
   }
 
-  const key = operatorKey.get();
+  const token = typeof window !== "undefined" ? (sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "") : "";
+  const key = token ? "" : operatorKey.get();
   const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/viewer?mode=${mode}`, {
     method: "POST",
     headers: { Accept: "application/json", ...(key ? { "X-Agent360-Operator-Token": key } : {}) },

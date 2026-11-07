@@ -49,8 +49,7 @@ export function getAuthHeaders(agentId?: string): Record<string, string> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-  }
-  if (opToken) {
+  } else if (opToken) {
     headers["X-Agent360-Operator-Token"] = opToken;
     headers["X-Operator-Token"] = opToken;
   }

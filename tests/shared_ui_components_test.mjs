@@ -1086,3 +1086,20 @@ console.log("Testing Phone Browser Device Recognition, Network/Emulation UA Sync
   );
 }
 console.log("✓ Test 70: Phone Browser Device Recognition, Network/Emulation UA Sync, Pre-Navigation Mobile Tab & Auto-Reload Contract verified");
+
+console.log("Testing Member Agent Visibility Isolation & No Operator Token Elevation Contract...");
+{
+  const a2aSrc = fs.readFileSync(new URL("../src/services/a2aApi.ts", import.meta.url), "utf8");
+  const agentApiSrc = fs.readFileSync(new URL("../src/services/agentApi.ts", import.meta.url), "utf8");
+  const guardSrc = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Security/AgentOwnershipGuard.cs", import.meta.url), "utf8");
+  const opAuthSrc = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/SubAgents/OperatorAuthFilter.cs", import.meta.url), "utf8");
+  assert.ok(
+    !a2aSrc.includes("DEFAULT_OPERATOR_TOKEN") &&
+    !a2aSrc.includes("4c72b68abbe9a28628df95234d79e665d76e65ff5154deff54ac40f9b1b6b10b") &&
+    agentApiSrc.includes("} else if (opToken) {") &&
+    !guardSrc.includes("OperatorAuthFilter.IsAuthorized(context, secOpt, env)") &&
+    opAuthSrc.includes("if (HasUserJwtBearer(http) || http.User.Identity?.IsAuthenticated == true) return false;"),
+    "Frontend must never ship a hardcoded default operator token or send operator headers alongside a user JWT Bearer token, and backend AgentOwnershipGuard/OperatorAuthFilter must never elevate an authenticated member session via operator headers"
+  );
+}
+console.log("✓ Test 71: Member Agent Visibility Isolation & No Operator Token Elevation Contract verified");
