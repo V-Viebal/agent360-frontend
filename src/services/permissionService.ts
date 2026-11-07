@@ -273,6 +273,10 @@ function getPermissionName(type: PermissionType): string {
   switch (type) {
     case "microphone":
       return "Microphone Access";
+    case "camera":
+      return "Camera Access";
+    case "screen":
+      return "Screen Share Access";
     case "notifications":
       return "Desktop Notifications";
     case "clipboard":
@@ -288,6 +292,10 @@ function getPermissionDescription(type: PermissionType): string {
   switch (type) {
     case "microphone":
       return "Voice recording for Speech-to-text prompt input.";
+    case "camera":
+      return "Live camera streaming for video calls with agents.";
+    case "screen":
+      return "Real-time screen share visual streaming for agents.";
     case "notifications":
       return "Desktop alerts when long-running agent tasks complete.";
     case "clipboard":

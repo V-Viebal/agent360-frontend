@@ -6512,6 +6512,7 @@ function SelkiesViewer({
   const closedTabsUntilRef = useRef<Map<string, number>>(new Map());
   const tabMutationLockUntilRef = useRef<number>(0);
   const lastNonAnchorTabsRef = useRef<{ tabs: AgentBrowserTab[]; at: number }>({ tabs: [], at: 0 });
+  const autoNewTabAttemptedAtRef = useRef<Record<string, number>>({});
   const selectedTabIdRef = useRef<string>("");
   selectedTabIdRef.current = selectedTabId;
   const isEditingAddressRef = useRef<boolean>(false);
@@ -6744,6 +6745,16 @@ function SelkiesViewer({
           realTabs.length === 0 &&
           lastNonAnchorTabsRef.current.tabs.length > 0 &&
           nowMs - lastNonAnchorTabsRef.current.at < 20000;
+        if (
+          realTabs.length === 0 &&
+          !canHoldPreviousNonAnchorTabs &&
+          nowMs >= tabMutationLockUntilRef.current &&
+          nowMs - (autoNewTabAttemptedAtRef.current[agentId] || 0) > 8000
+        ) {
+          autoNewTabAttemptedAtRef.current[agentId] = nowMs;
+          void handleCreateNewTab();
+          return;
+        }
         const rawList =
           realTabs.length > 0
             ? realTabs
@@ -13075,6 +13086,7 @@ ${targetItem.text}`;
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [liveVoiceEnergy, setLiveVoiceEnergy] = useState<number>(0);
   const [isRealtimeVoiceOpen, setIsRealtimeVoiceOpen] = useState(false);
+  const [isVoiceMoreMenuOpen, setIsVoiceMoreMenuOpen] = useState(false);
   const [realtimeShowCaptions, setRealtimeShowCaptions] = useState(true);
   const [realtimeVoiceStatus, setRealtimeVoiceStatus] = useState<"idle" | "connecting" | "listening" | "thinking" | "speaking">("idle");
   const [realtimeTranscript, setRealtimeTranscript] = useState<string>("");
@@ -13751,6 +13763,7 @@ ${targetItem.text}`;
   };
 
   const stopRealtimeVoiceChat = () => {
+    setIsVoiceMoreMenuOpen(false);
     realtimeContinuousActiveRef.current = false;
     if (realtimeFrameIntervalRef.current) {
       clearInterval(realtimeFrameIntervalRef.current);
@@ -24229,6 +24242,7 @@ const selectedAgentTheme = getAgentColorTheme(
         const dockBtnBorder = isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)";
         const dockBtnText = isLight ? "#1e293b" : "#f4f6fa";
         const dockBtnShadow = isLight ? "0 4px 14px rgba(0, 0, 0, 0.06)" : undefined;
+        const isVoiceConnected = realtimeVoiceStatus !== "connecting" && realtimeVoiceStatus !== "idle";
         const headlineText = realtimeShowCaptions && (realtimeBotReply || realtimeTranscript)
           ? (realtimeBotReply || realtimeTranscript)
           : realtimeVoiceStatus === "connecting"
@@ -24335,43 +24349,132 @@ const selectedAgentTheme = getAgentColorTheme(
               />
             </div>
 
-            {/* Top Minimal Chrome Header (matching Image 2: Pill Capsule + Right Chat Button) */}
-            <div className="relative z-10 w-full px-4 sm:px-6 pt-3 pb-3 flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08]">
-              {/* Left balance placeholder */}
-              <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0" aria-hidden="true" />
+            {/* Top Minimal Chrome Header (matching normal chat UI & image: Left Menu/Equal + Center Pill Capsule + Right Captions & More Menu) */}
+            <div className="relative z-10 w-full px-3 sm:px-4 h-12 flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08] select-none">
+              {/* Left Menu Button: Same CTA as normal chat UI (two horizontal bars matching screenshot) */}
+              <button
+                type="button"
+                data-testid="voice-header-menu-btn"
+                aria-label="Toggle Agents Sidebar"
+                onClick={() => {
+                  if (window.innerWidth >= 1024) {
+                    handleToggleLeftSidebar();
+                  } else {
+                    setMobileAgentsOpen(!mobileAgentsOpen);
+                  }
+                }}
+                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer shrink-0"
+                title="Danh sách Agent (Menu)"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="9" x2="20" y2="9" />
+                  <line x1="4" y1="15" x2="20" y2="15" />
+                </svg>
+              </button>
 
-              {/* Center Pill Capsule with Agent Avatar and Name */}
+              {/* Center Pill Capsule with Agent Name + Glowing Dot */}
               <div
                 data-testid="realtime-voice-agent-capsule"
                 onClick={() => setIsVoiceRecordSettingsOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-white/15 bg-[#f8fafc] dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1a1a24] shadow-2xs transition-all cursor-pointer select-none leading-none"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-white/15 bg-white/80 dark:bg-[#14141c]/80 hover:bg-white dark:hover:bg-[#1a1a24] shadow-2xs transition-all cursor-pointer select-none leading-none"
                 title="Tuỳ chọn thiết bị & mô hình giọng nói"
               >
-                <AgentAvatar
-                  agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
-                  size="3xs"
-                  interactive={false}
-                  className="shrink-0"
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{
+                    backgroundColor: voiceThemeAccent,
+                    boxShadow: `0 0 8px ${voiceThemeAccent}`,
+                  }}
                 />
                 <span
                   style={{ color: textColorPrimary }}
                   className="text-xs sm:text-[13px] font-semibold tracking-tight whitespace-nowrap"
                 >
-                  {selectedAgent?.name || "Skyer"}
+                  {selectedAgent?.name || "Mons"}
                 </span>
               </div>
 
-              {/* Right Chat / Captions Button */}
-              <button
-                type="button"
-                data-testid="voice-dock-captions-btn"
-                onClick={() => setRealtimeShowCaptions((prev) => !prev)}
-                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl border border-slate-200/80 dark:border-white/10 bg-[#f8f3ed] dark:bg-white/10 hover:bg-slate-200/70 dark:hover:bg-white/15 flex items-center justify-center text-[#57534e] dark:text-neutral-200 cursor-pointer transition-colors shadow-2xs shrink-0"
-                title={realtimeShowCaptions ? "Ẩn hội thoại chữ" : "Hiện hội thoại chữ"}
-                aria-label="Toggle live captions"
-              >
-                <MessageSquare size={15} className="stroke-[1.9]" />
-              </button>
+              {/* Right Controls: Chat / Captions Button + More Action Button (...) */}
+              <div className="flex items-center gap-1 shrink-0 relative">
+                <button
+                  type="button"
+                  data-testid="voice-dock-captions-btn"
+                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
+                  className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white ${
+                    realtimeShowCaptions
+                      ? "bg-black/5 dark:bg-white/10"
+                      : "hover:bg-black/5 dark:hover:bg-white/10 opacity-70"
+                  }`}
+                  title={realtimeShowCaptions ? "Ẩn hội thoại chữ (Captions)" : "Hiện hội thoại chữ (Captions)"}
+                  aria-label="Toggle live captions"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="4" />
+                    <line x1="7" y1="11" x2="15" y2="11" />
+                    <line x1="7" y1="15" x2="12" y2="15" />
+                  </svg>
+                </button>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    data-testid="voice-header-more-btn"
+                    onClick={() => setIsVoiceMoreMenuOpen((prev) => !prev)}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                    title="Tuỳ chọn khác"
+                    aria-label="More options"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="5" cy="12" r="1.6" />
+                      <circle cx="12" cy="12" r="1.6" />
+                      <circle cx="19" cy="12" r="1.6" />
+                    </svg>
+                  </button>
+
+                  {isVoiceMoreMenuOpen && (
+                    <div
+                      data-testid="voice-more-menu-dropdown"
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-full mt-1.5 w-48 rounded-xl bg-white dark:bg-[#181822] border border-slate-200 dark:border-white/10 shadow-2xl py-1 z-50 text-xs font-sans animate-in fade-in zoom-in-95 duration-100"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsVoiceMoreMenuOpen(false);
+                          setIsVoiceRecordSettingsOpen(true);
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <Settings size={14} className="text-slate-500 dark:text-neutral-400" />
+                        <span>Cài đặt giọng nói & micro</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsVoiceMoreMenuOpen(false);
+                          setIsPermissionsModalOpen(true);
+                        }}
+                        className="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-200 flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <ShieldCheck size={14} className="text-slate-500 dark:text-neutral-400" />
+                        <span>Quyền & Thiết bị (RTC)</span>
+                      </button>
+                      <div className="border-t border-slate-100 dark:border-white/10 my-1" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsVoiceMoreMenuOpen(false);
+                          stopRealtimeVoiceChat();
+                        }}
+                        className="w-full px-3 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
+                      >
+                        <X size={14} />
+                        <span>Kết thúc cuộc gọi</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Center Stage: Skyer Logo + Video Stream PIP + Display Prompt / Live Transcript */}
@@ -24404,26 +24507,54 @@ const selectedAgentTheme = getAgentColorTheme(
               ) : (
                 <div
                   onClick={toggleRealtimeMicTurn}
-                  className="skyer-voice-logo mb-6 cursor-pointer relative flex items-center justify-center"
+                  className="mb-6 cursor-pointer relative flex items-center justify-center transition-all duration-300"
                   style={{
-                    animation: "skyerLogoFloat 5s ease-in-out infinite",
-                    filter: `drop-shadow(0 0 18px color-mix(in srgb, var(--voice-theme) 68%, transparent))`,
+                    animation: isVoiceConnected ? undefined : "skyerLogoFloat 5s ease-in-out infinite",
+                    filter: `drop-shadow(0 0 24px color-mix(in srgb, var(--voice-theme) ${realtimeVoiceStatus === "speaking" ? "85%" : "55%"}, transparent))`,
                   }}
-                  title="Nhấn để nói hoặc ngắt lời"
+                  title={isVoiceConnected ? (realtimeVoiceStatus === "speaking" ? "Agent đang nói (Nhấn để ngắt lời)" : "Nhấn để nói") : "Đang kết nối..."}
                 >
-                  <svg
-                    data-testid="skyer-voice-logo"
-                    width="46"
-                    height="46"
-                    viewBox="0 0 32 32"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="transition-transform duration-300 hover:scale-105"
-                  >
-                    <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
-                    <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
-                    <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
-                    <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
-                  </svg>
+                  {isVoiceConnected ? (
+                    <div className="relative flex items-center justify-center">
+                      {/* Ambient Audio Pulse Ring when speaking */}
+                      {realtimeVoiceStatus === "speaking" && (
+                        <div
+                          className="absolute -inset-4 rounded-full animate-ping opacity-25"
+                          style={{ backgroundColor: voiceThemeAccent }}
+                        />
+                      )}
+                      <AgentAvatar
+                        agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
+                        size="md"
+                        interactive={false}
+                        alwaysAnimate={true}
+                        forcedAnimation={
+                          realtimeVoiceStatus === "speaking"
+                            ? "nod.1.4,jump.1.4"
+                            : realtimeVoiceStatus === "thinking"
+                            ? "nod.1.4"
+                            : "wink.1.4,nod.1.4"
+                        }
+                        className="transition-transform duration-300 hover:scale-110"
+                      />
+                    </div>
+                  ) : (
+                    <div className="skyer-voice-logo flex items-center justify-center">
+                      <svg
+                        data-testid="skyer-voice-logo"
+                        width="46"
+                        height="46"
+                        viewBox="0 0 32 32"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="transition-transform duration-300 hover:scale-105"
+                      >
+                        <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" />
+                        <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(90 16 16)" />
+                        <path fill={isLight ? "#1e293b" : "#FFFDF9"} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(180 16 16)" />
+                        <path fill={voiceThemeAccent} d="M16 16V3.5a6.25 6.25 0 0 1 0 12.5Z" transform="rotate(270 16 16)" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -351,7 +351,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-white">{perm.name}</span>
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white">{perm.name}</span>
                       {renderBadge(perm.state)}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
@@ -389,7 +389,7 @@ export function PermissionsModal({ isOpen, onClose, onRequestDone }: Permissions
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#22222e] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-white">{t("permissions.voiceInput")}</span>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">{t("permissions.voiceInput")}</span>
                 <p className="text-[11px] text-slate-500 dark:text-neutral-400 mt-0.5">
                   Configure automatic silence timeout and speech submission mode
                 </p>
