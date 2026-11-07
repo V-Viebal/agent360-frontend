@@ -4991,10 +4991,10 @@ function InteractiveTurnWidgetsSection({
             let channelStatusLabel = "Connect";
 
             if (isZalo && currentMode === "web") {
-              if (hasZaloChatTab && !hasZaloLoginTab) {
+              if (isConfigEnabled && hasZaloChatTab && !hasZaloLoginTab) {
                 isConnected = true;
                 channelStatusLabel = "Connected";
-              } else if (isConfigEnabled || hasZaloLoginTab) {
+              } else if (isConfigEnabled) {
                 isConnected = false;
                 channelStatusLabel = "Quét QR";
               } else {
@@ -5101,7 +5101,7 @@ function InteractiveTurnWidgetsSection({
                         data-ux-target-min="24"
                         data-testid={`interactive-connect-channel-setup-${chType}`}
                         onClick={() => {
-                          if (isZalo && currentMode === "web" && (isConfigEnabled || hasZaloLoginTab) && !isConnected) {
+                          if (isZalo && currentMode === "web" && isConfigEnabled && !isConnected) {
                             onOpenZaloWebBrowser?.();
                             window.dispatchEvent(new CustomEvent("agent360_channel_browser_refresh"));
                             return;
@@ -5135,7 +5135,7 @@ function InteractiveTurnWidgetsSection({
                             <Check size={13} />
                             <span>{inlineToken.trim() ? "Update" : "Connected"}</span>
                           </>
-                        ) : isZalo && currentMode === "web" && (isConfigEnabled || hasZaloLoginTab) ? (
+                        ) : isZalo && currentMode === "web" && isConfigEnabled ? (
                           <>
                             <QrCode size={13} />
                             <span>Quét QR</span>
@@ -6396,12 +6396,14 @@ function SelkiesViewer({
   const [isLandscapeRotated, setIsLandscapeRotated] = useState<boolean>(false);
   const [isPhoneClient, setIsPhoneClient] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
-      const uaMob = typeof navigator !== "undefined" && /Android|iPhone|iPod|Windows Phone|Mobile/i.test(navigator.userAgent || "");
+      const uaDataMob = typeof navigator !== "undefined" && Boolean((navigator as any).userAgentData?.mobile);
+      const uaMob = uaDataMob || (typeof navigator !== "undefined" && /Android|iPhone|iPod|Windows Phone|Mobile|Silk|CriOS|FxiOS/i.test(navigator.userAgent || ""));
+      const hasTouch = typeof navigator !== "undefined" && Number(navigator.maxTouchPoints || 0) > 0;
       const coarse =
         typeof window.matchMedia === "function" &&
         window.matchMedia("(pointer: coarse)").matches &&
         (window.innerWidth < 960 || window.innerHeight < 560 || Math.min(window.screen.width, window.screen.height) < 600);
-      return window.innerWidth < 768 || coarse || (uaMob && window.innerWidth < 960);
+      return window.innerWidth < 768 || coarse || uaMob || (hasTouch && Math.min(window.innerWidth, window.innerHeight) < 600);
     }
     return false;
   });
@@ -6814,12 +6816,14 @@ function SelkiesViewer({
     const vv = window.visualViewport;
     let maxWindowInnerH = Math.max(window.innerHeight, vv?.height || 0);
     const updateDeviceAndKeyboard = () => {
-      const uaMob = typeof navigator !== "undefined" && /Android|iPhone|iPod|Windows Phone|Mobile/i.test(navigator.userAgent || "");
+      const uaDataMob = typeof navigator !== "undefined" && Boolean((navigator as any).userAgentData?.mobile);
+      const uaMob = uaDataMob || (typeof navigator !== "undefined" && /Android|iPhone|iPod|Windows Phone|Mobile|Silk|CriOS|FxiOS/i.test(navigator.userAgent || ""));
+      const hasTouch = typeof navigator !== "undefined" && Number(navigator.maxTouchPoints || 0) > 0;
       const coarse =
         typeof window.matchMedia === "function" &&
         window.matchMedia("(pointer: coarse)").matches &&
         (window.innerWidth < 960 || window.innerHeight < 560 || Math.min(window.screen.width, window.screen.height) < 600);
-      const phoneNow = window.innerWidth < 768 || coarse || (uaMob && window.innerWidth < 960);
+      const phoneNow = window.innerWidth < 768 || coarse || uaMob || (hasTouch && Math.min(window.innerWidth, window.innerHeight) < 600);
       setIsPhoneClient(phoneNow);
       const curInnerH = window.innerHeight;
       if (curInnerH > maxWindowInnerH || Math.abs(window.innerWidth - (vv?.width || window.innerWidth)) > 80) {
@@ -9055,7 +9059,6 @@ function AgentBrowserPreview({
       if (!alive) return;
       try {
         const { w: initW, h: initH, isMobile: initMob } = latestViewportRef.current;
-        lastSentViewportRef.current = { pageId, w: Math.round(initW), h: Math.round(initH), isMobile: initMob };
         ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH, initMob));
         ws.binaryType = "blob";
         wsRef.current = ws;
@@ -9064,6 +9067,24 @@ function AgentBrowserPreview({
           reconnectAttempt = 0;
           wsConnectedRef.current = true;
           lastFrameAt = performance.now();
+          const curVp = latestViewportRef.current;
+          if (curVp.w >= 320 && curVp.h >= 240) {
+            const rw = Math.round(curVp.w);
+            const rh = Math.round(curVp.h);
+            lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };
+            try {
+              ws?.send(
+                JSON.stringify({
+                  action: "resize",
+                  width: rw,
+                  height: rh,
+                  pageId,
+                  isMobile: curVp.isMobile,
+                  deviceType: curVp.isMobile ? "phone" : "desktop",
+                })
+              );
+            } catch {}
+          }
         };
       ws.onmessage = (ev) => {
         if (!alive) return;
@@ -9233,7 +9254,7 @@ function AgentBrowserPreview({
     };
   }, [enabled, agentId, pageId, liveWs]);
 
-  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0 });
+  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number; confirmed?: boolean }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0, confirmed: false });
 
   // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open or during active splitter drag to prevent CDP resize thrash; flushes smoothly once settled)
   useEffect(() => {
@@ -9244,12 +9265,12 @@ function AgentBrowserPreview({
     const h = Math.round(viewportHeight);
     const prev = lastSentViewportRef.current;
     const forceResync = prev.refreshSignal !== refreshSignal;
-    if (!forceResync && prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
+    if (!forceResync && prev.confirmed && prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
       return;
     }
     const timer = setTimeout(() => {
       const modeFlipped = prev.pageId === pageId && prev.isMobile !== undefined && prev.isMobile !== isMobileDevice;
-      lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice, refreshSignal };
+      lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice, refreshSignal, confirmed: true };
       const deviceType = isMobileDevice ? "phone" : "desktop";
       const sock = wsRef.current;
       if (sock && sock.readyState === WebSocket.OPEN) {
@@ -16469,12 +16490,33 @@ ${targetItem.text}`;
       if (info) {
         setAgentBrowser(info);
       }
+      const isMobClient =
+        typeof window !== "undefined" &&
+        (window.innerWidth < 768 ||
+          Boolean((navigator as any).userAgentData?.mobile) ||
+          /Android|iPhone|iPod|Windows Phone|Mobile|Silk|CriOS|FxiOS/i.test(navigator.userAgent || "") ||
+          (typeof window.matchMedia === "function" &&
+            window.matchMedia("(pointer: coarse)").matches &&
+            Math.min(window.innerWidth, window.innerHeight) < 600));
+      const savedMode = (() => {
+        try { return sessionStorage.getItem(`skyer_browser_view_mode_${targetId}`); } catch { return null; }
+      })();
+      const wantMobZalo = savedMode ? savedMode === "phone" : isMobClient;
+      const initZaloW = wantMobZalo ? Math.max(375, Math.min(430, window.innerWidth || 390)) : 1920;
+      const initZaloH = wantMobZalo ? Math.max(640, Math.min(932, (window.innerHeight || 844) - 76)) : 1080;
       const tabs = info?.tabs || [];
       const zaloTab = tabs.find(
         (t) => !t.anchor && ((t.url || "").includes("chat.zalo.me") || (t.url || "").includes("id.zalo.me"))
       );
       if (zaloTab) {
-        await dispatchAgentBrowserInput(targetId, { action: "activate_tab", pageId: zaloTab.targetId });
+        await dispatchAgentBrowserInput(targetId, {
+          action: "activate_tab",
+          pageId: zaloTab.targetId,
+          width: initZaloW,
+          height: initZaloH,
+          isMobile: wantMobZalo,
+          deviceType: wantMobZalo ? "phone" : "desktop",
+        });
       } else {
         const blankOrGoogle = tabs.find(
           (t) =>
@@ -16488,11 +16530,19 @@ ${targetItem.text}`;
             action: "navigate",
             text: "https://chat.zalo.me",
             pageId: blankOrGoogle.targetId,
+            width: initZaloW,
+            height: initZaloH,
+            isMobile: wantMobZalo,
+            deviceType: wantMobZalo ? "phone" : "desktop",
           });
         } else {
           await dispatchAgentBrowserInput(targetId, {
             action: "new_tab",
             text: "https://chat.zalo.me",
+            width: initZaloW,
+            height: initZaloH,
+            isMobile: wantMobZalo,
+            deviceType: wantMobZalo ? "phone" : "desktop",
           });
         }
       }
@@ -16507,14 +16557,43 @@ ${targetItem.text}`;
     }
   };
 
+  const closeZaloWebTabsForAgent = async (targetAgentRaw?: string) => {
+    const targetId = targetAgentRaw || selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+    if (!targetId) return;
+    try {
+      const info = await fetchAgentBrowser(targetId);
+      const tabs = info?.tabs || [];
+      const zaloTabs = tabs.filter(
+        (t) => !t.anchor && ((t.url || "").includes("chat.zalo.me") || (t.url || "").includes("id.zalo.me"))
+      );
+      for (const zt of zaloTabs) {
+        await dispatchAgentBrowserInput(targetId, { action: "close_tab", pageId: zt.targetId });
+      }
+      if (zaloTabs.length > 0) {
+        const refreshed = await fetchAgentBrowser(targetId);
+        if (refreshed) {
+          setAgentBrowser(refreshed);
+        }
+        window.dispatchEvent(new CustomEvent("agent360_channel_browser_refresh"));
+      }
+    } catch (err) {
+      console.warn("closeZaloWebTabsForAgent error", err);
+    }
+  };
+
   const handleToggleChannel = async (channelType: string, currentEnabled: boolean) => {
     const nextState = !currentEnabled;
     setChannels((prev) =>
       prev.map((ch) => (ch.type === channelType ? { ...ch, enabled: nextState } : ch))
     );
     const ok = await toggleAgentChannel(selectedAgentId, channelType, nextState);
-    if (ok && channelType === "zalo" && nextState) {
-      await openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+    if (ok && channelType === "zalo") {
+      const aid = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+      if (nextState) {
+        await openZaloWebBrowserForAgent(aid);
+      } else {
+        await closeZaloWebTabsForAgent(aid);
+      }
     }
   };
 
@@ -24100,76 +24179,43 @@ const selectedAgentTheme = getAgentColorTheme(
               />
             </div>
 
-            {/* Top Minimal Chrome Header (matching Image 1) */}
-            <div className="relative z-10 w-full max-w-2xl px-6 pt-5 pb-2 flex items-center justify-between">
+            {/* Top Minimal Chrome Header (matching Image 2: Pill Capsule + Right Chat Button) */}
+            <div className="relative z-10 w-full px-4 sm:px-6 pt-3 pb-3 flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08]">
+              {/* Left balance placeholder */}
+              <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0" aria-hidden="true" />
+
+              {/* Center Pill Capsule with Agent Avatar and Name */}
+              <div
+                data-testid="realtime-voice-agent-capsule"
+                onClick={() => setIsVoiceRecordSettingsOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-white/15 bg-[#f8fafc] dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1a1a24] shadow-2xs transition-all cursor-pointer select-none leading-none"
+                title="Tuỳ chọn thiết bị & mô hình giọng nói"
+              >
+                <AgentAvatar
+                  agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
+                  size="3xs"
+                  interactive={false}
+                  className="shrink-0"
+                />
+                <span
+                  style={{ color: textColorPrimary }}
+                  className="text-xs sm:text-[13px] font-semibold tracking-tight whitespace-nowrap"
+                >
+                  {selectedAgent?.name || "Skyer"}
+                </span>
+              </div>
+
+              {/* Right Chat / Captions Button */}
               <button
                 type="button"
-                onClick={() => setIsVoiceRecordSettingsOpen(true)}
-                style={{ color: textColorPrimary }}
-                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                title="Tuỳ chọn thiết bị & mô hình giọng nói"
-                aria-label="Voice menu"
+                data-testid="voice-dock-captions-btn"
+                onClick={() => setRealtimeShowCaptions((prev) => !prev)}
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl border border-slate-200/80 dark:border-white/10 bg-[#f8f3ed] dark:bg-white/10 hover:bg-slate-200/70 dark:hover:bg-white/15 flex items-center justify-center text-[#57534e] dark:text-neutral-200 cursor-pointer transition-colors shadow-2xs shrink-0"
+                title={realtimeShowCaptions ? "Ẩn hội thoại chữ" : "Hiện hội thoại chữ"}
+                aria-label="Toggle live captions"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
-                  <line x1="4" y1="9" x2="20" y2="9" />
-                  <line x1="4" y1="15" x2="20" y2="15" />
-                </svg>
+                <MessageSquare size={15} className="stroke-[1.9]" />
               </button>
-
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 rounded-full transition-transform duration-300"
-                    style={{
-                      backgroundColor: voiceThemeAccent,
-                      boxShadow: `0 0 10px ${voiceThemeAccent}`,
-                    }}
-                  />
-                  <span style={{ color: textColorPrimary }} className="text-xs font-semibold tracking-wide">
-                    {selectedAgent?.name || "Skyer"}
-                  </span>
-                </div>
-                {liveRtcNodeId && (
-                  <span
-                    data-testid="rtc-node-badge"
-                    style={{ color: textColorTertiary }}
-                    className="text-[10px] tracking-wider font-mono"
-                  >
-                    {liveRtcNodeId} • LLM360 5a54d0
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
-                  style={{ color: textColorPrimary, opacity: realtimeShowCaptions ? 1 : 0.45 }}
-                  className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-opacity cursor-pointer"
-                  title={realtimeShowCaptions ? "Ẩn phụ đề trực tiếp" : "Hiện phụ đề trực tiếp"}
-                  aria-label="Toggle captions"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="4" y="4" width="16" height="16" rx="4" />
-                    <line x1="8" y1="13" x2="16" y2="13" />
-                    <line x1="8" y1="16.5" x2="13" y2="16.5" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsVoiceRecordSettingsOpen(true)}
-                  style={{ color: textColorPrimary }}
-                  className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Cài đặt giọng nói nâng cao"
-                  aria-label="More voice options"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="12" r="1.6" />
-                    <circle cx="12" cy="12" r="1.6" />
-                    <circle cx="19" cy="12" r="1.6" />
-                  </svg>
-                </button>
-              </div>
             </div>
 
             {/* Center Stage: Skyer Logo + Video Stream PIP + Display Prompt / Live Transcript */}
@@ -26603,8 +26649,13 @@ ${chat.id}`);
         agentName={selectedAgent.name}
         onSaved={(chType, en) => {
           refreshDetailsData();
-          if (chType === "zalo" && en) {
-            void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+          if (chType === "zalo") {
+            const aid = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+            if (en) {
+              void openZaloWebBrowserForAgent(aid);
+            } else if (en === false) {
+              void closeZaloWebTabsForAgent(aid);
+            }
           }
         }}
         onOpenZaloWebBrowser={() => {

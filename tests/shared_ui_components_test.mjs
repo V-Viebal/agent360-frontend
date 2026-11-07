@@ -1065,3 +1065,24 @@ console.log("Testing CDP Browser Real Page Loading State, Stop Action & Live Tab
   );
 }
 console.log("✓ Test 69: CDP Browser Real Page Loading State, Stop Action & Live Tab Metadata Contract verified");
+
+console.log("Testing Phone Browser Device Recognition, Network/Emulation UA Sync, Pre-Navigation Mobile Tab & Auto-Reload Contract...");
+{
+  const hub70 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/ScreencastHub.cs", import.meta.url), "utf8");
+  const cdpEp70 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserCdpEndpoint.cs", import.meta.url), "utf8");
+  const dir70 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserDirectory.cs", import.meta.url), "utf8");
+  const grok70 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  assert.ok(
+    hub70.includes("ProbeDocumentMobileMismatchExpression") &&
+    hub70.includes('method = "Network.setUserAgentOverride"') &&
+    hub70.includes('method = "Emulation.setEmitTouchEventsForMouse"') &&
+    hub70.includes("var shouldReload = req.ReloadOnModeChange == true || modeChanged;") &&
+    hub70.includes("ignoreCache = true") &&
+    cdpEp70.includes("var initNavUrl = isMobNew ? (safeReq.Text ?? \"https://www.google.com\") : null;") &&
+    dir70.includes('var createUrl = isMobNewTab ? "about:blank" : newUrl;') &&
+    grok70.includes("Boolean((navigator as any).userAgentData?.mobile)") &&
+    grok70.includes("lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };"),
+    "Phone browser must synchronize Network.setUserAgentOverride + Emulation.setUserAgentOverride + touch emulation, pre-emulate new tabs on about:blank before navigating, and auto-reload with ignoreCache=true when switching a desktop-loaded tab to mobile"
+  );
+}
+console.log("✓ Test 70: Phone Browser Device Recognition, Network/Emulation UA Sync, Pre-Navigation Mobile Tab & Auto-Reload Contract verified");
