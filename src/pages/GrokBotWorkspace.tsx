@@ -7019,8 +7019,9 @@ function SelkiesViewer({
         const next = prev.map((t) => {
           if (t.targetId !== tabId) return t;
           const live = liveTabMetaRef.current[tabId];
-          const url = live.url || t.url;
-          const title = live.title || (url !== t.url ? url : t.title);
+          const isTransientBlank = live.url === "about:blank" && Boolean(t.url && t.url !== "about:blank");
+          const url = (!isTransientBlank && live.url) || t.url;
+          const title = live.title || (!isTransientBlank && url !== t.url ? url : t.title);
           if (url === t.url && title === t.title) return t;
           changed = true;
           return { ...t, url, title };
@@ -7028,8 +7029,8 @@ function SelkiesViewer({
         return changed ? next : prev;
       });
     }
-    if (cleanUrl && !isEditingAddressRef.current) {
-      setAddressInput(cleanUrl.startsWith("about:") ? "" : cleanUrl);
+    if (cleanUrl && !cleanUrl.startsWith("about:") && !isEditingAddressRef.current) {
+      setAddressInput(cleanUrl);
     }
     if (!state.loading) {
       setIsNavigating(false);
@@ -8376,7 +8377,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
           >
           <AgentBrowserPreview
             agentId={agentId}
-            pageId={selectedTabId && !selectedTabId.startsWith("optimistic-") ? selectedTabId : undefined}
+            pageId={selectedTabId || undefined}
             enabled={boxSize.w > 0 && boxSize.h > 0}
             intervalMs={800}
             liveWs={true}
@@ -8961,7 +8962,7 @@ function AgentBrowserPreview({
 
   // 1. Persistent 30fps Full HD WebSocket Screencast with Zero-Re-Render DOM Swap & Adaptive Network Quality
   useEffect(() => {
-    if (!enabled || !liveWs || typeof WebSocket === "undefined") return;
+    if (!enabled || !liveWs || typeof WebSocket === "undefined" || (pageId && pageId.startsWith("optimistic-"))) return;
     let alive = true;
     let ws: WebSocket | null = null;
     let rafId = 0;
@@ -9258,7 +9259,7 @@ function AgentBrowserPreview({
 
   // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open or during active splitter drag to prevent CDP resize thrash; flushes smoothly once settled)
   useEffect(() => {
-    if (!enabled || !liveWs || viewportWidth < 320 || viewportHeight < 240) return;
+    if (!enabled || !liveWs || viewportWidth < 320 || viewportHeight < 240 || (pageId && pageId.startsWith("optimistic-"))) return;
     if (isVirtualKeyboardOpen) return;
     if (isResizing) return;
     const w = Math.round(viewportWidth);
@@ -9286,7 +9287,7 @@ function AgentBrowserPreview({
 
   // 3. Fallback HTTP Frame Poll ONLY when liveWs is false or if WebSocket fails to connect within 1400ms
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || (pageId && pageId.startsWith("optimistic-"))) return;
     let alive = true;
     let fails = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
