@@ -1401,24 +1401,39 @@ export function parseRawChatMessages(rawList: any[], chatId: string, isSessionAc
       if (last && last.role === "user" && last.content.trim() === t.content.trim()) {
         continue;
       }
+      if (!t.reactions || t.reactions.length === 0) {
+        const { emoji: autoEmoji } = classifyUserMessageMood(t.content, false, t.id || chatId);
+        if (autoEmoji) {
+          t.reactions = [autoEmoji];
+        }
+      }
     }
 
     if (t.role === "assistant") {
       const shouldReconcile = !isSessionActive || !isLatestTurn;
-      if (shouldReconcile) {
-        if (t.steps) {
-          for (const s of t.steps) {
-            if (s.kind === "tool_call" && s.state === "calling") {
+      const overrideReactions: string[] = [];
+      if (t.steps) {
+        for (const s of t.steps) {
+          if (s.kind === "tool_call") {
+            if (shouldReconcile && s.state === "calling") {
               s.state = "success";
             }
+            overrideReactions.push(...extractToolReactionEmojis(s.tool, s.args, s.result));
           }
         }
-        if (t.toolCalls) {
-          for (const tc of t.toolCalls) {
-            if (tc.state === "calling") {
-              tc.state = "success";
-            }
+      }
+      if (t.toolCalls) {
+        for (const tc of t.toolCalls) {
+          if (shouldReconcile && tc.state === "calling") {
+            tc.state = "success";
           }
+          overrideReactions.push(...extractToolReactionEmojis(tc.tool, tc.args, tc.result));
+        }
+      }
+      if (overrideReactions.length > 0 && filteredTurns.length > 0) {
+        const prevTurn = filteredTurns[filteredTurns.length - 1];
+        if (prevTurn && prevTurn.role === "user") {
+          prevTurn.reactions = Array.from(new Set(overrideReactions)).slice(0, 3);
         }
       }
     }
@@ -2340,17 +2355,268 @@ export interface SubmitMessageReactionPayload {
   message_snippet?: string;
   target_agent_id?: string;
   trigger_agent_response?: boolean;
+  source_user_prompt?: string;
+}
+
+export const ALLOWED_TELEGRAM_REACTION_EMOJIS = new Set<string>([
+  "👍", "👎", "❤", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱", "🤬", "😢",
+  "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊", "🤡", "🥱", "🥴", "😍", "🐳",
+  "❤‍🔥", "🌚", "🌭", "💯", "🤣", "⚡", "🍌", "🏆", "💔", "🤨", "😐", "🍓",
+  "🍾", "💋", "🖕", "😈", "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈",
+  "😇", "😨", "🤝", "✍", "🤗", "🫡", "🎅", "🎄", "☃", "💅", "🤪", "🗿",
+  "🆒", "💘", "🙉", "🦄", "😘", "💊", "🙊", "😎", "👾", "🤷‍♂", "🤷", "🤷‍♀",
+  "😡",
+]);
+
+const REACTION_EMOJI_ALIASES: Record<string, string> = {
+  "❤️": "❤",
+  "✍️": "✍",
+  "☃️": "☃",
+  "🕊️": "🕊",
+  "❤️‍🔥": "❤‍🔥",
+};
+
+const USER_MESSAGE_REACTION_MOODS: Array<{ mood: string; emojis: string[]; terms: string[] }> = [
+  { mood: "love_request", emojis: ["❤"], terms: ["thả tim", "tha tim", "thả ❤", "thả ❤️", "tim cho", "love"] },
+  {
+    mood: "reaction_request",
+    emojis: ["👍", "👌"],
+    terms: [
+      "reaction", "react", "thả biểu cảm", "tha bieu cam", "bấm biểu cảm",
+      "bam bieu cam", "bấm vào tin", "bam vao tin", "thả like", "tha like",
+      "thả icon", "tha icon", "bấm reaction", "bam reaction",
+    ],
+  },
+  {
+    mood: "thanks",
+    emojis: ["🙏", "🤗", "❤"],
+    terms: ["cảm ơn", "cam on", "cám ơn", "thanks", "thank you", "thank", "tks", "thx"],
+  },
+  {
+    mood: "praise",
+    emojis: ["🔥", "👏", "🏆"],
+    terms: [
+      "giỏi", "xuất sắc", "tuyệt vời", "tuyệt", "quá đỉnh", "đỉnh", "pro quá",
+      "good job", "great job", "awesome", "perfect", "hoàn hảo", "ngon",
+      "hoạt động đó", "hoat dong do", "ổn rồi", "on roi",
+    ],
+  },
+  {
+    mood: "success",
+    emojis: ["🎉", "🏆", "🍾"],
+    terms: [
+      "thành công", "thanh cong", "xong rồi", "xong roi", "done", "deploy được",
+      "chạy rồi", "chay roi", "hoàn thành", "hoan thanh", "được rồi", "duoc roi",
+    ],
+  },
+  {
+    mood: "urgent",
+    emojis: ["⚡", "🫡"],
+    terms: ["gấp", "khẩn", "urgent", "asap", "ngay lập tức", "ngay bây giờ", "nhanh lên"],
+  },
+  {
+    mood: "problem",
+    emojis: ["🫡", "👨‍💻", "🤨"],
+    terms: [
+      "lỗi", "loi ", "bug", "error", "fail", "hỏng", "không được", "khong duoc",
+      "chưa được", "chua duoc", "sập", "down", "không chạy", "vẫn chưa", "van chua",
+      "problem", "sai ",
+    ],
+  },
+  {
+    mood: "sad",
+    emojis: ["🤗", "😢"],
+    terms: ["buồn", "mệt", "chán", "tiếc", "nản", "stress", "áp lực", "sad", "tired"],
+  },
+  {
+    mood: "laugh",
+    emojis: ["🤣", "😁"],
+    terms: ["haha", "hihi", "hehe", "kkk", "lol", "lmao", "😂", "🤣"],
+  },
+  {
+    mood: "greeting",
+    emojis: ["🤗"],
+    terms: ["xin chào", "chào", "hello", "hi em", "hey", "alo"],
+  },
+  {
+    mood: "agree",
+    emojis: ["👌", "🤝", "👍"],
+    terms: [
+      "ok", "oke", "okay", "đồng ý", "dong y", "chuẩn", "chuan", "đúng rồi",
+      "dung roi", "yes", "chốt", "chot", "được đó", "duoc do",
+    ],
+  },
+  {
+    mood: "task",
+    emojis: ["🫡", "✍", "👨‍💻"],
+    terms: [
+      "kiểm tra", "kiem tra", "sửa", "sua ", "fix", "deploy", "triển khai",
+      "trien khai", "thực thi", "thuc thi", "thực hiện", "thuc hien", "làm ",
+      "lam ", "tạo", "tao ", "cập nhật", "cap nhat", "hoàn thiện", "hoan thien",
+      "check", "build", "viết", "viet ", "gửi", "gui ",
+    ],
+  },
+  {
+    mood: "question",
+    emojis: ["🤔", "🤓"],
+    terms: [
+      "?", "tại sao", "tai sao", "vì sao", "vi sao", "như thế nào", "thế nào",
+      "làm sao", "lam sao", "phân tích", "phan tich", "đánh giá", "danh gia",
+      "so sánh", "so sanh", "nên ", "có nên", "why", "how", "what",
+    ],
+  },
+];
+
+export function normalizeTelegramReactionEmoji(value: string): string {
+  const trimmed = String(value || "").trim();
+  return REACTION_EMOJI_ALIASES[trimmed] || trimmed;
+}
+
+function escapeRegexLiteral(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function reactionTermMatches(term: string, normalizedText: string): boolean {
+  const core = term.trim();
+  if (!core) return false;
+  const isWordStart = /^[\p{L}\p{N}]/u.test(core);
+  const isWordEnd = /[\p{L}\p{N}]$/u.test(core);
+  const prefix = isWordStart ? "(?<![\\p{L}\\p{N}_])" : "";
+  const suffix = isWordEnd ? "(?![\\p{L}\\p{N}_])" : "";
+  const pattern = new RegExp(`${prefix}${escapeRegexLiteral(core)}${suffix}`, "iu");
+  return pattern.test(normalizedText);
+}
+
+function computeDeterministicReactionSeed(seedSource?: string | number | null): number {
+  if (typeof seedSource === "number" && Number.isFinite(seedSource)) {
+    return Math.abs(Math.trunc(seedSource));
+  }
+  const str = String(seedSource || "").trim();
+  if (!str) return 0;
+  if (/^\d+$/.test(str)) {
+    return Math.abs(parseInt(str, 10) || 0);
+  }
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash * 31) + str.charCodeAt(i)) & 0x7fffffff;
+  }
+  return hash;
+}
+
+/**
+ * Picks a mood and an allowed QwenPaw Telegram reaction emoji for one inbound user message,
+ * mirroring QwenPaw Telegram's `classify_reaction_mood` behavior.
+ */
+export function classifyUserMessageMood(
+  text: string,
+  hasMedia = false,
+  messageId?: string | number | null
+): { mood: string; emoji: string } {
+  const raw = String(text || "").trim();
+  const withoutReply = raw.replace(/^\[Replying to [^\]]+\]\s*/i, "");
+  const hasAttachedTag = /\[Attached (?:File|Image|Video|Audio):[^\]]+\]/i.test(withoutReply);
+  const cleaned = withoutReply.replace(/\[Attached (?:File|Image|Video|Audio):[^\]]+\]/gi, "").trim();
+  const effectiveHasMedia = hasMedia || hasAttachedTag;
+
+  const normalized = " " + cleaned.toLocaleLowerCase().split(/\s+/).filter(Boolean).join(" ") + " ";
+  if (normalized.length <= 60) {
+    for (const cand of ALLOWED_TELEGRAM_REACTION_EMOJIS) {
+      if (cand !== "🤣" && normalized.includes(cand)) {
+        return { mood: "named_emoji", emoji: cand };
+      }
+    }
+    for (const [alias, canonical] of Object.entries(REACTION_EMOJI_ALIASES)) {
+      if (normalized.includes(alias) && ALLOWED_TELEGRAM_REACTION_EMOJIS.has(canonical)) {
+        return { mood: "named_emoji", emoji: canonical };
+      }
+    }
+  }
+
+  const seed = computeDeterministicReactionSeed(messageId ?? cleaned);
+  for (const rule of USER_MESSAGE_REACTION_MOODS) {
+    if (rule.terms.some((term) => reactionTermMatches(term, normalized))) {
+      const allowed = rule.emojis.filter((e) => ALLOWED_TELEGRAM_REACTION_EMOJIS.has(e));
+      const pool = allowed.length > 0 ? allowed : ["👀"];
+      return { mood: rule.mood, emoji: pool[seed % pool.length] };
+    }
+  }
+
+  if (effectiveHasMedia && !cleaned) {
+    return { mood: "media", emoji: "👀" };
+  }
+  return { mood: "seen", emoji: "👀" };
+}
+
+/**
+ * Extracts reaction emojis when an agent calls `set_telegram_message_reaction` or `present(kind="reaction")`
+ * during a turn to update its mood reaction on the user's message.
+ */
+export function extractToolReactionEmojis(toolName?: string, rawArgs?: string, rawResult?: string): string[] {
+  const tLow = String(toolName || "").toLowerCase();
+  const isReactionTool =
+    tLow.includes("set_telegram_message_reaction") ||
+    tLow.includes("set_message_reaction") ||
+    tLow === "present" ||
+    tLow.endsWith("__present");
+  if (!isReactionTool && (!rawResult || (!rawResult.includes("message-reaction-runtime") && !rawResult.includes('"reaction"')))) {
+    return [];
+  }
+
+  const collected: string[] = [];
+  const pushCandidate = (val: any) => {
+    if (!val) return;
+    if (typeof val === "string") {
+      const norm = normalizeTelegramReactionEmoji(val);
+      if (norm) collected.push(norm);
+    } else if (Array.isArray(val)) {
+      for (const item of val) pushCandidate(item);
+    } else if (typeof val === "object" && val.emoji) {
+      pushCandidate(val.emoji);
+    }
+  };
+
+  if (rawResult && typeof rawResult === "string") {
+    try {
+      const parsed = JSON.parse(rawResult);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of items) {
+        const obj = item?.type === "text" && typeof item.text === "string" && item.text.trim().startsWith("{")
+          ? JSON.parse(item.text)
+          : item;
+        if (
+          obj?.schema === "qwenpaw-telegram/message-reaction-runtime/v1" ||
+          (obj?.schema === "skyer-interaction/v1" && obj?.kind === "reaction") ||
+          obj?.kind === "reaction"
+        ) {
+          pushCandidate(obj.reactions || obj.reaction);
+        }
+      }
+    } catch {}
+  }
+
+  if (collected.length === 0 && rawArgs && typeof rawArgs === "string" && (tLow.includes("set_telegram_message_reaction") || tLow.includes("set_message_reaction"))) {
+    try {
+      const parsedArgs = JSON.parse(rawArgs);
+      pushCandidate(parsedArgs?.reaction || parsedArgs?.reactions || parsedArgs?.emoji);
+    } catch {}
+  }
+
+  return Array.from(new Set(collected)).slice(0, 3);
 }
 
 export interface ReactionClassification {
   sentiment: "positive" | "negative" | "neutral";
   category: "praise" | "approve" | "disapprove" | "sad_frustrated" | "surprised_curious" | "amused" | "feedback";
   labelVi: string;
+  intentVi: string;
+  actionLabelVi: string;
 }
 
 export function classifyReactionEmoji(emoji: string): ReactionClassification {
-  switch (emoji) {
+  const norm = normalizeTelegramReactionEmoji(emoji);
+  switch (norm) {
     case "❤️":
+    case "❤":
     case "🔥":
     case "🚀":
     case "🎉":
@@ -2361,8 +2627,19 @@ export function classifyReactionEmoji(emoji: string): ReactionClassification {
     case "🙌":
     case "⚡":
     case "💪":
-      return { sentiment: "positive", category: "praise", labelVi: "Khen ngợi / Rất tốt" };
+    case "🏆":
+    case "🍾":
+    case "❤‍🔥":
+    case "🥰":
+      return {
+        sentiment: "positive",
+        category: "praise",
+        labelVi: "Khen ngợi / Rất tốt",
+        intentVi: "Đánh giá cao chất lượng phản hồi",
+        actionLabelVi: "Ghi nhận chuẩn chất lượng & gợi ý bước mở rộng",
+      };
     case "👍":
+    case "👌":
     case "🤝":
     case "🫡":
     case "🎯":
@@ -2370,18 +2647,72 @@ export function classifyReactionEmoji(emoji: string): ReactionClassification {
     case "🙏":
     case "☕":
     case "🤖":
-      return { sentiment: "positive", category: "approve", labelVi: "Đồng ý / Đúng ý" };
+    case "✍":
+      return {
+        sentiment: "positive",
+        category: "approve",
+        labelVi: "Đồng ý / Đúng ý",
+        intentVi: "Chấp thuận phương án vừa nêu",
+        actionLabelVi: "Chốt phương án & đề xuất bước triển khai tiếp theo",
+      };
     case "👎":
-      return { sentiment: "negative", category: "disapprove", labelVi: "Chưa hài lòng / Không đúng" };
+    case "🤬":
+    case "😡":
+    case "🤮":
+    case "💩":
+    case "🖕":
+      return {
+        sentiment: "negative",
+        category: "disapprove",
+        labelVi: "Chưa hài lòng / Cần chỉnh sửa",
+        intentVi: "Phản hồi chưa đúng trọng tâm hoặc thiếu chính xác",
+        actionLabelVi: "Tự rà soát điểm hạn chế & đưa ra phương án cải thiện ngay",
+      };
     case "😢":
-      return { sentiment: "negative", category: "sad_frustrated", labelVi: "Hụt hẫng / Cần khắc phục" };
+    case "😭":
+    case "💔":
+    case "😨":
+    case "😱":
+      return {
+        sentiment: "negative",
+        category: "sad_frustrated",
+        labelVi: "Đang gặp vướng mắc / Cần tháo gỡ",
+        intentVi: "Gặp sự cố hoặc kết quả chưa giải quyết được khó khăn",
+        actionLabelVi: "Kiểm tra nguyên nhân gốc & đề xuất hướng tháo gỡ cụ thể",
+      };
+    case "🤔":
+    case "🤨":
+    case "🤓":
     case "😮":
     case "👀":
-      return { sentiment: "neutral", category: "surprised_curious", labelVi: "Ngạc nhiên / Cần làm rõ" };
+    case "🤯":
+      return {
+        sentiment: "neutral",
+        category: "surprised_curious",
+        labelVi: "Băn khoăn / Cần làm rõ thêm",
+        intentVi: "Cần giải thích sâu hơn hoặc dẫn chứng cụ thể",
+        actionLabelVi: "Làm rõ cơ chế mấu chốt & bổ sung ví dụ thực tế",
+      };
     case "😆":
-      return { sentiment: "positive", category: "amused", labelVi: "Thú vị / Vui vẻ" };
+    case "🤣":
+    case "😁":
+    case "🤪":
+    case "😎":
+      return {
+        sentiment: "positive",
+        category: "amused",
+        labelVi: "Thú vị / Vui vẻ",
+        intentVi: "Tạo không khí tích cực",
+        actionLabelVi: "Đáp lại tự nhiên & duy trì mạch công việc",
+      };
     default:
-      return { sentiment: "neutral", category: "feedback", labelVi: "Đánh giá" };
+      return {
+        sentiment: "neutral",
+        category: "feedback",
+        labelVi: "Đánh giá phản hồi",
+        intentVi: "Gửi tín hiệu cảm xúc phản hồi",
+        actionLabelVi: "Tiếp thu tín hiệu & đồng hành hỗ trợ",
+      };
   }
 }
 

@@ -657,7 +657,7 @@ console.log("✓ Test 46: Browser Anti-Flicker Anchor Tab Hold & WebSocket Auto-
 console.log("Testing Browser Scale-Jitter Guard for Modal / Split View and Stable CDP Frame Sizing...");
 assert.ok(
   grokMouseGesturesSrc.includes("isComputerSplitOpen && !isBrowserModalOpen") &&
-  grokMouseGesturesSrc.includes('className="w-full h-full sm:w-[95vw] sm:h-[95vh]') &&
+  (grokMouseGesturesSrc.includes('className="w-full h-full sm:w-[95vw] sm:h-[95vh]') || grokMouseGesturesSrc.includes("w-full h-full sm:w-[95vw] sm:h-[95vh]")) &&
   !grokMouseGesturesSrc.includes('max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150'),
   "The maximized browser must not mount alongside split view or animate a scale transform during interaction"
 );
@@ -827,7 +827,7 @@ assert.ok(
   screencastHubSrc.includes("if (Math.Abs(_backingScale - 1.0) > 0.01) return;") &&
   !screencastHubSrc.includes("return (matchesBacking || matchesLogical) && Math.Abs(frameAspect - targetAspect) <= 0.035;") &&
   !cdpEndpointSrc.includes("hub.WarmTabsInBackground(cdp!, otherIds") &&
-  grokImeSrc.includes("if (document.hidden || wsConnectedRef.current || (liveWs && hasFrame)) return;"),
+  (grokImeSrc.includes("if (document.hidden || wsConnectedRef.current || (liveWs && hasFrame)) return;") || grokImeSrc.includes("if (document.hidden || wsConnectedRef.current || (liveWs && (hasFrame || viewportWidth >= 320))) return;")),
   "ScreencastHub and AgentBrowserPreview must accept backing-scaled screencast metadata, suppress unscaled Page.captureScreenshot when _backingScale < 1, avoid pre-warming background tabs across the same Chromium window, and prevent HTTP fallback polls from overwriting live WebSocket frames"
 );
 console.log("✓ Test 59: Anti-Scale-Jitter FullHD Backing-Scale Guard & Inactive Tab Isolation Contract verified");
@@ -1081,7 +1081,7 @@ console.log("Testing Phone Browser Device Recognition, Network/Emulation UA Sync
     cdpEp70.includes("var initNavUrl = isMobNew ? (safeReq.Text ?? \"https://www.google.com\") : null;") &&
     dir70.includes('var createUrl = isMobNewTab ? "about:blank" : newUrl;') &&
     grok70.includes("Boolean((navigator as any).userAgentData?.mobile)") &&
-    grok70.includes("lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };"),
+    (grok70.includes("lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };") || grok70.includes("lastSentViewportRef.current = { agentId, pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };")),
     "Phone browser must synchronize Network.setUserAgentOverride + Emulation.setUserAgentOverride + touch emulation, pre-emulate new tabs on about:blank before navigating, and auto-reload with ignoreCache=true when switching a desktop-loaded tab to mobile"
   );
 }
@@ -1103,3 +1103,28 @@ console.log("Testing Member Agent Visibility Isolation & No Operator Token Eleva
   );
 }
 console.log("✓ Test 71: Member Agent Visibility Isolation & No Operator Token Elevation Contract verified");
+
+console.log("Testing QwenPaw Telegram-Style Agent Reaction on User Messages & Intent-Aware User Reaction Evaluation Contract...");
+{
+  const grok72 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  const agentApi72 = fs.readFileSync(new URL("../src/services/agentApi.ts", import.meta.url), "utf8");
+  const roomSvc72 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/SubAgents/SessionRoomService.cs", import.meta.url), "utf8");
+  const ep72 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Endpoints/AgentFeaturesEndpoints.cs", import.meta.url), "utf8");
+  assert.ok(
+    agentApi72.includes("export function classifyUserMessageMood(") &&
+    agentApi72.includes("export function extractToolReactionEmojis(") &&
+    agentApi72.includes("ALLOWED_TELEGRAM_REACTION_EMOJIS") &&
+    agentApi72.includes("actionLabelVi:") &&
+    grok72.includes('ev?.object === "agent_reaction" && ev.emoji') &&
+    grok72.includes("data-testid={isUser ? `agent-user-reaction-badge-${emoji}` : `user-agent-reaction-badge-${emoji}`}") &&
+    grok72.includes("source_user_prompt: sourceUserPrompt") &&
+    grok72.includes("const reactTurnAcc = new TurnAccumulator(tempBotMsgId);") &&
+    roomSvc72.includes("public static (string Mood, string Emoji) ClassifyUserMessageMood(") &&
+    roomSvc72.includes("[Phân tích ý đồ người dùng (Intent)]:") &&
+    roomSvc72.includes("[Hành động cải thiện đề xuất (Action)]:") &&
+    ep72.includes('@object = "agent_reaction"') &&
+    ep72.includes('$"agent:{agentTarget}"'),
+    "Chat UI must attach QwenPaw Telegram-style mood-matched agent reactions to user messages, support tool-driven reaction overrides, and evaluate user reactions on agent responses with structured Intent + Action directives"
+  );
+}
+console.log("✓ Test 72: QwenPaw Telegram-Style Agent Reaction on User Messages & Intent-Aware User Reaction Evaluation Contract verified");

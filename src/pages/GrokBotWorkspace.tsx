@@ -1138,6 +1138,8 @@ import {
   postChatRoomMessage,
   submitMessageReaction,
   classifyReactionEmoji,
+  classifyUserMessageMood,
+  extractToolReactionEmojis,
   updateChatTitle,
   updateChatRoomTitle,
   updateChatRoomTriagePolicy,
@@ -6426,7 +6428,7 @@ function SelkiesViewer({
     setTabLoadingById({});
     liveTabMetaRef.current = {};
   }, [agentId]);
-  const effectiveViewMode: "phone" | "desktop" = browserViewModeOverride ?? (isPhoneClient && !isLandscapeRotated ? "phone" : "desktop");
+  const effectiveViewMode: "phone" | "desktop" = browserViewModeOverride ?? (isPhoneClient ? "phone" : "desktop");
   const isDesktopSiteMode = effectiveViewMode === "desktop";
   const setIsDesktopSiteMode = (next: boolean | ((prev: boolean) => boolean)) => {
     const curDesktop = effectiveViewMode === "desktop";
@@ -6520,16 +6522,39 @@ function SelkiesViewer({
     return tabOpQueueRef.current;
   };
   const computeActiveBrowserViewport = (modeOverride?: "phone" | "desktop") => {
-    const rawW = isLandscapeRotated ? Math.max(320, boxSize.h - 76) : Math.max(320, boxSize.w);
-    const rawH = isLandscapeRotated ? Math.max(240, boxSize.w) : Math.max(240, boxSize.h - 76);
+    const hideChromeHeaderOnPhoneFullscreen = Boolean(isMaximized && isPhoneClient);
+    const chromeHeaderOffset = hideChromeHeaderOnPhoneFullscreen ? 0 : 76;
+    const rawW = isLandscapeRotated
+      ? Math.max(320, boxSize.h)
+      : Math.max(320, boxSize.w);
+    const rawH = isLandscapeRotated
+      ? Math.max(240, boxSize.w - chromeHeaderOffset)
+      : Math.max(240, boxSize.h - chromeHeaderOffset);
     const scaleFactor = browserZoomPercent < 100 ? 100 / Math.max(50, browserZoomPercent) : 1;
     const targetMode = modeOverride ?? effectiveViewMode;
-    const effectiveMob = targetMode === "phone" && !isLandscapeRotated;
+    const effectiveMob = targetMode === "phone";
     if (effectiveMob) {
+      const isLandscape = isLandscapeRotated || rawW > rawH;
       if (!isPhoneClient) {
+        if (isLandscape) {
+          return {
+            w: Math.min(932, Math.max(640, Math.round(844 * scaleFactor))),
+            h: Math.min(480, Math.max(320, Math.round(390 * scaleFactor))),
+            isMobile: true,
+          };
+        }
         return {
           w: Math.min(430, Math.max(375, Math.round(390 * scaleFactor))),
           h: Math.min(932, Math.max(640, Math.round(844 * scaleFactor))),
+          isMobile: true,
+        };
+      }
+      if (isLandscape) {
+        const mobH = Math.max(320, Math.min(480, rawH));
+        const mobW = Math.round(rawW * (mobH / Math.max(1, rawH)));
+        return {
+          w: Math.min(1080, Math.max(480, Math.round(mobW * scaleFactor))),
+          h: Math.min(480, Math.max(240, Math.round(mobH * scaleFactor))),
           isMobile: true,
         };
       }
@@ -8268,8 +8293,49 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
           isLandscapeRotated ? "z-20 shadow-2xl" : "w-full h-full flex-1"
         }`}
       >
-        {/* Unified Customized Browser Tab Strip & Omnibox Header on BOTH Web and Phone */}
-        {renderBrowserChromeHeader()}
+        {/* Unified Customized Browser Tab Strip & Omnibox Header (Hidden in Fullscreen Mode on Phone for 100% Web Viewport) */}
+        {!(isMaximized && isPhoneClient) && renderBrowserChromeHeader()}
+
+        {/* Compact Floating Exit-Fullscreen Control Pill on Phone when Web Controls are hidden */}
+        {isMaximized && isPhoneClient && (
+          <div
+            data-testid="agent-browser-phone-fullscreen-floating-bar"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-2.5 right-2.5 z-50 flex items-center gap-1 p-1 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md border border-white/15 shadow-lg text-white transition-all"
+          >
+            <button
+              type="button"
+              data-testid="agent-browser-phone-fullscreen-rotate-btn"
+              onClick={() => {
+                triggerHaptic(8);
+                setIsLandscapeRotated((r) => !r);
+              }}
+              className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                isLandscapeRotated ? "bg-[#1a73e8] text-white" : "hover:bg-white/15 text-white/90"
+              }`}
+              title={isLandscapeRotated ? "Quay về màn hình dọc" : "Xoay ngang màn hình 90°"}
+              aria-label="Toggle landscape rotation"
+            >
+              <Smartphone size={13} className={isLandscapeRotated ? "rotate-90 transition-transform" : "transition-transform"} />
+            </button>
+            {onToggleMaximize && (
+              <button
+                type="button"
+                data-testid="agent-browser-phone-fullscreen-exit-btn"
+                onClick={() => {
+                  triggerHaptic(8);
+                  onToggleMaximize();
+                }}
+                className="h-7 px-2.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                title={maximizeTooltip || "Thoát toàn màn hình (Hiện thanh điều khiển)"}
+                aria-label="Exit fullscreen and show browser controls"
+              >
+                <Minimize2 size={12} />
+                <span>Thu nhỏ</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Main Webpage Viewport Area (Full Height & Interactive Touch/Mouse/Pinch-Zoom) */}
         <div className="relative flex-1 w-full min-h-0 bg-[#F8F3ED] dark:bg-[#0a0a0f] overflow-hidden flex items-center justify-center">
@@ -8392,7 +8458,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             interactive={true}
             isResizing={isResizing}
             mobileInputMode={mobileInteractionMode}
-            isMobileDevice={effectiveViewMode === "phone" && !isLandscapeRotated}
+            isMobileDevice={effectiveViewMode === "phone"}
             isVirtualKeyboardOpen={isVirtualKeyboardOpen}
             virtualKeyboardHeight={virtualKeyboardHeight}
             viewportWidth={computeActiveBrowserViewport().w}
@@ -8720,8 +8786,10 @@ function AgentBrowserPreview({
     const { x, y } = cursorNormRef.current;
     const box = getRenderedImageBox();
     if (box && box.rect.width > 0 && box.rect.height > 0) {
-      curEl.style.left = `${(box.offsetX + x * box.renderW).toFixed(1)}px`;
-      curEl.style.top = `${(box.offsetY + y * box.renderH).toFixed(1)}px`;
+      const layoutW = isLandscapeRotated ? box.renderH : box.renderW;
+      const layoutH = isLandscapeRotated ? box.renderW : box.renderH;
+      curEl.style.left = `${(box.offsetX + x * layoutW).toFixed(1)}px`;
+      curEl.style.top = `${(box.offsetY + y * layoutH).toFixed(1)}px`;
     } else {
       curEl.style.left = `${(x * 100).toFixed(2)}%`;
       curEl.style.top = `${(y * 100).toFixed(2)}%`;
@@ -14359,7 +14427,15 @@ ${targetItem.text}`;
     if (foundMsg && selectedAgent?.id && selectedChatId) {
       const isAgentResponse = foundMsg.role === "assistant";
       const targetAgentId = foundMsg.senderAgentId || selectedAgent.id;
-      const snippet = (foundMsg.content || "").slice(0, 160).replace(/\s+/g, " ");
+      const snippet = (foundMsg.content || "").slice(0, 320).replace(/\s+/g, " ");
+      const msgIdx = messages.findIndex((m) => m.id === msgId);
+      let sourceUserPrompt: string | undefined;
+      for (let i = (msgIdx >= 0 ? msgIdx - 1 : messages.length - 1); i >= 0; i--) {
+        if (messages[i]?.role === "user" && messages[i]?.content) {
+          sourceUserPrompt = messages[i].content.slice(0, 240).replace(/\s+/g, " ");
+          break;
+        }
+      }
 
       if (isAdded) {
         // Post background record to session room ONLY when this session already has an active multi-agent room
@@ -14382,9 +14458,9 @@ ${targetItem.text}`;
           const originChatId = selectedChatId;
           const originAgentId = selectedAgent.id;
           const classification = classifyReactionEmoji(emoji);
-          const feedbackToast = `Đã gửi đánh giá ${emoji} (${classification.labelVi})`;
+          const feedbackToast = `Đã gửi đánh giá ${emoji} (${classification.labelVi} — ${classification.actionLabelVi})`;
           setForkToast(feedbackToast);
-          setTimeout(() => setForkToast(null), 2500);
+          setTimeout(() => setForkToast(null), 3200);
 
           // Tạo placeholder turn phản hồi ngầm cho Agent mà không tạo thêm user bubble
           const tempBotMsgId = `bot-react-${Date.now()}`;
@@ -14404,7 +14480,7 @@ ${targetItem.text}`;
           setActiveRespondingAgent({
             id: targetAgentId,
             name: foundMsg.senderAgentName || selectedAgent.name,
-            statusText: `${foundMsg.senderAgentName || selectedAgent.name} đang phản hồi đánh giá ${emoji}...`,
+            statusText: `${foundMsg.senderAgentName || selectedAgent.name} đang xử lý đánh giá ${emoji} (${classification.actionLabelVi})...`,
           });
 
           // Gọi API submitMessageReaction hỗ trợ stream
@@ -14415,6 +14491,7 @@ ${targetItem.text}`;
             message_snippet: snippet,
             target_agent_id: targetAgentId,
             trigger_agent_response: true,
+            source_user_prompt: sourceUserPrompt,
           }).then(async (response) => {
             if (!response.ok || !response.body) {
               setStreamingChatIds((prev) => prev.filter((id) => id !== originChatId));
@@ -14427,6 +14504,7 @@ ${targetItem.text}`;
             const decoder = new TextDecoder();
             let buffer = "";
             let accumulated = "";
+            const reactTurnAcc = new TurnAccumulator(tempBotMsgId);
 
             while (true) {
               const { done, value } = await reader.read();
@@ -14443,7 +14521,25 @@ ${targetItem.text}`;
                   if (rawData === "[DONE]") break;
                   try {
                     const parsed = JSON.parse(rawData);
-                    if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {
+                    const ingested = reactTurnAcc.ingest(parsed);
+                    if (ingested) {
+                      const snap = reactTurnAcc.snapshot();
+                      if (snap.content) accumulated = snap.content;
+                      setMessages((prev: ChatMessage[]) =>
+                        prev.map((m: ChatMessage) =>
+                          m.id === tempBotMsgId
+                            ? {
+                                ...m,
+                                content: snap.content || accumulated,
+                                textSegments: snap.textSegments,
+                                reasoning: snap.reasoning,
+                                steps: snap.steps,
+                                toolCalls: snap.toolCalls,
+                              }
+                            : m
+                        )
+                      );
+                    } else if ((parsed.object === "content" && parsed.type === "text") || parsed.type === "text") {
                       if (parsed.delta && parsed.text) {
                         accumulated += parsed.text;
                       } else if (parsed.text) {
@@ -18077,14 +18173,21 @@ const selectedAgentTheme = getAgentColorTheme(
     updateTurnMessages((prev) => {
       // If user message is already shown at the end (queued or instant echo), just append bot placeholder
       const lastMsg = prev[prev.length - 1];
+      const { emoji: autoUserEmoji } = classifyUserMessageMood(userText, false, originChatId);
       if (lastMsg && lastMsg.role === "user" && lastMsg.content === userText) {
-        return [...prev, initialBotMsg];
+        const updatedLast = lastMsg.reactions && lastMsg.reactions.length > 0
+          ? lastMsg
+          : { ...lastMsg, reactions: autoUserEmoji ? [autoUserEmoji] : undefined };
+        return [...prev.slice(0, -1), updatedLast, initialBotMsg];
       }
+      const newUserMsgId = `usr-${Date.now()}`;
+      const { emoji: deterministicEmoji } = classifyUserMessageMood(userText, false, newUserMsgId);
       const userMsg: ChatMessage = {
-        id: `usr-${Date.now()}`,
+        id: newUserMsgId,
         role: "user",
         content: userText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        reactions: deterministicEmoji ? [deterministicEmoji] : undefined,
       };
       return [...prev, userMsg, initialBotMsg];
     });
@@ -18201,8 +18304,22 @@ const selectedAgentTheme = getAgentColorTheme(
         }
         lastPaint = now;
         const snap = turnAcc.snapshot();
+        const toolOverrideEmojis: string[] = [];
+        if (snap.toolCalls && snap.toolCalls.length > 0) {
+          for (const tc of snap.toolCalls) {
+            toolOverrideEmojis.push(...extractToolReactionEmojis(tc.tool, tc.args, tc.result));
+          }
+        }
         updateTurnMessages((prev) =>
-          prev.map((m) => (m.id === tempBotMsgId ? { ...m, content: snap.content, textSegments: snap.textSegments, reasoning: snap.reasoning, steps: snap.steps, toolCalls: snap.toolCalls } : m))
+          prev.map((m, idx) => {
+            if (m.id === tempBotMsgId) {
+              return { ...m, content: snap.content, textSegments: snap.textSegments, reasoning: snap.reasoning, steps: snap.steps, toolCalls: snap.toolCalls };
+            }
+            if (toolOverrideEmojis.length > 0 && m.role === "user" && prev[idx + 1]?.id === tempBotMsgId) {
+              return { ...m, reactions: Array.from(new Set(toolOverrideEmojis)).slice(0, 3) };
+            }
+            return m;
+          })
         );
         if (selectedChatIdRef.current === originChatId && !isUserScrolledUpRef.current) {
           jumpToBottom();
@@ -18232,6 +18349,15 @@ const selectedAgentTheme = getAgentColorTheme(
             accumulated = "";
           },
           onEvent: (ev) => {
+            if (ev?.object === "agent_reaction" && ev.emoji) {
+              updateTurnMessages((prev) => {
+                const botIdx = prev.findIndex((m) => m.id === tempBotMsgId);
+                const targetUserIdx = botIdx > 0 ? botIdx - 1 : prev.map((m) => m.role).lastIndexOf("user");
+                if (targetUserIdx < 0) return prev;
+                return prev.map((m, idx) => (idx === targetUserIdx ? { ...m, reactions: [String(ev.emoji)] } : m));
+              });
+              return;
+            }
             if (ev?.object === "room_event") {
               if (selectedChatIdRef.current === originChatId) {
                 if (ev.room) {
@@ -20576,8 +20702,11 @@ const selectedAgentTheme = getAgentColorTheme(
               );
               const hasThinking = Boolean(hasSteps || hasTools || msg.reasoning || msg.roomId || msg.senderAgentId || hasRoomTurns);
               const { replyTo: parsedReplyTo, cleanContent, attachments: parsedAttachments } = parseQuotedReplyFromContent(msg.content, msg.replyTo, msg.senderAgentId || selectedAgent?.slug || selectedAgent?.id || "default", msg.toolCalls, msg.steps);
+              const fallbackUserReaction = isUser && (!msg.reactions || msg.reactions.length === 0)
+                ? [classifyUserMessageMood(cleanContent || msg.content, Boolean(parsedAttachments && parsedAttachments.length > 0), msg.id).emoji]
+                : [];
               const currentReactions = isUser
-                ? []
+                ? Array.from(new Set([...(msg.reactions || fallbackUserReaction), ...(msgReactions[msg.id] || [])]))
                 : Array.from(new Set([...(msg.reactions || []), ...(msgReactions[msg.id] || [])]));
               const isReactOpen = activeReactPopoverMsgId === msg.id;
               const isExtendOpen = activeExtendPopoverMsgId === msg.id;
@@ -20880,24 +21009,33 @@ const selectedAgentTheme = getAgentColorTheme(
                     <div
                       data-testid={`msg-action-bar-${msg.id}`}
                       className={`relative flex items-center gap-1 p-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-all duration-150 ${
-                        speakingMsgId === msg.id || isReactOpen || isExtendOpen || (!isUser && currentReactions.length > 0)
+                        speakingMsgId === msg.id || isReactOpen || isExtendOpen || currentReactions.length > 0
                           ? "opacity-100 flex"
                           : "hidden sm:flex sm:opacity-0 sm:group-hover/msg:opacity-100"
                       }`}
                     >
                       {/* Integrated Reaction Badge(s) inside the pill */}
-                      {!isUser && currentReactions.length > 0 && (
+                      {currentReactions.length > 0 && (
                         <div data-testid={`msg-reactions-${msg.id}`} className="flex items-center gap-0.5 pl-0.5 pr-1 border-r border-slate-200 dark:border-white/10">
                           {currentReactions.map((emoji) => (
                             <button
                               key={emoji}
                               type="button"
+                              data-testid={isUser ? `agent-user-reaction-badge-${emoji}` : `user-agent-reaction-badge-${emoji}`}
                               onClick={(e) => {
                                 e.stopPropagation();
+                                if (isUser) return;
                                 toggleMessageReaction(msg.id, emoji, msg);
                               }}
-                              style={{ backgroundColor: selectedAgentTheme.bgLight, borderColor: selectedAgentTheme.borderLight }} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] text-slate-800 dark:text-neutral-100 hover:scale-110 active:scale-90 transition-transform cursor-pointer border"
-                              title="Bạn đã phản hồi cảm xúc này. Bấm để gỡ bỏ."
+                              style={{ backgroundColor: selectedAgentTheme.bgLight, borderColor: selectedAgentTheme.borderLight }}
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] text-slate-800 dark:text-neutral-100 transition-transform border ${
+                                isUser ? "cursor-default" : "hover:scale-110 active:scale-90 cursor-pointer"
+                              }`}
+                              title={
+                                isUser
+                                  ? `${selectedAgent?.name || "Agent"} đã thả cảm xúc ${emoji} cho tin nhắn của bạn`
+                                  : `Bạn đã phản hồi cảm xúc ${emoji} (${classifyReactionEmoji(emoji).labelVi}). Bấm để gỡ bỏ.`
+                              }
                             >
                               <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
                               <span style={{ color: selectedAgentTheme.primary }} className="text-[10px] font-mono font-semibold leading-none">1</span>
@@ -24306,9 +24444,7 @@ const selectedAgentTheme = getAgentColorTheme(
               {(isMicActive || realtimeVoiceStatus === "speaking" || realtimeVoiceStatus === "thinking") && (
                 <div style={{ color: textColorTertiary }} className="mt-4 text-xs font-medium tracking-wide">
                   {isMicActive
-                    ? "Đang thu âm... Nhấn viên thuốc sương khói để gửi"
-                    : realtimeVoiceStatus === "speaking"
-                    ? "Nhấn vào viên thuốc trung tâm để ngắt lời"
+                    ? "Đang lắng nghe..."
                     : "Đang xử lý..."}
                 </div>
               )}
@@ -26606,15 +26742,24 @@ ${chat.id}`);
       {/* ========================================================= */}
       {isBrowserModalOpen && (() => {
         const browserTarget = getAgentBrowserUrl(selectedAgent, agentBrowser);
+        const isPhoneFullscreenModal =
+          typeof window !== "undefined" &&
+          Math.min(window.innerWidth, window.innerHeight) < 600;
         return (
           <div
             data-testid="computer-maximized-modal-backdrop"
-            className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-xs animate-in fade-in duration-150 select-none overflow-hidden"
+            className={`fixed inset-0 z-[100] flex items-center justify-center ${
+              isPhoneFullscreenModal ? "p-0" : "p-0 sm:p-4 md:p-6"
+            } bg-black/85 backdrop-blur-xs animate-in fade-in duration-150 select-none overflow-hidden`}
             onClick={() => handleSetBrowserModalOpen(false)}
           >
             <div
               data-testid="computer-maximized-modal"
-              className="w-full h-full sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl bg-white dark:bg-[#121218] border-0 sm:border border-slate-200 dark:border-[#252532] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-150"
+              className={`${
+                isPhoneFullscreenModal
+                  ? "w-full h-full max-w-full max-h-[100dvh] rounded-none border-0"
+                  : "w-full h-full sm:w-[95vw] sm:h-[95vh] max-w-full sm:max-w-[95vw] max-h-[100dvh] sm:max-h-[95vh] rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-[#252532]"
+              } bg-white dark:bg-[#121218] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-150`}
               onClick={(e) => e.stopPropagation()}
             >
 
