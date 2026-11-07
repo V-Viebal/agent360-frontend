@@ -6419,6 +6419,12 @@ function SelkiesViewer({
       const saved = sessionStorage.getItem(`skyer_browser_view_mode_${agentId}`);
       setBrowserViewModeOverride(saved === "phone" || saved === "desktop" ? saved : null);
     } catch {}
+    selectedTabIdRef.current = "";
+    setSelectedTabId("");
+    setBrowserTabs([]);
+    setAddressInput("");
+    setTabLoadingById({});
+    liveTabMetaRef.current = {};
   }, [agentId]);
   const effectiveViewMode: "phone" | "desktop" = browserViewModeOverride ?? (isPhoneClient && !isLandscapeRotated ? "phone" : "desktop");
   const isDesktopSiteMode = effectiveViewMode === "desktop";
@@ -8943,7 +8949,7 @@ function AgentBrowserPreview({
     }
   };
 
-  // 0. Instant 0ms Frame Restore on Tab Switch from in-memory tab cache
+  // 0. Instant 0ms Frame Restore on Tab/Agent Switch from in-memory tab cache (resets stale previous-agent canvas when uncached)
   useLayoutEffect(() => {
     const cached = frameCacheRef?.current?.[cacheKey];
     if (cached && cached !== "__loading__") {
@@ -8957,6 +8963,17 @@ function AgentBrowserPreview({
         imgRef.current.src = cached;
       }
       setHasFrame(true);
+    } else {
+      currentSrcRef.current = "";
+      usingCanvasGpuRef.current = false;
+      if (canvasRef.current) {
+        canvasRef.current.style.display = "none";
+      }
+      if (imgRef.current) {
+        imgRef.current.style.display = "none";
+        imgRef.current.removeAttribute("src");
+      }
+      setHasFrame(false);
     }
   }, [cacheKey]);
 
@@ -9072,7 +9089,7 @@ function AgentBrowserPreview({
           if (curVp.w >= 320 && curVp.h >= 240) {
             const rw = Math.round(curVp.w);
             const rh = Math.round(curVp.h);
-            lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };
+            lastSentViewportRef.current = { agentId, pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };
             try {
               ws?.send(
                 JSON.stringify({
@@ -9255,7 +9272,7 @@ function AgentBrowserPreview({
     };
   }, [enabled, agentId, pageId, liveWs]);
 
-  const lastSentViewportRef = useRef<{ pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number; confirmed?: boolean }>({ pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0, confirmed: false });
+  const lastSentViewportRef = useRef<{ agentId?: string; pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number; confirmed?: boolean }>({ agentId: undefined, pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0, confirmed: false });
 
   // 2. Smooth Debounced Viewport Synchronization (Frozen while Phone Virtual Keyboard is open or during active splitter drag to prevent CDP resize thrash; flushes smoothly once settled)
   useEffect(() => {
@@ -9265,13 +9282,13 @@ function AgentBrowserPreview({
     const w = Math.round(viewportWidth);
     const h = Math.round(viewportHeight);
     const prev = lastSentViewportRef.current;
-    const forceResync = prev.refreshSignal !== refreshSignal;
-    if (!forceResync && prev.confirmed && prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
+    const forceResync = prev.refreshSignal !== refreshSignal || prev.agentId !== agentId;
+    if (!forceResync && prev.confirmed && prev.agentId === agentId && prev.pageId === pageId && prev.isMobile === isMobileDevice && Math.abs(prev.w - w) <= 2 && Math.abs(prev.h - h) <= 2) {
       return;
     }
     const timer = setTimeout(() => {
-      const modeFlipped = prev.pageId === pageId && prev.isMobile !== undefined && prev.isMobile !== isMobileDevice;
-      lastSentViewportRef.current = { pageId, w, h, isMobile: isMobileDevice, refreshSignal, confirmed: true };
+      const modeFlipped = prev.agentId === agentId && prev.pageId === pageId && prev.isMobile !== undefined && prev.isMobile !== isMobileDevice;
+      lastSentViewportRef.current = { agentId, pageId, w, h, isMobile: isMobileDevice, refreshSignal, confirmed: true };
       const deviceType = isMobileDevice ? "phone" : "desktop";
       const sock = wsRef.current;
       if (sock && sock.readyState === WebSocket.OPEN) {
@@ -9294,7 +9311,7 @@ function AgentBrowserPreview({
     const ctrl = new AbortController();
 
     const fetchFallbackFrame = async () => {
-      if (document.hidden || wsConnectedRef.current || (liveWs && hasFrame)) return;
+      if (document.hidden || wsConnectedRef.current || (liveWs && (hasFrame || viewportWidth >= 320))) return;
       try {
         const next = await fetchAgentBrowserFrame(agentBrowserImageUrl(agentId, Date.now(), pageId), ctrl.signal);
         if (!alive || wsConnectedRef.current) {
