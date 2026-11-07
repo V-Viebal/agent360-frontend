@@ -1,3 +1,4 @@
+import { ChannelChatIcon } from "./ChannelChatIcon";
 import { useTranslation } from "../i18n/LanguageContext";
 import { useState, useEffect, useMemo } from "react";
 import { CustomSelect } from "./ui/CustomSelect";
@@ -395,11 +396,36 @@ export function ScheduleJobModal({
               value={targetChannel}
               onChange={(val) => setTargetChannel(val)}
               options={[
-                { value: "telegram", label: "Telegram Channel" },
-                { value: "discord", label: "Discord Channel" },
-                { value: "console", label: "Internal Console" },
-                { value: "matrix", label: "Matrix Room" },
-                { value: "slack", label: "Slack Workspace" },
+                {
+                  value: "telegram",
+                  label: "Telegram Channel",
+                  icon: <ChannelChatIcon channel="telegram" isSelected={true} size={15} />,
+                },
+                {
+                  value: "zalo",
+                  label: "Zalo Chat (Web/Bot)",
+                  icon: <ChannelChatIcon channel="zalo" isSelected={true} size={15} />,
+                },
+                {
+                  value: "discord",
+                  label: "Discord Channel",
+                  icon: <ChannelChatIcon channel="discord" isSelected={true} size={15} />,
+                },
+                {
+                  value: "slack",
+                  label: "Slack Workspace",
+                  icon: <ChannelChatIcon channel="slack" isSelected={true} size={15} />,
+                },
+                {
+                  value: "matrix",
+                  label: "Matrix Room",
+                  icon: <ChannelChatIcon channel="matrix" isSelected={true} size={15} />,
+                },
+                {
+                  value: "console",
+                  label: "Internal Console",
+                  icon: <ChannelChatIcon channel="console" isSelected={true} size={15} />,
+                },
               ]}
               className="w-full"
               triggerClassName="w-full bg-slate-50 dark:bg-[#181824] border border-slate-200 dark:border-[#2a2a3c] hover:border-slate-300 dark:hover:border-[#3a3a50] focus:border-[var(--agent-color)] rounded-xl px-3 py-2 text-slate-800 dark:text-white font-mono text-xs"

@@ -6,6 +6,7 @@ import { playMicroClick } from "../../services/notificationService";
 export interface SelectOption {
   value: string;
   label: string;
+  icon?: React.ReactNode;
   badge?: string;
   description?: string;
 }
@@ -238,8 +239,13 @@ export function CustomSelect({
             />
           ) : (
             <>
-              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left group-hover/select-trigger:text-slate-900 dark:group-hover/select-trigger:text-white transition-colors relative">
-                <span className="relative pb-0.5 border-b border-transparent group-hover/select-trigger:border-neutral-500/50 transition-colors">
+              <span className="truncate text-inherit font-medium min-w-0 flex-1 text-left group-hover/select-trigger:text-slate-900 dark:group-hover/select-trigger:text-white transition-colors relative flex items-center gap-2">
+                {selectedOption?.icon && (
+                  <span className="shrink-0 flex items-center justify-center">
+                    {selectedOption.icon}
+                  </span>
+                )}
+                <span className="relative pb-0.5 border-b border-transparent group-hover/select-trigger:border-neutral-500/50 transition-colors truncate">
                   {selectedOption ? selectedOption.label : placeholder}
                 </span>
               </span>
@@ -335,13 +341,20 @@ export function CustomSelect({
                           : "text-slate-800 dark:text-neutral-300 hover:bg-slate-50 dark:hover:bg-[#1a1a24] hover:text-slate-900 dark:hover:text-white"
                       }`}
                     >
-                      <div className="flex flex-col truncate pr-2">
-                        <span className="truncate">{opt.label}</span>
-                        {opt.description && (
-                          <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-normal truncate">
-                            {opt.description}
+                      <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+                        {opt.icon && (
+                          <span className="shrink-0 flex items-center justify-center">
+                            {opt.icon}
                           </span>
                         )}
+                        <div className="flex flex-col truncate">
+                          <span className="truncate">{opt.label}</span>
+                          {opt.description && (
+                            <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-normal truncate">
+                              {opt.description}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {opt.badge && (
                         <span className="text-[9px] font-mono font-medium text-[#ea580c] dark:text-[#f8a87c] bg-orange-500/10 dark:bg-[#f8a87c]/10 px-1.5 py-0.2 rounded ml-1 shrink-0 border border-orange-500/20 dark:border-[#f8a87c]/20">
