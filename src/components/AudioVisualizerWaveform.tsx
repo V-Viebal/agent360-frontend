@@ -7,6 +7,7 @@ interface AudioVisualizerWaveformProps {
   onAudioLevel?: (level: number) => void;
   agentId?: string;
   themeColor?: string;
+  externalLevel?: number;
 }
 
 export function AudioVisualizerWaveform({
@@ -15,6 +16,7 @@ export function AudioVisualizerWaveform({
   onAudioLevel,
   agentId,
   themeColor,
+  externalLevel,
 }: AudioVisualizerWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -47,6 +49,46 @@ export function AudioVisualizerWaveform({
     }
 
     let isMounted = true;
+
+    // Fast-path: When externalLevel is provided by parent Web Audio pipeline, render directly at 60fps without opening a second hardware mic stream
+    if (typeof externalLevel === "number") {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      let phase = 0;
+      const drawExternal = () => {
+        if (!isMounted || !canvasRef.current) return;
+        animationFrameRef.current = requestAnimationFrame(drawExternal);
+        phase += 0.22;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const barCount = 28;
+        const barWidth = 2.2;
+        const gap = 2.2;
+        const totalWidth = barCount * (barWidth + gap);
+        const startX = (canvas.width - totalWidth) / 2;
+        const baseColor = themeColor || "#ffffff";
+        const norm = Math.min(1, Math.max(0.12, externalLevel / 100));
+
+        for (let i = 0; i < barCount; i++) {
+          const wave = 0.45 + 0.55 * Math.sin(phase + i * 0.42);
+          const h = Math.max(3.5, Math.min(canvas.height - 2, norm * wave * (canvas.height - 2)));
+          const x = startX + i * (barWidth + gap);
+          const y = (canvas.height - h) / 2;
+          ctx.fillStyle = baseColor;
+          ctx.beginPath();
+          ctx.roundRect(x, y, barWidth, h, 1.5);
+          ctx.fill();
+        }
+      };
+      drawExternal();
+      return () => {
+        isMounted = false;
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      };
+    }
 
     async function setupAudio() {
       try {
@@ -167,33 +209,18 @@ export function AudioVisualizerWaveform({
         audioContextRef.current.close().catch(() => {});
       }
     };
-  }, [isRecording]);
+  }, [isRecording, typeof externalLevel === "number" ? Math.round(externalLevel / 4) : undefined]);
 
   if (!isRecording) return null;
 
+  const activeLvl = typeof externalLevel === "number" ? externalLevel : currentLevel;
+
   return (
-    <div
-      className={`flex items-center gap-2 px-2 sm:px-2.5 py-1 rounded-full transition-all duration-150 border animate-in fade-in select-none ${
-        currentLevel > 40
-          ? "bg-red-500/20 border-red-500/50 shadow-xs shadow-red-500/20"
-          : "bg-red-500/10 border-red-500/25"
-      } ${className}`}
-    >
-      <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
-      <span className="text-[10px] font-mono text-red-400 font-semibold uppercase tracking-wider shrink-0 hidden xs:inline">
-        Listening
-      </span>
-      <canvas
-        ref={canvasRef}
-        width={80}
-        height={currentLevel > 50 ? 24 : 18}
-        className="block shrink-0 transition-all duration-100"
-      />
-      {currentLevel > 0 && (
-        <span className="text-[9px] font-mono text-neutral-400 shrink-0 hidden sm:inline">
-          {currentLevel}%
-        </span>
-      )}
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={140}
+      height={24}
+      className={`block shrink-0 transition-all duration-100 max-w-full ${className}`}
+    />
   );
 }

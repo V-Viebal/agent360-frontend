@@ -49,9 +49,9 @@ export function VoiceRecordSettingsModal({
   const [silenceDuration, setSilenceDuration] = useState<number>(() => {
     try {
       const v = localStorage.getItem("agent360_vad_silence_ms");
-      return v ? parseInt(v, 10) : 2400;
+      return v ? parseInt(v, 10) : 1200;
     } catch {
-      return 2400;
+      return 1200;
     }
   });
   const [vadSensitivity, setVadSensitivity] = useState<"quiet" | "normal" | "noisy">(() => {
@@ -400,7 +400,7 @@ export function VoiceRecordSettingsModal({
                 <div className="pt-1 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
                   <span>Silence Pause Window:</span>
                   <div className="flex items-center gap-1.5">
-                    {[1500, 2400, 3500].map((ms) => (
+                    {[800, 1200, 2000].map((ms) => (
                       <button
                         key={ms}
                         type="button"
