@@ -1128,3 +1128,40 @@ console.log("Testing QwenPaw Telegram-Style Agent Reaction on User Messages & In
   );
 }
 console.log("✓ Test 72: QwenPaw Telegram-Style Agent Reaction on User Messages & Intent-Aware User Reaction Evaluation Contract verified");
+
+console.log("Testing Chat UI Grab Message to Reply & Context Emphasis Contract...");
+{
+  const grok73 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  const agentApi73 = fs.readFileSync(new URL("../src/services/agentApi.ts", import.meta.url), "utf8");
+  assert.ok(
+    grok73.includes("setSwipingMsgId") &&
+    grok73.includes("swipe-reply-indicator") &&
+    grok73.includes("handleMouseDownGrabMsg") &&
+    grok73.includes("[Trọng tâm ngữ cảnh được người dùng phản hồi & nhấn mạnh từ") &&
+    grok73.includes("*(Chỉ dẫn ngữ cảnh cho Agent: Người dùng đang reply trực tiếp vào nội dung trên để nhấn mạnh làm ngữ cảnh xử lý chính.") &&
+    agentApi73.includes("[Trọng tâm ngữ cảnh"),
+    "Chat UI must support horizontal swipe/grab-to-reply gesture with responsive visual indicator and inject structured reply emphasis context into user request"
+  );
+}
+console.log("✓ Test 73: Chat UI Grab Message to Reply & Context Emphasis Contract verified");
+
+console.log("Testing Cross-Agent Browser Tab Control, Fresh Target Creation & Full-Height Viewport Rendering Contract...");
+{
+  const grok74 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  const dir74 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserDirectory.cs", import.meta.url), "utf8");
+  const hub74 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/ScreencastHub.cs", import.meta.url), "utf8");
+  const ep74 = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Browser/AgentBrowserCdpEndpoint.cs", import.meta.url), "utf8");
+  assert.ok(
+    grok74.includes("const activeAgentIdRef = useRef<string>(agentId);") &&
+    grok74.includes("if (activeAgentIdRef.current !== reqAgentId) return;") &&
+    grok74.includes("const realNewId = res.createdTargetId || (res.targetId && res.targetId !== prevSelectedId ? res.targetId : undefined);") &&
+    grok74.includes('imgRef.current.style.objectFit = interactive && !nextUrl.startsWith("data:image/svg+xml") ? "fill" : "contain";') &&
+    dir74.includes("_browserSocketDiscoverEnabled") &&
+    dir74.includes("!existingTargetIds.Contains(tId)") &&
+    hub74.includes('if (action == "new_tab")') &&
+    hub74.includes("return (false, null);") &&
+    ep74.includes('string.Equals(wsProp.GetString(), "minimized", StringComparison.OrdinalIgnoreCase)'),
+    "Cross-agent browser switching must guard tab mutations against stale agent responses, exclude pre-existing Target.targetCreated replay events on disk profiles, never minimize other profiles on shared display, and preserve seed SVG aspect ratio"
+  );
+}
+console.log("✓ Test 74: Cross-Agent Browser Tab Control, Fresh Target Creation & Full-Height Viewport Rendering Contract verified");

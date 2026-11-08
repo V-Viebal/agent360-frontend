@@ -54,6 +54,13 @@ export function VoiceRecordSettingsModal({
       return 2400;
     }
   });
+  const [vadSensitivity, setVadSensitivity] = useState<"quiet" | "normal" | "noisy">(() => {
+    try {
+      return (localStorage.getItem("agent360_vad_sensitivity") as any) || "normal";
+    } catch {
+      return "normal";
+    }
+  });
 
   // Frequency bands (Bass / Mid / Treble) for live Equalizer Monitor
     const [voiceProfile, setVoiceProfileState] = useState<VoiceAudioProfile>(() => getVoiceAudioProfile());
@@ -183,8 +190,17 @@ export function VoiceRecordSettingsModal({
     setSilenceDuration(ms);
     try {
       localStorage.setItem("agent360_vad_silence_ms", ms.toString());
-      window.dispatchEvent(new CustomEvent("agent360_vad_settings_changed", { detail: { mode: vadMode, silenceDuration: ms } }));
-      broadcastAudioSettingChange("VAD_CHANGED", { detail: { mode: vadMode, silenceDuration: ms } });
+      window.dispatchEvent(new CustomEvent("agent360_vad_settings_changed", { detail: { mode: vadMode, silenceDuration: ms, sensitivity: vadSensitivity } }));
+      broadcastAudioSettingChange("VAD_CHANGED", { detail: { mode: vadMode, silenceDuration: ms, sensitivity: vadSensitivity } });
+    } catch {}
+  };
+
+  const handleSensitivityChange = (sens: "quiet" | "normal" | "noisy") => {
+    setVadSensitivity(sens);
+    try {
+      localStorage.setItem("agent360_vad_sensitivity", sens);
+      window.dispatchEvent(new CustomEvent("agent360_vad_settings_changed", { detail: { mode: vadMode, silenceDuration, sensitivity: sens } }));
+      broadcastAudioSettingChange("VAD_CHANGED", { detail: { mode: vadMode, silenceDuration, sensitivity: sens } });
     } catch {}
   };
 
@@ -380,25 +396,56 @@ export function VoiceRecordSettingsModal({
             </div>
 
             {vadMode === "continuous" && (
-              <div className="pt-1 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
-                <span>Silence Pause Window:</span>
-                <div className="flex items-center gap-1.5">
-                  {[1500, 2400, 3500].map((ms) => (
-                    <button
-                      key={ms}
-                      type="button"
-                      onClick={() => handleSilenceChange(ms)}
-                      className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
-                        silenceDuration === ms
-                          ? "bg-[var(--agent-primary)] text-black font-bold"
-                          : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
-                      }`}
-                    >
-                      {(ms / 1000).toFixed(1)}s
-                    </button>
-                  ))}
+              <>
+                <div className="pt-1 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400">
+                  <span>Silence Pause Window:</span>
+                  <div className="flex items-center gap-1.5">
+                    {[1500, 2400, 3500].map((ms) => (
+                      <button
+                        key={ms}
+                        type="button"
+                        onClick={() => handleSilenceChange(ms)}
+                        className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
+                          silenceDuration === ms
+                            ? "bg-[var(--agent-primary)] text-black font-bold"
+                            : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
+                        }`}
+                      >
+                        {(ms / 1000).toFixed(1)}s
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                <div className="pt-2 flex items-center justify-between text-xs font-mono text-slate-500 dark:text-neutral-400 border-t border-slate-200/60 dark:border-white/5">
+                  <div className="flex flex-col">
+                    <span className="text-white text-[11px] font-medium">Mic Sensitivity (VAD):</span>
+                    <span className="text-[10px] text-slate-400">
+                      {vadSensitivity === "noisy" ? "Ồn ào (Quán café, văn phòng)" : vadSensitivity === "quiet" ? "Rất nhạy (Phòng kín yên tĩnh)" : "Tiêu chuẩn"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: "quiet", label: "Phòng yên tĩnh" },
+                      { id: "normal", label: "Tiêu chuẩn" },
+                      { id: "noisy", label: "Lọc ồn ào" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSensitivityChange(item.id as any)}
+                        className={`px-2 py-0.5 rounded text-[11px] cursor-pointer transition-colors ${
+                          vadSensitivity === item.id
+                            ? "bg-[var(--agent-primary)] text-black font-bold"
+                            : "bg-slate-100 dark:bg-[#1c1c28] hover:bg-[#252538] text-slate-700 dark:text-neutral-300"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 

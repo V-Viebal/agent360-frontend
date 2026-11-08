@@ -904,7 +904,9 @@ function parseQuotedReplyFromContent(
       authorName: match[1].trim(),
       snippet: match[2].trim(),
     };
-    text = stripSharedRoomContext(match[3]);
+    let tail = match[3];
+    tail = tail.replace(/^\[Trọng tâm ngữ cảnh[^\]]*\][\s\S]*?\*\([^\n\r]*\)\*\s*(?:\r?\n)+/i, "");
+    text = stripSharedRoomContext(tail);
   }
 
   const attachments: ParsedChatAttachmentItem[] = [];
@@ -6517,6 +6519,8 @@ function SelkiesViewer({
   selectedTabIdRef.current = selectedTabId;
   const isEditingAddressRef = useRef<boolean>(false);
   isEditingAddressRef.current = isEditingAddress;
+  const activeAgentIdRef = useRef<string>(agentId);
+  activeAgentIdRef.current = agentId;
   const tabOpQueueRef = useRef<Promise<void>>(Promise.resolve());
   const enqueueTabMutation = (op: () => Promise<void>) => {
     tabOpQueueRef.current = tabOpQueueRef.current.then(op).catch(() => {});
@@ -6607,6 +6611,8 @@ function SelkiesViewer({
   };
   if (tabOrderLoadedForRef.current !== agentId) {
     tabOrderLoadedForRef.current = agentId;
+    tabMutationLockUntilRef.current = 0;
+    closedTabsUntilRef.current.clear();
     lastNonAnchorTabsRef.current = { tabs: [], at: 0 };
     try {
       const saved = sessionStorage.getItem(`skyer_browser_tab_order_${agentId}`);
@@ -6728,10 +6734,11 @@ function SelkiesViewer({
 
   // Sync live tabs & active URL from the agent's Chromium profile across both Desktop and Mobile
   const refreshBrowserTabs = async () => {
+    const reqAgentId = agentId;
     if (!agentId || draggingTabIdRef.current) return;
     try {
-      const info = await fetchAgentBrowser(agentId);
-      if (draggingTabIdRef.current) return;
+      const info = await fetchAgentBrowser(reqAgentId);
+      if (draggingTabIdRef.current || activeAgentIdRef.current !== reqAgentId) return;
       if (info?.vpn) {
         setVpnStatus(info.vpn);
       }
@@ -6749,9 +6756,9 @@ function SelkiesViewer({
           realTabs.length === 0 &&
           !canHoldPreviousNonAnchorTabs &&
           nowMs >= tabMutationLockUntilRef.current &&
-          nowMs - (autoNewTabAttemptedAtRef.current[agentId] || 0) > 8000
+          nowMs - (autoNewTabAttemptedAtRef.current[reqAgentId] || 0) > 8000
         ) {
-          autoNewTabAttemptedAtRef.current[agentId] = nowMs;
+          autoNewTabAttemptedAtRef.current[reqAgentId] = nowMs;
           void handleCreateNewTab();
           return;
         }
@@ -6792,7 +6799,7 @@ function SelkiesViewer({
             selectedTabIdRef.current = activeTab.targetId;
             setSelectedTabId(activeTab.targetId);
           }
-          if (!isEditingAddressRef.current && !curTabId.startsWith("optimistic-")) {
+          if (!isEditingAddressRef.current && !selectedTabIdRef.current.startsWith("optimistic-")) {
             const cleanUrl = activeTab.anchor ? "" : (activeTab.url || "");
             setAddressInput(cleanUrl);
           }
@@ -7138,19 +7145,20 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
 
   // Instant 0ms Optimistic New Tab creation with crisp Google homepage seed & seamless target ID swap
   const handleCreateNewTab = async () => {
+    const reqAgentId = agentId;
     triggerHaptic(8);
     setIsNavigating(true);
     tabMutationLockUntilRef.current = Date.now() + 3200;
 
     const existingGoogleTab = browserTabs.find((t) => (t.url || "").includes("google.com"));
-    const cachedGoogleFrame = existingGoogleTab ? tabFrameCacheRef.current[`${agentId}:${existingGoogleTab.targetId}`] : "";
+    const cachedGoogleFrame = existingGoogleTab ? tabFrameCacheRef.current[`${reqAgentId}:${existingGoogleTab.targetId}`] : "";
     const googleSeedFrame =
       cachedGoogleFrame && cachedGoogleFrame !== "__loading__"
         ? cachedGoogleFrame
         : INSTANT_GOOGLE_NEW_TAB_DATA_URL;
 
     const optId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    tabFrameCacheRef.current[`${agentId}:${optId}`] = googleSeedFrame;
+    tabFrameCacheRef.current[`${reqAgentId}:${optId}`] = googleSeedFrame;
     const prevSelectedId = selectedTabIdRef.current;
 
     const optTab: AgentBrowserTab = {
@@ -7172,7 +7180,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
     const vp = computeActiveBrowserViewport();
     await enqueueTabMutation(async () => {
       try {
-        const res = await dispatchAgentBrowserInput(agentId, {
+        const res = await dispatchAgentBrowserInput(reqAgentId, {
           action: "new_tab",
           text: "https://www.google.com",
           pageId: prevSelectedId && !prevSelectedId.startsWith("optimistic-") ? prevSelectedId : undefined,
@@ -7181,10 +7189,11 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
           isMobile: vp.isMobile,
           deviceType: vp.isMobile ? "phone" : "desktop",
         });
+        if (activeAgentIdRef.current !== reqAgentId) return;
 
-        const realNewId = res.createdTargetId || res.targetId;
-        if (realNewId && (!tabFrameCacheRef.current[`${agentId}:${realNewId}`] || tabFrameCacheRef.current[`${agentId}:${realNewId}`] === "__loading__")) {
-          tabFrameCacheRef.current[`${agentId}:${realNewId}`] = googleSeedFrame;
+        const realNewId = res.createdTargetId || (res.targetId && res.targetId !== prevSelectedId ? res.targetId : undefined);
+        if (realNewId && (!tabFrameCacheRef.current[`${reqAgentId}:${realNewId}`] || tabFrameCacheRef.current[`${reqAgentId}:${realNewId}`] === "__loading__")) {
+          tabFrameCacheRef.current[`${reqAgentId}:${realNewId}`] = googleSeedFrame;
         }
 
         if (realNewId) {
@@ -7221,11 +7230,14 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             setAddressInput("https://www.google.com");
           }
         } else {
+          tabMutationLockUntilRef.current = 0;
           await refreshBrowserTabs();
         }
       } finally {
-        delete tabFrameCacheRef.current[`${agentId}:${optId}`];
-        setIsNavigating(false);
+        delete tabFrameCacheRef.current[`${reqAgentId}:${optId}`];
+        if (activeAgentIdRef.current === reqAgentId) {
+          setIsNavigating(false);
+        }
       }
     });
   };
@@ -8881,6 +8893,8 @@ function AgentBrowserPreview({
     }
     if (imgRef.current) {
       imgRef.current.style.display = "block";
+      imgRef.current.style.objectFit = interactive && !nextUrl.startsWith("data:image/svg+xml") ? "fill" : "contain";
+      imgRef.current.style.backgroundColor = nextUrl.startsWith("data:image/svg+xml") ? "#ffffff" : "transparent";
       imgRef.current.src = nextUrl;
     }
     if (!hasFrame) {
@@ -9039,6 +9053,8 @@ function AgentBrowserPreview({
       }
       if (imgRef.current) {
         imgRef.current.style.display = "block";
+        imgRef.current.style.objectFit = interactive && !cached.startsWith("data:image/svg+xml") ? "fill" : "contain";
+        imgRef.current.style.backgroundColor = cached.startsWith("data:image/svg+xml") ? "#ffffff" : "transparent";
         imgRef.current.src = cached;
       }
       setHasFrame(true);
@@ -13085,8 +13101,22 @@ ${targetItem.text}`;
   const [isRecording, setIsRecording] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [liveVoiceEnergy, setLiveVoiceEnergy] = useState<number>(0);
+  const [realtimeBotVoiceEnergy, setRealtimeBotVoiceEnergy] = useState<number>(0);
+  const botAudioVisualizerRef = useRef<{ audioCtx: AudioContext; analyser: AnalyserNode; interval: any } | null>(null);
+
+  const stopBotAudioVisualizer = () => {
+    if (botAudioVisualizerRef.current) {
+      try {
+        if (botAudioVisualizerRef.current.interval) clearInterval(botAudioVisualizerRef.current.interval);
+        if (botAudioVisualizerRef.current.audioCtx && botAudioVisualizerRef.current.audioCtx.state !== "closed") {
+          botAudioVisualizerRef.current.audioCtx.close().catch(() => {});
+        }
+      } catch {}
+      botAudioVisualizerRef.current = null;
+    }
+    setRealtimeBotVoiceEnergy(0);
+  };
   const [isRealtimeVoiceOpen, setIsRealtimeVoiceOpen] = useState(false);
-  const [isVoiceMoreMenuOpen, setIsVoiceMoreMenuOpen] = useState(false);
   const [realtimeShowCaptions, setRealtimeShowCaptions] = useState(true);
   const [realtimeVoiceStatus, setRealtimeVoiceStatus] = useState<"idle" | "connecting" | "listening" | "thinking" | "speaking">("idle");
   const [realtimeTranscript, setRealtimeTranscript] = useState<string>("");
@@ -13166,13 +13196,16 @@ ${targetItem.text}`;
   const autoSendOnSilenceRef = useRef<boolean>(true);
   const vadModeRef = useRef<"continuous" | "manual" | "push_to_talk">("continuous");
   const silenceDurationRef = useRef<number>(2400);
+  const vadSensitivityRef = useRef<"quiet" | "normal" | "noisy">("normal");
 
   useEffect(() => {
     try {
       const mode = (localStorage.getItem("agent360_vad_mode") as any) || "continuous";
       const silence = parseInt(localStorage.getItem("agent360_vad_silence_ms") || "2400", 10);
+      const sensitivity = (localStorage.getItem("agent360_vad_sensitivity") as any) || "normal";
       vadModeRef.current = mode;
       silenceDurationRef.current = silence;
+      vadSensitivityRef.current = sensitivity;
       autoSendOnSilenceRef.current = mode === "continuous";
     } catch {}
 
@@ -13180,6 +13213,7 @@ ${targetItem.text}`;
       if (e.detail) {
         vadModeRef.current = e.detail.mode || "continuous";
         silenceDurationRef.current = e.detail.silenceDuration || 2400;
+        if (e.detail.sensitivity) vadSensitivityRef.current = e.detail.sensitivity;
         autoSendOnSilenceRef.current = e.detail.mode === "continuous";
       }
     };
@@ -13469,6 +13503,7 @@ ${targetItem.text}`;
             disarmAutoBargeInDetection();
 
             // 1. Immediately cut assistant audio playback
+            stopBotAudioVisualizer();
             if (realtimeActiveAudioPlayerRef.current) {
               try {
                 realtimeActiveAudioPlayerRef.current.pause();
@@ -13552,7 +13587,9 @@ ${targetItem.text}`;
         const avgEnergy = sum / dataArray.length;
         setLiveVoiceEnergy(Math.min(100, Math.round((avgEnergy / 128) * 100)));
 
-        if (avgEnergy > 18) {
+        const effectiveThreshold =
+          vadSensitivityRef.current === "noisy" ? 28 : vadSensitivityRef.current === "quiet" ? 11 : 18;
+        if (avgEnergy > effectiveThreshold) {
           speechDetected = true;
           if (silenceTimer) {
             clearTimeout(silenceTimer);
@@ -13702,13 +13739,43 @@ ${targetItem.text}`;
             const blob = new Blob([byteArr], { type: msg.mime_type || "audio/mpeg" });
             const url = URL.createObjectURL(blob);
             const audio = new Audio(url);
+            audio.crossOrigin = "anonymous";
             realtimeActiveAudioPlayerRef.current = audio;
+
+            // Real-time FFT Audio Visualizer Halo for Agent Speaking
+            stopBotAudioVisualizer();
+            try {
+              const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const source = audioCtx.createMediaElementSource(audio);
+              const analyser = audioCtx.createAnalyser();
+              analyser.fftSize = 128;
+              source.connect(analyser);
+              analyser.connect(audioCtx.destination);
+
+              const freqData = new Uint8Array(analyser.frequencyBinCount);
+              const interval = setInterval(() => {
+                if (audio.paused || audio.ended) {
+                  stopBotAudioVisualizer();
+                  return;
+                }
+                analyser.getByteFrequencyData(freqData);
+                let sum = 0;
+                for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+                const avg = sum / freqData.length;
+                setRealtimeBotVoiceEnergy(Math.min(100, Math.round((avg / 128) * 100)));
+              }, 40);
+
+              botAudioVisualizerRef.current = { audioCtx, analyser, interval };
+            } catch (err) {
+              console.warn("Agent Voice Visualizer skipped:", err);
+            }
 
             // DUAL-CHANNEL AUTO BARGE-IN: Keep listening to user voice during assistant playback.
             // If user begins speaking, IMMEDIATELY cut assistant speech, notify server, and commit user's new turn!
             armAutoBargeInDetection();
 
             const resumeListeningAfterSpeech = () => {
+              stopBotAudioVisualizer();
               disarmAutoBargeInDetection();
               URL.revokeObjectURL(url);
               if (realtimeActiveAudioPlayerRef.current === audio) {
@@ -13763,7 +13830,7 @@ ${targetItem.text}`;
   };
 
   const stopRealtimeVoiceChat = () => {
-    setIsVoiceMoreMenuOpen(false);
+    stopBotAudioVisualizer();
     realtimeContinuousActiveRef.current = false;
     if (realtimeFrameIntervalRef.current) {
       clearInterval(realtimeFrameIntervalRef.current);
@@ -14685,6 +14752,13 @@ ${targetItem.text}`;
     }
   };
 
+  // Horizontal drag / grab message to reply state (works on both touch and mouse grab)
+  const [swipingMsgId, setSwipingMsgId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const swipeActivatedMsgRef = useRef<ChatMessage | null>(null);
+  const swipeTriggerHapticFiredRef = useRef<boolean>(false);
+  const mouseGrabStateRef = useRef<{ startX: number; startY: number; msg: ChatMessage } | null>(null);
+
   const handleTouchStartMsg = (
     e: React.TouchEvent,
     msgData: {
@@ -14698,11 +14772,15 @@ ${targetItem.text}`;
       clickY?: number;
     }
   ) => {
-    // Only engage mobile bottom-sheet long-press on actual mobile/coarse touch screens
-    if (!isCoarseTouchDevice()) return;
     if (e.touches.length > 0) {
       touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
+    swipeTriggerHapticFiredRef.current = false;
+    swipeActivatedMsgRef.current = msgData.rawMsg || null;
+    setSwipingMsgId(msgData.id);
+    setSwipeOffset(0);
+
+    if (!isCoarseTouchDevice()) return;
     longPressPreventClickRef.current = false;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     const currentTarget = e.currentTarget as HTMLElement;
@@ -14725,19 +14803,43 @@ ${targetItem.text}`;
     if (!touchStartPosRef.current || e.touches.length === 0) return;
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
-    const dx = Math.abs(currentX - touchStartPosRef.current.x);
-    const dy = Math.abs(currentY - touchStartPosRef.current.y);
+    const rawDx = currentX - touchStartPosRef.current.x;
+    const absDy = Math.abs(currentY - touchStartPosRef.current.y);
 
-    if (dx > 10 || dy > 10) {
+    if (Math.abs(rawDx) > 8 || absDy > 8) {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
     }
+
+    // Engaging horizontal drag to reply (primarily horizontal gesture)
+    if (Math.abs(rawDx) > absDy && Math.abs(rawDx) > 6) {
+      // Allow dragging either left or right (rightward or leftward drag with dampening)
+      const maxOffset = 84;
+      const damped = Math.sign(rawDx) * Math.min(maxOffset, Math.pow(Math.abs(rawDx), 0.88) * 2);
+      setSwipeOffset(damped);
+
+      if (Math.abs(damped) >= 42 && !swipeTriggerHapticFiredRef.current) {
+        swipeTriggerHapticFiredRef.current = true;
+        triggerHaptic(18);
+      } else if (Math.abs(damped) < 42) {
+        swipeTriggerHapticFiredRef.current = false;
+      }
+    }
   };
 
   const handleTouchEndMsg = () => {
+    if (swipeActivatedMsgRef.current && Math.abs(swipeOffset) >= 42) {
+      handleStartReply(swipeActivatedMsgRef.current);
+      triggerHaptic(20);
+    }
     touchStartPosRef.current = null;
+    swipeActivatedMsgRef.current = null;
+    swipeTriggerHapticFiredRef.current = false;
+    setSwipingMsgId(null);
+    setSwipeOffset(0);
+
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -14746,6 +14848,57 @@ ${targetItem.text}`;
       longPressPreventClickRef.current = false;
     }, 120);
   };
+
+  // Mouse Grab message to reply handlers for desktop & trackpad
+  const handleMouseDownGrabMsg = (e: React.MouseEvent, msg: ChatMessage) => {
+    if (e.button !== 0) return;
+    // Don't engage if clicking an interactive sub-element like a button, link, or selection
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest("a") || target.closest('[data-testid^="agent-mention-chip"]')) return;
+    mouseGrabStateRef.current = { startX: e.clientX, startY: e.clientY, msg };
+    setSwipingMsgId(msg.id);
+    setSwipeOffset(0);
+    swipeTriggerHapticFiredRef.current = false;
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!mouseGrabStateRef.current) return;
+      const dx = e.clientX - mouseGrabStateRef.current.startX;
+      const dy = Math.abs(e.clientY - mouseGrabStateRef.current.startY);
+      if (Math.abs(dx) > dy && Math.abs(dx) > 5) {
+        const maxOffset = 84;
+        const damped = Math.sign(dx) * Math.min(maxOffset, Math.pow(Math.abs(dx), 0.88) * 2);
+        setSwipeOffset(damped);
+        if (Math.abs(damped) >= 42 && !swipeTriggerHapticFiredRef.current) {
+          swipeTriggerHapticFiredRef.current = true;
+          triggerHaptic(18);
+        } else if (Math.abs(damped) < 42) {
+          swipeTriggerHapticFiredRef.current = false;
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (mouseGrabStateRef.current) {
+        if (Math.abs(swipeOffset) >= 42) {
+          handleStartReply(mouseGrabStateRef.current.msg);
+          triggerHaptic(20);
+        }
+        mouseGrabStateRef.current = null;
+        swipeTriggerHapticFiredRef.current = false;
+        setSwipingMsgId(null);
+        setSwipeOffset(0);
+      }
+    };
+
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, [swipeOffset]);
   const [isBatchClearModalOpen, setIsBatchClearModalOpen] = useState(false);
   // Multi-select state for bulk deleting chat sessions
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
@@ -18232,6 +18385,7 @@ const selectedAgentTheme = getAgentColorTheme(
     updateAgentSessionRunning(targetAgent?.slug || originAgentId, [originChatId, startSessionId], true);
     const cleanFirstLineTitle = userText
       .replace(/^\[Replying to [^:\]]+:\s*"[^"]*"\]\s*/i, "")
+      .replace(/^\[Trọng tâm ngữ cảnh[^\]]*\][\s\S]*?\*\([^\n\r]*\)\*\s*(?:\r?\n)*/i, "")
       .replace(/\[Attached File:[^\]]+\]/gi, "")
       .trim()
       .split(/\r?\n/)[0]
@@ -18878,8 +19032,9 @@ const selectedAgentTheme = getAgentColorTheme(
     const currentTurnFiles = [...attachedFiles];
     if (replyingToMsg) {
       const safeAuthor = (replyingToMsg.authorName || "Agent").replace(/[\]:"]/g, "");
-      const safeSnippet = (replyingToMsg.snippet || "").replace(/"/g, "'").replace(/\s+/g, " ").trim().slice(0, 140);
-      userText = `[Replying to ${safeAuthor}: "${safeSnippet}"]\n\n${userText}`;
+      const safeSnippet = (replyingToMsg.snippet || "").replace(/"/g, "'").replace(/\s+/g, " ").trim().slice(0, 240);
+      const replyEmphasisContext = `[Trọng tâm ngữ cảnh được người dùng phản hồi & nhấn mạnh từ ${safeAuthor}]:\n> "${safeSnippet}"\n*(Chỉ dẫn ngữ cảnh cho Agent: Người dùng đang reply trực tiếp vào nội dung trên để nhấn mạnh làm ngữ cảnh xử lý chính. Hãy ưu tiên phân tích, đối chiếu và phản hồi tập trung theo đúng trọng tâm ý này.)*`;
+      userText = `[Replying to ${safeAuthor}: "${safeSnippet}"]\n\n${replyEmphasisContext}\n\n${userText}`;
       setReplyingToMsg(null);
     }
     if (attachedFiles.length > 0) {
@@ -20437,7 +20592,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 setMobileBotInfoOpen(false);
               }
             }}
-            className="lg:hidden flex h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors"
+            className="lg:hidden flex h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
             title="Toggle Agents Sidebar"
           >
             <Menu size={16} />
@@ -20495,7 +20650,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     setMobileBotInfoOpen(false);
                   }
                 }}
-                className="h-8 w-8 rounded-lg bg-[#181820] hover:bg-[#22222e] border border-[#242430] flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer shrink-0 transition-colors"
+                className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] flex items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
                 title="Expand Conversations list"
               >
                 <MessageSquare size={16} />
@@ -21017,7 +21172,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
               const renderMessageReactionsAndActions = () => (
                 <div className={`flex flex-row items-center gap-1.5 mt-0.5 w-full relative ${isUser ? "justify-end" : "justify-start"}`}>
-                  {/* Unified Action Bar: Reaction Badge(s) integrated directly alongside React, Reply, Extend */}
+                  {/* Unified Action Bar: CTAs appear strictly on hover over message turn; React icon & badges positioned to the right of CTAs */}
                   {!(isStreaming && isLastTurn && !isUser) && (
                     <div
                       data-testid={`msg-action-bar-${msg.id}`}
@@ -21027,9 +21182,349 @@ const selectedAgentTheme = getAgentColorTheme(
                           : "hidden sm:flex sm:opacity-0 sm:group-hover/msg:opacity-100"
                       }`}
                     >
-                      {/* Integrated Reaction Badge(s) inside the pill */}
+                      {/* Action CTAs (Reply, Extend, React Button): ONLY appear on hover over message turn, or when popover is open */}
+                      <div
+                        className={`flex items-center gap-1 transition-all duration-150 ${
+                          speakingMsgId === msg.id || isReactOpen || isExtendOpen
+                            ? "flex opacity-100"
+                            : currentReactions.length > 0
+                            ? "hidden sm:flex sm:opacity-0 sm:pointer-events-none sm:w-0 sm:overflow-hidden sm:group-hover/msg:w-auto sm:group-hover/msg:opacity-100 sm:group-hover/msg:pointer-events-auto sm:group-hover/msg:overflow-visible"
+                            : "flex opacity-100"
+                        }`}
+                      >
+                        {/* 1. Reply Button (Both User & Agent) - No Tooltip */}
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-reply-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartReply(msg);
+                          }}
+                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                          aria-label="Trả lời"
+                        >
+                          <CornerUpLeft size={13} />
+                        </button>
+
+                        {/* 2. Extend Menu Button (...) - 3-dots on desktop hover */}
+                        <div className="relative shrink-0">
+                          <button
+                            data-ux-target-min="24"
+                            data-testid="msg-extend-btn"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                              const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                              const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                              setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
+                              setActiveReactPopoverMsgId(null);
+                              if (typeof window !== "undefined" && window.innerWidth < 640) {
+                                const turnEl = document.getElementById(`chat-msg-${msg.id}`);
+                                const bubbleEl = (turnEl?.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
+                                const bubbleRect = bubbleEl.getBoundingClientRect();
+                                const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
+                                setMobileActionMsg({
+                                  id: msg.id,
+                                  content: cleanContent,
+                                  turnIdx: mIdx,
+                                  role: isUser ? "user" : "assistant",
+                                  hasThinking,
+                                  rawMsg: msg,
+                                  anchorRect: anchor,
+                                });
+                              } else {
+                                setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                              }
+                            }}
+                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                              isExtendOpen
+                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
+                                : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                            }`}
+                            aria-label="Mở rộng"
+                          >
+                            <MoreHorizontal size={13} />
+                          </button>
+
+                          {/* Desktop Vertical Extend Dropdown Menu - Compact & Always In Viewport */}
+                          {isExtendOpen && (
+                            <div
+                              data-testid="msg-extend-menu"
+                              onClick={(e) => e.stopPropagation()}
+                              className={`absolute z-50 w-40 py-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-[11px] font-sans text-left max-h-[65vh] overflow-y-auto ${
+                                extendPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
+                              } ${isUser ? "right-0" : "left-0"}`}
+                            >
+                              <div className="space-y-0.5 pb-1">
+                                {/* Reply */}
+                                <button
+                                  type="button"
+                                  data-testid="extend-reply-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    handleStartReply(msg);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                >
+                                  <CornerUpLeft size={14} className="text-neutral-400 shrink-0" />
+                                  <span>Reply</span>
+                                </button>
+
+                                {/* Copy */}
+                                <button
+                                  type="button"
+                                  data-testid="extend-copy-btn"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(cleanContent);
+                                    setCopiedResponseMsgId(msg.id);
+                                    setActiveExtendPopoverMsgId(null);
+                                    setTimeout(() => setCopiedResponseMsgId(null), 1800);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                >
+                                  {copiedResponseMsgId === msg.id ? (
+                                    <Check size={14} className="text-emerald-400 shrink-0" />
+                                  ) : (
+                                    <Copy size={14} className="text-neutral-400 shrink-0" />
+                                  )}
+                                  <span>{copiedResponseMsgId === msg.id ? "Đã chép!" : "Copy"}</span>
+                                </button>
+
+                                {/* Thinking (Agent only, when has thinking) */}
+                                {!isUser && hasThinking && (
+                                  <button
+                                    type="button"
+                                    data-testid="extend-thinking-btn"
+                                    onClick={() => {
+                                      handleOpenActiveThinkingModal(msg);
+                                    }}
+                                    style={{ color: selectedAgentTheme.light }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer font-medium"
+                                  >
+                                    <Sparkles size={14} style={{ color: selectedAgentTheme.primary }} className="shrink-0" />
+                                    <span>Thinking & Tools</span>
+                                  </button>
+                                )}
+
+                                {/* Edit (User only) */}
+                                {isUser && (
+                                  <button
+                                    type="button"
+                                    data-testid="extend-edit-btn"
+                                    onClick={() => {
+                                      setActiveExtendPopoverMsgId(null);
+                                      setInputText(cleanContent);
+                                      if (textareaRef.current) {
+                                        textareaRef.current.style.height = "auto";
+                                        textareaRef.current.focus();
+                                        setTimeout(() => {
+                                          if (textareaRef.current) {
+                                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
+                                            textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
+                                          }
+                                        }, 0);
+                                      }
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-cyan-500 dark:text-cyan-400 transition-colors cursor-pointer"
+                                  >
+                                    <Edit2 size={14} className="text-cyan-400 shrink-0" />
+                                    <span>Edit</span>
+                                  </button>
+                                )}
+
+                                {/* TTS Read Aloud (Agent only) */}
+                                {!isUser && (
+                                  <button
+                                    type="button"
+                                    data-testid="extend-tts-btn"
+                                    onClick={() => {
+                                      setActiveExtendPopoverMsgId(null);
+                                      if (speakingMsgId === msg.id) {
+                                        stopSpeaking();
+                                        setSpeakingMsgId(null);
+                                      } else {
+                                        setSpeakingMsgId(msg.id);
+                                        speakText(cleanContent, {
+                                          onSegmentChange: (seg) => setSpeakingSentence(seg),
+                                          onEnd: () => {
+                                            setSpeakingMsgId(null);
+                                            setSpeakingSentence(null);
+                                          },
+                                          onError: () => {
+                                            setSpeakingMsgId(null);
+                                            setSpeakingSentence(null);
+                                          },
+                                        });
+                                      }
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                  >
+                                    <Volume2 size={14} className="text-neutral-400 shrink-0" />
+                                    <span>Read Aloud</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="space-y-0.5 pt-1">
+                                {/* Pin / Star */}
+                                <button
+                                  type="button"
+                                  data-testid="extend-star-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    toggleStarMessage(msg.id);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                >
+                                  <Star size={14} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-400 shrink-0"} />
+                                  <span>{starredMsgIds.includes(msg.id) ? "Unpin" : "Pin / Star"}</span>
+                                </button>
+
+                                {/* Forward (Agent only) */}
+                                {!isUser && (
+                                  <button
+                                    type="button"
+                                    data-testid="extend-forward-btn"
+                                    onClick={() => {
+                                      setActiveExtendPopoverMsgId(null);
+                                      setForwardModalMsg(cleanContent);
+                                    }}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                  >
+                                    <Share2 size={14} className="text-neutral-400 shrink-0" />
+                                    <span>Forward</span>
+                                  </button>
+                                )}
+
+                                {/* Fork */}
+                                <button
+                                  type="button"
+                                  data-testid="extend-fork-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    handleForkSession(mIdx);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                >
+                                  <GitFork size={14} className="text-neutral-400 shrink-0" />
+                                  <span>Fork Session</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. React Button: ONLY for Agent message - positioned to the RIGHT of Reply and Extend CTAs */}
+                        {!isUser && (
+                          <div className="relative shrink-0">
+                            <button
+                              data-ux-target-min="24"
+                              data-testid="msg-react-btn"
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                                const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                                const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                                setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
+                                setActiveExtendPopoverMsgId(null);
+                                setShowFullEmojiPicker(false);
+                                setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                              }}
+                              className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                                isReactOpen
+                                  ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
+                                  : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                              }`}
+                              aria-label="Thả cảm xúc"
+                            >
+                              <Smile size={13} />
+                            </button>
+
+                            {/* Quick Emoji Reaction Popover */}
+                            {isReactOpen && (
+                              <div
+                                data-testid="msg-react-popover"
+                                onClick={(e) => e.stopPropagation()}
+                                className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none left-0 text-slate-700 dark:text-neutral-200 ${
+                                  reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
+                                }`}
+                              >
+                                <div className="flex items-center gap-0.5 px-1 py-0.5">
+                                  {recentReactions.slice(0, 7).map((emoji) => {
+                                    const active = currentReactions.includes(emoji);
+                                    return (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        data-testid={`react-option-${emoji}`}
+                                        onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
+                                        className={`h-6 w-6 rounded-full flex items-center justify-center text-xs hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
+                                          active ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] ring-1 ring-[var(--agent-color)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "hover:bg-white/10"
+                                        }`}
+                                        aria-label={`Thả ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                  <button
+                                    type="button"
+                                    data-testid="desktop-more-emoji-btn"
+                                    onClick={() => {
+                                      triggerHaptic(10);
+                                      setShowFullEmojiPicker((prev) => !prev);
+                                    }}
+                                    className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer ${
+                                      showFullEmojiPicker ? "bg-slate-200 dark:bg-white/20 text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                                    }`}
+                                    title="Mở thêm biểu tượng cảm xúc"
+                                  >
+                                    <Plus size={12} className="shrink-0" />
+                                  </button>
+                                </div>
+
+                                {showFullEmojiPicker && (
+                                  <div
+                                    data-testid="desktop-full-emoji-picker-grid"
+                                    className="grid grid-cols-6 gap-0.5 p-1 rounded-lg bg-[#141a24] border border-white/10 w-full text-xs max-h-44 overflow-y-auto"
+                                  >
+                                    {FULL_EMOJI_PALETTE.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        data-testid={`full-emoji-${emoji}`}
+                                        onClick={() => {
+                                          toggleMessageReaction(msg.id, emoji, msg);
+                                          setShowFullEmojiPicker(false);
+                                        }}
+                                        className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 4. Reaction Badge(s) inside the pill - positioned to the RIGHT of all CTAs */}
                       {currentReactions.length > 0 && (
-                        <div data-testid={`msg-reactions-${msg.id}`} className="flex items-center gap-0.5 pl-0.5 pr-1 border-r border-slate-200 dark:border-white/10">
+                        <div
+                          data-testid={`msg-reactions-${msg.id}`}
+                          className={`flex items-center gap-0.5 px-0.5 transition-all duration-150 ${
+                            speakingMsgId === msg.id || isReactOpen || isExtendOpen
+                              ? "border-l border-slate-200 dark:border-white/10 ml-0.5 pl-1"
+                              : "sm:group-hover/msg:border-l sm:group-hover/msg:border-slate-200 dark:sm:group-hover/msg:border-white/10 sm:group-hover/msg:ml-0.5 sm:group-hover/msg:pl-1"
+                          }`}
+                        >
                           {currentReactions.map((emoji) => (
                             <button
                               key={emoji}
@@ -21056,331 +21551,11 @@ const selectedAgentTheme = getAgentColorTheme(
                           ))}
                         </div>
                       )}
-                      {/* 1. React Button: ONLY for Agent message - No Tooltip */}
-                      {!isUser && (
-                        <div className="relative">
-                          <button
-                            data-ux-target-min="24"
-                            data-testid="msg-react-btn"
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                              const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                              const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                              setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
-                              setActiveExtendPopoverMsgId(null);
-                              setShowFullEmojiPicker(false);
-                              setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                            }}
-                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                              isReactOpen
-                                ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
-                                : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                            }`}
-                            aria-label="Thả cảm xúc"
-                          >
-                            <Smile size={13} />
-                          </button>
-
-                          {/* Quick Emoji Reaction Popover */}
-                          {isReactOpen && (
-                            <div
-                              data-testid="msg-react-popover"
-                              onClick={(e) => e.stopPropagation()}
-                              className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none left-0 text-slate-700 dark:text-neutral-200 ${
-                                reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
-                              }`}
-                            >
-                              <div className="flex items-center gap-0.5 px-1 py-0.5">
-                                {recentReactions.slice(0, 7).map((emoji) => {
-                                  const active = currentReactions.includes(emoji);
-                                  return (
-                                    <button
-                                      key={emoji}
-                                      type="button"
-                                      data-testid={`react-option-${emoji}`}
-                                      onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
-                                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
-                                        active ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] ring-1 ring-[var(--agent-color)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "hover:bg-white/10"
-                                      }`}
-                                      aria-label={`Thả ${emoji}`}
-                                    >
-                                      {emoji}
-                                    </button>
-                                  );
-                                })}
-                                <button
-                                  type="button"
-                                  data-testid="desktop-more-emoji-btn"
-                                  onClick={() => {
-                                    triggerHaptic(10);
-                                    setShowFullEmojiPicker((prev) => !prev);
-                                  }}
-                                  className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer ${
-                                    showFullEmojiPicker ? "bg-slate-200 dark:bg-white/20 text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/10"
-                                  }`}
-                                  title="Mở thêm biểu tượng cảm xúc"
-                                >
-                                  <Plus size={12} className="shrink-0" />
-                                </button>
-                              </div>
-
-                              {showFullEmojiPicker && (
-                                <div
-                                  data-testid="desktop-full-emoji-picker-grid"
-                                  className="grid grid-cols-6 gap-0.5 p-1 rounded-lg bg-[#141a24] border border-white/10 w-full text-xs max-h-44 overflow-y-auto"
-                                >
-                                  {FULL_EMOJI_PALETTE.map((emoji) => (
-                                    <button
-                                      key={emoji}
-                                      type="button"
-                                      data-testid={`full-emoji-${emoji}`}
-                                      onClick={() => {
-                                        toggleMessageReaction(msg.id, emoji, msg);
-                                        setShowFullEmojiPicker(false);
-                                      }}
-                                      className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* 2. Reply Button (Both User & Agent) - No Tooltip */}
-                      <button
-                        data-ux-target-min="24"
-                        data-testid="msg-reply-btn"
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartReply(msg);
-                        }}
-                        className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                        aria-label="Trả lời"
-                      >
-                        <CornerUpLeft size={13} />
-                      </button>
-
-                      {/* Extend Menu Button (...) - 3-dots on desktop hover */}
-                      <div className="relative">
-                        <button
-                          data-ux-target-min="24"
-                          data-testid="msg-extend-btn"
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                            const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                            const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                            setExtendPopoverAbove(spaceTop >= 210 || spaceTop > spaceBottom);
-                            setActiveReactPopoverMsgId(null);
-                            if (typeof window !== "undefined" && window.innerWidth < 640) {
-                              const turnEl = document.getElementById(`chat-msg-${msg.id}`);
-                              const bubbleEl = (turnEl?.querySelector('.inline-block') as HTMLElement) || e.currentTarget;
-                              const bubbleRect = bubbleEl.getBoundingClientRect();
-                              const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
-                              setMobileActionMsg({
-                                id: msg.id,
-                                content: cleanContent,
-                                turnIdx: mIdx,
-                                role: isUser ? "user" : "assistant",
-                                hasThinking,
-                                rawMsg: msg,
-                                anchorRect: anchor,
-                              });
-                            } else {
-                              setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                            }
-                          }}
-                          className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                            isExtendOpen
-                              ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
-                              : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
-                          }`}
-                          aria-label="Mở rộng"
-                        >
-                          <MoreHorizontal size={13} />
-                        </button>
-
-                        {/* Desktop Vertical Extend Dropdown Menu - Compact & Always In Viewport */}
-                        {isExtendOpen && (
-                          <div
-                            data-testid="msg-extend-menu"
-                            onClick={(e) => e.stopPropagation()}
-                            className={`absolute z-50 w-40 py-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-[11px] font-sans text-left max-h-[65vh] overflow-y-auto ${
-                              extendPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
-                            } ${isUser ? "right-0" : "left-0"}`}
-                          >
-                            <div className="space-y-0.5 pb-1">
-                              {/* Reply */}
-                              <button
-                                type="button"
-                                data-testid="extend-reply-btn"
-                                onClick={() => {
-                                  setActiveExtendPopoverMsgId(null);
-                                  handleStartReply(msg);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                              >
-                                <CornerUpLeft size={14} className="text-neutral-400 shrink-0" />
-                                <span>Reply</span>
-                              </button>
-
-                              {/* Copy */}
-                              <button
-                                type="button"
-                                data-testid="extend-copy-btn"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(cleanContent);
-                                  setCopiedResponseMsgId(msg.id);
-                                  setActiveExtendPopoverMsgId(null);
-                                  setTimeout(() => setCopiedResponseMsgId(null), 1800);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                              >
-                                {copiedResponseMsgId === msg.id ? (
-                                  <Check size={14} className="text-emerald-400 shrink-0" />
-                                ) : (
-                                  <Copy size={14} className="text-neutral-400 shrink-0" />
-                                )}
-                                <span>{copiedResponseMsgId === msg.id ? "Đã chép!" : "Copy"}</span>
-                              </button>
-
-                              {/* Thinking (Agent only, when has thinking) */}
-                              {!isUser && hasThinking && (
-                                <button
-                                  type="button"
-                                  data-testid="extend-thinking-btn"
-                                  onClick={() => {
-                                    handleOpenActiveThinkingModal(msg);
-                                  }}
-                                  style={{ color: selectedAgentTheme.light }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer font-medium"
-                                >
-                                  <Sparkles size={14} style={{ color: selectedAgentTheme.primary }} className="shrink-0" />
-                                  <span>Thinking & Tools</span>
-                                </button>
-                              )}
-
-                              {/* Edit (User only) */}
-                              {isUser && (
-                                <button
-                                  type="button"
-                                  data-testid="extend-edit-btn"
-                                  onClick={() => {
-                                    setActiveExtendPopoverMsgId(null);
-                                    setInputText(cleanContent);
-                                    if (textareaRef.current) {
-                                      textareaRef.current.style.height = "auto";
-                                      textareaRef.current.focus();
-                                      setTimeout(() => {
-                                        if (textareaRef.current) {
-                                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
-                                          textareaRef.current.setSelectionRange(cleanContent.length, cleanContent.length);
-                                        }
-                                      }, 0);
-                                    }
-                                  }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-cyan-500 dark:text-cyan-400 transition-colors cursor-pointer"
-                                >
-                                  <Edit2 size={14} className="text-cyan-400 shrink-0" />
-                                  <span>Edit</span>
-                                </button>
-                              )}
-
-                              {/* TTS Read Aloud (Agent only) */}
-                              {!isUser && (
-                                <button
-                                  type="button"
-                                  data-testid="extend-tts-btn"
-                                  onClick={() => {
-                                    setActiveExtendPopoverMsgId(null);
-                                    if (speakingMsgId === msg.id) {
-                                      stopSpeaking();
-                                      setSpeakingMsgId(null);
-                                    } else {
-                                      setSpeakingMsgId(msg.id);
-                                      speakText(cleanContent, {
-                                        onSegmentChange: (seg) => setSpeakingSentence(seg),
-                                        onEnd: () => {
-                                          setSpeakingMsgId(null);
-                                          setSpeakingSentence(null);
-                                        },
-                                        onError: () => {
-                                          setSpeakingMsgId(null);
-                                          setSpeakingSentence(null);
-                                        },
-                                      });
-                                    }
-                                  }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                                >
-                                  <Volume2 size={14} className="text-neutral-400 shrink-0" />
-                                  <span>Read Aloud</span>
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="space-y-0.5 pt-1">
-                              {/* Pin / Star */}
-                              <button
-                                type="button"
-                                data-testid="extend-star-btn"
-                                onClick={() => {
-                                  toggleStarMessage(msg.id);
-                                  setActiveExtendPopoverMsgId(null);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                              >
-                                <Star size={14} className={starredMsgIds.includes(msg.id) ? "fill-amber-400 text-amber-400 shrink-0" : "text-neutral-400 shrink-0"} />
-                                <span>{starredMsgIds.includes(msg.id) ? "Unstar" : "Pin / Star"}</span>
-                              </button>
-
-                              {/* Forward (Agent only) */}
-                              {!isUser && (
-                                <button
-                                  type="button"
-                                  data-testid="extend-forward-btn"
-                                  onClick={() => {
-                                    setActiveExtendPopoverMsgId(null);
-                                    setForwardModalMsg(cleanContent);
-                                  }}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                                >
-                                  <Share2 size={14} className="text-neutral-400 shrink-0" />
-                                  <span>Forward</span>
-                                </button>
-                              )}
-
-                              {/* Fork */}
-                              <button
-                                type="button"
-                                data-testid="extend-fork-btn"
-                                onClick={() => {
-                                  setActiveExtendPopoverMsgId(null);
-                                  handleForkSession(mIdx);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                              >
-                                <GitFork size={14} className="text-neutral-400 shrink-0" />
-                                <span>Fork Session</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   )}
                 </div>
               );
+
               const prevMsg = mIdx > 0 ? displayMessages[mIdx - 1] : null;
               const isConsecutiveAssistant = !isUser && prevMsg && prevMsg.role === "assistant";
               const showTimestampDivider = shouldShowChatTimestampDivider(prevMsg?.timestamp, msg.timestamp);
@@ -21406,13 +21581,15 @@ const selectedAgentTheme = getAgentColorTheme(
                         : "space-y-1"
                     } ${isUser ? "items-end" : "items-start"}`}
                   >
-                  {/* If user message: Clean right-aligned bubble, shrink to fit content */}
+                  {/* If user message: Clean right-aligned bubble with swipe-to-reply gesture */}
                   {isUser ? (
                     <div
+                      data-testid={`user-msg-container-${msg.id}`}
                       onTouchStart={(e) => handleTouchStartMsg(e, { id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg })}
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
+                      onMouseDown={(e) => handleMouseDownGrabMsg(e, msg)}
                       onClick={() => {
                         if (longPressPreventClickRef.current) {
                           longPressPreventClickRef.current = false;
@@ -21426,8 +21603,29 @@ const selectedAgentTheme = getAgentColorTheme(
                         const anchor = { top: bubbleRect.top, bottom: bubbleRect.bottom, left: bubbleRect.left, right: bubbleRect.right, width: bubbleRect.width, height: bubbleRect.height };
                         setMobileActionMsg({ id: msg.id, content: cleanContent, turnIdx: mIdx, role: "user", rawMsg: msg, anchorRect: anchor, clickY: e.clientY });
                       }}
-                      className="flex flex-col items-end w-full max-w-full min-w-0"
+                      style={{
+                        transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined,
+                        transition: swipingMsgId === msg.id ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
+                        cursor: swipingMsgId === msg.id ? "grabbing" : "grab",
+                      }}
+                      className="relative flex flex-col items-end w-full max-w-full min-w-0 select-none touch-pan-y"
                     >
+                      {/* Swipe-to-reply visual indicator badge on horizontal drag */}
+                      {swipingMsgId === msg.id && Math.abs(swipeOffset) > 10 && (
+                        <div
+                          data-testid="swipe-reply-indicator"
+                          style={{
+                            opacity: Math.min(1, Math.abs(swipeOffset) / 42),
+                            transform: `scale(${Math.min(1.25, 0.75 + Math.abs(swipeOffset) / 84)})`,
+                            backgroundColor: Math.abs(swipeOffset) >= 42 ? selectedAgentTheme.primary : "rgba(100, 116, 139, 0.2)",
+                            color: Math.abs(swipeOffset) >= 42 ? "#ffffff" : undefined,
+                          }}
+                          className={`absolute ${swipeOffset < 0 ? "right-full mr-2.5" : "left-full ml-2.5"} top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center shadow-md transition-all duration-100 z-10 pointer-events-none text-slate-700 dark:text-neutral-200`}
+                          title="Kéo sang để trả lời (Reply)"
+                        >
+                          <CornerUpLeft size={15} className={swipeOffset < 0 ? "" : "rotate-180"} />
+                        </div>
+                      )}
                       <div
                         data-testid="user-message-bubble"
                         style={{
@@ -21485,8 +21683,9 @@ const selectedAgentTheme = getAgentColorTheme(
                       {renderMessageReactionsAndActions()}
                     </div>
                   ) : (
-                    /* Assistant Turn: Structured Content Blocks + Agent Tool Cards */
+                    /* Assistant Turn: Structured Content Blocks + Agent Tool Cards with swipe-to-reply gesture */
                     <div
+                      data-testid={`asst-msg-container-${msg.id}`}
                       onTouchStart={(e) => handleTouchStartMsg(e, {
                         id: msg.id,
                         content: cleanContent,
@@ -21498,6 +21697,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       onTouchEnd={handleTouchEndMsg}
                       onTouchMove={handleTouchMoveMsg}
                       onTouchCancel={handleTouchEndMsg}
+                      onMouseDown={(e) => handleMouseDownGrabMsg(e, msg)}
                       onClick={() => {
                         if (longPressPreventClickRef.current) {
                           longPressPreventClickRef.current = false;
@@ -21521,8 +21721,29 @@ const selectedAgentTheme = getAgentColorTheme(
                           clickY: e.clientY,
                         });
                       }}
-                      className="flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0"
+                      style={{
+                        transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined,
+                        transition: swipingMsgId === msg.id ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
+                        cursor: swipingMsgId === msg.id ? "grabbing" : "grab",
+                      }}
+                      className="relative flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0 select-none touch-pan-y"
                     >
+                      {/* Swipe-to-reply visual indicator badge on horizontal drag */}
+                      {swipingMsgId === msg.id && Math.abs(swipeOffset) > 10 && (
+                        <div
+                          data-testid="swipe-reply-indicator"
+                          style={{
+                            opacity: Math.min(1, Math.abs(swipeOffset) / 42),
+                            transform: `scale(${Math.min(1.25, 0.75 + Math.abs(swipeOffset) / 84)})`,
+                            backgroundColor: Math.abs(swipeOffset) >= 42 ? selectedAgentTheme.primary : "rgba(100, 116, 139, 0.2)",
+                            color: Math.abs(swipeOffset) >= 42 ? "#ffffff" : undefined,
+                          }}
+                          className={`absolute ${swipeOffset > 0 ? "left-full ml-2.5" : "right-full mr-2.5"} top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center shadow-md transition-all duration-100 z-10 pointer-events-none text-slate-700 dark:text-neutral-200`}
+                          title="Kéo sang để trả lời (Reply)"
+                        >
+                          <CornerUpLeft size={15} className={swipeOffset > 0 ? "" : "rotate-180"} />
+                        </div>
+                      )}
                       {/* Language-Agnostic Context-Native Solo Turn Rendering:
                           Splits natural lead-in segment(s) emitted by the Agent from the main answer body,
                           and keeps the Responding Indicator Pill strictly separate while actively running. */}
@@ -24349,131 +24570,68 @@ const selectedAgentTheme = getAgentColorTheme(
               />
             </div>
 
-            {/* Top Minimal Chrome Header (matching normal chat UI & image: Left Menu/Equal + Center Pill Capsule + Right Captions & More Menu) */}
-            <div className="relative z-10 w-full px-3 sm:px-4 h-12 flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08] select-none">
-              {/* Left Menu Button: Same CTA as normal chat UI (two horizontal bars matching screenshot) */}
+            {/* Top Minimal Chrome Header (Reusing exact Chat UI Header button components & styles) */}
+            <div className="relative z-10 w-full px-2 sm:px-3 h-12 flex items-center justify-between border-b border-neutral-200 dark:border-[#1c1c22] select-none bg-[var(--bg-workspace)]">
+              {/* Left button: mobile drawer only on mobile viewport matching Chat UI */}
               <button
                 type="button"
-                data-testid="voice-header-menu-btn"
                 aria-label="Toggle Agents Sidebar"
+                data-ux-target-min="24"
                 onClick={() => {
                   if (window.innerWidth >= 1024) {
                     handleToggleLeftSidebar();
                   } else {
                     setMobileAgentsOpen(!mobileAgentsOpen);
+                    setMobileChatsOpen(false);
+                    setMobileBotInfoOpen(false);
                   }
                 }}
-                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-300 transition-colors cursor-pointer shrink-0"
-                title="Danh sách Agent (Menu)"
+                className="lg:hidden flex h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
+                title="Toggle Agents Sidebar"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="4" y1="9" x2="20" y2="9" />
-                  <line x1="4" y1="15" x2="20" y2="15" />
-                </svg>
+                <Menu size={16} />
               </button>
+              {/* Desktop balance spacer so center capsule remains perfectly centered */}
+              <div className="hidden lg:block w-8 h-8 shrink-0" aria-hidden="true" />
 
-              {/* Center Pill Capsule with Agent Name + Glowing Dot */}
-              <div
-                data-testid="realtime-voice-agent-capsule"
-                onClick={() => setIsVoiceRecordSettingsOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200/80 dark:border-white/15 bg-white/80 dark:bg-[#14141c]/80 hover:bg-white dark:hover:bg-[#1a1a24] shadow-2xs transition-all cursor-pointer select-none leading-none"
-                title="Tuỳ chọn thiết bị & mô hình giọng nói"
-              >
-                <span
-                  className="h-2 w-2 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: voiceThemeAccent,
-                    boxShadow: `0 0 8px ${voiceThemeAccent}`,
-                  }}
-                />
-                <span
-                  style={{ color: textColorPrimary }}
-                  className="text-xs sm:text-[13px] font-semibold tracking-tight whitespace-nowrap"
+              {/* Middle Group: Capsule Info matching Chat UI */}
+              <div className="flex items-center gap-2 mx-auto">
+                <div
+                  data-testid="realtime-voice-agent-capsule"
+                  onClick={() => setIsVoiceRecordSettingsOpen(true)}
+                  className="group inline-flex items-center justify-center gap-2 bg-slate-50 dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-[13px] font-semibold text-neutral-900 dark:text-white shadow-xs cursor-pointer transition-all select-none leading-none"
+                  title="Tuỳ chọn thiết bị & mô hình giọng nói"
                 >
-                  {selectedAgent?.name || "Mons"}
-                </span>
+                  <AgentAvatar
+                    agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
+                    size="xs"
+                    interactive={false}
+                    className="shrink-0"
+                  />
+                  <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">
+                    {selectedAgent?.name || "Agent"}
+                  </span>
+                </div>
               </div>
 
-              {/* Right Controls: Chat / Captions Button + More Action Button (...) */}
-              <div className="flex items-center gap-1 shrink-0 relative">
+              {/* Right button: Reusing exact Chat UI MessageSquare expand / chat button */}
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   data-testid="voice-dock-captions-btn"
-                  onClick={() => setRealtimeShowCaptions((prev) => !prev)}
-                  className={`h-8 w-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white ${
-                    realtimeShowCaptions
-                      ? "bg-black/5 dark:bg-white/10"
-                      : "hover:bg-black/5 dark:hover:bg-white/10 opacity-70"
-                  }`}
+                  aria-label="Expand Conversations list"
+                  data-ux-target-min="24"
+                  onClick={() => {
+                    setRealtimeShowCaptions((prev) => !prev);
+                    if (isChatListCollapsed) {
+                      handleToggleChatList(false);
+                    }
+                  }}
+                  className="h-8 w-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-[#181820] dark:hover:bg-[#22222e] border border-slate-200 dark:border-[#242430] flex items-center justify-center text-slate-600 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
                   title={realtimeShowCaptions ? "Ẩn hội thoại chữ (Captions)" : "Hiện hội thoại chữ (Captions)"}
-                  aria-label="Toggle live captions"
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="18" height="18" x="3" y="3" rx="4" />
-                    <line x1="7" y1="11" x2="15" y2="11" />
-                    <line x1="7" y1="15" x2="12" y2="15" />
-                  </svg>
+                  <MessageSquare size={16} />
                 </button>
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    data-testid="voice-header-more-btn"
-                    onClick={() => setIsVoiceMoreMenuOpen((prev) => !prev)}
-                    className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                    title="Tuỳ chọn khác"
-                    aria-label="More options"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="5" cy="12" r="1.6" />
-                      <circle cx="12" cy="12" r="1.6" />
-                      <circle cx="19" cy="12" r="1.6" />
-                    </svg>
-                  </button>
-
-                  {isVoiceMoreMenuOpen && (
-                    <div
-                      data-testid="voice-more-menu-dropdown"
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 top-full mt-1.5 w-48 rounded-xl bg-white dark:bg-[#181822] border border-slate-200 dark:border-white/10 shadow-2xl py-1 z-50 text-xs font-sans animate-in fade-in zoom-in-95 duration-100"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsVoiceMoreMenuOpen(false);
-                          setIsVoiceRecordSettingsOpen(true);
-                        }}
-                        className="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                      >
-                        <Settings size={14} className="text-slate-500 dark:text-neutral-400" />
-                        <span>Cài đặt giọng nói & micro</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsVoiceMoreMenuOpen(false);
-                          setIsPermissionsModalOpen(true);
-                        }}
-                        className="w-full px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-neutral-200 flex items-center gap-2.5 transition-colors cursor-pointer"
-                      >
-                        <ShieldCheck size={14} className="text-slate-500 dark:text-neutral-400" />
-                        <span>Quyền & Thiết bị (RTC)</span>
-                      </button>
-                      <div className="border-t border-slate-100 dark:border-white/10 my-1" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsVoiceMoreMenuOpen(false);
-                          stopRealtimeVoiceChat();
-                        }}
-                        className="w-full px-3 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2.5 transition-colors cursor-pointer font-medium"
-                      >
-                        <X size={14} />
-                        <span>Kết thúc cuộc gọi</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -24516,12 +24674,30 @@ const selectedAgentTheme = getAgentColorTheme(
                 >
                   {isVoiceConnected ? (
                     <div className="relative flex items-center justify-center">
-                      {/* Ambient Audio Pulse Ring when speaking */}
+                      {/* Dynamic FFT Voice Energy Halos */}
                       {realtimeVoiceStatus === "speaking" && (
-                        <div
-                          className="absolute -inset-4 rounded-full animate-ping opacity-25"
-                          style={{ backgroundColor: voiceThemeAccent }}
-                        />
+                        <>
+                          {/* Inner Reactive Energy Halo */}
+                          <div
+                            className="absolute rounded-full pointer-events-none transition-all duration-75 ease-out"
+                            style={{
+                              inset: `-${Math.max(6, Math.round(realtimeBotVoiceEnergy * 0.28))}px`,
+                              backgroundColor: voiceThemeAccent,
+                              opacity: Math.max(0.2, Math.min(0.7, realtimeBotVoiceEnergy / 100)),
+                              filter: `blur(${Math.max(4, Math.round(realtimeBotVoiceEnergy * 0.2))}px)`,
+                            }}
+                          />
+                          {/* Outer Ambient Audio Waves Halo */}
+                          <div
+                            className="absolute rounded-full pointer-events-none transition-all duration-100 ease-out"
+                            style={{
+                              inset: `-${Math.max(12, Math.round(realtimeBotVoiceEnergy * 0.48))}px`,
+                              border: `2px solid ${voiceThemeAccent}`,
+                              opacity: Math.max(0.15, Math.min(0.55, realtimeBotVoiceEnergy / 110)),
+                              transform: `scale(${1 + (realtimeBotVoiceEnergy / 260)})`,
+                            }}
+                          />
+                        </>
                       )}
                       <AgentAvatar
                         agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
@@ -24535,7 +24711,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             ? "nod.1.4"
                             : "wink.1.4,nod.1.4"
                         }
-                        className="transition-transform duration-300 hover:scale-110"
+                        className="transition-transform duration-300 hover:scale-110 z-10"
                       />
                     </div>
                   ) : (

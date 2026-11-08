@@ -362,7 +362,10 @@ export async function fetchAgentChats(agentId?: string): Promise<AgentSession[]>
 
     const result = sortedRaw.map((c: any) => {
       const stripReplyHeader = (val: string) =>
-        (val || '').replace(/^\[Replying to [^:\]]+:\s*"[^"]*"\]\s*/i, '').trim();
+        (val || '')
+          .replace(/^\[Replying to [^:\]]+:\s*"[^"]*"\]\s*/i, '')
+          .replace(/^\[Trọng tâm ngữ cảnh[^\]]*\][\s\S]*?\*\([^\n]*\)\*\s*/i, '')
+          .trim();
 
       let cleanTitle = stripReplyHeader(c.name || c.title || c.topic || '');
       // Never expose raw technical UUID or session hashes to the UI
