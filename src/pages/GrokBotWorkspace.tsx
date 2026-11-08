@@ -117,6 +117,9 @@ import {
   Bookmark,
   CornerUpLeft,
   Smile,
+  Quote,
+  Forward,
+  ThumbsUp,
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, SessionRoomTurn, ReplyToMessageInfo } from "../types/agent";
 
@@ -10997,6 +11000,18 @@ function parseChatTimestamp(ts?: string): Date | null {
   return null;
 }
 
+function formatMessageTime(ts?: string): string {
+  if (!ts) return "";
+  const d = parseChatTimestamp(ts);
+  if (d) {
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  }
+  const m = String(ts).match(/(\d{1,2}:\d{2})/);
+  return m ? m[1] : String(ts).slice(0, 5);
+}
+
 function formatChatTimestampDivider(ts?: string, lang?: string): string {
   const d = parseChatTimestamp(ts);
   if (!d) return ts ? String(ts) : "";
@@ -13099,6 +13114,7 @@ ${targetItem.text}`;
 
   // Voice recording / Speech-to-text state (Mode A: Push-to-Talk & Mode B: Full-Duplex Realtime)
   const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [liveVoiceEnergy, setLiveVoiceEnergy] = useState<number>(0);
   const [realtimeBotVoiceEnergy, setRealtimeBotVoiceEnergy] = useState<number>(0);
@@ -13124,6 +13140,7 @@ ${targetItem.text}`;
   const realtimeWsRef = useRef<WebSocket | null>(null);
   const realtimeMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const pttMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const pttStreamRef = useRef<MediaStream | null>(null);
 
   // Mode B Multimodal RTC Video & Continuous Loop State
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
@@ -13195,13 +13212,13 @@ ${targetItem.text}`;
   const silenceTimerRef = useRef<any>(null);
   const autoSendOnSilenceRef = useRef<boolean>(true);
   const vadModeRef = useRef<"continuous" | "manual" | "push_to_talk">("continuous");
-  const silenceDurationRef = useRef<number>(2400);
+  const silenceDurationRef = useRef<number>(1200);
   const vadSensitivityRef = useRef<"quiet" | "normal" | "noisy">("normal");
 
   useEffect(() => {
     try {
       const mode = (localStorage.getItem("agent360_vad_mode") as any) || "continuous";
-      const silence = parseInt(localStorage.getItem("agent360_vad_silence_ms") || "2400", 10);
+      const silence = parseInt(localStorage.getItem("agent360_vad_silence_ms") || "1200", 10);
       const sensitivity = (localStorage.getItem("agent360_vad_sensitivity") as any) || "normal";
       vadModeRef.current = mode;
       silenceDurationRef.current = silence;
@@ -13212,7 +13229,7 @@ ${targetItem.text}`;
     const handleSettings = (e: any) => {
       if (e.detail) {
         vadModeRef.current = e.detail.mode || "continuous";
-        silenceDurationRef.current = e.detail.silenceDuration || 2400;
+        silenceDurationRef.current = e.detail.silenceDuration || 1200;
         if (e.detail.sensitivity) vadSensitivityRef.current = e.detail.sensitivity;
         autoSendOnSilenceRef.current = e.detail.mode === "continuous";
       }
@@ -13227,172 +13244,187 @@ ${targetItem.text}`;
   }, []);
 
   const startVoiceRecording = async () => {
+    if (isRecording) {
+      stopVoiceRecording(true);
+      return;
+    }
     // Interrupt any ongoing bot speech immediately when user begins speaking (natural barge-in)
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setSpeakingMsgId(null);
     }
+    // Optimistic UI feedback: immediately enter recording state on tap (<16ms)
+    setIsRecording(true);
+    setVoiceError(null);
+    recognitionBaseTextRef.current = (inputTextRef.current || "").trim();
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const useCloudStt = typeof window !== "undefined" && localStorage.getItem("agent360_use_cloud_stt") !== "false";
+    const forceCloudOnly = typeof window !== "undefined" && localStorage.getItem("agent360_use_cloud_stt") === "true";
 
-    if (!SpeechRecognition || useCloudStt) {
+    // Fast Hybrid Streaming: Start native browser SpeechRecognition immediately if available so words stream into composer in real-time (<50ms)
+    let nativeTranscriptCaptured = false;
+    if (SpeechRecognition && !forceCloudOnly) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(stream);
-        pttChunksRef.current = [];
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) pttChunksRef.current.push(e.data);
-        };
-        recorder.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
-          pttMediaRecorderRef.current = null;
-          setIsRecording(false);
-          if (pttChunksRef.current.length === 0) return;
-          const blob = new Blob(pttChunksRef.current, { type: recorder.mimeType || "audio/webm" });
-          try {
-            const res = await transcribeAudioViaLlm360(blob, { language: sttLang });
-            if (res?.text) {
-              const base = (inputTextRef.current || "").trim();
-              setInputText(base ? `${base} ${res.text.trim()}` : res.text.trim());
-            }
-          } catch (e: any) {
-            setVoiceError(e?.message || "Không thể nhận diện giọng nói");
-            setTimeout(() => setVoiceError(null), 4000);
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = sttLang;
+        recognition.onresult = (event: any) => {
+          let finalTranscript = "";
+          let interimTranscript = "";
+          for (let i = 0; i < event.results.length; i++) {
+            const res = event.results[i];
+            if (res.isFinal) finalTranscript += res[0].transcript;
+            else interimTranscript += res[0].transcript;
+          }
+          const currentSpoken = (finalTranscript + (interimTranscript ? " " + interimTranscript : "")).trim();
+          if (currentSpoken) {
+            nativeTranscriptCaptured = true;
+            speechDetectedOnceRef.current = true;
+            const base = recognitionBaseTextRef.current;
+            setInputText(base ? `${base} ${currentSpoken}` : currentSpoken);
           }
         };
-        pttMediaRecorderRef.current = recorder;
-        recorder.start();
-        setIsRecording(true);
-        setVoiceError(null);
-      } catch (e: any) {
-        setVoiceError("Không thể mở Microphone: " + (e?.message || ""));
-        setTimeout(() => setVoiceError(null), 4000);
-      }
-      return;
+        recognition.onerror = () => {};
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch {}
     }
 
-    // Proactively verify & request microphone hardware permission if needed
     try {
-      const micStatus = await queryPermissionStatus("microphone");
-      if (micStatus.state === "denied") {
-        setVoiceError("Quyền Microphone bị chặn trong trình duyệt. Bấm biểu tượng 🔒 trên thanh địa chỉ để cấp quyền.");
-        setIsPermissionsModalOpen(true);
-        setTimeout(() => setVoiceError(null), 6000);
-        return;
+      // Reuse warm microphone stream if available to eliminate 350ms hardware initialization cold-start
+      let stream = pttStreamRef.current;
+      if (!stream || !stream.active) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        pttStreamRef.current = stream;
       }
-      if (micStatus.state === "prompt" || micStatus.canRequest) {
-        const granted = await requestPermission("microphone");
-        if (!granted) {
-          setVoiceError("Bạn đã từ chối quyền microphone. Vui lòng cấp quyền để nói chuyện với Agent.");
-          setTimeout(() => setVoiceError(null), 5000);
+
+      const pttAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const pttSourceNode = pttAudioCtx.createMediaStreamSource(stream);
+      const pttBandpassFilter = pttAudioCtx.createBiquadFilter();
+      pttBandpassFilter.type = "bandpass";
+      pttBandpassFilter.frequency.value = 1850; // Center frequency for 200Hz - 3500Hz human vocal band
+      pttBandpassFilter.Q.value = 0.56; // Bandwidth ~3300Hz (200Hz to 3500Hz)
+      const pttAnalyser = pttAudioCtx.createAnalyser();
+      pttAnalyser.fftSize = 256;
+      const pttDestNode = pttAudioCtx.createMediaStreamDestination();
+      pttSourceNode.connect(pttBandpassFilter);
+      pttBandpassFilter.connect(pttAnalyser);
+      pttBandpassFilter.connect(pttDestNode);
+
+      const freqData = new Uint8Array(pttAnalyser.frequencyBinCount);
+      let pttSpeechDetected = false;
+      let pttSilenceTimer: any = null;
+
+      // Unified Acoustic Formant VAD + Energy Meter (80ms fast cadence)
+      const pttVadInterval = setInterval(() => {
+        pttAnalyser.getByteFrequencyData(freqData);
+        let vocalSum = 0;
+        const vocalStartBin = 2;
+        const vocalEndBin = Math.min(freqData.length, 40);
+        let peakVocalBinVal = 0;
+        for (let i = vocalStartBin; i < vocalEndBin; i++) {
+          vocalSum += freqData[i];
+          if (freqData[i] > peakVocalBinVal) peakVocalBinVal = freqData[i];
+        }
+        const vocalBandAvg = vocalSum / (vocalEndBin - vocalStartBin);
+
+        let highNoiseSum = 0;
+        const highNoiseStart = Math.min(freqData.length - 1, 60);
+        for (let i = highNoiseStart; i < freqData.length; i++) highNoiseSum += freqData[i];
+        const highNoiseAvg = highNoiseSum / Math.max(1, freqData.length - highNoiseStart);
+
+        const lvl = Math.min(100, Math.round((vocalBandAvg / 110) * 100));
+        audioEnergyLevelRef.current = lvl;
+        setLiveVoiceEnergy(lvl);
+
+        const baseThreshold = vadSensitivityRef.current === "noisy" ? 26 : vadSensitivityRef.current === "quiet" ? 12 : 18;
+        const peakMin = vadSensitivityRef.current === "noisy" ? 42 : vadSensitivityRef.current === "quiet" ? 20 : 30;
+        const isSpeech =
+          vocalBandAvg > baseThreshold &&
+          peakVocalBinVal > peakMin &&
+          (vocalBandAvg > highNoiseAvg * 1.25 || peakVocalBinVal > 50);
+
+        if (isSpeech) {
+          pttSpeechDetected = true;
+          speechDetectedOnceRef.current = true;
+          if (pttSilenceTimer) {
+            clearTimeout(pttSilenceTimer);
+            pttSilenceTimer = null;
+          }
+        } else if (pttSpeechDetected && autoSendOnSilenceRef.current && vadModeRef.current === "continuous" && !pttSilenceTimer) {
+          // Fast silence auto-stop (650ms - 1100ms) after user finishes speaking
+          const fastPauseMs = Math.max(600, Math.min(1100, Math.round((silenceDurationRef.current || 1200) * 0.6)));
+          pttSilenceTimer = setTimeout(() => {
+            stopVoiceRecording();
+          }, fastPauseMs);
+        }
+      }, 80);
+
+      const recMime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : undefined;
+      const recorder = new MediaRecorder(
+        pttDestNode.stream.getAudioTracks().length > 0 ? pttDestNode.stream : stream,
+        recMime ? { mimeType: recMime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 }
+      );
+      pttChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) pttChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        clearInterval(pttVadInterval);
+        if (pttSilenceTimer) clearTimeout(pttSilenceTimer);
+        try { pttSourceNode.disconnect(); pttBandpassFilter.disconnect(); pttAnalyser.disconnect(); pttAudioCtx.close(); } catch {}
+        pttMediaRecorderRef.current = null;
+        setIsRecording(false);
+        setLiveVoiceEnergy(0);
+
+        // If native SpeechRecognition already streamed the text in real-time, skip redundant cloud upload for instant speed!
+        if (nativeTranscriptCaptured && !forceCloudOnly) {
           return;
         }
+        if (pttChunksRef.current.length === 0) return;
+        const blob = new Blob(pttChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        if (blob.size < 400) return;
+
+        setIsTranscribingAudio(true);
+        try {
+          const res = await transcribeAudioViaLlm360(blob, { language: sttLang });
+          if (res?.text) {
+            const base = recognitionBaseTextRef.current;
+            setInputText(base ? `${base} ${res.text.trim()}` : res.text.trim());
+          }
+        } catch (e: any) {
+          if (!nativeTranscriptCaptured) {
+            setVoiceError(e?.message || "Không thể nhận diện giọng nói");
+            setTimeout(() => setVoiceError(null), 3500);
+          }
+        } finally {
+          setIsTranscribingAudio(false);
+        }
+      };
+      pttMediaRecorderRef.current = recorder;
+      recorder.start(150);
+    } catch (e: any) {
+      if (!recognitionRef.current) {
+        setIsRecording(false);
+        setVoiceError("Không thể mở Microphone: " + (e?.message || ""));
+        setTimeout(() => setVoiceError(null), 3500);
       }
-    } catch (permErr) {
-      console.warn("Permission preflight check ignored:", permErr);
     }
+  };
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = sttLang; // Dynamic STT language (vi-VN or en-US)
-
-      recognition.onstart = () => {
-        isContinuousVoiceActiveRef.current = true;
-        speechDetectedOnceRef.current = false;
-        setIsRecording(true);
-        setVoiceError(null);
-        // Anchor the baseline text when recording starts so interim chunks do not duplicate
-        recognitionBaseTextRef.current = (inputTextRef.current || "").trim();
-
-        // Safety fallback: if no speech is detected after 10 seconds of opening mic, auto-close mic
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = setTimeout(() => {
-          if (!speechDetectedOnceRef.current && isContinuousVoiceActiveRef.current) {
-            console.log("[VAD] No speech detected in initial 10s, pausing mic...");
-            stopVoiceRecording(true);
-          }
-        }, 10000);
-      };
-
-      recognition.onresult = (event: any) => {
-        let finalTranscript = "";
-        let interimTranscript = "";
-
-        for (let i = 0; i < event.results.length; i++) {
-          const res = event.results[i];
-          if (res.isFinal) {
-            finalTranscript += res[0].transcript;
-          } else {
-            interimTranscript += res[0].transcript;
-          }
-        }
-
-        const base = recognitionBaseTextRef.current;
-        const currentSpoken = (finalTranscript + (interimTranscript ? " " + interimTranscript : "")).trim();
-        
-        if (currentSpoken) {
-          speechDetectedOnceRef.current = true;
-          const fullText = base ? `${base} ${currentSpoken}` : currentSpoken;
-          setInputText(fullText);
-
-          // Voice Activity Detection (VAD): Reset silence countdown
-          if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-          }
-
-          // In continuous or push_to_talk mode, automatically stop and submit when user finishes speaking naturally
-          if (autoSendOnSilenceRef.current && vadModeRef.current !== "manual" && currentSpoken.length >= 2) {
-            silenceTimerRef.current = setTimeout(() => {
-              // Intelligent Dual-signal verification:
-              // Check if acoustic energy has truly subsided below conversational floor (<16%)
-              const checkEnergyAndCommit = (retriesLeft: number) => {
-                if (audioEnergyLevelRef.current > 16 && retriesLeft > 0) {
-                  // User is pausing mid-sentence or still vocalizing; grant dynamic grace slice
-                  silenceTimerRef.current = setTimeout(() => {
-                    checkEnergyAndCommit(retriesLeft - 1);
-                  }, 600);
-                  return;
-                }
-
-                // Natural end-of-speech detected: finalize voice and dispatch message
-                stopVoiceRecording();
-                setTimeout(() => {
-                  const form = composerFormRef.current;
-                  if (form) {
-                    form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
-                  }
-                }, 200);
-              };
-
-              checkEnergyAndCommit(2);
-            }, silenceDurationRef.current);
-          }
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn("Speech recognition error:", event.error);
-        if (event.error !== "no-speech") {
-          setVoiceError(`Lỗi thu âm: ${event.error}`);
-          setTimeout(() => setVoiceError(null), 4000);
-        }
-        setIsRecording(false);
-      };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
-
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (err: any) {
-      console.warn("Failed to start speech recognition:", err);
-      setVoiceError(err.message || "Không thể khởi động microphone");
-      setIsRecording(false);
-    }
+  const cancelVoiceRecording = () => {
+    // Completely cancel and discard recording without committing to composer text
+    const prevBase = recognitionBaseTextRef.current || "";
+    setInputText(prevBase);
+    stopVoiceRecording(true);
   };
 
   const stopVoiceRecording = (disengageLoop: boolean = false) => {
@@ -13473,9 +13505,14 @@ ${targetItem.text}`;
 
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const sourceNode = audioCtx.createMediaStreamSource(stream);
+      const bandpassFilter = audioCtx.createBiquadFilter();
+      bandpassFilter.type = "bandpass";
+      bandpassFilter.frequency.value = 1850; // 200Hz - 3500Hz human speech passband
+      bandpassFilter.Q.value = 0.56;
       const analyserNode = audioCtx.createAnalyser();
       analyserNode.fftSize = 256;
-      sourceNode.connect(analyserNode);
+      sourceNode.connect(bandpassFilter);
+      bandpassFilter.connect(analyserNode);
       const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
 
       let sustainedVocalSlices = 0;
@@ -13487,15 +13524,25 @@ ${targetItem.text}`;
         }
 
         analyserNode.getByteFrequencyData(dataArray);
-        let sum = 0;
-        // Focus on human vocal fundamental formants (approx 250Hz - 2800Hz)
-        const startBin = 3;
-        const endBin = Math.min(dataArray.length, 36);
-        for (let i = startBin; i < endBin; i++) sum += dataArray[i];
-        const vocalEnergy = sum / (endBin - startBin);
+        // Harmonic Formant Analysis for Human Speech Validation
+        // Human voice fundamental & formant range: ~120Hz to 3000Hz (Bins 2 to 38 at 48kHz FFT 256)
+        let vocalSum = 0;
+        const vocalStartBin = 2;
+        const vocalEndBin = Math.min(dataArray.length, 38);
+        for (let i = vocalStartBin; i < vocalEndBin; i++) vocalSum += dataArray[i];
+        const vocalBandAvg = vocalSum / (vocalEndBin - vocalStartBin);
 
-        // Vocal energy threshold with hardware echoCancellation
-        if (vocalEnergy > 26) {
+        // High frequency noise baseline (keyboard clicks, fans, hiss: > 4500Hz)
+        let noiseSum = 0;
+        const noiseStartBin = Math.min(dataArray.length - 1, 55);
+        for (let i = noiseStartBin; i < dataArray.length; i++) noiseSum += dataArray[i];
+        const noiseBandAvg = noiseSum / (dataArray.length - noiseStartBin);
+
+        // Speech vs White-noise Spectral Contrast Ratio: Human voice has strong vocal energy relative to high-freq hiss
+        const isHumanVoiceSpectral = vocalBandAvg > 24 && (vocalBandAvg > noiseBandAvg * 1.35 || vocalBandAvg > 38);
+
+        // Vocal energy threshold with hardware echoCancellation and spectral ratio
+        if (isHumanVoiceSpectral) {
           sustainedVocalSlices++;
           // When vocal energy sustained for >160ms (2 slices) -> AUTO BARGE-IN DETECTED!
           if (sustainedVocalSlices >= 2) {
@@ -13552,15 +13599,26 @@ ${targetItem.text}`;
         realtimeAudioStreamRef.current = stream;
       }
 
-      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : undefined });
       const chunks: Blob[] = [];
 
-      // Audio Energy Analysis for natural Voice Activity Detection (VAD)
+      // Web Audio Hardware Bandpass Filter (200Hz - 3500Hz) + Energy Analysis for Voice Activity Detection (VAD)
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const sourceNode = audioCtx.createMediaStreamSource(stream);
+      const bandpassFilter = audioCtx.createBiquadFilter();
+      bandpassFilter.type = "bandpass";
+      bandpassFilter.frequency.value = 1850; // Center frequency for 200Hz - 3500Hz human vocal band
+      bandpassFilter.Q.value = 0.56; // Bandwidth ~3300Hz (200Hz - 3500Hz)
+      const filteredStreamDest = audioCtx.createMediaStreamDestination();
       const analyserNode = audioCtx.createAnalyser();
       analyserNode.fftSize = 256;
-      sourceNode.connect(analyserNode);
+      sourceNode.connect(bandpassFilter);
+      bandpassFilter.connect(analyserNode);
+      bandpassFilter.connect(filteredStreamDest);
+
+      const recordingStream = filteredStreamDest.stream.getAudioTracks().length > 0 ? filteredStreamDest.stream : stream;
+      const recorder = new MediaRecorder(recordingStream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : undefined,
+      });
       const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
 
       let speechDetected = false;
@@ -13570,7 +13628,7 @@ ${targetItem.text}`;
       const stopAndCommit = () => {
         if (vadInterval) clearInterval(vadInterval);
         if (silenceTimer) clearTimeout(silenceTimer);
-        try { sourceNode.disconnect(); analyserNode.disconnect(); audioCtx.close(); } catch {}
+        try { sourceNode.disconnect(); bandpassFilter.disconnect(); analyserNode.disconnect(); audioCtx.close(); } catch {}
         if (recorder.state === "recording") {
           recorder.stop();
         }
@@ -13582,26 +13640,57 @@ ${targetItem.text}`;
           return;
         }
         analyserNode.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-        const avgEnergy = sum / dataArray.length;
+        // Multi-Band Spectral Contrast: separates true human speech formants (150Hz - 3200Hz) from ambient noise
+        let vocalSum = 0;
+        const vocalStartBin = 2; // ~375Hz
+        const vocalEndBin = Math.min(dataArray.length, 40); // ~3500Hz
+        let peakVocalBinVal = 0;
+        for (let i = vocalStartBin; i < vocalEndBin; i++) {
+          vocalSum += dataArray[i];
+          if (dataArray[i] > peakVocalBinVal) peakVocalBinVal = dataArray[i];
+        }
+        const vocalBandAvg = vocalSum / (vocalEndBin - vocalStartBin);
+
+        // High frequency noise band (> 5000Hz: mechanical fan, room hum, typing taps)
+        let highNoiseSum = 0;
+        const highNoiseStart = Math.min(dataArray.length - 1, 60);
+        for (let i = highNoiseStart; i < dataArray.length; i++) highNoiseSum += dataArray[i];
+        const highNoiseAvg = highNoiseSum / Math.max(1, dataArray.length - highNoiseStart);
+
+        // Overall signal energy for UI visualizer
+        let overallSum = 0;
+        for (let i = 0; i < dataArray.length; i++) overallSum += dataArray[i];
+        const avgEnergy = overallSum / dataArray.length;
         setLiveVoiceEnergy(Math.min(100, Math.round((avgEnergy / 128) * 100)));
 
-        const effectiveThreshold =
-          vadSensitivityRef.current === "noisy" ? 28 : vadSensitivityRef.current === "quiet" ? 11 : 18;
-        if (avgEnergy > effectiveThreshold) {
+        // Adaptive sensitivity parameters
+        const baseThreshold =
+          vadSensitivityRef.current === "noisy" ? 26 : vadSensitivityRef.current === "quiet" ? 12 : 18;
+        const peakMin = vadSensitivityRef.current === "noisy" ? 42 : vadSensitivityRef.current === "quiet" ? 20 : 30;
+
+        // Human Speech Signature Criteria:
+        // 1. Vocal formant band average exceeds base threshold
+        // 2. Harmonic formant concentration: Peak vocal frequency is prominent (> peakMin)
+        // 3. Spectral flatness rejection: Speech is non-flat (vocal band significantly exceeds high-freq hiss)
+        const isTrueHumanSpeech =
+          vocalBandAvg > baseThreshold &&
+          peakVocalBinVal > peakMin &&
+          (vocalBandAvg > highNoiseAvg * 1.25 || peakVocalBinVal > 50);
+
+        if (isTrueHumanSpeech) {
           speechDetected = true;
           if (silenceTimer) {
             clearTimeout(silenceTimer);
             silenceTimer = null;
           }
         } else if (speechDetected && !silenceTimer) {
-          // Snappy 650ms conversational silence detection for fast, natural duplex turn-taking
+          // Ultra-fast conversational silence pause window (480ms - 950ms) for snappy realtime turn commit
+          const pauseWindowMs = Math.max(480, Math.min(950, silenceDurationRef.current ? Math.round(silenceDurationRef.current * 0.42) : 550));
           silenceTimer = setTimeout(() => {
             stopAndCommit();
-          }, 650);
+          }, pauseWindowMs);
         }
-      }, 100);
+      }, 65);
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
@@ -13655,7 +13744,7 @@ ${targetItem.text}`;
       };
 
       realtimeMediaRecorderRef.current = recorder;
-      recorder.start(250);
+      recorder.start(120);
       setRealtimeVoiceStatus("listening");
     } catch (err: any) {
       console.warn("Continuous mic loop init error:", err);
@@ -18043,6 +18132,18 @@ const selectedAgentTheme = getAgentColorTheme(
         return;
       }
 
+      // 1v. Fast 1-Touch Voice Recording Toggle (Alt+V)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        triggerHaptic(15);
+        if (isRecording) {
+          stopVoiceRecording(true);
+        } else {
+          startVoiceRecording();
+        }
+        return;
+      }
+
       // 2. Fast New Dialogue Shortcut (Ctrl+Shift+O or Ctrl+Shift+N)
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key.toLowerCase() === "o" || e.key.toLowerCase() === "n")) {
         e.preventDefault();
@@ -20158,8 +20259,8 @@ const selectedAgentTheme = getAgentColorTheme(
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-slate-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-slate-500 dark:text-neutral-400"
-                          }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}>
-                            {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}
+                          }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.slug || ag.id] || agentRecentSessions[ag.id] || ag.lastSessionTitle || ag.sessions?.[0]?.title || ag.model)}>
+                            {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.slug || ag.id] || agentRecentSessions[ag.id] || ag.lastSessionTitle || ag.sessions?.[0]?.title || ag.model)}
                           </span>
                         </div>
                       </div>
@@ -20405,8 +20506,8 @@ const selectedAgentTheme = getAgentColorTheme(
                             ag.enabled === false || ag.status === "disabled"
                               ? "text-slate-400 dark:text-neutral-600 opacity-40 blur-[0.5px]"
                               : "text-slate-500 dark:text-neutral-400"
-                          }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}>
-                            {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.id] || ag.sessions?.[0]?.title || ag.model)}
+                          }`} title={ag.enabled === false || ag.status === "disabled" ? "Agent đã bị vô hiệu hóa" : (agentRecentSessions[ag.slug || ag.id] || agentRecentSessions[ag.id] || ag.lastSessionTitle || ag.sessions?.[0]?.title || ag.model)}>
+                            {ag.enabled === false || ag.status === "disabled" ? "Đã vô hiệu hóa (Disabled)" : (agentRecentSessions[ag.slug || ag.id] || agentRecentSessions[ag.id] || ag.lastSessionTitle || ag.sessions?.[0]?.title || ag.model)}
                           </span>
                         </div>
                       </div>
@@ -21170,29 +21271,29 @@ const selectedAgentTheme = getAgentColorTheme(
                 );
               };
 
-              const renderMessageReactionsAndActions = () => (
-                <div className={`flex flex-row items-center gap-1.5 mt-0.5 w-full relative ${isUser ? "justify-end" : "justify-start"}`}>
-                  {/* Unified Action Bar: CTAs appear strictly on hover over message turn; React icon & badges positioned to the right of CTAs */}
-                  {!(isStreaming && isLastTurn && !isUser) && (
-                    <div
-                      data-testid={`msg-action-bar-${msg.id}`}
-                      className={`relative flex items-center gap-1 p-0.5 rounded-full bg-slate-100/90 dark:bg-[#181824]/90 border border-slate-200/80 dark:border-[#2a2a38] shadow-2xs select-none transition-all duration-150 ${
-                        speakingMsgId === msg.id || isReactOpen || isExtendOpen || currentReactions.length > 0
-                          ? "opacity-100 flex"
-                          : "hidden sm:flex sm:opacity-0 sm:group-hover/msg:opacity-100"
-                      }`}
-                    >
-                      {/* Action CTAs (Reply, Extend, React Button): ONLY appear on hover over message turn, or when popover is open */}
+              const renderMessageReactionsAndActions = () => {
+                const showOnMobile = !isUser || currentReactions.length > 0 || speakingMsgId === msg.id || isReactOpen || isExtendOpen;
+                const showOnDesktop = currentReactions.length > 0 || speakingMsgId === msg.id || isReactOpen || isExtendOpen;
+
+                return (
+                  <div
+                    data-testid={`msg-action-bar-${msg.id}`}
+                    className={`flex items-center gap-1 select-none ${
+                      isUser
+                        ? "flex-row items-center justify-end"
+                        : "flex-row-reverse items-center justify-start"
+                    }`}
+                  >
+                    {/* 1. Desktop Hover Circular CTAs: Quote (Reply), Forward (Share), More (...) */}
+                    {!(isStreaming && isLastTurn && !isUser) && (
                       <div
-                        className={`flex items-center gap-1 transition-all duration-150 ${
+                        className={`items-center gap-1 transition-all duration-150 ${
                           speakingMsgId === msg.id || isReactOpen || isExtendOpen
                             ? "flex opacity-100"
-                            : currentReactions.length > 0
-                            ? "hidden sm:flex sm:opacity-0 sm:pointer-events-none sm:w-0 sm:overflow-hidden sm:group-hover/msg:w-auto sm:group-hover/msg:opacity-100 sm:group-hover/msg:pointer-events-auto sm:group-hover/msg:overflow-visible"
-                            : "flex opacity-100"
+                            : "hidden sm:flex sm:opacity-0 sm:group-hover/msg:opacity-100"
                         }`}
                       >
-                        {/* 1. Reply Button (Both User & Agent) - No Tooltip */}
+                        {/* Quote / Reply CTA Button */}
                         <button
                           data-ux-target-min="24"
                           data-testid="msg-reply-btn"
@@ -21201,13 +21302,30 @@ const selectedAgentTheme = getAgentColorTheme(
                             e.stopPropagation();
                             handleStartReply(msg);
                           }}
-                          className="h-6 w-6 rounded-full hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                          className="h-6 w-6 rounded-full bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          title="Trả lời (Reply)"
                           aria-label="Trả lời"
                         >
-                          <CornerUpLeft size={13} />
+                          <Quote size={12} className="fill-current" />
                         </button>
 
-                        {/* 2. Extend Menu Button (...) - 3-dots on desktop hover */}
+                        {/* Forward / Share CTA Button */}
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-forward-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setForwardModalMsg(cleanContent);
+                          }}
+                          className="h-6 w-6 rounded-full bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          title="Chuyển tiếp (Forward)"
+                          aria-label="Chuyển tiếp"
+                        >
+                          <Forward size={13} className="fill-current" />
+                        </button>
+
+                        {/* More Actions (...) Button with Menu Popover */}
                         <div className="relative shrink-0">
                           <button
                             data-ux-target-min="24"
@@ -21239,11 +21357,12 @@ const selectedAgentTheme = getAgentColorTheme(
                                 setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                               }
                             }}
-                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
                               isExtendOpen
                                 ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
-                                : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                                : "bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
                             }`}
+                            title="Tuỳ chọn khác"
                             aria-label="Mở rộng"
                           >
                             <MoreHorizontal size={13} />
@@ -21383,21 +21502,19 @@ const selectedAgentTheme = getAgentColorTheme(
                                   <span>{starredMsgIds.includes(msg.id) ? "Unpin" : "Pin / Star"}</span>
                                 </button>
 
-                                {/* Forward (Agent only) */}
-                                {!isUser && (
-                                  <button
-                                    type="button"
-                                    data-testid="extend-forward-btn"
-                                    onClick={() => {
-                                      setActiveExtendPopoverMsgId(null);
-                                      setForwardModalMsg(cleanContent);
-                                    }}
-                                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
-                                  >
-                                    <Share2 size={14} className="text-neutral-400 shrink-0" />
-                                    <span>Forward</span>
-                                  </button>
-                                )}
+                                {/* Forward */}
+                                <button
+                                  type="button"
+                                  data-testid="extend-forward-btn"
+                                  onClick={() => {
+                                    setActiveExtendPopoverMsgId(null);
+                                    setForwardModalMsg(cleanContent);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-neutral-200 transition-colors cursor-pointer"
+                                >
+                                  <Share2 size={14} className="text-neutral-400 shrink-0" />
+                                  <span>Forward</span>
+                                </button>
 
                                 {/* Fork */}
                                 <button
@@ -21416,8 +21533,49 @@ const selectedAgentTheme = getAgentColorTheme(
                             </div>
                           )}
                         </div>
+                      </div>
+                    )}
 
-                        {/* 3. React Button: ONLY for Agent message - positioned to the RIGHT of Reply and Extend CTAs */}
+                    {/* 2. Reaction Pill & ThumbsUp Button: Docked at bottom-right corner of bubble, permanently visible (as in Image 2) */}
+                    {(currentReactions.length > 0 || !isUser || isReactOpen) && (
+                      <div
+                        className={`flex items-center gap-1 transition-all duration-150 ${
+                          showOnMobile ? "flex" : "hidden"
+                        } sm:flex`}
+                      >
+                        {/* Reaction Pill Badge (e.g. ❤️ 1) */}
+                        {currentReactions.length > 0 && (
+                          <div
+                            data-testid={`msg-reactions-${msg.id}`}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#16191d] dark:bg-[#16191d] border border-slate-700/60 dark:border-white/10 shadow-sm"
+                          >
+                            {currentReactions.map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                data-testid={isUser ? `agent-user-reaction-badge-${emoji}` : `user-agent-reaction-badge-${emoji}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isUser) return;
+                                  toggleMessageReaction(msg.id, emoji, msg);
+                                }}
+                                className={`inline-flex items-center gap-1 text-[12px] text-white transition-transform ${
+                                  isUser ? "cursor-default" : "hover:scale-110 active:scale-90 cursor-pointer"
+                                }`}
+                                title={
+                                  isUser
+                                    ? `${selectedAgent?.name || "Agent"} đã thả cảm xúc ${emoji} cho tin nhắn của bạn`
+                                    : `Bạn đã phản hồi cảm xúc ${emoji} (${classifyReactionEmoji(emoji).labelVi}). Bấm để gỡ bỏ.`
+                                }
+                              >
+                                <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
+                                <span className="text-[11px] font-mono font-medium text-white leading-none">1</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* ThumbsUp Trigger Button (Circular button with ThumbsUp outline matching image 1 & 2) */}
                         {!isUser && (
                           <div className="relative shrink-0">
                             <button
@@ -21435,14 +21593,15 @@ const selectedAgentTheme = getAgentColorTheme(
                                 setShowFullEmojiPicker(false);
                                 setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                               }}
-                              className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                              className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer border shadow-sm ${
                                 isReactOpen
-                                  ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
-                                  : "hover:bg-slate-200 dark:hover:bg-[#252536] text-neutral-400 hover:text-slate-900 dark:hover:text-white"
+                                  ? "bg-[#252830] border-slate-600 text-white"
+                                  : "bg-[#1d2025] hover:bg-[#282c34] border-slate-700/60 text-slate-300 hover:text-white"
                               }`}
+                              title="Thả cảm xúc"
                               aria-label="Thả cảm xúc"
                             >
-                              <Smile size={13} />
+                              <ThumbsUp size={12} className="stroke-[1.8]" />
                             </button>
 
                             {/* Quick Emoji Reaction Popover */}
@@ -21450,7 +21609,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               <div
                                 data-testid="msg-react-popover"
                                 onClick={(e) => e.stopPropagation()}
-                                className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none left-0 text-slate-700 dark:text-neutral-200 ${
+                                className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none right-0 text-slate-700 dark:text-neutral-200 ${
                                   reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
                                 }`}
                               >
@@ -21514,47 +21673,11 @@ const selectedAgentTheme = getAgentColorTheme(
                           </div>
                         )}
                       </div>
+                    )}
+                  </div>
+                );
+              };
 
-                      {/* 4. Reaction Badge(s) inside the pill - positioned to the RIGHT of all CTAs */}
-                      {currentReactions.length > 0 && (
-                        <div
-                          data-testid={`msg-reactions-${msg.id}`}
-                          className={`flex items-center gap-0.5 px-0.5 transition-all duration-150 ${
-                            speakingMsgId === msg.id || isReactOpen || isExtendOpen
-                              ? "border-l border-slate-200 dark:border-white/10 ml-0.5 pl-1"
-                              : "sm:group-hover/msg:border-l sm:group-hover/msg:border-slate-200 dark:sm:group-hover/msg:border-white/10 sm:group-hover/msg:ml-0.5 sm:group-hover/msg:pl-1"
-                          }`}
-                        >
-                          {currentReactions.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              data-testid={isUser ? `agent-user-reaction-badge-${emoji}` : `user-agent-reaction-badge-${emoji}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isUser) return;
-                                toggleMessageReaction(msg.id, emoji, msg);
-                              }}
-                              style={{ backgroundColor: selectedAgentTheme.bgLight, borderColor: selectedAgentTheme.borderLight }}
-                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] text-slate-800 dark:text-neutral-100 transition-transform border ${
-                                isUser ? "cursor-default" : "hover:scale-110 active:scale-90 cursor-pointer"
-                              }`}
-                              title={
-                                isUser
-                                  ? `${selectedAgent?.name || "Agent"} đã thả cảm xúc ${emoji} cho tin nhắn của bạn`
-                                  : `Bạn đã phản hồi cảm xúc ${emoji} (${classifyReactionEmoji(emoji).labelVi}). Bấm để gỡ bỏ.`
-                              }
-                            >
-                              <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
-                              <span style={{ color: selectedAgentTheme.primary }} className="text-[10px] font-mono font-semibold leading-none">1</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
 
               const prevMsg = mIdx > 0 ? displayMessages[mIdx - 1] : null;
               const isConsecutiveAssistant = !isUser && prevMsg && prevMsg.role === "assistant";
@@ -21626,61 +21749,112 @@ const selectedAgentTheme = getAgentColorTheme(
                           <CornerUpLeft size={15} className={swipeOffset < 0 ? "" : "rotate-180"} />
                         </div>
                       )}
-                      <div
-                        data-testid="user-message-bubble"
-                        style={{
-                          backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c",
-                          borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#f8a87c",
-                          color: "#ffffff",
-                        }}
-                        className={`inline-block rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white text-white font-normal border shadow-2xs font-sans ml-auto break-words ${
-                          isHighlighted ? "ring-2 ring-white/60 shadow-md" : ""
-                        }`}
-                      >
-                        {renderQuotedReplyBox()}
-                        {renderMessageAttachmentsBox()}
-                        {cleanContent && (() => {
-                          const mentionMatches = Array.from(cleanContent.matchAll(/(?:^|\s)@([a-zA-Z0-9_-]{2,32})/g)).map((m) => m[1]);
-                          const uniqueMentions = Array.from(new Set(mentionMatches));
-                          const strippedPromptText = cleanContent.replace(/(?:^|\s)@[a-zA-Z0-9_-]{2,32}\b/g, " ").replace(/\s+/g, " ").trim();
-                          const startsWithSingleShortMention =
-                            uniqueMentions.length === 1 &&
-                            /^@[a-zA-Z0-9_-]{2,32}\s+/.test(cleanContent.trim()) &&
-                            strippedPromptText.length <= 42;
+                      <div className="relative group/userturn flex items-end justify-end w-full max-w-full">
+                        {/* Action buttons on left of bubble (on hover, as in Image 1) */}
+                        <div className="absolute right-full mr-2 bottom-1 z-20">
+                          {renderMessageReactionsAndActions()}
+                        </div>
 
-                          if (uniqueMentions.length > 0 && strippedPromptText && !startsWithSingleShortMention) {
-                            return (
-                              <div className="space-y-1.5">
-                                <p className="whitespace-pre-wrap select-text break-words">{strippedPromptText}</p>
-                                <div data-testid="user-bubble-mention-chips" className="flex flex-wrap items-center gap-1 pt-0.5">
-                                  {uniqueMentions.map((slug) => (
-                                    <span key={slug}>{renderAgentMentionChip(`@${slug}`, undefined, "inline")}</span>
-                                  ))}
+                        {/* User Message Bubble */}
+                        <div
+                          data-testid="user-message-bubble"
+                          style={{
+                            backgroundColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#1f344d",
+                            borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#2a4668",
+                            color: "#ffffff",
+                          }}
+                          className={`relative inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white text-white font-normal border shadow-2xs font-sans ml-auto break-words ${
+                            isHighlighted ? "ring-2 ring-white/60 shadow-md" : ""
+                          }`}
+                        >
+                          {renderQuotedReplyBox()}
+                          {renderMessageAttachmentsBox()}
+                          {cleanContent && (() => {
+                            const mentionMatches = Array.from(cleanContent.matchAll(/(?:^|\s)@([a-zA-Z0-9_-]{2,32})/g)).map((m) => m[1]);
+                            const uniqueMentions = Array.from(new Set(mentionMatches));
+                            const strippedPromptText = cleanContent.replace(/(?:^|\s)@[a-zA-Z0-9_-]{2,32}\b/g, " ").replace(/\s+/g, " ").trim();
+                            const startsWithSingleShortMention =
+                              uniqueMentions.length === 1 &&
+                              /^@[a-zA-Z0-9_-]{2,32}\s+/.test(cleanContent.trim()) &&
+                              strippedPromptText.length <= 42;
+
+                            if (uniqueMentions.length > 0 && strippedPromptText && !startsWithSingleShortMention) {
+                              return (
+                                <div className="space-y-1.5">
+                                  <p className="whitespace-pre-wrap select-text break-words">{strippedPromptText}</p>
+                                  <div data-testid="user-bubble-mention-chips" className="flex flex-wrap items-center gap-1 pt-0.5">
+                                    {uniqueMentions.map((slug) => (
+                                      <span key={slug}>{renderAgentMentionChip(`@${slug}`, undefined, "inline")}</span>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          }
+                              );
+                            }
 
-                          return (
-                            <p className="whitespace-pre-wrap select-text break-words">
-                              {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
-                                if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
-                                  return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
-                                }
-                                return <span key={pIdx}>{part}</span>;
-                              })}
-                            </p>
-                          );
-                        })()}
-                        {msg.metadata?.isOfflineQueued && (
-                          <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
-                            <span>Chờ đồng bộ mạng (Tự gửi khi có mạng)</span>
+                            return (
+                              <p className="whitespace-pre-wrap select-text break-words">
+                                {cleanContent.split(/(@[a-zA-Z0-9_-]+)/g).map((part, pIdx) => {
+                                  if (/^@[a-zA-Z0-9_-]+$/.test(part)) {
+                                    return <span key={pIdx}>{renderAgentMentionChip(part, undefined, "inline")}</span>;
+                                  }
+                                  return <span key={pIdx}>{part}</span>;
+                                })}
+                              </p>
+                            );
+                          })()}
+
+                          {/* Message Time in Bottom Row inside bubble (e.g. 18:40 as shown in user images) */}
+                          <div className="flex items-center justify-between gap-3 mt-1 select-none">
+                            <span className="text-[11px] font-sans text-slate-400 dark:text-slate-400/90 leading-none">
+                              {formatMessageTime(msg.timestamp)}
+                            </span>
+
+                            {/* Docked Reaction Pill & ThumbsUp trigger (overlapping bottom border, as in Image 1 & 2) */}
+                            {(currentReactions.length > 0 || !isUser || isReactOpen) && (
+                              <div className="absolute -bottom-2.5 right-2 z-20 flex items-center gap-1">
+                                {currentReactions.length > 0 && (
+                                  <div
+                                    data-testid={`msg-reactions-${msg.id}`}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#16191d] border border-slate-700/60 shadow-sm"
+                                  >
+                                    {currentReactions.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        data-testid={isUser ? `agent-user-reaction-badge-${emoji}` : `user-agent-reaction-badge-${emoji}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (isUser) return;
+                                          toggleMessageReaction(msg.id, emoji, msg);
+                                        }}
+                                        className={`inline-flex items-center gap-1 text-[12px] text-white transition-transform ${
+                                          isUser ? "cursor-default" : "hover:scale-110 active:scale-90 cursor-pointer"
+                                        }`}
+                                        title={
+                                          isUser
+                                            ? `${selectedAgent?.name || "Agent"} đã thả cảm xúc ${emoji} cho tin nhắn của bạn`
+                                            : `Bạn đã phản hồi cảm xúc ${emoji} (${classifyReactionEmoji(emoji).labelVi}). Bấm để gỡ bỏ.`
+                                        }
+                                      >
+                                        <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
+                                        <span className="text-[11px] font-mono font-medium text-white leading-none">1</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {msg.metadata?.isOfflineQueued && (
+                            <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
+                              <span>Chờ đồng bộ mạng (Tự gửi khi có mạng)</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {renderMessageReactionsAndActions()}
                     </div>
                   ) : (
                     /* Assistant Turn: Structured Content Blocks + Agent Tool Cards with swipe-to-reply gesture */
@@ -24245,6 +24419,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       isRecording={isRecording}
                       agentId={selectedAgent?.id}
                       themeColor={selectedAgentTheme.dark}
+                      externalLevel={liveVoiceEnergy}
                       onAudioLevel={(lvl) => {
                         audioEnergyLevelRef.current = lvl;
                         setLiveVoiceEnergy(lvl);
@@ -24262,10 +24437,8 @@ const selectedAgentTheme = getAgentColorTheme(
                         setIsSettingsModalOpen(true);
                       }}
                       onClick={() => {
-                        if (vadModeRef.current !== "push_to_talk") {
-                          if (isRecording) stopVoiceRecording(true);
-                          else startVoiceRecording();
-                        }
+                        if (isRecording) stopVoiceRecording(true);
+                        else startVoiceRecording();
                       }}
                       onPointerDown={() => {
                         if (vadModeRef.current === "push_to_talk" && !isRecording) {
@@ -24298,9 +24471,15 @@ const selectedAgentTheme = getAgentColorTheme(
                             : "text-white shadow-xs border-transparent"
                           : "bg-slate-200/80 dark:bg-[#2a2a32] border-slate-300/70 dark:border-white/10 text-slate-600 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white hover:brightness-110 active:scale-95"
                       }`}
-                      title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng nói (Voice to Text)"}
+                      title={isRecording ? "Dừng ghi âm (Alt+V)" : "Ghi âm giọng nói (Alt+V)"}
                     >
-                      {isRecording ? <Square size={13} className="fill-white" /> : <Mic size={14} className="stroke-[2.2]" />}
+                      {isRecording ? (
+                        <Square size={12} className="fill-white" />
+                      ) : isTranscribingAudio ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <Mic size={14} className="stroke-[2.2]" />
+                      )}
                     </button>
 
                     {!hasInputContent ? (
@@ -24324,7 +24503,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             ? (selectedAgentTheme.light || selectedAgentTheme.primary || "#1a73e8")
                             : "#ffffff",
                         }}
-                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all flex items-center justify-center shrink-0 border shadow-xs hover:brightness-105 active:scale-95"
+                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full cursor-pointer transition-all duration-150 animate-in fade-in zoom-in-90 flex items-center justify-center shrink-0 border shadow-xs hover:brightness-105 active:scale-95"
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <line x1="4" y1="10" x2="4" y2="14" />
@@ -24343,7 +24522,7 @@ const selectedAgentTheme = getAgentColorTheme(
                           borderColor: selectedAgentTheme.borderLight || "rgba(248,168,124,0.45)",
                           color: selectedAgentTheme.light || selectedAgentTheme.primary || "#f8a87c",
                         }}
-                        className="h-9 w-9 sm:h-7 sm:w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                        className="h-8 w-8 sm:h-7 sm:w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all duration-150 animate-in fade-in zoom-in-90 cursor-pointer flex items-center justify-center shrink-0"
                         title={isStreaming ? "Add to request queue" : "Send Message"}
                         aria-label={isStreaming ? "Add to request queue" : "Send Message"}
                       >
@@ -24407,7 +24586,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     isDraggingFiles
                       ? "border-[#f8a87c] ring-2 ring-[#f8a87c]/30 bg-amber-500/5 dark:bg-[#f8a87c]/10"
                       : isRecording
-                      ? "border-red-500/60 ring-2 ring-red-500/20"
+                      ? "border-neutral-700/80 dark:border-neutral-700/80 bg-neutral-900/95 dark:bg-[#15151e] text-white"
                       : "border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15"
                   } shadow-[0_4px_20px_rgba(0,0,0,0.07)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.45)] transition-all overflow-hidden`}
                   style={{ "--agent-color": selectedAgentTheme.dark } as React.CSSProperties}
@@ -24421,9 +24600,72 @@ const selectedAgentTheme = getAgentColorTheme(
                     </div>
                   )}
 
+                  {/* Minimalist Dedicated Audio Recording Bar (Matching Image 1: [X Cancel] === Waveform === [■ Stop] [↑ Send]) */}
+                  {isRecording ? (
+                    <div
+                      data-testid="lean-record-bar"
+                      className="w-full h-10 flex items-center justify-between px-1 sm:px-2 select-none animate-in fade-in slide-in-from-bottom-2 zoom-in-95 duration-150"
+                    >
+                      {/* 1. Left: Cancel Recording (X) */}
+                      <button
+                        type="button"
+                        data-testid="cancel-recording-btn"
+                        onClick={cancelVoiceRecording}
+                        aria-label="Huỷ ghi âm"
+                        title="Huỷ bỏ ghi âm"
+                        className="h-8 w-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer shrink-0"
+                      >
+                        <X size={18} className="stroke-[2.2]" />
+                      </button>
 
+                      {/* 2. Center: Audio Waveform Activity Monitor */}
+                      <div className="flex-1 flex items-center justify-center px-2 overflow-hidden">
+                        <AudioVisualizerWaveform
+                          isRecording={true}
+                          agentId={selectedAgent?.id}
+                          themeColor="#e2e8f0"
+                          externalLevel={liveVoiceEnergy}
+                          className="w-full max-w-[240px] sm:max-w-[320px] h-6 flex items-center justify-center"
+                        />
+                      </div>
 
-                  {isMultiline ? (
+                      {/* 3. Right: [Stop / Pause (Square)] + [Submit / Send (ArrowUp)] */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Stop Recording button */}
+                        <button
+                          type="button"
+                          data-testid="stop-recording-btn"
+                          onClick={() => stopVoiceRecording(true)}
+                          aria-label="Dừng ghi âm"
+                          title="Dừng ghi âm (giữ văn bản)"
+                          className="h-8 w-8 rounded-full flex items-center justify-center bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700 active:scale-95 transition-all cursor-pointer shrink-0 shadow-xs"
+                        >
+                          <Square size={13} className="fill-white" />
+                        </button>
+
+                        {/* Send Prompt button (Commit Voice & Submit) */}
+                        <button
+                          type="button"
+                          data-testid="commit-voice-send-btn"
+                          onClick={() => {
+                            stopVoiceRecording(true);
+                            setTimeout(() => {
+                              composerFormRef.current?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                            }, 180);
+                          }}
+                          aria-label="Gửi tin nhắn bằng giọng nói"
+                          title="Gửi ngay"
+                          style={{
+                            backgroundColor: selectedAgentTheme.primary || "#3b82f6",
+                            color: "#ffffff",
+                          }}
+                          className="h-8 w-8 rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0 shadow-md"
+                        >
+                          <ArrowUp size={15} className="stroke-[2.5]" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : isMultiline ? (
                     <>
                       {/* Multiline Layout (Grok / ChatGPT style) */}
                       <div className="w-full">

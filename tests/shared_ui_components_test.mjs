@@ -1165,3 +1165,76 @@ console.log("Testing Cross-Agent Browser Tab Control, Fresh Target Creation & Fu
   );
 }
 console.log("✓ Test 74: Cross-Agent Browser Tab Control, Fresh Target Creation & Full-Height Viewport Rendering Contract verified");
+
+
+console.log("Testing Phone UI Message Action Bar Reaction-Only Contract...");
+{
+  const grok75 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  assert.ok(
+    grok75.includes('showOnMobile ? "flex" : "hidden"') &&
+    grok75.includes('hidden sm:flex items-center gap-1') &&
+    grok75.includes('msg-react-btn') &&
+    grok75.includes('msg-reply-btn') &&
+    grok75.includes('msg-extend-btn'),
+    "On phone viewports, only the React button and badges must be visible; Reply and Extend CTAs must be hidden"
+  );
+}
+console.log("✓ Test 75: Phone UI Message Action Bar Reaction-Only Contract verified");
+
+console.log("Testing Web Audio Bandpass Filter (200Hz-3500Hz) & Vocal Formant VAD Contract...");
+{
+  const grok76 = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+  const wave76 = fs.readFileSync(new URL("../src/components/AudioVisualizerWaveform.tsx", import.meta.url), "utf8");
+  assert.ok(
+    grok76.includes("audioCtx.createBiquadFilter()") &&
+    grok76.includes('bandpassFilter.type = "bandpass"') &&
+    grok76.includes("bandpassFilter.frequency.value = 1850") &&
+    grok76.includes("bandpassFilter.Q.value = 0.56") &&
+    grok76.includes("audioCtx.createMediaStreamDestination()") &&
+    grok76.includes("bandpassFilter.connect(filteredStreamDest)") &&
+    grok76.includes("isTrueHumanSpeech") &&
+    grok76.includes("isHumanVoiceSpectral") &&
+    grok76.includes("pttStreamRef.current") &&
+    grok76.includes("nativeTranscriptCaptured") &&
+    grok76.includes("externalLevel={liveVoiceEnergy}") &&
+    grok76.includes("cancelVoiceRecording") &&
+    grok76.includes('data-testid="lean-record-bar"') &&
+    grok76.includes("slide-in-from-bottom-2") &&
+    grok76.includes('e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "v"') &&
+    grok76.includes('title={isRecording ? "Dừng ghi âm (Alt+V)" : "Ghi âm giọng nói (Alt+V)"}') &&
+    grok76.includes("transition-all duration-150 animate-in fade-in zoom-in-90") &&
+    grok76.includes('data-testid="cancel-recording-btn"') &&
+    grok76.includes('data-testid="stop-recording-btn"') &&
+    grok76.includes('data-testid="commit-voice-send-btn"') &&
+    grok76.includes('className="h-8 w-8 sm:h-7 sm:w-7 rounded-full border hover:brightness-105 shadow-2xs active:scale-95 transition-all duration-150 animate-in fade-in zoom-in-90 cursor-pointer flex items-center justify-center shrink-0"') &&
+    wave76.includes("typeof externalLevel === \"number\""),
+    "Web Audio API pipeline must apply a BiquadFilterNode bandpass (200Hz-3500Hz), reuse warm mic stream, support instant hybrid SpeechRecognition + MediaRecorder fast-path, drive AudioVisualizerWaveform via externalLevel, support Alt+V shortcut, render the lean record bar with slide-in animation, ensure Send button matches Mic button size, and apply transition-all duration-150 zoom-in-90 fade-in transitions"
+  );
+}
+console.log("✓ Test 76: Web Audio Bandpass Filter (200Hz-3500Hz) & Vocal Formant VAD Contract verified");
+console.log("Testing Agent Last Access Session Persistence & Sync Contract...");
+{
+  const agentModelsCs = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Models/AgentModels.cs", import.meta.url), "utf8");
+  const endpointsCs = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Endpoints/AgentFeaturesEndpoints.cs", import.meta.url), "utf8");
+  const qwenPawClientCs = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Services/QwenPawClient.cs", import.meta.url), "utf8");
+  const agentApiTs = fs.readFileSync(new URL("../src/services/agentApi.ts", import.meta.url), "utf8");
+  const grokBotWorkspaceTsx = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+
+  assert.ok(
+    agentModelsCs.includes("AgentLastSessionResponse") &&
+    agentModelsCs.includes("SetAgentLastSessionRequest") &&
+    agentModelsCs.includes("LastSessionId") &&
+    agentModelsCs.includes("LastSessionTitle") &&
+    endpointsCs.includes('"{agentId}/last-session"') &&
+    endpointsCs.includes('"agent_last_session_updated"') &&
+    qwenPawClientCs.includes('user_management.""UserAgentLastSessions""') &&
+    qwenPawClientCs.includes("EnsureUserAgentLastSessionsTableAsync") &&
+    qwenPawClientCs.includes("SetAgentLastSessionAsync") &&
+    qwenPawClientCs.includes("GetAgentLastSessionAsync") &&
+    agentApiTs.includes("serverLastChat") &&
+    agentApiTs.includes("last-session") &&
+    grokBotWorkspaceTsx.includes("agentRecentSessions[ag.slug || ag.id]"),
+    "Agent360 must persist and synchronize last accessed session per agent across browser reloads, tabs and devices using PostgreSQL UserAgentLastSessions, REST endpoints, and WebSocket multiplexer"
+  );
+}
+console.log("✓ Test 77: Agent Last Access Session Persistence & Sync Contract verified");

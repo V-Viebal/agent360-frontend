@@ -159,6 +159,8 @@ export interface InfraAgent {
   runtimeVersion: string;
   uptime: string;
   activeSessionId?: string;
+  lastSessionId?: string;
+  lastSessionTitle?: string;
   memoryUsageMb: number;
   description: string;
   tools: AgentTool[];

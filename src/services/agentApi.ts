@@ -134,6 +134,14 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
       if (a.avatar_config || a.avatarConfig) {
         hydrateAgentCustomProfileFromDto(a.id, a.slug, a.avatar_config || a.avatarConfig, a.name);
       }
+      const serverLastChat = a.active_session_id || a.activeSessionId || a.last_session_id || a.lastSessionId;
+      if (serverLastChat && typeof window !== "undefined") {
+        const localSaved = getSavedLastChatForAgent(a.id) || getSavedLastChatForAgent(a.slug);
+        if (!localSaved) {
+          saveLastChatForAgent(a.id, serverLastChat);
+          saveLastChatForAgent(a.slug, serverLastChat);
+        }
+      }
       return {
         id: a.id,
         name: getCustomAgentName(a.id) || getCustomAgentName(a.slug) || a.name || a.id,
@@ -149,6 +157,9 @@ export async function fetchInfraAgents(): Promise<InfraAgent[]> {
         uptime: a.uptime || "Online (Private)",
         memoryUsageMb: a.memoryUsageMb || 256,
         description: a.description || "Active autonomous infrastructure agent",
+        activeSessionId: serverLastChat || a.activeSessionId,
+        lastSessionId: serverLastChat,
+        lastSessionTitle: a.last_session_title || a.lastSessionTitle,
         tools: a.tools || [],
         sessions: a.sessions || [],
         canToggle: a.can_toggle ?? a.canToggle ?? true,
@@ -240,6 +251,17 @@ export function saveLastChatForAgent(agentId: string | null | undefined, chatId:
     localStorage.setItem(`agent360_last_chat_bot:agent360:${slug}`, cleanChatId);
     localStorage.setItem("agent360_last_chat_id", cleanChatId);
   } catch {}
+
+  // Persist asynchronously to backend PostgreSQL UserAgentLastSessions if not an empty unsent session-*
+  if (hasCredential() && !cleanChatId.startsWith("session-")) {
+    try {
+      authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(slug)}/last-session`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: cleanChatId, session_id: cleanChatId })
+      }, slug).catch(() => {});
+    } catch {}
+  }
 }
 
 export function clearSavedLastChatForAgent(agentId: string | null | undefined, onlyIfMatchesChatId?: string | null): void {
