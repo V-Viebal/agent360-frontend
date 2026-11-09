@@ -14866,7 +14866,7 @@ ${targetItem.text}`;
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
   const swipeActivatedMsgRef = useRef<ChatMessage | null>(null);
   const swipeTriggerHapticFiredRef = useRef<boolean>(false);
-  const mouseGrabStateRef = useRef<{ startX: number; startY: number; msg: ChatMessage } | null>(null);
+  const mouseGrabStateRef = useRef<{ startX: number; startY: number; msg: ChatMessage; targetElement?: HTMLElement } | null>(null);
 
   const handleTouchStartMsg = (
     e: React.TouchEvent,
@@ -14959,14 +14959,19 @@ ${targetItem.text}`;
   };
 
   // Mouse Grab message to reply handlers for desktop & trackpad
-  const handleMouseDownGrabMsg = (e: React.MouseEvent, msg: ChatMessage) => {
+  const handleMouseDownGrabMsg = (e: React.MouseEvent, msg: ChatMessage, customTarget?: HTMLElement) => {
     if (e.button !== 0) return;
     // Don't engage if clicking an interactive sub-element like a button, link, or selection
     const target = e.target as HTMLElement;
     if (target.closest("button") || target.closest("a") || target.closest('[data-testid^="agent-mention-chip"]')) return;
-    mouseGrabStateRef.current = { startX: e.clientX, startY: e.clientY, msg };
+    const bubbleTarget = customTarget || (target.closest('[data-testid="user-message-bubble"]') as HTMLElement) || (target.closest('.group\/asstturn') as HTMLElement) || (target.closest('[data-testid="solo-kickoff-intent-bubble"]') as HTMLElement) || (e.currentTarget as HTMLElement);
+    mouseGrabStateRef.current = { startX: e.clientX, startY: e.clientY, msg, targetElement: bubbleTarget };
     setSwipingMsgId(msg.id);
     setSwipeOffset(0);
+    if (bubbleTarget && bubbleTarget !== e.currentTarget) {
+      bubbleTarget.style.transition = "none";
+      bubbleTarget.style.cursor = "grabbing";
+    }
     swipeTriggerHapticFiredRef.current = false;
   };
 
@@ -14979,6 +14984,10 @@ ${targetItem.text}`;
         const maxOffset = 84;
         const damped = Math.sign(dx) * Math.min(maxOffset, Math.pow(Math.abs(dx), 0.88) * 2);
         setSwipeOffset(damped);
+        const el = mouseGrabStateRef.current.targetElement;
+        if (el && el !== el.closest('[data-testid^="asst-msg-container"], [data-testid^="user-msg-container"]')) {
+          el.style.transform = "translateX(" + damped + "px)";
+        }
         if (Math.abs(damped) >= 42 && !swipeTriggerHapticFiredRef.current) {
           swipeTriggerHapticFiredRef.current = true;
           triggerHaptic(18);
@@ -14993,6 +15002,12 @@ ${targetItem.text}`;
         if (Math.abs(swipeOffset) >= 42) {
           handleStartReply(mouseGrabStateRef.current.msg);
           triggerHaptic(20);
+        }
+        const el = mouseGrabStateRef.current.targetElement;
+        if (el && el !== el.closest('[data-testid^="asst-msg-container"], [data-testid^="user-msg-container"]')) {
+          el.style.transition = "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)";
+          el.style.transform = "";
+          el.style.cursor = "";
         }
         mouseGrabStateRef.current = null;
         swipeTriggerHapticFiredRef.current = false;
@@ -21841,7 +21856,26 @@ const selectedAgentTheme = getAgentColorTheme(
                                   <div
                                     key={`lead-${msg.id}-${sIdx}`}
                                     data-testid="solo-kickoff-intent-bubble"
-                                    className="inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150"
+                                    onMouseDown={(e) => {
+                                      e.stopPropagation();
+                                      const virtualLeadMsg: ChatMessage = {
+                                        ...msg,
+                                        id: `${msg.id}-lead-${sIdx}`,
+                                        content: seg,
+                                      };
+                                      handleMouseDownGrabMsg(e, virtualLeadMsg, e.currentTarget);
+                                    }}
+                                    onTouchStart={(e) => {
+                                      e.stopPropagation();
+                                      handleTouchStartMsg(e, {
+                                        id: `${msg.id}-lead-${sIdx}`,
+                                        content: seg,
+                                        turnIdx: mIdx,
+                                        role: "assistant",
+                                        rawMsg: { ...msg, id: `${msg.id}-lead-${sIdx}`, content: seg },
+                                      });
+                                    }}
+                                    className="inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150 cursor-grab"
                                   >
                                     <FormattedMessageContent
                                       content={stabilizeStreamingMarkdown(seg, isTurnActivelyRunning)}
@@ -21880,7 +21914,28 @@ const selectedAgentTheme = getAgentColorTheme(
 
                             {(mainBodyContent || parsedAttachments.length > 0) && (
                               <>
-                                <div className="relative group/asstturn inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
+                                <div
+                                  className="relative group/asstturn inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%] cursor-grab"
+                                  onMouseDown={(e) => {
+                                    e.stopPropagation();
+                                    const virtualBodyMsg: ChatMessage = {
+                                      ...msg,
+                                      id: `${msg.id}-body`,
+                                      content: mainBodyContent || msg.content,
+                                    };
+                                    handleMouseDownGrabMsg(e, virtualBodyMsg, e.currentTarget);
+                                  }}
+                                  onTouchStart={(e) => {
+                                    e.stopPropagation();
+                                    handleTouchStartMsg(e, {
+                                      id: `${msg.id}-body`,
+                                      content: mainBodyContent || msg.content,
+                                      turnIdx: mIdx,
+                                      role: "assistant",
+                                      rawMsg: { ...msg, id: `${msg.id}-body`, content: mainBodyContent || msg.content },
+                                    });
+                                  }}
+                                >
                                   {msg.senderAgentId && (
                                     <div
                                       data-testid={`room-msg-badge-${msg.senderAgentId}`}
