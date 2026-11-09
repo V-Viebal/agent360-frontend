@@ -21300,7 +21300,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     className={`flex items-center gap-1 select-none ${
                       isUser
                         ? "flex-row items-center justify-end"
-                        : "flex-row-reverse items-center justify-start"
+                        : "flex-row items-center justify-start"
                     }`}
                   >
                     {/* 1. Desktop Hover Circular CTAs: Quote (Reply), Forward (Share), More (...) */}
@@ -21555,138 +21555,97 @@ const selectedAgentTheme = getAgentColorTheme(
                       </div>
                     )}
 
-                    {/* 2. Reaction Pill & ThumbsUp Button: Docked at bottom-right of assistant message (for user message, pill is docked on user bubble) */}
+                    {/* ThumbsUp Trigger Button (ONLY for Assistant messages, matching Image 1 & 2) */}
                     {!isUser && (
-                      <div
-                        className={`flex items-center gap-1 transition-all duration-150 ${
-                          showOnMobile ? "flex" : "hidden"
-                        } sm:flex`}
-                      >
-                        {/* Reaction Pill Badge (e.g. ❤️ 1) */}
-                        {currentReactions.length > 0 && (
+                      <div className="relative shrink-0">
+                        <button
+                          data-ux-target-min="24"
+                          data-testid="msg-react-btn"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const containerRect = messagesContainerRef.current?.getBoundingClientRect();
+                            const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
+                            const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
+                            setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
+                            setActiveExtendPopoverMsgId(null);
+                            setShowFullEmojiPicker(false);
+                            setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
+                          }}
+                          className={`h-5.5 w-5.5 rounded-full flex items-center justify-center transition-colors cursor-pointer border shadow-sm ${
+                            isReactOpen
+                              ? "bg-[#252830] border-slate-600 text-white"
+                              : "bg-[#1d2025] hover:bg-[#282c34] border-slate-700/60 text-slate-300 hover:text-white"
+                          }`}
+                          title="Thả cảm xúc"
+                          aria-label="Thả cảm xúc"
+                        >
+                          <ThumbsUp size={10.5} className="stroke-[1.8]" />
+                        </button>
+
+                        {/* Quick Emoji Reaction Popover */}
+                        {isReactOpen && (
                           <div
-                            data-testid={`msg-reactions-${msg.id}`}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#16191d] dark:bg-[#16191d] border border-slate-700/60 dark:border-white/10 shadow-sm"
+                            data-testid="msg-react-popover"
+                            onClick={(e) => e.stopPropagation()}
+                            className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none left-0 text-slate-700 dark:text-neutral-200 ${
+                              reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
+                            }`}
                           >
-                            {currentReactions.map((emoji) => (
-                              <button
-                                key={emoji}
-                                type="button"
-                                data-testid={isUser ? `agent-user-reaction-badge-${emoji}` : `user-agent-reaction-badge-${emoji}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (isUser) return;
-                                  toggleMessageReaction(msg.id, emoji, msg);
-                                }}
-                                className={`inline-flex items-center gap-1 text-[12px] text-white transition-transform ${
-                                  isUser ? "cursor-default" : "hover:scale-110 active:scale-90 cursor-pointer"
-                                }`}
-                                title={
-                                  isUser
-                                    ? `${selectedAgent?.name || "Agent"} đã thả cảm xúc ${emoji} cho tin nhắn của bạn`
-                                    : `Bạn đã phản hồi cảm xúc ${emoji} (${classifyReactionEmoji(emoji).labelVi}). Bấm để gỡ bỏ.`
-                                }
-                              >
-                                <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
-                                <span className="text-[11px] font-mono font-medium text-white leading-none">1</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* ThumbsUp Trigger Button (Circular button with ThumbsUp outline matching image 1 & 2) */}
-                        {!isUser && (
-                          <div className="relative shrink-0">
-                            <button
-                              data-ux-target-min="24"
-                              data-testid="msg-react-btn"
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const containerRect = messagesContainerRef.current?.getBoundingClientRect();
-                                const spaceTop = containerRect ? rect.top - containerRect.top : rect.top;
-                                const spaceBottom = containerRect ? containerRect.bottom - rect.bottom : window.innerHeight - rect.bottom;
-                                setReactPopoverAbove(spaceTop >= 180 || spaceTop > spaceBottom);
-                                setActiveExtendPopoverMsgId(null);
-                                setShowFullEmojiPicker(false);
-                                setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
-                              }}
-                              className={`h-5.5 w-5.5 rounded-full flex items-center justify-center transition-colors cursor-pointer border shadow-sm ${
-                                isReactOpen
-                                  ? "bg-[#252830] border-slate-600 text-white"
-                                  : "bg-[#1d2025] hover:bg-[#282c34] border-slate-700/60 text-slate-300 hover:text-white"
-                              }`}
-                              title="Thả cảm xúc"
-                              aria-label="Thả cảm xúc"
-                            >
-                              <ThumbsUp size={10.5} className="stroke-[1.8]" />
-                            </button>
-
-                            {/* Quick Emoji Reaction Popover */}
-                            {isReactOpen && (
-                              <div
-                                data-testid="msg-react-popover"
-                                onClick={(e) => e.stopPropagation()}
-                                className={`absolute z-50 flex flex-col items-center gap-1 p-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/90 dark:border-white/10 shadow-xl select-none right-0 text-slate-700 dark:text-neutral-200 ${
-                                  reactPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
-                                }`}
-                              >
-                                <div className="flex items-center gap-0.5 px-1 py-0.5">
-                                  {recentReactions.slice(0, 7).map((emoji) => {
-                                    const active = currentReactions.includes(emoji);
-                                    return (
-                                      <button
-                                        key={emoji}
-                                        type="button"
-                                        data-testid={`react-option-${emoji}`}
-                                        onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
-                                        className={`h-6 w-6 rounded-full flex items-center justify-center text-xs hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
-                                          active ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] ring-1 ring-[var(--agent-color)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "hover:bg-white/10"
-                                        }`}
-                                        aria-label={`Thả ${emoji}`}
-                                      >
-                                        {emoji}
-                                      </button>
-                                    );
-                                  })}
+                            <div className="flex items-center gap-0.5 px-1 py-0.5">
+                              {recentReactions.slice(0, 7).map((emoji) => {
+                                const active = currentReactions.includes(emoji);
+                                return (
                                   <button
+                                    key={emoji}
                                     type="button"
-                                    data-testid="desktop-more-emoji-btn"
-                                    onClick={() => {
-                                      triggerHaptic(10);
-                                      setShowFullEmojiPicker((prev) => !prev);
-                                    }}
-                                    className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer ${
-                                      showFullEmojiPicker ? "bg-slate-200 dark:bg-white/20 text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                                    data-testid={`react-option-${emoji}`}
+                                    onClick={() => toggleMessageReaction(msg.id, emoji, msg)}
+                                    className={`h-6 w-6 rounded-full flex items-center justify-center text-xs hover:scale-125 active:scale-90 transition-transform cursor-pointer ${
+                                      active ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] ring-1 ring-[var(--agent-color)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]" : "hover:bg-white/10"
                                     }`}
-                                    title="Mở thêm biểu tượng cảm xúc"
+                                    aria-label={`Thả ${emoji}`}
                                   >
-                                    <Plus size={12} className="shrink-0" />
+                                    {emoji}
                                   </button>
-                                </div>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                data-testid="desktop-more-emoji-btn"
+                                onClick={() => {
+                                  triggerHaptic(10);
+                                  setShowFullEmojiPicker((prev) => !prev);
+                                }}
+                                className={`h-6 w-6 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer ${
+                                  showFullEmojiPicker ? "bg-slate-200 dark:bg-white/20 text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/10"
+                                }`}
+                                title="Mở thêm biểu tượng cảm xúc"
+                              >
+                                <Plus size={12} className="shrink-0" />
+                              </button>
+                            </div>
 
-                                {showFullEmojiPicker && (
-                                  <div
-                                    data-testid="desktop-full-emoji-picker-grid"
-                                    className="grid grid-cols-6 gap-0.5 p-1 rounded-lg bg-[#141a24] border border-white/10 w-full text-xs max-h-44 overflow-y-auto"
+                            {showFullEmojiPicker && (
+                              <div
+                                data-testid="desktop-full-emoji-picker-grid"
+                                className="grid grid-cols-6 gap-0.5 p-1 rounded-lg bg-[#141a24] border border-white/10 w-full text-xs max-h-44 overflow-y-auto"
+                              >
+                                {FULL_EMOJI_PALETTE.map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    data-testid={`full-emoji-${emoji}`}
+                                    onClick={() => {
+                                      toggleMessageReaction(msg.id, emoji, msg);
+                                      setShowFullEmojiPicker(false);
+                                    }}
+                                    className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
                                   >
-                                    {FULL_EMOJI_PALETTE.map((emoji) => (
-                                      <button
-                                        key={emoji}
-                                        type="button"
-                                        data-testid={`full-emoji-${emoji}`}
-                                        onClick={() => {
-                                          toggleMessageReaction(msg.id, emoji, msg);
-                                          setShowFullEmojiPicker(false);
-                                        }}
-                                        className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-125 hover:scale-110 transition-transform cursor-pointer"
-                                      >
-                                        {emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
+                                    {emoji}
+                                  </button>
+                                ))}
                               </div>
                             )}
                           </div>
@@ -22026,7 +21985,35 @@ const selectedAgentTheme = getAgentColorTheme(
                                     </div>
                                   )}
                             {/* Assistant Response Bubble (Clean Content Only - Thinking moved to Action Bar) */}
-                            <div className={`inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[var(--agent-primary)] shadow-lg" : ""}`}>
+                            <div className={`relative inline-block w-auto max-w-full rounded-[18px] px-3.5 py-1.5 sm:px-4 sm:py-2 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 ${isHighlighted ? "ring-2 ring-[var(--agent-primary)] shadow-lg" : ""}`}>
+                            {/* Docked Reaction Pill on bottom right of assistant bubble */}
+                            {(currentReactions.length > 0 || isReactOpen) && (
+                              <div className="absolute -bottom-3.5 right-2 z-20 flex items-center gap-1">
+                                {currentReactions.length > 0 && (
+                                  <div
+                                    data-testid={`msg-reactions-${msg.id}`}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#16191d] border border-slate-700/60 shadow-sm"
+                                  >
+                                    {currentReactions.map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        type="button"
+                                        data-testid={`user-agent-reaction-badge-${emoji}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleMessageReaction(msg.id, emoji, msg);
+                                        }}
+                                        className="inline-flex items-center gap-1 text-[12px] text-white transition-transform hover:scale-110 active:scale-90 cursor-pointer"
+                                        title={`Bạn đã phản hồi cảm xúc ${emoji} (${classifyReactionEmoji(emoji).labelVi}). Bấm để gỡ bỏ.`}
+                                      >
+                                        <span className="inline-block transform active:scale-125 transition-transform leading-none">{emoji}</span>
+                                        <span className="text-[11px] font-mono font-medium text-white leading-none">1</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             {renderQuotedReplyBox()}
                             {renderMessageAttachmentsBox()}
                             <div className="text-[14.5px] sm:text-[15px] leading-snug divide-y divide-dashed divide-slate-200 dark:divide-[#22222c]/50">
@@ -22103,6 +22090,13 @@ const selectedAgentTheme = getAgentColorTheme(
                               )}
                             </div>
                             </div>
+                                                        {/* Action buttons on right of assistant bubble (on hover, as in Image 4aa2c8f7) */}
+                            {!showRespondingPill && (
+                              <div className="absolute left-full ml-2 bottom-0 z-20 pointer-events-none group-hover/msg:pointer-events-auto">
+                                {renderMessageReactionsAndActions()}
+                              </div>
+                            )}
+
                             {/* Narrator Inline Receipt ("Messaged @A and @B", "N messages with @A and @B", "Message from @A") right-aligned below Host bubble */}
                             {!msg.senderAgentId && (() => {
                               const receipt = msg.roomReceipt || (msg.metadata?.receipt as any);
@@ -22236,11 +22230,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             />
                           )}
 
-                          {!showRespondingPill && (
-                            <div className="min-h-[28px] flex items-center">
-                              {renderMessageReactionsAndActions()}
-                            </div>
-                          )}
+
                         </>
                       )}
 
