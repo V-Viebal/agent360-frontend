@@ -11000,17 +11000,6 @@ function parseChatTimestamp(ts?: string): Date | null {
   return null;
 }
 
-function formatMessageTime(ts?: string): string {
-  if (!ts) return "";
-  const d = parseChatTimestamp(ts);
-  if (d) {
-    const hours = String(d.getHours()).padStart(2, "0");
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
-  }
-  const m = String(ts).match(/(\d{1,2}:\d{2})/);
-  return m ? m[1] : String(ts).slice(0, 5);
-}
 
 function formatChatTimestampDivider(ts?: string, lang?: string): string {
   const d = parseChatTimestamp(ts);
@@ -14543,6 +14532,36 @@ ${targetItem.text}`;
   const [activeReactPopoverMsgId, setActiveReactPopoverMsgId] = useState<string | null>(null);
   const [reactPopoverAbove, setReactPopoverAbove] = useState<boolean>(true);
   const [activeExtendPopoverMsgId, setActiveExtendPopoverMsgId] = useState<string | null>(null);
+  // Close message extend menu and react popover when clicking outside
+  useEffect(() => {
+    if (!activeExtendPopoverMsgId && !activeReactPopoverMsgId) return;
+
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      if (activeExtendPopoverMsgId) {
+        if (!target.closest('[data-testid="msg-extend-menu"]') && !target.closest('[data-testid="msg-extend-btn"]')) {
+          setActiveExtendPopoverMsgId(null);
+        }
+      }
+
+      if (activeReactPopoverMsgId) {
+        if (!target.closest('[data-testid="msg-react-popover"]') && !target.closest('[data-testid="msg-react-btn"]')) {
+          setActiveReactPopoverMsgId(null);
+          setShowFullEmojiPicker(false);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [activeExtendPopoverMsgId, activeReactPopoverMsgId]);
+
   const [extendPopoverAbove, setExtendPopoverAbove] = useState<boolean>(true);
   const [isMobileActionExtended, setIsMobileActionExtended] = useState<boolean>(false);
   const [showFullEmojiPicker, setShowFullEmojiPicker] = useState<boolean>(false);
@@ -19533,7 +19552,7 @@ const selectedAgentTheme = getAgentColorTheme(
                 aria-label="Expand Agents Sidebar"
               >
                 {/* Logo visible by default, hidden on hover */}
-                <div className="transition-all duration-200 group-hover:opacity-0 group-hover:scale-75">
+                <div className="transition-all duration-200 group-hover:opacity-0 group-hover:scale-75 translate-y-[3.5px]">
                   <SkyerLogo size={24} showText={false} showBotBadge={false} />
                 </div>
                 {/* PanelLeftOpen icon revealed on hover */}
@@ -20640,10 +20659,10 @@ const selectedAgentTheme = getAgentColorTheme(
         {!isLeftSidebarCollapsed ? (
           <div
             onMouseDown={() => setIsResizingLeft(true)}
-            className="hidden lg:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 active:bg-[var(--agent-primary,#38bdf8)] transition-colors z-30 -mr-0.5 group"
+            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 active:bg-[var(--agent-primary,#38bdf8)] transition-colors z-30 -mr-0.5 group"
             title="Kéo để chỉnh độ rộng danh sách Agent"
           >
-            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
+            <div className="w-[1px] h-5 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
           </div>
         ) : (
           <div
@@ -20660,11 +20679,11 @@ const selectedAgentTheme = getAgentColorTheme(
                 handleToggleLeftSidebar(false);
               }
             }}
-            className="hidden lg:block absolute top-0 right-0 w-2 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 active:bg-[var(--agent-primary,#38bdf8)] transition-all z-30 -mr-1 group cursor-pointer"
+            className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary,#38bdf8)]/50 active:bg-[var(--agent-primary,#38bdf8)] transition-all z-30 -mr-0.5 group cursor-pointer"
             title="Bấm hoặc kéo để mở rộng danh sách Agent (Ctrl+B)"
             aria-label="Bấm để mở danh sách Agent"
           >
-            <div className="w-0.5 h-8 bg-neutral-500/30 group-hover:bg-[var(--agent-primary,#38bdf8)] group-hover:h-12 rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-all duration-150" />
+            <div className="w-[1px] h-6 bg-neutral-500/30 group-hover:bg-[var(--agent-primary,#38bdf8)] group-hover:h-10 rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-all duration-150" />
           </div>
         )}
       </aside>
@@ -21302,11 +21321,11 @@ const selectedAgentTheme = getAgentColorTheme(
                             e.stopPropagation();
                             handleStartReply(msg);
                           }}
-                          className="h-6 w-6 rounded-full bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          className="h-5.5 w-5.5 rounded-full bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
                           title="Trả lời (Reply)"
                           aria-label="Trả lời"
                         >
-                          <Quote size={12} className="fill-current" />
+                          <Quote size={10.5} className="fill-current" />
                         </button>
 
                         {/* Forward / Share CTA Button */}
@@ -21318,11 +21337,11 @@ const selectedAgentTheme = getAgentColorTheme(
                             e.stopPropagation();
                             setForwardModalMsg(cleanContent);
                           }}
-                          className="h-6 w-6 rounded-full bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          className="h-5.5 w-5.5 rounded-full bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
                           title="Chuyển tiếp (Forward)"
                           aria-label="Chuyển tiếp"
                         >
-                          <Forward size={13} className="fill-current" />
+                          <Forward size={11.5} className="stroke-[1.9]" />
                         </button>
 
                         {/* More Actions (...) Button with Menu Popover */}
@@ -21357,7 +21376,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 setActiveExtendPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                               }
                             }}
-                            className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
+                            className={`h-5.5 w-5.5 rounded-full flex items-center justify-center transition-colors cursor-pointer shadow-2xs ${
                               isExtendOpen
                                 ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)]"
                                 : "bg-slate-200/80 dark:bg-[#2b2d33] hover:bg-slate-300 dark:hover:bg-[#383a42] text-slate-700 dark:text-neutral-300 hover:text-slate-900 dark:hover:text-white"
@@ -21365,7 +21384,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             title="Tuỳ chọn khác"
                             aria-label="Mở rộng"
                           >
-                            <MoreHorizontal size={13} />
+                            <MoreHorizontal size={11.5} />
                           </button>
 
                           {/* Desktop Vertical Extend Dropdown Menu - Compact & Always In Viewport */}
@@ -21374,7 +21393,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               data-testid="msg-extend-menu"
                               onClick={(e) => e.stopPropagation()}
                               className={`absolute z-50 w-40 py-1 rounded-xl bg-white/95 dark:bg-[#18202c]/95 border border-slate-200/80 dark:border-white/10 shadow-lg flex flex-col divide-y divide-slate-100 dark:divide-white/5 text-[11px] font-sans text-left max-h-[65vh] overflow-y-auto ${
-                                extendPopoverAbove ? "bottom-full mb-1" : "top-full mt-1"
+                                extendPopoverAbove ? "bottom-full mb-1.5" : "top-full mt-1.5"
                               } ${isUser ? "right-0" : "left-0"}`}
                             >
                               <div className="space-y-0.5 pb-1">
@@ -21536,8 +21555,8 @@ const selectedAgentTheme = getAgentColorTheme(
                       </div>
                     )}
 
-                    {/* 2. Reaction Pill & ThumbsUp Button: Docked at bottom-right corner of bubble, permanently visible (as in Image 2) */}
-                    {(currentReactions.length > 0 || !isUser || isReactOpen) && (
+                    {/* 2. Reaction Pill & ThumbsUp Button: Docked at bottom-right of assistant message (for user message, pill is docked on user bubble) */}
+                    {!isUser && (
                       <div
                         className={`flex items-center gap-1 transition-all duration-150 ${
                           showOnMobile ? "flex" : "hidden"
@@ -21593,7 +21612,7 @@ const selectedAgentTheme = getAgentColorTheme(
                                 setShowFullEmojiPicker(false);
                                 setActiveReactPopoverMsgId((prev) => (prev === msg.id ? null : msg.id));
                               }}
-                              className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer border shadow-sm ${
+                              className={`h-5.5 w-5.5 rounded-full flex items-center justify-center transition-colors cursor-pointer border shadow-sm ${
                                 isReactOpen
                                   ? "bg-[#252830] border-slate-600 text-white"
                                   : "bg-[#1d2025] hover:bg-[#282c34] border-slate-700/60 text-slate-300 hover:text-white"
@@ -21601,7 +21620,7 @@ const selectedAgentTheme = getAgentColorTheme(
                               title="Thả cảm xúc"
                               aria-label="Thả cảm xúc"
                             >
-                              <ThumbsUp size={12} className="stroke-[1.8]" />
+                              <ThumbsUp size={10.5} className="stroke-[1.8]" />
                             </button>
 
                             {/* Quick Emoji Reaction Popover */}
@@ -21749,9 +21768,9 @@ const selectedAgentTheme = getAgentColorTheme(
                           <CornerUpLeft size={15} className={swipeOffset < 0 ? "" : "rotate-180"} />
                         </div>
                       )}
-                      <div className="relative group/userturn flex items-end justify-end w-full max-w-full">
+                      <div className="relative group/userturn flex items-end justify-end max-w-[85%] sm:max-w-[80%] ml-auto">
                         {/* Action buttons on left of bubble (on hover, as in Image 1) */}
-                        <div className="absolute right-full mr-2 bottom-1 z-20">
+                        <div className="absolute right-full mr-2 bottom-0 z-20 pointer-events-none group-hover/msg:pointer-events-auto">
                           {renderMessageReactionsAndActions()}
                         </div>
 
@@ -21763,7 +21782,7 @@ const selectedAgentTheme = getAgentColorTheme(
                             borderColor: selectedAgentTheme.primary || selectedAgentTheme.dark || "#2a4668",
                             color: "#ffffff",
                           }}
-                          className={`relative inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 text-[14.5px] sm:text-[15px] leading-relaxed max-w-[85%] sm:max-w-[80%] !text-white text-white font-normal border shadow-2xs font-sans ml-auto break-words ${
+                          className={`relative inline-block rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 text-[14.5px] sm:text-[15px] leading-relaxed max-w-full !text-white text-white font-normal border shadow-2xs font-sans break-words ${
                             isHighlighted ? "ring-2 ring-white/60 shadow-md" : ""
                           }`}
                         >
@@ -21803,15 +21822,9 @@ const selectedAgentTheme = getAgentColorTheme(
                             );
                           })()}
 
-                          {/* Message Time in Bottom Row inside bubble (e.g. 18:40 as shown in user images) */}
-                          <div className="flex items-center justify-between gap-3 mt-1 select-none">
-                            <span className="text-[11px] font-sans text-slate-400 dark:text-slate-400/90 leading-none">
-                              {formatMessageTime(msg.timestamp)}
-                            </span>
-
-                            {/* Docked Reaction Pill & ThumbsUp trigger (overlapping bottom border, as in Image 1 & 2) */}
-                            {(currentReactions.length > 0 || !isUser || isReactOpen) && (
-                              <div className="absolute -bottom-2.5 right-2 z-20 flex items-center gap-1">
+                          {/* Docked Reaction Pill (overlapping bottom border, as in Image 1 & 2) */}
+                          {(currentReactions.length > 0 || !isUser || isReactOpen) && (
+                            <div className="absolute -bottom-3.5 right-2 z-20 flex items-center gap-1">
                                 {currentReactions.length > 0 && (
                                   <div
                                     data-testid={`msg-reactions-${msg.id}`}
@@ -21844,7 +21857,6 @@ const selectedAgentTheme = getAgentColorTheme(
                                 )}
                               </div>
                             )}
-                          </div>
 
                           {msg.metadata?.isOfflineQueued && (
                             <div className="mt-1 flex items-center gap-1.5 text-[10px] font-mono text-amber-500 dark:text-amber-400">
@@ -22003,7 +22015,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
                             {(mainBodyContent || parsedAttachments.length > 0) && (
                               <>
-                                <div className="inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
+                                <div className="relative group/asstturn inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]">
                                   {msg.senderAgentId && (
                                     <div
                                       data-testid={`room-msg-badge-${msg.senderAgentId}`}
@@ -25199,10 +25211,10 @@ const selectedAgentTheme = getAgentColorTheme(
               e.preventDefault();
               setIsResizingChatSessions(true);
             }}
-            className="hidden lg:block absolute top-0 left-0 -ml-1 w-2 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/50 active:bg-[var(--agent-primary)] transition-colors z-30 group"
+            className="hidden lg:block absolute top-0 left-0 -ml-0.5 w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/50 active:bg-[var(--agent-primary)] transition-colors z-30 group"
             title="Kéo để chỉnh độ rộng danh sách chat"
           >
-            <div className="w-0.5 h-6 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
+            <div className="w-[1px] h-5 bg-neutral-600/40 group-hover:bg-[var(--agent-primary,#38bdf8)] rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 transition-colors" />
           </div>
         )}
         {/* Header & Collapse Toggle */}
@@ -26071,7 +26083,7 @@ ${chat.id}`);
               className="hidden lg:block relative w-1 h-full cursor-col-resize hover:bg-[var(--agent-primary)]/60 active:bg-[var(--agent-primary)] transition-colors shrink-0 z-30 select-none group"
               title={t("computer.dragSplitterTitle") || "Kéo để thay đổi tỷ lệ"}
             >
-              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-0.5 h-6 rounded-full bg-neutral-600/40 group-hover:bg-[var(--agent-primary)] group-hover:h-9 transition-all" />
+              <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[1px] h-5 rounded-full bg-neutral-600/40 group-hover:bg-[var(--agent-primary)] group-hover:h-8 transition-all" />
             </div>
 
             <section

@@ -64,9 +64,13 @@ if (isAlreadyUp) {
 
   backendProcess = spawn('dotnet', [dllArg, '--urls', 'http://0.0.0.0:5290'], {
     cwd: rootBackend,
-    stdio: 'inherit',
+    stdio: isBackendOnly ? 'ignore' : 'inherit',
+    detached: isBackendOnly,
     windowsHide: true,
   });
+  if (isBackendOnly) {
+    backendProcess.unref();
+  }
 
   backendProcess.on('error', (err) => {
     console.error('Failed to spawn dotnet backend:', err.message);
