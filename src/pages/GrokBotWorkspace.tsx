@@ -21306,10 +21306,10 @@ const selectedAgentTheme = getAgentColorTheme(
                     {/* 1. Desktop Hover Circular CTAs: Quote (Reply), Forward (Share), More (...) */}
                     {!(isStreaming && isLastTurn && !isUser) && (
                       <div
-                        className={`items-center gap-1 transition-all duration-150 ${
+                        className={`hidden sm:flex items-center gap-1 transition-all duration-150 ${
                           speakingMsgId === msg.id || isReactOpen || isExtendOpen
-                            ? "flex opacity-100"
-                            : "hidden sm:flex sm:opacity-0 sm:group-hover/msg:opacity-100"
+                            ? "opacity-100"
+                            : "sm:opacity-0 sm:group-hover/msg:opacity-100"
                         }`}
                       >
                         {/* Quote / Reply CTA Button */}
@@ -21557,7 +21557,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
                     {/* ThumbsUp Trigger Button (ONLY for Assistant messages, matching Image 1 & 2) */}
                     {!isUser && (
-                      <div className="relative shrink-0">
+                      <div className={`relative shrink-0 ${showOnMobile ? "flex" : "hidden"} sm:flex`}>
                         <button
                           data-ux-target-min="24"
                           data-testid="msg-react-btn"
