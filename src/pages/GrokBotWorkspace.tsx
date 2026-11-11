@@ -118,9 +118,17 @@ import {
 } from "lucide-react";
 import { InfraAgent, ChatMessage, AgentSession, SessionCollaborationRoom, SessionRoomTurn, ReplyToMessageInfo } from "../types/agent";
 
-/** Short haptic tick on supporting devices; disabled for lean noiseless UX. */
-const triggerHaptic = (_ms = 8) => {
-  // Vibration disabled as requested for clean operational experience
+/** Short haptic tactile vibration on supporting mobile devices; silently ignored elsewhere. */
+const triggerHaptic = (ms = 15) => {
+  try {
+    if (typeof window !== "undefined" && typeof navigator !== "undefined" && "vibrate" in navigator) {
+      // Gentle tactile tick (10ms - 25ms)
+      const duration = Math.max(8, Math.min(ms, 35));
+      navigator.vibrate(duration);
+    }
+  } catch {
+    /* unsupported on non-touch / desktop devices */
+  }
 };
 
 const DEFAULT_REACTIONS = ["❤️", "😆", "😮", "😢", "👍", "👎", "🔥", "🚀"];
@@ -14988,7 +14996,7 @@ ${targetItem.text}`;
 
       if (Math.abs(damped) >= 30 && !swipeTriggerHapticFiredRef.current) {
         swipeTriggerHapticFiredRef.current = true;
-        triggerHaptic(16);
+        triggerHaptic(22);
       } else if (Math.abs(damped) < 30) {
         swipeTriggerHapticFiredRef.current = false;
       }
@@ -15004,7 +15012,7 @@ ${targetItem.text}`;
     const currentOffset = swipeOffsetRef.current;
     if (swipeActivatedMsgRef.current && Math.abs(currentOffset) >= 30) {
       handleStartReply(swipeActivatedMsgRef.current);
-      triggerHaptic(20);
+      triggerHaptic(25);
     }
 
     touchStartPosRef.current = null;
@@ -15068,7 +15076,7 @@ ${targetItem.text}`;
       triggerHaptic(10);
       return;
     }
-    triggerHaptic(20);
+    triggerHaptic(25);
 
     // 1. Clear unread from local state for all alias keys of this agent
     const matchingKeys = new Set<string>([
@@ -15377,7 +15385,7 @@ ${targetItem.text}`;
       e.stopPropagation();
       e.preventDefault();
     }
-    triggerHaptic(20);
+    triggerHaptic(25);
     const targetId = agent.id;
     const rawSlug = agent.slug || agent.id.replace(/^bot:agent360:/i, "");
     const cleanSlug = (resolveCanonicalAgentSlugFromAlias(rawSlug) || rawSlug).toLowerCase();
@@ -18167,7 +18175,7 @@ const selectedAgentTheme = getAgentColorTheme(
       // 1c. Fast Toggle Virtual Computer (Alt+C)
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
-        triggerHaptic(20);
+        triggerHaptic(25);
         handleToggleComputerSplit();
         return;
       }
@@ -18314,7 +18322,7 @@ const selectedAgentTheme = getAgentColorTheme(
       if (lightboxImageUrl) {
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "c") {
           e.preventDefault();
-          triggerHaptic(20);
+          triggerHaptic(25);
           (async () => {
             try {
               const res = await fetch(lightboxImageUrl.url);
@@ -18337,7 +18345,7 @@ const selectedAgentTheme = getAgentColorTheme(
         }
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "s") {
           e.preventDefault();
-          triggerHaptic(20);
+          triggerHaptic(25);
           const a = document.createElement("a");
           a.href = lightboxImageUrl.url;
           a.download = lightboxImageUrl.name;
@@ -18385,7 +18393,7 @@ const selectedAgentTheme = getAgentColorTheme(
         // Native Fullscreen toggle with 'f' key
         if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === "f") {
           e.preventDefault();
-          triggerHaptic(20);
+          triggerHaptic(25);
           if (!document.fullscreenElement) {
             lightboxModalRef.current?.requestFullscreen?.();
           } else {
@@ -21680,7 +21688,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       }}
                       style={{
                         transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined,
-                        transition: swipingMsgId === msg.id && swipeOffset !== 0 ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
+                        transition: swipingMsgId === msg.id && swipeOffset !== 0 ? "none" : "transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                       }}
                       className="relative flex flex-col items-end w-full max-w-full min-w-0 select-none touch-pan-y"
                     >
@@ -21825,7 +21833,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       }}
                       style={{
                         transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined,
-                        transition: swipingMsgId === msg.id && swipeOffset !== 0 ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
+                        transition: swipingMsgId === msg.id && swipeOffset !== 0 ? "none" : "transform 0.32s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                       }}
                       className="relative flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0 select-none touch-pan-y"
                     >
@@ -27950,7 +27958,7 @@ ${chat.id}`);
                 <button
                   type="button"
                   onClick={async () => {
-                    triggerHaptic(20);
+                    triggerHaptic(25);
                     try {
                       // Attempt to fetch blob and copy as real image item
                       const res = await fetch(lightboxImageUrl.url);
@@ -28017,7 +28025,7 @@ ${chat.id}`);
                 <button
                   type="button"
                   onClick={() => {
-                    triggerHaptic(20);
+                    triggerHaptic(25);
                     if (!document.fullscreenElement) {
                       lightboxModalRef.current?.requestFullscreen?.();
                     } else {
