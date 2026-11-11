@@ -24761,7 +24761,7 @@ const selectedAgentTheme = getAgentColorTheme(
                       <div className="w-full">
                         {renderTextarea()}
                       </div>
-                      <div className="flex items-center justify-between w-full pt-1.5 border-t border-slate-100 dark:border-white/[0.06]">
+                      <div className="flex items-center justify-between w-full pt-1">
                         <div className="flex items-center gap-1">
                           {renderPlusButton()}
                         </div>
