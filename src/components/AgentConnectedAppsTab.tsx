@@ -14,7 +14,7 @@ import {
   Activity,
 } from "lucide-react";
 import { AgentMcpClient, fetchAgentMcpClients, authorizedFetch } from "../services/agentApi";
-import { APPS_CATALOG, resolveAppLogo } from "./ConnectAppsModal";
+import { APPS_CATALOG, resolveAppLogo } from "../data/appsCatalog";
 import { getAgentColorTheme } from "./AgentAvatar";
 
 interface AgentConnectedAppsTabProps {

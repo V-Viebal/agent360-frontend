@@ -585,6 +585,47 @@ export async function updateAgentActiveModel(agentId: string, providerId: string
   }
 }
 
+export const AGENT_THINKING_LEVELS = ["inherit", "off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
+export type AgentThinkingLevel = (typeof AGENT_THINKING_LEVELS)[number];
+
+function normalizeThinkingLevel(value: unknown): AgentThinkingLevel {
+  const v = String(value ?? "").trim().toLowerCase();
+  return (AGENT_THINKING_LEVELS as readonly string[]).includes(v) ? (v as AgentThinkingLevel) : "inherit";
+}
+
+export async function fetchAgentThinkingLevel(agentId: string): Promise<AgentThinkingLevel | null> {
+  const cleanId = agentId.replace(/^bot:agent360:/i, "").trim();
+  if (!cleanId) return null;
+  try {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
+      headers: { Accept: "application/json" },
+    }, cleanId);
+    if (!res.ok) return null;
+    const profile = await res.json().catch(() => null);
+    return profile ? normalizeThinkingLevel(profile.thinking_level) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function updateAgentThinkingLevel(agentId: string, level: AgentThinkingLevel): Promise<AgentThinkingLevel | null> {
+  const cleanId = agentId.replace(/^bot:agent360:/i, "").trim();
+  if (!cleanId) return null;
+  try {
+    const res = await authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      // Effort levels and numeric budgets are mutually exclusive on QwenPaw profiles.
+      body: JSON.stringify({ thinking_level: level, thinking_budget: null }),
+    }, cleanId);
+    if (!res.ok) return null;
+    const profile = await res.json().catch(() => null);
+    return profile ? normalizeThinkingLevel(profile.thinking_level) : level;
+  } catch {
+    return null;
+  }
+}
+
 export interface ModelOption {
   providerId: string;
   providerName: string;

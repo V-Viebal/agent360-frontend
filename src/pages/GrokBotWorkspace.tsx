@@ -27,15 +27,10 @@ import {
   Info,
 } from "lucide-react";
 import { ContextUsageBar } from "../components/ContextUsageBar";
-import { ConnectAppsModal, APPS_CATALOG, resolveAppLogo } from "../components/ConnectAppsModal";
+import { APPS_CATALOG, resolveAppLogo } from "../data/appsCatalog";
 import { AgentConnectedAppsTab } from "../components/AgentConnectedAppsTab";
 import { AgentSubAgentsTab } from "../components/AgentSubAgentsTab";
 import { ExternalSubAgentsTab } from "../components/ExternalSubAgentsTab";
-import { ChannelConfigModal } from "../components/ChannelConfigModal";
-import { ScheduleJobModal } from "../components/ScheduleJobModal";
-import { VoiceRecordSettingsModal } from "../components/VoiceRecordSettingsModal";
-import { StarredAndShortcutsModal } from "../components/StarredAndShortcutsModal";
-import { A2ATopologyGraphModal } from "../components/A2ATopologyGraphModal";
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -1157,6 +1152,7 @@ import {
   authorizedFetch,
   submitChatInteraction,
   ClaimedInteractionRecord,
+  toggleScheduleStatus,
 } from "../services/agentApi";
 import { sendConsoleChatMessageStream, SessionBusyConflictError } from "../services/chatStream";
 import { TurnAccumulator, attachLiveTurn } from "../services/turnStream";
@@ -1165,20 +1161,15 @@ import { uploadFileToGateway, UploadedFileResult, resolveUploadedAttachmentPrevi
 import { requestNotificationPermission, notifyTaskComplete, SoundPreset, SOUND_PRESETS, playNotificationChime, playMicroClick } from "../services/notificationService";
 import { speakText, speakTextViaLlm360, stopSpeaking, transcribeAudioViaLlm360, resolveVoiceRealtimeWsUrl, getStoredSpeechSettings, saveStoredSpeechSettings, getAvailableVoices } from "../services/speechService";
 import { CustomSelect, StatusBadge, IconButton, SearchInput, Toast, EmptyState } from "../components/ui";
-import { CommandPaletteModal } from "../components/CommandPaletteModal";
-import { SettingsModal } from "../components/SettingsModal";
-import { AgentSettingsModal, AgentSettingsTab } from "../components/AgentSettingsModal";
-import { PermissionsModal } from "../components/PermissionsModal";
+import type { AgentSettingsTab } from "../components/AgentSettingsModal";
 import { OnboardingChecklistWidget, recordMilestone } from "../components/OnboardingChecklistWidget";
 import { startOnboardingTour, hasSeenOnboardingTour, resetOnboardingTour } from "../services/onboardingService";
-import { KeyboardShortcutsModal } from "../components/KeyboardShortcutsModal";
 import { AudioVisualizerWaveform } from "../components/AudioVisualizerWaveform";
 import { AgentAvatar, getAgentColorTheme } from "../components/AgentAvatar";
-import { AgentAvatarModal } from "../components/AgentAvatarModal";
 import { syncAgentProfilesCatalogFromBackend, fetchRemoteAgentProfile, getCustomAgentName, slugifyAgentUrlAlias, getAgentRouteSegment, resolveCanonicalAgentSlugFromAlias } from "../services/avatarService";
 import { AgentMemoryTab } from "../components/AgentMemoryTab";
 import { SlashCommandMenu, SlashCommand } from "../components/SlashCommandMenu";
-import { PromptRecipesModal, getSavedTeamRecipes, saveTeamRecipe, PromptRecipe } from "../components/PromptRecipesModal";
+import { getSavedTeamRecipes, saveTeamRecipe, type PromptRecipe } from "../data/promptRecipes";
 import { MermaidDiagram } from "../components/MermaidDiagram";
 import { requestPermission, queryPermissionStatus } from "../services/permissionService";
 import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
@@ -1849,7 +1840,7 @@ function AgentThinkingModal({
             setDragY(0);
             setIsDragging(false);
           }}
-          className="sm:hidden flex flex-col items-center justify-center pt-2 pb-0.5 cursor-grab active:cursor-grabbing shrink-0 touch-none select-none bg-slate-50 dark:bg-[#161620]"
+          className="sm:hidden flex flex-col items-center justify-center pt-2 pb-0.5  active:cursor-grabbing cursor-grab shrink-0 touch-none select-none bg-slate-50 dark:bg-[#161620]"
           aria-label="Vuốt xuống để đóng"
         >
           <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-neutral-600 transition-colors" />
@@ -11053,8 +11044,47 @@ function useScrollBottomIndicator() {
   return { scrollRef, canScrollDown, updateScrollState };
 }
 
+import { LazyModalSlot } from "../components/LazyModalSlot";
+const SettingsModal = React.lazy(() => import("../components/SettingsModal").then((mod) => ({ default: mod.SettingsModal })));
+const A2ATopologyGraphModal = React.lazy(() => import("../components/A2ATopologyGraphModal").then((mod) => ({ default: mod.A2ATopologyGraphModal })));
+const AgentSettingsModal = React.lazy(() => import("../components/AgentSettingsModal").then((mod) => ({ default: mod.AgentSettingsModal })));
+const PermissionsModal = React.lazy(() => import("../components/PermissionsModal").then((mod) => ({ default: mod.PermissionsModal })));
+const VoiceRecordSettingsModal = React.lazy(() => import("../components/VoiceRecordSettingsModal").then((mod) => ({ default: mod.VoiceRecordSettingsModal })));
+const ScheduleJobModal = React.lazy(() => import("../components/ScheduleJobModal").then((mod) => ({ default: mod.ScheduleJobModal })));
+const ChannelConfigModal = React.lazy(() => import("../components/ChannelConfigModal").then((mod) => ({ default: mod.ChannelConfigModal })));
+const AgentAvatarModal = React.lazy(() => import("../components/AgentAvatarModal").then((mod) => ({ default: mod.AgentAvatarModal })));
+const KeyboardShortcutsModal = React.lazy(() => import("../components/KeyboardShortcutsModal").then((mod) => ({ default: mod.KeyboardShortcutsModal })));
+const CommandPaletteModal = React.lazy(() => import("../components/CommandPaletteModal").then((mod) => ({ default: mod.CommandPaletteModal })));
+const StarredAndShortcutsModal = React.lazy(() => import("../components/StarredAndShortcutsModal").then((mod) => ({ default: mod.StarredAndShortcutsModal })));
+const ConnectAppsModal = React.lazy(() => import("../components/ConnectAppsModal").then((mod) => ({ default: mod.ConnectAppsModal })));
+const PromptRecipesModal = React.lazy(() => import("../components/PromptRecipesModal").then((mod) => ({ default: mod.PromptRecipesModal })));
+const LAZY_MODAL_PRELOADERS = [
+  () => import("../components/ConnectAppsModal"),
+  () => import("../components/PromptRecipesModal"),
+  () => import("../components/SettingsModal"),
+  () => import("../components/A2ATopologyGraphModal"),
+  () => import("../components/AgentSettingsModal"),
+  () => import("../components/PermissionsModal"),
+  () => import("../components/VoiceRecordSettingsModal"),
+  () => import("../components/ScheduleJobModal"),
+  () => import("../components/ChannelConfigModal"),
+  () => import("../components/AgentAvatarModal"),
+  () => import("../components/KeyboardShortcutsModal"),
+  () => import("../components/CommandPaletteModal"),
+  () => import("../components/StarredAndShortcutsModal"),
+];
+
 export function GrokBotWorkspace() {
   const { t, language } = useTranslation();
+  useEffect(() => {
+    const preload = () => LAZY_MODAL_PRELOADERS.forEach((load) => void load().catch(() => {}));
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(preload, { timeout: 8000 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const timer = window.setTimeout(preload, 4000);
+    return () => window.clearTimeout(timer);
+  }, []);
   const { resolvedTheme } = useTheme();
   const isLightMode = resolvedTheme === 'light';
   const { scrollRef: agentsListScrollRef, canScrollDown: agentsListCanScrollDown, updateScrollState: updateAgentsScroll } = useScrollBottomIndicator();
@@ -11612,6 +11642,14 @@ export function GrokBotWorkspace() {
   const [rightTab, setRightTab] = useState<"Details" | "Computer" | "Library">("Details");
   const [detailSubTab, setDetailSubTab] = useState<"Overview" | "Memory" | "Library">("Overview");
   const [isAgentSettingsModalOpen, setIsAgentSettingsModalOpen] = useState(false);
+  const handleOpenAgentSettings = (agentTarget?: InfraAgent | null, tab: AgentSettingsTab = "general") => {
+    if (agentTarget) {
+      handleSelectAgent(agentTarget);
+    }
+    setAgentSettingsModalTab(tab);
+    setIsAgentSettingsModalOpen(true);
+  };
+
   const [agentSettingsModalTab, setAgentSettingsModalTab] = useState<AgentSettingsTab>("general");
   const [connectedAppIds, setConnectedAppIds] = useState<string[]>([]);
   const [currentAgentMcpClients, setCurrentAgentMcpClients] = useState<AgentMcpClient[]>([]);
@@ -14861,12 +14899,13 @@ ${targetItem.text}`;
     }
   };
 
-  // Horizontal drag / grab message to reply state (works on both touch and mouse grab)
+  // Horizontal swipe-to-reply gesture for mobile touch devices (desktop uses hover action bar)
   const [swipingMsgId, setSwipingMsgId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const swipeOffsetRef = useRef<number>(0);
   const swipeActivatedMsgRef = useRef<ChatMessage | null>(null);
   const swipeTriggerHapticFiredRef = useRef<boolean>(false);
-  const mouseGrabStateRef = useRef<{ startX: number; startY: number; msg: ChatMessage; targetElement?: HTMLElement } | null>(null);
+  const isSwipingTouchRef = useRef<boolean>(false);
 
   const handleTouchStartMsg = (
     e: React.TouchEvent,
@@ -14881,11 +14920,19 @@ ${targetItem.text}`;
       clickY?: number;
     }
   ) => {
+    // Ignore touch on interactive sub-elements (reaction buttons, links, dropdowns)
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("button") || target?.closest("a") || target?.closest("[data-testid^='msg-action-bar']") || target?.closest("[data-testid^='msg-reactions']") || target?.closest("[data-testid^='room-msg-badge']")) {
+      return;
+    }
+
     if (e.touches.length > 0) {
       touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
+    isSwipingTouchRef.current = false;
     swipeTriggerHapticFiredRef.current = false;
     swipeActivatedMsgRef.current = msgData.rawMsg || null;
+    swipeOffsetRef.current = 0;
     setSwipingMsgId(msgData.id);
     setSwipeOffset(0);
 
@@ -14894,6 +14941,7 @@ ${targetItem.text}`;
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     const currentTarget = e.currentTarget as HTMLElement;
     longPressTimerRef.current = setTimeout(() => {
+      if (isSwipingTouchRef.current) return;
       longPressPreventClickRef.current = true;
       if (typeof window !== "undefined" && "vibrate" in navigator) {
         triggerHaptic(12);
@@ -14905,7 +14953,7 @@ ${targetItem.text}`;
         anchorRect: rect ? { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height } : undefined,
         clickY: touchStartPosRef.current?.y,
       });
-    }, 380);
+    }, 450);
   };
 
   const handleTouchMoveMsg = (e: React.TouchEvent) => {
@@ -14913,116 +14961,73 @@ ${targetItem.text}`;
     const currentX = e.touches[0].clientX;
     const currentY = e.touches[0].clientY;
     const rawDx = currentX - touchStartPosRef.current.x;
-    const absDy = Math.abs(currentY - touchStartPosRef.current.y);
+    const rawDy = currentY - touchStartPosRef.current.y;
+    const absDx = Math.abs(rawDx);
+    const absDy = Math.abs(rawDy);
 
-    if (Math.abs(rawDx) > 8 || absDy > 8) {
+    // Any discernible movement cancels long-press context sheet
+    if (absDx > 6 || absDy > 6) {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
     }
 
-    // Engaging horizontal drag to reply (primarily horizontal gesture)
-    if (Math.abs(rawDx) > absDy && Math.abs(rawDx) > 6) {
-      // Allow dragging either left or right (rightward or leftward drag with dampening)
-      const maxOffset = 84;
-      const damped = Math.sign(rawDx) * Math.min(maxOffset, Math.pow(Math.abs(rawDx), 0.88) * 2);
+    // Engaging horizontal drag to reply when horizontal movement is dominant
+    if (!isSwipingTouchRef.current) {
+      if (absDx > 8 && absDx > absDy) {
+        isSwipingTouchRef.current = true;
+      }
+    }
+
+    if (isSwipingTouchRef.current) {
+      const maxOffset = 64;
+      const damped = Math.sign(rawDx) * Math.min(maxOffset, Math.pow(absDx, 0.86) * 1.5);
+      swipeOffsetRef.current = damped;
       setSwipeOffset(damped);
 
-      if (Math.abs(damped) >= 42 && !swipeTriggerHapticFiredRef.current) {
+      if (Math.abs(damped) >= 30 && !swipeTriggerHapticFiredRef.current) {
         swipeTriggerHapticFiredRef.current = true;
-        triggerHaptic(18);
-      } else if (Math.abs(damped) < 42) {
+        triggerHaptic(16);
+      } else if (Math.abs(damped) < 30) {
         swipeTriggerHapticFiredRef.current = false;
       }
     }
   };
 
   const handleTouchEndMsg = () => {
-    if (swipeActivatedMsgRef.current && Math.abs(swipeOffset) >= 42) {
-      handleStartReply(swipeActivatedMsgRef.current);
-      triggerHaptic(20);
-    }
-    touchStartPosRef.current = null;
-    swipeActivatedMsgRef.current = null;
-    swipeTriggerHapticFiredRef.current = false;
-    setSwipingMsgId(null);
-    setSwipeOffset(0);
-
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+
+    const currentOffset = swipeOffsetRef.current;
+    if (swipeActivatedMsgRef.current && Math.abs(currentOffset) >= 30) {
+      handleStartReply(swipeActivatedMsgRef.current);
+      triggerHaptic(20);
+    }
+
+    touchStartPosRef.current = null;
+    swipeActivatedMsgRef.current = null;
+    swipeTriggerHapticFiredRef.current = false;
+    isSwipingTouchRef.current = false;
+    swipeOffsetRef.current = 0;
+    setSwipeOffset(0);
+
+    setTimeout(() => {
+      setSwipingMsgId(null);
+    }, 220);
+
     setTimeout(() => {
       longPressPreventClickRef.current = false;
     }, 120);
   };
 
-  // Mouse Grab message to reply handlers for desktop & trackpad
-  const handleMouseDownGrabMsg = (e: React.MouseEvent, msg: ChatMessage, customTarget?: HTMLElement) => {
-    if (e.button !== 0) return;
-    // Don't engage if clicking an interactive sub-element like a button, link, or selection
-    const target = e.target as HTMLElement;
-    if (target.closest("button") || target.closest("a") || target.closest('[data-testid^="agent-mention-chip"]')) return;
-    const bubbleTarget = customTarget || (target.closest('[data-testid="user-message-bubble"]') as HTMLElement) || (target.closest('.group\/asstturn') as HTMLElement) || (target.closest('[data-testid="solo-kickoff-intent-bubble"]') as HTMLElement) || (e.currentTarget as HTMLElement);
-    mouseGrabStateRef.current = { startX: e.clientX, startY: e.clientY, msg, targetElement: bubbleTarget };
-    setSwipingMsgId(msg.id);
-    setSwipeOffset(0);
-    if (bubbleTarget && bubbleTarget !== e.currentTarget) {
-      bubbleTarget.style.transition = "none";
-      bubbleTarget.style.cursor = "grabbing";
-    }
-    swipeTriggerHapticFiredRef.current = false;
+  // Desktop mouse grab-to-reply disabled per user request; kept as no-op function satisfying contract
+  const handleMouseDownGrabMsg = (_e?: React.MouseEvent, _msg?: ChatMessage, _customTarget?: HTMLElement) => {
+    // Desktop mouse grab disabled: desktop users select text with mouse and use hover action bar
+    return;
   };
-
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!mouseGrabStateRef.current) return;
-      const dx = e.clientX - mouseGrabStateRef.current.startX;
-      const dy = Math.abs(e.clientY - mouseGrabStateRef.current.startY);
-      if (Math.abs(dx) > dy && Math.abs(dx) > 5) {
-        const maxOffset = 84;
-        const damped = Math.sign(dx) * Math.min(maxOffset, Math.pow(Math.abs(dx), 0.88) * 2);
-        setSwipeOffset(damped);
-        const el = mouseGrabStateRef.current.targetElement;
-        if (el && el !== el.closest('[data-testid^="asst-msg-container"], [data-testid^="user-msg-container"]')) {
-          el.style.transform = "translateX(" + damped + "px)";
-        }
-        if (Math.abs(damped) >= 42 && !swipeTriggerHapticFiredRef.current) {
-          swipeTriggerHapticFiredRef.current = true;
-          triggerHaptic(18);
-        } else if (Math.abs(damped) < 42) {
-          swipeTriggerHapticFiredRef.current = false;
-        }
-      }
-    };
-
-    const handleGlobalMouseUp = () => {
-      if (mouseGrabStateRef.current) {
-        if (Math.abs(swipeOffset) >= 42) {
-          handleStartReply(mouseGrabStateRef.current.msg);
-          triggerHaptic(20);
-        }
-        const el = mouseGrabStateRef.current.targetElement;
-        if (el && el !== el.closest('[data-testid^="asst-msg-container"], [data-testid^="user-msg-container"]')) {
-          el.style.transition = "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)";
-          el.style.transform = "";
-          el.style.cursor = "";
-        }
-        mouseGrabStateRef.current = null;
-        swipeTriggerHapticFiredRef.current = false;
-        setSwipingMsgId(null);
-        setSwipeOffset(0);
-      }
-    };
-
-    window.addEventListener("mousemove", handleGlobalMouseMove);
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleGlobalMouseMove);
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-    };
-  }, [swipeOffset]);
   const [isBatchClearModalOpen, setIsBatchClearModalOpen] = useState(false);
   // Multi-select state for bulk deleting chat sessions
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
@@ -19389,7 +19394,6 @@ const selectedAgentTheme = getAgentColorTheme(
       prev.map((s) => (s.id === job.id ? { ...s, enabled: nextState } : s))
     );
     try {
-      const { toggleScheduleStatus } = await import("../services/agentApi");
       const ok = await toggleScheduleStatus(job.id, !nextState, selectedAgent.id);
       if (!ok) {
         // Rollback on failure
@@ -19649,7 +19653,14 @@ const selectedAgentTheme = getAgentColorTheme(
                               : "border-transparent hover:bg-neutral-200/60 dark:hover:bg-[#161620] hover:border-transparent cursor-pointer"
                           }`}
                         >
-                        <div className="relative shrink-0 flex items-center justify-center transition-all">
+                        <div
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAgentSettings(ag);
+                          }}
+                          className="relative shrink-0 flex items-center justify-center transition-all"
+                          title="Bấm đúp vào Avatar để mở Cài đặt Agent"
+                        >
                           <AgentAvatar agent={ag} size="sm" interactive={false} alwaysAnimate={isSelected || checkIsAgentBusy(ag)} forcedAnimation={isSelected || checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {isAgentPinned(ag) && (
                             <span className="absolute -top-0.5 -left-0.5 p-0.5 rounded-full z-10 flex items-center justify-center pointer-events-none" style={{ color: getAgentColorTheme(ag.id, ag.name, ag.roleTag).primary }}>
@@ -20131,7 +20142,14 @@ const selectedAgentTheme = getAgentColorTheme(
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
-                        <div className="relative shrink-0 flex items-center justify-center self-center">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAgentSettings(ag);
+                          }}
+                          className="relative shrink-0 flex items-center justify-center self-center cursor-pointer hover:scale-105 transition-transform"
+                          title="Bấm vào Avatar để mở Cài đặt Agent"
+                        >
                           <AgentAvatar agent={ag} size="md" alwaysAnimate={isSelected || checkIsAgentBusy(ag)} forcedAnimation={isSelected || checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
@@ -20378,7 +20396,14 @@ const selectedAgentTheme = getAgentColorTheme(
                         }`}
                       >
                         {/* Dedicated Agent Identity Avatar */}
-                        <div className="relative shrink-0 flex items-center justify-center self-center">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAgentSettings(ag);
+                          }}
+                          className="relative shrink-0 flex items-center justify-center self-center cursor-pointer hover:scale-105 transition-transform"
+                          title="Bấm vào Avatar để mở Cài đặt Agent"
+                        >
                           <AgentAvatar agent={ag} size="md" alwaysAnimate={isSelected || checkIsAgentBusy(ag)} forcedAnimation={isSelected || checkIsAgentBusy(ag) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} />
                           {ag.status === "degraded" && (
                             <span
@@ -20753,7 +20778,18 @@ const selectedAgentTheme = getAgentColorTheme(
                   </>
                 ) : (
                   <>
-                    <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedAgent) {
+                          handleOpenAgentSettings(selectedAgent);
+                        }
+                      }}
+                      className="shrink-0 cursor-pointer hover:scale-110 transition-transform"
+                      title="Bấm vào Avatar để mở Cài đặt Agent"
+                    >
+                      <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
+                    </div>
                     <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
                       <ChevronRight size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
@@ -21597,13 +21633,30 @@ const selectedAgentTheme = getAgentColorTheme(
                   )}
                   <div
                     id={`chat-msg-${msg.id}`}
-                    className={`flex flex-col w-full group/msg ${
+                    className={`relative flex flex-col w-full group/msg ${
                       isConsecutiveAssistant
                         ? "-mt-2 sm:-mt-2.5 space-y-0.5"
                         : "space-y-1"
                     } ${isUser ? "items-end" : "items-start"}`}
                   >
-                  {/* If user message: Clean right-aligned bubble with swipe-to-reply gesture */}
+                  {/* Swipe-to-reply visual indicator badge on mobile horizontal swipe */}
+                  {swipingMsgId === msg.id && Math.abs(swipeOffset) > 6 && (
+                    <div
+                      data-testid="swipe-reply-indicator"
+                      style={{
+                        opacity: Math.min(1, Math.abs(swipeOffset) / 24),
+                        transform: `scale(${Math.min(1.2, 0.75 + Math.abs(swipeOffset) / 54)})`,
+                        backgroundColor: Math.abs(swipeOffset) >= 30 ? selectedAgentTheme.primary : "rgba(100, 116, 139, 0.25)",
+                        color: Math.abs(swipeOffset) >= 30 ? "#ffffff" : undefined,
+                      }}
+                      className={`absolute ${swipeOffset < 0 ? "right-2 sm:right-3" : "left-2 sm:left-3"} top-1/2 -translate-y-1/2 h-7.5 w-7.5 sm:h-8 sm:w-8 rounded-full flex items-center justify-center shadow-md transition-all duration-75 z-10 pointer-events-none text-slate-700 dark:text-neutral-200`}
+                      title="Kéo sang để trả lời (Reply)"
+                    >
+                      <CornerUpLeft size={14} className={swipeOffset < 0 ? "" : "rotate-180"} />
+                    </div>
+                  )}
+
+                  {/* If user message: Clean right-aligned bubble with mobile swipe-to-reply gesture */}
                   {isUser ? (
                     <div
                       data-testid={`user-msg-container-${msg.id}`}
@@ -21627,27 +21680,10 @@ const selectedAgentTheme = getAgentColorTheme(
                       }}
                       style={{
                         transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined,
-                        transition: swipingMsgId === msg.id ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
-                        cursor: swipingMsgId === msg.id ? "grabbing" : "grab",
+                        transition: swipingMsgId === msg.id && swipeOffset !== 0 ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
                       }}
                       className="relative flex flex-col items-end w-full max-w-full min-w-0 select-none touch-pan-y"
                     >
-                      {/* Swipe-to-reply visual indicator badge on horizontal drag */}
-                      {swipingMsgId === msg.id && Math.abs(swipeOffset) > 10 && (
-                        <div
-                          data-testid="swipe-reply-indicator"
-                          style={{
-                            opacity: Math.min(1, Math.abs(swipeOffset) / 42),
-                            transform: `scale(${Math.min(1.25, 0.75 + Math.abs(swipeOffset) / 84)})`,
-                            backgroundColor: Math.abs(swipeOffset) >= 42 ? selectedAgentTheme.primary : "rgba(100, 116, 139, 0.2)",
-                            color: Math.abs(swipeOffset) >= 42 ? "#ffffff" : undefined,
-                          }}
-                          className={`absolute ${swipeOffset < 0 ? "right-full mr-2.5" : "left-full ml-2.5"} top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center shadow-md transition-all duration-100 z-10 pointer-events-none text-slate-700 dark:text-neutral-200`}
-                          title="Kéo sang để trả lời (Reply)"
-                        >
-                          <CornerUpLeft size={15} className={swipeOffset < 0 ? "" : "rotate-180"} />
-                        </div>
-                      )}
                       <div className="relative group/userturn flex items-end justify-end max-w-[85%] sm:max-w-[80%] ml-auto">
                         {/* Action buttons on left of bubble (on hover, as in Image 1) */}
                         <div className="absolute right-full mr-2 bottom-0 z-20 pointer-events-none group-hover/msg:pointer-events-auto">
@@ -21749,7 +21785,7 @@ const selectedAgentTheme = getAgentColorTheme(
 
                     </div>
                   ) : (
-                    /* Assistant Turn: Structured Content Blocks + Agent Tool Cards with swipe-to-reply gesture */
+                    /* Assistant Turn: Structured Content Blocks + Agent Tool Cards with mobile swipe-to-reply gesture */
                     <div
                       data-testid={`asst-msg-container-${msg.id}`}
                       onTouchStart={(e) => handleTouchStartMsg(e, {
@@ -21789,27 +21825,10 @@ const selectedAgentTheme = getAgentColorTheme(
                       }}
                       style={{
                         transform: swipingMsgId === msg.id ? `translateX(${swipeOffset}px)` : undefined,
-                        transition: swipingMsgId === msg.id ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
-                        cursor: swipingMsgId === msg.id ? "grabbing" : "grab",
+                        transition: swipingMsgId === msg.id && swipeOffset !== 0 ? "none" : "transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1)",
                       }}
                       className="relative flex flex-col items-start w-full max-w-full space-y-1.5 min-w-0 select-none touch-pan-y"
                     >
-                      {/* Swipe-to-reply visual indicator badge on horizontal drag */}
-                      {swipingMsgId === msg.id && Math.abs(swipeOffset) > 10 && (
-                        <div
-                          data-testid="swipe-reply-indicator"
-                          style={{
-                            opacity: Math.min(1, Math.abs(swipeOffset) / 42),
-                            transform: `scale(${Math.min(1.25, 0.75 + Math.abs(swipeOffset) / 84)})`,
-                            backgroundColor: Math.abs(swipeOffset) >= 42 ? selectedAgentTheme.primary : "rgba(100, 116, 139, 0.2)",
-                            color: Math.abs(swipeOffset) >= 42 ? "#ffffff" : undefined,
-                          }}
-                          className={`absolute ${swipeOffset > 0 ? "left-full ml-2.5" : "right-full mr-2.5"} top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center shadow-md transition-all duration-100 z-10 pointer-events-none text-slate-700 dark:text-neutral-200`}
-                          title="Kéo sang để trả lời (Reply)"
-                        >
-                          <CornerUpLeft size={15} className={swipeOffset > 0 ? "" : "rotate-180"} />
-                        </div>
-                      )}
                       {/* Language-Agnostic Context-Native Solo Turn Rendering:
                           Splits natural lead-in segment(s) emitted by the Agent from the main answer body,
                           and keeps the Responding Indicator Pill strictly separate while actively running. */}
@@ -21857,25 +21876,9 @@ const selectedAgentTheme = getAgentColorTheme(
                                     key={`lead-${msg.id}-${sIdx}`}
                                     data-testid="solo-kickoff-intent-bubble"
                                     onMouseDown={(e) => {
-                                      e.stopPropagation();
-                                      const virtualLeadMsg: ChatMessage = {
-                                        ...msg,
-                                        id: `${msg.id}-lead-${sIdx}`,
-                                        content: seg,
-                                      };
-                                      handleMouseDownGrabMsg(e, virtualLeadMsg, e.currentTarget);
+                                      handleMouseDownGrabMsg(e, msg);
                                     }}
-                                    onTouchStart={(e) => {
-                                      e.stopPropagation();
-                                      handleTouchStartMsg(e, {
-                                        id: `${msg.id}-lead-${sIdx}`,
-                                        content: seg,
-                                        turnIdx: mIdx,
-                                        role: "assistant",
-                                        rawMsg: { ...msg, id: `${msg.id}-lead-${sIdx}`, content: seg },
-                                      });
-                                    }}
-                                    className="inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150 cursor-grab"
+                                    className="inline-block w-auto max-w-full rounded-[18px] px-3 py-1 sm:px-3.5 sm:py-1.5 shadow-xs bg-slate-100/90 border border-slate-200/60 text-slate-800 dark:bg-[#16161e] dark:border-[#242432] dark:text-neutral-200 text-[14.5px] sm:text-[15px] leading-snug select-text animate-in fade-in slide-in-from-bottom-1 duration-150 "
                                   >
                                     <FormattedMessageContent
                                       content={stabilizeStreamingMarkdown(seg, isTurnActivelyRunning)}
@@ -21915,25 +21918,9 @@ const selectedAgentTheme = getAgentColorTheme(
                             {(mainBodyContent || parsedAttachments.length > 0) && (
                               <>
                                 <div
-                                  className="relative group/asstturn inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%] cursor-grab"
+                                  className="relative group/asstturn inline-flex flex-col items-start max-w-[85%] sm:max-w-[80%]"
                                   onMouseDown={(e) => {
-                                    e.stopPropagation();
-                                    const virtualBodyMsg: ChatMessage = {
-                                      ...msg,
-                                      id: `${msg.id}-body`,
-                                      content: mainBodyContent || msg.content,
-                                    };
-                                    handleMouseDownGrabMsg(e, virtualBodyMsg, e.currentTarget);
-                                  }}
-                                  onTouchStart={(e) => {
-                                    e.stopPropagation();
-                                    handleTouchStartMsg(e, {
-                                      id: `${msg.id}-body`,
-                                      content: mainBodyContent || msg.content,
-                                      turnIdx: mIdx,
-                                      role: "assistant",
-                                      rawMsg: { ...msg, id: `${msg.id}-body`, content: mainBodyContent || msg.content },
-                                    });
+                                    handleMouseDownGrabMsg(e, msg);
                                   }}
                                 >
                                   {msg.senderAgentId && (
@@ -23253,7 +23240,7 @@ const selectedAgentTheme = getAgentColorTheme(
                     plusMenuTouchStartYRef.current = null;
                   }}
                   onClick={() => setIsPlusMenuOpen(false)}
-                  className="md:hidden flex flex-col items-center justify-center pt-1 pb-2.5 -mt-1 cursor-grab active:cursor-grabbing shrink-0 touch-none select-none active:opacity-75 transition-opacity"
+                  className="md:hidden flex flex-col items-center justify-center pt-1 pb-2.5 -mt-1  active:cursor-grabbing cursor-grab shrink-0 touch-none select-none active:opacity-75 transition-opacity"
                   aria-label="Kéo để đóng"
                 >
                   <div className="w-10 h-1 bg-neutral-300 dark:bg-neutral-600 rounded-full hover:bg-[#f8a87c] transition-colors" />
@@ -27443,123 +27430,133 @@ ${chat.id}`);
 
       {/* Connect Apps Modal */}
             {/* Channel Configuration Modal */}
-      <ChannelConfigModal
-        isOpen={isChannelModalOpen}
-        onClose={() => setIsChannelModalOpen(false)}
-        channel={selectedChannelForConfig}
-        agentId={selectedAgent.id}
-        agentName={selectedAgent.name}
-        onSaved={(chType, en) => {
-          refreshDetailsData();
-          if (chType === "zalo") {
-            const aid = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
-            if (en) {
-              void openZaloWebBrowserForAgent(aid);
-            } else if (en === false) {
-              void closeZaloWebTabsForAgent(aid);
+      <LazyModalSlot open={isChannelModalOpen}>
+        <ChannelConfigModal
+          isOpen={isChannelModalOpen}
+          onClose={() => setIsChannelModalOpen(false)}
+          channel={selectedChannelForConfig}
+          agentId={selectedAgent.id}
+          agentName={selectedAgent.name}
+          onSaved={(chType, en) => {
+            refreshDetailsData();
+            if (chType === "zalo") {
+              const aid = selectedAgent?.slug || selectedAgent?.id || selectedAgentId;
+              if (en) {
+                void openZaloWebBrowserForAgent(aid);
+              } else if (en === false) {
+                void closeZaloWebTabsForAgent(aid);
+              }
             }
-          }
-        }}
-        onOpenZaloWebBrowser={() => {
-          void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
-        }}
-      />
+          }}
+          onOpenZaloWebBrowser={() => {
+            void openZaloWebBrowserForAgent(selectedAgent?.slug || selectedAgent?.id || selectedAgentId);
+          }}
+        />
+      </LazyModalSlot>
 
       {/* Schedule Job Configuration Modal */}
-      <ScheduleJobModal
-        isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
-        job={selectedJobForConfig}
-        agentId={selectedAgent.id}
-        agentName={selectedAgent.name}
-        onSaved={refreshDetailsData}
-      />
+      <LazyModalSlot open={isScheduleModalOpen}>
+        <ScheduleJobModal
+          isOpen={isScheduleModalOpen}
+          onClose={() => setIsScheduleModalOpen(false)}
+          job={selectedJobForConfig}
+          agentId={selectedAgent.id}
+          agentName={selectedAgent.name}
+          onSaved={refreshDetailsData}
+        />
+      </LazyModalSlot>
 
-            <AgentAvatarModal
-        isOpen={isAvatarSetupModalOpen}
-        onClose={() => setIsAvatarSetupModalOpen(false)}
-        agent={selectedAgent}
-      />
+      <LazyModalSlot open={isAvatarSetupModalOpen}>
+        <AgentAvatarModal
+          isOpen={isAvatarSetupModalOpen}
+          onClose={() => setIsAvatarSetupModalOpen(false)}
+          agent={selectedAgent}
+        />
+      </LazyModalSlot>
 
-      <AgentSettingsModal
-        isOpen={isAgentSettingsModalOpen}
-        onClose={() => setIsAgentSettingsModalOpen(false)}
-        initialTab={agentSettingsModalTab}
-        agent={selectedAgent}
-        allAgents={agents}
-        availableModels={availableModels}
-        isChangingModel={isChangingModel}
-        onSelectModel={handleSelectModel}
-        onOpenAvatarModal={() => setIsAvatarSetupModalOpen(true)}
-        togglingAgentId={togglingAgentId}
-        onToggleAgentEnabled={handleToggleAgentEnabled}
-        onOpenConnectModal={() => setIsConnectAppsOpen(true)}
-        mcpRefreshTrigger={mcpRefreshTrigger}
-        onMcpClientsChanged={() => setMcpRefreshTrigger((t) => t + 1)}
-        onOpenTopologyModal={() => setIsTopologyModalOpen(true)}
-        channels={channels}
-        loadingChannels={loadingChannels}
-        onToggleChannel={handleToggleChannel}
-        onConfigureChannel={(ch) => {
-          setSelectedChannelForConfig(ch);
-          setIsChannelModalOpen(true);
-        }}
-        schedules={schedules}
-        loadingSchedules={loadingSchedules}
-        onAddSchedule={() => {
-          setSelectedJobForConfig(null);
-          setIsScheduleModalOpen(true);
-        }}
-        onEditSchedule={(job) => {
-          setSelectedJobForConfig(job);
-          setIsScheduleModalOpen(true);
-        }}
-        turnTelemetry={turnTelemetry}
-        skills={skills}
-      />
+      <LazyModalSlot open={isAgentSettingsModalOpen}>
+        <AgentSettingsModal
+          isOpen={isAgentSettingsModalOpen}
+          onClose={() => setIsAgentSettingsModalOpen(false)}
+          initialTab={agentSettingsModalTab}
+          agent={selectedAgent}
+          allAgents={agents}
+          availableModels={availableModels}
+          isChangingModel={isChangingModel}
+          onSelectModel={handleSelectModel}
+          onOpenAvatarModal={() => setIsAvatarSetupModalOpen(true)}
+          togglingAgentId={togglingAgentId}
+          onToggleAgentEnabled={handleToggleAgentEnabled}
+          onOpenConnectModal={() => setIsConnectAppsOpen(true)}
+          mcpRefreshTrigger={mcpRefreshTrigger}
+          onMcpClientsChanged={() => setMcpRefreshTrigger((t) => t + 1)}
+          onOpenTopologyModal={() => setIsTopologyModalOpen(true)}
+          channels={channels}
+          loadingChannels={loadingChannels}
+          onToggleChannel={handleToggleChannel}
+          onConfigureChannel={(ch) => {
+            setSelectedChannelForConfig(ch);
+            setIsChannelModalOpen(true);
+          }}
+          schedules={schedules}
+          loadingSchedules={loadingSchedules}
+          onAddSchedule={() => {
+            setSelectedJobForConfig(null);
+            setIsScheduleModalOpen(true);
+          }}
+          onEditSchedule={(job) => {
+            setSelectedJobForConfig(job);
+            setIsScheduleModalOpen(true);
+          }}
+          turnTelemetry={turnTelemetry}
+          skills={skills}
+        />
+      </LazyModalSlot>
 
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-        initialTab={settingsModalTab}
-        onOpenPermissions={() => setIsPermissionsModalOpen(true)}
-        {...({
-          onOpenStarredAndShortcuts: () => {
+      <LazyModalSlot open={isSettingsModalOpen}>
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          initialTab={settingsModalTab}
+          onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+          {...({
+            onOpenStarredAndShortcuts: () => {
+              setIsSettingsModalOpen(false);
+              setIsStarredShortcutsOpen(true);
+            },
+            starredCount: starredMsgIds.length,
+          } as any)}
+          sttLang={sttLang}
+          onSttLangChange={setSttLang}
+          agentId={selectedAgent?.id}
+          agentName={selectedAgent?.name}
+                                agentBrowser={agentBrowser}
+          onStartTour={() => startOnboardingTour({ force: true })}
+          onResetChecklist={() => {
+            try {
+              localStorage.removeItem("agent360_onboarding_checklist_dismissed");
+              window.dispatchEvent(new CustomEvent("agent360_milestone_updated"));
+            } catch {}
+          }}
+          onExportMarkdown={() => {
             setIsSettingsModalOpen(false);
-            setIsStarredShortcutsOpen(true);
-          },
-          starredCount: starredMsgIds.length,
-        } as any)}
-        sttLang={sttLang}
-        onSttLangChange={setSttLang}
-        agentId={selectedAgent?.id}
-        agentName={selectedAgent?.name}
-                              agentBrowser={agentBrowser}
-        onStartTour={() => startOnboardingTour({ force: true })}
-        onResetChecklist={() => {
-          try {
-            localStorage.removeItem("agent360_onboarding_checklist_dismissed");
-            window.dispatchEvent(new CustomEvent("agent360_milestone_updated"));
-          } catch {}
-        }}
-        onExportMarkdown={() => {
-          setIsSettingsModalOpen(false);
-          handleExportSessionMarkdown();
-        }}
-        onExportJson={() => {
-          setIsSettingsModalOpen(false);
-          handleExportSessionJson();
-        }}
-        onExportCertificate={() => {
-          setIsSettingsModalOpen(false);
-          handleExportAuditCertificate();
-        }}
-        onInstallPwa={() => {
-          setIsSettingsModalOpen(false);
-          handleInstallPWA();
-        }}
-        isPwaInstallable={Boolean(deferredPrompt)}
-      />
+            handleExportSessionMarkdown();
+          }}
+          onExportJson={() => {
+            setIsSettingsModalOpen(false);
+            handleExportSessionJson();
+          }}
+          onExportCertificate={() => {
+            setIsSettingsModalOpen(false);
+            handleExportAuditCertificate();
+          }}
+          onInstallPwa={() => {
+            setIsSettingsModalOpen(false);
+            handleInstallPWA();
+          }}
+          isPwaInstallable={Boolean(deferredPrompt)}
+        />
+      </LazyModalSlot>
 
       {/* Universal File & Media Attachment Preview Modal */}
       {previewModalFile && (
@@ -28142,7 +28139,7 @@ ${chat.id}`);
                 lightboxZoom > 1
                   ? isPanningLightbox
                     ? "cursor-grabbing"
-                    : "cursor-grab"
+                    : ""
                   : "cursor-default"
               }`}
             >
@@ -28196,82 +28193,94 @@ ${chat.id}`);
         </div>
       )}
 
-      <StarredAndShortcutsModal
-        isOpen={isStarredShortcutsModalOpen}
-        onClose={() => setIsStarredShortcutsOpen(false)}
-        starredMessages={messages.filter((m) => starredMsgIds.includes(m.id))}
-        onUnstar={(msgId) => toggleStarMessage(msgId)}
-        onOpenShortcutsCustomizer={() => {
-          setIsStarredShortcutsOpen(false);
-          setIsKeyboardShortcutsOpen(true);
-        }}
-      />
+      <LazyModalSlot open={isStarredShortcutsModalOpen}>
+        <StarredAndShortcutsModal
+          isOpen={isStarredShortcutsModalOpen}
+          onClose={() => setIsStarredShortcutsOpen(false)}
+          starredMessages={messages.filter((m) => starredMsgIds.includes(m.id))}
+          onUnstar={(msgId) => toggleStarMessage(msgId)}
+          onOpenShortcutsCustomizer={() => {
+            setIsStarredShortcutsOpen(false);
+            setIsKeyboardShortcutsOpen(true);
+          }}
+        />
+      </LazyModalSlot>
 
 
-      <VoiceRecordSettingsModal
-        isOpen={isVoiceRecordSettingsOpen}
-        onClose={() => setIsVoiceRecordSettingsOpen(false)}
-        sttLang={sttLang}
-        onSttLangChange={setSttLang}
-        onOpenShortcuts={() => setIsKeyboardShortcutsOpen(true)}
-        onOpenPermissions={() => setIsPermissionsModalOpen(true)}
-        agentId={selectedAgent?.id}
-        agentName={selectedAgent?.name}
-      />
+      <LazyModalSlot open={isVoiceRecordSettingsOpen}>
+        <VoiceRecordSettingsModal
+          isOpen={isVoiceRecordSettingsOpen}
+          onClose={() => setIsVoiceRecordSettingsOpen(false)}
+          sttLang={sttLang}
+          onSttLangChange={setSttLang}
+          onOpenShortcuts={() => setIsKeyboardShortcutsOpen(true)}
+          onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+          agentId={selectedAgent?.id}
+          agentName={selectedAgent?.name}
+        />
+      </LazyModalSlot>
 
-      <PermissionsModal
-        isOpen={isPermissionsModalOpen}
-        onClose={() => setIsPermissionsModalOpen(false)}
-        onRequestDone={() => {
-          setVoiceError(null);
-        }}
-      />
+      <LazyModalSlot open={isPermissionsModalOpen}>
+        <PermissionsModal
+          isOpen={isPermissionsModalOpen}
+          onClose={() => setIsPermissionsModalOpen(false)}
+          onRequestDone={() => {
+            setVoiceError(null);
+          }}
+        />
+      </LazyModalSlot>
 
-      <KeyboardShortcutsModal
-        isOpen={isKeyboardShortcutsOpen}
-        onClose={() => setIsKeyboardShortcutsOpen(false)}
-      />
+      <LazyModalSlot open={isKeyboardShortcutsOpen}>
+        <KeyboardShortcutsModal
+          isOpen={isKeyboardShortcutsOpen}
+          onClose={() => setIsKeyboardShortcutsOpen(false)}
+        />
+      </LazyModalSlot>
 
-      <A2ATopologyGraphModal
-        isOpen={isTopologyModalOpen}
-        onClose={() => setIsTopologyModalOpen(false)}
-        currentAgent={selectedAgent}
-        allAgents={agents}
-        onSelectAgent={handleSelectAgent}
-        nodePingMs={nodePingMs}
-      />
+      <LazyModalSlot open={isTopologyModalOpen}>
+        <A2ATopologyGraphModal
+          isOpen={isTopologyModalOpen}
+          onClose={() => setIsTopologyModalOpen(false)}
+          currentAgent={selectedAgent}
+          allAgents={agents}
+          onSelectAgent={handleSelectAgent}
+          nodePingMs={nodePingMs}
+        />
+      </LazyModalSlot>
 
-      <CommandPaletteModal
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onOpenAgentSettings={(tab) => {
-          setAgentSettingsModalTab(tab);
-          setIsAgentSettingsModalOpen(true);
-        }}
-        agents={agents}
-        chats={chats}
-        onSelectAgent={handleSelectAgent}
-        onSelectChat={handleSelectChat}
-        onNewChat={handleNewChat}
-        onToggleSound={() => {
-          setIsSoundEnabled((prev) => {
-            const next = !prev;
-            try {
-              localStorage.setItem("agent360_sound_enabled", next ? "true" : "false");
-            } catch {}
-            return next;
-          });
-        }}
-        isSoundEnabled={isSoundEnabled}
-        onOpenPermissions={() => setIsPermissionsModalOpen(true)}
-        onCompactContext={async () => {
-          if (selectedAgent) {
-            await compactAgentContext(selectedAgent.id, selectedChat?.id);
-          }
-        }}
-        onFilterInstance={(inst) => setSelectedInstance(inst)}
-        infraInstances={INFRA_INSTANCES}
-      />
+      <LazyModalSlot open={isCommandPaletteOpen}>
+        <CommandPaletteModal
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onOpenAgentSettings={(tab) => {
+            setAgentSettingsModalTab(tab);
+            setIsAgentSettingsModalOpen(true);
+          }}
+          agents={agents}
+          chats={chats}
+          onSelectAgent={handleSelectAgent}
+          onSelectChat={handleSelectChat}
+          onNewChat={handleNewChat}
+          onToggleSound={() => {
+            setIsSoundEnabled((prev) => {
+              const next = !prev;
+              try {
+                localStorage.setItem("agent360_sound_enabled", next ? "true" : "false");
+              } catch {}
+              return next;
+            });
+          }}
+          isSoundEnabled={isSoundEnabled}
+          onOpenPermissions={() => setIsPermissionsModalOpen(true)}
+          onCompactContext={async () => {
+            if (selectedAgent) {
+              await compactAgentContext(selectedAgent.id, selectedChat?.id);
+            }
+          }}
+          onFilterInstance={(inst) => setSelectedInstance(inst)}
+          infraInstances={INFRA_INSTANCES}
+        />
+      </LazyModalSlot>
 
       {/* Forward to Agent Selection Modal */}
       {forwardModalMsg && (
@@ -28428,58 +28437,62 @@ ${chat.id}`);
         />
       )}
 
-      <PromptRecipesModal
-        isOpen={isRecipesModalOpen}
-        onClose={() => setIsRecipesModalOpen(false)}
-        onSelectRecipe={(prompt, recipe) => {
-          setInputText(prompt);
-// Room creation deferred until prompt with @mention is actually submitted
-          setTimeout(() => textareaRef.current?.focus(), 50);
-        }}
-      />
+      <LazyModalSlot open={isRecipesModalOpen}>
+        <PromptRecipesModal
+          isOpen={isRecipesModalOpen}
+          onClose={() => setIsRecipesModalOpen(false)}
+          onSelectRecipe={(prompt, recipe) => {
+            setInputText(prompt);
+  // Room creation deferred until prompt with @mention is actually submitted
+            setTimeout(() => textareaRef.current?.focus(), 50);
+          }}
+        />
+      </LazyModalSlot>
 
-      <ConnectAppsModal
-        isOpen={isConnectAppsOpen}
-        onClose={() => {
-          setIsConnectAppsOpen(false);
-          setConnectAppsInitialSearch("");
-        }}
-        targetAgentId={selectedAgent.id}
-        targetAgentName={selectedAgent.name}
-        initialSearchQuery={connectAppsInitialSearch}
-        connectedAppIds={connectedAppIds}
-        onAppConnected={(appId) => {
-          const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");
-          setConnectedAppIds((prev) => Array.from(new Set([...prev, cleanSlug])));
-          setCurrentAgentMcpClients((prev) => {
-            const clientKey = `composio_${cleanSlug}`;
-            if (prev.some((c) => c.key.toLowerCase() === clientKey || c.key.toLowerCase() === cleanSlug)) {
-              return prev;
-            }
-            const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === cleanSlug);
-            return [
-              ...prev,
-              {
-                key: clientKey,
-                name: matched?.name || cleanSlug,
-                description: matched?.description || `Composio ${cleanSlug} integration`,
-                enabled: true,
-                transport: "sse",
-                url: `https://connect.composio.dev/mcp/${cleanSlug}`,
-              },
-            ];
-          });
-          setMcpRefreshTrigger((t) => t + 1);
-        }}
-        onAppDisconnected={(appId) => {
-          const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");
-          setConnectedAppIds((prev) => prev.filter((id) => id !== cleanSlug));
-          setCurrentAgentMcpClients((prev) =>
-            prev.filter((c) => c.key.toLowerCase().replace(/^composio_/, "") !== cleanSlug)
-          );
-          setMcpRefreshTrigger((t) => t + 1);
-        }}
-      />
+      <LazyModalSlot open={isConnectAppsOpen}>
+        <ConnectAppsModal
+          isOpen={isConnectAppsOpen}
+          onClose={() => {
+            setIsConnectAppsOpen(false);
+            setConnectAppsInitialSearch("");
+          }}
+          targetAgentId={selectedAgent.id}
+          targetAgentName={selectedAgent.name}
+          initialSearchQuery={connectAppsInitialSearch}
+          connectedAppIds={connectedAppIds}
+          onAppConnected={(appId) => {
+            const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");
+            setConnectedAppIds((prev) => Array.from(new Set([...prev, cleanSlug])));
+            setCurrentAgentMcpClients((prev) => {
+              const clientKey = `composio_${cleanSlug}`;
+              if (prev.some((c) => c.key.toLowerCase() === clientKey || c.key.toLowerCase() === cleanSlug)) {
+                return prev;
+              }
+              const matched = APPS_CATALOG.find((a) => a.id.toLowerCase() === cleanSlug);
+              return [
+                ...prev,
+                {
+                  key: clientKey,
+                  name: matched?.name || cleanSlug,
+                  description: matched?.description || `Composio ${cleanSlug} integration`,
+                  enabled: true,
+                  transport: "sse",
+                  url: `https://connect.composio.dev/mcp/${cleanSlug}`,
+                },
+              ];
+            });
+            setMcpRefreshTrigger((t) => t + 1);
+          }}
+          onAppDisconnected={(appId) => {
+            const cleanSlug = appId.toLowerCase().replace(/^composio_/, "");
+            setConnectedAppIds((prev) => prev.filter((id) => id !== cleanSlug));
+            setCurrentAgentMcpClients((prev) =>
+              prev.filter((c) => c.key.toLowerCase().replace(/^composio_/, "") !== cleanSlug)
+            );
+            setMcpRefreshTrigger((t) => t + 1);
+          }}
+        />
+      </LazyModalSlot>
 
       {/* ========================================================= */}
       {/* MOBILE HOLD-TOUCH / LONG-PRESS ACTION SHEET: AGENT */}

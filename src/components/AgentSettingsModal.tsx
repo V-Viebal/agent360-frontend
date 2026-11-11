@@ -31,7 +31,7 @@ import {
   FileText,
   Cpu,
 } from "lucide-react";
-import { fetchWorkspaceFileContent } from "../services/agentApi";
+import { fetchWorkspaceFileContent, fetchAgentThinkingLevel, updateAgentThinkingLevel, AGENT_THINKING_LEVELS, AgentThinkingLevel } from "../services/agentApi";
 import { Tooltip } from "./ui/Tooltip";
 import { saveCustomAgentName } from "../services/avatarService";
 import { InfraAgent } from "../types/agent";
@@ -144,6 +144,38 @@ export function AgentSettingsModal({
   const [modelSearch, setModelSearch] = useState("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [reactionSummary, setReactionSummary] = useState<MessageReactionSummaryDto | null>(null);
+  const [thinkingLevel, setThinkingLevel] = useState<AgentThinkingLevel | null>(null);
+  const [savingThinkingLevel, setSavingThinkingLevel] = useState<AgentThinkingLevel | null>(null);
+  const [thinkingLevelError, setThinkingLevelError] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !agent?.id) return;
+    let cancelled = false;
+    setThinkingLevel(null);
+    setThinkingLevelError(false);
+    fetchAgentThinkingLevel(agent.id).then((level) => {
+      if (!cancelled) setThinkingLevel(level ?? "inherit");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, agent?.id]);
+
+  const handleSelectThinkingLevel = async (level: AgentThinkingLevel) => {
+    if (!agent?.id || savingThinkingLevel || level === thinkingLevel) return;
+    const previous = thinkingLevel;
+    setSavingThinkingLevel(level);
+    setThinkingLevelError(false);
+    setThinkingLevel(level);
+    const saved = await updateAgentThinkingLevel(agent.id, level);
+    if (saved) {
+      setThinkingLevel(saved);
+    } else {
+      setThinkingLevel(previous);
+      setThinkingLevelError(true);
+    }
+    setSavingThinkingLevel(null);
+  };
 
   // SOUL.md expandable viewer & editor state
   const [isSoulExpanded, setIsSoulExpanded] = useState(false);
@@ -259,7 +291,7 @@ export function AgentSettingsModal({
     },
     {
       id: "webhooks_a2a",
-      label: "Webhooks & Matrix",
+      label: "Webhooks",
       icon: <Activity size={15} />,
     },
     {
@@ -541,6 +573,43 @@ export function AgentSettingsModal({
                         </div>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Reasoning effort (QwenPaw profile thinking_level) */}
+                <div data-testid="agent-reasoning-effort" className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Brain size={14} style={{ color: agentTheme.primary }} />
+                      <span>Reasoning effort</span>
+                    </span>
+                    {thinkingLevelError && (
+                      <span className="text-[11px] text-rose-500">Không lưu được</span>
+                    )}
+                  </div>
+                  <div role="radiogroup" aria-label="Reasoning effort" className="grid grid-cols-4 gap-1.5">
+                    {AGENT_THINKING_LEVELS.map((level) => {
+                      const isActive = thinkingLevel === level;
+                      const isSaving = savingThinkingLevel === level;
+                      return (
+                        <button
+                          key={level}
+                          type="button"
+                          role="radio"
+                          aria-checked={isActive}
+                          disabled={thinkingLevel === null || Boolean(savingThinkingLevel)}
+                          onClick={() => void handleSelectThinkingLevel(level)}
+                          className={"flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-mono border transition-colors cursor-pointer disabled:cursor-default " + (
+                            isActive
+                              ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold"
+                              : "bg-white dark:bg-[#121218] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#242432] hover:border-slate-300 dark:hover:border-neutral-700 disabled:opacity-60"
+                          )}
+                        >
+                          {isSaving && <Loader2 size={10} className="animate-spin" />}
+                          <span>{level === "inherit" ? "default" : level}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -828,7 +897,7 @@ export function AgentSettingsModal({
               </div>
             )}
 
-            {/* TAB 4B: WEBHOOKS, MATRIX BRIDGE & QWENPAW RUNTIME API */}
+            {/* TAB 4B: AGENT WEBHOOKS */}
             {activeTab === "webhooks_a2a" && (
               <div className="space-y-4 max-w-4xl">
 
