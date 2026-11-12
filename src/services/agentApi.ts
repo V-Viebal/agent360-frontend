@@ -2855,6 +2855,8 @@ export interface AgentWebhookConfig {
   require_hmac: boolean;
   signing_secret_masked: string;
   signing_secret_preview: string;
+  /** Full signing secret; only present right after creation/rotation. */
+  secret?: string;
   inbound_webhook_url: string;
   agentteams_webhook_url: string;
   allowed_events: string[];
@@ -2994,6 +2996,19 @@ export async function rotateAgentWebhookSecret(agentId: string): Promise<{
     throw new Error(`Failed to rotate webhook secret (HTTP ${res.status})`);
   }
   return await res.json();
+}
+
+export async function clearAgentWebhookDeliveries(agentId: string): Promise<boolean> {
+  const cleanId = agentId.replace(/^bot:agent360:/, "");
+  const res = await authorizedFetch(
+    `${API_BASE_URL}/agents/${encodeURIComponent(cleanId)}/webhooks/deliveries`,
+    {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    },
+    cleanId
+  );
+  return res.ok;
 }
 
 export async function fetchAgentWebhookDeliveries(

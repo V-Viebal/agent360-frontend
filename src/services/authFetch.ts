@@ -14,9 +14,27 @@ const ID_TOKEN = "skyer_id_token";
 const USER_PROFILE = "skyer_user_profile";
 const RETURN_URL = "skyer_return_url";
 
+function tokenExpiry(token: string | null): number {
+  if (!token) return 0;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.exp === "number" ? payload.exp : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function getStoredToken(key: string): string | null {
   try {
-    return sessionStorage.getItem(key) || localStorage.getItem(key);
+    const fromSession = sessionStorage.getItem(key);
+    const fromLocal = localStorage.getItem(key);
+    // Another tab may have renewed the shared localStorage copy. Logto rotates refresh tokens, so this tab's
+    // sessionStorage copy is then revoked (invalid_grant) and its access token keeps expiring: use the newer pair.
+    if (fromSession && fromLocal && fromSession !== fromLocal) {
+      if (key === ACCESS) return tokenExpiry(fromLocal) > tokenExpiry(fromSession) ? fromLocal : fromSession;
+      if (key === REFRESH) return fromLocal;
+    }
+    return fromSession || fromLocal;
   } catch {
     return null;
   }
@@ -143,6 +161,23 @@ export function getOrRenewAccessToken(originalFetch: typeof fetch = window.fetch
     });
   }
   return refreshingPromise;
+}
+
+/**
+ * Access token for transports that cannot carry an Authorization header (WebSocket/EventSource query strings).
+ * Renews an expiring token first; when the session can no longer be renewed, starts sign-in instead of letting the
+ * caller reconnect forever with an expired token.
+ */
+export async function ensureFreshAccessToken(): Promise<string | null> {
+  const token = getStoredToken(ACCESS);
+  if (!token || !tokenApproachingExpiry(token, 30)) return token;
+  const renewed = await getOrRenewAccessToken();
+  if (renewed) return renewed;
+  if (tokenApproachingExpiry(token, 0)) {
+    redirectToSignIn();
+    return null;
+  }
+  return token;
 }
 
 /**

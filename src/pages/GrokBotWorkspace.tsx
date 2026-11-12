@@ -1184,6 +1184,7 @@ import { TelemetryHud, TurnTelemetry } from "../components/TelemetryHud";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LanguageSelector } from "../components/LanguageSelector";
 import { operatorKey } from "../services/a2aApi";
+import { ensureFreshAccessToken } from "../services/authFetch";
 import { AgentBrowserInfo, AgentBrowserTab, AgentBrowserVpnStatus, AgentBrowserHistoryItem, BrowserInputPayload, fetchAgentBrowserHistory, fetchAgentBrowserSuggestions, detectAdaptiveNetworkQuality, DesktopAuthError, agentBrowserImageUrl, hasNoBrowser, clearNoBrowserCache, fetchAgentBrowser, fetchAgentBrowserFrame, focusAgentBrowser, issueAgentDesktopUrl, isSignedAgentDesktopUrl, prefetchAgentDesktopUrl, dispatchAgentBrowserInput, agentBrowserStreamWsUrl, fetchAgentBrowserVpn, setAgentBrowserVpn } from "../services/agentBrowserApi";
 
 
@@ -9204,7 +9205,10 @@ function AgentBrowserPreview({
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectAttempt = 0;
 
-    const connectWs = () => {
+    const connectWs = async () => {
+      if (!alive) return;
+      // The stream authenticates via ?access_token=; renew it first so reconnects never loop on an expired token (401).
+      await ensureFreshAccessToken().catch(() => null);
       if (!alive) return;
       try {
         const { w: initW, h: initH, isMobile: initMob } = latestViewportRef.current;
@@ -9395,7 +9399,7 @@ function AgentBrowserPreview({
       } catch {}
     };
 
-    connectWs();
+    void connectWs();
 
     return () => {
       alive = false;

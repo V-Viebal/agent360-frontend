@@ -1238,3 +1238,39 @@ console.log("Testing Agent Last Access Session Persistence & Sync Contract...");
   );
 }
 console.log("✓ Test 77: Agent Last Access Session Persistence & Sync Contract verified");
+
+console.log("Testing Lean Agent Webhooks Tab (No QwenPaw branding & JSON Detail Inspector) Contract...");
+{
+  const webhooksSrc = fs.readFileSync(new URL("../src/components/AgentWebhooksTab.tsx", import.meta.url), "utf8");
+  const modalSrc = fs.readFileSync(new URL("../src/components/AgentSettingsModal.tsx", import.meta.url), "utf8");
+
+  assert.ok(
+    !webhooksSrc.toLowerCase().includes("qwenpaw"),
+    "AgentWebhooksTab must not contain QwenPaw branding or internal runtime terminology"
+  );
+  assert.ok(
+    webhooksSrc.includes("agent-inbound-webhook-url") &&
+    webhooksSrc.includes("webhook-secret-display") &&
+    webhooksSrc.includes("btn-dispatch-test-webhook") &&
+    webhooksSrc.includes("webhook-deliveries-list") &&
+    webhooksSrc.includes("btn-clear-webhook-deliveries"),
+    "AgentWebhooksTab must retain clean inbound URL, HMAC secret, test sender, delivery log list, and clear button"
+  );
+  assert.ok(
+    webhooksSrc.includes("Request Payload JSON:") &&
+    webhooksSrc.includes("expandedDeliveryId"),
+    "AgentWebhooksTab must support expandable delivery detail inspection for Request Payload JSON and Response"
+  );
+  assert.ok(
+    modalSrc.includes('label: "Webhooks"'),
+    "AgentSettingsModal must present a clean, concise 'Webhooks' label"
+  );
+  assert.ok(
+    webhooksSrc.includes("btn-toggle-curl-snippet") &&
+    webhooksSrc.includes("curl-command-snippet-panel") &&
+    webhooksSrc.includes("btn-copy-curl-command") &&
+    webhooksSrc.includes("X-Agent360-Signature"),
+    "AgentWebhooksTab must support executable cURL generator with precomputed HMAC signature and timestamp"
+  );
+}
+console.log("✓ Test 82: Lean Agent Webhooks Tab Contract verified");
