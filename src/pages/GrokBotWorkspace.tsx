@@ -16061,13 +16061,20 @@ ${targetItem.text}`;
       }
       setIsLoadingAgents(false);
 
-      // Pre-populate recent sessions map for each agent from initial data
+      // Pre-populate recent sessions map for each agent from initial data & DB lastSessionTitle
       if (Array.isArray(loadedAgents)) {
         setAgentRecentSessions((prev) => {
           const next = { ...prev };
           for (const ag of loadedAgents) {
-            if (!next[ag.id] && ag.sessions && ag.sessions.length > 0 && ag.sessions[0]?.title) {
-              next[ag.id] = ag.sessions[0].title;
+            const sid = ag.id;
+            const sslug = ag.slug;
+            const dbTitle = ag.lastSessionTitle;
+            if (dbTitle) {
+              if (sid) next[sid] = dbTitle;
+              if (sslug) next[sslug] = dbTitle;
+            } else if (!next[sid] && ag.sessions && ag.sessions.length > 0 && ag.sessions[0]?.title) {
+              next[sid] = ag.sessions[0].title;
+              if (sslug) next[sslug] = ag.sessions[0].title;
             }
           }
           try { localStorage.setItem("agent360_recent_sessions_map", JSON.stringify(next)); } catch {}
@@ -16424,7 +16431,7 @@ ${targetItem.text}`;
           }
           setSelectedChatId(targetChatId);
           if (!targetChatId.startsWith("session-") || hasLocalSessionActivity(targetChatId)) {
-            saveLastChatForAgent(currentAgent, targetChatId);
+            saveLastChatForAgent(currentAgent, targetChatId, foundSaved?.title || loadedChats[0]?.title);
           }
 
           // Ensure channel filter does not hide loaded chats or the selected chat
@@ -17722,7 +17729,7 @@ const selectedAgentTheme = getAgentColorTheme(
       !streamingChatIdsRef.current.includes(chat.id) &&
       !(getCachedChatMessages(chat.id, selectedAgentId)?.length);
     if (!isEmptyTransientNew && selectedAgentId) {
-      saveLastChatForAgent(selectedAgentId, chat.id);
+      saveLastChatForAgent(selectedAgentId, chat.id, chat.title);
     }
 
     // Update routing URL to /app/:agentSlug/:chatId

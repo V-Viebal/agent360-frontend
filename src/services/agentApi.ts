@@ -237,10 +237,11 @@ export function getSavedLastChatForAgent(agentId?: string | null): string | null
   return null;
 }
 
-export function saveLastChatForAgent(agentId: string | null | undefined, chatId: string | null | undefined): void {
+export function saveLastChatForAgent(agentId: string | null | undefined, chatId: string | null | undefined, title?: string | null): void {
   if (typeof window === "undefined") return;
   const slug = normalizeAgentStorageSlug(agentId);
   const cleanChatId = (chatId || "").trim();
+  const cleanTitle = (title || "").trim();
   if (!slug || !cleanChatId) return;
   try {
     const scope = getCurrentCacheUserScope();
@@ -258,7 +259,11 @@ export function saveLastChatForAgent(agentId: string | null | undefined, chatId:
       authorizedFetch(`${API_BASE_URL}/agents/${encodeURIComponent(slug)}/last-session`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: cleanChatId, session_id: cleanChatId })
+        body: JSON.stringify({
+          chat_id: cleanChatId,
+          session_id: cleanChatId,
+          ...(cleanTitle ? { title: cleanTitle } : {})
+        })
       }, slug).catch(() => {});
     } catch {}
   }

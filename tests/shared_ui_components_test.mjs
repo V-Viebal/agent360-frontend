@@ -1274,3 +1274,22 @@ console.log("Testing Lean Agent Webhooks Tab (No QwenPaw branding & JSON Detail 
   );
 }
 console.log("✓ Test 82: Lean Agent Webhooks Tab Contract verified");
+
+console.log("Testing Agent Last Activity Session DB Hydration Contract...");
+{
+  const apiSrc = fs.readFileSync(new URL("../src/services/agentApi.ts", import.meta.url), "utf8");
+  const grokSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+
+  assert.ok(
+    apiSrc.includes("lastSessionTitle: a.last_session_title || a.lastSessionTitle") &&
+    apiSrc.includes("saveLastChatForAgent(agentId: string | null | undefined, chatId: string | null | undefined, title?: string | null)"),
+    "agentApi must parse last_session_title and support passing title to saveLastChatForAgent"
+  );
+  assert.ok(
+    grokSrc.includes("const dbTitle = ag.lastSessionTitle;") &&
+    grokSrc.includes("if (dbTitle) {") &&
+    grokSrc.includes("saveLastChatForAgent(selectedAgentId, chat.id, chat.title);"),
+    "GrokBotWorkspace must hydrate agentRecentSessions from DB lastSessionTitle on load"
+  );
+}
+console.log("✓ Test 83: Agent Last Activity Session DB Hydration Contract verified");
