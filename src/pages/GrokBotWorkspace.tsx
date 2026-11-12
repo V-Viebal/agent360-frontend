@@ -6448,6 +6448,8 @@ function SelkiesViewer({
   const isVirtualKeyboardOpenRef = useRef<boolean>(false);
   const [boxSize, setBoxSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const [browserTabs, setBrowserTabs] = useState<AgentBrowserTab[]>([]);
+  const browserTabsRef = useRef<AgentBrowserTab[]>([]);
+  browserTabsRef.current = browserTabs;
   const [selectedTabId, setSelectedTabId] = useState<string>("");
   const [addressInput, setAddressInput] = useState<string>("");
   const [isEditingAddress, setIsEditingAddress] = useState<boolean>(false);
@@ -7086,6 +7088,33 @@ function SelkiesViewer({
     if (!state.loading) {
       setIsNavigating(false);
       if (cleanUrl && !cleanUrl.startsWith("about:")) saveOmniboxEntry(state.title || cleanUrl, cleanUrl, false);
+    }
+  };
+
+  // A page opened a popup/new window (OAuth/QR login, target=_blank): poll until the new target shows up, then follow it like Chrome does.
+  const handlePopupOpened = async (popup: { openerId: string; url: string }) => {
+    const reqAgentId = agentId;
+    const knownIds = new Set(browserTabsRef.current.map((t) => t.targetId));
+    const popupUrl = popup.url || "";
+    for (let attemptIdx = 0; attemptIdx < 12; attemptIdx++) {
+      await new Promise((r) => setTimeout(r, attemptIdx === 0 ? 250 : 500));
+      if (activeAgentIdRef.current !== reqAgentId) return;
+      let info: Awaited<ReturnType<typeof fetchAgentBrowser>> | null = null;
+      try {
+        info = await fetchAgentBrowser(reqAgentId);
+      } catch {
+        continue;
+      }
+      const realTabs = (info?.tabs || []).filter((t) => !t.anchor);
+      const fresh = realTabs.filter((t) => !knownIds.has(t.targetId));
+      const popupTab =
+        fresh.find((t) => popupUrl && popupUrl !== "about:blank" && (t.url === popupUrl || t.url.startsWith(popupUrl.split("#")[0]))) ||
+        fresh[fresh.length - 1];
+      if (!popupTab) continue;
+      const list = reconcileTabsWithOrder(realTabs);
+      setBrowserTabs(list);
+      handleActivateTab(popupTab);
+      return;
     }
   };
 
@@ -8490,6 +8519,7 @@ const INSTANT_GOOGLE_NEW_TAB_DATA_URL =
             viewportHeight={computeActiveBrowserViewport().h}
             frameCacheRef={tabFrameCacheRef}
             onPageLoadingState={handlePageLoadingState}
+            onPopupOpened={handlePopupOpened}
             externalZoomPercent={browserZoomPercent}
             onZoomStep={handleZoomStep}
             onBrowserShortcut={(shortcut) => {
@@ -8531,6 +8561,7 @@ function AgentBrowserPreview({
   onZoomStep,
   onBrowserShortcut,
   onPageLoadingState,
+  onPopupOpened,
 }: {
   agentId: string;
   pageId?: string;
@@ -8552,9 +8583,12 @@ function AgentBrowserPreview({
   onZoomStep?: (deltaPct: number | "reset") => void;
   onBrowserShortcut?: (shortcut: "new_tab" | "close_tab" | "focus_address" | "reload" | "back" | "forward" | "find") => void;
   onPageLoadingState?: (state: { loading: boolean; url: string; title: string }) => void;
+  onPopupOpened?: (popup: { openerId: string; url: string }) => void;
 }) {
   const onPageLoadingStateRef = useRef(onPageLoadingState);
   onPageLoadingStateRef.current = onPageLoadingState;
+  const onPopupOpenedRef = useRef(onPopupOpened);
+  onPopupOpenedRef.current = onPopupOpened;
   const cacheKey = `${agentId}:${pageId || "default"}`;
   const initCached = frameCacheRef?.current?.[cacheKey];
   const validInitCached = initCached && initCached !== "__loading__" ? initCached : "";
@@ -9232,6 +9266,13 @@ function AgentBrowserPreview({
                 loading: Boolean(msg.params.loading),
                 url: typeof msg.params.url === "string" ? msg.params.url : "",
                 title: typeof msg.params.title === "string" ? msg.params.title : "",
+              });
+              return;
+            }
+            if (msg?.method === "Page.popupOpened" && msg?.params) {
+              onPopupOpenedRef.current?.({
+                openerId: typeof msg.params.openerId === "string" ? msg.params.openerId : "",
+                url: typeof msg.params.url === "string" ? msg.params.url : "",
               });
               return;
             }
