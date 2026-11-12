@@ -11022,6 +11022,12 @@ function isCoarseTouchDevice(): boolean {
 }
 
 
+// Touch-only phones/tablets (no mouse/trackpad): the virtual keyboard's Enter key inserts a newline; sending uses the Send button.
+function isTouchOnlyKeyboardDevice(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(pointer: coarse)").matches && !window.matchMedia("(any-pointer: fine)").matches;
+}
+
 function parseChatTimestamp(ts?: string): Date | null {
   if (!ts) return null;
   const d = new Date(ts);
@@ -11188,6 +11194,8 @@ export function GrokBotWorkspace() {
     );
   };
   const [isLoadingAgents, setIsLoadingAgents] = useState<boolean>(() => agents.length === 0);
+  // True when the last fleet fetch failed (network/auth/5xx); distinguishes "load error" from "no agents assigned".
+  const [agentsLoadFailed, setAgentsLoadFailed] = useState<boolean>(false);
   const [isLoadingChats, setIsLoadingChats] = useState(false);
   const [isOnlineState, setIsOnlineState] = useState<boolean>(() => {
     return typeof navigator !== "undefined" ? navigator.onLine : true;
@@ -15997,10 +16005,15 @@ ${targetItem.text}`;
         // When 0 agents are returned, user either has no assigned agents or is a new member.
         // Don't show technical 'cluster standby / reconnect' error banner in this legitimate case.
         setBackendError(null);
+        setAgentsLoadFailed(false);
       } catch (err: any) {
         setBackendError(err?.name === "AgentListAuthError" || err instanceof AgentListAuthError
           ? err.message
           : "Cluster API is unreachable. Showing no agents until it responds.");
+        setAgentsLoadFailed(true);
+        // A failed fetch is not "zero agents": keep the cached (SWR) fleet and its caches instead of wiping them.
+        setIsLoadingAgents(false);
+        return;
       }
 
       setAgents(loadedAgents);
@@ -17055,7 +17068,8 @@ ${targetItem.text}`;
     }
   };
 
-  const hasNoAgents = !isLoadingAgents && agents.length === 0;
+  const hasNoAgents = !isLoadingAgents && !agentsLoadFailed && agents.length === 0;
+  const isAgentsUnavailable = !isLoadingAgents && agentsLoadFailed && agents.length === 0;
 
   // Always focus textarea when chat finishes loading or user switches sessions on desktop (when Virtual Computer is closed)
   useEffect(() => {
@@ -20953,7 +20967,47 @@ const selectedAgentTheme = getAgentColorTheme(
           onScroll={handleMessagesScroll}
           className={`flex-1 overflow-y-auto overscroll-contain scrollbar-hover ${isCompactMode ? "px-3 pt-2 pb-6 space-y-3" : "px-4 md:px-8 pt-3 pb-8 space-y-3.5 sm:space-y-4"} max-w-3xl mx-auto w-full`}
         >
-          {hasNoAgents ? (
+          {(isLoadingAgents && agents.length === 0) ? (
+            <div data-testid="agents-loading-skeleton" className="space-y-4 py-2 w-full animate-in fade-in duration-200">
+              <div className="flex justify-end">
+                <div className="w-[65%] sm:w-[50%] p-3.5 rounded-2xl rounded-tr-xs bg-slate-100 dark:bg-[#181822] border border-slate-200 dark:border-[#262634] space-y-2">
+                  <div className="h-3 w-4/5 rounded-md skeleton-shimmer" />
+                  <div className="h-3 w-2/3 rounded-md skeleton-shimmer" />
+                </div>
+              </div>
+              <div className="flex justify-start">
+                <div className="w-[85%] sm:w-[75%] p-4 rounded-2xl rounded-tl-xs bg-white dark:bg-[#101016] border border-slate-200 dark:border-[#1e1e28] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded-full skeleton-shimmer" />
+                    <div className="h-3 w-28 rounded-md skeleton-shimmer" />
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    <div className="h-3.5 w-full rounded-md skeleton-shimmer" />
+                    <div className="h-3.5 w-[92%] rounded-md skeleton-shimmer" />
+                    <div className="h-3.5 w-[78%] rounded-md skeleton-shimmer" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : isAgentsUnavailable ? (
+            <div data-testid="agents-unavailable-state" className="h-full min-h-[460px] flex items-center justify-center p-4">
+              <EmptyState
+                size="lg"
+                icon={<RefreshCw size={32} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />}
+                title="Chưa tải được danh sách Agent"
+                description={backendError || "Không kết nối được tới Skyer. Vui lòng thử lại."}
+                action={{
+                  label: "Thử lại",
+                  icon: <RefreshCw size={13} />,
+                  variant: "primary",
+                  onClick: () => {
+                    playMicroClick();
+                    window.location.reload();
+                  },
+                }}
+              />
+            </div>
+          ) : hasNoAgents ? (
             <div className="h-full min-h-[460px] flex items-center justify-center p-4">
               <EmptyState
                 size="lg"
@@ -24226,7 +24280,7 @@ const selectedAgentTheme = getAgentColorTheme(
                   ref={textareaRef}
                   rows={isMultiline ? 2 : 1}
                   wrap="soft"
-                  enterKeyHint="send"
+                  enterKeyHint={isTouchOnlyKeyboardDevice() ? "enter" : "send"}
                   value={inputText}
                   onPaste={(e) => {
                     const items = e.clipboardData?.items;
@@ -24507,6 +24561,11 @@ const selectedAgentTheme = getAgentColorTheme(
                         target.style.height = "auto";
                         target.style.height = Math.min(target.scrollHeight, typeof window !== "undefined" && window.innerWidth < 640 ? 140 : 210) + "px";
                       }, 0);
+                      return;
+                    }
+
+                    // On touch-only devices the virtual keyboard Enter inserts a newline (native behaviour); send via the Send button.
+                    if (e.key === "Enter" && isTouchOnlyKeyboardDevice()) {
                       return;
                     }
 
