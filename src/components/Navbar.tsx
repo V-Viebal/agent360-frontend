@@ -8,6 +8,7 @@ import { LanguageSelector } from "./LanguageSelector";
 import { ThemeSelector } from "./ThemeSelector";
 import { useTranslation } from "../i18n/LanguageContext";
 import { ContactModal } from "./ContactModal";
+import { getAccessToken } from "../services/sessionStorageHelpers";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -22,7 +23,7 @@ export function Navbar() {
   const location = useLocation();
 
   useEffect(() => {
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    const token = getAccessToken();
     setHasSession(!!token);
   }, []);
 

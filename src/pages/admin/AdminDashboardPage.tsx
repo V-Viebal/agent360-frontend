@@ -12,6 +12,7 @@ import {
   CreditCard,
   RefreshCw
 } from "lucide-react";
+import { getAccessToken } from "../../services/sessionStorageHelpers";
 
 export function AdminDashboardPage() {
   const [agentsCount, setAgentsCount] = useState<number>(0);
@@ -21,7 +22,7 @@ export function AdminDashboardPage() {
 
   async function loadDashboardData() {
     setLoading(true);
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+    const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {

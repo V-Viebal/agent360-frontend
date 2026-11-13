@@ -25,7 +25,7 @@ export class AgentListAuthError extends Error {
 
 export function hasCredential(): boolean {
   try {
-    return !!(sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || operatorKey.get());
+    return !!(getAccessToken() || operatorKey.get());
   } catch {
     return false;
   }
@@ -42,7 +42,7 @@ export function getAuthHeaders(agentId?: string): Record<string, string> {
   let token = "";
   let opToken = "";
   try {
-    token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+    token = getAccessToken() || "";
     opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || operatorKey.get() || "";
   } catch {}
 
@@ -195,7 +195,7 @@ export function getCurrentCacheUserScope(): string {
       const parsed = JSON.parse(profileRaw);
       if (parsed?.sub) return String(parsed.sub).trim();
     }
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+    const token = getAccessToken();
     if (token && token.includes(".")) {
       const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
       if (payload?.sub) return String(payload.sub).trim();
@@ -1985,6 +1985,7 @@ export async function toggleScheduleStatus(jobId: string, currentEnabled: boolea
 }
 
 import { InfraNodeInstance, BotDeploymentInstance } from "../types/instance";
+import { getAccessToken } from "./sessionStorageHelpers";
 
 export async function fetchInfraInstances(): Promise<InfraNodeInstance[]> {
   try {

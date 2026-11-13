@@ -1,5 +1,6 @@
 import { operatorKey } from "./a2aApi";
 import { authorizedFetch } from "./agentApi";
+import { getAccessToken } from "./sessionStorageHelpers";
 
 export interface AgentBrowserTab {
   targetId: string;
@@ -173,7 +174,7 @@ export function agentBrowserStreamWsUrl(agentId: string, maxWidth = 1920, pageId
   qs.set("mobile", isMobileDevice ? "1" : "0");
   qs.set("device", isMobileDevice ? "phone" : "desktop");
   try {
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+    const token = getAccessToken() || "";
     const opToken = operatorKey.get();
     if (token) {
       qs.set("access_token", token);
@@ -212,7 +213,7 @@ export async function issueAgentDesktopUrl(agentId: string, mode: "control" | "w
     return cached.url;
   }
 
-  const token = typeof window !== "undefined" ? (sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "") : "";
+  const token = typeof window !== "undefined" ? (getAccessToken() || "") : "";
   const key = token ? "" : operatorKey.get();
   const res = await authorizedFetch(`/api/agents/${encodeURIComponent(id)}/browser/viewer?mode=${mode}`, {
     method: "POST",

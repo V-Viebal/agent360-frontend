@@ -11104,6 +11104,7 @@ function useScrollBottomIndicator() {
 }
 
 import { LazyModalSlot } from "../components/LazyModalSlot";
+import { getAccessToken } from "../services/sessionStorageHelpers";
 const SettingsModal = React.lazy(() => import("../components/SettingsModal").then((mod) => ({ default: mod.SettingsModal })));
 const A2ATopologyGraphModal = React.lazy(() => import("../components/A2ATopologyGraphModal").then((mod) => ({ default: mod.A2ATopologyGraphModal })));
 const AgentSettingsModal = React.lazy(() => import("../components/AgentSettingsModal").then((mod) => ({ default: mod.AgentSettingsModal })));
@@ -11436,7 +11437,7 @@ export function GrokBotWorkspace() {
   // Strictly check if current logged in user has ADMIN role.
   // When an authenticated user session exists, their role MUST reflect their real account role.
   // Leftover operatorKey in localStorage must NEVER elevate a regular MEMBER / CUSTOMER session to admin!
-  const hasUserSession = !!(sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || currentUser);
+  const hasUserSession = !!(getAccessToken() || currentUser);
   const isAdmin = hasUserSession
     ? !!(
         currentUser?.roles?.some(r => ["ADMIN", "SYSTEM", "ROOT"].includes(r.toUpperCase())) ||
@@ -16197,6 +16198,31 @@ ${targetItem.text}`;
     return () => clearTimeout(timer);
   }, []);
 
+  // A long-idle tab can fail the mount-time fleet load (expired session). When the tab is shown again, renew the
+  // session and retry; reload only once the fleet actually loads so the full init path runs with a valid token.
+  useEffect(() => {
+    if (!agentsLoadFailed) return;
+    let busy = false;
+    const retry = async () => {
+      if (busy || document.visibilityState !== "visible") return;
+      busy = true;
+      try {
+        await ensureFreshAccessToken();
+        await fetchInfraAgents();
+        window.location.reload();
+      } catch {
+      } finally {
+        busy = false;
+      }
+    };
+    document.addEventListener("visibilitychange", retry);
+    window.addEventListener("focus", retry);
+    return () => {
+      document.removeEventListener("visibilitychange", retry);
+      window.removeEventListener("focus", retry);
+    };
+  }, [agentsLoadFailed]);
+
   // Listen to WebSocket composio:connection_activated globally so workspace state updates even when modal is closed
   useEffect(() => {
     const handleGlobalComposioActivation = (ev: Event) => {
@@ -16631,7 +16657,7 @@ ${targetItem.text}`;
     try {
       let sseUrl = `/api/agents/${encodeURIComponent(selectedAgentId)}/chats/${encodeURIComponent(selectedChatId)}/stream`;
       try {
-        const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+        const token = getAccessToken();
         const opKey = !token ? (localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token")) : null;
         const qParams = new URLSearchParams();
         if (token) qParams.set("access_token", token);
@@ -23173,7 +23199,11 @@ const selectedAgentTheme = getAgentColorTheme(
               </div>
               <button data-ux-target-min="24"
                 type="button"
-                onClick={() => window.location.reload()}
+                onClick={async () => {
+                  // Renew an expired session first so the reload does not repeat the same 401.
+                  try { await ensureFreshAccessToken(); } catch {}
+                  window.location.reload();
+                }}
                 className="rounded-full bg-amber-400/20 px-3 py-1 font-medium text-amber-300 hover:bg-amber-400/30 transition-colors"
               >
                 Reconnect

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { EnterpriseDataTable, Column } from "../../components/ui/EnterpriseDataTable";
 import { SlideOverDrawer } from "../../components/ui/SlideOverDrawer";
+import { getAccessToken } from "../../services/sessionStorageHelpers";
 
 interface UserItem {
   id: number;
@@ -43,7 +44,7 @@ export function AdminUsersPage() {
   async function loadUsers() {
     setLoading(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/users", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -61,7 +62,7 @@ export function AdminUsersPage() {
   async function handleSyncAllFromLogto() {
     setSyncing(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/users/sync-from-logto", {
         method: "POST",
         headers: {
@@ -90,7 +91,7 @@ export function AdminUsersPage() {
     if (!syncSub.trim()) return;
     setSyncing(true);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/users/sync", {
         method: "POST",
         headers: {
@@ -133,7 +134,7 @@ export function AdminUsersPage() {
     setUpdatingId(u.id);
 
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch(`/api/admin/users/${u.id}/role`, {
         method: "PUT",
         headers: {

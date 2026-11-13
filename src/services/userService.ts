@@ -1,4 +1,5 @@
 import { authConfig } from "../config/authConfig";
+import { getAccessToken } from "./sessionStorageHelpers";
 
 export interface UserProfile {
   sub: string;
@@ -52,7 +53,7 @@ export function isPlaceholderEmail(email?: string | null, sub?: string | null): 
 export async function getCurrentUserProfile(forceRefresh = false): Promise<UserProfile | null> {
   const accessToken =
     typeof window !== "undefined"
-      ? sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")
+      ? getAccessToken()
       : null;
   const idToken =
     typeof window !== "undefined"
@@ -215,7 +216,7 @@ export async function updateUserProfile(updates: { name?: string; picture?: stri
     localStorage.setItem("skyer_user_profile", JSON.stringify(updated));
   } catch {}
 
-  const accessToken = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+  const accessToken = getAccessToken();
   if (accessToken) {
     try {
       await fetch("/api/users/me", {
@@ -242,7 +243,7 @@ export async function updateUserProfile(updates: { name?: string; picture?: stri
 export async function changeCurrentUserPassword(newPassword: string): Promise<{ ok: boolean; message?: string; error?: string }> {
   const accessToken =
     typeof window !== "undefined"
-      ? sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")
+      ? getAccessToken()
       : null;
 
   if (!accessToken) {
@@ -285,7 +286,7 @@ export async function changeCurrentUserPassword(newPassword: string): Promise<{ 
 export async function getCurrentUserPasswordStatus(): Promise<boolean> {
   const accessToken =
     typeof window !== "undefined"
-      ? sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token")
+      ? getAccessToken()
       : null;
 
   if (!accessToken) return false;

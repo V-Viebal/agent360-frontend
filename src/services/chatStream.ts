@@ -1,4 +1,5 @@
 import { isInternalRuntimeMessage, stripInternalExecutionArtifacts } from "./agentApi";
+import { getAccessToken } from "./sessionStorageHelpers";
 export interface StreamChunkEvent {
   type: "text" | "reasoning" | "tool_call" | "tool_result" | "error" | "done";
   content?: string;
@@ -121,7 +122,7 @@ export async function sendConsoleChatMessageStream(
         Accept: "text/event-stream"
       };
       try {
-        const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token");
+        const token = getAccessToken();
         if (token) {
           authHeaders["Authorization"] = "Bearer " + token;
         } else {

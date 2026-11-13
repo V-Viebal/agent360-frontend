@@ -1,5 +1,6 @@
 import { authConfig } from "../config/authConfig";
 import { initiateSkyerSignIn } from "./pkceAuth";
+import { getStoredToken, tokenExpiry } from "./sessionStorageHelpers";
 
 /**
  * Robust session maintenance and token lifecycle manager matching monosbase design:
@@ -14,31 +15,7 @@ const ID_TOKEN = "skyer_id_token";
 const USER_PROFILE = "skyer_user_profile";
 const RETURN_URL = "skyer_return_url";
 
-function tokenExpiry(token: string | null): number {
-  if (!token) return 0;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload.exp === "number" ? payload.exp : 0;
-  } catch {
-    return 0;
-  }
-}
-
-export function getStoredToken(key: string): string | null {
-  try {
-    const fromSession = sessionStorage.getItem(key);
-    const fromLocal = localStorage.getItem(key);
-    // Another tab may have renewed the shared localStorage copy. Logto rotates refresh tokens, so this tab's
-    // sessionStorage copy is then revoked (invalid_grant) and its access token keeps expiring: use the newer pair.
-    if (fromSession && fromLocal && fromSession !== fromLocal) {
-      if (key === ACCESS) return tokenExpiry(fromLocal) > tokenExpiry(fromSession) ? fromLocal : fromSession;
-      if (key === REFRESH) return fromLocal;
-    }
-    return fromSession || fromLocal;
-  } catch {
-    return null;
-  }
-}
+export { getStoredToken, tokenExpiry };
 
 export function setStoredToken(key: string, value: string): void {
   try {
@@ -250,6 +227,19 @@ export function redirectToSignIn(): void {
   });
 }
 
+/**
+ * Callers often attach their own `Authorization: Bearer <jwt>` read earlier from storage. After a long idle tab that
+ * copy is expired while a renewed token exists (silent renew, other tab, or the 401 retry below). Replace an explicit
+ * Logto JWT that expires before the current one; never touch non-JWT/foreign credentials.
+ */
+export function shouldSetBearer(existing: string | null, token: string): boolean {
+  if (!existing) return true;
+  const m = /^Bearer\s+(.+)$/i.exec(existing.trim());
+  if (!m || m[1] === token) return false;
+  const existingExp = tokenExpiry(m[1]);
+  return existingExp > 0 && existingExp < tokenExpiry(token);
+}
+
 export function installAuthFetch(): void {
   if (typeof window === "undefined" || (window.fetch as any).__agent360Auth) return;
   const original = window.fetch.bind(window);
@@ -272,7 +262,7 @@ export function installAuthFetch(): void {
 
     const withToken = (token: string | null) => {
       const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
-      if (token && !headers.has("Authorization")) {
+      if (token && shouldSetBearer(headers.get("Authorization"), token)) {
         headers.set("Authorization", `Bearer ${token}`);
       }
       return original(input, { ...init, headers });

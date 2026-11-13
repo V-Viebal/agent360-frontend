@@ -4,12 +4,39 @@ export const ID_TOKEN = "skyer_id_token";
 export const USER_PROFILE = "skyer_user_profile";
 export const RETURN_URL = "skyer_return_url";
 
+/** JWT `exp` (seconds) or 0 when the value is not a decodable JWT. */
+export function tokenExpiry(token: string | null): number {
+  if (!token) return 0;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.exp === "number" ? payload.exp : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Single token read path. Another tab (or this tab's silent renew) may have renewed the shared localStorage copy;
+ * Logto rotates refresh tokens, so a stale sessionStorage pair is revoked and its access token expires. Always
+ * return the newer pair instead of blindly preferring sessionStorage.
+ */
 export function getStoredToken(key: string): string | null {
   try {
-    return sessionStorage.getItem(key) || localStorage.getItem(key);
+    const fromSession = sessionStorage.getItem(key);
+    const fromLocal = localStorage.getItem(key);
+    if (fromSession && fromLocal && fromSession !== fromLocal) {
+      if (key === ACCESS || key === ID_TOKEN) return tokenExpiry(fromLocal) > tokenExpiry(fromSession) ? fromLocal : fromSession;
+      if (key === REFRESH) return fromLocal;
+    }
+    return fromSession || fromLocal;
   } catch {
     return null;
   }
+}
+
+/** Current Logto access token (newest of the sessionStorage/localStorage copies). */
+export function getAccessToken(): string | null {
+  return getStoredToken(ACCESS);
 }
 
 export function setStoredToken(key: string, value: string): void {

@@ -20,6 +20,7 @@ import { SlideOverDrawer } from "../../components/ui/SlideOverDrawer";
 import { Modal } from "../../components/ui/Modal";
 import { CustomSelect, SelectOption } from "../../components/ui/CustomSelect";
 import { AgentIam360CellTab } from "../../components/AgentIam360CellTab";
+import { getAccessToken } from "../../services/sessionStorageHelpers";
 
 interface AgentItem {
   id: string;
@@ -74,7 +75,7 @@ export function AdminAgentsPage() {
 
   async function loadData(syncFromLogtoFirst = false) {
     setLoading(true);
-    const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+    const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
     const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
@@ -160,7 +161,7 @@ export function AdminAgentsPage() {
   async function handleToggleAnyoneAccess(agent: AgentItem, enabled: boolean, role: string = "Operator") {
     setTogglingAnyoneSlug(agent.slug);
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/agents/anyone-access", {
         method: "POST",
         headers: {
@@ -196,7 +197,7 @@ export function AdminAgentsPage() {
     setSubmitting(true);
 
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch("/api/admin/agents/assign", {
         method: "POST",
         headers: {
@@ -230,7 +231,7 @@ export function AdminAgentsPage() {
   async function handleRevokeAssignment(id: number) {
     if (!confirm("Bạn có chắc chắn muốn thu hồi quyền truy cập này khỏi Agent?")) return;
     try {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || localStorage.getItem("agent360.a2a.operatorKey");
+      const token = getAccessToken() || localStorage.getItem("agent360.a2a.operatorKey");
       const res = await fetch(`/api/admin/agents/assignments/${id}`, {
         method: "DELETE",
         headers: token ? { Authorization: `Bearer ${token}` } : {},

@@ -1,3 +1,4 @@
+import { getAccessToken } from "./sessionStorageHelpers";
 export type AvatarType = "blob" | "role" | "icon" | "emoji" | "image";
 
 export interface BlobAvatarOptions {
@@ -151,7 +152,7 @@ function buildAgentWriteHeaders(agentId?: string): Record<string, string> {
   };
   try {
     if (typeof window !== "undefined") {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      const token = getAccessToken() || "";
       const opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || "";
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
@@ -414,7 +415,7 @@ function buildMultipartUploadHeaders(agentId?: string): Record<string, string> {
   };
   try {
     if (typeof window !== "undefined") {
-      const token = sessionStorage.getItem("skyer_access_token") || localStorage.getItem("skyer_access_token") || "";
+      const token = getAccessToken() || "";
       const opToken = localStorage.getItem("agent360.a2a.operatorKey") || localStorage.getItem("operator_token") || "";
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
