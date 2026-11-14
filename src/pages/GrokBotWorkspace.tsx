@@ -20989,12 +20989,16 @@ const selectedAgentTheme = getAgentColorTheme(
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (selectedAgent) {
-                          handleOpenAgentSettings(selectedAgent);
+                        if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+                          handleToggleLeftSidebar(false);
+                        } else {
+                          setMobileAgentsOpen(true);
+                          setMobileChatsOpen(false);
+                          setMobileBotInfoOpen(false);
                         }
                       }}
                       className="shrink-0 cursor-pointer hover:scale-110 transition-transform"
-                      title="Bấm vào Avatar để mở Cài đặt Agent"
+                      title="Bấm vào Avatar để mở danh sách Agent"
                     >
                       <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
                     </div>
