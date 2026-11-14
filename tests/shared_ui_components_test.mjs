@@ -532,10 +532,21 @@ assert.ok(
 );
 console.log("✓ Test 36: Browser Dynamic Hover Cursor & Drag-and-Drop Tab Management Contract verified");
 
+console.log("Testing Browser Tab Switch Over Open Stream Socket Contract...");
+assert.ok(
+  grokMobileSrc.includes('action: "switch_tab"') &&
+  grokMobileSrc.includes('msg?.method === "Page.tabSwitched"') &&
+  grokMobileSrc.includes("requestTabSwitchRef.current?.(pageId)") &&
+  grokMobileSrc.includes("}, [enabled, agentId, liveWs, streamNonce]);") &&
+  !grokMobileSrc.includes("}, [enabled, agentId, pageId, liveWs]);"),
+  "AgentBrowserPreview must keep one stream socket across tab changes, send switch_tab, drop frames until Page.tabSwitched, and only reconnect as a fallback"
+);
+console.log("✓ Test 36b: Browser tab switch reuses the open stream socket");
+
 console.log("Testing Hardware GPU createImageBitmap + <canvas> Screencast Pipeline Contract...");
 assert.ok(
   grokMobileSrc.includes("window.createImageBitmap(blobToDecode)") &&
-  grokMobileSrc.includes("paintImageBitmapDom(bitmap, blobToDecode)") &&
+  grokMobileSrc.includes("paintImageBitmapDomRef.current(bitmap, blobToDecode)") &&
   grokMobileSrc.includes('data-testid="agent-browser-gpu-canvas"') &&
   grokMobileSrc.includes('getContext("2d", { alpha: false, desynchronized: true })') &&
   grokMobileSrc.includes("bitmap.close()"),
@@ -949,7 +960,7 @@ const runtimeProxySrc64 = fs.readFileSync(path.join(rootDir, "../backend/src/Age
 assert.ok(
   grokImeSrc.includes("inferAgentViewerUrlFallback(agent)") &&
   grokImeSrc.includes("fetchSkills(undefined)") &&
-  grokImeSrc.includes("}, [enabled, agentId, pageId, liveWs]);") &&
+  grokImeSrc.includes("}, [enabled, agentId, liveWs, streamNonce]);") &&
   grokImeSrc.includes("agent-browser-quick-input-mode-btn") &&
   grokImeSrc.includes("useState<\"touch\" | \"mouse\">(\"touch\")") &&
   grokImeSrc.includes("twoFingerMode: mobileInputMode === \"mouse\" ? \"undecided\" : \"pinch\"") &&
@@ -1081,7 +1092,7 @@ console.log("Testing Phone Browser Device Recognition, Network/Emulation UA Sync
     cdpEp70.includes("var initNavUrl = isMobNew ? (safeReq.Text ?? \"https://www.google.com\") : null;") &&
     dir70.includes('var createUrl = isMobNewTab ? "about:blank" : newUrl;') &&
     grok70.includes("Boolean((navigator as any).userAgentData?.mobile)") &&
-    (grok70.includes("lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };") || grok70.includes("lastSentViewportRef.current = { agentId, pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };")),
+    (grok70.includes("lastSentViewportRef.current = { agentId, pageId: connPageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };") || grok70.includes("lastSentViewportRef.current = { pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };") || grok70.includes("lastSentViewportRef.current = { agentId, pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };")),
     "Phone browser must synchronize Network.setUserAgentOverride + Emulation.setUserAgentOverride + touch emulation, pre-emulate new tabs on about:blank before navigating, and auto-reload with ignoreCache=true when switching a desktop-loaded tab to mobile"
   );
 }

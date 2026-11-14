@@ -9109,10 +9109,25 @@ function AgentBrowserPreview({
     }
   }, [cacheKey]);
 
+  // The stream socket outlives tab changes, so frame painters are read through refs (fresh cacheKey/hasFrame per tab).
+  const streamPageIdRef = useRef(pageId);
+  streamPageIdRef.current = pageId;
+  const requestTabSwitchRef = useRef<((nextPageId: string) => boolean) | null>(null);
+  const [streamNonce, setStreamNonce] = useState(0);
+  const paintImageBitmapDomRef = useRef(paintImageBitmapDom);
+  paintImageBitmapDomRef.current = paintImageBitmapDom;
+  const commitStreamFrameDomRef = useRef(commitStreamFrameDom);
+  commitStreamFrameDomRef.current = commitStreamFrameDom;
+
   // 1. Persistent 30fps Full HD WebSocket Screencast with Zero-Re-Render DOM Swap & Adaptive Network Quality
   useEffect(() => {
-    if (!enabled || !liveWs || typeof WebSocket === "undefined" || (pageId && pageId.startsWith("optimistic-"))) return;
+    const initialPageId = streamPageIdRef.current;
+    if (!enabled || !liveWs || typeof WebSocket === "undefined" || (initialPageId && initialPageId.startsWith("optimistic-"))) return;
     let alive = true;
+    // Tab switches reuse this socket: frames are dropped from switch_tab until the server acks the new tab.
+    let tabGen = 0;
+    let switchPending: string | null = null;
+    let switchTimer: ReturnType<typeof setTimeout> | null = null;
     let ws: WebSocket | null = null;
     let rafId = 0;
     let pendingDataUrl: string | null = null;
@@ -9131,17 +9146,19 @@ function AgentBrowserPreview({
       if (!alive || (!pendingBlob && !pendingDataUrl) || isDecodingFrame) return;
       if (pendingBlob && supportsGpuBitmap) {
         const blobToDecode = pendingBlob;
+        const decodeGen = tabGen;
         pendingBlob = null;
         isDecodingFrame = true;
         window.createImageBitmap(blobToDecode)
           .then((bitmap) => {
             isDecodingFrame = false;
-            if (!alive) {
+            if (!alive || decodeGen !== tabGen) {
               try { bitmap.close(); } catch {}
+              if (alive && (pendingBlob || pendingDataUrl)) flushPendingFrame();
               return;
             }
             lastPaintedAt = performance.now();
-            paintImageBitmapDom(bitmap, blobToDecode);
+            paintImageBitmapDomRef.current(bitmap, blobToDecode);
             if (pendingBlob || pendingDataUrl) {
               flushPendingFrame();
             }
@@ -9149,9 +9166,10 @@ function AgentBrowserPreview({
           .catch(() => {
             isDecodingFrame = false;
             if (!alive) return;
+            if (decodeGen !== tabGen) return;
             const fallbackUrl = URL.createObjectURL(blobToDecode);
             lastPaintedAt = performance.now();
-            commitStreamFrameDom(fallbackUrl);
+            commitStreamFrameDomRef.current(fallbackUrl);
             if ((pendingBlob || pendingDataUrl) && !rafId) {
               rafId = requestAnimationFrame(flushPendingFrame);
             }
@@ -9169,11 +9187,18 @@ function AgentBrowserPreview({
         const preImg = new Image();
         preImg.decoding = "async";
         preImg.src = nextUrl;
+        const decodeGen = tabGen;
         const finishDecode = () => {
           isDecodingFrame = false;
           if (!alive) return;
+          if (decodeGen !== tabGen) {
+            if (nextUrl.startsWith("blob:")) {
+              try { URL.revokeObjectURL(nextUrl); } catch {}
+            }
+            return;
+          }
           lastPaintedAt = performance.now();
-          commitStreamFrameDom(nextUrl);
+          commitStreamFrameDomRef.current(nextUrl);
           if ((pendingBlob || pendingDataUrl) && !rafId) {
             rafId = requestAnimationFrame(flushPendingFrame);
           }
@@ -9194,7 +9219,7 @@ function AgentBrowserPreview({
       if (Math.abs(targetQ - currentAbrQuality) >= 6) {
         currentAbrQuality = targetQ;
         try {
-          ws.send(JSON.stringify({ action: "quality", width: targetQ, pageId }));
+          ws.send(JSON.stringify({ action: "quality", width: targetQ, pageId: streamPageIdRef.current }));
         } catch {}
       }
     };
@@ -9206,13 +9231,20 @@ function AgentBrowserPreview({
     let reconnectAttempt = 0;
 
     const connectWs = async () => {
+      reconnectTimer = null;
       if (!alive) return;
       // The stream authenticates via ?access_token=; renew it first so reconnects never loop on an expired token (401).
       await ensureFreshAccessToken().catch(() => null);
       if (!alive) return;
       try {
         const { w: initW, h: initH, isMobile: initMob } = latestViewportRef.current;
-        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, pageId, initW, initH, initMob));
+        const wantedPageId = streamPageIdRef.current;
+        // An optimistic tab has no Chromium target yet: open on the default tab and hold frames until the real id arrives.
+        const connPageId = wantedPageId && !wantedPageId.startsWith("optimistic-") ? wantedPageId : undefined;
+        tabGen += 1;
+        switchPending = connPageId === wantedPageId ? null : (wantedPageId ?? null);
+        if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+        ws = new WebSocket(agentBrowserStreamWsUrl(agentId, 1920, connPageId, initW, initH, initMob));
         ws.binaryType = "blob";
         wsRef.current = ws;
         ws.onopen = () => {
@@ -9224,14 +9256,14 @@ function AgentBrowserPreview({
           if (curVp.w >= 320 && curVp.h >= 240) {
             const rw = Math.round(curVp.w);
             const rh = Math.round(curVp.h);
-            lastSentViewportRef.current = { agentId, pageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };
+            lastSentViewportRef.current = { agentId, pageId: connPageId, w: rw, h: rh, isMobile: curVp.isMobile, refreshSignal, confirmed: true };
             try {
               ws?.send(
                 JSON.stringify({
                   action: "resize",
                   width: rw,
                   height: rh,
-                  pageId,
+                  pageId: connPageId,
                   isMobile: curVp.isMobile,
                   deviceType: curVp.isMobile ? "phone" : "desktop",
                 })
@@ -9241,6 +9273,7 @@ function AgentBrowserPreview({
         };
       ws.onmessage = (ev) => {
         if (!alive) return;
+        if (switchPending && typeof ev.data !== "string") return;
         try {
           let nextFrameUrl = "";
           let nextFrameBlob: Blob | null = null;
@@ -9265,6 +9298,20 @@ function AgentBrowserPreview({
             }
           } else if (typeof ev.data === "string") {
             const msg = JSON.parse(ev.data);
+            if (msg?.method === "Page.tabSwitched" && msg?.params) {
+              const ackId = typeof msg.params.pageId === "string" ? msg.params.pageId : "";
+              if (ackId && ackId === switchPending) {
+                if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+                if (msg.params.ok === false) {
+                  // Tab is not (yet) known to the server: a fresh connection opens it directly.
+                  try { ws?.close(); } catch {}
+                } else {
+                  switchPending = null;
+                }
+              }
+              return;
+            }
+            if (switchPending && msg?.method !== "Page.popupOpened" && msg?.method !== "Page.clipboardContent") return;
             if (msg?.method === "Page.loadingState" && msg?.params) {
               onPageLoadingStateRef.current?.({
                 loading: Boolean(msg.params.loading),
@@ -9364,7 +9411,7 @@ function AgentBrowserPreview({
                   currentAbrQuality = desiredQ;
                   lastQualitySentAt = now;
                   try {
-                    ws.send(JSON.stringify({ action: "quality", width: desiredQ, pageId }));
+                    ws.send(JSON.stringify({ action: "quality", width: desiredQ, pageId: streamPageIdRef.current }));
                   } catch {}
                 }
               }
@@ -9399,11 +9446,52 @@ function AgentBrowserPreview({
       } catch {}
     };
 
+    const beginTabSwitch = (nextPageId: string): boolean => {
+      if (!alive) return false;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        // A socket that is still connecting (or about to reconnect) opens on the latest tab by itself.
+        return ws?.readyState === WebSocket.CONNECTING || reconnectTimer !== null;
+      }
+      tabGen += 1;
+      pendingBlob = null;
+      if (pendingDataUrl && pendingDataUrl.startsWith("blob:")) {
+        try { URL.revokeObjectURL(pendingDataUrl); } catch {}
+      }
+      pendingDataUrl = null;
+      switchPending = nextPageId;
+      if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+      if (nextPageId.startsWith("optimistic-")) return true;
+      const vp = latestViewportRef.current;
+      try {
+        ws.send(JSON.stringify({
+          action: "switch_tab",
+          pageId: nextPageId,
+          width: Math.round(vp.w),
+          height: Math.round(vp.h),
+          isMobile: vp.isMobile,
+          deviceType: vp.isMobile ? "phone" : "desktop",
+        }));
+      } catch {
+        return false;
+      }
+      const sock = ws;
+      switchTimer = setTimeout(() => {
+        switchTimer = null;
+        if (alive && switchPending === nextPageId) {
+          try { sock.close(); } catch {}
+        }
+      }, 4000);
+      return true;
+    };
+    requestTabSwitchRef.current = beginTabSwitch;
+
     void connectWs();
 
     return () => {
       alive = false;
       wsConnectedRef.current = false;
+      requestTabSwitchRef.current = null;
+      if (switchTimer) clearTimeout(switchTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (rafId) cancelAnimationFrame(rafId);
       try { conn?.removeEventListener?.("change", onNetChange); } catch {}
@@ -9412,7 +9500,18 @@ function AgentBrowserPreview({
         try { ws.close(); } catch {}
       }
     };
-  }, [enabled, agentId, pageId, liveWs]);
+  }, [enabled, agentId, liveWs, streamNonce]);
+
+  // Tab change: move the open stream onto the new tab (no new handshake/auth round trip); reconnect only as a fallback.
+  const switchedPageIdRef = useRef(pageId);
+  useEffect(() => {
+    if (switchedPageIdRef.current === pageId) return;
+    switchedPageIdRef.current = pageId;
+    if (!enabled || !liveWs) return;
+    if (!pageId || !requestTabSwitchRef.current?.(pageId)) {
+      setStreamNonce((n) => n + 1);
+    }
+  }, [pageId, enabled, liveWs]);
 
   const lastSentViewportRef = useRef<{ agentId?: string; pageId?: string; w: number; h: number; isMobile?: boolean; refreshSignal?: number; confirmed?: boolean }>({ agentId: undefined, pageId: undefined, w: 0, h: 0, isMobile: undefined, refreshSignal: 0, confirmed: false });
 
