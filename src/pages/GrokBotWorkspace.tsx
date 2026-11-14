@@ -17700,11 +17700,12 @@ const selectedAgentTheme = getAgentColorTheme(
       }
       return cid;
     };
+    const fallbackAgentChat = agent.activeSessionId || agent.lastSessionId;
     const resolvedInitialChatId =
       isValidSavedSession(rawLastChat) ||
       (targetCached && targetCached.length > 0
         ? (targetCached.find((c) => c.title !== "New Chat" || c.isRunning || c.is_running) || targetCached[0]).id
-        : "");
+        : (fallbackAgentChat || ""));
 
     if (targetCached && targetCached.length > 0) {
       setChats(targetCached);
@@ -17756,6 +17757,14 @@ const selectedAgentTheme = getAgentColorTheme(
       !(getCachedChatMessages(chat.id, selectedAgentId)?.length);
     if (!isEmptyTransientNew && selectedAgentId) {
       saveLastChatForAgent(selectedAgentId, chat.id, chat.title);
+      if (chat.title && chat.title !== "New Chat") {
+        const normKey = normalizeAgentKey(selectedAgentId);
+        setAgentRecentSessions((prev) => {
+          const next = { ...prev, [selectedAgentId]: chat.title, [normKey]: chat.title, [`bot:agent360:${normKey}`]: chat.title };
+          try { localStorage.setItem("agent360_recent_sessions_map", JSON.stringify(next)); } catch {}
+          return next;
+        });
+      }
     }
 
     // Update routing URL to /app/:agentSlug/:chatId

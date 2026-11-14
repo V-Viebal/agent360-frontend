@@ -1293,3 +1293,23 @@ console.log("Testing Agent Last Activity Session DB Hydration Contract...");
   );
 }
 console.log("✓ Test 83: Agent Last Activity Session DB Hydration Contract verified");
+
+console.log("Testing Agent Last Activity Session Fallback & Immediate Selection Update Contract...");
+{
+  const clientSrc = fs.readFileSync(new URL("../../backend/src/Agent360.API/Features/Agents/Services/QwenPawClient.cs", import.meta.url), "utf8");
+  const grokSrc = fs.readFileSync(new URL("../src/pages/GrokBotWorkspace.tsx", import.meta.url), "utf8");
+
+  assert.ok(
+    clientSrc.includes("CleanSessionTitle") &&
+    clientSrc.includes("var effTitle = lastSession?.Title;") &&
+    clientSrc.includes("var effChatId = lastSession?.ChatId ?? a.ActiveSessionId;"),
+    "QwenPawClient must sanitize and prewarm fallback session titles from chat lists"
+  );
+  assert.ok(
+    grokSrc.includes("const fallbackAgentChat = agent.activeSessionId || agent.lastSessionId;") &&
+    grokSrc.includes("setAgentRecentSessions((prev) => {") &&
+    grokSrc.includes("[normKey]: chat.title"),
+    "GrokBotWorkspace must fallback to activeSessionId/lastSessionId and update recent session preview instantly on chat selection"
+  );
+}
+console.log("✓ Test 84: Agent Last Activity Session Fallback & Immediate Selection Update Contract verified");
