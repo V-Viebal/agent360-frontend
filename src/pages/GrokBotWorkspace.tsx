@@ -20981,8 +20981,8 @@ const selectedAgentTheme = getAgentColorTheme(
               >
                 {hasNoAgents ? (
                   <>
-                    <Shield size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)]" />
-                    <span className="truncate max-w-[160px] sm:max-w-[220px] text-xs text-neutral-900 dark:text-white font-mono">Chưa có Agent</span>
+                    <Shield size={14} className="text-[var(--agent-light)] dark:text-[var(--agent-dark)] shrink-0 self-center" />
+                    <span className="truncate max-w-[160px] sm:max-w-[220px] text-xs text-neutral-900 dark:text-white font-mono self-center">Chưa có Agent</span>
                   </>
                 ) : (
                   <>
@@ -20997,16 +20997,16 @@ const selectedAgentTheme = getAgentColorTheme(
                           setMobileBotInfoOpen(false);
                         }
                       }}
-                      className="shrink-0 cursor-pointer hover:scale-110 transition-transform"
+                      className="shrink-0 flex items-center justify-center self-center cursor-pointer hover:scale-110 transition-transform"
                       title="Bấm vào Avatar để mở danh sách Agent"
                     >
-                      <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0" />
+                      <AgentAvatar agent={selectedAgent} size="xs" alwaysAnimate={isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)} forcedAnimation={(isStreaming || isCurrentSessionRunning || Boolean(liveTurnForView)) ? "nod.1.4,jump.1.4,wink.1.4" : undefined} className="shrink-0 self-center" />
                     </div>
-                    <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">{selectedAgent?.name || "Agent"}</span>
+                    <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap self-center">{selectedAgent?.name || "Agent"}</span>
                     {isBotInfoCollapsed ? (
-                      <ChevronRight size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:translate-x-1" />
+                      <ChevronRight size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 self-center -mr-0.5 transform transition-transform group-hover:translate-x-1" />
                     ) : (
-                      <ChevronLeft size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 -mr-0.5 transform transition-transform group-hover:-translate-x-1" />
+                      <ChevronLeft size={13} style={{ color: selectedAgentTheme.primary }} className="opacity-0 group-hover:opacity-100 transition-all duration-200 shrink-0 self-center -mr-0.5 transform transition-transform group-hover:-translate-x-1" />
                     )}
                   </>
                 )}
@@ -25182,13 +25182,15 @@ const selectedAgentTheme = getAgentColorTheme(
                   className="group inline-flex items-center justify-center gap-2 bg-slate-50 dark:bg-[#14141c] hover:bg-slate-100 dark:hover:bg-[#1c1c28] border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/15 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-[13px] font-semibold text-neutral-900 dark:text-white shadow-xs cursor-pointer transition-all select-none leading-none"
                   title="Tuỳ chọn thiết bị & mô hình giọng nói"
                 >
-                  <AgentAvatar
-                    agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
-                    size="xs"
-                    interactive={false}
-                    className="shrink-0"
-                  />
-                  <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap">
+                  <div className="shrink-0 flex items-center justify-center self-center">
+                    <AgentAvatar
+                      agent={selectedAgent || ({ id: "skyer", name: "Skyer", roleTag: "AI" } as any)}
+                      size="xs"
+                      interactive={false}
+                      className="shrink-0 self-center"
+                    />
+                  </div>
+                  <span className="truncate max-w-[140px] sm:max-w-[200px] text-xs text-neutral-900 dark:text-white whitespace-nowrap self-center">
                     {selectedAgent?.name || "Agent"}
                   </span>
                 </div>
