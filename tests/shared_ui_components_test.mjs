@@ -1324,3 +1324,23 @@ console.log("Testing Agent Last Activity Session Fallback & Immediate Selection 
   );
 }
 console.log("✓ Test 84: Agent Last Activity Session Fallback & Immediate Selection Update Contract verified");
+
+console.log("Testing Dynamic Model Reasoning Effort Dropdown Contract...");
+{
+  const apiSrc = fs.readFileSync(new URL("../src/services/agentApi.ts", import.meta.url), "utf8");
+  const modalSrc = fs.readFileSync(new URL("../src/components/AgentSettingsModal.tsx", import.meta.url), "utf8");
+
+  assert.ok(
+    apiSrc.includes("export function getSupportedThinkingLevelsForModel(") &&
+    apiSrc.includes("clean.startsWith(\"grok\") || clean.includes(\"grok-4.7\")"),
+    "agentApi must export getSupportedThinkingLevelsForModel returning model-scoped levels without max for grok-4.7"
+  );
+
+  assert.ok(
+    modalSrc.includes("btn-toggle-thinking-level-dropdown") &&
+    modalSrc.includes("thinking-level-dropdown-menu") &&
+    modalSrc.includes("getSupportedThinkingLevelsForModel(currentCleanModel)"),
+    "AgentSettingsModal must present a dynamic dropdown for reasoning effort with model-scoped options"
+  );
+}
+console.log("✓ Test 85: Dynamic Model Reasoning Effort Dropdown Contract verified");

@@ -31,7 +31,7 @@ import {
   FileText,
   Cpu,
 } from "lucide-react";
-import { fetchWorkspaceFileContent, fetchAgentThinkingLevel, updateAgentThinkingLevel, AGENT_THINKING_LEVELS, AgentThinkingLevel } from "../services/agentApi";
+import { fetchWorkspaceFileContent, fetchAgentThinkingLevel, updateAgentThinkingLevel, getSupportedThinkingLevelsForModel, AGENT_THINKING_LEVELS, AgentThinkingLevel } from "../services/agentApi";
 import { Tooltip } from "./ui/Tooltip";
 import { saveCustomAgentName } from "../services/avatarService";
 import { InfraAgent } from "../types/agent";
@@ -143,6 +143,7 @@ export function AgentSettingsModal({
   const agentTheme = getAgentColorTheme(agent.id, agent.name, agent.roleTag);
   const [modelSearch, setModelSearch] = useState("");
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isThinkingDropdownOpen, setIsThinkingDropdownOpen] = useState(false);
   const [reactionSummary, setReactionSummary] = useState<MessageReactionSummaryDto | null>(null);
   const [thinkingLevel, setThinkingLevel] = useState<AgentThinkingLevel | null>(null);
   const [savingThinkingLevel, setSavingThinkingLevel] = useState<AgentThinkingLevel | null>(null);
@@ -576,42 +577,89 @@ export function AgentSettingsModal({
                   </div>
                 </div>
 
-                {/* Reasoning effort (QwenPaw profile thinking_level) */}
-                <div data-testid="agent-reasoning-effort" className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Brain size={14} style={{ color: agentTheme.primary }} />
-                      <span>Reasoning effort</span>
-                    </span>
-                    {thinkingLevelError && (
-                      <span className="text-[11px] text-rose-500">Không lưu được</span>
-                    )}
-                  </div>
-                  <div role="radiogroup" aria-label="Reasoning effort" className="grid grid-cols-4 gap-1.5">
-                    {AGENT_THINKING_LEVELS.map((level) => {
-                      const isActive = thinkingLevel === level;
-                      const isSaving = savingThinkingLevel === level;
-                      return (
-                        <button
-                          key={level}
-                          type="button"
-                          role="radio"
-                          aria-checked={isActive}
-                          disabled={thinkingLevel === null || Boolean(savingThinkingLevel)}
-                          onClick={() => void handleSelectThinkingLevel(level)}
-                          className={"flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-mono border transition-colors cursor-pointer disabled:cursor-default " + (
-                            isActive
-                              ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold"
-                              : "bg-white dark:bg-[#121218] text-slate-600 dark:text-neutral-400 border-slate-200 dark:border-[#242432] hover:border-slate-300 dark:hover:border-neutral-700 disabled:opacity-60"
+                {/* Reasoning effort (QwenPaw profile thinking_level) - Dynamic Dropdown matching active model capabilities */}
+                {(() => {
+                  const supportedLevels = getSupportedThinkingLevelsForModel(currentCleanModel);
+                  const effectiveLevel = thinkingLevel || "inherit";
+                  return (
+                    <div data-testid="agent-reasoning-effort" className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <Brain size={14} style={{ color: agentTheme.primary }} />
+                          <span>Reasoning effort</span>
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {savingThinkingLevel && <Loader2 size={11} className="animate-spin text-neutral-400" />}
+                          {thinkingLevelError && (
+                            <span className="text-[11px] text-rose-500">Không lưu được</span>
                           )}
+                          <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full border font-semibold bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)]">
+                            {effectiveLevel === "inherit" ? "default" : effectiveLevel}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Dropdown Selector */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          data-testid="btn-toggle-thinking-level-dropdown"
+                          disabled={Boolean(savingThinkingLevel)}
+                          onClick={() => setIsThinkingDropdownOpen((prev) => !prev)}
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-mono bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] text-slate-800 dark:text-neutral-200 hover:border-slate-300 dark:hover:border-neutral-700 transition-colors cursor-pointer shadow-2xs"
                         >
-                          {isSaving && <Loader2 size={10} className="animate-spin" />}
-                          <span>{level === "inherit" ? "default" : level}</span>
+                          <span className="flex items-center gap-2 truncate">
+                            <Brain size={13} style={{ color: agentTheme.primary }} className="shrink-0" />
+                            <span className="font-medium truncate">
+                              {effectiveLevel === "inherit" ? "Mặc định (default / inherit)" : `Mức suy luận: ${effectiveLevel}`}
+                            </span>
+                          </span>
+                          {isThinkingDropdownOpen ? <ChevronUp size={14} className="shrink-0 text-slate-400" /> : <ChevronDown size={14} className="shrink-0 text-slate-400" />}
                         </button>
-                      );
-                    })}
-                  </div>
-                </div>
+
+                        {isThinkingDropdownOpen && (
+                          <div data-testid="thinking-level-dropdown-menu" className="mt-2 p-1.5 rounded-xl bg-white dark:bg-[#121218] border border-slate-200 dark:border-[#242432] space-y-1 animate-in fade-in duration-100 shadow-lg">
+                            {supportedLevels.map((level) => {
+                              const isSelected = effectiveLevel === level;
+                              const isSaving = savingThinkingLevel === level;
+                              return (
+                                <button
+                                  key={level}
+                                  type="button"
+                                  data-testid={`thinking-level-option-${level}`}
+                                  disabled={Boolean(savingThinkingLevel)}
+                                  onClick={() => {
+                                    void handleSelectThinkingLevel(level);
+                                    setIsThinkingDropdownOpen(false);
+                                  }}
+                                  className={"w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-mono transition-all cursor-pointer border text-left " + (
+                                    isSelected
+                                      ? "bg-[var(--agent-bg-light)] dark:bg-[var(--agent-bg-dark)] text-[var(--agent-light)] dark:text-[var(--agent-dark)] border-[var(--agent-border-light)] dark:border-[var(--agent-border-dark)] font-semibold shadow-xs"
+                                      : "bg-transparent hover:bg-slate-100 dark:hover:bg-[#1c1c28] text-slate-700 dark:text-neutral-300 border-transparent"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="truncate font-medium">{level === "inherit" ? "default (kế thừa cấu hình)" : level}</span>
+                                    {level === "off" && (
+                                      <span className="text-[10px] text-slate-400 dark:text-neutral-500 font-sans">(tắt reasoning)</span>
+                                    )}
+                                    {level === "max" && (
+                                      <span className="text-[10px] text-amber-500 font-sans">(tối đa)</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                    {isSaving && <Loader2 size={11} className="animate-spin" />}
+                                    {isSelected && <Check size={12} style={{ color: agentTheme.primary }} className="shrink-0" />}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* System Governance & SOUL.md Profile (Expandable) */}
                 <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 dark:bg-[#161620] border border-slate-200 dark:border-[#242432] space-y-2.5">

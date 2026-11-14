@@ -593,6 +593,47 @@ export async function updateAgentActiveModel(agentId: string, providerId: string
 export const AGENT_THINKING_LEVELS = ["inherit", "off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 export type AgentThinkingLevel = (typeof AGENT_THINKING_LEVELS)[number];
 
+/**
+ * Returns supported reasoning effort levels based on model capability specification.
+ * Models like grok-4.7 support up to xhigh (no max).
+ * Models like gpt-6-luna / gpt-6-sol / gpt-6.1-sol / gpt-6-astra support up to max.
+ * Gemini 4 series support low, medium, high, xhigh, max.
+ * Non-reasoning models return ['inherit', 'off'].
+ */
+export function getSupportedThinkingLevelsForModel(modelName?: string | null): AgentThinkingLevel[] {
+  const norm = (modelName || "").trim().toLowerCase();
+  const clean = norm.includes("/") ? norm.split("/").pop()! : norm;
+
+  // Non-reasoning models / fixed models
+  if (clean.includes("orchestrator") || clean.includes("embed") || clean.includes("flux")) {
+    return ["inherit", "off"];
+  }
+
+  // Models supporting max: gpt-6-*, gemini-4-*, gpt-5.6-*
+  if (
+    clean.startsWith("gpt-6") ||
+    clean.startsWith("gpt-5.6") ||
+    clean.startsWith("gemini-4") ||
+    clean.includes("claude-opus-5.5") ||
+    clean.includes("claude-sonnet-5.5")
+  ) {
+    return ["inherit", "off", "minimal", "low", "medium", "high", "xhigh", "max"];
+  }
+
+  // grok models (grok-4.7, grok-4.6, grok-imagine) support minimal, low, medium, high, xhigh (no max)
+  if (clean.startsWith("grok") || clean.includes("grok-4.7")) {
+    return ["inherit", "off", "minimal", "low", "medium", "high", "xhigh"];
+  }
+
+  // Claude models & gemini-3.* default up to xhigh
+  if (clean.startsWith("claude") || clean.startsWith("gemini")) {
+    return ["inherit", "off", "minimal", "low", "medium", "high", "xhigh"];
+  }
+
+  // Default standard reasoning set up to xhigh
+  return ["inherit", "off", "minimal", "low", "medium", "high", "xhigh"];
+}
+
 function normalizeThinkingLevel(value: unknown): AgentThinkingLevel {
   const v = String(value ?? "").trim().toLowerCase();
   return (AGENT_THINKING_LEVELS as readonly string[]).includes(v) ? (v as AgentThinkingLevel) : "inherit";
